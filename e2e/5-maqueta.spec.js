@@ -467,7 +467,8 @@ for (const [ancho, alto] of [[1280, 800], [800, 1280]]) {
       await expect(page.locator('[data-producido]').first()).toBeVisible();
       await expect(page.locator('#pr-tablero')).toContainText('Sin turno');
       // Planta v2: el motivo va en la tarjeta parada, en minúscula como en el diseño 2a.
-      await expect(page.locator('#pr-tablero')).toContainText(/se rompió la cadena/i);
+      // Desde el 30/09/2026 el motivo es uno de motivos_parada ("Corte de cadena: …").
+      await expect(page.locator('#pr-tablero')).toContainText(/corte de cadena/i);
     });
     await paso('lo-producido', async () => {
       await page.locator('[data-producido]').first().click();

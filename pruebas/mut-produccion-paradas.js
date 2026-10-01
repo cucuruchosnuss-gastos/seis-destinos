@@ -12,6 +12,9 @@ correrMutacionesProduccion({
   escape: 'esc',
   funciones: ['htmlAccionesParada', 'htmlParadas', 'htmlCampoHora', 'htmlHorasParada', 'htmlParadasTurno'],
   equivalentes: [
+    { expr: 'esc(clases)', motivo: 'las clases de una parada salen del código (pr-parada-item, --curso, --programada): nada escapable' },
+    { expr: 'esc(cat)', motivo: 'cat es una clave de NOMBRE_CATEGORIA_PARADA (programada / falla / otro) o null: una categoría desconocida no se dibuja' },
+    { expr: 'esc(NOMBRE_CATEGORIA_PARADA[cat])', motivo: "'Programada' / 'Falla' / 'Otro', escritos en el código" },
     { expr: 'esc(clave)', motivo: 'clave es "inicio" o "fin", constantes del código' },
     { expr: 'esc(rotulo)', motivo: 'el rótulo es "Paró a las" / "Volvió a las", constantes del código' },
     { expr: "esc(normalizarHora(valor) || 'sin hora')", motivo: 'normalizarHora() solo devuelve "HH:MM" o vacío' },
@@ -69,16 +72,16 @@ correrMutacionesProduccion({
     { nombre: 'el historial abre el editor sin permiso', de: "      if (modo === 'borrar' ? !acc.borrar : !acc.editar) return\n", a: '' },
     // Planta v2: cada parada de la planilla es un botón que abre el editor;
     // borrar vive adentro del editor (puedeBorrar).
-    { nombre: 'la planilla no ofrece corregir', de: "pr-parada-item--curso'}\" data-parada-editar=\"${esc(p.id)}\"", a: "pr-parada-item--curso'}\" data-x=\"${esc(p.id)}\"" },
+    { "nombre": "la planilla no ofrece corregir", "de": "class=\"${esc(clases)}\" data-parada-editar=\"${esc(p.id)}\"", "a": "class=\"${esc(clases)}\" data-x=\"${esc(p.id)}\"" },
     { nombre: 'la planilla no ofrece borrar', de: "contexto: 'planilla', puedeBorrar: true", a: "contexto: 'planilla', puedeBorrar: false" },
     // El editor.
     { nombre: 'Escape no cierra el editor', de: "      if (ev.key === 'Escape') { ev.preventDefault(); cerrarEditorParada(); return }\n", a: '' },
     { nombre: 'borrar en una abierta pide motivo', de: "      document.getElementById('pr-parada-editor-campo-motivo').hidden = f.modo === 'borrar' && !cerrada", a: "      document.getElementById('pr-parada-editor-campo-motivo').hidden = false" },
     { nombre: 'corregir no trae el motivo', de: "        motivo: modo === 'borrar' ? '' : (parada?.motivo ?? ''),", a: "        motivo: '',"},
-    { nombre: '"Paró ahora" también en una pendiente de completar', de: "document.getElementById('pr-btn-parada').hidden = !!enCurso || !abierta", a: "document.getElementById('pr-btn-parada').hidden = !!enCurso" },
-    { nombre: '"Paró ahora" nunca aparece', de: "document.getElementById('pr-btn-parada').hidden = !!enCurso || !abierta", a: "document.getElementById('pr-btn-parada').hidden = true" },
+    { "nombre": "\"Paró ahora\" también en una pendiente de completar", "de": "return p?.turno?.estado === 'abierto' && !paradaEnCurso(p?.paradas)", "a": "return !paradaEnCurso(p?.paradas)" },
+    { "nombre": "\"Paró ahora\" nunca aparece", "de": "document.getElementById('pr-btn-parada').hidden = !puedeQuedarAbierta(p) || esLimpieza(m)", "a": "document.getElementById('pr-btn-parada').hidden = true" },
     // Planta v2: "Anotar" está siempre (sin hidden desde JS).
-    { nombre: '"Anotar una parada" nunca aparece', de: 'id="pr-btn-anotar-parada">', a: 'id="pr-btn-anotar-parada" hidden>' },
+    { "nombre": "\"Anotar una parada\" nunca aparece", "de": "id=\"pr-btn-guardar-parada\">Guardar la parada", "a": "id=\"pr-btn-guardar-parada\" hidden>Guardar la parada" },
     { nombre: 'una abierta en una pendiente arranca "todavía no volvió"', de: "sigue: !!parada && !parada.fin && turno?.estado === 'abierto',", a: 'sigue: !!parada && !parada.fin,' },
     { nombre: 'una pendiente no arranca en la hora en que se la forzó', de: "      if (turno?.estado === 'pendiente_completar' && turno.forzado_en) return horaRedondeada(new Date(turno.forzado_en))\n", a: '' },
     { nombre: 'el error del editor no se ve', de: '      errEditor.textContent = texto\n      errEditor.hidden = !texto', a: "      errEditor.textContent = ''\n      errEditor.hidden = true" },

@@ -233,6 +233,10 @@ const RETIRADOS = [
   ['control:button#pr-asignar-volver[type=button]',
     'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): Asignar PIN es la otra pestaña de la pantalla del acceso maestro (data-maestro-tab); la ventana del teclado ' +
     'tiene su "Cancelar" (#pr-asignar-cancelar).'],
+  ['control:button#pr-btn-anotar-parada[type=button]',
+    'Paradas (30/09/2026): anotar una parada que ya pasó es ahora la pantalla de Paradas misma, que es lo más común (motivo de ' +
+    'motivos_parada, a qué hora paró con un reloj de ruedas, cuánto duró y el resumen): se guarda con "Guardar la parada" ' +
+    '(#pr-btn-guardar-parada). Las paradas del turno se ven y se corrigen en su ventana ("Ver", #pr-btn-ver-paradas).'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

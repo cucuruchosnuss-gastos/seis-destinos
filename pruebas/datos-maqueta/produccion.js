@@ -8,7 +8,7 @@
 // siempre la misma pantalla, el día que se corra. Las horas "hace …" no se
 // dibujan (serían negativas): no se inventa ninguna.
 'use strict';
-const { UID, tarea, UNIDADES } = require('./comun');
+const { UID, tarea, UNIDADES, MOTIVOS_PARADA } = require('./comun');
 
 const DIA = '2099-12-31';
 const hora = (hhmm) => `${DIA}T${hhmm}:00Z`;
@@ -141,9 +141,10 @@ module.exports = {
     receta_items: ORIGINAL.items.map(it => ({ receta_id: 'rec-1', ingrediente_id: it.ingrediente_id, cantidad_kg: it.cantidad_kg, insumo_preferido_id: it.insumo_preferido_id })),
     recetas: [{ id: 'rec-1', maquina_id: 'maq-1', tipo_masa: 'Común', version: 7 }, { id: 'rec-4', maquina_id: 'maq-4', tipo_masa: 'Común', version: 3 }],
     ingredientes: ORIGINAL.items.map(it => ({ id: it.ingrediente_id, nombre: it.ingrediente, define_chocolate: it.ingrediente_id === 'i-cacao' })),
+    motivos_parada: MOTIVOS_PARADA,
     paradas_produccion: [
-      { id: 'pa-1', turno_id: 't2', inicio: hora('10:32'), fin: null, motivo: 'Se rompió la cadena' },
-      { id: 'pa-2', turno_id: 't1', inicio: hora('10:05'), fin: hora('10:25'), motivo: 'Cambio de molde' },
+      { id: 'pa-1', turno_id: 't2', inicio: hora('10:32'), fin: null, motivo: 'Corte de cadena: la de abajo', motivo_id: 'mp-cadena', categoria: 'falla', detalle: 'la de abajo' },
+      { id: 'pa-2', turno_id: 't1', inicio: hora('10:05'), fin: hora('10:25'), motivo: 'Limpieza de planchas: al arrancar', motivo_id: 'mp-limp', categoria: 'programada', detalle: 'al arrancar' },
     ],
     produccion_items: [
       { id: 'pi-1', turno_id: 't1', orden: 1, sublote: '7033-1', presentacion_id: 'pp-1', marca_id: null, cajas: 12, unidades_por_caja: 320, unidades: 3840, anulado: false, caja_insumo_id: null, embolsado: 'grande' },

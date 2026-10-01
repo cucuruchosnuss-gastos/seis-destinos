@@ -28,4 +28,19 @@ const UNIDADES_4 = [
   { id: 'u-p', nombre: 'Pruebas (robot)', prefijo: 'X', logo_url: null, activo: true, es_prueba: true },
 ];
 
-module.exports = { UID, tarea, UNIDADES, UNIDADES_4 };
+// Los motivos de parada, como en la base (motivos_parada, 30/09/2026): la
+// limpieza (programada) primero, las fallas y "Otro motivo" al final.
+const MOTIVOS_PARADA = [
+  ['mp-limp', 'Limpieza de planchas', 'programada', false, 1],
+  ['mp-cadena', 'Corte de cadena', 'falla', false, 10],
+  ['mp-correa', 'Corte de correa', 'falla', false, 11],
+  ['mp-peine', 'Levantó el peine', 'falla', false, 12],
+  ['mp-luz', 'Corte de luz', 'falla', false, 13],
+  ['mp-punto', 'Fuera de punto', 'falla', false, 14],
+  ['mp-fuego', 'Problema con el fuego', 'falla', false, 15],
+  ['mp-electrico', 'Problema eléctrico', 'falla', false, 16],
+  ['mp-motor', 'Se quemó el motor', 'falla', false, 17],
+  ['mp-otro', 'Otro motivo', 'otro', true, 99],
+].map(([id, nombre, categoria, pide_detalle, orden]) => ({ id, nombre, categoria, pide_detalle, orden, activo: true }));
+
+module.exports = { MOTIVOS_PARADA, UID, tarea, UNIDADES, UNIDADES_4 };

@@ -69,7 +69,7 @@ const FUNCIONES_BASE = [
   'nombrePersona', 'textoMinutos', 'duracionTexto', 'leerPlanilla', 'paradaEnCurso', 'minutosParadas',
   'htmlLotePlanilla', 'htmlQuePlanilla', 'htmlEstadoPlanilla', 'htmlMasasPlanilla', 'htmlParadas',
   'htmlOperariosPlanilla', 'pintarOperariosPlanilla', 'pintarResultadosPlanillaOp', 'recargarPlanilla',
-  'cambiarOperarioTurno', 'abrirPlanilla', 'pintarPlanilla', 'pintarBotonesPlanilla', 'motivosSugeridos', 'mostrarFormParada',
+  'cambiarOperarioTurno', 'abrirPlanilla', 'pintarPlanilla', 'pintarBotonesPlanilla', 'mostrarFormParada',
   'confirmarParada', 'reanudar', 'abrirForzar', 'confirmarForzar',
   'leerPendientesCompletar', 'htmlPendientesCompletar',
   'detallePresentacion', 'describirProducido', 'itemsVivos', 'totalesProducido', 'htmlProducido',
@@ -210,6 +210,8 @@ const NUEVAS_GESTION = [
   'renderScrap', 'htmlFallaInd', 'pintarDiaIndicadores', 'cambiarDiaIndicadores', 'htmlNumeroMenu', 'pintarNumerosMenu',
   // Las masas tiradas (30/09/2026): su tarjeta, con datos propios.
   'leerTiradas', 'resumenTiradas', 'renderTiradas',
+  // Las paradas de la semana (30/09/2026): la limpieza aparte de las fallas.
+  'leerParadasSemana', 'minutosDeParadaInd', 'resumenParadasSemana', 'renderParadasSemana',
   'pintarTituloConfig', 'tocarCono', 'conosDelFiltro', 'listaConosVisible', 'htmlFilaCono', 'elegirFiltroConos',
   'sinPinEnUnidad', 'rolesDe', 'deQuienHoja', 'pedirCerrarHoja', 'volverAHojaPines',
   'puedeCorregirSublote', 'htmlEditorSublote', 'horarioTurno', 'minutosParadasTurno', 'pintarDetalleHistorial',
@@ -268,7 +270,12 @@ const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unid
   // presentación ya no es un formulario suelto (se edita en su renglón).
   'htmlEmpaquePresentacion', 'htmlConfigEmpaque', 'htmlPresentacionConfig',
   // Planta v2 (28/09/2026): la máquina elegida va en la cabecera, no en la barra.
-  'htmlLatMaquina']
+  'htmlLatMaquina',
+  // Paradas (30/09/2026): los motivos ya no se escriben en el código (salen
+  // de motivos_parada) y el motivo de una parada en curso no se cambia desde
+  // la pantalla de Paradas (el trigger lo reescribe con el de la lista).
+  'motivosSugeridos', 'motivoDeParada', 'textoMotivoParada', 'seleccionParada', 'tocarMotivoParada', 'guardarMotivoParada',
+  'MOTIVOS_PARADA', 'OTRO_MOTIVO']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
@@ -319,8 +326,8 @@ const NUEVAS_PLANTA = [
   'icono', 'inicialesDe', 'htmlRelojDoble', 'cabeceraDeVista', 'pintarCabeceraVista', 'contextoAbrir',
   'alternarBuscarOtra', 'pintarBandaMaestro', 'spanTablero', 'htmlOperariosAbrir', 'leerOcupadosYRecientes',
   'tocarMaquinaAbrir', 'apellidoDe', 'htmlOpsResumen', 'htmlMasasResumen', 'htmlParadasResumen', 'abrirVentanaOps',
-  'cerrarVentanaOps', 'motivoDeParada', 'textoMotivoParada', 'seleccionParada', 'htmlParadasTurno', 'pintarParadas',
-  'tocarMotivoParada', 'guardarMotivoParada', 'mayusculaInicial', 'indiceDeNombre', 'colorProducto', 'colorCono',
+  'cerrarVentanaOps', 'htmlParadasTurno', 'pintarParadas',
+  'mayusculaInicial', 'indiceDeNombre', 'colorProducto', 'colorCono',
   'htmlNombreProducto', 'htmlChipCono', 'nombreCorto', 'hayMasaChocolate', 'leerUsoConos', 'ponerCajasAgregar',
   'scrapAlto', 'bloqueosCierre', 'irDesdeCierre', 'detalleAnteriorCorto', 'htmlCantidadGrande', 'usarLoteDeLista',
   'mostrarEntrar', 'errorEntrar', 'conReintento', 'textoDeHtml',
@@ -330,6 +337,13 @@ const NUEVAS_PLANTA = [
   'diaDeLaMasa', 'cuandoFueLaAnterior', 'leerTurnoDeLaAnterior',
   // El botón de volver y "¿Salir sin guardar?" (30/09/2026).
   'destinoVolver', 'aMedioCargar', 'pintarVolver', 'irAlInicioDelModo', 'volverEnPlanta', 'pedirConfirmacion', 'pintarConfirma', 'responderConfirma',
+  // Paradas con motivos fijos y anotar una que ya pasó (30/09/2026).
+  'leerMotivosParada', 'asegurarMotivosParada', 'esLimpieza', 'motivoElegido', 'paradaNuevaVacia', 'paradaNuevaEmpezada',
+  'pasoAnteriorParada', 'volverPasoParada', 'prepararParadaNueva', 'textoParadaNueva', 'textoDuracion', 'hhmm', 'puedeQuedarAbierta',
+  'horasParadaNueva', 'minutosLimpieza', 'limpiezaQuedaAbierta', 'faltanParaParadaNueva', 'parametrosParadaNueva', 'resumenParadaNueva',
+  'minutosDeRueda', 'htmlColumnaRueda', 'htmlRueda', 'alinearRuedas', 'fijarRuedaPorScroll', 'ponerValorRueda', 'tocarRueda',
+  'htmlMotivosParada', 'htmlDuracionesParada', 'htmlHorasParadaNueva', 'pintarResumenParada', 'pintarParadaNueva', 'elegirMotivoParada',
+  'elegirDuracionParada', 'escribirDetalleParada', 'guardarParadaNueva', 'abrirVentanaParadas', 'cerrarVentanaParadas',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -339,12 +353,14 @@ const CONST_SOLO_GESTION = ['PESTANAS_CONFIG', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_T
 const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'TABLAS_VIVAS', 'CADA_REVISION_VIVO_MS', 'QUIETO_PARA_REVISAR_MS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR',
   // Planta v2 (28/09/2026)
-  'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'MOTIVOS_PARADA', 'OTRO_MOTIVO', 'COLOR_TAMANO', 'COLOR_CHOCO',
+  'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'COLOR_TAMANO', 'COLOR_CHOCO',
   'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES',
   // Recargar (30/09/2026)
   'VISTAS_A_MEDIO_CARGAR',
   // El botón de volver (30/09/2026)
-  'VISTAS_INICIO']
+  'VISTAS_INICIO',
+  // Paradas (30/09/2026)
+  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

@@ -24,7 +24,7 @@ correrMutacionesProduccion({
     { nombre: 'un es_dispositivo que no es true entra a la planta', de: "if (!ses || ses.es_dispositivo !== true) return 'gestion'", a: "if (!ses || ses.es_dispositivo === false) return 'gestion'" },
     { nombre: 'un dispositivo sin fábrica entra', de: "      if (!ses.unidad_negocio_id) return 'sin_fabrica'\n", a: '' },
     { nombre: 'un dispositivo con cargar en OTRA fábrica entra', de: "      if (!unidadesCon('cargar').includes(String(ses.unidad_negocio_id))) return 'sin_permiso'\n", a: '' },
-    { nombre: 'una cuenta personal se queda en la planta', de: "if (destino === 'gestion') { window.location.replace('produccion-gestion.html'); return }", a: "if (destino === 'gestion') { return }" },
+    { nombre: 'una cuenta personal se queda en la planta', de: "if (destino === 'gestion') { olvidarPlantaInstalada(); window.location.replace('produccion-gestion.html'); return }", a: "if (destino === 'gestion') { olvidarPlantaInstalada(); return }" },
     { nombre: 'si mi_sesion falla se redirige a ciegas', de: "        sinAcceso('No se pudo saber qué cuenta es esta. Revisá la conexión.', LINKS_SIN_SESION)\n", a: "        window.location.replace('produccion-gestion.html')\n" },
     // Gestión: ver o configurar.
     { nombre: 'a la gestión se entra con solo cargar', de: "const puedeVerGestion = () => tieneTarea('ver') || tieneTarea('configurar')", a: "const puedeVerGestion = () => tieneTarea('ver') || tieneTarea('configurar') || tieneTarea('cargar')" },

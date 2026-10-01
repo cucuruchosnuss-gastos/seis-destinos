@@ -257,10 +257,12 @@ esperas.push((async () => {
   chk('9. la receta: una fila por ingrediente, en cualquier ancho',
     /\.pr-rec, \.pr-rec--cab \{\s*display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1\.1fr\) minmax\(0, 1\.25fr\) 64px;/.test(FUENTE) &&
     !/\.pr-rec[ ,{][^}]*(grid-template-columns: (minmax\(0, 1fr\)|1fr);|display: (block|flex))/.test(FUENTE.replace(/\.pr-rec, \.pr-rec--cab \{[^}]*\}/, '')))
-  // Planta v2: las paradas en bordó con los tokens nuevos (--p-mal).
-  chk('14. "Paró ahora" en bordó', /class="pr-prim pr-prim--mal" id="pr-btn-parada"/.test(FUENTE) && /\.pr-prim--mal \{ background: var\(--p-mal\); \}/.test(FUENTE))
+  // Planta v2: las paradas en bordó con los tokens nuevos (--p-mal). Desde el
+  // 30/09/2026 "Paró ahora" es el botón SECUNDARIO (borde bordó) y el
+  // principal es "Guardar la parada" (anotar una que ya pasó).
+  chk('14. "Paró ahora" en bordó', /class="pr-pa-ahora" id="pr-btn-parada"/.test(FUENTE) && /\.pr-pa-ahora \{[^}]*border: 1\.5px solid var\(--p-mal\);[^}]*color: var\(--p-mal\);/.test(FUENTE))
   chk('14. la tarjeta de paradas en bordó', /\.pr-parada-activa \{ background: var\(--p-mal\); color: #fff;/.test(FUENTE) &&
-    /\.pr-paradas__cab \{[^}]*color: var\(--p-mal\);/.test(FUENTE) && /\.pr-parada-item--curso \{ background: var\(--p-mal-suave\);/.test(FUENTE))
+    /\.pr-parada-item--curso \{ background: var\(--p-mal-suave\);/.test(FUENTE))
 
   const S = armar()
   chk('16. el reloj: "28/09/2026 · 12:37" en hora argentina', S.textoReloj(new Date('2026-09-28T15:37:10Z')) === '28/09/2026 · 12:37', S.textoReloj(new Date('2026-09-28T15:37:10Z')))

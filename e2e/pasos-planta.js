@@ -72,6 +72,20 @@ const PASOS_PLANTA = [
     await page.locator('#pr-barra [data-seccion="paradas"]').click()
     await expect(page.locator('#pr-paradas')).toBeVisible()
   }],
+  // Paradas (30/09/2026): anotar una que ya pasó con los DOS relojes (lo más
+  // alto que se pone la pantalla): un motivo, "Otro" en cuánto duró y el
+  // resumen. Todo tiene que entrar sin scroll a 1000 × 540.
+  ['paradas-anotar', async (page) => {
+    await page.locator('#pr-parada-sugerencias .pr-motivo').first().click()
+    await page.locator('#pr-parada-duracion [data-duracion="otro"]').click()
+    await expect(page.locator('#pr-parada-hora [data-rueda="fin"]')).toBeVisible()
+    await expect(page.locator('#pr-parada-resumen')).toBeVisible()
+  }],
+  // La limpieza de planchas "al arrancar", con su nota y "Todavía no terminó".
+  ['paradas-limpieza', async (page) => {
+    await page.locator('#pr-parada-sugerencias [data-limpieza="arranque"]').click()
+    await expect(page.locator('#pr-parada-duracion [data-duracion="sigue"]')).toBeVisible()
+  }],
   ['cerrar-planilla', async (page) => {
     await page.locator('#pr-barra [data-seccion="cierre"]').click()
     await expect(page.locator('#pr-cierre')).toBeVisible()

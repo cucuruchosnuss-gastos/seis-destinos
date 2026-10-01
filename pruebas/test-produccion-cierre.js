@@ -153,10 +153,10 @@ esperas.push((async () => {
   // Planta v2 (6b): la franja en bordó "PARADA · desde las 10:32 · hace …",
   // y el motivo marcado en la grilla de "¿Por qué paró?".
   chk('con parada en curso: la franja fija, desde cuándo y hace cuánto', S.__doc.getElementById('pr-parada-activa').hidden === false &&
-    S.__doc.getElementById('pr-parada-activa-texto').textContent === 'desde las 10:32' &&
+    S.__doc.getElementById('pr-parada-activa-texto').textContent === ' · desde las 10:32' &&
+    S.__doc.getElementById('pr-parada-activa-motivo').textContent === 'pulpo' &&
     /^ · hace \d/.test(S.__doc.getElementById('pr-parada-activa-hace').textContent), S.__doc.getElementById('pr-parada-activa-hace').textContent)
-  chk('… y por qué paró', S.__doc.getElementById('pr-parada-motivos-titulo').textContent === '¿Por qué paró?' &&
-    /data-motivo="Otro motivo" aria-pressed="true"/.test(html(S, 'pr-parada-sugerencias')) &&
+  chk('… y por qué paró', /<span class="pr-pa-paso__n">1<\/span>¿Por qué paró\?/.test(FUENTE) &&
     /En curso desde 10:32 · pulpo/.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
   chk('… con "Volvió a andar"', /id="pr-btn-reanudar"[^>]*>Volvió a andar</.test(FUENTE) && S.__doc.getElementById('pr-btn-reanudar').hidden === false)
   chk('… "Paró ahora" desaparece (la base rechaza una segunda)', S.__doc.getElementById('pr-btn-parada').hidden === true)
@@ -793,41 +793,44 @@ esperas.push((async () => {
 // ── Paradas: iniciar y reanudar ──────────────────────────────────────────
 esperas.push((async () => {
   const S = armar()
+  S.__tablas.motivos_parada = [
+    { id: 'mo-limp', nombre: 'Limpieza de planchas', categoria: 'programada', pide_detalle: false, orden: 1 },
+    { id: 'mo-cad', nombre: 'Corte de cadena', categoria: 'falla', pide_detalle: false, orden: 10 },
+    { id: 'mo-luz', nombre: 'Corte de luz', categoria: 'falla', pide_detalle: false, orden: 13 },
+    { id: 'mo-otro', nombre: 'Otro motivo', categoria: 'otro', pide_detalle: true, orden: 99 },
+  ]
   await S.abrirPlanilla('t1')
-  // Planta v2: los motivos son FIJOS, en una grilla grande (MOTIVOS_PARADA)
-  // más "Otro motivo" con su detalle, que se guarda como "Otro: …". Ya no se
-  // sugieren los motivos usados antes.
+  // Paradas (30/09/2026): los motivos salen de motivos_parada, en su orden
+  // (la limpieza primero, con sus dos botones). "Otro motivo" pide el
+  // detalle, que viaja como "Otro motivo: …" (la base lo engancha).
+  await S.asegurarMotivosParada()
   S.pintarParadas()
   const sug = html(S, 'pr-parada-sugerencias')
   const motivos = [...sug.matchAll(/data-motivo="([^"]+)"/g)].map(m => m[1])
-  chk('los motivos grandes, y "Otro motivo" al final', JSON.stringify(motivos) ===
-    JSON.stringify(['Se cortó la cadena', 'Falta masa', 'Limpieza', 'Cambio de molde', 'Corte de luz', 'Otro motivo']), motivos.join(','))
+  chk('los motivos de la base, la limpieza primero y "Otro motivo" al final', JSON.stringify(motivos) ===
+    JSON.stringify(['mo-limp', 'mo-limp', 'mo-cad', 'mo-luz', 'mo-otro']), motivos.join(','))
   chk('… ninguno elegido de antemano', !/aria-pressed="true"/.test(sug))
   await S.mostrarFormParada()
   chk('sin elegir un motivo: no se manda y se dice', rpcs(S, 'iniciar_parada').length === 0 &&
-    S.__doc.getElementById('pr-parada-error').textContent === 'Elegí por qué se para.' && S.__doc.getElementById('pr-parada-error').hidden === false)
-  await S.tocarMotivoParada('Falta masa')
-  chk('tocar un motivo sin parada en curso solo lo elige (no manda nada)', rpcs(S, 'iniciar_parada').length === 0 &&
-    /data-motivo="Falta masa" aria-pressed="true"/.test(html(S, 'pr-parada-sugerencias')))
-  await S.tocarMotivoParada('Otro motivo')
+    S.__doc.getElementById('pr-parada-error').textContent === 'Elegí por qué paró.' && S.__doc.getElementById('pr-parada-error').hidden === false)
+  S.elegirMotivoParada('mo-cad')
+  chk('tocar un motivo solo lo elige (no manda nada)', rpcs(S, 'iniciar_parada').length === 0 &&
+    /data-motivo="mo-cad" aria-pressed="true"/.test(html(S, 'pr-parada-sugerencias')))
+  S.elegirMotivoParada('mo-otro')
   chk('"Otro motivo" abre el detalle', S.__doc.getElementById('pr-parada-otro').hidden === false)
   S.__doc.getElementById('pr-parada-motivo').value = '  Se cortó la luz  '
-  S.__tablas.paradas_produccion = [{ id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: null, motivo: 'Otro: Se cortó la luz' }]
+  S.__tablas.paradas_produccion = [{ id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: null, motivo: 'Otro motivo: Se cortó la luz' }]
   await S.confirmarParada()
-  chk('iniciar_parada con el turno y el motivo recortado ("Otro: …")',
-    JSON.stringify(rpcs(S, 'iniciar_parada')[0]?.[1]) === '{"p_turno_id":"t1","p_motivo":"Otro: Se cortó la luz"}', JSON.stringify(rpcs(S, 'iniciar_parada')))
+  chk('iniciar_parada con el turno y el motivo recortado ("Otro motivo: …")',
+    JSON.stringify(rpcs(S, 'iniciar_parada')[0]?.[1]) === '{"p_turno_id":"t1","p_motivo":"Otro motivo: Se cortó la luz"}', JSON.stringify(rpcs(S, 'iniciar_parada')))
   chk('… y aparece la franja', S.__doc.getElementById('pr-parada-activa').hidden === false)
-  chk('"Otro" sin detalle se guarda "Otro motivo"', S.textoMotivoParada({ clave: 'Otro motivo', detalle: '   ' }) === 'Otro motivo' &&
-    S.textoMotivoParada({ clave: 'Limpieza', detalle: 'x' }) === 'Limpieza' && S.textoMotivoParada({ clave: null }) === '')
-  chk('un motivo guardado se reconoce al volver', S.motivoDeParada('Otro: pulpo').clave === 'Otro motivo' && S.motivoDeParada('Otro: pulpo').detalle === 'pulpo' &&
-    S.motivoDeParada('limpieza').clave === 'Limpieza' && S.motivoDeParada('algo raro').detalle === 'algo raro')
-  // Con la máquina parada, tocar OTRO motivo le cambia el motivo a la que
-  // sigue (editar_parada, con sus mismas horas).
-  S.estado.paradaSel = null
-  await S.tocarMotivoParada('Limpieza')
-  chk('con una parada en curso, tocar otro motivo lo corrige con editar_parada',
-    JSON.stringify(rpcs(S, 'editar_parada')[0]?.[1]) === '{"p_parada_id":"pa2","p_motivo":"Limpieza","p_inicio":"2026-09-22T12:00:00Z","p_fin":null}',
-    JSON.stringify(rpcs(S, 'editar_parada')))
+  chk('el texto del motivo: el nombre de la lista, y el detalle después de ":"', S.textoParadaNueva({ motivoId: 'mo-cad', detalle: '   ' }) === 'Corte de cadena' &&
+    S.textoParadaNueva({ motivoId: 'mo-cad', detalle: ' la de abajo ' }) === 'Corte de cadena: la de abajo' && S.textoParadaNueva({ motivoId: null }) === '')
+  // Con la máquina parada, tocar un motivo NO cambia el de la que sigue: el
+  // trigger lo reescribe con el de la lista (motivo_id), así que se corrige
+  // desde la parada del turno ("Ver") y solo las horas.
+  S.elegirMotivoParada('mo-luz')
+  chk('con una parada en curso, tocar un motivo no manda editar_parada', rpcs(S, 'editar_parada').length === 0)
   // Con una parada vieja ADELANTE en la lista: reanudar tiene que terminar la
   // EN CURSO, no la primera que encuentre.
   S.estado.planilla.paradas = [
@@ -914,6 +917,11 @@ esperas.push((async () => {
   const catChoco = { ...catMalo, productos: [{ id: marca('chocoId'), nombre: `Cucuruchón ${marca('chocoTam')} Chocolate`, tipo_masa: 'Chocolate' }] }
   chequearMarcas(chk, 'paso del producto (chocolate, sin masa)',
     X.htmlPasoProducto(catChoco, { productoId: marca('chocoId'), chocoSinMasa: true }), ['chocoId', 'chocoTam'])
+  // Un chocolate con su color ELEGIDO (productos_terminados.color) tiene otra
+  // rama del botón: también escapada.
+  const catChocoColor = { ...catMalo, productos: [{ id: marca('chocoColId'), nombre: `Cucuruchón ${marca('chocoColTam')} Chocolate`, tipo_masa: 'Chocolate', color: 'rosa' }] }
+  chequearMarcas(chk, 'paso del producto (chocolate con color elegido)',
+    X.htmlPasoProducto(catChocoColor, { productoId: marca('chocoColId') }), ['chocoColId', 'chocoColTam'])
   // Planta v2: la presentación ya no muestra su empaque (texto de la base).
   const pasoPres = X.htmlPasoPresentacion({ productoId: marca('prodId'), conCono: true }, catMalo)
   chequearMarcas(chk, 'paso de la presentación', pasoPres, ['presId', 'presentacion'])
