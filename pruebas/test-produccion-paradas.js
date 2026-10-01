@@ -349,7 +349,9 @@ esperas.push((async () => {
 // ── Lo que queda escrito ──────────────────────────────────────────────────
 {
   chk('"Paró ahora" sigue con iniciar_parada', /id="pr-btn-parada"[^>]*>Paró ahora</.test(FUENTE) && /supabase\.rpc\('iniciar_parada'/.test(FUENTE))
-  chk('"Anotar una parada" en la planilla', /id="pr-btn-anotar-parada">\+ Anotar una parada que ya pasó</.test(FUENTE))
+  // Paradas (30/09/2026): anotar una que ya pasó es la pantalla de Paradas
+  // misma (motivo, a qué hora paró, cuánto duró): "Guardar la parada".
+  chk('"Anotar una parada" en la planilla', /id="pr-btn-guardar-parada">Guardar la parada</.test(FUENTE))
   chk('el editor es un diálogo modal', /id="pr-parada-editor" hidden role="dialog" aria-modal="true"/.test(FUENTE))
   {
     const { extraerFn } = require('./extraer')
@@ -360,7 +362,7 @@ esperas.push((async () => {
   }
   chk('Escape cierra el editor', /if \(ev\.key === 'Escape'\) \{ ev\.preventDefault\(\); cerrarEditorParada\(\); return \}/.test(FUENTE))
   chk('se escucha el teclado del editor', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE))
-  chk('los botones de la planilla abren el editor', /closest\('\[data-parada-editar\]'\); if \(e\) return abrirEditorDesdePlanilla\('editar'/.test(FUENTE) &&
+  chk('los botones de la planilla abren el editor', /closest\('\[data-parada-editar\]'\); if \(e\) \{ cerrarVentanaParadas\(\); return abrirEditorDesdePlanilla\('editar'/.test(FUENTE) &&
     /closest\('\[data-parada-borrar\]'\); if \(b\) abrirEditorDesdePlanilla\('borrar'/.test(FUENTE))
   chk('y los del historial (en la gestión)', /abrirEditorDesdeHistorial\('editar', e\.dataset\.paradaEditar\)/.test(FUENTE_G) && /abrirEditorDesdeHistorial\('borrar', b\.dataset\.paradaBorrar\)/.test(FUENTE_G))
   chk('la gestión conecta el editor de paradas (Escape y teclado incluidos)', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE_G) && /function conectarEditorParada\(\)/.test(FUENTE_G))

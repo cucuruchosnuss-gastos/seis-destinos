@@ -1659,6 +1659,15 @@
     .pg-tir__fila { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 14px; }
     .pg-tir__fila span:first-child { overflow-wrap: anywhere; min-width: 0; }
     .pg-tir__fila span:last-child { font-weight: 800; white-space: nowrap; }
+    /* Paradas de la semana (30/09/2026): la limpieza de planchas en su verde
+       agua (programada, no falla: el mismo color que en la planta) y las
+       fallas en bordó. */
+    .pg-par { --pg-teal-osc: oklch(0.38 0.07 185); --pg-teal-suave: oklch(0.95 0.03 185); }
+    .pg-par__cab { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 15px; font-weight: 700; }
+    .pg-par__limp { color: var(--pg-teal-osc); background: var(--pg-teal-suave); border-radius: 8px; padding: 1px 8px; }
+    .pg-par__falla { color: var(--bordo-oscuro); }
+    .pg-par__otro { color: var(--pg-texto-2); }
+    .pg-par__parcial { margin: 6px 0 0; font-size: 13px; color: var(--pg-texto-2); }
     @media (max-width: 899px) {
       /* La etiqueta y el valor ARRIBA de la barra (1c): la barra usa todo el ancho. */
       .pg-rend, .pr-ind:not(.pg-ind--ancha) .pg-rend { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
@@ -4158,6 +4167,113 @@
         '<h3 class="pg-tir__sub">Por motivo</h3>' + filas(d.porMotivo ?? []) + '</div>'
     }
 
+    // PARADAS DE LA SEMANA (30/09/2026): la limpieza de planchas (programada)
+    // APARTE de las fallas, por máquina, y las fallas por motivo, para ver qué
+    // es normal y qué no. `indicadores_produccion` no separa por categoría
+    // (sus minutos_parada suman todo), así que esta tarjeta lee sus datos
+    // aparte —`leerParadasSemana`— y falla SOLA. La categoría la pone la base
+    // (el trigger de paradas_produccion la saca de motivos_parada); una parada
+    // sin categoría cuenta aparte, como "sin clasificar". Una parada que sigue
+    // abierta cuenta hasta ahora, como en los minutos_parada de la base.
+    // La semana son los 7 días que terminan en el día elegido arriba (por la
+    // fecha del TURNO, como la tarjeta Semana).
+    async function leerParadasSemana(unidadId, fin, ahora = new Date()) {
+      try {
+        const desde = sumarDias(fin, -6)
+        const { data: turnos, error: eT } = await supabase.from('turnos_produccion')
+          .select('id, maquina_id, fecha').eq('unidad_negocio_id', unidadId).lte('fecha', fin).gte('fecha', desde)
+        if (eT) throw eT
+        const ids = (turnos ?? []).map(t => t.id)
+        let paradas = [], maquinas = [], motivos = []
+        if (ids.length) {
+          const r1 = await supabase.from('paradas_produccion').select('id, turno_id, inicio, fin, motivo, motivo_id, categoria').in('turno_id', ids)
+          if (r1.error) throw r1.error
+          paradas = r1.data ?? []
+        }
+        if (paradas.length) {
+          const rm = await supabase.from('maquinas').select('id, nombre').eq('unidad_negocio_id', unidadId)
+          if (rm.error) throw rm.error
+          maquinas = rm.data ?? []
+          // Sin los nombres de la lista se usa el texto guardado de la parada.
+          const r3 = await supabase.from('motivos_parada').select('id, nombre')
+          motivos = r3.error ? [] : (r3.data ?? [])
+        }
+        const datos = resumenParadasSemana({ turnos: turnos ?? [], paradas, maquinas, motivos, ahora })
+        // PostgREST corta en 1000 filas: con tantas, la suma puede estar corta.
+        datos.parcial = paradas.length >= 1000
+        return { datos, error: null }
+      } catch (err) {
+        console.error('paradas de la semana:', err)
+        return { datos: null, error: err?.message || 'No hubo respuesta del servidor. Revisá la conexión.' }
+      }
+    }
+
+    function minutosDeParadaInd(p, ahora = new Date()) {
+      const ini = new Date(p?.inicio).getTime()
+      const fin = p?.fin ? new Date(p.fin).getTime() : new Date(ahora).getTime()
+      if (!Number.isFinite(ini) || !Number.isFinite(fin) || fin <= ini) return 0
+      return Math.round((fin - ini) / 60000)
+    }
+
+    // De las filas leídas a lo que dibuja la tarjeta: minutos por categoría,
+    // por máquina (limpieza y lo demás) y lo que NO es programado por motivo.
+    function resumenParadasSemana({ turnos, paradas, maquinas, motivos, ahora = new Date() }) {
+      const turnoDe = new Map(turnos.map(t => [t.id, t]))
+      const nombreMaq = new Map(maquinas.map(m => [m.id, m.nombre]))
+      const nombreMotivo = new Map(motivos.map(m => [m.id, m.nombre]))
+      const totales = { programada: 0, falla: 0, otro: 0, sin: 0 }
+      const porMaq = new Map(), porMot = new Map()
+      let cantidad = 0
+      for (const p of paradas) {
+        const t = turnoDe.get(p.turno_id)
+        if (!t) continue
+        cantidad += 1
+        const min = minutosDeParadaInd(p, ahora)
+        const cat = ['programada', 'falla', 'otro'].includes(p.categoria) ? p.categoria : 'sin'
+        totales[cat] += min
+        const km = t.maquina_id ?? ''
+        const m = porMaq.get(km) ?? { nombre: nombreMaq.get(t.maquina_id) ?? 'Máquina sin nombre', limpieza: 0, fallas: 0 }
+        if (cat === 'programada') m.limpieza += min
+        else m.fallas += min
+        porMaq.set(km, m)
+        if (cat === 'programada') continue
+        const nombre = nombreMotivo.get(p.motivo_id) ?? (String(p.motivo ?? '').split(':')[0].trim() || 'Sin motivo')
+        const k = nombre.toLocaleLowerCase('es').replace(/\s+/g, ' ')
+        const r = porMot.get(k) ?? { nombre, veces: 0, minutos: 0 }
+        r.veces += 1
+        r.minutos += min
+        porMot.set(k, r)
+      }
+      const orden = (a, z) => String(a.nombre).localeCompare(String(z.nombre), 'es')
+      return {
+        cantidad,
+        totales,
+        porMaquina: [...porMaq.values()].sort(orden),
+        porMotivo: [...porMot.values()].sort((a, z) => z.minutos - a.minutos || z.veces - a.veces || orden(a, z)),
+      }
+    }
+
+    function renderParadasSemana(d) {
+      if (!d || typeof d !== 'object' || !d.totales || !Number.isInteger(d.cantidad)) return null
+      if (d.cantidad === 0) return htmlSinDatosInd('Sin paradas', 'En los últimos 7 días no se anotó ninguna parada.')
+      const t = d.totales
+      const otras = t.otro + t.sin
+      const cab = '<p class="pg-par__cab">' +
+        `<span class="pg-par__limp">${esc(horasMinutosInd(t.programada))} de limpieza programada</span>` +
+        `<span class="pg-par__falla">${esc(horasMinutosInd(t.falla))} de fallas</span>` +
+        (otras > 0 ? `<span class="pg-par__otro">${esc(horasMinutosInd(otras))} de otros motivos</span>` : '') + '</p>'
+      const maq = '<ul class="pg-tir__lista">' + (d.porMaquina ?? []).map(m =>
+        `<li class="pg-tir__fila"><span>${esc(m.nombre)}</span><span>${esc(horasMinutosInd(m.limpieza))} limpieza · ${esc(horasMinutosInd(m.fallas))} fallas</span></li>`).join('') + '</ul>'
+      const mot = (d.porMotivo ?? []).length
+        ? '<ul class="pg-tir__lista">' + d.porMotivo.map(r =>
+          `<li class="pg-tir__fila"><span>${esc(r.nombre)}</span><span>${esc(r.veces === 1 ? '1 vez' : enteroInd(r.veces) + ' veces')} · ${esc(horasMinutosInd(r.minutos))}</span></li>`).join('') + '</ul>'
+        : '<p class="pg-par__parcial">Ninguna falla: solo limpieza programada.</p>'
+      return '<div class="pg-par">' + cab +
+        '<h3 class="pg-tir__sub">Por máquina</h3>' + maq +
+        '<h3 class="pg-tir__sub">Fallas por motivo</h3>' + mot +
+        (d.parcial ? '<p class="pg-par__parcial">Puede estar incompleto: hay demasiadas paradas para leerlas todas.</p>' : '') + '</div>'
+    }
+
     const TARJETAS_INDICADORES = [
       { id: 'ahora', titulo: 'Ahora', render: renderAhora, contexto: contextoAhora },
       { id: 'hoy', titulo: 'Hoy', render: renderHoy, contexto: contextoHoy },
@@ -4166,6 +4282,7 @@
       { id: 'rendimiento', titulo: 'Rendimiento de la harina', render: renderRendimiento, contexto: () => 'unidades por kilo · de peor a mejor', ancha: true },
       { id: 'scrap', titulo: 'Scrap por lote de harina', render: renderScrap, contexto: () => '% de la masa · 30 días' },
       { id: 'tiradas', titulo: 'Masas tiradas', render: renderTiradas, contexto: () => '7 días · lo que se usó quedó descontado', propia: true },
+      { id: 'paradas', titulo: 'Paradas de la semana', render: renderParadasSemana, contexto: () => '7 días · la limpieza aparte de las fallas', datos: () => estado.paradasSemana, falla: 'No se pudieron leer las paradas.' },
     ]
 
     // La falla de una tarjeta: el texto, y el detalle PEGADO a "Reintentar".
@@ -4179,6 +4296,13 @@
     function htmlTarjetaIndicador(t, datos, error, cargando) {
       // Una tarjeta con datos PROPIOS (las masas tiradas) no depende de la
       // RPC: usa lo que leyó ella, y si falla, falla sola.
+      // Las paradas de la semana, igual: leen lo suyo y fallan solas.
+      if (t.datos) {
+        const p = t.datos() ?? { cargando: true }
+        cargando = !!p.cargando
+        error = p.error ?? null
+        datos = p.datos ?? null
+      }
       if (t.propia) {
         const p = estado.tiradas ?? { cargando: true }
         cargando = !!p.cargando
@@ -4187,7 +4311,7 @@
       }
       let cuerpo, ctx = ''
       if (cargando) cuerpo = '<p class="pr-ind__vacio">Cargando…</p>'
-      else if (error) cuerpo = htmlFallaInd(t.propia ? 'No se pudieron leer las masas tiradas.' : 'No se pudieron cargar los indicadores.', error)
+      else if (error) cuerpo = htmlFallaInd(t.falla || (t.propia ? 'No se pudieron leer las masas tiradas.' : 'No se pudieron cargar los indicadores.'), error)
       else {
         try { cuerpo = t.render(datos); ctx = t.contexto ? t.contexto(datos) : '' } catch (err) { console.error(`indicador ${t.id}:`, err); cuerpo = null }
         if (cuerpo == null) cuerpo = htmlFallaInd('Esta tarjeta no se pudo cargar. Las demás están bien.', 'Vino un dato que la pantalla no entiende.')
@@ -4226,6 +4350,7 @@
       const cont = document.getElementById('pr-indicadores')
       pintarDiaIndicadores()
       if (!estado.unidadId) { cont.innerHTML = sinUnidadPorBarra() ? `<div class="pr-aviso">${esc(textoSinProduccionEnBarra())}</div>` : ''; return }
+      estado.paradasSemana = { cargando: true }
       estado.tiradas = { cargando: true }
       cont.innerHTML = htmlIndicadores(null, null, true)
       let datos = null, error = null
@@ -4233,6 +4358,7 @@
       if (estado.fechaInd) params.p_fecha = estado.fechaInd
       // Las masas tiradas se leen en paralelo y por su cuenta: nunca tiran.
       const tiradas = leerTiradas(params.p_unidad_negocio_id, estado.fechaInd ?? hoyArgentina())
+      const paradasSemana = leerParadasSemana(params.p_unidad_negocio_id, estado.fechaInd ?? hoyArgentina())
       try {
         const { data, error: e } = await supabase.rpc('indicadores_produccion', params)
         if (e) throw e
@@ -4241,9 +4367,11 @@
         console.error('indicadores_produccion:', err)
         error = err?.message || 'No hubo respuesta del servidor. Revisá la conexión.'
       }
+      const par = await paradasSemana
       const tir = await tiradas
       if (turno !== turnoIndicadores) return
       estado.tiradas = tir
+      estado.paradasSemana = par
       estado.indicadores = { unidadId: params.p_unidad_negocio_id, datos, error }
       cont.innerHTML = htmlIndicadores(datos, error)
       pintarNumerosMenu()

@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <!-- SIN ZOOM (30/09/2026): en la tablet, deslizar para recargar a veces
-       dejaba la pantalla agrandada y sin forma de volver. -->
+       dejaba la pantalla agrandada y sin forma de volver. Lo que lo evita es
+       el bloqueo del zoom (este viewport, touch-action y los campos de 16 px
+       o más); desde el 01/10/2026 se vuelve a recargar deslizando. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Planta — Seis Destinos</title>
   <link rel="stylesheet" href="../css/main.css">
@@ -134,10 +136,12 @@
     }
 
     html, body { height: 100%; }
-    /* SIN ZOOM NI "DESLIZAR PARA RECARGAR" (30/09/2026): sin zoom por doble
-       toque, y Chrome no recarga al tirar hacia abajo (eso dejaba la tablet
-       con zoom). Para recargar está el botón "Recargar" de la barra lateral. */
-    html, body { touch-action: manipulation; overscroll-behavior-y: none; }
+    /* SIN ZOOM (30/09/2026): sin zoom por doble toque. El "deslizar para
+       recargar" VOLVIÓ el 01/10/2026 (Facu lo prefiere al botón "Recargar",
+       que se fue): lo que dejaba la tablet agrandada era el zoom, y lo evitan
+       el viewport, esta regla y los campos de 16 px o más. Un producto o una
+       parada a medio cargar se guardan al recargar (guardarCargaAMedias). */
+    html, body { touch-action: manipulation; }
     body, body.pagina-modulo {
       margin: 0;
       background: var(--p-fondo);
@@ -184,6 +188,67 @@
     .pr-cab__titulo--solo { color: var(--p-tinta); }
     .pr-cab__reloj { font-size: 16px; font-weight: 700; color: var(--p-tinta-2); white-space: nowrap; }
     @media (orientation: portrait) { .pr-cab__reloj { display: none; } }
+    /* LAS PESTAÑAS DE LAS MÁQUINAS (01/10/2026): una fila, nunca dos, y sin
+       scroll. Con tres o más la cabecera se "aprieta": las pestañas se
+       achican y el reloj muestra solo la hora (la fecha vuelve con menos
+       máquinas). La activa, bien marcada en el naranja de lo elegido; un
+       puntito bordó si esa máquina está parada ahora. */
+    .pr-cab__reloj--hora { display: none; }
+    .pr-cab--apretada .pr-cab__reloj { display: none; }
+    .pr-cab--apretada .pr-cab__reloj--hora { display: inline; }
+    @media (orientation: portrait) { .pr-cab--apretada .pr-cab__reloj--hora { display: none; } }
+    .pr-cab__maquinas { display: flex; align-items: stretch; gap: 4px; flex: 0 1 auto; min-width: 0; }
+    .pr-pest {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      flex: 0 1 auto; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px;
+      border: 1.5px solid var(--p-borde-boton); border-radius: 12px; background: var(--p-tarjeta);
+      font-family: var(--p-titulo); font-size: 17px; font-weight: 700; color: var(--p-tinta-2);
+      white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums;
+    }
+    .pr-pest:active { background: var(--p-tinte); }
+    .pr-pest--activa { border: 2px solid var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); font-size: 20px; font-weight: 800; }
+    .pr-pest__sep { color: var(--p-suave); font-weight: 600; }
+    .pr-pest--activa .pr-pest__sep { color: var(--p-acento); }
+    .pr-pest__punto { width: 10px; height: 10px; border-radius: 50%; background: var(--p-mal); flex-shrink: 0; }
+    .pr-cab--apretada .pr-pest { padding: 0 8px; font-size: 15px; gap: 4px; }
+    .pr-cab--apretada .pr-pest--activa { font-size: 17px; }
+    .pr-cab--muy-apretada .pr-pest { padding: 0 6px; font-size: 14px; }
+    .pr-cab--muy-apretada .pr-pest--activa { font-size: 15px; }
+    .pr-cab--muy-apretada .pr-pest__sep { display: none; }
+    /* Con pestañas, el título va en una línea y se corta con "…" si no entra. */
+    .pr-cab--maquinas .pr-cab__titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 3em; }
+    /* Parada, con tres o más máquinas, el título cede su lugar a las
+       pestañas: la sección ya va marcada en la barra de arriba. */
+    @media (orientation: portrait) {
+      .pr-cab--apretada .pr-cab__titulo { display: none; }
+      .pr-cab--apretada .pr-pest { padding: 0 6px; font-size: 14px; }
+      .pr-cab--apretada .pr-pest--activa { font-size: 14px; }
+      .pr-cab--apretada .pr-cab__maquinas { gap: 3px; }
+    }
+    /* El botón de volver: misma posición y mismo tamaño en todas las
+       pantallas de los dos modos (ancho fijo: "Inicio" y "Atrás" miden lo mismo). */
+    .pr-cab__volver {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      width: 112px; min-height: 44px; flex-shrink: 0; box-sizing: border-box;
+      border: 1.5px solid var(--p-borde-boton); border-radius: 12px; background: var(--p-tarjeta);
+      font-family: var(--p-titulo); font-size: 18px; font-weight: 800; color: var(--p-tinta); padding: 0 10px;
+    }
+    .pr-cab__volver:active { background: var(--p-tinte); }
+    /* "Listo" arriba del teclado de la tablet (su "bottom" lo pone
+       revisarTeclado() con visualViewport). */
+    .pr-listo {
+      position: fixed; right: 12px; bottom: 8px; z-index: 80; min-height: 48px; min-width: 112px; padding: 0 22px;
+      border: 0; border-radius: 12px; background: var(--p-acento); color: #fff;
+      font-family: var(--p-titulo); font-size: 18px; font-weight: 800;
+      box-shadow: 0 4px 14px rgba(28, 26, 23, 0.25);
+    }
+    /* "¿Salir sin guardar?": la pregunta de antes de perder algo a medio cargar. */
+    .pr-confirma-fondo { position: fixed; inset: 0; z-index: 70; background: rgba(28, 26, 23, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .pr-confirma { background: var(--p-tarjeta); border-radius: 16px; padding: 20px; max-width: 440px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+    .pr-confirma__titulo { margin: 0; font-family: var(--p-titulo); font-size: 22px; font-weight: 800; color: var(--p-tinta); }
+    .pr-confirma__texto { margin: 0; font-size: 16px; color: var(--p-tinta-2); }
+    .pr-confirma__botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .pr-confirma__botones .pr-btn { min-height: 52px; }
 
     /* ── Piezas comunes ── */
     .pr-tarjeta { background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 12px; }
@@ -327,18 +392,11 @@
       height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--p-borde); background: var(--p-tarjeta);
       display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--p-tinta-2); width: 100%;
     }
-    /* "Recargar", discreto: el mismo botón que Salir, sin borde. */
-    .pr-lat__recargar { border-color: transparent; background: transparent; color: var(--p-gris); }
-    .pr-recargar-fondo { position: fixed; inset: 0; z-index: 60; background: rgba(28, 26, 23, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .pr-recargar { background: var(--p-tarjeta); border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
-    .pr-recargar__titulo { margin: 0; font-family: var(--p-titulo); font-size: 22px; font-weight: 800; color: var(--p-tinta); }
-    .pr-recargar__texto { margin: 0; font-size: 16px; color: var(--p-tinta-2); }
-    .pr-recargar__botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
     @media (orientation: portrait) {
       .pr-lateral {
         width: auto; border-right: 0; border-bottom: 1px solid var(--p-borde); padding: 0; gap: 0;
-        display: grid; grid-template-columns: auto minmax(0, 1fr) auto 48px 48px; grid-template-areas: "otro quien reloj recargar salir" "nav nav nav nav nav";
+        display: grid; grid-template-columns: auto minmax(0, 1fr) auto 48px; grid-template-areas: "otro quien reloj salir" "nav nav nav nav";
         column-gap: 10px; align-items: center;
       }
       .pr-lat__otro { grid-area: otro; width: auto; padding: 0 12px; margin-left: 12px; margin-top: 8px; margin-bottom: 8px; }
@@ -354,7 +412,6 @@
       .pr-reloj-fecha { font-size: 12px; color: var(--p-gris); }
       .pr-lat__salir { grid-area: salir; width: 48px; height: 48px; border-radius: 12px; margin-right: 12px; padding: 0; }
       .pr-lat__salir span { display: none; }
-      .pr-lat__recargar { grid-area: recargar; margin-right: 0; }
       .pr-lat__secciones { grid-area: nav; flex-direction: row; gap: 4px; padding: 0 8px 8px; overflow: visible; }
       .pr-lat__item {
         flex: 1 1 0; min-width: 0; height: 56px; min-height: 56px; border-radius: 12px; padding: 0 4px;
@@ -763,37 +820,87 @@
     .pr-op:disabled { background: var(--p-renglon); color: var(--p-suave); }
 
     /* ══ 6 · PARADAS ══ */
-    .pr-paradas { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; }
-    @media (orientation: portrait) { .pr-paradas { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } }
-    .pr-paradas__izq { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-    .pr-parada-activa { background: var(--p-mal); color: #fff; border-radius: 16px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-    .pr-parada-activa__sello { height: 30px; padding: 0 10px; border-radius: 8px; background: #fff; color: var(--p-mal); font-size: 14px; font-weight: 800; letter-spacing: 0.04em; display: flex; align-items: center; flex-shrink: 0; }
-    .pr-parada-activa__que { font-family: var(--p-titulo); font-size: 22px; font-weight: 700; line-height: 1.1; }
-    .pr-parada-andando { background: var(--p-bien-suave); color: var(--p-bien-txt); border-radius: 16px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; font-size: 15px; font-weight: 600; }
-    .pr-parada-andando__sello { height: 30px; padding: 0 10px; border-radius: 8px; background: var(--p-bien); color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; flex-shrink: 0; }
-    .pr-motivos { flex: 1; min-height: 0; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
-    .pr-motivos__titulo { margin: 0; font-size: 17px; font-weight: 800; }
-    .pr-motivos__grilla { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(52px, 1fr); gap: 8px; }
-    @media (orientation: portrait) { .pr-motivos__grilla { grid-auto-rows: 72px; flex: 0 0 auto; } .pr-motivos { flex: 0 0 auto; } }
-    .pr-motivo { border-radius: 12px; border: 2px solid var(--p-borde); background: var(--p-tarjeta); font-size: 16.5px; font-weight: 700; text-align: left; padding: 0 14px; color: var(--p-tinta); }
+    /* ── PARADAS (30/09/2026): una línea de estado arriba, y abajo dos
+       columnas: 1 los motivos (la limpieza primero, en verde agua, que es su
+       color: programada, no falla) y 2-3-4 a qué hora paró, cuánto duró, el
+       resumen y Guardar. Entra sin scroll a 1000 × 540; parada, scrollea
+       adentro de su caja (data-scroll-propio). ── */
+    .pr-pa-estado { display: flex; align-items: center; gap: 10px; min-height: 44px; flex-shrink: 0; }
+    .pr-pa-estado > .pr-parada-activa, .pr-pa-estado > .pr-parada-andando { flex: 1; min-width: 0; }
+    .pr-paradas { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+    @media (orientation: portrait) { .pr-paradas { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; align-content: start; } }
+    .pr-parada-activa { background: var(--p-mal); color: #fff; border-radius: 12px; padding: 4px 6px 4px 10px; display: flex; align-items: center; gap: 10px; min-height: 44px; box-sizing: border-box; }
+    .pr-parada-activa__sello { height: 28px; padding: 0 10px; border-radius: 8px; background: #fff; color: var(--p-mal); font-size: 13px; font-weight: 800; letter-spacing: 0.04em; display: flex; align-items: center; flex-shrink: 0; }
+    .pr-parada-activa__que { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pr-parada-activa__volvio { min-height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #fff; color: var(--p-mal); font-size: 16px; font-weight: 800; flex-shrink: 0; }
+    .pr-parada-andando { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--p-bien-txt); }
+    .pr-parada-andando__punto { width: 12px; height: 12px; border-radius: 50%; background: var(--p-bien); flex-shrink: 0; }
+    .pr-pa-ver { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: var(--p-tarjeta); color: var(--p-tinta); font-size: 15px; font-weight: 700; flex-shrink: 0; margin-left: auto; }
+    .pr-pa-ver:disabled { color: var(--p-suave); border-color: var(--p-borde); }
+    .pr-pa-col { background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
+    .pr-pa-paso { margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--p-tinta); line-height: 1.1; }
+    .pr-pa-paso__n { width: 22px; height: 22px; border-radius: 50%; background: var(--p-tinta); color: #fff; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pr-pa-motivos { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-pa-limpieza { display: flex; align-items: center; gap: 10px; background: var(--p-teal-suave); border: 1.5px solid var(--p-teal-borde); border-radius: 12px; padding: 5px 6px 5px 12px; flex-shrink: 0; }
+    .pr-pa-limpieza--elegida { border-color: var(--p-teal); }
+    .pr-pa-limpieza__nombre { flex: 1; min-width: 0; font-size: 16px; font-weight: 800; color: var(--p-teal-osc); line-height: 1.15; }
+    .pr-pa-limpieza__botones { display: flex; gap: 6px; flex-shrink: 0; }
+    .pr-pa-limpieza__boton { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--p-teal-borde); background: #fff; color: var(--p-teal-osc); font-size: 15px; font-weight: 800; }
+    .pr-pa-limpieza__boton[aria-pressed="true"] { background: var(--p-teal); border-color: var(--p-teal); color: #fff; }
+    .pr-pa-motivos__grilla { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(44px, 1fr); gap: 6px; }
+    @media (orientation: portrait) { .pr-pa-motivos__grilla { grid-auto-rows: 48px; flex: 0 0 auto; } }
+    .pr-motivo { border-radius: 10px; border: 1.5px solid var(--p-borde-boton); background: var(--p-tarjeta); font-size: 15px; font-weight: 700; text-align: center; padding: 2px 6px; color: var(--p-tinta); line-height: 1.15; }
     .pr-motivo[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); }
-    .pr-motivos__otro { display: flex; gap: 8px; }
+    .pr-pa-sin-motivos { margin: 0; font-size: 15px; font-weight: 600; color: var(--p-mal-txt); }
+    .pr-motivos__otro { display: flex; gap: 8px; flex-shrink: 0; }
     .pr-motivos__otro .pr-input { flex: 1; }
     .pr-prim--mal { background: var(--p-mal); }
-    .pr-paradas__der { background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-    .pr-paradas__cab { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-mal); flex-shrink: 0; }
-    .pr-paradas__icono { width: 22px; height: 22px; border-radius: 6px; background: var(--p-mal-suave); color: var(--p-mal); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .pr-pa-der { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; grid-template-areas: "hora dur" "res res" "bot bot"; column-gap: 14px; row-gap: 8px; }
+    .pr-pa-der > .pr-pa-bloque:first-child { grid-area: hora; }
+    .pr-pa-der > .pr-pa-bloque:nth-child(2) { grid-area: dur; }
+    .pr-pa-bloque { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; }
+    .pr-pa-relojes { display: flex; flex-direction: column; gap: 6px; }
+    .pr-pa-nota { margin: 0; font-size: 15px; font-weight: 600; color: var(--p-teal-osc); max-width: 190px; }
+    .pr-pa-duraciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 38px; gap: 6px; }
+    .pr-pa-dur { border-radius: 10px; border: 1.5px solid var(--p-borde-boton); background: var(--p-tarjeta); font-size: 16px; font-weight: 800; color: var(--p-tinta); padding: 0 6px; }
+    .pr-pa-dur[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); }
+    .pr-pa-dur--sigue { grid-column: 1 / -1; border-color: var(--p-mal); color: var(--p-mal); }
+    .pr-pa-dur--sigue[aria-pressed="true"] { background: var(--p-mal); border-color: var(--p-mal); color: #fff; }
+    .pr-pa-dur:disabled { border-color: var(--p-borde); color: var(--p-apagado); background: var(--p-alt); }
+    .pr-pa-resumen { grid-area: res; margin: 0; font-size: 16px; font-weight: 600; color: var(--p-gris); line-height: 1.2; }
+    .pr-pa-resumen--listo { color: var(--p-tinta); font-weight: 800; }
+    .pr-pa-botones { grid-area: bot; display: flex; gap: 8px; }
+    .pr-pa-guardar { flex: 2; min-height: 50px; }
+    .pr-pa-ahora { flex: 1; min-height: 50px; border-radius: 12px; border: 1.5px solid var(--p-mal); background: #fff; color: var(--p-mal); font-size: 16px; font-weight: 800; }
+    /* El reloj de ruedas: dos columnas que se deslizan y se enganchan en el
+       renglón del medio (el marco naranja es lo elegido). */
+    .pr-rueda { display: flex; flex-direction: column; gap: 2px; }
+    .pr-rueda__rotulo { font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--p-gris); }
+    .pr-rueda__caja { position: relative; display: flex; align-items: center; gap: 2px; height: 102px; width: max-content; background: var(--p-alt); border: 1px solid var(--p-borde); border-radius: 12px; padding: 0 6px; }
+    .pr-rueda__marco { position: absolute; left: 4px; right: 4px; top: 34px; height: 34px; border-radius: 8px; background: var(--p-acento-suave); border: 1.5px solid var(--p-acento-linea); pointer-events: none; box-sizing: border-box; }
+    .pr-rueda__col { position: relative; z-index: 1; height: 102px; width: 62px; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; touch-action: pan-y; }
+    .pr-rueda__col::-webkit-scrollbar { display: none; }
+    .pr-rueda__relleno { height: 34px; }
+    .pr-rueda__it { display: block; width: 100%; height: 34px; border: 0; background: transparent; padding: 0; font-family: var(--p-titulo); font-size: 21px; font-weight: 700; color: var(--p-suave); scroll-snap-align: center; }
+    .pr-rueda__it[aria-selected="true"] { color: var(--p-acento-osc); font-size: 25px; font-weight: 800; }
+    .pr-rueda__dos { position: relative; z-index: 1; font-family: var(--p-titulo); font-size: 24px; font-weight: 800; color: var(--p-tinta); }
+    .pr-rueda__pista { font-size: 12px; color: var(--p-gris); max-width: 150px; line-height: 1.15; }
+    /* Las paradas del turno, en su ventana. */
+    .pr-pa-ventana { max-width: 520px; max-height: min(86dvh, 640px); display: flex; flex-direction: column; gap: 8px; }
     .pr-paradas__lista { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
     .pr-parada-item { border-radius: 12px; border: 1px solid var(--p-borde); background: var(--p-tarjeta); padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; color: var(--p-tinta); flex-shrink: 0; }
+    .pr-parada-item--programada { background: var(--p-teal-suave); border-color: var(--p-teal-borde); }
     .pr-parada-item--curso { background: var(--p-mal-suave); border-color: var(--p-mal-borde); color: var(--p-mal-txt); }
     .pr-parada-item__cab { display: flex; align-items: baseline; gap: 8px; }
     .pr-parada-item__horas { font-family: var(--p-titulo); font-size: 19px; font-weight: 800; flex: 1; }
+    .pr-parada-item__cat { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--p-tinte); color: var(--p-tinta-2); }
+    .pr-parada-item__cat--programada { background: #fff; color: var(--p-teal-osc); }
+    .pr-parada-item__cat--falla { background: var(--p-mal-suave); color: var(--p-mal-txt); }
     .pr-parada-item__dur { font-size: 14px; font-weight: 700; }
     .pr-parada-item__motivo { font-size: 14px; color: var(--p-tinta-2); }
     .pr-paradas__total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--p-div); padding-top: 8px; font-size: 14px; color: var(--p-gris); flex-shrink: 0; }
     .pr-paradas__total:empty { display: none; }
     .pr-paradas__total strong { color: var(--p-tinta); }
-    .pr-paradas__anotar { min-height: 44px; border-radius: 12px; border: 1.5px solid var(--p-acento); background: #fff; color: var(--p-acento); font-size: 15.5px; font-weight: 800; flex-shrink: 0; }
 
     /* ══ 7 · CERRAR PLANILLA ══ */
     .pr-cierre { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 10px; }
@@ -1334,6 +1441,20 @@
          modo kiosco. En "¿Quién sos?" no se dibuja: esa pantalla es completa. -->
     <aside class="pr-lateral" id="pr-barra" hidden aria-label="Barra de la planta"></aside>
 
+    <!-- "¿Salir sin guardar?" (30/09/2026): antes de irse de algo a medio
+         cargar (el botón de volver, otra pestaña de máquina). Nunca confirm():
+         no se puede estilar y algunos webviews lo bloquean. -->
+    <div class="pr-confirma-fondo" id="pr-confirma" hidden>
+      <div class="pr-confirma" role="alertdialog" aria-modal="true" aria-labelledby="pr-confirma-titulo">
+        <p class="pr-confirma__titulo" id="pr-confirma-titulo"></p>
+        <p class="pr-confirma__texto" id="pr-confirma-texto"></p>
+        <div class="pr-confirma__botones">
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-confirma-no">No, seguir</button>
+          <button type="button" class="pr-btn pr-btn--accion" id="pr-confirma-si"></button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mientras el acceso maestro está activo se dice arriba de todo, porque
          todo lo que se haga queda a nombre de esa persona. -->
     <div class="pr-maestro" id="pr-maestro" hidden>
@@ -1374,10 +1495,23 @@
            1": lo elegido), el título de la pantalla y, apaisada, el reloj. Una
            sola línea de 36 px; la pinta pintarCabecera(). -->
       <header class="pr-cab" id="pr-cab" hidden>
+        <!-- EL BOTÓN DE VOLVER (30/09/2026): en toda pantalla que no sea el
+             Inicio, arriba a la izquierda y siempre igual. Vuelve al Inicio DEL
+             MODO (nunca cambia de modo: eso pide PIN); en los pasos de Agregar
+             producto y de anotar una parada, al paso anterior. Lo pinta
+             pintarVolver(). -->
+        <button type="button" class="pr-cab__volver" id="pr-cab-volver" hidden><svg class="pr-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="pr-cab-volver-texto">Inicio</span></button>
+        <!-- LAS PESTAÑAS DE LAS MÁQUINAS (01/10/2026): en Planilla, Lo
+             producido, Paradas, Cerrar planilla y la receta de Sala de masa,
+             las máquinas abiertas del turno ("M1 · 7033"), como las de un
+             navegador. Reemplazan al "Lote 7033 · Máquina 1" de esas
+             pantallas. Las pinta pintarPestanasMaquinas(). -->
+        <nav class="pr-cab__maquinas" id="pr-cab-maquinas" aria-label="Máquinas abiertas" hidden></nav>
         <span class="pr-cab__ctx" id="pr-cab-ctx"></span>
         <span class="pr-cab__sep" id="pr-cab-sep" aria-hidden="true"></span>
         <h1 class="pr-cab__titulo" id="pr-cab-titulo"></h1>
         <span class="pr-reloj pr-cab__reloj" data-reloj aria-label="Fecha y hora"></span>
+        <span class="pr-reloj pr-cab__reloj pr-cab__reloj--hora" data-reloj-hora aria-label="Hora"></span>
       </header>
       <section class="pr-tarjeta" id="pr-inicio">
         <h1 class="pr-titulo">Planta</h1>
@@ -1645,7 +1779,7 @@
             <h2 class="pr-lp__titulo" id="pr-corregir-titulo" tabindex="-1"></h2>
             <label class="pr-campo" id="pr-corregir-campo-cajas">
               <span class="pr-campo__rotulo">Cajas</span>
-              <input type="text" id="pr-corregir-cajas" class="pr-input" autocomplete="off">
+              <input type="text" id="pr-corregir-cajas" class="pr-input" inputmode="numeric" enterkeyhint="done" autocomplete="off">
             </label>
             <label class="pr-campo">
               <span class="pr-campo__rotulo">¿Por qué?</span>
@@ -1730,7 +1864,7 @@
               <div class="pr-ag__cajas-centro">
                 <div class="pr-contador">
                   <button type="button" class="pr-contador__paso" data-cajas-paso="-1" aria-label="Una caja menos">&minus;</button>
-                  <input type="text" id="pr-agregar-cajas" class="pr-contador__valor" autocomplete="off" aria-label="Cajas">
+                  <input type="text" id="pr-agregar-cajas" class="pr-contador__valor" inputmode="numeric" enterkeyhint="done" autocomplete="off" aria-label="Cajas">
                   <button type="button" class="pr-contador__paso" data-cajas-paso="1" aria-label="Una caja más">+</button>
                 </div>
                 <div class="pr-calculo">
@@ -1765,37 +1899,64 @@
       <!-- 6 · PARADAS de la máquina elegida: la franja bordó con desde
            cuándo, los motivos grandes y "Volvió a andar" en el lugar de la
            acción principal. A la derecha, las paradas del turno. -->
+      <!-- PARADAS (30/09/2026): motivos FIJOS (los de motivos_parada, en su
+           orden) y anotar una que ya pasó, que es lo más común: la máquina se
+           arregla y se anota después. Arriba, en UNA línea, si está andando o
+           parada; abajo, en este orden y sin scroll a 1000×540: 1 ¿Por qué
+           paró? · 2 ¿A qué hora paró? (un reloj de ruedas) · 3 ¿Cuánto duró? ·
+           4 el resumen y Guardar. "Paró ahora" queda como botón secundario.
+           Las paradas del turno se ven en su ventana ("Ver"). -->
       <section id="pr-paradas" hidden>
-        <div class="pr-paradas">
-          <div class="pr-paradas__izq">
-            <div class="pr-parada-activa" id="pr-parada-activa" hidden>
-              <span class="pr-parada-activa__sello">PARADA</span>
-              <span class="pr-parada-activa__que"><span id="pr-parada-activa-texto"></span><span id="pr-parada-activa-hace"></span></span>
-            </div>
-            <div class="pr-parada-andando" id="pr-parada-andando" hidden>
-              <span class="pr-parada-andando__sello">ANDANDO</span>
-              <span class="pr-parada-andando__que">Si la máquina se para, elegí por qué y tocá «Paró ahora».</span>
-            </div>
-            <div class="pr-motivos" id="pr-parada-motivos">
-              <h2 class="pr-motivos__titulo" id="pr-parada-motivos-titulo">¿Por qué paró?</h2>
-              <div class="pr-motivos__grilla" id="pr-parada-sugerencias"></div>
-              <div class="pr-motivos__otro" id="pr-parada-otro" hidden>
-                <input type="text" id="pr-parada-motivo" class="pr-input" maxlength="280" autocomplete="off" placeholder="¿Qué pasó? (opcional)" aria-label="Qué pasó">
-                <button type="button" class="pr-btn pr-btn--secundario" id="pr-parada-guardar-motivo" hidden>Guardar</button>
-              </div>
-            </div>
-            <p class="pr-error-pegado" id="pr-parada-error" hidden></p>
-            <button type="button" class="pr-prim" id="pr-btn-reanudar" hidden>Volvió a andar</button>
-            <button type="button" class="pr-prim pr-prim--mal" id="pr-btn-parada" hidden>Paró ahora</button>
+        <div class="pr-pa-estado">
+          <div class="pr-parada-activa" id="pr-parada-activa" hidden>
+            <span class="pr-parada-activa__sello">PARADA</span>
+            <span class="pr-parada-activa__que"><span id="pr-parada-activa-motivo"></span><span id="pr-parada-activa-texto"></span><span id="pr-parada-activa-hace"></span></span>
+            <button type="button" class="pr-parada-activa__volvio" id="pr-btn-reanudar" hidden>Volvió a andar</button>
           </div>
-          <div class="pr-paradas__der">
-            <div class="pr-paradas__cab"><span class="pr-paradas__icono" aria-hidden="true"><svg class="pr-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM10 9v6M14 9v6"/></svg></span>PARADAS DEL TURNO</div>
-            <div class="pr-paradas__lista" id="pr-planilla-paradas" data-scroll-propio></div>
-            <div class="pr-paradas__total" id="pr-paradas-total"></div>
-            <button type="button" class="pr-paradas__anotar" id="pr-btn-anotar-parada">+ Anotar una parada que ya pasó</button>
+          <div class="pr-parada-andando" id="pr-parada-andando" hidden>
+            <span class="pr-parada-andando__punto" aria-hidden="true"></span><span class="pr-parada-andando__sello">Andando</span>
+          </div>
+          <button type="button" class="pr-pa-ver" id="pr-btn-ver-paradas" aria-haspopup="dialog"></button>
+        </div>
+        <p class="pr-error-pegado" id="pr-parada-error" hidden></p>
+        <div class="pr-paradas">
+          <div class="pr-pa-col pr-motivos" id="pr-parada-motivos">
+            <h2 class="pr-pa-paso" id="pr-parada-motivos-titulo"><span class="pr-pa-paso__n">1</span>¿Por qué paró?</h2>
+            <div class="pr-pa-motivos" id="pr-parada-sugerencias"></div>
+            <div class="pr-motivos__otro" id="pr-parada-otro" hidden>
+              <input type="text" id="pr-parada-motivo" class="pr-input" maxlength="200" autocomplete="off" enterkeyhint="done" aria-label="Detalle de la parada">
+            </div>
+          </div>
+          <div class="pr-pa-col pr-pa-der">
+            <div class="pr-pa-bloque" id="pr-parada-hora-bloque">
+              <h2 class="pr-pa-paso" id="pr-parada-hora-titulo"><span class="pr-pa-paso__n">2</span>¿A qué hora paró?</h2>
+              <div class="pr-pa-relojes" id="pr-parada-hora"></div>
+            </div>
+            <div class="pr-pa-bloque">
+              <h2 class="pr-pa-paso" id="pr-parada-duracion-titulo"><span class="pr-pa-paso__n">3</span>¿Cuánto duró?</h2>
+              <div class="pr-pa-duraciones" id="pr-parada-duracion"></div>
+            </div>
+            <p class="pr-pa-resumen" id="pr-parada-resumen"></p>
+            <div class="pr-pa-botones">
+              <button type="button" class="pr-pa-ahora" id="pr-btn-parada" hidden>Paró ahora</button>
+              <button type="button" class="pr-prim pr-pa-guardar" id="pr-btn-guardar-parada">Guardar la parada</button>
+            </div>
           </div>
         </div>
       </section>
+
+      <!-- Las paradas del turno, en su ventana: cada una se toca para
+           corregirla (el editor de siempre). -->
+      <div class="pr-lp" id="pr-paradas-ventana" hidden role="dialog" aria-modal="true" aria-labelledby="pr-paradas-ventana-titulo">
+        <div class="pr-lp__caja pr-pa-ventana">
+          <div class="pr-lp__cab">
+            <div class="pr-lp__titulos"><h2 class="pr-lp__titulo" id="pr-paradas-ventana-titulo" tabindex="-1">Paradas del turno</h2></div>
+            <button type="button" class="pr-cerrar-x" id="pr-paradas-ventana-cerrar" aria-label="Cerrar">&times;</button>
+          </div>
+          <div class="pr-paradas__lista" id="pr-planilla-paradas" data-scroll-propio></div>
+          <div class="pr-paradas__total" id="pr-paradas-total"></div>
+        </div>
+      </div>
 
       <section id="pr-cierre" hidden>
         <div class="pr-cierre" data-scroll-propio>
@@ -1806,7 +1967,7 @@
             <div class="pr-cierre-caja" id="pr-cierre-campo-hora">
               <div class="pr-cierre-caja__dato">
                 <span class="pr-cierre-caja__rotulo" id="pr-cierre-hora-rotulo">SE APAGÓ EL FUEGO A LAS</span>
-                <input type="text" id="pr-cierre-hora" class="pr-cierre-num" inputmode="numeric" autocomplete="off" aria-label="Hora">
+                <input type="text" id="pr-cierre-hora" class="pr-cierre-num" inputmode="numeric" enterkeyhint="done" autocomplete="off" aria-label="Hora">
               </div>
               <button type="button" class="pr-cierre-paso" data-hora-paso="-5" aria-label="Cinco minutos menos">&minus;5</button>
               <button type="button" class="pr-cierre-paso" data-hora-paso="5" aria-label="Cinco minutos más">+5</button>
@@ -1816,7 +1977,7 @@
             <div class="pr-cierre-caja" id="pr-cierre-campo-scrap">
               <div class="pr-cierre-caja__dato">
                 <span class="pr-cierre-caja__rotulo">SCRAP</span>
-                <span class="pr-cierre-scrap"><input type="text" id="pr-cierre-scrap" class="pr-cierre-num" autocomplete="off" placeholder="—" aria-label="Scrap en kilos"><span class="pr-cierre-kg">kg</span></span>
+                <span class="pr-cierre-scrap"><input type="text" id="pr-cierre-scrap" class="pr-cierre-num" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="—" aria-label="Scrap en kilos"><span class="pr-cierre-kg">kg</span></span>
               </div>
               <button type="button" class="pr-cierre-paso" data-scrap-paso="-1" aria-label="Un kilo menos">&minus;</button>
               <button type="button" class="pr-cierre-paso" data-scrap-paso="1" aria-label="Un kilo más">+</button>
@@ -1832,7 +1993,7 @@
                   <span>La máquina se rompió y no volvió</span>
                 </button>
               </div>
-              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000"></textarea>
+              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000" autocomplete="off"></textarea>
               <p class="pr-campo__nota" id="pr-cierre-obs-nota" hidden></p>
             </div>
             <!-- Lo que hay que confirmar antes de mandar: una parada sin
@@ -1960,7 +2121,7 @@
             </label>
             <label class="pr-campo">
               <span class="pr-campo__rotulo">Cuánto, en kilos</span>
-              <input type="text" id="pr-otro-kg" class="pr-input" autocomplete="off">
+              <input type="text" id="pr-otro-kg" class="pr-input" inputmode="decimal" enterkeyhint="done" autocomplete="off">
             </label>
           </div>
           <p class="pr-error-pegado" id="pr-otro-error" hidden></p>
@@ -1995,7 +2156,7 @@
             <span class="pr-campo__rotulo">Cantidad (kg)</span>
             <span class="pr-rec__cant">
               <button type="button" class="pr-rec__paso" id="pr-agregar-ing-menos" aria-label="Menos">−</button>
-              <input type="text" class="pr-rec__num" id="pr-agregar-ing-kg" aria-label="Kilos del ingrediente agregado">
+              <input type="text" class="pr-rec__num" id="pr-agregar-ing-kg" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Kilos del ingrediente agregado">
               <button type="button" class="pr-rec__paso" id="pr-agregar-ing-mas" aria-label="Más">+</button>
             </span>
             <p class="pr-agregar-ing__guia" id="pr-agregar-ing-guia" hidden>Para chocolate van de 600 a 700 g.</p>
@@ -2070,6 +2231,10 @@
         <div class="pr-cerrado__lista" id="pr-cerrado-lista" data-scroll-propio></div>
         <button type="button" class="pr-prim" id="pr-cerrado-volver">Volver a las máquinas</button>
       </section>
+      <!-- EL TECLADO DE LA TABLET (01/10/2026): con el teclado en pantalla
+           abierto, "Listo" arriba de él lo cierra (y el campo que se está
+           escribiendo queda a la vista). Lo maneja revisarTeclado(). -->
+      <button type="button" class="pr-listo" id="pr-teclado-listo" hidden>Listo</button>
     </main>
 
   </div>
@@ -2578,39 +2743,43 @@
     function htmlLateral() {
       const cuerpoLat = estado.modo === 'masa' ? htmlLatSala() : htmlLatSecciones()
       return htmlBotonOtroModo() + htmlLatPersona() + htmlRelojDoble('pr-lat__reloj') + cuerpoLat + htmlLatConexion() +
-        `<button type="button" class="pr-lat__salir pr-lat__recargar" id="pr-btn-recargar" aria-label="Recargar">${icono('recargar', 17)}<span>Recargar</span></button>` +
-        `<button type="button" class="pr-lat__salir" id="pr-btn-salir" aria-label="Salir">${icono('salir', 17)}<span>Salir</span></button>` +
-        htmlConfirmaRecargar()
+        `<button type="button" class="pr-lat__salir" id="pr-btn-salir" aria-label="Salir">${icono('salir', 17)}<span>Salir</span></button>`
     }
 
-    // RECARGAR (30/09/2026): sin "deslizar para recargar" (dejaba la tablet
-    // con zoom), la planta se recarga con este botón. Si hay algo a medio
-    // cargar en pantalla, pregunta antes: recargar lo perdería. (Las masas sin
-    // mandar NO se pierden: quedan guardadas en la tablet y se mandan solas.)
-    const VISTAS_A_MEDIO_CARGAR = ['pr-abrir', 'pr-agregar-prod', 'pr-paradas', 'pr-cierre', 'pr-receta', 'pr-asignar']
+    // LO QUE QUEDA A MEDIO CARGAR AL RECARGAR (01/10/2026). Se volvió a
+    // recargar deslizando la pantalla (el botón "Recargar" se fue), así que un
+    // producto o una parada a medio cargar se guardan al irse la página
+    // (pagehide) y se recuperan al volver a abrir Lo producido o Paradas de
+    // ESA máquina. La masa ya tenía su borrador; el cierre, el suyo. Se usa
+    // sessionStorage: dura lo que dura la pestaña (recargar no la borra).
+    const CLAVE_AGREGAR_A_MEDIAS = 'produccion.aMedias.agregar'
+    const CLAVE_PARADA_A_MEDIAS = 'produccion.aMedias.parada'
+    const CAMPOS_AGREGAR_A_MEDIAS = ['paso', 'productoId', 'conCono', 'presentacionId', 'marcaId', 'marcaElegida', 'cajaId', 'cajaElegida', 'embolsado', 'chocoSinMasa']
 
-    function hayAlgoAMedioCargar() {
-      return VISTAS_A_MEDIO_CARGAR.includes(estado.vista)
+    function guardarCargaAMedias() {
+      const p = estado.planilla
+      const a = estado.agregar
+      if (estado.vista === 'pr-agregar-prod' && a && !a.corrige && a.productoId && p?.turno?.id) {
+        const campos = {}
+        for (const c of CAMPOS_AGREGAR_A_MEDIAS) campos[c] = a[c] ?? null
+        const campo = document.getElementById('pr-agregar-cajas')
+        guardarSesion(CLAVE_AGREGAR_A_MEDIAS, JSON.stringify({ turnoId: p.turno.id, campos, cajas: campo ? leerCampoNumero(campo) : null }))
+      } else guardarSesion(CLAVE_AGREGAR_A_MEDIAS, null)
+      const f = estado.paradaNueva
+      if (estado.vista === 'pr-paradas' && f?.turnoId && paradaNuevaEmpezada(f)) {
+        guardarSesion(CLAVE_PARADA_A_MEDIAS, JSON.stringify({ ...f, enviando: false, errorBase: '', intentado: false }))
+      } else guardarSesion(CLAVE_PARADA_A_MEDIAS, null)
     }
 
-    function htmlConfirmaRecargar() {
-      if (!estado.recargarPide) return ''
-      return `<div class="pr-recargar-fondo"><div class="pr-recargar" role="alertdialog" aria-modal="true" aria-labelledby="pr-recargar-titulo">` +
-        `<p class="pr-recargar__titulo" id="pr-recargar-titulo">¿Recargar la pantalla?</p>` +
-        `<p class="pr-recargar__texto">Se pierde lo que estás cargando y todavía no mandaste.</p>` +
-        `<div class="pr-recargar__botones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-recargar-no">No, seguir</button>` +
-        `<button type="button" class="pr-btn pr-btn--accion" id="pr-recargar-si">Sí, recargar</button></div></div></div>`
-    }
-
-    function pedirRecargar() {
-      if (!hayAlgoAMedioCargar()) { recargarPantalla(); return }
-      estado.recargarPide = true
-      pintarLateral()
-    }
-
-    function recargarPantalla() {
-      estado.recargarPide = false
-      window.location.reload()
+    // Lo guardado de ESA máquina, una sola vez (se borra al tomarlo).
+    function tomarCargaAMedias(clave, turnoId) {
+      const crudo = leerSesion(clave)
+      if (!crudo || !turnoId) return null
+      let g = null
+      try { g = JSON.parse(crudo) } catch { g = null }
+      if (!g || g.turnoId !== turnoId) return null
+      guardarSesion(clave, null)
+      return g
     }
 
     // "¿Quién sos?" es a pantalla completa: la barra lateral aparece recién
@@ -2677,19 +2846,280 @@
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // LAS PESTAÑAS DE LAS MÁQUINAS (01/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Con dos máquinas abiertas, para pasar de la Máquina 1 a la 2 había que
+    // volver al Inicio y entrar de nuevo. Ahora, arriba de Planilla, Lo
+    // producido, Paradas y Cerrar planilla (y de la receta en Sala de masa),
+    // una fila de pestañas con las máquinas abiertas del turno. Tocar otra
+    // cambia de máquina y se queda en la MISMA sección. Con una sola, la
+    // pestaña igual se ve: dice en cuál se está.
+    const VISTAS_CON_PESTANAS = ['pr-planilla', 'pr-agregar-prod', 'pr-paradas', 'pr-cierre', 'pr-receta']
+
+    // "Máquina 1" → "M1"; un nombre que no termina en número queda entero
+    // ("Máquina robot" → "Robot"). Sin nombre, "Máq.".
+    function nombreCortoMaquina(nombre) {
+      const s = String(nombre ?? '').trim()
+      const resto = s.replace(/^M[aá]quina\s*/i, '')
+      if (!s) return 'Máq.'
+      if (/^\d+$/.test(resto)) return 'M' + resto
+      return resto ? resto.charAt(0).toLocaleUpperCase('es') + resto.slice(1) : s
+    }
+
+    // La máquina de la pantalla: la de la receta en Sala de masa, la de la
+    // planilla en Producción (o la que se está abriendo, mientras carga).
+    function turnoDePantalla() {
+      if (estado.vista === 'pr-receta') return estado.salaTurno?.id ?? null
+      return estado.planilla?.turno?.id ?? estado.planillaPedida ?? null
+    }
+
+    // [{ turnoId, nombre, lote, parada, activa }] o null (sin pestañas).
+    function pestanasMaquinas() {
+      if (!VISTAS_CON_PESTANAS.includes(estado.vista)) return null
+      const actualId = turnoDePantalla()
+      if (!actualId) return null
+      const lista = maquinasAbiertas().map(e => ({ turnoId: e.turno.id, nombre: e.maquina?.nombre ?? '', lote: e.turno.lote, parada: !!e.parada }))
+      // Una planilla que no está entre las abiertas (pendiente de completar)
+      // igual tiene su pestaña: dice en cuál se está.
+      if (!lista.some(x => x.turnoId === actualId)) {
+        const p = estado.vista === 'pr-receta' ? null : estado.planilla
+        const t = estado.vista === 'pr-receta' ? estado.salaTurno : null
+        if (p?.turno?.id === actualId) lista.unshift({ turnoId: actualId, nombre: p.maquinaNombre ?? '', lote: p.turno.lote, parada: false })
+        else if (t) lista.unshift({ turnoId: actualId, nombre: t.maquinaNombre ?? '', lote: t.lote, parada: false })
+        else return null
+      }
+      return lista.map(x => {
+        const activa = x.turnoId === actualId
+        // La activa en Producción mira su planilla, que está más al día que el tablero.
+        const parada = activa && estado.vista !== 'pr-receta' && estado.planilla?.turno?.id === actualId
+          ? !!paradaEnCurso(estado.planilla.paradas) : x.parada
+        return { ...x, parada, activa }
+      })
+    }
+
+    function htmlPestanasMaquinas(lista) {
+      return (lista ?? []).map(x => {
+        const corto = nombreCortoMaquina(x.nombre)
+        const leer = `${x.nombre || corto}, lote ${x.lote ?? '—'}${x.parada ? ', parada' : ''}`
+        return `<button type="button" class="pr-pest${x.activa ? ' pr-pest--activa' : ''}" data-pestana-turno="${esc(x.turnoId)}"` +
+          `${x.activa ? ' aria-current="page"' : ''} aria-label="${esc(leer)}" title="${esc(leer)}">` +
+          (x.parada ? '<span class="pr-pest__punto" aria-hidden="true"></span>' : '') +
+          `<span class="pr-pest__maq">${esc(corto)}</span><span class="pr-pest__sep" aria-hidden="true">·</span>` +
+          `<span class="pr-pest__lote">${esc(x.lote ?? '—')}</span></button>`
+      }).join('')
+    }
+
+    // Pinta las pestañas en la cabecera; devuelve si hay.
+    function pintarPestanasMaquinas() {
+      const nav = document.getElementById('pr-cab-maquinas')
+      const cab = document.getElementById('pr-cab')
+      if (!nav || !cab) return false
+      const lista = lateralVisible() ? pestanasMaquinas() : null
+      nav.hidden = !lista
+      nav.innerHTML = lista ? htmlPestanasMaquinas(lista) : ''
+      const n = lista?.length ?? 0
+      cab.classList?.toggle('pr-cab--maquinas', !!lista)
+      cab.classList?.toggle('pr-cab--apretada', n >= 3)
+      cab.classList?.toggle('pr-cab--muy-apretada', n >= 6)
+      return !!lista
+    }
+
+    // Tocar otra pestaña: la misma sección, en la otra máquina. Si hay algo a
+    // medio cargar que se perdería (un producto o una parada empezados),
+    // pregunta antes. En Sala de masa no hace falta: la masa a medias queda
+    // guardada en la tablet y se retoma al volver a esa máquina.
+    async function cambiarDeMaquina(turnoId) {
+      tocar()
+      const v = estado.vista
+      if (!turnoId || !VISTAS_CON_PESTANAS.includes(v)) return 'nada'
+      if (turnoId === turnoDePantalla()) return 'misma'
+      if (v === 'pr-receta') { await elegirMaquinaSala(turnoId); return 'sala' }
+      const ir = async () => {
+        if (v === 'pr-agregar-prod') return abrirLoProducido(turnoId)
+        if (v === 'pr-paradas') return abrirPlanilla(turnoId, 'pr-paradas')
+        if (v === 'pr-cierre') {
+          await abrirPlanilla(turnoId)
+          if (estado.planilla?.turno?.id === turnoId && estado.vista === 'pr-planilla') return mostrarCierre()
+          return
+        }
+        return abrirPlanilla(turnoId)
+      }
+      if (aMedioCargar()) {
+        pedirConfirmacion({ titulo: '¿Dejar esto sin guardar?', texto: 'Lo que estás cargando en esta máquina todavía no se guardó y se va a perder.', si: 'Sí, cambiar de máquina' }, ir)
+        return 'pregunta'
+      }
+      await ir()
+      return 'cambio'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL TECLADO DE LA TABLET (01/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // En la tablet, el teclado en pantalla tapa la mitad de abajo y no tiene
+    // un "Listo" a mano. Con visualViewport se sabe cuánto queda a la vista:
+    // si el teclado está abierto sobre un campo de texto, aparece "Listo"
+    // pegado arriba del teclado (lo cierra) y el campo se trae a la vista.
+    // Los campos de número ya piden el teclado numérico (inputmode) y ninguno
+    // sugiere palabras guardadas (autocomplete="off"). El PIN no usa el
+    // teclado del sistema: tiene el suyo, en pantalla.
+    const MARGEN_TECLADO = 120
+
+    function campoDeTexto(el) {
+      if (!el) return false
+      if (el.tagName === 'TEXTAREA') return true
+      return el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'hidden', 'date', 'range'].includes(String(el.type ?? 'text'))
+    }
+
+    // El teclado está abierto si la parte visible es bastante más baja que la ventana.
+    function tecladoAbierto(vv = window.visualViewport, alto = window.innerHeight) {
+      return !!vv && Number.isFinite(vv.height) && alto - vv.height > MARGEN_TECLADO
+    }
+
+    function revisarTeclado() {
+      const b = document.getElementById('pr-teclado-listo')
+      if (!b) return false
+      const vv = window.visualViewport
+      const activo = document.activeElement
+      const abierto = campoDeTexto(activo) && tecladoAbierto(vv)
+      b.hidden = !abierto
+      document.body?.classList?.toggle('pr-teclado-abierto', abierto)
+      if (!abierto) return false
+      const abajo = Math.max(0, window.innerHeight - (vv.height + (vv.offsetTop || 0)))
+      b.style.bottom = `${Math.round(abajo + 8)}px`
+      // El campo que se escribe, arriba del teclado.
+      const r = activo.getBoundingClientRect?.()
+      if (r && (r.bottom > (vv.offsetTop || 0) + vv.height - 60 || r.top < (vv.offsetTop || 0))) activo.scrollIntoView?.({ block: 'center' })
+      return true
+    }
+
+    function cerrarTeclado() {
+      const a = document.activeElement
+      if (campoDeTexto(a)) a.blur?.()
+      return revisarTeclado()
+    }
+
+    function conectarTeclado() {
+      const vv = window.visualViewport
+      vv?.addEventListener?.('resize', revisarTeclado)
+      vv?.addEventListener?.('scroll', revisarTeclado)
+      document.addEventListener('focusin', revisarTeclado)
+      document.addEventListener('focusout', () => setTimeout(revisarTeclado, 0))
+      const b = document.getElementById('pr-teclado-listo')
+      // pointerdown: que tocar "Listo" no le saque el foco al campo antes de tiempo.
+      b?.addEventListener('pointerdown', ev => ev.preventDefault())
+      b?.addEventListener('click', cerrarTeclado)
+    }
+
     function pintarCabeceraVista() {
       const cab = document.getElementById('pr-cab')
       if (!cab) return
       const c = lateralVisible() ? cabeceraDeVista() : null
       cab.hidden = !c
-      if (!c) return
+      if (!c) { pintarPestanasMaquinas(); return }
+      // Con pestañas, el "Lote 7033 · Máquina 1" lo dice la pestaña activa.
+      const conPestanas = pintarPestanasMaquinas()
       document.getElementById('pr-cab-ctx').textContent = c.ctx
-      document.getElementById('pr-cab-ctx').hidden = !c.ctx
-      document.getElementById('pr-cab-sep').hidden = !c.ctx
+      document.getElementById('pr-cab-ctx').hidden = conPestanas || !c.ctx
+      document.getElementById('pr-cab-sep').hidden = conPestanas || !c.ctx
       const t = document.getElementById('pr-cab-titulo')
       t.textContent = c.titulo
       t.classList?.toggle('pr-cab__titulo--solo', !c.ctx)
+      pintarVolver()
       tocarReloj()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL BOTÓN DE VOLVER (30/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Para salir de una sección había que buscar "Inicio" en la barra. Ahora
+    // cada pantalla que no es el Inicio tiene "‹ Inicio" arriba a la izquierda.
+    // Vuelve al Inicio DEL MODO en el que se está (nunca cambia de modo: eso
+    // pide PIN y va por "Cambiar a…"). En los pasos de Agregar producto y de
+    // anotar una parada vuelve al paso anterior ("‹ Atrás"), y en el primero
+    // al Inicio. Si hay algo a medio cargar que se perdería, pregunta antes.
+    const VISTAS_INICIO = ['pr-produccion', 'pr-sala']
+
+    // { tipo: 'paso' | 'paso-parada' | 'inicio', texto, paso } o null (en el
+    // Inicio no hay botón).
+    function destinoVolver() {
+      const v = estado.vista
+      if (!v || VISTAS_INICIO.includes(v)) return null
+      if (v === 'pr-agregar-prod') {
+        const a = estado.agregar
+        const pasos = a ? pasosAgregar(a, estado.catalogo) : []
+        const i = pasos.findIndex(x => x.clave === a?.paso)
+        if (i > 0) return { tipo: 'paso', texto: 'Atrás', paso: pasos[i - 1].clave }
+      }
+      // Anotar una parada: primero suelta cuánto duró, después el motivo.
+      if (v === 'pr-paradas') {
+        const paso = pasoAnteriorParada(estado.paradaNueva)
+        if (paso) return { tipo: 'paso-parada', texto: 'Atrás', paso }
+      }
+      return { tipo: 'inicio', texto: 'Inicio' }
+    }
+
+    // ¿Se perdería algo yendo al Inicio? Solo lo que NO se guarda solo: el
+    // cierre y la masa ya tienen su borrador en la tablet.
+    function aMedioCargar() {
+      switch (estado.vista) {
+        case 'pr-abrir': return (estado.abrir?.filas ?? []).some(f => f.elegida && !f.bloqueada)
+        case 'pr-agregar-prod': return !!(estado.agregar && (estado.agregar.productoId || estado.agregar.corrige))
+        case 'pr-paradas': return paradaNuevaEmpezada(estado.paradaNueva)
+        default: return false
+      }
+    }
+
+    function pintarVolver() {
+      const b = document.getElementById('pr-cab-volver')
+      if (!b) return
+      const d = lateralVisible() ? destinoVolver() : null
+      b.hidden = !d
+      if (!d) return
+      document.getElementById('pr-cab-volver-texto').textContent = d.texto
+      b.setAttribute('aria-label', d.tipo === 'inicio' ? `Volver al Inicio de ${estado.modo === 'masa' ? 'Sala de masa' : 'Producción'}` : 'Volver al paso anterior')
+    }
+
+    function irAlInicioDelModo() {
+      return estado.modo === 'masa' ? mostrarSala() : mostrarTablero()
+    }
+
+    function volverEnPlanta() {
+      tocar()
+      const d = destinoVolver()
+      if (!d) return 'nada'
+      if (d.tipo === 'paso') { irAPasoAgregar(d.paso); return 'paso' }
+      if (d.tipo === 'paso-parada') { volverPasoParada(d.paso); return 'paso' }
+      if (aMedioCargar()) {
+        pedirConfirmacion({ titulo: '¿Salir sin guardar?', texto: 'Lo que estás cargando todavía no se guardó y se va a perder.', si: 'Sí, salir' },
+          () => irAlInicioDelModo())
+        return 'pregunta'
+      }
+      irAlInicioDelModo()
+      return 'inicio'
+    }
+
+    // La pregunta de antes de perder algo. accion() corre solo con "Sí".
+    function pedirConfirmacion({ titulo, texto, si }, accion) {
+      estado.confirma = { titulo, texto, si, accion }
+      pintarConfirma()
+      document.getElementById('pr-confirma-no').focus?.()
+    }
+
+    function pintarConfirma() {
+      const c = estado.confirma
+      document.getElementById('pr-confirma').hidden = !c
+      if (!c) return
+      document.getElementById('pr-confirma-titulo').textContent = c.titulo
+      document.getElementById('pr-confirma-texto').textContent = c.texto
+      document.getElementById('pr-confirma-si').textContent = c.si
+    }
+
+    function responderConfirma(si) {
+      const c = estado.confirma
+      estado.confirma = null
+      pintarConfirma()
+      if (si && c?.accion) return c.accion()
     }
 
     // "Máquina 4 · turno nuevo" con UNA máquina elegida; con varias, cuántas.
@@ -3174,6 +3604,8 @@
       // Irse de "Asignar PIN" por cualquier camino (otro modo, Salir, el
       // cierre por inactividad) borra el PIN a medio tipear de la memoria.
       if (id !== 'pr-asignar') estado.asignar = null
+      // Una pregunta de "¿Salir sin guardar?" es de la pantalla que se deja.
+      if (estado.confirma) { estado.confirma = null; pintarConfirma() }
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       pintarCabecera()
@@ -4238,9 +4670,6 @@
       // delegación desde el contenedor, que sí es fijo.
       document.getElementById('pr-barra').addEventListener('click', ev => {
         if (ev.target.closest('#pr-btn-salir')) { tocar(); salir(); return }
-        if (ev.target.closest('#pr-btn-recargar')) { tocar(); pedirRecargar(); return }
-        if (ev.target.closest('#pr-recargar-si')) { recargarPantalla(); return }
-        if (ev.target.closest('#pr-recargar-no')) { estado.recargarPide = false; pintarLateral(); return }
         if (ev.target.closest('#pr-lat-cambiar')) { tocar(); cambiarDePersona(); return }
         const s = ev.target.closest('[data-seccion]')
         if (s) { if (!s.disabled) irASeccion(s.dataset.seccion); return }
@@ -4248,6 +4677,17 @@
         if (t) { mostrarHistorialMaquina(t.dataset.lateralTurno); return }
         const b = ev.target.closest('[data-modo]'); if (b && !b.disabled) tocarModo(b.dataset.modo)
       })
+      // El botón de volver y la pregunta "¿Salir sin guardar?" (30/09/2026).
+      document.getElementById('pr-cab-volver').addEventListener('click', volverEnPlanta)
+      // Las pestañas de las máquinas se repintan enteras: por delegación.
+      document.getElementById('pr-cab-maquinas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-pestana-turno]')
+        if (b) cambiarDeMaquina(b.dataset.pestanaTurno)
+      })
+      document.getElementById('pr-confirma-no').addEventListener('click', () => responderConfirma(false))
+      document.getElementById('pr-confirma-si').addEventListener('click', () => responderConfirma(true))
+      document.getElementById('pr-confirma').addEventListener('click', ev => { if (ev.target.id === 'pr-confirma') responderConfirma(false) })
+      document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && estado.confirma) responderConfirma(false) })
       // La banda de "¿Quién sos?" también se repinta entera.
       document.getElementById('pr-quien-banda').addEventListener('click', ev => {
         const ir = ev.target.closest('#pr-quien-ir-masa')
@@ -4329,6 +4769,11 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
       })
+      // Deslizar para recargar (o cualquier salida de la página): lo que está
+      // a medio cargar queda guardado para cuando se vuelva a esa sección.
+      window.addEventListener('pagehide', guardarCargaAMedias)
+      // "Listo" arriba del teclado de la tablet.
+      conectarTeclado()
       // Cualquier toque cuenta como uso, para el cierre por inactividad.
       for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, tocar)
       // Un solo reloj: el cierre por inactividad y la cuenta regresiva del
@@ -5203,7 +5648,7 @@
         .select('id, nro, hora, doble, origen, es_chocolate, masero_id, descartada, descarte_motivo').eq('turno_id', turnoId).eq('anulada', false).order('nro')
       if (e3) throw e3
       const { data: paradas, error: e4 } = await supabase.from('paradas_produccion')
-        .select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio')
+        .select('id, inicio, fin, motivo, categoria, detalle, hasta_fin_de_turno').eq('turno_id', turnoId).order('inicio')
       if (e4) throw e4
       // Lo producido: cada fila ya es un sublote en la base y su stock
       // terminado ya entró. Los ANULADOS vienen también, a propósito: se
@@ -5749,10 +6194,11 @@
 
     async function abrirPlanilla(turnoId, vista = 'pr-planilla') {
       enlazarCamposPlanilla()
+      const pedidoPlanilla = (estado.pedidoPlanilla = (estado.pedidoPlanilla ?? 0) + 1)
+      estado.planillaPedida = turnoId
       estado.planilla = null
       estado.opsPlanilla = { buscando: false, busqueda: '', guardando: false }
       estado.corregir = null
-      estado.paradaSel = null
       // A la planilla se puede llegar sin pasar por Abrir turno ni por la
       // lista de "¿Quién sos?", así que el personal se asegura también acá.
       await asegurarPersonal()
@@ -5768,8 +6214,12 @@
       mostrarVista(vista)
       const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
       try {
-        { const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre } }
+        const l = await leerPlanilla(turnoId)
+        // Otra pestaña tocada mientras esta cargaba: gana la última.
+        if (pedidoPlanilla !== estado.pedidoPlanilla) return
+        estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre }
       } catch (err) {
+        if (pedidoPlanilla !== estado.pedidoPlanilla) return
         console.error('planilla:', err)
         registrarError({ evento: 'planta', mensaje: 'No se pudo leer la planilla: ' + (err?.message ?? err) })
         document.getElementById('pr-planilla-producido').innerHTML = ''
@@ -5786,6 +6236,7 @@
         console.error('catálogo de productos:', err)
         estado.catalogo = null
       }
+      if (pedidoPlanilla !== estado.pedidoPlanilla) return
       pintarPlanilla()
     }
 
@@ -5825,60 +6276,510 @@
       }
     }
 
-    // ── Paradas ───────────────────────────────────────────────────────────
+    // ── Paradas (30/09/2026): motivos fijos y anotar una que ya pasó ───────
+    //
+    // LOS MOTIVOS SALEN DE LA BASE (motivos_parada, en su "orden"), nunca de
+    // una lista escrita acá: así "Corte de luz" y "Corte luz" no vuelven a
+    // ser dos. Hay tres categorías: programada (la limpieza de planchas),
+    // falla y otro. Las RPCs de siempre (iniciar_parada, registrar_parada)
+    // siguen recibiendo el motivo como TEXTO ("Corte de luz: se cortó en el
+    // barrio") y el trigger de paradas_produccion lo engancha solo con la
+    // lista (motivo_id, categoria y detalle).
+    //
+    // OJO — editar_parada NO puede cambiar el motivo de una parada ya
+    // guardada: con motivo_id puesto, el trigger reescribe el motivo con el de
+    // la lista. Por eso corregir una parada cambia solo las horas.
+    //
+    // Lo más común no es anotarla en el momento: se arregla la máquina y se
+    // anota después. Por eso la pantalla es "anotar una que ya pasó" (motivo,
+    // a qué hora paró, cuánto duró) y "Paró ahora" queda como secundario.
 
-    // Los motivos usados antes, del más reciente al más viejo, sin repetir
-    // (comparados sin mayúsculas ni espacios de más).
-    function motivosSugeridos(filas, max = 8) {
-      const vistos = new Set(), out = []
-      for (const f of filas ?? []) {
-        const t = String(f.motivo ?? '').trim()
-        const k = t.toLowerCase().replace(/\s+/g, ' ')
-        if (!t || vistos.has(k)) continue
-        vistos.add(k); out.push(t)
-        if (out.length >= max) break
+    // El nombre exacto con el que registrar_limpieza_planchas la anota.
+    const NOMBRE_LIMPIEZA = 'Limpieza de planchas'
+    const DURACIONES_PARADA = [10, 15, 20, 30, 45, 60, 90]
+    // El reloj de ruedas: cada renglón mide esto, y se ven tres.
+    const ALTO_RUEDA = 34
+    const MINUTOS_LIMPIEZA = { min: 5, max: 480 }
+
+    // Los motivos activos, en su orden. null = no se pudieron leer (la
+    // pantalla lo dice y deja escribir el motivo: la base lo engancha igual).
+    async function leerMotivosParada() {
+      try {
+        const { data, error } = await supabase.from('motivos_parada')
+          .select('id, nombre, categoria, pide_detalle, orden').eq('activo', true).order('orden')
+        if (error) throw error
+        const lista = [...(data ?? [])].sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0))
+        // Sin ningún motivo no hay qué elegir: se escribe, como si no se
+        // hubieran podido leer.
+        return lista.length ? lista : null
+      } catch (e) {
+        console.error('motivos_parada:', e)
+        return null
+      }
+    }
+
+    // Una sola lectura a la vez; si falló, se vuelve a intentar con "Volver a
+    // leer los motivos" (forzar).
+    function asegurarMotivosParada({ forzar = false } = {}) {
+      if (Array.isArray(estado.motivosParada) && !forzar) return Promise.resolve(estado.motivosParada)
+      if (estado.motivosLeyendo && !forzar) return estado.motivosLeyendo
+      if (!forzar && estado.motivosParada === null && estado.motivosIntentados) return Promise.resolve(null)
+      estado.motivosIntentados = true
+      estado.motivosLeyendo = leerMotivosParada().then(lista => {
+        estado.motivosParada = lista
+        estado.motivosLeyendo = null
+        if (estado.vista === 'pr-paradas') pintarParadaNueva()
+        return lista
+      })
+      return estado.motivosLeyendo
+    }
+
+    function esLimpieza(m) {
+      return !!m && normalizarBusqueda(m.nombre) === normalizarBusqueda(NOMBRE_LIMPIEZA)
+    }
+
+    function motivoElegido(f, motivos = estado.motivosParada) {
+      if (!f?.motivoId || !Array.isArray(motivos)) return null
+      return motivos.find(m => m.id === f.motivoId) ?? null
+    }
+
+    // El formulario vacío: arranca en la hora de ahora menos 30 minutos.
+    function paradaNuevaVacia(turno, ahora = new Date()) {
+      return {
+        turnoId: turno?.id ?? null, motivoId: null, limpieza: null, detalle: '', textoLibre: '',
+        inicio: horaConPaso(horaDeReferencia(turno, ahora), -30) || '00:00', duracion: null, fin: null,
+        fino: { inicio: false, fin: false }, intentado: false, enviando: false, errorBase: '',
+      }
+    }
+
+    // Se empezó a cargar algo (para el botón de volver y para recuperarlo).
+    function paradaNuevaEmpezada(f) {
+      return !!(f && (f.motivoId || f.duracion || String(f.textoLibre ?? '').trim()))
+    }
+
+    // El paso anterior del botón de volver: primero se suelta cuánto duró,
+    // después el motivo; sin nada elegido, null (vuelve al Inicio).
+    function pasoAnteriorParada(f) {
+      if (!f) return null
+      if (f.duracion) return 'duracion'
+      if (f.motivoId || String(f.textoLibre ?? '').trim()) return 'motivo'
+      return null
+    }
+
+    function volverPasoParada(paso) {
+      const f = estado.paradaNueva
+      if (!f) return
+      if (paso === 'duracion') { f.duracion = null; f.fin = null }
+      if (paso === 'motivo') { f.motivoId = null; f.limpieza = null; f.detalle = ''; f.textoLibre = '' }
+      f.errorBase = ''
+      f.intentado = false
+      pintarParadaNueva()
+    }
+
+    function prepararParadaNueva(p = estado.planilla) {
+      if (!p?.turno) return null
+      const f = estado.paradaNueva
+      if (!f || f.turnoId !== p.turno.id) {
+        // Una parada que quedó a medio anotar al recargar, en esta máquina.
+        const g = tomarCargaAMedias(CLAVE_PARADA_A_MEDIAS, p.turno.id)
+        estado.paradaNueva = g ? { ...paradaNuevaVacia(p.turno), ...g } : paradaNuevaVacia(p.turno)
+      }
+      return estado.paradaNueva
+    }
+
+    // El texto que viaja como p_motivo: "Corte de cadena: la de abajo".
+    function textoParadaNueva(f, motivos = estado.motivosParada) {
+      if (motivos === null) return String(f?.textoLibre ?? '').trim()
+      if (!Array.isArray(motivos)) return ''
+      const m = motivoElegido(f, motivos)
+      if (!m) return ''
+      const d = String(f.detalle ?? '').trim()
+      return d ? `${m.nombre}: ${d}` : m.nombre
+    }
+
+    function textoDuracion(min) {
+      if (min < 60) return `${min} min`
+      const h = Math.floor(min / 60), r = min % 60
+      return r ? `${h} h ${r}` : `${h} h`
+    }
+
+    function hhmm(iso) {
+      return horaArgentina(iso) || '—'
+    }
+
+    // ¿Puede quedar abierta ("Todavía no volvió")? Con el turno abierto y sin
+    // otra parada sin terminar (la base no deja dos).
+    function puedeQuedarAbierta(p) {
+      return p?.turno?.estado === 'abierto' && !paradaEnCurso(p?.paradas)
+    }
+
+    // { inicio, fin } en ISO (fin null = sigue), o { error } en palabras.
+    function horasParadaNueva(f, turno, ahora = new Date()) {
+      if (!f.duracion) return { error: 'Elegí cuánto duró, o «Todavía no volvió».' }
+      if (f.duracion === 'otro') return resolverHorasParada({ inicio: f.inicio, fin: f.fin, sigue: false }, turno, ahora)
+      const h = resolverHorasParada({ inicio: f.inicio, sigue: true }, turno, ahora)
+      if (h.error || f.duracion === 'sigue') return h
+      const fin = new Date(h.inicio).getTime() + Number(f.duracion) * 60000
+      const { tope, cerrado } = limitesParada(turno, ahora)
+      if (fin > tope) {
+        return { error: cerrado
+          ? 'Con esa duración la vuelta queda después del cierre de la planilla.'
+          : `Con esa duración volvió a las ${horaArgentina(new Date(fin))}, que todavía no pasó. Si sigue parada, tocá «Todavía no volvió».` }
+      }
+      return { inicio: h.inicio, fin: isoAr(fin) }
+    }
+
+    // La limpieza de planchas: { minutos } (null = sigue limpiando), con el
+    // momento y los minutos que pide registrar_limpieza_planchas, o { error }.
+    // "Al arrancar" va desde que se abrió el turno; "Al terminar", hasta ahora.
+    function minutosLimpieza(f, turno, ahora = new Date()) {
+      if (!f.limpieza) return { error: 'Elegí si la limpieza fue al arrancar o al terminar.' }
+      if (!f.duracion) return { error: f.limpieza === 'arranque' ? 'Elegí cuánto duró, o «Todavía no terminó».' : 'Elegí cuánto duró.' }
+      let min
+      if (f.duracion === 'sigue') {
+        if (f.limpieza !== 'arranque') return { error: 'Elegí cuánto duró.' }
+        return { minutos: null }
+      }
+      if (f.duracion === 'otro') {
+        const abierto = turno?.abierto_en ? new Date(turno.abierto_en).getTime() : NaN
+        if (f.limpieza === 'arranque') {
+          const h = resolverHorasParada({ inicio: horaArgentina(turno?.abierto_en), fin: f.fin, sigue: false }, turno, ahora)
+          if (h.error) return h
+          min = Math.round((new Date(h.fin).getTime() - abierto) / 60000)
+        } else {
+          const h = resolverHorasParada({ inicio: f.inicio, sigue: true }, turno, ahora)
+          if (h.error) return h
+          min = Math.round((new Date(ahora).getTime() - new Date(h.inicio).getTime()) / 60000)
+        }
+      } else min = Number(f.duracion)
+      if (!Number.isFinite(min) || min < MINUTOS_LIMPIEZA.min || min > MINUTOS_LIMPIEZA.max) {
+        return { error: `La limpieza tiene que durar entre ${MINUTOS_LIMPIEZA.min} minutos y ${MINUTOS_LIMPIEZA.max / 60} horas.` }
+      }
+      return { minutos: min }
+    }
+
+    // ¿La limpieza "al arrancar" queda abierta? (sigue, o termina después de ahora)
+    function limpiezaQuedaAbierta(f, turno, r, ahora = new Date()) {
+      if (f.limpieza !== 'arranque' || r.error) return false
+      if (r.minutos === null) return true
+      const fin = new Date(turno?.abierto_en).getTime() + r.minutos * 60000
+      return fin > new Date(ahora).getTime()
+    }
+
+    // Lo que falta, en palabras. Lista vacía = se puede mandar.
+    function faltanParaParadaNueva(f, p, ahora = new Date(), motivos = estado.motivosParada) {
+      const faltan = []
+      if (!f || !p?.turno) return ['No hay planilla elegida.']
+      if (motivos === null) {
+        if (String(f.textoLibre ?? '').trim().length < 2) faltan.push('Escribí qué pasó.')
+      } else if (!Array.isArray(motivos)) {
+        faltan.push('Esperá a que se lean los motivos.')
+      } else {
+        const m = motivoElegido(f, motivos)
+        if (!m) faltan.push('Elegí por qué paró.')
+        else if (esLimpieza(m)) {
+          const r = minutosLimpieza(f, p.turno, ahora)
+          if (r.error) faltan.push(r.error)
+          else if (limpiezaQuedaAbierta(f, p.turno, r, ahora) && !puedeQuedarAbierta(p)) {
+            faltan.push(paradaEnCurso(p.paradas) ? 'Ya hay una parada sin terminar: tocá «Volvió a andar» primero.' : 'La planilla ya no está abierta: poné cuánto duró.')
+          }
+          return faltan
+        } else if (m.pide_detalle && String(f.detalle ?? '').trim().length < 2) faltan.push('Escribí qué pasó.')
+      }
+      const h = horasParadaNueva(f, p.turno, ahora)
+      if (h.error) faltan.push(h.error)
+      else if (h.fin === null && !puedeQuedarAbierta(p)) {
+        faltan.push(paradaEnCurso(p.paradas) ? 'Ya hay una parada sin terminar: tocá «Volvió a andar» primero.' : 'La planilla ya no está abierta: poné cuánto duró.')
+      }
+      return faltan
+    }
+
+    // [rpc, parámetros]: la limpieza con registrar_limpieza_planchas; las
+    // demás con registrar_parada (p_fin null = "Todavía no volvió": así se
+    // guarda a la hora que paró, no a la de ahora).
+    function parametrosParadaNueva(f, p, ahora = new Date(), motivos = estado.motivosParada) {
+      const m = motivoElegido(f, motivos)
+      if (esLimpieza(m)) {
+        const r = minutosLimpieza(f, p.turno, ahora)
+        return ['registrar_limpieza_planchas', { p_turno_id: p.turno.id, p_momento: f.limpieza === 'arranque' ? 'arranque' : 'final', p_minutos: r.minutos ?? null }]
+      }
+      const h = horasParadaNueva(f, p.turno, ahora)
+      return ['registrar_parada', { p_turno_id: p.turno.id, p_motivo: textoParadaNueva(f, motivos), p_inicio: h.inicio, p_fin: h.fin }]
+    }
+
+    // El resumen de una línea antes de guardar: "Corte de cadena · de 10:15
+    // a 10:45 (30 min)". Vacío si todavía no se puede armar.
+    function resumenParadaNueva(f, p, ahora = new Date(), motivos = estado.motivosParada) {
+      if (!f || !p?.turno) return ''
+      const m = motivoElegido(f, motivos)
+      if (esLimpieza(m)) {
+        const r = minutosLimpieza(f, p.turno, ahora)
+        if (r.error) return ''
+        const nombre = `${m.nombre} ${f.limpieza === 'arranque' ? 'al arrancar' : 'al terminar'}`
+        if (f.limpieza === 'arranque') {
+          const ini = new Date(p.turno.abierto_en).getTime()
+          if (limpiezaQuedaAbierta(f, p.turno, r, ahora)) return `${nombre} · desde las ${hhmm(ini)}, todavía limpiando`
+          return `${nombre} · de ${hhmm(ini)} a ${hhmm(ini + r.minutos * 60000)} (${textoMinutos(r.minutos)})`
+        }
+        const fin = new Date(ahora).getTime()
+        return `${nombre} · de ${hhmm(fin - r.minutos * 60000)} a ${hhmm(fin)} (${textoMinutos(r.minutos)})`
+      }
+      const texto = Array.isArray(motivos)
+        ? (m ? `${m.nombre}${String(f.detalle ?? '').trim() ? ` (${String(f.detalle).trim()})` : ''}` : '')
+        : (motivos === null ? String(f.textoLibre ?? '').trim() : '')
+      if (!texto) return ''
+      const h = horasParadaNueva(f, p.turno, ahora)
+      if (h.error) return ''
+      if (h.fin === null) return `${texto} · desde las ${hhmm(h.inicio)}, todavía parada`
+      const min = Math.round((new Date(h.fin).getTime() - new Date(h.inicio).getTime()) / 60000)
+      return `${texto} · de ${hhmm(h.inicio)} a ${hhmm(h.fin)} (${textoMinutos(min)})`
+    }
+
+    // ── El reloj de ruedas (como el de la alarma del celular) ───────────────
+    // Dos columnas (horas y minutos) que se deslizan con el dedo y se
+    // enganchan en el renglón del medio. Los minutos van de a 5; tocar el
+    // minuto elegido los pasa de a 1 (para afinar) y otra vez de a 5.
+    function minutosDeRueda(fino) {
+      const paso = fino ? 1 : 5
+      return Array.from({ length: 60 / paso }, (_, i) => String(i * paso).padStart(2, '0'))
+    }
+
+    function htmlColumnaRueda(clave, tipo, lista, elegido, rotulo) {
+      const relleno = '<div class="pr-rueda__relleno" aria-hidden="true"></div>'
+      return `<div class="pr-rueda__col" data-rueda-col="${esc(clave)}:${esc(tipo)}" role="listbox" aria-label="${esc(rotulo)}">` + relleno +
+        lista.map(v => `<button type="button" class="pr-rueda__it" role="option" data-rueda-set="${esc(clave)}:${esc(tipo)}:${esc(v)}" aria-selected="${v === elegido ? 'true' : 'false'}">${esc(v)}</button>`).join('') +
+        relleno + '</div>'
+    }
+
+    // Con dos relojes ("Otro"), la pista va solo en el segundo: así entran
+    // los dos sin scroll a 1000 × 540.
+    function htmlRueda(clave, rotulo, valor, fino, conPista = true) {
+      const v = normalizarHora(valor) || '00:00'
+      const h = v.slice(0, 2), m = v.slice(3)
+      const finoReal = fino || Number(m) % 5 !== 0
+      const horas = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+      return `<div class="pr-rueda" data-rueda="${esc(clave)}"><span class="pr-rueda__rotulo">${esc(rotulo)}</span>` +
+        '<div class="pr-rueda__caja"><div class="pr-rueda__marco" aria-hidden="true"></div>' +
+        htmlColumnaRueda(clave, 'h', horas, h, `${rotulo}: hora`) + '<span class="pr-rueda__dos" aria-hidden="true">:</span>' +
+        htmlColumnaRueda(clave, 'm', minutosDeRueda(finoReal), m, `${rotulo}: minutos`) + '</div>' +
+        (conPista ? `<span class="pr-rueda__pista">${finoReal ? 'de a 1 minuto · tocá el minuto para volver de a 5' : 'tocá el minuto para afinar de a 1'}</span>` : '') + '</div>'
+    }
+
+    // Lleva cada columna al valor elegido y la escucha (se repinta entera).
+    function alinearRuedas() {
+      const cont = document.getElementById('pr-parada-hora')
+      for (const col of cont?.querySelectorAll?.('[data-rueda-col]') ?? []) {
+        const items = [...col.querySelectorAll('[data-rueda-set]')]
+        const i = items.findIndex(b => b.getAttribute('aria-selected') === 'true')
+        if (i >= 0) col.scrollTop = i * ALTO_RUEDA
+        col.addEventListener('scroll', () => {
+          clearTimeout(col._reloj)
+          col._reloj = setTimeout(() => fijarRuedaPorScroll(col), 140)
+        }, { passive: true })
+      }
+    }
+
+    // Al soltar el dedo: el renglón que quedó en el medio es el elegido.
+    function fijarRuedaPorScroll(col) {
+      if (!col?.isConnected) return
+      const items = [...col.querySelectorAll('[data-rueda-set]')]
+      if (!items.length) return
+      const i = Math.max(0, Math.min(items.length - 1, Math.round(col.scrollTop / ALTO_RUEDA)))
+      const [clave, tipo, v] = items[i].dataset.ruedaSet.split(':')
+      for (const b of items) b.setAttribute('aria-selected', b === items[i] ? 'true' : 'false')
+      ponerValorRueda(clave, tipo, v, { repintar: false })
+    }
+
+    function ponerValorRueda(clave, tipo, v, { repintar = true } = {}) {
+      const f = estado.paradaNueva
+      if (!f || !['inicio', 'fin'].includes(clave) || !/^\d{2}$/.test(v)) return
+      tocar()
+      const actual = normalizarHora(f[clave]) || '00:00'
+      f[clave] = tipo === 'h' ? `${v}:${actual.slice(3)}` : `${actual.slice(0, 2)}:${v}`
+      f.errorBase = ''
+      if (repintar) pintarParadaNueva()
+      else pintarResumenParada()
+    }
+
+    // Tocar un renglón lo elige; tocar el MINUTO ya elegido afina de a 1 (o
+    // vuelve de a 5, redondeando para abajo).
+    function tocarRueda(clave, tipo, v) {
+      const f = estado.paradaNueva
+      if (!f) return
+      const actual = normalizarHora(f[clave]) || '00:00'
+      if (tipo === 'm' && actual.slice(3) === v) {
+        tocar()
+        const fino = !(f.fino[clave] || Number(v) % 5 !== 0)
+        f.fino[clave] = fino
+        if (!fino) f[clave] = `${actual.slice(0, 2)}:${String(Number(v) - (Number(v) % 5)).padStart(2, '0')}`
+        return pintarParadaNueva()
+      }
+      ponerValorRueda(clave, tipo, v)
+    }
+
+    // ── El formulario de Paradas ────────────────────────────────────────────
+    function htmlMotivosParada(motivos, f) {
+      if (motivos === undefined) return '<p class="pr-texto-suave">Leyendo los motivos…</p>'
+      if (!Array.isArray(motivos)) {
+        return '<p class="pr-pa-sin-motivos" role="alert">No se pudieron leer los motivos. Escribí qué pasó y se guarda igual.</p>' +
+          '<button type="button" class="pr-btn pr-btn--secundario" data-motivos-reintentar="1">Volver a leer los motivos</button>'
+      }
+      const lim = motivos.find(esLimpieza)
+      const resto = motivos.filter(m => m !== lim)
+      let h = ''
+      if (lim) {
+        const elegida = f?.motivoId === lim.id
+        const boton = (momento, texto) => `<button type="button" class="pr-pa-limpieza__boton" data-motivo="${esc(lim.id)}" data-limpieza="${esc(momento)}" aria-pressed="${elegida && f.limpieza === momento ? 'true' : 'false'}">${esc(texto)}</button>`
+        h += `<div class="pr-pa-limpieza${elegida ? ' pr-pa-limpieza--elegida' : ''}"><span class="pr-pa-limpieza__nombre">${esc(lim.nombre)}</span>` +
+          '<div class="pr-pa-limpieza__botones">' + boton('arranque', 'Al arrancar') + boton('final', 'Al terminar') + '</div></div>'
+      }
+      h += '<div class="pr-pa-motivos__grilla">' + resto.map(m =>
+        `<button type="button" class="pr-motivo pr-motivo--${m.categoria === 'otro' ? 'otro' : 'falla'}" data-motivo="${esc(m.id)}" aria-pressed="${f?.motivoId === m.id ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('') + '</div>'
+      return h
+    }
+
+    function htmlDuracionesParada(f, p, m) {
+      const limpieza = esLimpieza(m)
+      const boton = (v, t, extra = '') => `<button type="button" class="pr-pa-dur${esc(extra)}" data-duracion="${esc(v)}" aria-pressed="${String(f.duracion) === String(v) ? 'true' : 'false'}">${esc(t)}</button>`
+      let out = DURACIONES_PARADA.map(min => boton(min, textoDuracion(min))).join('') + boton('otro', 'Otro')
+      if (!limpieza || f.limpieza === 'arranque') {
+        const sigue = boton('sigue', limpieza ? 'Todavía no terminó' : 'Todavía no volvió', ' pr-pa-dur--sigue')
+        out += puedeQuedarAbierta(p) ? sigue : sigue.replace('<button ', '<button disabled ')
       }
       return out
     }
 
-    function mostrarFormParada() {
-      // "Paró ahora" ya no abre un formulario: el motivo se elige en la misma
-      // pantalla de Paradas (se conserva el nombre para quien la llame).
-      return confirmarParada()
+    // El paso 2: el reloj de "paró a las", y con "Otro", también el de
+    // "volvió a las". La limpieza dice desde/hasta cuándo va.
+    function htmlHorasParadaNueva(f, p, m) {
+      if (esLimpieza(m) && f.limpieza) {
+        if (f.limpieza === 'arranque') {
+          const desde = `<p class="pr-pa-nota">Desde que se abrió el turno, a las ${esc(hhmm(p.turno.abierto_en))}.</p>`
+          return f.duracion === 'otro' ? desde + htmlRueda('fin', 'Terminó a las', f.fin, f.fino.fin) : desde
+        }
+        const hasta = '<p class="pr-pa-nota">Hasta ahora: la máquina paró antes de terminar el turno.</p>'
+        return f.duracion === 'otro' ? hasta + htmlRueda('inicio', 'Empezó a las', f.inicio, f.fino.inicio) : hasta
+      }
+      if (f.duracion === 'otro') return htmlRueda('inicio', 'Paró a las', f.inicio, f.fino.inicio, false) + htmlRueda('fin', 'Volvió a las', f.fin, f.fino.fin)
+      return htmlRueda('inicio', 'Paró a las', f.inicio, f.fino.inicio)
     }
 
-    // Los motivos grandes de la pantalla de Paradas (6), y "Otro motivo" con
-    // su detalle, que se guarda como "Otro: …". Si no se escribe nada se
-    // guarda "Otro motivo" y el cierre lo avisa (que_falta_para_cerrar).
-    const MOTIVOS_PARADA = ['Se cortó la cadena', 'Falta masa', 'Limpieza', 'Cambio de molde', 'Corte de luz']
-    const OTRO_MOTIVO = 'Otro motivo'
-
-    function motivoDeParada(texto) {
-      const t = String(texto ?? '').trim()
-      if (!t) return { clave: null, detalle: '' }
-      const k = normalizarBusqueda(t)
-      const fijo = MOTIVOS_PARADA.find(m => normalizarBusqueda(m) === k)
-      if (fijo) return { clave: fijo, detalle: '' }
-      const otro = /^otro(\s+motivo)?\s*:?\s*/i.exec(t)
-      if (otro) return { clave: OTRO_MOTIVO, detalle: t.slice(otro[0].length).trim() }
-      return { clave: OTRO_MOTIVO, detalle: t }
+    // El resumen y el error, sin repintar las ruedas (se llama mientras se
+    // desliza una).
+    function pintarResumenParada(ahora = new Date()) {
+      const f = estado.paradaNueva, p = estado.planilla
+      if (!f || !p) return
+      const resumen = resumenParadaNueva(f, p, ahora)
+      const faltan = faltanParaParadaNueva(f, p, ahora)
+      const texto = f.errorBase || (f.intentado && faltan.length ? faltan[0] : '')
+      const res = document.getElementById('pr-parada-resumen')
+      res.textContent = resumen || (texto ? '' : (faltan[0] ?? 'Elegí el motivo y cuánto duró.'))
+      res.classList?.toggle('pr-pa-resumen--listo', !!resumen)
+      const err = document.getElementById('pr-parada-error')
+      err.hidden = !texto
+      err.textContent = texto
+      const g = document.getElementById('pr-btn-guardar-parada')
+      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
+      g.disabled = !!f.enviando
+      g.textContent = f.enviando ? 'Guardando…' : 'Guardar la parada'
     }
 
-    function textoMotivoParada(sel) {
-      if (!sel?.clave) return ''
-      if (sel.clave !== OTRO_MOTIVO) return sel.clave
-      const d = String(sel.detalle ?? '').trim()
-      return d ? `Otro: ${d}` : OTRO_MOTIVO
+    function pintarParadaNueva() {
+      const p = estado.planilla
+      const f = prepararParadaNueva(p)
+      if (!f) return
+      const motivos = estado.motivosParada
+      const m = motivoElegido(f, motivos)
+      document.getElementById('pr-parada-sugerencias').innerHTML = htmlMotivosParada(motivos, f)
+      // El detalle: libre si los motivos no se leyeron; obligatorio en "Otro
+      // motivo" (pide_detalle); opcional en las fallas; la limpieza no lleva.
+      const otro = document.getElementById('pr-parada-otro')
+      const campo = document.getElementById('pr-parada-motivo')
+      const libre = motivos === null
+      otro.hidden = !(libre || (m && !esLimpieza(m)))
+      campo.placeholder = libre ? 'Escribí qué pasó' : (m?.pide_detalle ? '¿Qué pasó? (obligatorio)' : 'Detalle (opcional)')
+      if (document.activeElement !== campo) campo.value = libre ? f.textoLibre : f.detalle
+      document.getElementById('pr-parada-hora-titulo').innerHTML = `<span class="pr-pa-paso__n">2</span>${esLimpieza(m) && f.limpieza ? '¿Cuándo?' : '¿A qué hora paró?'}`
+      document.getElementById('pr-parada-hora').innerHTML = htmlHorasParadaNueva(f, p, m)
+      document.getElementById('pr-parada-duracion').innerHTML = htmlDuracionesParada(f, p, m)
+      // "Paró ahora": no con la limpieza (tiene su "al arrancar"), ni con una
+      // parada en curso, ni con la planilla cerrada.
+      document.getElementById('pr-btn-parada').hidden = !puedeQuedarAbierta(p) || esLimpieza(m)
+      pintarResumenParada()
+      alinearRuedas()
+      pintarVolver()
     }
 
-    function seleccionParada(p = estado.planilla) {
-      const enCurso = paradaEnCurso(p?.paradas)
-      if (estado.paradaSel) return estado.paradaSel
-      return enCurso ? motivoDeParada(enCurso.motivo) : { clave: null, detalle: '' }
+    function elegirMotivoParada(id, momento = null) {
+      const f = estado.paradaNueva
+      if (!f || !Array.isArray(estado.motivosParada)) return
+      const m = estado.motivosParada.find(x => x.id === id)
+      if (!m) return
+      tocar()
+      const antes = motivoElegido(f)
+      const nuevoMomento = esLimpieza(m) ? (momento ?? f.limpieza ?? null) : null
+      // Pasar de la limpieza a una falla (o de "al arrancar" a "al terminar")
+      // cambia qué quiere decir "cuánto duró": se vuelve a elegir.
+      if (esLimpieza(antes) !== esLimpieza(m) || nuevoMomento !== f.limpieza) { f.duracion = null; f.fin = null }
+      if (f.motivoId !== id) f.detalle = ''
+      f.motivoId = id
+      f.limpieza = nuevoMomento
+      f.errorBase = ''
+      pintarParadaNueva()
+      if (m.pide_detalle) document.getElementById('pr-parada-motivo').focus?.()
     }
 
-    // Las paradas del turno, la que sigue primero y en bordó. Cada una se toca
-    // para corregirla (el editor de siempre, con sus dos horas).
+    function elegirDuracionParada(v) {
+      const f = estado.paradaNueva
+      if (!f) return
+      tocar()
+      const d = v === 'otro' || v === 'sigue' ? v : Number(v)
+      if (typeof d === 'number' && !DURACIONES_PARADA.includes(d)) return
+      f.duracion = d
+      // "Otro": el segundo reloj arranca en la hora de parada más 30.
+      if (d === 'otro' && !f.fin) f.fin = horaConPaso(f.inicio, 30) || f.inicio
+      if (d === 'otro' && esLimpieza(motivoElegido(f)) && f.limpieza === 'arranque') f.fin = horaConPaso(horaArgentina(estado.planilla?.turno?.abierto_en), 30) || f.fin
+      f.errorBase = ''
+      pintarParadaNueva()
+    }
+
+    function escribirDetalleParada(valor) {
+      const f = estado.paradaNueva
+      if (!f) return
+      if (estado.motivosParada === null) f.textoLibre = valor
+      else f.detalle = valor
+      f.errorBase = ''
+      pintarResumenParada()
+    }
+
+    async function guardarParadaNueva(ahora = new Date()) {
+      const p = estado.planilla, f = estado.paradaNueva
+      if (!p || !f || f.enviando) return
+      escribirDetalleParada(document.getElementById('pr-parada-motivo').value)
+      f.intentado = true
+      f.errorBase = ''
+      if (faltanParaParadaNueva(f, p, ahora).length) return pintarResumenParada(ahora)
+      const [rpc, params] = parametrosParadaNueva(f, p, ahora)
+      f.enviando = true
+      pintarResumenParada(ahora)
+      try {
+        const { error } = await supabase.rpc(rpc, params)
+        if (error) throw error
+      } catch (e) {
+        console.error(rpc + ':', e)
+        f.enviando = false
+        // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
+        f.errorBase = e?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'
+        return pintarResumenParada(ahora)
+      }
+      estado.paradaNueva = paradaNuevaVacia(p.turno)
+      mostrarExito('Parada guardada.')
+      return recargarPlanilla()
+    }
+
+    // Las paradas del turno, la que sigue primero y en bordó, cada una con su
+    // categoría (la limpieza con su color). Se tocan para corregirlas.
+    const NOMBRE_CATEGORIA_PARADA = { programada: 'Programada', falla: 'Falla', otro: 'Otro' }
     function htmlParadasTurno(paradas) {
       const lista = paradas ?? []
       if (!lista.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
@@ -5887,8 +6788,12 @@
         const desde = horaArgentina(p.inicio) || '—'
         const hasta = p.fin ? (horaArgentina(p.fin) || '—') : 'ahora'
         const dur = duracionTexto(p.inicio, p.fin)
-        return `<button type="button" class="pr-parada-item${p.fin ? '' : ' pr-parada-item--curso'}" data-parada-editar="${esc(p.id)}">` +
-          `<span class="pr-parada-item__cab"><span class="pr-parada-item__horas">${esc(desde)} – ${esc(hasta)}</span><span class="pr-parada-item__dur">${esc(dur)}</span></span>` +
+        const cat = NOMBRE_CATEGORIA_PARADA[p.categoria] ? p.categoria : null
+        const clases = `pr-parada-item${p.fin ? '' : ' pr-parada-item--curso'}${cat === 'programada' ? ' pr-parada-item--programada' : ''}`
+        return `<button type="button" class="${esc(clases)}" data-parada-editar="${esc(p.id)}">` +
+          `<span class="pr-parada-item__cab"><span class="pr-parada-item__horas">${esc(desde)} – ${esc(hasta)}</span>` +
+          (cat ? `<span class="pr-parada-item__cat pr-parada-item__cat--${esc(cat)}">${esc(NOMBRE_CATEGORIA_PARADA[cat])}</span>` : '') +
+          `<span class="pr-parada-item__dur">${esc(dur)}</span></span>` +
           `<span class="pr-parada-item__motivo">${esc(p.motivo)}${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}</span></button>`
       }).join('')
     }
@@ -5900,87 +6805,62 @@
       const abierta = p.turno.estado === 'abierto'
       document.getElementById('pr-parada-activa').hidden = !enCurso
       const haceParada = enCurso ? duracionTexto(enCurso.inicio, null) : ''
-      document.getElementById('pr-parada-activa-texto').textContent = enCurso ? `desde las ${horaArgentina(enCurso.inicio) || '—'}` : ''
+      document.getElementById('pr-parada-activa-motivo').textContent = enCurso ? String(enCurso.motivo ?? '') : ''
+      document.getElementById('pr-parada-activa-texto').textContent = enCurso ? ` · desde las ${horaArgentina(enCurso.inicio) || '—'}` : ''
       document.getElementById('pr-parada-activa-hace').textContent = enCurso && haceParada ? ` · hace ${haceParada}` : ''
       document.getElementById('pr-parada-andando').hidden = !!enCurso || !abierta
-      document.getElementById('pr-parada-motivos').hidden = !enCurso && !abierta
-      document.getElementById('pr-parada-motivos-titulo').textContent = enCurso ? '¿Por qué paró?' : '¿Por qué se para?'
-      const sel = seleccionParada(p)
-      document.getElementById('pr-parada-sugerencias').innerHTML = [...MOTIVOS_PARADA, OTRO_MOTIVO].map(m =>
-        `<button type="button" class="pr-motivo" data-motivo="${esc(m)}" aria-pressed="${sel.clave === m ? 'true' : 'false'}">${esc(m)}</button>`).join('')
-      const otro = document.getElementById('pr-parada-otro')
-      const campo = document.getElementById('pr-parada-motivo')
-      const conOtro = sel.clave === OTRO_MOTIVO
-      if (otro.hidden && conOtro && document.activeElement !== campo) campo.value = sel.detalle ?? ''
-      otro.hidden = !conOtro
-      document.getElementById('pr-parada-guardar-motivo').hidden = !(conOtro && enCurso)
       document.getElementById('pr-btn-reanudar').hidden = !enCurso
-      document.getElementById('pr-btn-parada').hidden = !!enCurso || !abierta
       document.getElementById('pr-planilla-paradas').innerHTML = htmlParadasTurno(p.paradas)
       const n = (p.paradas ?? []).length
+      const total = textoMinutos(minutosParadas(p.paradas)) || '0 min'
       document.getElementById('pr-paradas-total').innerHTML = n
-        ? `<span>En total</span><strong>${esc(n)} ${n === 1 ? 'parada' : 'paradas'} · ${esc(textoMinutos(minutosParadas(p.paradas)) || '0 min')}</strong>`
+        ? `<span>En total</span><strong>${esc(n)} ${n === 1 ? 'parada' : 'paradas'} · ${esc(total)}</strong>`
         : ''
+      const ver = document.getElementById('pr-btn-ver-paradas')
+      ver.textContent = n ? `${n} ${n === 1 ? 'parada' : 'paradas'} en el turno · ${total} · Ver` : 'Sin paradas en el turno'
+      ver.disabled = !n
+      pintarParadaNueva()
+      if (!Array.isArray(estado.motivosParada)) asegurarMotivosParada()
     }
 
-    // Tocar un motivo. Sin parada, lo elige para "Paró ahora"; con la máquina
-    // parada, le cambia el motivo a la que sigue (editar_parada, con sus
-    // mismas horas). "Otro motivo" abre el detalle.
-    async function tocarMotivoParada(clave) {
-      const p = estado.planilla
-      if (!p) return
-      const err = document.getElementById('pr-parada-error')
-      err.hidden = true
-      const enCurso = paradaEnCurso(p.paradas)
-      const antes = seleccionParada(p)
-      estado.paradaSel = { clave, detalle: clave === OTRO_MOTIVO ? (antes.clave === OTRO_MOTIVO ? antes.detalle : '') : '' }
-      pintarParadas()
-      if (clave === OTRO_MOTIVO) { document.getElementById('pr-parada-motivo').focus(); return }
-      if (enCurso && clave !== motivoDeParada(enCurso.motivo).clave) await guardarMotivoParada()
+    function abrirVentanaParadas() {
+      tocar()
+      document.getElementById('pr-paradas-ventana').hidden = false
+      document.getElementById('pr-paradas-ventana-titulo').focus?.()
     }
 
-    async function guardarMotivoParada() {
-      const p = estado.planilla
-      const enCurso = p ? paradaEnCurso(p.paradas) : null
-      if (!enCurso || estado.guardandoMotivo) return
-      const sel = seleccionParada(p)
-      if (sel.clave === OTRO_MOTIVO) sel.detalle = document.getElementById('pr-parada-motivo').value
-      const motivo = textoMotivoParada(sel)
-      if (!motivo) return
-      estado.guardandoMotivo = true
-      const err = document.getElementById('pr-parada-error')
-      try {
-        const { error } = await supabase.rpc('editar_parada', { p_parada_id: enCurso.id, p_motivo: motivo, p_inicio: enCurso.inicio, p_fin: null })
-        if (error) throw error
-        estado.paradaSel = null
-        await recargarPlanilla()
-      } catch (e) {
-        err.textContent = e?.message || 'No se pudo cambiar el motivo.'
-        err.hidden = false
-      } finally {
-        estado.guardandoMotivo = false
-      }
+    function cerrarVentanaParadas() {
+      document.getElementById('pr-paradas-ventana').hidden = true
     }
 
+    function mostrarFormParada() {
+      // Se conserva el nombre para quien la llame: "Paró ahora".
+      return confirmarParada()
+    }
+
+    // "Paró ahora": con iniciar_parada, a la hora del servidor. Lleva el
+    // motivo elegido (con su detalle).
     async function confirmarParada() {
       const p = estado.planilla
-      if (!p) return
-      const err = document.getElementById('pr-parada-error')
-      const sel = seleccionParada(p)
-      if (sel.clave === OTRO_MOTIVO) sel.detalle = document.getElementById('pr-parada-motivo').value
-      const motivo = textoMotivoParada(sel)
-      if (!motivo) { err.textContent = 'Elegí por qué se para.'; err.hidden = false; return }
+      const f = prepararParadaNueva(p)
+      if (!p || !f) return
+      escribirDetalleParada(document.getElementById('pr-parada-motivo').value)
+      const m = motivoElegido(f)
+      const motivo = textoParadaNueva(f)
+      // El error va al ESTADO: el que lo escribe en pantalla es el render.
+      f.errorBase = !motivo ? 'Elegí por qué paró.'
+        : (m?.pide_detalle && String(f.detalle ?? '').trim().length < 2) ? 'Escribí qué pasó.' : ''
+      if (f.errorBase) return pintarResumenParada()
       const btn = document.getElementById('pr-btn-parada')
       btn.disabled = true
-      err.hidden = true
       try {
         const { error } = await supabase.rpc('iniciar_parada', { p_turno_id: p.turno.id, p_motivo: motivo })
         if (error) throw error
-        estado.paradaSel = null
+        estado.paradaNueva = paradaNuevaVacia(p.turno)
         await recargarPlanilla()
       } catch (e) {
-        err.textContent = e?.message || 'No se pudo registrar la parada.'
-        err.hidden = false
+        f.errorBase = e?.message || 'No se pudo registrar la parada.'
+        pintarResumenParada()
       } finally {
         btn.disabled = false
       }
@@ -5990,17 +6870,14 @@
       const enCurso = estado.planilla ? paradaEnCurso(estado.planilla.paradas) : null
       if (!enCurso) return
       const btn = document.getElementById('pr-btn-reanudar')
-      const err = document.getElementById('pr-parada-error')
+      const f = prepararParadaNueva()
       btn.disabled = true
-      err.hidden = true
       try {
         const { error } = await supabase.rpc('terminar_parada', { p_parada_id: enCurso.id })
         if (error) throw error
-        estado.paradaSel = null
         await recargarPlanilla()
       } catch (e) {
-        err.textContent = e?.message || 'No se pudo terminar la parada.'
-        err.hidden = false
+        if (f) { f.errorBase = e?.message || 'No se pudo terminar la parada.'; pintarResumenParada() }
       } finally {
         btn.disabled = false
       }
@@ -7189,6 +8066,12 @@
       document.getElementById('pr-agregar-cono-error').hidden = true
       document.getElementById('pr-agregar-error').hidden = true
       ponerNumero(document.getElementById('pr-agregar-cajas'), null)
+      // Un producto que quedó a medio cargar al recargar, en esta máquina.
+      const aMedias = tomarCargaAMedias(CLAVE_AGREGAR_A_MEDIAS, estado.planilla.turno?.id)
+      if (aMedias?.campos?.productoId) {
+        for (const c of CAMPOS_AGREGAR_A_MEDIAS) if (c in aMedias.campos) estado.agregar[c] = aMedias.campos[c]
+        if (aMedias.cajas != null) ponerNumero(document.getElementById('pr-agregar-cajas'), aMedias.cajas)
+      }
       mostrarVista('pr-agregar-prod')
       pintarAgregar()
       // Los conos más usados y el stock del empaque llegan después: la
@@ -7376,6 +8259,8 @@
       const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0
       confirmar.textContent = a.corrige ? 'Guardar la corrección'
         : (n ? `Agregar ${formatearNumeroAr(n, { decimales: 0 })} ${n === 1 ? 'caja' : 'cajas'} a lo producido` : 'Agregar a lo producido')
+      // "‹ Atrás" o "‹ Inicio" según el paso.
+      pintarVolver()
     }
 
     // La caja y el embolsado viajan SIEMPRE: el embolsado es el efectivo (con
@@ -7851,14 +8736,27 @@
 
     function conectarPlanilla() {
       document.getElementById('pr-btn-parada').addEventListener('click', confirmarParada)
+      // Paradas (30/09/2026): los motivos, el reloj de ruedas y cuánto duró.
       document.getElementById('pr-parada-sugerencias').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-motivo]'); if (b) tocarMotivoParada(b.dataset.motivo)
+        if (ev.target.closest('[data-motivos-reintentar]')) { asegurarMotivosParada({ forzar: true }); return }
+        const b = ev.target.closest('[data-motivo]'); if (b) elegirMotivoParada(b.dataset.motivo, b.dataset.limpieza ?? null)
       })
-      document.getElementById('pr-parada-motivo').addEventListener('input', ev => {
-        if (estado.paradaSel?.clave === OTRO_MOTIVO) estado.paradaSel.detalle = ev.target.value
-        else estado.paradaSel = { clave: OTRO_MOTIVO, detalle: ev.target.value }
+      document.getElementById('pr-parada-motivo').addEventListener('input', ev => escribirDetalleParada(ev.target.value))
+      document.getElementById('pr-parada-hora').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-rueda-set]'); if (!b) return
+        const [clave, tipo, v] = b.dataset.ruedaSet.split(':')
+        tocarRueda(clave, tipo, v)
       })
-      document.getElementById('pr-parada-guardar-motivo').addEventListener('click', guardarMotivoParada)
+      document.getElementById('pr-parada-duracion').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-duracion]'); if (b && !b.disabled) elegirDuracionParada(b.dataset.duracion)
+      })
+      document.getElementById('pr-btn-guardar-parada').addEventListener('click', () => guardarParadaNueva())
+      document.getElementById('pr-btn-ver-paradas').addEventListener('click', abrirVentanaParadas)
+      const ventanaParadas = document.getElementById('pr-paradas-ventana')
+      ventanaParadas.addEventListener('click', ev => {
+        if (ev.target === ventanaParadas || ev.target.closest('#pr-paradas-ventana-cerrar')) cerrarVentanaParadas()
+      })
+      ventanaParadas.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrarVentanaParadas() })
       document.getElementById('pr-planilla-ops').addEventListener('click', abrirVentanaOps)
       document.getElementById('pr-planilla-paradas-resumen').addEventListener('click', () => irASeccion('paradas'))
       document.getElementById('pr-agregar-proximo').addEventListener('click', abrirAgregar)
@@ -7871,9 +8769,8 @@
         const v = document.getElementById(id)
         v.addEventListener('click', ev => { if (ev.target === v) { if (id === 'pr-corregir') cerrarCorregir(); else v.hidden = true } })
       }
-      document.getElementById('pr-btn-anotar-parada').addEventListener('click', () => abrirEditorDesdePlanilla('anotar'))
       document.getElementById('pr-planilla-paradas').addEventListener('click', ev => {
-        const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdePlanilla('editar', e.dataset.paradaEditar)
+        const e = ev.target.closest('[data-parada-editar]'); if (e) { cerrarVentanaParadas(); return abrirEditorDesdePlanilla('editar', e.dataset.paradaEditar) }
         const b = ev.target.closest('[data-parada-borrar]'); if (b) abrirEditorDesdePlanilla('borrar', b.dataset.paradaBorrar)
       })
       const editor = document.getElementById('pr-parada-editor')
@@ -9149,7 +10046,7 @@
       const cant = editable
         ? '<span class="pr-rec__cant">' +
           `<button type="button" class="pr-rec__paso" data-menos="${esc(id)}" aria-label="Menos ${esc(it.ingrediente)}"${kg <= 0 ? ' disabled' : ''}>−</button>` +
-          `<input type="text" class="pr-rec__num${aleja ? ' pr-rec__num--aleja' : ''}" data-cant="${esc(id)}" aria-label="Kilos de ${esc(it.ingrediente)}">` +
+          `<input type="text" class="pr-rec__num${aleja ? ' pr-rec__num--aleja' : ''}" data-cant="${esc(id)}" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Kilos de ${esc(it.ingrediente)}">` +
           `<button type="button" class="pr-rec__paso" data-mas="${esc(id)}" aria-label="Más ${esc(it.ingrediente)}">+</button></span>`
         : `<span class="pr-rec__cant pr-rec__cant--fija"><span class="pr-rec__valor" data-valor="${esc(id)}">${htmlCantidadGrande(kg)}</span></span>`
       let accionRenglon = ''
@@ -9184,7 +10081,7 @@
         `<span class="pr-rec__marca">${esc(marca)}</span></span>` +
         '<span class="pr-rec__cant">' +
         `<button type="button" class="pr-rec__paso" data-menos-otro="${esc(o.id)}" aria-label="Menos ${esc(o.nombre)}"${(o.kg ?? 0) <= 0 ? ' disabled' : ''}>−</button>` +
-        `<input type="text" class="pr-rec__num" data-cant-otro="${esc(o.id)}" aria-label="Kilos de ${esc(o.nombre)}">` +
+        `<input type="text" class="pr-rec__num" data-cant-otro="${esc(o.id)}" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Kilos de ${esc(o.nombre)}">` +
         `<button type="button" class="pr-rec__paso" data-mas-otro="${esc(o.id)}" aria-label="Más ${esc(o.nombre)}">+</button>` +
         '</span>' +
         '<span class="pr-rec__lote-celda"><span class="pr-rec__nota">no descuenta stock</span></span>' +

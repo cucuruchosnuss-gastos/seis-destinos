@@ -18,7 +18,7 @@
 //    Media caja con / sin cono); la pantalla dice "Caja completa" y "Media
 //    altura" como el diseño.
 'use strict';
-const { UID, tarea, UNIDADES } = require('./comun');
+const { UID, tarea, UNIDADES, MOTIVOS_PARADA } = require('./comun');
 
 const DIA = '2026-09-28';
 const AYER = '2026-09-27';
@@ -219,6 +219,7 @@ module.exports = {
     receta_items: ORIGINAL.items.map(it => ({ receta_id: 'rec-1', ingrediente_id: it.ingrediente_id, cantidad_kg: it.cantidad_kg, insumo_preferido_id: it.insumo_preferido_id })),
     recetas: MAQUINAS.map((m, i) => ({ id: i === 0 ? 'rec-1' : `rec-${i + 1}`, maquina_id: m.id, tipo_masa: 'Común', version: 3 })),
     ingredientes: ORIGINAL.items.map(it => ({ id: it.ingrediente_id, nombre: it.ingrediente, define_chocolate: it.ingrediente_id === 'i-cacao' })),
+    motivos_parada: MOTIVOS_PARADA,
     paradas_produccion: PARADAS,
     produccion_items: PRODUCIDO,
     productos_terminados: PRODUCTOS,

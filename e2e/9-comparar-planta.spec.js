@@ -29,6 +29,7 @@ const SALIDA = path.join(__dirname, 'resultados', 'comparar');
 // su motivo y su propio tope, así siguen vigiladas). Como RETIRADOS en los
 // controles: una diferencia sin explicación es indistinguible de una rotura.
 const DESVIOS = {
+  '6': { tope: 0.45, motivo: 'Paradas (30/09/2026, pedido de Facu): la pantalla se rediseñó después del handoff "Planta v2". Los motivos salen de motivos_parada (la limpieza de planchas primero, en verde agua, con "Al arrancar" y "Al terminar"), el estado "Andando" pasó a una línea, y lo principal es anotar una parada que ya pasó (a qué hora paró con un reloj de ruedas, cuánto duró y el resumen); "Paró ahora" quedó secundario y las paradas del turno se ven en su ventana ("Ver").' },
   '5c': { tope: 0.45, motivo: 'el color de cada cono sale de su ID, de una paleta de ocho colores cálidos (así un cono no cambia de color cuando cambia el orden de "los más usados"); el diseño los pinta por posición y en lavandas. Además la app suma el chip "Común" (cono sin marca), que el diseño no dibuja.' },
 };
 

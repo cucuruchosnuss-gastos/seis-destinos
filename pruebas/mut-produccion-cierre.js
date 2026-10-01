@@ -21,6 +21,9 @@ correrMutacionesProduccion({
     'htmlPendientesCompletar', 'htmlFaltaCierre',
   ],
   equivalentes: [
+    { expr: 'esc(clases)', motivo: 'las clases de una parada salen del código (pr-parada-item, --curso, --programada): nada escapable' },
+    { expr: 'esc(cat)', motivo: 'cat es una clave de NOMBRE_CATEGORIA_PARADA (programada / falla / otro) o null: una categoría desconocida no se dibuja' },
+    { expr: 'esc(NOMBRE_CATEGORIA_PARADA[cat])', motivo: "'Programada' / 'Falla' / 'Otro', escritos en el código" },
     // (esc(x.texto) de htmlFaltaCierre ya NO es equivalente: desde la planta
     // v2 trae el texto de que_falta_para_cerrar, y la suite lo cubre.)
     { expr: 'esc(x.ir)', motivo: 'htmlFaltaCierre(): "paradas", "sala", "producido" o "scrap", constantes del código' },
@@ -141,16 +144,16 @@ correrMutacionesProduccion({
     { nombre: "el cálculo no multiplica", de: "? `${formatearNumeroAr(a.cajas * pr.unidades_por_caja, { decimales: 0 })} unidades`", a: "? `${formatearNumeroAr(a.cajas, { decimales: 0 })} unidades`" },
 
     // ── La planilla: paradas y botones ──────────────────────────────────
-    { nombre: "se puede parar dos veces", de: "document.getElementById('pr-btn-parada').hidden = !!enCurso || !abierta", a: "document.getElementById('pr-btn-parada').hidden = !abierta" },
+    { "nombre": "se puede parar dos veces", "de": "return p?.turno?.estado === 'abierto' && !paradaEnCurso(p?.paradas)", "a": "return p?.turno?.estado === 'abierto'" },
     { nombre: "cerrar se bloquea con una parada en curso", de: "        const off = (sec.deMaquina && !hay) ||", a: "        const off = (sec.deMaquina && !hay) || (sec.id === 'cierre' && parada) ||" },
     { nombre: 'el cierre no se abre con una parada en curso', de: '    async function mostrarCierre() {\n      const p = estado.planilla\n      if (!p) return', a: '    async function mostrarCierre() {\n      const p = estado.planilla\n      if (!p || paradaEnCurso(p.paradas)) return' },
     { nombre: "la parada en curso no va primera", de: "      const orden = [...lista.filter(p => !p.fin), ...[...lista.filter(p => p.fin)]", a: "      const orden = [...[...lista]" },
     // Terminar la tablet, parte 4: el renglón suma la clase del botón de corregir (conAcc/abre).
-    { nombre: "la parada en curso no se marca", de: "class=\"pr-parada-item${p.fin ? '' : ' pr-parada-item--curso'}\"", a: "class=\"pr-parada-item\"" },
+    { "nombre": "la parada en curso no se marca", "de": "${p.fin ? '' : ' pr-parada-item--curso'}", "a": "" },
     { nombre: 'la franja de parada no aparece', de: "      document.getElementById('pr-parada-activa').hidden = !enCurso", a: "      document.getElementById('pr-parada-activa').hidden = true" },
     { nombre: 'la franja no dice hace cuánto', de: "      document.getElementById('pr-parada-activa-hace').textContent = enCurso", a: "      document.getElementById('pr-parada-activa-hace').textContent = false" },
-    { nombre: "sin motivo de parada se manda igual", de: "      if (!motivo) { err.textContent = 'Elegí por qué se para.'; err.hidden = false; return }\n", a: "" },
-    { nombre: "un motivo fijo guardado se lee como \"Otro\"", de: "      if (fijo) return { clave: fijo, detalle: '' }\n", a: "" },
+    { "nombre": "sin motivo de parada se manda igual", "de": "f.errorBase = !motivo ? 'Elegí por qué paró.'", "a": "f.errorBase = !motivo ? ''" },
+    { "nombre": "el motivo elegido no se encuentra en la lista", "de": "      return motivos.find(m => m.id === f.motivoId) ?? null\n", "a": "      return null\n" },
     { nombre: 'terminar_parada con otra parada', de: "supabase.rpc('terminar_parada', { p_parada_id: enCurso.id })", a: "supabase.rpc('terminar_parada', { p_parada_id: estado.planilla.paradas[0].id })" },
 
     // ── Masas ───────────────────────────────────────────────────────────
@@ -238,7 +241,7 @@ correrMutacionesProduccion({
     { nombre: "sin catálogo igual se puede agregar", de: "        b.disabled = !p || !estado.catalogo", a: "        b.disabled = !p" },
     // ── La planta con dos modos: 6b y 7 ─────────────────────────────────
     { nombre: "6b sin \"hace cuánto\"", de: "textContent = enCurso && haceParada ? ` · hace ${haceParada}` : ''", a: "textContent = ''" },
-    { nombre: "6b sin \"¿Por qué paró?\"", de: "textContent = enCurso ? '¿Por qué paró?' : '¿Por qué se para?'", a: "textContent = '¿Por qué se para?'" },
+    { "nombre": "6b sin \"¿Por qué paró?\"", "de": "<span class=\"pr-pa-paso__n\">1</span>¿Por qué paró?</h2>", "a": "<span class=\"pr-pa-paso__n\">1</span>¿Por qué se para?</h2>" },
     { nombre: "7 sin lo que falta del formulario", de: "if (b?.intentado) for (const f of faltanParaCerrar(b)) avisos.push", a: "if (false) for (const f of faltanParaCerrar(b)) avisos.push" },
     { nombre: "7 no dibuja los avisos de la base (la parada sin terminar)", de: "        } else if (f?.nivel === 'aviso') {", a: "        } else if (false) {" },
     { nombre: "7 no avisa que no hay nada producido", de: "      if (p && !itemsVivos(p.items).length) avisos.push", a: "      if (false) avisos.push" },
