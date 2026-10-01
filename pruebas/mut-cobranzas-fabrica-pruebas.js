@@ -28,8 +28,8 @@ correrMutaciones({
     { nombre: 'pintarRepartidores dibuja aunque no haya ver_todo',
       de: 'if (!puedeVerTodo() || !estado.repartidores.length) return', a: 'if (!estado.repartidores.length) return' },
     { nombre: 'el init no lanza la fábrica',
-      de: '      asegurarFabrica()\n      asegurarUnidades().then(() => {', a: '      asegurarUnidades().then(() => {' },
+      de: '      asegurarFabrica().then(() => { if (esFormAsentado(estado.form)) pintarAsentar() })\n      asegurarUnidades().then(() => {', a: '      asegurarUnidades().then(() => {' },
     { nombre: 'el init espera la fábrica (frena el arranque)',
-      de: '      asegurarFabrica()\n      asegurarUnidades().then(() => {', a: '      await asegurarFabrica()\n      asegurarUnidades().then(() => {' },
+      de: '      asegurarFabrica().then(() => { if (esFormAsentado(estado.form)) pintarAsentar() })\n      asegurarUnidades().then(() => {', a: '      await asegurarFabrica()\n      asegurarUnidades().then(() => {' },
   ],
 })

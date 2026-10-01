@@ -27,7 +27,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { construirCon } = require('./sandbox')
+const { construirCon, FUNCIONES_ASENTAR, CONSTANTES_ASENTAR } = require('./sandbox')
 const { fuenteNumeros, inputFalso } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
@@ -115,10 +115,11 @@ const FUNCIONES = [
   'htmlChequeDetalle', 'normalizarCliente', 'textoSalidaCheque', 'htmlLinkChequeEnCartera',
   // E-cheques y transferencias (30/09/2026)
   'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila',
+  ...FUNCIONES_ASENTAR,
 ]
 const CONSTANTES = [
   'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_CHEQUE', 'ESTADOS_COBRANZA', 'ETIQUETA_ESTADO_COBRANZA', 'puedeProcesar',
-  'puedeVerTodo', 'puedeVerCartera', 'ACENTOS_COB', 'SIN_ACENTOS_COB',
+  'puedeVerTodo', 'puedeVerCartera', 'ACENTOS_COB', 'SIN_ACENTOS_COB', ...CONSTANTES_ASENTAR,
 ]
 
 function sandbox() {

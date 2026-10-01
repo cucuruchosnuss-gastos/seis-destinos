@@ -861,6 +861,15 @@ if (SOLO !== 'render') {
     ["echecks.map((e, i) => htmlEcheckForm(e, i, admin)).join('')", 'HTML armado por htmlEcheckForm(), que escapa adentro'],
     ["transf.map((t, i) => htmlTransferenciaForm(t, i, admin)).join('')", 'HTML armado por htmlTransferenciaForm(), que escapa adentro'],
     ['htmlResumenFormas(totalesPorForma(f))', 'HTML armado por htmlResumenFormas(), que escapa adentro'],
+    // La cobranza ya asentada (01/10/2026). Las ejecuta con marcas
+    // test-cobranzas-asentada.js.
+    ['htmlMarcaEmpresa(u)', 'HTML armado por htmlMarcaEmpresa(): un <img> sin src con escCob(u.id), o un círculo con escCob() del color y las letras'],
+    ["a.clientes.map(htmlOpcionClienteAsentar).join('')", 'HTML armado por htmlOpcionClienteAsentar(), que escapa adentro (escCob del id, el nombre, la razón social, la localidad y el saldo)'],
+    ['tope', 'HTML armado en htmlClientesAsentar(): un aviso literal del código'],
+    ['opciones', 'HTML armado en htmlProyectoAsentar(): <option> con escCob(x.id) y escCob() del nombre y el estado'],
+    ['htmlEmpresas(empresasParaAsentar(), f.unidad_id)', 'HTML armado por htmlEmpresas(), que escapa adentro'],
+    ['htmlClientesAsentar(f, a)', 'HTML armado por htmlClientesAsentar(), que escapa adentro'],
+    ['htmlP', 'HTML armado por htmlProyectoAsentar(), que escapa adentro'],
   ])
   const malas = []
   for (const x of aRevisar) {

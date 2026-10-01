@@ -454,7 +454,8 @@ async function pruebas() {
     const SALIERON = /cob-pestana|cob-cartera|cob-tabla|cob-btn--elegido/
     // cob-unidad-: la nota y la marca "Sin unidad" de la barra de unidad (28/09/2026).
     // cob-resumen-formas / cob-formas-linea: las cuatro formas de pago (30/09/2026).
-    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^\.cob-unidad-|^\.cob-resumen-formas|^\.cob-formas-linea|^\.cob-formas-tabla|^\.cob-cheque__tipo \.forma-pago/
+    // cob-empresa / cob-cliente-op / ...: la cobranza ya asentada (01/10/2026).
+    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^\.cob-unidad-|^\.cob-resumen-formas|^\.cob-formas-linea|^\.cob-formas-tabla|^\.cob-cheque__tipo \.forma-pago|^\.cob-campo__rotulo|^\.cob-empresa|^\.cob-clientes|^\.cob-cliente-op|^\.cob-cliente-elegido|^\.cob-asentar-nota/
     // (29/09/2026) El sistema visual nuevo cambió en TODA la app los tintes
     // azulados escritos a mano por los cálidos (rgba(26,42,82) → rgba(28,26,23),
     // #55617d → #6B645A): se comparan con esa traducción aplicada.

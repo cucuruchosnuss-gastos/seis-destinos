@@ -200,7 +200,7 @@ async function pruebas() {
   {
     const ini = FUENTE.indexOf('async function init()')
     const cuerpo = FUENTE.slice(ini, FUENTE.indexOf('\n    init()', ini))
-    chk('el init lanza asegurarFabrica()', /\n\s*asegurarFabrica\(\)\n/.test(cuerpo))
+    chk('el init lanza asegurarFabrica()', /\n\s*asegurarFabrica\(\)(\.then\([^\n]*\))?\n/.test(cuerpo))
     chk('el init no la espera (no frena el arranque)', !/await[^\n]*asegurarFabrica/.test(cuerpo))
     chk('el import trae los helpers de utils.js',
       /import \{[^}]*cargarFabricaDePruebas[^}]*sinUnidadesDePrueba[^}]*sinPersonasDePrueba[^}]*FABRICA_SIN_DATOS[^}]*\} from '\.\.\/js\/utils\.js'/.test(FUENTE))

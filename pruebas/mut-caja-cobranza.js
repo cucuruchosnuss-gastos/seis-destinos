@@ -34,6 +34,6 @@ correrMutaciones({
       de: "document.getElementById('aviso-ingreso-cliente').hidden = !(tipo === 'ingreso' && subtipo === 'externo')",
       a: "document.getElementById('aviso-ingreso-cliente').hidden = false" },
     { nombre: 'el aviso sin el link a Cobranzas',
-      de: 'cargala en <a href="cobranzas.html">Cobranzas</a> para', a: 'cargala en Cobranzas para' },
+      de: 'se carga en <a href="cobranzas.html">Cobranzas</a></div>', a: 'se carga en Cobranzas</div>' },
   ],
 })

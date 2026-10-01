@@ -209,7 +209,9 @@ const COMPORTAMIENTO = [
   ['error de la base: editar lo tapa con un genérico (en el guardado)',
     'err.textContent = resultado.mensaje', "err.textContent = 'No se pudo guardar.'"],
   ['error de la base: editar lo tapa con un genérico (en la subida)',
-    "mensaje: error.message || 'El servidor rechazó la cobranza.'", "mensaje: 'El servidor rechazó la cobranza.'"],
+    // Con lo que sigue, para no confundirla con la de la cobranza ya asentada
+    // (01/10/2026), que repite la línea (la prueba mut-cobranzas-asentada.js).
+    "mensaje: error.message || 'El servidor rechazó la cobranza.' }\n        }\n        return { ok: true, yaExistia", "mensaje: 'El servidor rechazó la cobranza.' }\n        }\n        return { ok: true, yaExistia"],
   ['detalle: no avisa que hay cheques afuera',
     'const haySalidos = !anulada && ', 'const haySalidos = false && '],
   ['detalle: el estado del cheque no se muestra',

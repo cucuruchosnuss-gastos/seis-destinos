@@ -12,6 +12,23 @@ const { fuenteConComun } = require('./fuente-cobranzas')
 // sinUnidadesDePrueba, sinPersonasDePrueba…) llegan con fuenteNumeros(), que
 // carga utils.js desde la sección de números hasta el final (26/09/2026).
 
+// La cobranza ya asentada (01/10/2026), y lo que usa de js/barra-unidad.js.
+// Exportadas: toda suite que arme el formulario de Cobranzas las necesita
+// (motivosParaNoGuardar, subirCobranza y pintarFormulario las llaman).
+const FUNCIONES_ASENTAR = [
+  'estadoAsentarVacio', 'esFormAsentado', 'empresasParaAsentar', 'empresaInicialAsentar', 'unidadDelForm', 'esTaller',
+  'htmlMarcaEmpresa', 'htmlEmpresas', 'textoSaldoCliente', 'htmlOpcionClienteAsentar', 'htmlClientesAsentar',
+  'clientesDeLaEmpresa', 'buscarClientesAsentar', 'alEscribirClienteAsentar', 'soltarClienteAsentar', 'elegirEmpresa',
+  'elegirClienteAsentar', 'cambiarClienteAsentar', 'proyectosDelClienteCob', 'htmlProyectoAsentar', 'faltaProyectoAsentar',
+  'proyectoParaBase', 'cargarProyectosAsentar', 'ponerLogosEmpresas', 'pintarAsentar', 'alTocarEnAsentar', 'alElegirProyecto',
+  'textoCobranzaAsentada', 'subirCobranzaAsentada',
+  'ordenarUnidades', 'logoUnidad', 'nombreCorto', 'inicialesDe',
+]
+const CONSTANTES_ASENTAR = [
+  'MS_BUSCAR_CLIENTE', 'MIN_LETRAS_CLIENTE', 'TOPE_CLIENTES_BUSCADOS', 'ETIQUETA_ESTADO_PROYECTO_COB',
+  'MARCA_FABRICA', 'NOMBRE_CORTO', 'ORDEN_PREFIJO',
+]
+
 const FUNCIONES = [
   'escCob', 'dvBcra', 'escribirImporteEnCampo', 'formatearImporte',
   'normalizarCliente', 'hoyArgentina', 'esFechaIso', 'diasEntre', 'formatearFechaCob',
@@ -38,12 +55,14 @@ const FUNCIONES = [
   'numeroDeResumen', 'htmlResumen', 'parametrosResumen',
   // E-cheques y transferencias (30/09/2026)
   'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila',
+  ...FUNCIONES_ASENTAR,
 ]
 
 const CONSTANTES = [
   'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia', 'puedeVerCartera',
   'ETIQUETA_ESTADO_CHEQUE', 'UUID_COB', 'SEGUNDOS_LECTURA_LENTA', 'TEXTO_BOTON_CHEQUE_MANO',
+  ...CONSTANTES_ASENTAR,
 ]
 
 const PRELUDIO = `
@@ -188,4 +207,4 @@ function construir(rutaHtml) {
   })
 }
 
-module.exports = { construir, construirCon, scriptModulo, FUNCIONES, CONSTANTES }
+module.exports = { construir, construirCon, scriptModulo, FUNCIONES, CONSTANTES, FUNCIONES_ASENTAR, CONSTANTES_ASENTAR }

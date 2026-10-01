@@ -699,6 +699,14 @@
       color: var(--color-exito);
     }
 
+    /* Ajuste de saldo (01/10/2026): cargado desde la base, en gris. Va después
+       de la regla base de la tarjeta para no quedar pisado. */
+    .chip-tipo-movimiento--ingreso_ajuste,
+    .chip-tipo-movimiento--egreso_ajuste {
+      background: var(--color-pista);
+      color: var(--color-texto-2);
+    }
+
     .movimiento__persona {
       font-size: 0.875rem;
       font-weight: 700;
@@ -738,6 +746,17 @@
       color: var(--color-texto);
       white-space: nowrap;
       flex-shrink: 0;
+    }
+
+    /* Ajuste de saldo: la fila entera en gris (fondo de pista y el importe en
+       el gris secundario). Después de .tarjeta-movimiento y .movimiento__monto,
+       con la misma especificidad o más, para no quedar pisada. */
+    .tarjeta-movimiento.tarjeta-movimiento--ajuste {
+      background: var(--color-pista);
+    }
+    .tarjeta-movimiento--ajuste .movimiento__monto,
+    .tarjeta-movimiento--ajuste .movimiento__descripcion {
+      color: var(--color-texto-2);
     }
 
     /* ── Botones de medio de pago (2 opciones) ────────────────────────────── */
@@ -818,6 +837,15 @@
       top: 0.875rem;
       right: 0.875rem;
     }
+
+    /* Debajo del título del ingreso externo, en chico: no es un aviso, es una
+       indicación (01/10/2026). */
+    .aviso-ingreso-cliente {
+      font-size: 0.8125rem;
+      color: var(--color-texto-2);
+      margin: 0.25rem 0 0;
+    }
+    .aviso-ingreso-cliente[hidden] { display: none; }
 
     .aviso-retiro-personal {
       background: var(--bordo-suave);
@@ -1587,11 +1615,11 @@
     <div id="modal-movimiento__panel">
       <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-movimiento" title="Cerrar">✕</button>
       <h2 id="movimiento-titulo">Registrar ingreso</h2>
+      <!-- Ingreso externo (01/10/2026): en chico, debajo del título. La plata
+           de un cliente va por Cobranzas, que baja su deuda al asentarla. -->
+      <div id="aviso-ingreso-cliente" class="aviso-ingreso-cliente" hidden>La plata de un cliente se carga en <a href="cobranzas.html">Cobranzas</a></div>
 
       <div id="aviso-retiro-personal" class="aviso-retiro-personal" hidden></div>
-      <!-- Ingreso externo (30/09/2026): la plata de un cliente va por
-           Cobranzas, que baja su deuda al asentarla. -->
-      <div id="aviso-ingreso-cliente" class="aviso-retiro-personal" hidden>Si es plata de un cliente, cargala en <a href="cobranzas.html">Cobranzas</a> para que baje su deuda.</div>
 
       <div class="formulario" style="margin-top:1rem;">
         <div class="grupo-campo" id="grupo-contraparte" style="display:none;">
@@ -1901,7 +1929,14 @@
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
     // nombre de la contraparte ("Entregado a X"), ver etiquetaMovimiento().
-    const TIPO_LABEL = { ingreso: 'Ingreso', ingreso_externo: 'Ingreso externo', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro', ingreso_reversion_gasto: 'Devolución por anulación' }
+    const TIPO_LABEL = { ingreso: 'Ingreso', ingreso_externo: 'Ingreso externo', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro', ingreso_reversion_gasto: 'Devolución por anulación', ingreso_ajuste: 'Ajuste', egreso_ajuste: 'Ajuste' }
+
+    // Los AJUSTES de saldo (01/10/2026): ingreso_ajuste y egreso_ajuste se
+    // cargan desde la base, nunca desde una pantalla. En la lista se ven como
+    // "Ajuste", en gris, con su descripción, y no se pueden tocar (Caja no
+    // tiene cómo editar ni borrar un movimiento). Suman o restan como
+    // cualquier otro: la regla del signo es el prefijo del tipo. Cuál es un
+    // ajuste lo decide renderizarFilaMovimiento (m.tipo).
     const MEDIO_PAGO_LABEL_CAJA = { efectivo: 'Efectivo', transferencia: 'Banco' }
     // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos
     // a los de medio_pago ('efectivo'/'transferencia') — no son intercambiables.
@@ -1954,6 +1989,16 @@
     // Empresa" del selector de pago, con su propio tieneTareaExplicita().
     function tieneTareaExplicita(tarea) {
       return estado.misTareasCaja.has(tarea)
+    }
+
+    // El ingreso externo (préstamos, aportes): desde el 01/10/2026 lo cargan
+    // SOLO Facu y Pablo. registrar_ingreso_externo_caja exige rol_app =
+    // 'super_admin' Y la tarea explícita de esa caja, así que la pantalla pide
+    // las dos cosas: sin una de ellas el botón prometería algo que la base
+    // rechaza. La plata de un cliente va por Cobranzas.
+    const TITULO_INGRESO_EXTERNO = 'Ingreso externo (préstamos, aportes)'
+    function puedoIngresoExterno(tarea) {
+      return estado.miEmpleado?.rol_app === 'super_admin' && tieneTareaExplicita(tarea)
     }
 
     // ── Solicitudes que involucran a Empresa ────────────────────────────────
@@ -2281,6 +2326,8 @@
       { value: 'egreso_transferencia', label: 'Entregado a otro' },
       { value: 'egreso_traspaso',      label: 'Traspaso saliente' },
       { value: 'ingreso_traspaso',     label: 'Traspaso entrante' },
+      { value: 'ingreso_ajuste',       label: 'Ajuste que suma' },
+      { value: 'egreso_ajuste',        label: 'Ajuste que resta' },
     ]
 
     // Aplica período (rango de fechas por mes tildado, vía OR de rangos),
@@ -3513,13 +3560,17 @@
       // ajena no va ninguno de los dos.
       // El modal NO deduce cuál de los dos flujos abrir — se lo dice el botón
       // que se tocó (ver el subtipo en los listeners de abajo).
+      // DESDE EL 01/10/2026 el ingreso externo es SOLO de un super_admin (Facu
+      // y Pablo): registrar_ingreso_externo_caja rechaza a cualquier otro, y
+      // además sigue pidiendo la tarea explícita. A los demás no les aparece:
+      // la plata de un cliente se carga en Cobranzas.
       if (empleadoId === estado.miEmpleado.id) {
         botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Añadir ingreso</button>`)
-        if (tieneTareaExplicita('ingreso_externo_propio')) {
-          botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">Ingreso externo</button>`)
+        if (puedoIngresoExterno('ingreso_externo_propio')) {
+          botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">${esc(TITULO_INGRESO_EXTERNO)}</button>`)
         }
-      } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo_empresa')) {
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">Ingreso externo</button>`)
+      } else if (empleadoId === estado.idEmpresa && puedoIngresoExterno('ingreso_externo_empresa')) {
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">${esc(TITULO_INGRESO_EXTERNO)}</button>`)
       }
 
       // Egreso: en la propia ficha para cualquiera; en la de Empresa con la
@@ -3781,8 +3832,15 @@
         ? `<div class="movimiento__referencia">Viene de una cobranza asentada: no se edita ni se borra desde Caja — <a href="administracion.html?seccion=cobranzas&amp;cobranza=${encodeURIComponent(m.cobranza_id)}">Ver la cobranza →</a></div>`
         : ''
 
+      // Un ajuste de saldo se cargó desde la base: se dice, y la fila va en
+      // gris (no es un aviso, es un movimiento que nadie de la pantalla hizo).
+      const ajuste = m.tipo === 'ingreso_ajuste' || m.tipo === 'egreso_ajuste'
+      const refAjuste = ajuste
+        ? `<div class="movimiento__referencia">Ajuste de saldo: no se edita ni se borra desde Caja.</div>`
+        : ''
+
       return `
-        <div class="tarjeta-movimiento">
+        <div class="tarjeta-movimiento${ajuste ? ' tarjeta-movimiento--ajuste' : ''}">
           <div class="movimiento__cabecera">
             <div class="movimiento__info">
               ${personaHtml}
@@ -3792,6 +3850,7 @@
               ${m.descripcion ? `<div class="movimiento__descripcion">${esc(m.descripcion)}</div>` : ''}
               ${refGasto}
               ${refCobranza}
+              ${refAjuste}
             </div>
             <div class="movimiento__monto">${signo} ${importeHtml(m.monto, m.moneda)}</div>
           </div>
@@ -4851,7 +4910,7 @@
           // selector es siempre de UN solo dueño (el de esta ficha), nunca un
           // merge entre cuentas propias y de Empresa. La RPC re-valida
           // server-side qué tarea corresponde según el dueño de la cuenta.
-          document.getElementById('movimiento-titulo').textContent = 'Ingreso externo'
+          document.getElementById('movimiento-titulo').textContent = TITULO_INGRESO_EXTERNO
           grupoContraparte.style.display = 'none'
           grupoCuentaUnica.style.display = 'flex'
           labelCuentaUnica.textContent = 'Cuenta'

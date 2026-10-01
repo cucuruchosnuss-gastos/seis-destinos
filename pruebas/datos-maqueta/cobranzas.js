@@ -60,6 +60,16 @@ module.exports = {
   rpc: {
     resumen_cobranzas: [{ por_controlar: 3, cantidad: 5, total: 955000 }],
     mis_pendientes: [{ modulo: 'cobranzas', clave: 'por_controlar', cantidad: 3, texto: 'Cobranzas por controlar' }],
+    // La cobranza ya asentada (01/10/2026): la lista de clientes de cada
+    // empresa. Viene mezclada a propósito: la pantalla se queda con los de la
+    // empresa elegida.
+    buscar_clientes: [
+      { cliente_id: 'cli-jm-d', nombre: 'J&M', razon_social: 'J Y M SA', localidad: 'Rosario', empresa: 'Dolce Pasta', unidad_negocio_id: 'u-d', activo: true, saldo: 250000, parecido: 0 },
+      { cliente_id: 'cli-ana-d', nombre: 'Distribuidora Anatolia', razon_social: 'ANATOLIA SRL', localidad: 'Córdoba', empresa: 'Dolce Pasta', unidad_negocio_id: 'u-d', activo: true, saldo: -15000, parecido: 0 },
+      { cliente_id: 'cli-jm-n', nombre: 'J&M', razon_social: 'J Y M SA', localidad: 'Rosario', empresa: 'Cucuruchos Nuss', unidad_negocio_id: 'u-n', activo: true, saldo: 98000, parecido: 0 },
+      { cliente_id: 'cli-lap-n', nombre: 'Heladería Laponia', razon_social: null, localidad: 'Villa Carlos Paz', empresa: 'Cucuruchos Nuss', unidad_negocio_id: 'u-n', activo: true, saldo: 0, parecido: 0 },
+    ],
+    cargar_cobranza_asentada: { id: 'x', importe: 100000, saldo_cliente: 150000, asentada: true },
   },
 };
 

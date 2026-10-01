@@ -105,7 +105,7 @@ const FUNCIONES = [
 
 function sandbox() {
   const S = construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO'],
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'TITULO_INGRESO_EXTERNO'],
     retorno: `estado, __els, __errores, __llamadas(){ return __llamadas }, __limpiar(){ __llamadas = []; __errores.length = 0 },
       __respuesta(r){ __respuestaSolicitud = r }, __doc: document, IDS_CAMPOS_MONTO`,
   })

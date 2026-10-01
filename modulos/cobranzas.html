@@ -457,6 +457,96 @@
 
     .cob-campo { margin-bottom: 0.875rem; min-width: 0; }
     .cob-campo:last-child { margin-bottom: 0; }
+
+    /* LA COBRANZA YA ASENTADA (01/10/2026): la empresa en botones grandes con
+       su logo o su color, y los clientes de esa empresa en una lista. El
+       naranja marca lo elegido (es lo que se toca), nunca validez. */
+    .cob-campo__rotulo {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+    }
+    .cob-empresas {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    .cob-empresa {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      min-height: 64px;
+      padding: 0.625rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      text-align: left;
+      cursor: pointer;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-empresa[aria-pressed="true"] {
+      border-color: var(--naranja);
+      background: var(--naranja-suave);
+      box-shadow: 0 0 0 2px var(--naranja-suave);
+    }
+    .cob-empresa__marca {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 0.8125rem;
+      font-weight: 800;
+      overflow: hidden;
+    }
+    .cob-empresa__marca img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .cob-empresa__marca--logo { background: var(--color-fondo); }
+    .cob-clientes {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-top: 0.5rem;
+    }
+    .cob-cliente-op {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 48px;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      text-align: left;
+      cursor: pointer;
+      min-width: 0;
+    }
+    .cob-cliente-op__texto { min-width: 0; }
+    .cob-cliente-op__nombre { font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); overflow-wrap: anywhere; min-width: 0; }
+    .cob-cliente-op__meta { font-size: 0.75rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .cob-cliente-op__saldo { flex: 0 0 auto; font-size: 0.8125rem; font-weight: 600; color: var(--color-texto-2); white-space: nowrap; }
+    .cob-cliente-elegido {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.75rem;
+      border: 1.5px solid var(--naranja);
+      border-radius: var(--radio-boton);
+      background: var(--naranja-suave);
+      min-width: 0;
+    }
+    .cob-asentar-nota { margin-top: 0.5rem; font-size: 0.8125rem; color: var(--color-texto-2); }
     .cob-campo label {
       display: block;
       font-size: 0.8125rem;
@@ -1235,7 +1325,24 @@
 
       <div class="cob-seccion">
         <div class="cob-seccion__titulo">Quién y cuándo</div>
-        <div class="cob-campo">
+        <!-- Quien controla las cobranzas (cobranzas:procesar) la carga YA
+             ASENTADA (01/10/2026): primero la empresa, después un cliente de
+             la lista de esa empresa. La pinta pintarAsentar(); el hidden lo
+             saca el JS. El chofer sigue con el cliente escrito a mano. -->
+        <div id="cob-asentar" hidden>
+          <div class="cob-campo">
+            <div class="cob-campo__rotulo" id="cob-rotulo-empresa">Empresa de la cobranza</div>
+            <div class="cob-empresas" id="cob-empresas" role="group" aria-labelledby="cob-rotulo-empresa"></div>
+          </div>
+          <div class="cob-campo" id="cob-campo-clientes" hidden>
+            <label for="cob-asentar-buscar">Cliente</label>
+            <input type="search" id="cob-asentar-buscar" maxlength="80" autocomplete="off"
+                   placeholder="Buscá por nombre, razón social, CUIT o apodo">
+            <div id="cob-lista-clientes"></div>
+          </div>
+          <div class="cob-campo" id="cob-campo-proyecto" hidden></div>
+        </div>
+        <div class="cob-campo" id="cob-campo-cliente-libre">
           <label for="cob-cliente">Cliente</label>
           <input type="text" id="cob-cliente" maxlength="120" autocomplete="off"
                  placeholder="Nombre del cliente">
@@ -1403,7 +1510,7 @@
     // La barra de unidad de negocio de arriba (js/barra-unidad.js, 28/09/2026):
     // la elección de la fábrica y el aviso cuando cambia. Es el mismo módulo que
     // carga el <script> del <head>: el navegador lo ejecuta una sola vez.
-    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad, ordenarUnidades, logoUnidad, nombreCorto, MARCA_FABRICA, inicialesDe } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1420,6 +1527,11 @@
       miEmpleadoId: null,
       miRolApp: null,
       misTareas: new Set(),
+
+      // La cobranza ya asentada (01/10/2026): lo que dura mientras el
+      // formulario está abierto y no va al borrador (los clientes que trajo
+      // el buscador y los proyectos del Taller). Lo arma estadoAsentarVacio().
+      asentar: null,
 
       // Catálogo de bancos, cacheado también en IndexedDB para que los nombres
       // se vean sin señal.
@@ -1938,7 +2050,10 @@
     // afuera: si no, el select la perdería.
     function cuentasParaElegir(actualId) {
       const todas = estado.cuentasBancoLista ?? []
-      const elegida = estado.unidadElegida
+      // Ya asentada: las cuentas de la empresa elegida en el formulario (la
+      // base mete la transferencia en esa cuenta). Si no, las de la barra.
+      const f = estado.form
+      const elegida = (esFormAsentado(f) && f.unidad_id) ? f.unidad_id : estado.unidadElegida
       const lista = elegida ? todas.filter(c => c.unidad_negocio_id === elegida) : todas.slice()
       if (actualId && !lista.some(c => c.id === actualId)) {
         const actual = todas.find(c => c.id === actualId) ?? estado.cuentasNombres?.get?.(actualId)
@@ -2240,6 +2355,393 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // LA COBRANZA YA ASENTADA (01/10/2026)
+    //
+    // Quien controla las cobranzas (cobranzas:procesar: Facu, Pablo, Yanina)
+    // la carga y la asienta en un solo paso: primero la EMPRESA (botones
+    // grandes con su logo o su color; si la barra de arriba tiene una sola
+    // fábrica elegida, viene marcada esa), después un cliente ACTIVO de esa
+    // empresa (buscar_clientes con p_unidad_negocio_id), y al guardar va a
+    // cargar_cobranza_asentada: guarda, asienta, mete el efectivo en la caja
+    // de efectivo de esa empresa y las transferencias en su banco, y baja la
+    // deuda del cliente. Un reintento con el mismo p_id devuelve reintento:
+    // true sin duplicar, así que el borrador y el sincronizador sirven igual
+    // que para el chofer.
+    // Los demás (sin procesar) cargan como siempre: el cliente escrito a mano
+    // y la cobranza queda por asentar.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MS_BUSCAR_CLIENTE = 250
+    const MIN_LETRAS_CLIENTE = 2
+    // buscar_clientes devuelve hasta 60: con la lista entera, se avisa.
+    const TOPE_CLIENTES_BUSCADOS = 60
+
+    function estadoAsentarVacio() {
+      return { busqueda: '', turno: 0, clientes: null, error: '', unidadBuscada: null, proyectos: undefined, temporizador: null }
+    }
+
+    // ¿Este formulario se guarda ya asentado? Lo decide la marca del borrador
+    // (f.asentar, que se pone al abrir una cobranza NUEVA con procesar): una
+    // edición nunca.
+    function esFormAsentado(f) {
+      return !!f && f.asentar === true && f.modo !== 'edicion'
+    }
+
+    // Las empresas que se ofrecen: las activas, sin la fábrica de pruebas
+    // (salvo para una cuenta de prueba), en el orden de la barra de arriba.
+    function empresasParaAsentar() {
+      // Hasta saber cuál es la fábrica de pruebas no se ofrece ninguna: si no,
+      // una cuenta real la vería un instante (y la podría tocar).
+      if (estado.fabricaLista !== true) return []
+      const activas = (estado.unidades ?? []).filter(u => u && u.activo !== false)
+      return ordenarUnidades(sinUnidadesDePrueba(activas, estado.fabrica ?? FABRICA_SIN_DATOS))
+    }
+
+    // La que viene marcada: la fábrica elegida en la barra, si es una de las
+    // que se ofrecen (con las unidades todavía sin leer, se le cree a la barra).
+    function empresaInicialAsentar() {
+      const e = estado.unidadElegida
+      if (!e) return null
+      const lista = empresasParaAsentar()
+      return (!lista.length || lista.some(u => u.id === e)) ? e : null
+    }
+
+    function unidadDelForm(f) {
+      return (estado.unidades ?? []).find(u => u.id === f?.unidad_id) ?? null
+    }
+
+    // La base reconoce al Taller por su NOMBRE: la pantalla, igual.
+    function esTaller(u) {
+      return String(u?.nombre ?? '').trim().toLowerCase() === 'taller'
+    }
+
+    // El logo NO va en el HTML: la plantilla deja un <img> vacío y
+    // ponerLogosEmpresas() le pone el src por propiedad (un nombre de archivo
+    // que pasó por logoUnidad: solo una imagen de la raíz del repo).
+    function htmlMarcaEmpresa(u) {
+      const logo = logoUnidad(u?.logo_url)
+      if (logo) return `<span class="cob-empresa__marca cob-empresa__marca--logo"><img data-logo-empresa="${escCob(u.id)}" alt=""></span>`
+      const [color, letras] = MARCA_FABRICA[u?.prefijo] ?? ['#57534E', inicialesDe(u?.nombre)]
+      return `<span class="cob-empresa__marca" style="background:${escCob(color)}" aria-hidden="true">${escCob(letras)}</span>`
+    }
+
+    function htmlEmpresas(lista, elegidaId) {
+      if (!lista.length) return '<div class="cob-asentar-nota">Leyendo las empresas…</div>'
+      return lista.map(u =>
+        `<button type="button" class="cob-empresa" data-empresa="${escCob(u.id)}" aria-pressed="${u.id === elegidaId ? 'true' : 'false'}">` +
+        `${htmlMarcaEmpresa(u)}<span>${escCob(nombreCorto(u))}</span></button>`).join('')
+    }
+
+    // Un saldo que no vino no dice nada (nunca "$ 0,00").
+    function textoSaldoCliente(saldo) {
+      if (saldo === null || saldo === undefined || saldo === '') return ''
+      const n = Number(saldo)
+      if (!Number.isFinite(n)) return ''
+      if (n > 0) return 'Debe ' + formatearImporte(n)
+      if (n < 0) return 'A favor ' + formatearImporte(-n)
+      return 'Cuenta en cero'
+    }
+
+    function htmlOpcionClienteAsentar(c) {
+      const meta = [c.razon_social && c.razon_social !== c.nombre ? c.razon_social : '', c.localidad ?? ''].filter(Boolean).join(' · ')
+      const saldo = textoSaldoCliente(c.saldo)
+      return `<button type="button" class="cob-cliente-op" data-cliente-id="${escCob(c.cliente_id)}">` +
+        `<span class="cob-cliente-op__texto"><span class="cob-cliente-op__nombre">${escCob(c.nombre)}</span>` +
+        `${meta ? `<br><span class="cob-cliente-op__meta">${escCob(meta)}</span>` : ''}</span>` +
+        `${saldo ? `<span class="cob-cliente-op__saldo">${escCob(saldo)}</span>` : ''}</button>`
+    }
+
+    function htmlClientesAsentar(f, a) {
+      if (f.cliente_id) {
+        const saldo = textoSaldoCliente(f.cliente_saldo)
+        return `<div class="cob-cliente-elegido"><span class="cob-cliente-op__texto"><span class="cob-cliente-op__nombre">${escCob(f.cliente)}</span>` +
+          `${saldo ? `<br><span class="cob-cliente-op__meta">${escCob(saldo)}</span>` : ''}</span>` +
+          `<button type="button" class="cob-btn cob-btn--chico" data-cambiar-cliente="1">Cambiar</button></div>`
+      }
+      if (a.error) {
+        return `<div class="cob-aviso cob-aviso--grave">${escCob(a.error)}</div>` +
+          `<div class="cob-acciones"><button type="button" class="cob-btn cob-btn--chico" data-reintentar-clientes="1">Volver a intentar</button></div>`
+      }
+      if (a.clientes === null) return '<div class="cob-asentar-nota">Buscando los clientes…</div>'
+      const texto = String(a.busqueda ?? '').trim()
+      if (!a.clientes.length) {
+        return `<div class="cob-asentar-nota">${escCob(texto.length >= MIN_LETRAS_CLIENTE
+          ? 'Ningún cliente activo de esta empresa coincide con «' + texto + '».'
+          : 'Esta empresa no tiene clientes activos.')}</div>`
+      }
+      const tope = a.clientes.length >= TOPE_CLIENTES_BUSCADOS
+        ? '<div class="cob-asentar-nota">Se ven los primeros: escribí para buscar el que falta.</div>'
+        : ''
+      return `<div class="cob-clientes">${a.clientes.map(htmlOpcionClienteAsentar).join('')}</div>${tope}`
+    }
+
+    // Lo que devuelve buscar_clientes, de ESA empresa y activo (la función ya
+    // filtra; se vuelve a mirar por las dudas). Sin búsqueda, por nombre.
+    function clientesDeLaEmpresa(data, unidad, texto) {
+      const lista = (Array.isArray(data) ? data : [])
+        .filter(c => c && c.cliente_id && c.unidad_negocio_id === unidad && c.activo !== false)
+      if (String(texto ?? '').trim().length < MIN_LETRAS_CLIENTE) {
+        lista.sort((x, y) => String(x.nombre ?? '').localeCompare(String(y.nombre ?? ''), 'es'))
+      }
+      return lista
+    }
+
+    async function buscarClientesAsentar() {
+      const f = estado.form
+      if (!esFormAsentado(f) || !f.unidad_id) return
+      if (!estado.asentar) estado.asentar = estadoAsentarVacio()
+      const a = estado.asentar
+      const turno = ++a.turno
+      const unidad = f.unidad_id
+      const texto = String(a.busqueda ?? '').trim()
+      a.unidadBuscada = unidad
+      a.clientes = null
+      a.error = ''
+      pintarAsentar()
+      let clientes = []
+      let error = ''
+      try {
+        const { data, error: errRpc } = await supabase.rpc('buscar_clientes', {
+          p_busqueda: texto.length >= MIN_LETRAS_CLIENTE ? texto : null,
+          p_unidad_negocio_id: unidad,
+        })
+        if (errRpc) throw errRpc
+        if (data === null) error = 'Con tu usuario no se puede ver la lista de clientes de esta empresa.'
+        else clientes = clientesDeLaEmpresa(data, unidad, texto)
+      } catch (err) {
+        console.error('No se pudo buscar los clientes:', err)
+        error = 'No se pudo leer la lista de clientes. Revisá la conexión.'
+      }
+      // Una respuesta vieja (otra búsqueda, otra empresa, otro formulario) no
+      // pisa la nueva.
+      if (turno !== a.turno || estado.asentar !== a || estado.form !== f || f.unidad_id !== unidad) return
+      a.clientes = clientes
+      a.error = error
+      pintarAsentar()
+    }
+
+    function alEscribirClienteAsentar(ev) {
+      if (!estado.asentar) estado.asentar = estadoAsentarVacio()
+      const a = estado.asentar
+      a.busqueda = ev?.target?.value ?? ''
+      clearTimeout(a.temporizador)
+      a.temporizador = setTimeout(() => buscarClientesAsentar(), MS_BUSCAR_CLIENTE)
+    }
+
+    function soltarClienteAsentar(f) {
+      f.cliente_id = null
+      f.cliente = ''
+      f.cliente_saldo = null
+      f.proyecto_id = null
+    }
+
+    function elegirEmpresa(id) {
+      const f = estado.form
+      if (!esFormAsentado(f)) return
+      if (!empresasParaAsentar().some(u => u.id === id)) return
+      if (f.unidad_id === id) return
+      f.unidad_id = id
+      soltarClienteAsentar(f)
+      // Una transferencia va a una cuenta de banco de ESA empresa: una cuenta
+      // de otra se suelta (se vuelve a elegir).
+      for (const t of f.transferencias ?? []) {
+        const c = estado.cuentasBanco?.get?.(t.cuenta_id)
+        if (t.cuenta_id && c && c.unidad_negocio_id !== id) { t.cuenta_id = ''; t.cuenta_nombre = '' }
+      }
+      estado.asentar = estadoAsentarVacio()
+      guardarBorrador()
+      pintarAsentar()
+      pintarFormasNuevas()
+      pintarTotalYGuardado()
+    }
+
+    function elegirClienteAsentar(id) {
+      const f = estado.form
+      const a = estado.asentar
+      if (!esFormAsentado(f) || !a) return
+      const c = (a.clientes ?? []).find(x => String(x.cliente_id) === String(id))
+      if (!c) return
+      f.cliente_id = c.cliente_id
+      f.cliente = c.nombre ?? ''
+      f.cliente_saldo = c.saldo ?? null
+      f.proyecto_id = null
+      a.proyectos = undefined
+      guardarBorrador()
+      pintarAsentar()
+      pintarTotalYGuardado()
+    }
+
+    function cambiarClienteAsentar() {
+      const f = estado.form
+      if (!esFormAsentado(f)) return
+      soltarClienteAsentar(f)
+      estado.asentar = estadoAsentarVacio()
+      guardarBorrador()
+      pintarAsentar()
+      pintarTotalYGuardado()
+    }
+
+    // ── El proyecto del Taller ─────────────────────────────────────────────
+    // Con el Taller se pide a qué proyecto va la plata (o "Ninguno en
+    // particular"). proyectos_taller devuelve cliente_id; sin taller:ver
+    // devuelve null, y ahí la cobranza va sin proyecto.
+    const ETIQUETA_ESTADO_PROYECTO_COB = { presupuestado: 'presupuestado', aprobado: 'aprobado', en_curso: 'en curso', terminado: 'terminado', entregado: 'entregado' }
+    function proyectosDelClienteCob(lista, clienteId) {
+      if (!Array.isArray(lista) || !clienteId) return []
+      return lista.filter(p => p && p.destino === 'externo' && p.estado !== 'cancelado' && p.cliente_id != null && String(p.cliente_id) === String(clienteId))
+    }
+
+    function htmlProyectoAsentar(f, a) {
+      if (!esTaller(unidadDelForm(f)) || !f.cliente_id) return ''
+      const p = a?.proyectos
+      if (p === undefined || p === 'cargando') return '<div class="cob-asentar-nota">Buscando los proyectos del cliente…</div>'
+      if (p === 'error') return '<div class="cob-asentar-nota">No se pudieron leer los proyectos del Taller: la cobranza va sin proyecto.</div>'
+      if (p === null) return '<div class="cob-asentar-nota">Con tu usuario no se ven los proyectos del Taller: la cobranza va sin proyecto.</div>'
+      const lista = proyectosDelClienteCob(p, f.cliente_id)
+      if (!lista.length) return '<div class="cob-asentar-nota">Este cliente no tiene proyectos en el Taller: la cobranza va sin proyecto.</div>'
+      const sel = f.proyecto_id ?? ''
+      const opciones = lista.map(x =>
+        `<option value="${escCob(x.id)}"${x.id === sel ? ' selected' : ''}>${escCob(x.nombre + (ETIQUETA_ESTADO_PROYECTO_COB[x.estado] ? ' (' + ETIQUETA_ESTADO_PROYECTO_COB[x.estado] + ')' : ''))}</option>`).join('')
+      return `<label for="cob-proyecto">¿A qué proyecto del Taller va esta plata?</label>` +
+        `<select id="cob-proyecto"><option value="">Elegí el proyecto</option>${opciones}` +
+        `<option value="ninguno"${sel === 'ninguno' ? ' selected' : ''}>Ninguno en particular</option></select>`
+    }
+
+    // ¿Falta elegir el proyecto? Solo con el Taller, un cliente elegido y
+    // proyectos que se pudieron leer.
+    function faltaProyectoAsentar(f, a) {
+      if (!esTaller(unidadDelForm(f)) || !f.cliente_id) return false
+      const p = a?.proyectos
+      if (!Array.isArray(p)) return false
+      return proyectosDelClienteCob(p, f.cliente_id).length > 0 && !f.proyecto_id
+    }
+
+    function proyectoParaBase(f) {
+      const p = f?.proyecto_id
+      return p && p !== 'ninguno' ? p : null
+    }
+
+    async function cargarProyectosAsentar() {
+      const a = estado.asentar
+      if (!a) return
+      a.proyectos = 'cargando'
+      let proyectos
+      try {
+        const { data, error } = await supabase.rpc('proyectos_taller', { p_solo_activos: false })
+        if (error) throw error
+        proyectos = data === null ? null : (Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error('No se pudieron leer los proyectos del Taller:', err)
+        proyectos = 'error'
+      }
+      if (estado.asentar !== a) return
+      a.proyectos = proyectos
+      pintarAsentar()
+      pintarTotalYGuardado()
+    }
+
+    // ── El render ──────────────────────────────────────────────────────────
+    function ponerLogosEmpresas(cont) {
+      cont?.querySelectorAll?.('img[data-logo-empresa]').forEach(img => {
+        const u = (estado.unidades ?? []).find(x => x.id === img.dataset.logoEmpresa)
+        const logo = logoUnidad(u?.logo_url)
+        if (logo) img.src = '../' + encodeURIComponent(logo)
+      })
+    }
+
+    function pintarAsentar() {
+      const caja = document.getElementById('cob-asentar')
+      const libre = document.getElementById('cob-campo-cliente-libre')
+      const f = estado.form
+      const activo = esFormAsentado(f)
+      caja.hidden = !activo
+      libre.hidden = activo
+      if (!activo) return
+      if (!estado.asentar) estado.asentar = estadoAsentarVacio()
+      const a = estado.asentar
+      const contEmpresas = document.getElementById('cob-empresas')
+      contEmpresas.innerHTML = htmlEmpresas(empresasParaAsentar(), f.unidad_id)
+      ponerLogosEmpresas(contEmpresas)
+      document.getElementById('cob-campo-clientes').hidden = !f.unidad_id
+      const buscador = document.getElementById('cob-asentar-buscar')
+      buscador.hidden = !!f.cliente_id
+      if (buscador.value !== a.busqueda) buscador.value = a.busqueda
+      document.getElementById('cob-lista-clientes').innerHTML = f.unidad_id ? htmlClientesAsentar(f, a) : ''
+      const proyecto = document.getElementById('cob-campo-proyecto')
+      const htmlP = htmlProyectoAsentar(f, a)
+      proyecto.hidden = !htmlP
+      proyecto.innerHTML = htmlP
+      // Lo que falta pedir a la base.
+      if (f.unidad_id && !f.cliente_id && a.unidadBuscada !== f.unidad_id && !a.error) buscarClientesAsentar()
+      if (f.cliente_id && esTaller(unidadDelForm(f)) && a.proyectos === undefined) cargarProyectosAsentar()
+    }
+
+    function alTocarEnAsentar(ev) {
+      const el = ev?.target?.closest?.('[data-empresa], [data-cliente-id], [data-cambiar-cliente], [data-reintentar-clientes]')
+      if (!el) return
+      const d = el.dataset
+      if (d.empresa) elegirEmpresa(d.empresa)
+      else if (d.clienteId) elegirClienteAsentar(d.clienteId)
+      else if (d.cambiarCliente) cambiarClienteAsentar()
+      else if (d.reintentarClientes) {
+        if (estado.asentar) estado.asentar.error = ''
+        buscarClientesAsentar()
+      }
+    }
+
+    function alElegirProyecto(ev) {
+      const f = estado.form
+      if (!esFormAsentado(f) || ev?.target?.id !== 'cob-proyecto') return
+      f.proyecto_id = ev.target.value || null
+      guardarBorrador()
+      pintarTotalYGuardado()
+    }
+
+    // "Cobranza asentada · J&M (Dolce Pasta) · $ 100.000,00 · quedó debiendo $ X"
+    function textoCobranzaAsentada(f, r) {
+      const u = unidadDelForm(f)
+      const empresa = u ? nombreCorto(u) : ''
+      const importe = leerNumeroAr(r?.importe) ?? totalesPorForma(f).total
+      const partes = ['Cobranza asentada', (f.cliente || 'Cliente') + (empresa ? ` (${empresa})` : ''), formatearImporte(importe)]
+      if (r?.reintento) {
+        partes.push('ya estaba asentada')
+      } else if (r?.saldo !== null && r?.saldo !== undefined && r?.saldo !== '' && Number.isFinite(Number(r.saldo))) {
+        const s = Number(r.saldo)
+        if (s > 0) partes.push('quedó debiendo ' + formatearImporte(s))
+        else if (s < 0) partes.push('le quedó ' + formatearImporte(-s) + ' a favor')
+        else partes.push('su cuenta quedó en cero')
+      }
+      return partes.join(' · ')
+    }
+
+    async function subirCobranzaAsentada(f, base) {
+      const params = {
+        p_id: base.p_id,
+        p_cliente_id: f.cliente_id,
+        p_fecha: base.p_fecha,
+        p_efectivo: base.p_efectivo,
+        p_comprobante_referencia: base.p_comprobante_referencia,
+        p_observaciones: base.p_observaciones,
+        p_fotos: base.p_fotos,
+        p_cheques: base.p_cheques,
+        // La lista ENTERA de transferencias, aunque esté vacía.
+        p_transferencias: (f.transferencias ?? []).map(transferenciaParaBase),
+        p_proyecto_id: proyectoParaBase(f),
+      }
+      try {
+        const { data, error } = await supabase.rpc('cargar_cobranza_asentada', params)
+        if (error) {
+          if (esErrorDeRed(error)) return { ok: false, tipo: 'red', mensaje: error.message ?? '' }
+          return { ok: false, tipo: 'validacion', mensaje: error.message || 'El servidor rechazó la cobranza.' }
+        }
+        return { ok: true, asentada: true, reintento: data?.reintento === true, importe: data?.importe ?? null, saldo: data?.saldo_cliente ?? null }
+      } catch (errRpc) {
+        console.error('Falló la RPC de la cobranza asentada:', errRpc)
+        return { ok: false, tipo: 'red', mensaje: 'No se pudo contactar al servidor.' }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -2359,7 +2861,7 @@
     async function cargarUnidades() {
       try {
         const { data, error } = await supabase
-          .from('unidades_negocio').select('id, nombre, activo').order('nombre')
+          .from('unidades_negocio').select('id, nombre, activo, prefijo, logo_url').order('nombre')
         if (error) throw error
         estado.unidades = data ?? []
         return true
@@ -2389,6 +2891,7 @@
       if (!promesaFabrica) {
         promesaFabrica = cargarFabricaDePruebas(supabase).then(f => {
           estado.fabrica = f ?? FABRICA_SIN_DATOS
+          estado.fabricaLista = true
           pintarRepartidores()
           return estado.fabrica
         })
@@ -3822,8 +4325,16 @@
       // El id se genera ACÁ y no al guardar: es la clave del borrador local, la
       // carpeta de las fotos en Storage y lo que hace idempotente al alta.
       estado.form = formularioVacio(crypto.randomUUID())
+      estado.asentar = estadoAsentarVacio()
+      // Quien controla las cobranzas la carga YA ASENTADA: empresa y cliente
+      // de la lista. Con una sola fábrica elegida arriba, viene marcada esa.
+      // (Si las empresas todavía no llegaron, el init repinta al llegar.)
+      if (puedeProcesar()) {
+        estado.form.asentar = true
+        estado.form.unidad_id = empresaInicialAsentar()
+      }
       pintarFormulario()
-      mostrarVistaCob('form', { subtitulo: 'Nueva cobranza' })
+      mostrarVistaCob('form', { subtitulo: puedeProcesar() ? 'Nueva cobranza (queda asentada)' : 'Nueva cobranza' })
       guardarBorrador()
     }
 
@@ -3832,6 +4343,7 @@
         const f = await dbLeer(STORE_BORRADORES, id)
         if (!f) { mostrarError('Ese borrador ya no está en el celular.'); return }
         estado.form = f
+        estado.asentar = estadoAsentarVacio()
         pintarFormulario()
         mostrarVistaCob('form', { subtitulo: 'Cobranza sin subir' })
       } catch (err) {
@@ -4262,6 +4774,7 @@
       document.getElementById('cob-referencia').value = f.comprobante_referencia
       document.getElementById('cob-observaciones').value = f.observaciones
 
+      pintarAsentar()
       pintarEstadoFotos()
       pintarCheques()
       pintarFormasNuevas()
@@ -4868,7 +5381,15 @@
       const f = estado.form
       const motivos = []
       if (!f) return ['No hay nada que guardar.']
-      if (!String(f.cliente ?? '').trim()) motivos.push('Falta el cliente.')
+      const asentada = esFormAsentado(f)
+      if (asentada) {
+        // Ya asentada: la empresa y un cliente DE LA LISTA (no un nombre
+        // escrito), y con el Taller el proyecto.
+        if (!f.unidad_id) motivos.push('Elegí la empresa de la cobranza.')
+        else if (!f.cliente_id) motivos.push('Elegí el cliente de la lista.')
+        else if (esTaller(unidadDelForm(f)) && (estado.asentar?.proyectos === undefined || estado.asentar?.proyectos === 'cargando')) motivos.push('Esperá: se están leyendo los proyectos del Taller.')
+        else if (faltaProyectoAsentar(f, estado.asentar)) motivos.push('Elegí a qué proyecto del Taller va (o «Ninguno en particular»).')
+      } else if (!String(f.cliente ?? '').trim()) motivos.push('Falta el cliente.')
       if (!esFechaIso(f.fecha)) motivos.push('Falta la fecha.')
       else if (diasEntre(hoyArgentina(), f.fecha) > 0) motivos.push('La fecha no puede ser posterior a hoy.')
 
@@ -4884,7 +5405,12 @@
       transferencias.forEach((t, i) => {
         erroresDeTransferencia(t).forEach(x => motivos.push(`Transferencia ${i + 1}: ${x}`))
       })
-      if (confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
+      // Ya asentada, una cobranza solo con transferencias SÍ entra
+      // (cargar_cobranza_asentada pasa por guardar_cobranza_completa, que le
+      // avisa a la base que trae transferencias).
+      if (asentada && confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
+        if (!transferencias.length) motivos.push('Cargá al menos una forma de pago: efectivo, un cheque, un e-cheque o una transferencia.')
+      } else if (confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
         // HUECO DE BASE (30/09/2026): guardar_cobranza_completa escribe las
         // transferencias DESPUÉS de los cheques, y _cobranza_escribir_detalle
         // rechaza "La cobranza no tiene ni cheques ni efectivo." antes de que
@@ -4913,6 +5439,7 @@
       // script fallara, el botón queda usable en vez de dejar el formulario
       // inutilizable.
       document.getElementById('cob-btn-guardar').disabled = motivos.length > 0
+      document.getElementById('cob-btn-guardar').textContent = esFormAsentado(estado.form) ? 'Guardar y asentar' : 'Guardar cobranza'
 
       const caja = document.getElementById('cob-form-pendientes')
       const f = estado.form
@@ -4952,7 +5479,9 @@
       if (resultado.ok) {
         await dbBorrar(STORE_BORRADORES, f.id)
         estado.form = null
-        mostrarExito(resultado.yaExistia ? 'La cobranza ya estaba guardada.' : 'Cobranza guardada.')
+        mostrarExito(resultado.asentada
+          ? textoCobranzaAsentada(f, resultado)
+          : (resultado.yaExistia ? 'La cobranza ya estaba guardada.' : 'Cobranza guardada.'))
         mostrarVistaCob('listado')
         await Promise.all([refrescarListado(), refrescarLocales()])
         return
@@ -5018,6 +5547,8 @@
         p_cheques: f.cheques.filter(c => c.confirmado).map(chequeParaBase)
           .concat((f.echecks ?? []).map(echequeParaBase)),
       }
+      // Quien controla: guarda y asienta juntas (cargar_cobranza_asentada).
+      if (esFormAsentado(f)) return subirCobranzaAsentada(f, payload)
       // Administración con e-cheques o transferencias: guardar_cobranza_completa
       // (alta o edición según exista el id) con la lista ENTERA de
       // transferencias (la base borra y reinserta).
@@ -5270,6 +5801,10 @@
 
       document.getElementById('cob-btn-camara').addEventListener('click', () => document.getElementById('cob-file-camara').click())
       document.getElementById('cob-btn-galeria').addEventListener('click', () => document.getElementById('cob-file-galeria').click())
+      // La cobranza ya asentada: empresa, cliente de la lista y proyecto.
+      document.getElementById('cob-asentar').addEventListener('click', alTocarEnAsentar)
+      document.getElementById('cob-asentar-buscar').addEventListener('input', alEscribirClienteAsentar)
+      document.getElementById('cob-campo-proyecto').addEventListener('change', alElegirProyecto)
       ;['cob-file-camara', 'cob-file-galeria'].forEach(id => {
         document.getElementById(id).addEventListener('change', async (ev) => {
           const archivos = [...(ev.target.files ?? [])]
@@ -5387,9 +5922,12 @@
 
       // Si el link directo ya dibujó el detalle, se redibuja cuando llegan
       // las unidades: el historial nombra la unidad a partir de su id.
-      asegurarFabrica()
+      // La cobranza ya asentada ofrece las empresas recién cuando llegan las
+      // unidades y se sabe cuál es la fábrica de pruebas: se repinta al llegar.
+      asegurarFabrica().then(() => { if (esFormAsentado(estado.form)) pintarAsentar() })
       asegurarUnidades().then(() => {
         if (estado.detalle?.historial?.some(h => h.accion === 'unidad_asignada')) renderizarDetalle()
+        if (esFormAsentado(estado.form)) pintarAsentar()
       })
       // Las cuentas de banco de la Empresa, para las transferencias: solo
       // Administración, y sin frenar el resto de la carga.

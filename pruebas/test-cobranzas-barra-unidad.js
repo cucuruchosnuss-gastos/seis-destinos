@@ -330,7 +330,7 @@ async function pruebas() {
   // ══ 7. EL FUENTE ═══════════════════════════════════════════════════════════
   {
     chk('import: trae la barra de js/barra-unidad.js',
-      /import \{ unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad \} from '\.\.\/js\/barra-unidad\.js'/.test(FUENTE))
+      /import \{ unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad[^}]*\} from '\.\.\/js\/barra-unidad\.js'/.test(FUENTE))
     const ini = FUENTE.indexOf('async function init()')
     const cuerpo = FUENTE.slice(ini, FUENTE.indexOf('\n    init()', ini))
     chk('init: se suscribe a los cambios de la barra', /alCambiarUnidad\(alCambiarUnidadCob\)/.test(cuerpo))
@@ -353,7 +353,11 @@ async function pruebas() {
     // Las dos piezas que sumó el 30/09/2026 (e-cheques y transferencias: el
     // resumen de las cuatro formas y su sección) son de Administración y no
     // piden unidad: se sacan para comparar (test-cobranzas-formas.js las prueba).
+    // Y la cobranza ya asentada (01/10/2026): la elección de la empresa es de
+    // quien controla (procesar), no del chofer; test-cobranzas-asentada.js la
+    // prueba. Se saca su bloque y el id del campo del cliente escrito.
     const sinFormas = (t) => t
+      .replace(/\n {8}<!-- Quien controla las cobranzas \(cobranzas:procesar\)[\s\S]*?<div class="cob-campo" id="cob-campo-cliente-libre">/, '\n        <div class="cob-campo">')
       .replace(/\n\n {6}<!-- Arriba de la cobranza, el total de las cuatro formas[\s\S]*?<div class="cob-resumen-formas" id="cob-resumen-formas" hidden><\/div>/, '')
       .replace(/\n\n {6}<!-- E-cheques y transferencias \(30\/09\/2026\)[\s\S]*?<button type="button" class="cob-btn cob-btn--chico" id="cob-btn-transferencia">\+ Agregar transferencia<\/button>\n {8}<\/div>\n {6}<\/div>/, '')
     const form = (t) => { const i = t.indexOf('<div id="cob-vista-form" hidden>'); return i === -1 ? '' : sinFormas(t.slice(i, t.indexOf('<!-- ══ BARRA FIJA', i))) }

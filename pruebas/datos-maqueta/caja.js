@@ -42,6 +42,8 @@ module.exports = {
       tarea(YO, 'caja', 'ver_empresa'),
       tarea(YO, 'caja', 'retiros_todos'),
       tarea(YO, 'caja', 'movimientos_todos'),
+      // El ingreso externo (préstamos, aportes): super_admin + la tarea.
+      tarea(YO, 'caja', 'ingreso_externo_empresa'),
     ],
     unidades_negocio: UNIDADES,
     v_empleados_publico: [
@@ -85,6 +87,8 @@ module.exports = {
       mov('m-3', EMPRESA, 'c-e-n2', 'ingreso_externo', 250000, 'Cobranza de un cliente', 'transferencia'),
       mov('m-4', EMPRESA, 'c-e-d1', 'ingreso_externo', 180000, 'Depósito', 'transferencia'),
       mov('m-5', EMPRESA, 'c-e-x', 'egreso_gasto', 1500, 'Caja chica'),
+      // Un ajuste de saldo cargado desde la base (01/10/2026): "Ajuste", en gris.
+      mov('m-6', EMPRESA, 'c-e-n2', 'egreso_ajuste', 12500, 'Diferencia del arqueo de septiembre'),
     ],
     caja_solicitudes_movimiento: [],
   },

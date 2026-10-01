@@ -21,7 +21,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { construirCon } = require('./sandbox')
+const { construirCon, FUNCIONES_ASENTAR, CONSTANTES_ASENTAR } = require('./sandbox')
 // Las funciones de números de js/utils.js (leerNumeroAr, ponerNumero…),
 // con su código REAL: el módulo las importa desde el 21/09/2026.
 const { fuenteNumeros } = require('./numeros-comun')
@@ -143,9 +143,10 @@ const FUNCIONES = [
   'abrirFormularioNuevo', 'abrirFormularioLocal', 'abrirFormularioEdicion', 'chequeDesdeBase',
   // E-cheques y transferencias (30/09/2026)
   'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'textoOpcional', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila', 'htmlDatosCheque', 'textoDiasHastaPago', 'esFechaIso', 'diasEntre', 'formatearFechaCob',
+  ...FUNCIONES_ASENTAR,
 ]
 const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR', 'MQ_ESCRITORIO',
-  'TEXTO_BOTON_CHEQUE_MANO']
+  'TEXTO_BOTON_CHEQUE_MANO', ...CONSTANTES_ASENTAR]
 
 function sandbox() {
   return construirCon(ARCHIVO, {

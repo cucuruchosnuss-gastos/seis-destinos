@@ -34,7 +34,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { construirCon } = require('./sandbox')
+const { construirCon, FUNCIONES_ASENTAR, CONSTANTES_ASENTAR } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
@@ -134,10 +134,12 @@ const FUNCIONES = [
   'subirCobranza', 'esErrorDeRed', 'htmlDetalle', 'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago',
   'htmlAccionesDetalle', 'htmlHistorial', 'textoHistorialCheque', 'resumirCambios', 'htmlLinkChequeEnCartera',
   'textoSalidaCheque', 'normalizarCliente', 'momentoArgentina',
+  ...FUNCIONES_ASENTAR,
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_COBRANZA', 'ETIQUETA_ESTADO_CHEQUE',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia', 'puedeVerCartera', 'TEXTO_BOTON_CHEQUE_MANO',
+  ...CONSTANTES_ASENTAR,
 ]
 
 function sandbox({ tareas = ['cargar'], rol = 'usuario' } = {}) {
