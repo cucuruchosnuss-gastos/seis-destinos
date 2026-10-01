@@ -73,9 +73,10 @@ esperas.push((async () => {
     const h = el(S, 'pr-parada-sugerencias').innerHTML
     const ids = [...h.matchAll(/data-motivo="([^"]+)"/g)].map(m => m[1])
     chk('consulta motivos_parada', S.__llamadas.consultas.some(([t]) => t === 'motivos_parada'))
-    chk('la limpieza va PRIMERO (sus dos botones) y después en su orden', JSON.stringify(ids) ===
-      JSON.stringify(['mo-limp', 'mo-limp', 'mo-cadena', 'mo-correa', 'mo-luz', 'mo-otro']), ids.join(','))
-    chk('la limpieza con "Al arrancar" y "Al terminar"', /data-limpieza="arranque"[^>]*>Al arrancar</.test(h) && /data-limpieza="final"[^>]*>Al terminar</.test(h))
+    chk('la limpieza va PRIMERO (sus tres botones) y después en su orden', JSON.stringify(ids) ===
+      JSON.stringify(['mo-limp', 'mo-limp', 'mo-limp', 'mo-cadena', 'mo-correa', 'mo-luz', 'mo-otro']), ids.join(','))
+    chk('la limpieza con "Al arrancar", "En el medio" y "Al terminar"', /data-limpieza="arranque"[^>]*>Al arrancar</.test(h) &&
+      /data-limpieza="medio"[^>]*>En el medio</.test(h) && /data-limpieza="final"[^>]*>Al terminar</.test(h))
     chk('la limpieza en su caja de color, aparte de las fallas', h.indexOf('pr-pa-limpieza') < h.indexOf('pr-pa-motivos__grilla'))
     chk('ninguno elegido de antemano', !/aria-pressed="true"/.test(h))
     chk('el detalle no aparece sin motivo', el(S, 'pr-parada-otro').hidden === true)
@@ -145,12 +146,12 @@ esperas.push((async () => {
     S.pintarParadas(); await tic()
     chk('con una parada en curso, "Todavía no volvió" se apaga', /data-duracion="sigue"[^>]*disabled|disabled[^>]*data-duracion="sigue"/.test(el(S, 'pr-parada-duracion').innerHTML))
     chk('… y "Paró ahora" no se ofrece', el(S, 'pr-btn-parada').hidden === true)
-    chk('… la línea de arriba dice PARADA con su motivo y "Volvió a andar"', el(S, 'pr-parada-activa').hidden === false &&
+    chk('… la línea de arriba dice PARADA con su motivo y "Volvió con el mismo lote"', el(S, 'pr-parada-activa').hidden === false &&
       el(S, 'pr-parada-activa-motivo').textContent === 'Corte de luz' && el(S, 'pr-btn-reanudar').hidden === false)
     S.estado.paradaNueva.duracion = 'sigue'
     S.estado.paradaNueva.motivoId = 'mo-cadena'
     S.estado.paradaNueva.inicio = '10:40'
-    chk('… y si igual se elige, se dice antes', S.faltanParaParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA)[0] === 'Ya hay una parada sin terminar: tocá «Volvió a andar» primero.')
+    chk('… y si igual se elige, se dice antes', S.faltanParaParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA)[0] === 'Ya hay una parada sin terminar: primero tocá «Volvió con el mismo lote» (o «Volvió con lote nuevo»).')
   }
 
   // 4 · La hora futura se avisa ANTES de guardar.
@@ -216,7 +217,7 @@ esperas.push((async () => {
     const S = armar()
     S.pintarParadas(); await tic()
     S.elegirMotivoParada('mo-limp', 'arranque')
-    chk('al arrancar: dice desde cuándo, sin reloj', /Desde que se abrió el turno, a las 06:00/.test(el(S, 'pr-parada-hora').innerHTML) && !/data-rueda=/.test(el(S, 'pr-parada-hora').innerHTML))
+    chk('al arrancar: dice desde cuándo, sin reloj', /Desde que empezó el turno, a las 06:00/.test(el(S, 'pr-parada-hora').innerHTML) && !/data-rueda=/.test(el(S, 'pr-parada-hora').innerHTML))
     chk('… "Todavía no terminó" en vez de "Todavía no volvió"', /data-duracion="sigue"[^>]*>Todavía no terminó</.test(el(S, 'pr-parada-duracion').innerHTML))
     chk('… "Paró ahora" no se ofrece con la limpieza', el(S, 'pr-btn-parada').hidden === true)
     S.elegirDuracionParada('30')
@@ -237,9 +238,11 @@ esperas.push((async () => {
     const S = armar()
     S.pintarParadas(); await tic()
     S.elegirMotivoParada('mo-limp', 'final')
-    chk('al terminar: no se ofrece "Todavía no terminó"', !/data-duracion="sigue"/.test(el(S, 'pr-parada-duracion').innerHTML))
+    const dur = el(S, 'pr-parada-duracion').innerHTML
+    chk('al terminar: "Empezó ahora" va PRIMERO (no "Todavía no terminó")', /^<button[^>]*data-duracion="sigue"[^>]*>Empezó ahora</.test(dur) && !/Todavía no terminó/.test(dur), dur.slice(0, 160))
     await S.guardarParadaNueva(AHORA)
-    chk('al terminar sin minutos: no se manda', rpcs(S, 'registrar_limpieza_planchas').length === 0 && el(S, 'pr-parada-error').textContent === 'Elegí cuánto duró.')
+    chk('al terminar sin elegir: no se manda, y se dice qué tocar', rpcs(S, 'registrar_limpieza_planchas').length === 0 &&
+      el(S, 'pr-parada-error').textContent === 'Tocá «Empezó ahora», o elegí cuánto duró si ya terminó.', el(S, 'pr-parada-error').textContent)
     S.elegirDuracionParada('45')
     chk('… el resumen va hasta ahora', S.resumenParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA) === 'Limpieza de planchas al terminar · de 10:15 a 11:00 (45 min)')
     await S.guardarParadaNueva(AHORA)
@@ -249,8 +252,43 @@ esperas.push((async () => {
     const S = armar()
     S.pintarParadas(); await tic()
     S.elegirMotivoParada('mo-limp')
-    chk('la limpieza sin elegir al arrancar o al terminar no se manda',
-      S.faltanParaParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA)[0] === 'Elegí si la limpieza fue al arrancar o al terminar.')
+    chk('la limpieza sin elegir el momento no se manda',
+      S.faltanParaParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA)[0] === 'Elegí si la limpieza fue al arrancar, en el medio o al terminar.')
+  }
+  // 7b · (01/10/2026) "Al terminar" y "En el medio" que EMPIEZAN AHORA: se
+  // guardan con p_minutos null (queda abierta) y nunca con una vuelta a futuro.
+  for (const momento of ['final', 'medio']) {
+    const S = armar()
+    S.pintarParadas(); await tic()
+    S.elegirMotivoParada('mo-limp', momento)
+    S.elegirDuracionParada('sigue')
+    chk(`${momento}: empezó ahora, el resumen lo dice`, /empezó ahora, a las 11:00/.test(S.resumenParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA)),
+      S.resumenParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA))
+    chk(`${momento}: empezó ahora, la nota dice que queda abierta`, /queda abierta/.test(el(S, 'pr-parada-hora').innerHTML))
+    await S.guardarParadaNueva(AHORA)
+    chk(`${momento}: empezó ahora → p_minutos null`, JSON.stringify(rpcs(S, 'registrar_limpieza_planchas')[0]?.[1]) ===
+      `{"p_turno_id":"t1","p_momento":"${momento}","p_minutos":null}`, JSON.stringify(rpcs(S, 'registrar_limpieza_planchas')))
+  }
+  {
+    // En el medio, ya terminó y duró 30: termina AHORA (11:00), nunca después.
+    const S = armar()
+    S.pintarParadas(); await tic()
+    S.elegirMotivoParada('mo-limp', 'medio')
+    S.elegirDuracionParada('30')
+    chk('en el medio, ya terminó: de 10:30 a 11:00', S.resumenParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA) === 'Limpieza de planchas en el medio · de 10:30 a 11:00 (30 min)',
+      S.resumenParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA))
+    await S.guardarParadaNueva(AHORA)
+    chk('en el medio con 30 min', JSON.stringify(rpcs(S, 'registrar_limpieza_planchas')[0]?.[1]) === '{"p_turno_id":"t1","p_momento":"medio","p_minutos":30}')
+  }
+  {
+    // Empezó ahora con una parada ya en curso: no se puede dejar abierta otra.
+    const S = armar()
+    S.estado.planilla && (S.estado.planilla.paradas = [{ id: 'pa-x', inicio: '2026-09-30T10:00:00-03:00', fin: null, motivo: 'Corte' }])
+    S.pintarParadas(); await tic()
+    S.elegirMotivoParada('mo-limp', 'final')
+    S.elegirDuracionParada('sigue')
+    const f = S.faltanParaParadaNueva(S.estado.paradaNueva, S.estado.planilla, AHORA)
+    chk('empezó ahora con otra parada en curso: no se manda', /Volvió con el mismo lote/.test(f[0] ?? ''), f.join(' | '))
   }
 
   // 8 · Sin los motivos: se escribe y se guarda igual (la base lo engancha).

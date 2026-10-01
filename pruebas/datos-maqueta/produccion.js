@@ -18,6 +18,9 @@ const MAQUINAS = [1, 2, 3, 4, 5].map(n => ({ id: `maq-${n}`, unidad_negocio_id: 
 const turno = (id, lote, maquina, encargado) => ({
   id, lote, maquina_id: maquina, unidad_negocio_id: 'u-n', fecha: DIA, turno: 'Mañana', encargado_id: encargado,
   estado: 'abierto', abierto_en: hora('09:02'), forzado_por: null, forzado_en: null, forzado_motivo: null,
+  // El horario (01/10/2026): abrir_turno pone hora_inicio con el de
+  // horarios_turno; hora_fin la pone el cierre (o "Volvió con lote nuevo").
+  hora_inicio: '06:00:00', hora_fin: null,
 });
 const masa = (id, turnoId, nro, hhmm, extra = {}) => ({
   id, turno_id: turnoId, nro, hora: hora(hhmm), tipo_masa: 'Común', doble: false, origen: 'original',
@@ -114,6 +117,12 @@ module.exports = {
       { id: 'emp-agus', nombre: 'Agustín Barrera', unidad_negocio_id: 'u-n', tipo: 'naaloo', activo: true },
     ],
     maquinas: MAQUINAS,
+    // Los horarios de Nuss (los de la base el 01/10/2026): la planilla dice
+    // "Turno 06:00 – 15:00" y el cierre propone 14:00 (8 h) y 15:00 (9 h).
+    horarios_turno: [
+      { unidad_negocio_id: 'u-n', turno: 'Mañana', hora_inicio: '06:00:00', hora_fin: '15:00:00', activo: true },
+      { unidad_negocio_id: 'u-n', turno: 'Tarde', hora_inicio: '15:00:00', hora_fin: '23:36:00', activo: true },
+    ],
     turnos_produccion: [turno('t1', 7033, 'maq-1', 'emp-fede'), turno('t2', 7034, 'maq-2', 'emp-fede'), turno('t4', 7035, 'maq-4', 'emp-fede')],
     turno_operarios: [
       { turno_id: 't1', empleado_id: 'emp-ramon', desde: hora('09:02'), hasta: null },

@@ -1986,6 +1986,21 @@
     .pc-vacio { padding: 18px; color: var(--color-texto-2); }
     .pc-titulo { font-family: var(--fuente-titulo); font-size: 23px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
     .pc-titulo--21 { font-size: 21px; letter-spacing: 0; }
+    /* Horarios de turno (01/10/2026): una fila por turno. */
+    .pc-hor { padding: 0 0 14px; }
+    .pc-hor__nota { margin: 0 16px 12px; }
+    .pc-hor__lista { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
+    .pc-hor__fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--color-borde); border-radius: 12px; background: var(--color-fondo); }
+    .pc-hor__fila--apagado { background: var(--color-superficie); }
+    .pc-hor__turno { font-family: var(--fuente-titulo); font-size: 18px; font-weight: 700; min-width: 7.5rem; }
+    .pc-hor__sin { font-family: var(--fuente); font-size: 13px; font-weight: 500; }
+    .pc-hor__campo { display: inline-flex; align-items: center; gap: 6px; }
+    .pc-hor__rot { font-size: 13px; color: var(--color-texto-2); }
+    .pc-hor__hora { width: 5.5rem; height: 44px; font-size: 16px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+    .pc-hor__dur { min-width: 4rem; }
+    .pc-hor__fila .pc-btn { height: 44px; margin-left: auto; }
+    .pc-hor__fila .pc-sw__rotulo { font-size: 13px; color: var(--color-texto-2); }
+    .pc-hor__fila .pr-cfg-error, .pc-hor__fila .pc-error-pegado { flex-basis: 100%; }
     .pc-pie { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .pc-pie--izq { justify-content: flex-start; }
 
@@ -2373,6 +2388,7 @@
       <div class="pg-menu__bloque" id="pr-menu-bloque-catalogo">
         <p class="pg-menu__grupo">Catálogo</p>
         <button type="button" class="pg-menu__item" data-ir-config="maquinas" hidden><span class="pg-menu__txt">Máquinas</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="horarios" hidden><span class="pg-menu__txt">Horarios de turno</span></button>
         <button type="button" class="pg-menu__item" data-ir-config="recetas" hidden><span class="pg-menu__txt">Recetas</span></button>
         <button type="button" class="pg-menu__item" data-ir-config="ingredientes" hidden><span class="pg-menu__txt">Ingredientes</span></button>
         <button type="button" class="pg-menu__item" data-ir-config="productos" hidden><span class="pg-menu__txt">Productos y empaque</span></button>
@@ -3030,7 +3046,9 @@
       return ''
     }
 
-    function htmlParadas(paradas, acciones = null) {
+    // `finTurno` (01/10/2026): la hora de fin del turno abierto. Sin ella, no
+    // se dice hasta cuándo se cuenta (nunca se inventa).
+    function htmlParadas(paradas, acciones = null, finTurno = null) {
       const lista = paradas ?? []
       if (!lista.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
       const orden = [...lista.filter(p => !p.fin), ...lista.filter(p => p.fin)]
@@ -3046,7 +3064,7 @@
         if (!p.fin) {
           return `<div class="pr-renglon pr-renglon--curso${conAcc}">${abre}` +
             `<span class="pr-renglon__num"><strong>${esc(desde)}</strong> · ${esc(p.motivo)}</span>` +
-            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}</span>${cierra}</div>`
+            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}${finTurno ? ` · se cuenta hasta las ${esc(finTurno)} si no vuelve` : ''}</span>${cierra}</div>`
         }
         // hasta_fin_de_turno lo pone cerrar_turno sobre la parada que quedó
         // abierta: la máquina NO volvió en todo el turno. En la planilla nunca
@@ -3639,6 +3657,7 @@
     const PESTANAS_CONFIG = [
       ['productos', 'Productos'], ['maquinas', 'Máquinas'], ['recetas', 'Recetas'],
       ['ingredientes', 'Ingredientes'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal y PINes'],
+      ['horarios', 'Horarios de turno'],
     ]
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
     const CLAVE_AVISO_PRODUCTOS = 'produccion.aviso-productos-revisado'
@@ -4508,6 +4527,7 @@
     const SECCIONES_CONFIG = [
       ['productos', 'Productos'], ['maquinas', 'Máquinas'], ['recetas', 'Recetas'],
       ['ingredientes', 'Ingredientes'], ['marcas', 'Conos'], ['personal', 'Personal y PINes'],
+      ['horarios', 'Horarios'],
     ]
     // Las secciones que ya no existen solas y a dónde fueron.
     const ALIAS_CONFIG = { empaque: 'productos' }
@@ -7113,13 +7133,119 @@
       if (r.ok) await cargarPestanaConfig()
     }
 
+    // ── Horarios de turno (01/10/2026) ───────────────────────────────────
+    //
+    // horarios_turno: por unidad y turno (Mañana, Tarde, Noche), la hora de
+    // inicio, la de fin y si está activo. Lo guarda guardar_horario_turno
+    // (produccion:configurar en la unidad; el error de la base TAL CUAL, pegado
+    // al botón de esa fila). Lo usa la tablet: abrir_turno pone la hora de
+    // inicio de la planilla, el cierre propone la de fin y una parada que no
+    // vuelve se cuenta hasta ahí. Un turno sin fila no tiene horario: los
+    // campos arrancan vacíos y no se inventa ninguna hora.
+    const TURNOS_HORARIO = [['Mañana', 'manana'], ['Tarde', 'tarde'], ['Noche', 'noche']]
+
+    async function leerHorariosConfig(c) {
+      const { data, error } = await supabase.from('horarios_turno')
+        .select('turno, hora_inicio, hora_fin, activo').eq('unidad_negocio_id', c.unidadId)
+      if (error) throw error
+      c.horBorrador = {}
+      return { horarios: data ?? [] }
+    }
+
+    // La fila de un turno: lo guardado en la base (horas "06:00") o vacío.
+    function horarioGuardado(d, turno) {
+      const h = (d?.horarios ?? []).find(x => x?.turno === turno)
+      if (!h) return { inicio: '', fin: '', activo: true, existe: false }
+      return { inicio: normalizarHora(String(h.hora_inicio ?? '').slice(0, 5)), fin: normalizarHora(String(h.hora_fin ?? '').slice(0, 5)),
+        activo: h.activo !== false, existe: true }
+    }
+
+    // Lo que se ve en la fila: lo que se está escribiendo, o lo guardado.
+    function horarioEnPantalla(c, turno) {
+      return { ...horarioGuardado(c?.datos, turno), ...(c?.horBorrador?.[turno] ?? {}) }
+    }
+
+    // Cuántas horas dura (un turno que cruza la medianoche termina al otro
+    // día): "9 h", "8 h 36". Sin las dos horas, nada.
+    function duracionHorario(inicio, fin) {
+      const a = normalizarHora(inicio), b = normalizarHora(fin)
+      if (!a || !b || a === b) return ''
+      const m = (x) => Number(x.slice(0, 2)) * 60 + Number(x.slice(3))
+      let min = m(b) - m(a)
+      if (min <= 0) min += 24 * 60
+      const h = Math.floor(min / 60), r = min % 60
+      return r ? `${h} h ${r}` : `${h} h`
+    }
+
+    function htmlConfigHorarios(c) {
+      const unidad = estado.unidades.get(c.unidadId) ?? ''
+      const filas = TURNOS_HORARIO.map(([turno, k]) => {
+        const h = horarioEnPantalla(c, turno)
+        const dur = duracionHorario(h.inicio, h.fin)
+        const DONDE = `pr-cfg-hor-guardar-${k}`
+        return `<div class="pc-hor__fila${h.activo ? '' : ' pc-hor__fila--apagado'}">` +
+          `<div class="pc-hor__turno">${esc(turno)}${h.existe ? '' : '<span class="pc-texto2 pc-hor__sin"> · sin horario</span>'}</div>` +
+          `<label class="pc-hor__campo"><span class="pc-hor__rot">Empieza</span><input type="text" class="pc-input pc-hor__hora" id="pr-cfg-hor-${k}-inicio" data-hor-turno="${esc(turno)}" data-hor-campo="inicio" inputmode="numeric" autocomplete="off" placeholder="06:00" value="${esc(h.inicio)}" aria-label="${esc(turno)}: hora de inicio"></label>` +
+          `<label class="pc-hor__campo"><span class="pc-hor__rot">Termina</span><input type="text" class="pc-input pc-hor__hora" id="pr-cfg-hor-${k}-fin" data-hor-turno="${esc(turno)}" data-hor-campo="fin" inputmode="numeric" autocomplete="off" placeholder="15:00" value="${esc(h.fin)}" aria-label="${esc(turno)}: hora de fin"></label>` +
+          `<span class="pc-texto2 pc-hor__dur">${dur ? esc(dur) : ''}</span>` +
+          `<span class="pc-sw__rotulo">Activo</span>` + swAbre() + `<input type="checkbox" role="switch" class="pc-sw__input" data-hor-activo="${esc(turno)}"${h.activo ? ' checked' : ''} aria-label="${esc(turno)}: activo">` + SW_CIERRA +
+          `<button type="button" class="pc-btn pc-btn--32" id="${esc(DONDE)}" data-hor-guardar="${esc(turno)}"${c.horGuardando === turno ? ' disabled' : ''}>${c.horGuardando === turno ? 'Guardando…' : 'Guardar'}</button>` +
+          htmlErrorPegado(c, DONDE) + `</div>`
+      }).join('')
+      return `<div class="pc-panel pc-hor"><div class="pc-personal__cab"><h2 class="pc-titulo pc-titulo--21">Horarios de turno</h2>` +
+        `<span class="pc-texto2 pc-14">· ${esc(unidad)}</span></div>` +
+        `<p class="pc-nota pc-hor__nota">La tablet los usa para la hora de inicio de cada planilla y para proponer la de fin al cerrar. Una parada que no vuelve se cuenta hasta la hora de fin. Un turno que termina antes de empezar (Noche) termina al otro día.</p>` +
+        `<div class="pc-hor__lista">${filas}</div></div>`
+    }
+
+    // Lo que se escribe queda en el borrador de la fila: un repintado (por un
+    // error de otra fila) no lo pierde.
+    function tocarHorario(turno, campo, valor) {
+      const c = estado.config
+      if (!c || !TURNOS_HORARIO.some(([t]) => t === turno)) return
+      c.horBorrador = c.horBorrador ?? {}
+      c.horBorrador[turno] = { ...(c.horBorrador[turno] ?? {}), [campo]: valor }
+    }
+
+    // { params } para guardar_horario_turno, o { error } en palabras. Todos
+    // los parámetros explícitos (p_activo también).
+    function parametrosHorario(c, turno) {
+      const h = horarioEnPantalla(c, turno)
+      const inicio = normalizarHora(h.inicio), fin = normalizarHora(h.fin)
+      if (!inicio) return { error: `Escribí a qué hora empieza el turno ${turno}, por ejemplo 06:00.` }
+      if (!fin) return { error: `Escribí a qué hora termina el turno ${turno}, por ejemplo 15:00.` }
+      return { params: { p_unidad_negocio_id: c.unidadId, p_turno: turno, p_hora_inicio: inicio, p_hora_fin: fin, p_activo: h.activo !== false } }
+    }
+
+    async function guardarHorario(turno) {
+      const c = estado.config
+      if (!c || c.horGuardando) return
+      const k = TURNOS_HORARIO.find(([t]) => t === turno)?.[1]
+      if (!k) return
+      const DONDE = `pr-cfg-hor-guardar-${k}`
+      const r0 = parametrosHorario(c, turno)
+      if (r0.error) { errorConfig(r0.error, DONDE); return }
+      c.horGuardando = turno
+      pintarPestanaConfig()
+      let r
+      try {
+        r = await guardarEnConfig('guardar_horario_turno', r0.params, `Horario del turno ${turno} guardado.`, DONDE)
+      } finally {
+        c.horGuardando = null
+      }
+      if (r?.ok) { delete c.horBorrador?.[turno]; await cargarPestanaConfig() }
+      else pintarPestanaConfig()
+    }
+
     const LECTORES_CONFIG = {
       maquinas: leerMaquinasConfig, recetas: leerRecetasConfig, ingredientes: leerIngredientesConfig,
       productos: leerProductosConfig, marcas: leerMarcasConfig, personal: leerPersonalConfig,
+      horarios: leerHorariosConfig,
     }
     const RENDERS_CONFIG = {
       maquinas: htmlConfigMaquinas, recetas: htmlConfigRecetas, ingredientes: htmlConfigIngredientes,
       productos: htmlConfigProductos, marcas: htmlConfigMarcas, personal: htmlConfigPersonal,
+      horarios: htmlConfigHorarios,
     }
     // Los renglones de la lista de cada sección, para redibujarlos solos
     // mientras se escribe en el buscador.
@@ -7193,6 +7319,7 @@
           else accionProducto(ds)
         }
         else if (tab === 'marcas') accionMarca(ds)
+        else if (tab === 'horarios' && ds.horGuardar !== undefined) guardarHorario(ds.horGuardar)
       })
       cuerpo.addEventListener('change', ev => {
         const t = ev.target, c = estado.config
@@ -7203,6 +7330,8 @@
         if (t.dataset?.recetaCmp !== undefined) { c.comparar = { ...(c.comparar ?? {}), [t.dataset.recetaCmp]: t.value }; c.volverA = null; return pintarPestanaConfig() }
         if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
         if (t.dataset?.marcaActivo !== undefined) return tocarCono(t.dataset.marcaActivo, 'activa', t.checked)
+        // Horarios: el interruptor Activo NO guarda solo; va con "Guardar" de su fila.
+        if (t.dataset?.horActivo !== undefined) { tocarHorario(t.dataset.horActivo, 'activo', t.checked); return pintarPestanaConfig() }
         if (t.dataset?.recetaTipo !== undefined) { c.recetaTipo = t.value; c.recetaVer = null; c.comparar = null; c.volverA = null; c.recetaEditando = t.value === NUEVO_TIPO; pintarPestanaConfig() }
         else if (t.dataset?.recetaPartida !== undefined) { c.recetaPartida = t.value; pintarPestanaConfig() }
         else if (t.dataset?.ingInsumo !== undefined) { t.checked ? c.insumosElegidos.add(t.dataset.ingInsumo) : c.insumosElegidos.delete(t.dataset.ingInsumo) }
@@ -7215,6 +7344,7 @@
       cuerpo.addEventListener('input', ev => {
         const t = ev.target, c = estado.config
         if (t.dataset?.recetaKg !== undefined) return marcarCambioReceta(t)
+        if (t.dataset?.horCampo !== undefined) return tocarHorario(t.dataset.horTurno, t.dataset.horCampo, t.value)
         if (t.id === 'pr-cfg-lista-buscar') { c.busquedaLista = t.value; return pintarFilasLista() }
         if (['pr-config-marca-buscar', 'pr-config-personal-buscar', 'pr-config-insumo-buscar'].includes(t.id)) {
           c.busqueda = t.value
@@ -7298,8 +7428,15 @@
       cerrado: ['cerrado', 'Cerrado'],
     }
 
-    function htmlEstadoTurno(estadoTurno) {
-      const [clase, texto] = ESTADO_TURNO[estadoTurno] ?? ['', estadoTurno ?? '—']
+    // `t` (01/10/2026): con la fila del turno, una pendiente_completar que NO
+    // tiene forzado_por (y la consulta lo trajo) es una que dejó "Volvió con
+    // lote nuevo": le faltan los productos y el scrap, no se cerró a la fuerza.
+    function esRelanzado(t) {
+      return t?.estado === 'pendiente_completar' && !!t && Object.prototype.hasOwnProperty.call(t, 'forzado_por') && t.forzado_por == null && !t.forzado_motivo
+    }
+
+    function htmlEstadoTurno(estadoTurno, t = null) {
+      const [clase, texto] = esRelanzado(t) ? ['pendiente', 'Falta completar (productos y scrap)'] : (ESTADO_TURNO[estadoTurno] ?? ['', estadoTurno ?? '—'])
       return `<span class="pr-of-chip pr-of-chip--${clase}">${esc(texto)}</span>`
     }
 
@@ -7350,7 +7487,7 @@
         if (!h.maquinas.some(m => m.id === h.maquina)) h.maquina = ''
         sel.value = h.maquina
         let q = supabase.from('turnos_produccion')
-          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en')
+          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, forzado_por, forzado_motivo')
           .eq('unidad_negocio_id', h.unidadId).gte('fecha', h.desde).lte('fecha', h.hasta)
         if (h.maquina) q = q.eq('maquina_id', h.maquina)
         if (h.estado) q = q.eq('estado', h.estado)
@@ -7386,14 +7523,23 @@
         `<span>${esc(t.turno)}</span>` +
         `<span>${esc(maquina)}</span>` +
         `<span>${esc(encargado)}</span>` +
-        `<span>${htmlEstadoTurno(t.estado)}</span></button>`
+        `<span>${htmlEstadoTurno(t.estado, t)}</span></button>`
     }
 
     async function leerDetalleTurno(turnoId) {
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       const [turno] = await leer(supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
+        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
       if (!turno) throw new Error('El turno no existe.')
+      // Con el turno abierto y sin hora de fin en la planilla, la del horario
+      // de la unidad (si no se puede leer, ninguna: nunca se inventa).
+      let finHorario = null
+      if (turno.estado === 'abierto' && !String(turno.hora_fin ?? '').slice(0, 5)) {
+        try {
+          const hs = await leer(supabase.from('horarios_turno').select('turno, hora_fin, activo').eq('unidad_negocio_id', turno.unidad_negocio_id).eq('turno', turno.turno).eq('activo', true))
+          finHorario = normalizarHora(String(hs.find(x => x?.turno === turno.turno && x?.activo !== false)?.hora_fin ?? '').slice(0, 5)) || null
+        } catch (err) { console.error('horario del turno:', err) }
+      }
       const maquina = (await leer(supabase.from('maquinas').select('id, nombre').eq('id', turno.maquina_id))).find(m => m.id === turno.maquina_id) ?? null
       // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
       // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
@@ -7431,7 +7577,14 @@
       // dejaría todos los nombres en blanco menos el tuyo.
       const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
         ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
-      return { turno, maquina, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque }
+      return { turno, maquina, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque, finHorario }
+    }
+
+    // La hora de fin del turno ABIERTO: la de la planilla o la del horario.
+    // Hasta ahí se cuenta una parada que no vuelve. null = no se sabe.
+    function finTurnoAbierto(d) {
+      if (d?.turno?.estado !== 'abierto') return null
+      return normalizarHora(String(d.turno.hora_fin ?? '').slice(0, 5)) || d.finHorario || null
     }
 
     // El empaque que descontó el turno: los movimientos de stock_movimientos
@@ -7642,7 +7795,7 @@
     // "Miércoles 24/09 · 06:02 a 14:10 · fuego apagado 13:55"
     function horarioTurno(t) {
       const desde = String(t.hora_inicio ?? '').slice(0, 5) || horaArgentina(t.abierto_en) || '—'
-      const hasta = t.estado === 'abierto' ? 'sigue abierto' : (horaArgentina(t.cerrado_en) || '—')
+      const hasta = t.estado === 'abierto' ? 'sigue abierto' : (String(t.hora_fin ?? '').slice(0, 5) || horaArgentina(t.cerrado_en) || '—')
       const fuego = String(t.hora_apagado ?? '').slice(0, 5)
       return [textoDiaInd(t.fecha), `${desde} a ${hasta}`, fuego ? `fuego apagado ${fuego}` : ''].filter(Boolean).join(' · ')
     }
@@ -7663,13 +7816,15 @@
       const forzado = t.forzado_motivo
         ? `<div class="pr-aviso pr-aviso--grave">Esta planilla se cerró a la fuerza${t.forzado_por ? ` · ${esc(nom(t.forzado_por))}` : ''}${t.forzado_en ? ` · ${esc(fechaCorta(t.forzado_en))}` : ''}: ${esc(t.forzado_motivo)}` +
           `${t.estado === 'pendiente_completar' ? ' Lo que produjo todavía no está en el stock.' : ''}</div>`
-        : ''
+        : (esRelanzado(t)
+          ? `<div class="pr-aviso pr-aviso--grave">Falta completar (productos y scrap): la máquina volvió con un lote nuevo${String(t.hora_fin ?? '').slice(0, 5) ? ` a las ${esc(String(t.hora_fin).slice(0, 5))}` : ''}. Se completa en la tablet, con la hora de fin ya puesta. Lo que produjo todavía no está en el stock.</div>`
+          : '')
       const cab = `<div class="pg-turno__cab">` +
         `<div class="pg-turno__lote"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
         `<div class="pg-turno__datos"><div class="pg-turno__maq"><strong>${esc(d.maquina?.nombre ?? 'Máquina')}</strong> · turno ${esc(t.turno)}</div>` +
         `<div class="pr-texto-suave">${esc(horarioTurno(t))}</div>` +
         `<div class="pg-turno__enc"><span class="pr-dato__rotulo">Encargado</span> <strong>${esc(nom(t.encargado_id))}</strong></div></div>` +
-        `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado)}</div></div>`
+        `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado, t)}</div></div>`
       const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
       // Las tiradas no cuentan como masas del turno (sí su consumo, que quedó descontado).
       const vivas = d.masas.filter(m => !m.anulada && m.descartada !== true).length
@@ -7695,7 +7850,7 @@
         `<div class="pg-turno__grilla">` +
         `<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}</section>` +
         `<section class="pg-caja"><h2 class="pr-subtitulo">Masas <span class="pg-caja__ctx">${esc(vivas)}</span></h2><ul class="pr-lista">${masas}</ul></section>` +
-        `<section class="pg-caja"><h2 class="pr-subtitulo">Paradas y scrap</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t))}` +
+        `<section class="pg-caja"><h2 class="pr-subtitulo">Paradas y scrap</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))}` +
         (accionesParadaHistorial(t).editar ? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada</button>' : '') +
         scrapPie + `</section></div>` +
         `<section class="pg-caja pg-caja--ancha"><h2 class="pr-subtitulo">Lo producido <span class="pg-caja__ctx">${esc(cantidad)}</span></h2><ul class="pr-lista pg-producido">${producido}</ul>${pieProducido}</section>` +

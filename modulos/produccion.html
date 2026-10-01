@@ -322,6 +322,24 @@
     .pr-lp__titulos { flex: 1; min-width: 0; line-height: 1.15; }
     .pr-lp__titulo { margin: 0; font-family: var(--p-titulo); font-size: 23px; font-weight: 700; flex: 1; min-width: 0; }
     .pr-lp__sub { font-size: 14px; color: var(--p-gris); }
+    /* La ventana de una hora (01/10/2026): el inicio del turno y "volvió con
+       lote nuevo". El teclado propio de la planta, nunca un input type=time. */
+    .pr-hv { width: min(440px, 100%); gap: 8px; overflow-y: auto; }
+    .pr-hv__nota { margin: 0; font-size: 15px; color: var(--p-tinta-2); line-height: 1.3; }
+    .pr-hv__fila { display: flex; align-items: center; gap: 8px; }
+    .pr-hv__num { flex: 1; text-align: center; font-family: var(--p-titulo); font-size: 40px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--p-tinta); }
+    .pr-hv__paso, .pr-hv__ahora { min-width: 56px; height: 48px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: #fff; font-size: 17px; font-weight: 700; color: var(--p-tinta); padding: 0 10px; }
+    .pr-hv__ahora[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); font-weight: 800; }
+    .pr-hv__teclado { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .pr-hv__tecla { height: 46px; border-radius: 12px; border: 1px solid var(--p-borde); background: var(--p-renglon); font-family: var(--p-titulo); font-size: 22px; font-weight: 700; color: var(--p-tinta); }
+    .pr-hv__tecla--texto { font-family: inherit; font-size: 15px; }
+    /* Arriba de la planilla: "Turno Mañana · 06:00 – 15:00" y corregir el inicio. */
+    .pr-horario { display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-height: 44px; }
+    .pr-horario:empty { display: none; }
+    .pr-horario__texto { flex: 1; min-width: 0; font-size: 15px; color: var(--p-tinta-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pr-horario__texto strong { color: var(--p-tinta); font-variant-numeric: tabular-nums; }
+    .pr-horario__corregir { min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: #fff; color: var(--p-tinta); font-size: 15px; font-weight: 700; flex-shrink: 0; }
+    .pr-aviso--relanzado { background: var(--p-acento-suave); border-color: var(--p-acento); color: var(--p-acento-osc); font-weight: 700; }
     .pr-cerrar-x { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 0; background: var(--p-renglon); color: var(--p-tinta-2); display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1; padding: 0; }
 
     /* ════ LA BARRA (diseño: "Estructura") ════
@@ -711,7 +729,7 @@
     .pr-lote-tarjeta__ops { font-size: 14px; color: var(--p-gris); }
 
     /* ══ 4a / 4b · LA PLANILLA ══ */
-    #pr-planilla-estado:empty { display: none; }
+    #pr-planilla-estado:empty, #pr-planilla-horario:empty { display: none; }
     .pr-res3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; height: 108px; flex-shrink: 0; }
     @media (orientation: portrait) { .pr-res3 { height: 128px; } }
     .pr-res {
@@ -831,8 +849,23 @@
     @media (orientation: portrait) { .pr-paradas { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; align-content: start; } }
     .pr-parada-activa { background: var(--p-mal); color: #fff; border-radius: 12px; padding: 4px 6px 4px 10px; display: flex; align-items: center; gap: 10px; min-height: 44px; box-sizing: border-box; }
     .pr-parada-activa__sello { height: 28px; padding: 0 10px; border-radius: 8px; background: #fff; color: var(--p-mal); font-size: 13px; font-weight: 800; letter-spacing: 0.04em; display: flex; align-items: center; flex-shrink: 0; }
-    .pr-parada-activa__que { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pr-parada-activa__volvio { min-height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #fff; color: var(--p-mal); font-size: 16px; font-weight: 800; flex-shrink: 0; }
+    /* 01/10/2026: con los dos "Volvió" la franja no entra a 1000 × 540: el
+       motivo se corta con "…" (nunca menos de 6em) y los botones bajan a dos
+       renglones antes que salirse. */
+    .pr-parada-activa__que { flex: 1; min-width: 6em; font-size: 16px; font-weight: 700; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pr-parada-activa__volvio { min-height: 40px; padding: 2px 12px; border-radius: 10px; border: 0; background: #fff; color: var(--p-mal); font-size: 15px; font-weight: 800; line-height: 1.1; flex-shrink: 1; min-width: 0; }
+    /* Angosta (el celular): la franja ocupa su renglón, los dos "Volvió"
+       bajan juntos abajo del motivo y "Ver" va en el renglón siguiente. */
+    @media (max-width: 700px) {
+      .pr-pa-estado { flex-wrap: wrap; }
+      .pr-pa-estado > .pr-parada-activa { flex: 1 1 100%; }
+      .pr-parada-activa { flex-wrap: wrap; padding: 6px; }
+      .pr-parada-activa__que { flex: 1 1 60%; }
+      .pr-parada-activa__volvio { flex: 1 1 40%; }
+    }
+    /* "Volvió con lote nuevo": el segundo botón de la franja, con borde y
+       sin relleno para que no compita con "Volvió con el mismo lote". */
+    .pr-parada-activa__volvio.pr-parada-activa__nuevo { background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.85); }
     .pr-parada-andando { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--p-bien-txt); }
     .pr-parada-andando__punto { width: 12px; height: 12px; border-radius: 50%; background: var(--p-bien); flex-shrink: 0; }
     .pr-pa-ver { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: var(--p-tarjeta); color: var(--p-tinta); font-size: 15px; font-weight: 700; flex-shrink: 0; margin-left: auto; }
@@ -841,11 +874,13 @@
     .pr-pa-paso { margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--p-tinta); line-height: 1.1; }
     .pr-pa-paso__n { width: 22px; height: 22px; border-radius: 50%; background: var(--p-tinta); color: #fff; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .pr-pa-motivos { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
-    .pr-pa-limpieza { display: flex; align-items: center; gap: 10px; background: var(--p-teal-suave); border: 1.5px solid var(--p-teal-borde); border-radius: 12px; padding: 5px 6px 5px 12px; flex-shrink: 0; }
+    /* La limpieza con sus TRES momentos (01/10/2026): el nombre arriba y los
+       tres botones en una fila pareja abajo (al costado no entran a 1000). */
+    .pr-pa-limpieza { display: flex; flex-direction: column; gap: 4px; background: var(--p-teal-suave); border: 1.5px solid var(--p-teal-borde); border-radius: 12px; padding: 5px 6px 6px; flex-shrink: 0; }
     .pr-pa-limpieza--elegida { border-color: var(--p-teal); }
-    .pr-pa-limpieza__nombre { flex: 1; min-width: 0; font-size: 16px; font-weight: 800; color: var(--p-teal-osc); line-height: 1.15; }
-    .pr-pa-limpieza__botones { display: flex; gap: 6px; flex-shrink: 0; }
-    .pr-pa-limpieza__boton { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--p-teal-borde); background: #fff; color: var(--p-teal-osc); font-size: 15px; font-weight: 800; }
+    .pr-pa-limpieza__nombre { min-width: 0; padding-left: 6px; font-size: 15px; font-weight: 800; color: var(--p-teal-osc); line-height: 1.15; }
+    .pr-pa-limpieza__botones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .pr-pa-limpieza__boton { min-height: 44px; padding: 0 6px; border-radius: 10px; border: 1.5px solid var(--p-teal-borde); background: #fff; color: var(--p-teal-osc); font-size: 15px; font-weight: 800; line-height: 1.1; }
     .pr-pa-limpieza__boton[aria-pressed="true"] { background: var(--p-teal); border-color: var(--p-teal); color: #fff; }
     .pr-pa-motivos__grilla { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(44px, 1fr); gap: 6px; }
     @media (orientation: portrait) { .pr-pa-motivos__grilla { grid-auto-rows: 48px; flex: 0 0 auto; } }
@@ -912,6 +947,15 @@
     .pr-cierre-caja__rotulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); }
     .pr-cierre-caja__nota { flex-basis: 100%; }
     .pr-cierre-caja__nota:empty { display: none; }
+    /* 01/10/2026: a qué hora terminó el turno, con los chips de 8 y 9 h. */
+    /* El ancho alcanza para "15:00" a 30 px; el selector va con las DOS
+       clases porque .pr-cierre-num (38 px) está más abajo y le ganaría. */
+    .pr-cierre-caja--fin .pr-cierre-caja__dato { flex: 0 0 auto; width: 8.5rem; }
+    .pr-cierre-num.pr-cierre-num--fin { font-size: 30px; }
+    .pr-cierre-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; justify-content: flex-end; }
+    .pr-cierre-chips:empty { display: none; }
+    .pr-cierre-chip { min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: #fff; color: var(--p-tinta); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .pr-cierre-chip[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); font-weight: 800; }
     .pr-cierre-num { border: 0; background: transparent; padding: 0; width: 100%; min-width: 0; font-family: var(--p-titulo); font-size: 38px; font-weight: 800; line-height: 1.05; color: var(--p-tinta); outline: none; }
     .pr-cierre-scrap { display: flex; align-items: baseline; gap: 4px; }
     .pr-cierre-scrap .pr-cierre-num { font-size: 28px; width: auto; field-sizing: content; min-width: 1.2ch; max-width: 8ch; }
@@ -1724,6 +1768,9 @@
         <!-- Una planilla de otro día, o una que quedó pendiente de completar
              después de un cierre forzado: se dice bien claro. -->
         <div id="pr-planilla-estado"></div>
+        <!-- 01/10/2026: el horario del turno ("Turno Mañana · 06:00 – 15:00")
+             con un toque para corregir el inicio (corregir_horario_turno). -->
+        <div id="pr-planilla-horario"></div>
         <p class="pr-error" id="pr-planilla-error" hidden></p>
 
         <!-- 4a · Arriba, fijos: operarios (verde agua), masas (trigo) y
@@ -1895,9 +1942,10 @@
            p_productos va vacío y la base, si alguna vez recibiera algo,
            continuaría la numeración de los sublotes. -->
       <!-- 6 · PARADAS (planta v2): la de UNA máquina, con los motivos grandes,
-           "Volvió a andar" y, al costado, las paradas del turno. -->
+           "Volvió con el mismo lote" / "Volvió con lote nuevo" y, al costado,
+           las paradas del turno. -->
       <!-- 6 · PARADAS de la máquina elegida: la franja bordó con desde
-           cuándo, los motivos grandes y "Volvió a andar" en el lugar de la
+           cuándo, los motivos grandes y "Volvió con el mismo lote" en el lugar de la
            acción principal. A la derecha, las paradas del turno. -->
       <!-- PARADAS (30/09/2026): motivos FIJOS (los de motivos_parada, en su
            orden) y anotar una que ya pasó, que es lo más común: la máquina se
@@ -1911,7 +1959,8 @@
           <div class="pr-parada-activa" id="pr-parada-activa" hidden>
             <span class="pr-parada-activa__sello">PARADA</span>
             <span class="pr-parada-activa__que"><span id="pr-parada-activa-motivo"></span><span id="pr-parada-activa-texto"></span><span id="pr-parada-activa-hace"></span></span>
-            <button type="button" class="pr-parada-activa__volvio" id="pr-btn-reanudar" hidden>Volvió a andar</button>
+            <button type="button" class="pr-parada-activa__volvio" id="pr-btn-reanudar" hidden>Volvió con el mismo lote</button>
+            <button type="button" class="pr-parada-activa__volvio pr-parada-activa__nuevo" id="pr-btn-relanzar" hidden>Volvió con lote nuevo</button>
           </div>
           <div class="pr-parada-andando" id="pr-parada-andando" hidden>
             <span class="pr-parada-andando__punto" aria-hidden="true"></span><span class="pr-parada-andando__sello">Andando</span>
@@ -1964,6 +2013,17 @@
             <p class="pr-texto-suave" id="pr-cierre-borrador" hidden></p>
             <!-- La hora de a 5 minutos, "Ahora", y tocando el número se
                  escribe. -->
+            <!-- 01/10/2026: a qué hora terminó el TURNO (p_hora_fin), obligatoria.
+                 Viene marcada la de la planilla o la del horario; los dos
+                 chips son el inicio más 8 y más 9 horas. -->
+            <div class="pr-cierre-caja pr-cierre-caja--fin" id="pr-cierre-campo-fin">
+              <div class="pr-cierre-caja__dato">
+                <span class="pr-cierre-caja__rotulo">¿A QUÉ HORA TERMINÓ EL TURNO?</span>
+                <input type="text" id="pr-cierre-fin" class="pr-cierre-num pr-cierre-num--fin" inputmode="numeric" enterkeyhint="done" autocomplete="off" placeholder="—" aria-label="Hora en que terminó el turno">
+              </div>
+              <div class="pr-cierre-chips" id="pr-cierre-fin-chips"></div>
+              <p class="pr-campo__nota pr-cierre-caja__nota" id="pr-cierre-fin-nota" hidden></p>
+            </div>
             <div class="pr-cierre-caja" id="pr-cierre-campo-hora">
               <div class="pr-cierre-caja__dato">
                 <span class="pr-cierre-caja__rotulo" id="pr-cierre-hora-rotulo">SE APAGÓ EL FUEGO A LAS</span>
@@ -2062,6 +2122,21 @@
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-parada-editor-cancelar">Cancelar</button>
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-parada-editor-a-borrar" hidden>Borrar esta parada</button>
             <button type="button" class="pr-btn pr-btn--accion" id="pr-parada-editor-guardar">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 01/10/2026: una hora, con el teclado propio de la planta. Corrige
+           el inicio del turno, o "Volvió con lote nuevo" desde la parada. -->
+      <div class="pr-lp" id="pr-hora-ventana" hidden role="dialog" aria-modal="true" aria-labelledby="pr-hora-ventana-titulo">
+        <div class="pr-lp__caja pr-hv">
+          <h2 class="pr-lp__titulo" id="pr-hora-ventana-titulo" tabindex="-1"></h2>
+          <p class="pr-hv__nota" id="pr-hora-ventana-nota"></p>
+          <div id="pr-hora-ventana-hora"></div>
+          <p class="pr-error-pegado" id="pr-hora-ventana-error" hidden></p>
+          <div class="pr-acciones">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-hora-ventana-cancelar">Cancelar</button>
+            <button type="button" class="pr-btn pr-btn--accion" id="pr-hora-ventana-guardar">Guardar</button>
           </div>
         </div>
       </div>
@@ -5060,20 +5135,35 @@
     // Los turnos 'pendiente_completar' de la unidad.
     async function leerPendientesCompletar(unidadId) {
       const { data, error } = await supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, fecha, turno').eq('unidad_negocio_id', unidadId).eq('estado', 'pendiente_completar').order('fecha')
+        .select('id, lote, maquina_id, fecha, turno, forzado_por').eq('unidad_negocio_id', unidadId).eq('estado', 'pendiente_completar').order('fecha')
       if (error) throw error
       return data ?? []
     }
 
+    // Dos clases de pendientes (01/10/2026): la que se CERRÓ A LA FUERZA
+    // (forzado_por puesto) y la que dejó "Volvió con lote nuevo" (sin
+    // forzado_por): a esa le falta lo producido y el scrap, nada más.
     function htmlPendientesCompletar(pendientes, maquinas) {
       const lista = pendientes ?? []
       if (!lista.length) return ''
       const nombre = id => (maquinas ?? []).find(m => m.id === id)?.nombre ?? 'Máquina'
-      const cuantas = lista.length === 1 ? '1 planilla quedó pendiente de completar' : `${lista.length} planillas quedaron pendientes de completar`
-      return `<div class="pr-aviso pr-aviso--grave"><strong>${esc(cuantas)}.</strong> ` +
-        'Se cerraron a la fuerza: la máquina quedó libre, pero lo que produjeron todavía no está en el stock.' +
+      const relanzadas = lista.filter(t => !t.forzado_por).length
+      const forzadas = lista.length - relanzadas
+      let cuantas, texto
+      if (!forzadas) {
+        cuantas = relanzadas === 1 ? '1 planilla falta completar (productos y scrap)' : `${relanzadas} planillas faltan completar (productos y scrap)`
+        texto = 'La máquina siguió con un lote nuevo: lo que produjo el lote anterior todavía no está en el stock.'
+      } else if (!relanzadas) {
+        cuantas = forzadas === 1 ? '1 planilla quedó pendiente de completar' : `${forzadas} planillas quedaron pendientes de completar`
+        texto = 'Se cerraron a la fuerza: la máquina quedó libre, pero lo que produjeron todavía no está en el stock.'
+      } else {
+        cuantas = `${lista.length} planillas quedaron pendientes de completar`
+        texto = 'Lo que produjeron todavía no está en el stock.'
+      }
+      const sufijo = t => !forzadas || !relanzadas ? '' : (t.forzado_por ? ' · cerrada a la fuerza' : ' · falta completar')
+      return `<div class="pr-aviso pr-aviso--grave"><strong>${esc(cuantas)}.</strong> ${esc(texto)}` +
         '<div class="pr-chips">' + lista.map(t =>
-          `<button type="button" class="pr-btn pr-btn--peligro" data-planilla="${esc(t.id)}">${esc(nombre(t.maquina_id))} · lote ${esc(t.lote)}</button>`).join('') +
+          `<button type="button" class="pr-btn pr-btn--peligro" data-planilla="${esc(t.id)}">${esc(nombre(t.maquina_id))} · lote ${esc(t.lote)}${esc(sufijo(t))}</button>`).join('') +
         '</div></div>'
     }
 
@@ -5633,10 +5723,12 @@
 
     async function leerPlanilla(turnoId) {
       const { data: turno, error: e1 } = await supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado, forzado_por, forzado_en, forzado_motivo')
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado, forzado_por, forzado_en, forzado_motivo, hora_inicio, hora_fin')
         .eq('id', turnoId).maybeSingle()
       if (e1) throw e1
       if (!turno) throw new Error('El turno no existe.')
+      // El horario del turno (01/10/2026): aparte y sin voltear la planilla.
+      const horario = await leerHorarioTurno(estado.unidadId, turno.turno)
       // `desde` y `hasta` van los dos: quitar_operario_turno NO borra la fila,
       // le pone `hasta`. El que se fue sigue siendo parte del turno.
       const { data: ops, error: e2 } = await supabase.from('turno_operarios')
@@ -5701,7 +5793,84 @@
       } catch (err) {
         console.error('nombre de la máquina:', err)
       }
-      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems, maquinaNombre }
+      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems, maquinaNombre, horario }
+    }
+
+    // ── EL HORARIO DEL TURNO (01/10/2026) ──────────────────────────────────
+    //
+    // horarios_turno: por unidad y turno, la hora de inicio y la de fin (Nuss:
+    // Mañana 06:00–15:00, Tarde 15:00–23:36; Dolce Pasta y Mengui no tienen).
+    // abrir_turno ya pone turnos_produccion.hora_inicio con el del horario;
+    // la hora de fin de la planilla la pone cerrar_turno (o relanzar). Se lee
+    // aparte: si no se puede, la planilla sigue sin él. null = no se sabe, y
+    // nunca se inventa una hora.
+    async function leerHorarioTurno(unidadId, turno) {
+      if (!unidadId || !turno) return null
+      try {
+        const { data, error } = await supabase.from('horarios_turno')
+          .select('turno, hora_inicio, hora_fin, activo').eq('unidad_negocio_id', unidadId).eq('turno', turno).eq('activo', true)
+        if (error) throw error
+        const h = (data ?? []).find(x => x?.turno === turno && x?.activo !== false) ?? null
+        if (!h) return null
+        const inicio = horaDeColumna(h.hora_inicio), fin = horaDeColumna(h.hora_fin)
+        return inicio || fin ? { inicio: inicio || null, fin: fin || null } : null
+      } catch (err) {
+        console.error('horario del turno:', err)
+        return null
+      }
+    }
+
+    // Una columna time llega "06:00:00": se toma "06:00". Lo que no es una
+    // hora da ''.
+    function horaDeColumna(t) {
+      return normalizarHora(String(t ?? '').slice(0, 5))
+    }
+
+    // { inicio, fin, inicioDe } del turno de una planilla. El INICIO: el de la
+    // planilla (turnos_produccion.hora_inicio), si no el del horario, si no la
+    // hora en que se abrió ('apertura'). El FIN: el de la planilla, si no el
+    // del horario; si ninguno, null (no se inventa).
+    function horasDelTurno(p) {
+      const t = p?.turno ?? {}, h = p?.horario ?? null
+      const planilla = horaDeColumna(t.hora_inicio)
+      const inicio = planilla || h?.inicio || horaArgentina(t.abierto_en) || null
+      const inicioDe = planilla ? 'planilla' : (h?.inicio ? 'horario' : (inicio ? 'apertura' : null))
+      const fin = horaDeColumna(t.hora_fin) || h?.fin || null
+      return { inicio, fin, inicioDe }
+    }
+
+    // Los dos chips del cierre: el inicio más 8 y más 9 horas ("14:00 · 8 h").
+    function chipsFinTurno(p) {
+      const { inicio } = horasDelTurno(p)
+      if (!inicio) return []
+      return [8, 9].map(h => ({ hora: horaConPaso(inicio, h * 60), horas: h, texto: `${horaConPaso(inicio, h * 60)} · ${h} h` }))
+    }
+
+    // La hora de fin del turno como instante: la fecha del turno, o el día
+    // siguiente si la de fin no es posterior a la de inicio (un turno que
+    // cruza la medianoche). Es la regla de _ts_turno de la base. null si falta.
+    function instanteFinTurno(p, fin) {
+      const f = normalizarHora(fin)
+      const fecha = p?.turno?.fecha
+      if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(String(fecha ?? ''))) return null
+      const { inicio } = horasDelTurno(p)
+      const otroDia = !!inicio && f <= inicio
+      return instanteAr(fecha, f) + (otroDia ? MS_DIA : 0)
+    }
+
+    // Arriba de la planilla: "Turno Mañana · 06:00 – 15:00" y un toque para
+    // corregir el inicio. Sin horario dice a qué hora se abrió. Solo con la
+    // planilla abierta o pendiente de completar (corregir_horario_turno no
+    // toca una cerrada sin configurar).
+    function htmlHorarioPlanilla(p) {
+      const t = p?.turno
+      if (!t || !['abierto', 'pendiente_completar'].includes(t.estado)) return ''
+      const { inicio, fin, inicioDe } = horasDelTurno(p)
+      const que = inicioDe === 'apertura'
+        ? `abierta ${inicio ?? '—'}${fin ? ` · termina ${fin}` : ''}`
+        : `${inicio ?? '—'} – ${fin ?? 'sin hora de fin'}`
+      return `<div class="pr-horario"><span class="pr-horario__texto">Turno ${esc(t.turno ?? '')} · <strong>${esc(que)}</strong></span>` +
+        '<button type="button" class="pr-horario__corregir" data-turno-inicio="1">Corregir el inicio</button></div>'
     }
 
     function paradaEnCurso(paradas) {
@@ -5739,6 +5908,15 @@
     // bien claro, con lo que hay que hacer. Lo demás no lleva ningún cartel.
     function htmlEstadoPlanilla(p, hoy) {
       const t = p.turno
+      // La que dejó "Volvió con lote nuevo" (relanzar_con_lote_nuevo) NO se
+      // cerró a la fuerza: no tiene forzado_por. La máquina siguió con otro
+      // lote y a esta le falta lo producido y el scrap.
+      if (t.estado === 'pendiente_completar' && !t.forzado_por) {
+        const fin = horasDelTurno(p).fin
+        return '<div class="pr-aviso pr-aviso--grave"><strong>Falta completar (productos y scrap).</strong> ' +
+          `La máquina siguió con un lote nuevo${fin ? ` desde las ${esc(fin)}` : ''}. ` +
+          'Cargá lo que produjo este lote y completala con "Completar la planilla": <strong>hasta entonces no está en el stock</strong>.</div>'
+      }
       if (t.estado === 'pendiente_completar') {
         const quien = nombrePersona(t.forzado_por)
         const motivo = String(t.forzado_motivo ?? '').trim()
@@ -6203,7 +6381,7 @@
       // lista de "¿Quién sos?", así que el personal se asegura también acá.
       await asegurarPersonal()
       estado.operarios = personasParaPuesto(estado.personal, 'operario').personas
-      for (const id of ['pr-planilla-estado', 'pr-planilla-ops', 'pr-planilla-masas', 'pr-planilla-paradas-resumen', 'pr-planilla-operarios',
+      for (const id of ['pr-planilla-estado', 'pr-planilla-horario', 'pr-planilla-ops', 'pr-planilla-masas', 'pr-planilla-paradas-resumen', 'pr-planilla-operarios',
         'pr-planilla-paradas', 'pr-planilla-producido', 'pr-planilla-total', 'pr-planilla-renglones', 'pr-paradas-total']) {
         document.getElementById(id).innerHTML = ''
       }
@@ -6245,7 +6423,8 @@
       if (!p) return
       pintarLateral()
       pintarCabeceraVista()
-      document.getElementById('pr-planilla-estado').innerHTML = htmlEstadoPlanilla(p, hoyArgentina())
+      document.getElementById('pr-planilla-estado').innerHTML = htmlAvisoRelanzado(p) + htmlEstadoPlanilla(p, hoyArgentina())
+      document.getElementById('pr-planilla-horario').innerHTML = htmlHorarioPlanilla(p)
       pintarOperariosPlanilla()
       document.getElementById('pr-planilla-masas').innerHTML = htmlMasasResumen(p.masas)
       const resParadas = document.getElementById('pr-planilla-paradas-resumen')
@@ -6429,21 +6608,36 @@
       return { inicio: h.inicio, fin: isoAr(fin) }
     }
 
+    // Cuándo empezó el turno, como instante: la hora de inicio de la planilla
+    // (turnos_produccion.hora_inicio, la del horario) en su fecha; si no hay,
+    // cuando se abrió. Es lo que usa registrar_limpieza_planchas para "al
+    // arrancar" (_ts_turno(fecha, hora_inicio) o abierto_en).
+    function inicioTurnoMs(turno) {
+      const h = horaDeColumna(turno?.hora_inicio)
+      if (h && /^\d{4}-\d{2}-\d{2}$/.test(String(turno?.fecha ?? ''))) return instanteAr(turno.fecha, h)
+      const a = turno?.abierto_en ? new Date(turno.abierto_en).getTime() : NaN
+      return Number.isFinite(a) ? a : NaN
+    }
+
+    // Los tres momentos de la limpieza (01/10/2026): al arrancar, en el medio
+    // del turno o al terminar. Los mismos valores que p_momento.
+    const MOMENTOS_LIMPIEZA = { arranque: 'al arrancar', medio: 'en el medio', final: 'al terminar' }
+
     // La limpieza de planchas: { minutos } (null = sigue limpiando), con el
     // momento y los minutos que pide registrar_limpieza_planchas, o { error }.
-    // "Al arrancar" va desde que se abrió el turno; "Al terminar", hasta ahora.
+    // "Al arrancar" va desde que empezó el turno. "En el medio" y "Al
+    // terminar": o EMPEZÓ AHORA (minutos null, queda abierta hasta "Volvió a
+    // andar" o el cierre), o YA TERMINÓ y duró tanto (termina ahora). Nunca se
+    // calcula una vuelta a futuro.
     function minutosLimpieza(f, turno, ahora = new Date()) {
-      if (!f.limpieza) return { error: 'Elegí si la limpieza fue al arrancar o al terminar.' }
-      if (!f.duracion) return { error: f.limpieza === 'arranque' ? 'Elegí cuánto duró, o «Todavía no terminó».' : 'Elegí cuánto duró.' }
+      if (!f.limpieza || !MOMENTOS_LIMPIEZA[f.limpieza]) return { error: 'Elegí si la limpieza fue al arrancar, en el medio o al terminar.' }
+      if (!f.duracion) return { error: f.limpieza === 'arranque' ? 'Elegí cuánto duró, o «Todavía no terminó».' : 'Tocá «Empezó ahora», o elegí cuánto duró si ya terminó.' }
       let min
-      if (f.duracion === 'sigue') {
-        if (f.limpieza !== 'arranque') return { error: 'Elegí cuánto duró.' }
-        return { minutos: null }
-      }
+      if (f.duracion === 'sigue') return { minutos: null }
       if (f.duracion === 'otro') {
-        const abierto = turno?.abierto_en ? new Date(turno.abierto_en).getTime() : NaN
+        const abierto = inicioTurnoMs(turno)
         if (f.limpieza === 'arranque') {
-          const h = resolverHorasParada({ inicio: horaArgentina(turno?.abierto_en), fin: f.fin, sigue: false }, turno, ahora)
+          const h = resolverHorasParada({ inicio: hhmm(abierto), fin: f.fin, sigue: false }, turno, ahora)
           if (h.error) return h
           min = Math.round((new Date(h.fin).getTime() - abierto) / 60000)
         } else {
@@ -6458,11 +6652,14 @@
       return { minutos: min }
     }
 
-    // ¿La limpieza "al arrancar" queda abierta? (sigue, o termina después de ahora)
+    // ¿La limpieza queda abierta? "Empezó ahora" / "Todavía no terminó"
+    // siempre; "al arrancar" también si con esos minutos termina después de
+    // ahora (la base la deja abierta en ese caso).
     function limpiezaQuedaAbierta(f, turno, r, ahora = new Date()) {
-      if (f.limpieza !== 'arranque' || r.error) return false
+      if (!f.limpieza || r.error) return false
       if (r.minutos === null) return true
-      const fin = new Date(turno?.abierto_en).getTime() + r.minutos * 60000
+      if (f.limpieza !== 'arranque') return false
+      const fin = inicioTurnoMs(turno) + r.minutos * 60000
       return fin > new Date(ahora).getTime()
     }
 
@@ -6481,7 +6678,7 @@
           const r = minutosLimpieza(f, p.turno, ahora)
           if (r.error) faltan.push(r.error)
           else if (limpiezaQuedaAbierta(f, p.turno, r, ahora) && !puedeQuedarAbierta(p)) {
-            faltan.push(paradaEnCurso(p.paradas) ? 'Ya hay una parada sin terminar: tocá «Volvió a andar» primero.' : 'La planilla ya no está abierta: poné cuánto duró.')
+            faltan.push(paradaEnCurso(p.paradas) ? 'Ya hay una parada sin terminar: primero tocá «Volvió con el mismo lote» (o «Volvió con lote nuevo»).' : 'La planilla ya no está abierta: poné cuánto duró.')
           }
           return faltan
         } else if (m.pide_detalle && String(f.detalle ?? '').trim().length < 2) faltan.push('Escribí qué pasó.')
@@ -6489,7 +6686,7 @@
       const h = horasParadaNueva(f, p.turno, ahora)
       if (h.error) faltan.push(h.error)
       else if (h.fin === null && !puedeQuedarAbierta(p)) {
-        faltan.push(paradaEnCurso(p.paradas) ? 'Ya hay una parada sin terminar: tocá «Volvió a andar» primero.' : 'La planilla ya no está abierta: poné cuánto duró.')
+        faltan.push(paradaEnCurso(p.paradas) ? 'Ya hay una parada sin terminar: primero tocá «Volvió con el mismo lote» (o «Volvió con lote nuevo»).' : 'La planilla ya no está abierta: poné cuánto duró.')
       }
       return faltan
     }
@@ -6501,7 +6698,8 @@
       const m = motivoElegido(f, motivos)
       if (esLimpieza(m)) {
         const r = minutosLimpieza(f, p.turno, ahora)
-        return ['registrar_limpieza_planchas', { p_turno_id: p.turno.id, p_momento: f.limpieza === 'arranque' ? 'arranque' : 'final', p_minutos: r.minutos ?? null }]
+        // p_minutos SIEMPRE explícito: null = empezó ahora / todavía no terminó.
+        return ['registrar_limpieza_planchas', { p_turno_id: p.turno.id, p_momento: f.limpieza, p_minutos: r.minutos ?? null }]
       }
       const h = horasParadaNueva(f, p.turno, ahora)
       return ['registrar_parada', { p_turno_id: p.turno.id, p_motivo: textoParadaNueva(f, motivos), p_inicio: h.inicio, p_fin: h.fin }]
@@ -6515,13 +6713,14 @@
       if (esLimpieza(m)) {
         const r = minutosLimpieza(f, p.turno, ahora)
         if (r.error) return ''
-        const nombre = `${m.nombre} ${f.limpieza === 'arranque' ? 'al arrancar' : 'al terminar'}`
+        const nombre = `${m.nombre} ${MOMENTOS_LIMPIEZA[f.limpieza]}`
         if (f.limpieza === 'arranque') {
-          const ini = new Date(p.turno.abierto_en).getTime()
+          const ini = inicioTurnoMs(p.turno)
           if (limpiezaQuedaAbierta(f, p.turno, r, ahora)) return `${nombre} · desde las ${hhmm(ini)}, todavía limpiando`
           return `${nombre} · de ${hhmm(ini)} a ${hhmm(ini + r.minutos * 60000)} (${textoMinutos(r.minutos)})`
         }
         const fin = new Date(ahora).getTime()
+        if (r.minutos === null) return `${nombre} · empezó ahora, a las ${hhmm(fin)}: se cuenta hasta que vuelva («Volvió con el mismo lote») o el cierre`
         return `${nombre} · de ${hhmm(fin - r.minutos * 60000)} a ${hhmm(fin)} (${textoMinutos(r.minutos)})`
       }
       const texto = Array.isArray(motivos)
@@ -6631,7 +6830,7 @@
         const elegida = f?.motivoId === lim.id
         const boton = (momento, texto) => `<button type="button" class="pr-pa-limpieza__boton" data-motivo="${esc(lim.id)}" data-limpieza="${esc(momento)}" aria-pressed="${elegida && f.limpieza === momento ? 'true' : 'false'}">${esc(texto)}</button>`
         h += `<div class="pr-pa-limpieza${elegida ? ' pr-pa-limpieza--elegida' : ''}"><span class="pr-pa-limpieza__nombre">${esc(lim.nombre)}</span>` +
-          '<div class="pr-pa-limpieza__botones">' + boton('arranque', 'Al arrancar') + boton('final', 'Al terminar') + '</div></div>'
+          '<div class="pr-pa-limpieza__botones">' + boton('arranque', 'Al arrancar') + boton('medio', 'En el medio') + boton('final', 'Al terminar') + '</div></div>'
       }
       h += '<div class="pr-pa-motivos__grilla">' + resto.map(m =>
         `<button type="button" class="pr-motivo pr-motivo--${m.categoria === 'otro' ? 'otro' : 'falla'}" data-motivo="${esc(m.id)}" aria-pressed="${f?.motivoId === m.id ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('') + '</div>'
@@ -6642,11 +6841,12 @@
       const limpieza = esLimpieza(m)
       const boton = (v, t, extra = '') => `<button type="button" class="pr-pa-dur${esc(extra)}" data-duracion="${esc(v)}" aria-pressed="${String(f.duracion) === String(v) ? 'true' : 'false'}">${esc(t)}</button>`
       let out = DURACIONES_PARADA.map(min => boton(min, textoDuracion(min))).join('') + boton('otro', 'Otro')
-      if (!limpieza || f.limpieza === 'arranque') {
-        const sigue = boton('sigue', limpieza ? 'Todavía no terminó' : 'Todavía no volvió', ' pr-pa-dur--sigue')
-        out += puedeQuedarAbierta(p) ? sigue : sigue.replace('<button ', '<button disabled ')
-      }
-      return out
+      // "En el medio" / "Al terminar": EMPEZÓ AHORA (queda abierta) va
+      // primero; los minutos son "ya terminó, duró…".
+      const ahoraLimpieza = limpieza && f.limpieza && f.limpieza !== 'arranque'
+      const sigue = boton('sigue', ahoraLimpieza ? 'Empezó ahora' : (limpieza ? 'Todavía no terminó' : 'Todavía no volvió'), ' pr-pa-dur--sigue')
+      const sigueHtml = puedeQuedarAbierta(p) ? sigue : sigue.replace('<button ', '<button disabled ')
+      return ahoraLimpieza ? sigueHtml + out : out + sigueHtml
     }
 
     // El paso 2: el reloj de "paró a las", y con "Otro", también el de
@@ -6654,10 +6854,12 @@
     function htmlHorasParadaNueva(f, p, m) {
       if (esLimpieza(m) && f.limpieza) {
         if (f.limpieza === 'arranque') {
-          const desde = `<p class="pr-pa-nota">Desde que se abrió el turno, a las ${esc(hhmm(p.turno.abierto_en))}.</p>`
+          const desde = `<p class="pr-pa-nota">Desde que empezó el turno, a las ${esc(hhmm(inicioTurnoMs(p.turno)))}.</p>`
           return f.duracion === 'otro' ? desde + htmlRueda('fin', 'Terminó a las', f.fin, f.fino.fin) : desde
         }
-        const hasta = '<p class="pr-pa-nota">Hasta ahora: la máquina paró antes de terminar el turno.</p>'
+        const hasta = f.duracion === 'sigue'
+          ? '<p class="pr-pa-nota">Empieza ahora y queda abierta: se cuenta hasta que vuelva («Volvió con el mismo lote»), o hasta el fin del turno si no vuelve.</p>'
+          : '<p class="pr-pa-nota">Si empieza ahora, tocá «Empezó ahora». Si ya terminó, elegí cuánto duró: termina ahora.</p>'
         return f.duracion === 'otro' ? hasta + htmlRueda('inicio', 'Empezó a las', f.inicio, f.fino.inicio) : hasta
       }
       if (f.duracion === 'otro') return htmlRueda('inicio', 'Paró a las', f.inicio, f.fino.inicio, false) + htmlRueda('fin', 'Volvió a las', f.fin, f.fino.fin)
@@ -6738,7 +6940,7 @@
       f.duracion = d
       // "Otro": el segundo reloj arranca en la hora de parada más 30.
       if (d === 'otro' && !f.fin) f.fin = horaConPaso(f.inicio, 30) || f.inicio
-      if (d === 'otro' && esLimpieza(motivoElegido(f)) && f.limpieza === 'arranque') f.fin = horaConPaso(horaArgentina(estado.planilla?.turno?.abierto_en), 30) || f.fin
+      if (d === 'otro' && esLimpieza(motivoElegido(f)) && f.limpieza === 'arranque') f.fin = horaConPaso(hhmm(inicioTurnoMs(estado.planilla?.turno)), 30) || f.fin
       f.errorBase = ''
       pintarParadaNueva()
     }
@@ -6780,14 +6982,18 @@
     // Las paradas del turno, la que sigue primero y en bordó, cada una con su
     // categoría (la limpieza con su color). Se tocan para corregirlas.
     const NOMBRE_CATEGORIA_PARADA = { programada: 'Programada', falla: 'Falla', otro: 'Otro' }
-    function htmlParadasTurno(paradas) {
+    // `finTurno` (01/10/2026): la hora de fin del turno abierto. La que sigue
+    // dice "en curso · se cuenta hasta las 15:00 si no vuelve"; sin hora de
+    // fin, solo cuánto va.
+    function htmlParadasTurno(paradas, finTurno = null) {
       const lista = paradas ?? []
       if (!lista.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
       const orden = [...lista.filter(p => !p.fin), ...[...lista.filter(p => p.fin)].sort((a, b) => String(b.inicio).localeCompare(String(a.inicio)))]
       return orden.map(p => {
         const desde = horaArgentina(p.inicio) || '—'
         const hasta = p.fin ? (horaArgentina(p.fin) || '—') : 'ahora'
-        const dur = duracionTexto(p.inicio, p.fin)
+        const va = duracionTexto(p.inicio, p.fin)
+        const dur = p.fin ? va : `en curso${va ? ` · ${va}` : ''}${finTurno ? ` · se cuenta hasta las ${finTurno} si no vuelve` : ''}`
         const cat = NOMBRE_CATEGORIA_PARADA[p.categoria] ? p.categoria : null
         const clases = `pr-parada-item${p.fin ? '' : ' pr-parada-item--curso'}${cat === 'programada' ? ' pr-parada-item--programada' : ''}`
         return `<button type="button" class="${esc(clases)}" data-parada-editar="${esc(p.id)}">` +
@@ -6808,9 +7014,16 @@
       document.getElementById('pr-parada-activa-motivo').textContent = enCurso ? String(enCurso.motivo ?? '') : ''
       document.getElementById('pr-parada-activa-texto').textContent = enCurso ? ` · desde las ${horaArgentina(enCurso.inicio) || '—'}` : ''
       document.getElementById('pr-parada-activa-hace').textContent = enCurso && haceParada ? ` · hace ${haceParada}` : ''
+      // Si no vuelve, la parada se cuenta hasta la hora de fin del turno
+      // (cerrar_turno la termina ahí). Sin hora de fin no se inventa.
+      const finTurno = abierta ? horasDelTurno(p).fin : null
+      document.getElementById('pr-parada-activa').title = enCurso && finTurno ? `Si no vuelve, se cuenta hasta las ${finTurno}` : ''
       document.getElementById('pr-parada-andando').hidden = !!enCurso || !abierta
       document.getElementById('pr-btn-reanudar').hidden = !enCurso
-      document.getElementById('pr-planilla-paradas').innerHTML = htmlParadasTurno(p.paradas)
+      // "Volvió con lote nuevo" solo con el turno ABIERTO: relanzar_con_lote_nuevo
+      // rechaza cualquier otro estado.
+      document.getElementById('pr-btn-relanzar').hidden = !enCurso || !abierta
+      document.getElementById('pr-planilla-paradas').innerHTML = htmlParadasTurno(p.paradas, finTurno)
       const n = (p.paradas ?? []).length
       const total = textoMinutos(minutosParadas(p.paradas)) || '0 min'
       document.getElementById('pr-paradas-total').innerHTML = n
@@ -6881,6 +7094,205 @@
       } finally {
         btn.disabled = false
       }
+    }
+
+    // ── LA VENTANA DE UNA HORA (01/10/2026) ─────────────────────────────────
+    //
+    // Dos usos, con el teclado propio de la planta (nunca un input type=time):
+    //  · 'inicio': corregir a qué hora empezó el turno (corregir_horario_turno,
+    //    con p_hora_fin en null: la de fin no se toca).
+    //  · 'relanzar': la parada en curso terminó y la máquina "volvió con lote
+    //    nuevo" (relanzar_con_lote_nuevo): el lote viejo queda pendiente de
+    //    completar y se abre uno nuevo en la misma máquina, con el mismo
+    //    encargado y los mismos operarios. Por defecto "ahora": p_hora va en
+    //    null y la hora la pone el servidor.
+    // El error va al ESTADO; el único que lo escribe en pantalla es el render.
+    function abrirHoraVentana(tipo, ahora = new Date()) {
+      const p = estado.planilla
+      if (!p?.turno) return
+      tocar()
+      if (tipo === 'relanzar') {
+        const enCurso = paradaEnCurso(p.paradas)
+        if (!enCurso || p.turno.estado !== 'abierto') return
+        estado.horaForm = { tipo, turnoId: p.turno.id, paradaId: enCurso.id, inicioParada: enCurso.inicio, motivo: enCurso.motivo ?? '',
+          hora: horaArgentina(ahora), ahora: true, buffer: '', enviando: false, errorBase: '' }
+      } else {
+        estado.horaForm = { tipo: 'inicio', turnoId: p.turno.id, hora: horasDelTurno(p).inicio || horaRedondeada(ahora),
+          ahora: false, buffer: '', enviando: false, errorBase: '' }
+      }
+      pintarHoraVentana()
+      document.getElementById('pr-hora-ventana').hidden = false
+      document.getElementById('pr-hora-ventana-titulo').focus?.()
+    }
+
+    function cerrarHoraVentana() {
+      estado.horaForm = null
+      document.getElementById('pr-hora-ventana').hidden = true
+    }
+
+    // Lo que se ve: lo que se está escribiendo ("9··" → "9·:··") o la hora.
+    function muestraHoraVentana(f) {
+      if (f.buffer) return f.buffer.padEnd(4, '·').replace(/^(..)(..)$/, '$1:$2')
+      return normalizarHora(f.hora) || '··:··'
+    }
+
+    function htmlHoraVentana(f) {
+      let teclado = '<div class="pr-hv__teclado" role="group" aria-label="Teclado de la hora">'
+      for (let d = 1; d <= 9; d++) teclado += `<button type="button" class="pr-hv__tecla" data-hv-tecla="${d}">${d}</button>`
+      teclado += '<button type="button" class="pr-hv__tecla pr-hv__tecla--texto" data-hv-tecla="limpiar">Borrar</button>'
+      teclado += '<button type="button" class="pr-hv__tecla" data-hv-tecla="0">0</button>'
+      teclado += '<button type="button" class="pr-hv__tecla" data-hv-tecla="borrar" aria-label="Borrar el último">⌫</button></div>'
+      const ahora = f.tipo === 'relanzar'
+        ? `<button type="button" class="pr-hv__ahora" data-hv-ahora="1" aria-pressed="${f.ahora ? 'true' : 'false'}">Ahora</button>` : ''
+      return '<div class="pr-hv__fila">' +
+        '<button type="button" class="pr-hv__paso" data-hv-paso="-5" aria-label="5 minutos menos">−5</button>' +
+        `<span class="pr-hv__num" aria-live="polite">${esc(muestraHoraVentana(f))}</span>` +
+        '<button type="button" class="pr-hv__paso" data-hv-paso="5" aria-label="5 minutos más">+5</button>' + ahora + '</div>' + teclado
+    }
+
+    function textosHoraVentana(f, p = estado.planilla) {
+      if (f.tipo === 'relanzar') {
+        return { titulo: '¿A qué hora volvió con lote nuevo?', boton: 'Volvió con lote nuevo',
+          nota: `El lote ${p?.turno?.lote ?? ''} queda para completar (productos y scrap) y la ${p?.maquinaNombre ?? 'máquina'} sigue con un lote nuevo, con el mismo encargado y los mismos operarios. La parada «${f.motivo}» termina a esa hora.` }
+      }
+      return { titulo: '¿A qué hora empezó el turno?', boton: 'Guardar el inicio',
+        nota: `Turno ${p?.turno?.turno ?? ''} · lote ${p?.turno?.lote ?? ''}. Corrige solo el inicio: la hora de fin no cambia.` }
+    }
+
+    function pintarHoraVentana() {
+      const f = estado.horaForm
+      if (!f) return
+      const t = textosHoraVentana(f)
+      document.getElementById('pr-hora-ventana-titulo').textContent = t.titulo
+      document.getElementById('pr-hora-ventana-nota').textContent = t.nota
+      document.getElementById('pr-hora-ventana-hora').innerHTML = htmlHoraVentana(f)
+      const err = document.getElementById('pr-hora-ventana-error')
+      err.textContent = f.errorBase
+      err.hidden = !f.errorBase
+      const g = document.getElementById('pr-hora-ventana-guardar')
+      g.textContent = f.enviando ? 'Guardando…' : t.boton
+      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
+      g.disabled = !!f.enviando
+    }
+
+    // 3 o 4 números: "930" es 09:30 y "1745" es 17:45 (la regla de normalizarHora).
+    function teclaHoraVentana(t) {
+      const f = estado.horaForm
+      if (!f || f.enviando) return
+      tocar()
+      if (t === 'limpiar') f.buffer = ''
+      else if (t === 'borrar') f.buffer = f.buffer.slice(0, -1)
+      else if (/^[0-9]$/.test(t) && f.buffer.length < 4) f.buffer += t
+      const h = f.buffer.length >= 3 ? normalizarHora(f.buffer) : ''
+      if (h) { f.hora = h; f.ahora = false }
+      f.errorBase = ''
+      pintarHoraVentana()
+    }
+
+    function pasoHoraVentana(minutos, ahora = new Date()) {
+      const f = estado.horaForm
+      if (!f || f.enviando) return
+      tocar()
+      f.hora = horaConPaso(normalizarHora(f.hora) || horaRedondeada(ahora), minutos)
+      f.buffer = ''
+      f.ahora = false
+      f.errorBase = ''
+      pintarHoraVentana()
+    }
+
+    function ahoraHoraVentana(ahora = new Date()) {
+      const f = estado.horaForm
+      if (!f || f.enviando) return
+      tocar()
+      f.hora = horaArgentina(ahora)
+      f.buffer = ''
+      f.ahora = true
+      f.errorBase = ''
+      pintarHoraVentana()
+    }
+
+    // { rpc, params } o { error } en palabras.
+    // RELANZAR: con "Ahora", p_hora va en null (la hora del servidor). Si se
+    // escribió otra, es la ÚLTIMA vez que esa hora pasó (nunca una futura: la
+    // base rechaza más de 5 minutos adelante), y tiene que ser después de la
+    // parada.
+    function pedidoHoraVentana(f, ahora = new Date()) {
+      if (f.buffer && !(f.buffer.length >= 3 && normalizarHora(f.buffer))) return { error: 'Esa hora no existe. Escribila con 4 números, por ejemplo 0930.' }
+      if (f.tipo === 'relanzar') {
+        if (f.ahora) return { rpc: 'relanzar_con_lote_nuevo', params: { p_parada_id: f.paradaId, p_hora: null } }
+        const h = normalizarHora(f.hora)
+        if (!h) return { error: 'Poné la hora en que volvió.' }
+        const ya = new Date(ahora).getTime()
+        let ms = instanteAr(hoyArgentina(new Date(ya)), h)
+        const ini = new Date(f.inicioParada).getTime()
+        if (ms > ya + TOLERANCIA_FUTURO_MS) {
+          // Una hora que hoy todavía no pasó es de ayer SOLO si la parada
+          // empezó antes (cruzó la medianoche). Si no, es una hora futura.
+          if (!(Number.isFinite(ini) && ms - MS_DIA > ini)) return { error: `Las ${h} todavía no pasaron: poné la hora en que volvió, o tocá «Ahora».` }
+          ms -= MS_DIA
+        }
+        if (Number.isFinite(ini) && ms <= ini) return { error: `La hora en que volvió tiene que ser después de la parada (paró a las ${horaArgentina(new Date(ini))}).` }
+        return { rpc: 'relanzar_con_lote_nuevo', params: { p_parada_id: f.paradaId, p_hora: isoAr(ms) } }
+      }
+      const h = normalizarHora(f.hora)
+      if (!h) return { error: 'Poné la hora en que empezó el turno.' }
+      return { rpc: 'corregir_horario_turno', params: { p_turno_id: f.turnoId, p_hora_inicio: h, p_hora_fin: null } }
+    }
+
+    // El aviso que queda arriba de la planilla nueva después de relanzar.
+    function textoRelanzado(res, maquinaNombre) {
+      return `Lote ${res?.lote_viejo ?? '—'} queda para completar · Ahora la ${maquinaNombre || 'máquina'} sigue con el lote ${res?.lote ?? '—'}`
+    }
+
+    function htmlAvisoRelanzado(p) {
+      const a = estado.avisoRelanzado
+      if (!a || !p?.turno || a.turnoId !== p.turno.id) return ''
+      return `<div class="pr-aviso pr-aviso--relanzado" role="status">${esc(a.texto)}</div>`
+    }
+
+    async function confirmarHoraVentana(ahora = new Date()) {
+      const f = estado.horaForm, p = estado.planilla
+      if (!f || f.enviando || !p) return
+      const pedido = pedidoHoraVentana(f, ahora)
+      if (pedido.error) { f.errorBase = pedido.error; return pintarHoraVentana() }
+      f.enviando = true
+      f.errorBase = ''
+      pintarHoraVentana()
+      let res
+      try {
+        const { data, error } = await supabase.rpc(pedido.rpc, pedido.params)
+        if (error) throw error
+        res = data
+      } catch (e) {
+        console.error(pedido.rpc + ':', e)
+        f.enviando = false
+        // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
+        f.errorBase = e?.message || 'No se pudo guardar. Revisá la conexión y probá de nuevo.'
+        return pintarHoraVentana()
+      }
+      cerrarHoraVentana()
+      if (f.tipo !== 'relanzar') {
+        mostrarExito(`Inicio del turno: ${normalizarHora(f.hora)}.`)
+        return recargarPlanilla()
+      }
+      const texto = textoRelanzado(res, p.maquinaNombre)
+      estado.avisoRelanzado = { turnoId: res?.turno_id ?? null, texto }
+      mostrarExito(texto)
+      // El tablero, para que la pestaña de la máquina ya diga el lote nuevo.
+      try { estado.tablero = estadoMaquinas(await leerTablero(estado.unidadId)) } catch (err) { console.error('tablero:', err) }
+      if (res?.turno_id) return abrirPlanilla(res.turno_id)
+    }
+
+    function teclaVentanaHora(ev) {
+      if (!estado.horaForm) return
+      if (ev.key === 'Escape') { ev.preventDefault(); cerrarHoraVentana(); return }
+      if (ev.key !== 'Tab') return
+      const panel = document.getElementById('pr-hora-ventana')
+      const focos = [...panel.querySelectorAll('button:not([disabled])')]
+      if (!focos.length) return
+      const i = focos.indexOf(document.activeElement)
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }
+      else if (!ev.shiftKey && i === focos.length - 1) { ev.preventDefault(); focos[0].focus() }
     }
 
     // ── Anotar, corregir y borrar una parada (terminar la tablet, parte 4)
@@ -8392,8 +8804,11 @@
       return `produccion.cierre.${turnoId}`
     }
 
+    // `fin` (01/10/2026): a qué hora terminó el TURNO (p_hora_fin de
+    // cerrar_turno). No es la hora del fuego: el fuego se apaga antes o
+    // después, y la hora de fin es hasta dónde se cuentan las paradas.
     function borradorCierreVacio() {
-      return { hora: '', scrap: null, obs: '', rota: false }
+      return { hora: '', scrap: null, obs: '', rota: false, fin: '' }
     }
 
     function leerBorradorCierre(turnoId) {
@@ -8407,6 +8822,7 @@
           scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,
           obs: typeof b.obs === 'string' ? b.obs : '',
           rota: b.rota === true,
+          fin: typeof b.fin === 'string' ? b.fin : '',
         }
       } catch { return null }
     }
@@ -8438,6 +8854,11 @@
     // vuelve obligatorio contar qué pasó.
     function faltanParaCerrar(b) {
       const faltan = []
+      // La hora de fin del turno es OBLIGATORIA (01/10/2026): viene marcada
+      // la de la planilla o la del horario; sin ninguna, se elige.
+      if (!normalizarHora(b.fin)) {
+        faltan.push({ campo: 'fin', error: 'Falta a qué hora terminó el turno.', nota: 'Tocá 8 h, 9 h o escribila.' })
+      }
       if (!normalizarHora(b.hora)) {
         faltan.push({ campo: 'hora', error: b.rota ? 'Falta la hora en que se rompió.' : 'Falta la hora en que se apagó el fuego.', nota: 'Poné la hora.' })
       }
@@ -8479,6 +8900,10 @@
           avisos.push({ texto: f.texto ?? '', ir, boton: ir === 'paradas' ? 'Ir a Paradas' : (ir === 'sala' ? 'Ir a Sala de masa' : '') })
         }
       }
+      // Una parada sin terminar se cuenta hasta la hora de fin del turno: se
+      // dice ANTES de confirmar (01/10/2026).
+      const hastaFin = paradaHastaFin(paradaEnCurso(p?.paradas), p, b?.fin)
+      if (hastaFin) avisos.push({ texto: hastaFin.texto, ir: 'paradas', boton: 'Ir a Paradas' })
       // Lo que la base no revisa y la pantalla sí: sin producido, y el scrap
       // que dobla el promedio de la máquina (con 5 turnos o más para comparar).
       if (p && !itemsVivos(p.items).length) avisos.push({ texto: 'No cargaste nada producido.', ir: 'producido', boton: 'Ir a Lo producido' })
@@ -8514,18 +8939,43 @@
         p_scrap_kg: b.scrap,
         p_observaciones: b.obs.trim() === '' ? null : b.obs.trim(),
         p_productos: [],
+        // SIEMPRE: la parada que quedó abierta termina a esta hora.
+        p_hora_fin: normalizarHora(b.fin) || null,
       }
     }
 
     // Lo que hay que CONFIRMAR antes de mandar. Una parada sin terminar no
     // bloquea —cerrar_turno la cierra sola y la marca como que la máquina no
     // volvió en todo el turno— pero no puede pasar en silencio.
-    function avisosDeCierre(p) {
+    // Hasta dónde se cuenta una parada abierta al cerrar con la hora de fin:
+    // la MISMA regla de cerrar_turno (el fin del turno, en su día —el
+    // siguiente si cruza la medianoche—; si no queda después de la parada, la
+    // base la termina ahora). { desde, hasta, minutos, texto } o null.
+    function paradaHastaFin(parada, p, fin, ahora = new Date()) {
+      if (!parada || parada.fin) return null
+      const ini = new Date(parada.inicio).getTime()
+      const h = normalizarHora(fin)
+      const ms = instanteFinTurno(p, h)
+      if (!Number.isFinite(ini) || !h || ms === null) return null
+      const motivo = String(parada.motivo ?? '')
+      if (ms <= ini) {
+        return { desde: ini, hasta: Math.max(ini, new Date(ahora).getTime()), minutos: null,
+          texto: `La parada «${motivo}» se va a contar hasta el momento de cerrar: la hora de fin (${h}) no es posterior a la parada.` }
+      }
+      const minutos = Math.round((ms - ini) / 60000)
+      return { desde: ini, hasta: ms, minutos,
+        texto: `La parada «${motivo}» se va a contar hasta las ${h}: de ${horaArgentina(new Date(ini))} a ${h} (${textoMinutos(minutos)}).` }
+    }
+
+    function avisosDeCierre(p, b = estado.cierre) {
       const avisos = []
       const enCurso = paradaEnCurso(p?.paradas)
       if (enCurso) {
         avisos.push(`Quedó una parada sin terminar ("${enCurso.motivo}", desde ${horaArgentina(enCurso.inicio) || '—'}). ` +
           'Al cerrar, la planilla la va a dar por terminada y va a quedar anotada como que la máquina no volvió en todo el turno.')
+        // Hasta cuándo se cuenta: la hora de fin del turno (01/10/2026).
+        const hasta = paradaHastaFin(enCurso, p, b?.fin)
+        if (hasta) avisos.push(hasta.texto)
       }
       if (!itemsVivos(p?.items).length) avisos.push('No cargaste nada producido. ¿Seguro que esta máquina no produjo?')
       return avisos
@@ -8568,10 +9018,13 @@
       mostrarVista('pr-cierre')
       const guardado = leerBorradorCierre(p.turno.id)
       estado.cierre = guardado ?? { ...borradorCierreVacio(), hora: horaArgentina(new Date()) }
+      // La hora de fin viene marcada: la de la planilla, o la del horario.
+      if (!normalizarHora(estado.cierre.fin)) estado.cierre.fin = horasDelTurno(p).fin || ''
       estado.cierreBase = { falta: null, errorFalta: false, scrapRef: null }
       document.getElementById('pr-cierre-borrador').hidden = !guardado
       document.getElementById('pr-cierre-borrador').textContent = guardado ? 'Se recuperó lo que habías cargado en esta tablet.' : ''
       document.getElementById('pr-cierre-hora').value = estado.cierre.hora
+      document.getElementById('pr-cierre-fin').value = estado.cierre.fin
       ponerNumero(document.getElementById('pr-cierre-scrap'), estado.cierre.scrap)
       document.getElementById('pr-cierre-obs').value = estado.cierre.obs
       pintarCierre()
@@ -8614,8 +9067,14 @@
       const clase = (id, campo, extra) => {
         document.getElementById(id).className = 'pr-cierre-caja' + extra + (marcados.has(campo) ? ' pr-campo--mal' : '')
       }
+      clase('pr-cierre-campo-fin', 'fin', ' pr-cierre-caja--fin')
       clase('pr-cierre-campo-hora', 'hora', '')
       clase('pr-cierre-campo-scrap', 'scrap', '')
+      document.getElementById('pr-cierre-fin-chips').innerHTML = htmlChipsFinCierre(p, b)
+      const fFin = faltan.find(f => f.campo === 'fin')
+      const notaFin = document.getElementById('pr-cierre-fin-nota')
+      notaFin.textContent = fFin ? fFin.nota : ''
+      notaFin.hidden = !(fFin && b.intentado)
       clase('pr-cierre-campo-obs', 'obs', ' pr-cierre__obs')
       const fObs = faltan.find(f => f.campo === 'obs')
       const notaObs = document.getElementById('pr-cierre-obs-nota')
@@ -8656,11 +9115,27 @@
       const b = estado.cierre
       if (!b) return
       b.hora = document.getElementById('pr-cierre-hora').value
+      b.fin = document.getElementById('pr-cierre-fin').value
       b.scrap = leerCampoNumero(document.getElementById('pr-cierre-scrap'))
       b.obs = document.getElementById('pr-cierre-obs').value
       b.errorBase = ''
-      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota })
+      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota, fin: b.fin })
       pintarCierre()
+    }
+
+    // Los chips de la hora de fin: el inicio del turno más 8 y más 9 horas.
+    // El que coincide con lo escrito va marcado.
+    function htmlChipsFinCierre(p, b) {
+      const elegido = normalizarHora(b?.fin)
+      return chipsFinTurno(p).map(c => `<button type="button" class="pr-cierre-chip" data-fin-chip="${esc(c.hora)}" aria-pressed="${c.hora === elegido ? 'true' : 'false'}">${esc(c.texto)}</button>`).join('')
+    }
+
+    function elegirFinCierre(hora) {
+      const h = normalizarHora(hora)
+      if (!h || !estado.cierre) return
+      tocar()
+      document.getElementById('pr-cierre-fin').value = h
+      cambioEnCierre()
     }
 
     function alternarRota() {
@@ -8788,6 +9263,20 @@
         if (estado.paradaForm) { estado.paradaForm.motivo = ev.target.value; estado.paradaForm.errorBase = '' }
       })
       document.getElementById('pr-btn-reanudar').addEventListener('click', reanudar)
+      // 01/10/2026: "Volvió con lote nuevo", "Corregir el inicio" y su ventana.
+      document.getElementById('pr-btn-relanzar').addEventListener('click', () => abrirHoraVentana('relanzar'))
+      document.getElementById('pr-planilla-horario').addEventListener('click', ev => {
+        if (ev.target.closest('[data-turno-inicio]')) abrirHoraVentana('inicio')
+      })
+      const ventanaHora = document.getElementById('pr-hora-ventana')
+      ventanaHora.addEventListener('click', ev => {
+        if (ev.target === ventanaHora || ev.target.closest('#pr-hora-ventana-cancelar')) return cerrarHoraVentana()
+        if (ev.target.closest('#pr-hora-ventana-guardar')) return confirmarHoraVentana()
+        const t = ev.target.closest('[data-hv-tecla]'); if (t) return teclaHoraVentana(t.dataset.hvTecla)
+        const p = ev.target.closest('[data-hv-paso]'); if (p) return pasoHoraVentana(Number(p.dataset.hvPaso))
+        if (ev.target.closest('[data-hv-ahora]')) return ahoraHoraVentana()
+      })
+      ventanaHora.addEventListener('keydown', teclaVentanaHora)
       // 7 · "Ir a Paradas" / "Ir a Lo producido" desde lo que falta.
       document.getElementById('pr-cierre-falta').addEventListener('click', ev => {
         const b = ev.target.closest('[data-cierre-ir]'); if (b) irDesdeCierre(b.dataset.cierreIr)
@@ -8887,9 +9376,12 @@
         cambioEnCierre()
       })
       document.getElementById('pr-cierre-rota').addEventListener('click', alternarRota)
-      for (const id of ['pr-cierre-hora', 'pr-cierre-scrap', 'pr-cierre-obs']) {
+      for (const id of ['pr-cierre-hora', 'pr-cierre-fin', 'pr-cierre-scrap', 'pr-cierre-obs']) {
         document.getElementById(id).addEventListener('input', cambioEnCierre)
       }
+      document.getElementById('pr-cierre-campo-fin').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-fin-chip]'); if (b) elegirFinCierre(b.dataset.finChip)
+      })
       document.getElementById('pr-cierre-campo-hora').addEventListener('click', ev => {
         const b = ev.target.closest('[data-hora-paso]'); if (b) cambiarHoraCierre(Number(b.dataset.horaPaso))
       })

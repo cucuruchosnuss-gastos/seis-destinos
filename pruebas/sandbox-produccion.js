@@ -241,6 +241,9 @@ const NUEVAS_GESTION = [
   'tocarActivaPresentacion', 'borradorTocado', 'abrirEmpaque', 'descartarBorrador', 'diaRelativo', 'htmlResaltado',
   // El color elegido de cada producto y la caja predeterminada (29/09/2026)
   'htmlColoresProducto', 'parametrosColorProducto', 'cambiarColorProducto', 'parametrosCajaPredeterminada', 'cambiarCajaPredeterminada',
+  // Horarios de turno, y la planilla que volvió con lote nuevo (01/10/2026)
+  'leerHorariosConfig', 'horarioGuardado', 'horarioEnPantalla', 'duracionHorario', 'htmlConfigHorarios', 'tocarHorario',
+  'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
@@ -249,7 +252,9 @@ const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJET
   'ICONO_EXCLAMACION', 'ICONO_CRUZ', 'ICONO_TILDE', 'ICONO_ESTRELLA', 'ICONO_HISTORIAL', 'ICONO_FLECHA',
   'COLORES_ELEGIBLES', 'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO',
   // Reventa y traspasos en el stock terminado (30/09/2026)
-  'NOMBRE_TIPO_STOCK_TERMINADO']
+  'NOMBRE_TIPO_STOCK_TERMINADO',
+  // Horarios de turno (01/10/2026)
+  'TURNOS_HORARIO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = [
@@ -351,6 +356,11 @@ const NUEVAS_PLANTA = [
   'elegirDuracionParada', 'escribirDetalleParada', 'guardarParadaNueva', 'abrirVentanaParadas', 'cerrarVentanaParadas',
   // Las pestañas de las máquinas (01/10/2026).
   'nombreCortoMaquina', 'turnoDePantalla', 'pestanasMaquinas', 'htmlPestanasMaquinas', 'pintarPestanasMaquinas', 'cambiarDeMaquina',
+  // Los horarios de turno, la limpieza en el medio y volver con lote nuevo (01/10/2026).
+  'leerHorarioTurno', 'horaDeColumna', 'horasDelTurno', 'chipsFinTurno', 'instanteFinTurno', 'htmlHorarioPlanilla', 'inicioTurnoMs',
+  'abrirHoraVentana', 'cerrarHoraVentana', 'muestraHoraVentana', 'htmlHoraVentana', 'textosHoraVentana', 'pintarHoraVentana',
+  'teclaHoraVentana', 'pasoHoraVentana', 'ahoraHoraVentana', 'pedidoHoraVentana', 'textoRelanzado', 'htmlAvisoRelanzado',
+  'confirmarHoraVentana', 'teclaVentanaHora', 'paradaHastaFin', 'htmlChipsFinCierre', 'elegirFinCierre',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -368,7 +378,7 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // El botón de volver (30/09/2026)
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
-  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA',
+  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA', 'MOMENTOS_LIMPIEZA',
   'VISTAS_CON_PESTANAS']
 
 const CONSTANTES_BASE = [

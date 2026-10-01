@@ -48,6 +48,18 @@ const PASOS_PLANTA = [
     await expect(page.locator('#pr-planilla')).toBeVisible()
     await expect(page.locator('#pr-planilla-producido')).toContainText('7033-6')
   }],
+  // El horario del turno (01/10/2026): la planilla dice "Turno Mañana ·
+  // 06:00 – 15:00" y "Corregir el inicio" abre la ventana de la hora, con el
+  // teclado propio de la planta.
+  ['planilla-hora-inicio', async (page) => {
+    await expect(page.locator('#pr-planilla-horario')).toContainText('06:00 – 15:00')
+    await page.locator('#pr-planilla-horario [data-turno-inicio]').click()
+    await expect(page.locator('#pr-hora-ventana')).toBeVisible()
+  }],
+  ['planilla-hora-inicio-cerrar', async (page) => {
+    await page.locator('#pr-hora-ventana-cancelar').click()
+    await expect(page.locator('#pr-hora-ventana')).toBeHidden()
+  }, false],
   ['lo-producido-producto', async (page) => {
     await page.locator('#pr-btn-agregar-producto').click()
     await expect(page.locator('#pr-agregar-prod')).toBeVisible()
@@ -86,9 +98,17 @@ const PASOS_PLANTA = [
     await page.locator('#pr-parada-sugerencias [data-limpieza="arranque"]').click()
     await expect(page.locator('#pr-parada-duracion [data-duracion="sigue"]')).toBeVisible()
   }],
+  // La limpieza "al terminar" (01/10/2026): "Empezó ahora" (sin duración) o
+  // "Ya terminó, duró…".
+  ['paradas-limpieza-final', async (page) => {
+    await page.locator('#pr-parada-sugerencias [data-limpieza="final"]').click()
+    await expect(page.locator('#pr-parada-duracion [data-duracion="sigue"]')).toContainText('Empezó ahora')
+  }],
   ['cerrar-planilla', async (page) => {
     await page.locator('#pr-barra [data-seccion="cierre"]').click()
     await expect(page.locator('#pr-cierre')).toBeVisible()
+    // "¿A qué hora terminó el turno?", con 14:00 (8 h) y 15:00 (9 h).
+    await expect(page.locator('#pr-cierre-fin-chips [data-fin-chip="14:00"]')).toContainText('8 h')
   }],
   // El botón de volver (30/09/2026): "‹ Inicio" lleva al Inicio del modo.
   ['volver-inicio', async (page) => {

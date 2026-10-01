@@ -299,7 +299,7 @@ esperas.push((async () => {
   chk('con las dos en la unidad: corregir y borrar', JSON.stringify(conDos.accionesParadaHistorial(CERRADO)) === '{"editar":true,"borrar":true}')
   chk('configurar en OTRA unidad no alcanza', JSON.stringify(armarG({ tareas: [['cargar', { todas: true }], ['configurar', { unidades: ['u-dp'] }]] }).accionesParadaHistorial(CERRADO)) === '{"editar":false,"borrar":false}')
   chk('en el historial, una planilla abierta no se toca (se maneja desde la planilla)', JSON.stringify(conDos.accionesParadaHistorial(DIA)) === '{"editar":false,"borrar":false}')
-  chk('el detalle usa esos permisos', /htmlParadas\(d\.paradas, accionesParadaHistorial\(t\)\)/.test(FUENTE_G) &&
+  chk('el detalle usa esos permisos', /htmlParadas\(d\.paradas, accionesParadaHistorial\(t\), finTurnoAbierto\(d\)\)/.test(FUENTE_G) &&
     /accionesParadaHistorial\(t\)\.editar \? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada<\/button>'/.test(FUENTE_G))
   chk('una cerrada no ofrece "Todavía no volvió"', !/data-hora-sigue/.test((() => { conDos.estado.detalleHistorial = { turno: CERRADO, paradas: [] }; conDos.abrirEditorDesdeHistorial('anotar'); return conDos.__doc.getElementById('pr-parada-editor-horas').innerHTML })()))
 
@@ -372,7 +372,7 @@ esperas.push((async () => {
   {
     const { extraerFn } = require('./extraer')
     chk('la planilla ofrece corregir y borrar', /data-parada-editar="\$\{esc\(p\.id\)\}"/.test(extraerFn(FUENTE, 'htmlParadasTurno')) &&
-      /getElementById\('pr-planilla-paradas'\)\.innerHTML = htmlParadasTurno\(p\.paradas\)/.test(FUENTE) &&
+      /getElementById\('pr-planilla-paradas'\)\.innerHTML = htmlParadasTurno\(p\.paradas, finTurno\)/.test(FUENTE) &&
       /contexto: 'planilla', puedeBorrar: true/.test(extraerFn(FUENTE, 'abrirEditorDesdePlanilla')))
   }
 }
