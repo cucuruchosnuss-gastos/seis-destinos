@@ -578,6 +578,15 @@ module.exports = {
         "nombre": "Minoristas",
         "moneda": "ARS",
         "activa": true
+      },
+      // La lista interna de la fábrica (30/09/2026): la del traspaso.
+      {
+        "id": "l3",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Entre fábricas",
+        "moneda": "ARS",
+        "activa": true,
+        "es_interna": true
       }
     ],
     "lista_precios_items": [

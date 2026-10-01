@@ -271,6 +271,10 @@
     .ad-sello--anulada { background: var(--bordo); color: #fff; border-color: var(--bordo); }
     /* "También proveedor" es un dato: neutro (el naranja es solo para lo que
        se toca, 29/09/2026). */
+    /* La lista interna de una fábrica (la que propone el precio de un traspaso). */
+    .ad-sello--interna { background: var(--color-superficie); color: var(--color-texto-menu); border-color: var(--color-borde-fuerte); }
+    .ad-lista-interna { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font-weight: 700; }
+    .ad-lista-interna input { width: 1.25rem; height: 1.25rem; }
     .ad-sello--proveedor { background: var(--color-superficie); color: var(--color-texto-menu); border-color: var(--color-borde); }
     /* La empresa de cada cliente, con "Todas las fábricas" (29/09/2026). */
     .ad-sello--empresa { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde-fuerte); letter-spacing: 0.02em; gap: 0.3125rem; }
@@ -667,6 +671,14 @@
         <h1 class="ad-titulo" id="ad-lista-titulo">Lista</h1>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-lista-activa">Desactivar</button>
       </div>
+      <!-- La lista INTERNA de la fábrica (30/09/2026): la que propone el precio
+           de un traspaso a otra fábrica. listas_precios.es_interna; la base
+           no tiene cómo guardarla desde acá (hueco): el tilde se ve y se
+           traba desde JS. -->
+      <section class="ad-tarjeta" aria-labelledby="ad-lista-interna-rotulo">
+        <label class="ad-lista-interna"><input type="checkbox" id="ad-lista-interna"> <span id="ad-lista-interna-rotulo">Lista interna</span></label>
+        <p class="ad-texto-suave" id="ad-lista-interna-nota"></p>
+      </section>
       <!-- Los clientes de esta lista (30/09/2026): se asignan desde acá con un
            tilde (guardar_ficha_cliente con lista_precio_id). -->
       <section class="ad-tarjeta ad-lista-clientes" aria-labelledby="ad-lista-clientes-titulo">
@@ -3050,7 +3062,7 @@
 
     async function asegurarListas(unidadId) {
       if (estado.listas && estado.listas.unidad === unidadId) return
-      const { data, error } = await supabase.from('listas_precios').select('id, nombre, moneda, activa').eq('unidad_negocio_id', unidadId).order('nombre')
+      const { data, error } = await supabase.from('listas_precios').select('id, nombre, moneda, activa, es_interna, es_base, base_id, recargo_pct').eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       estado.listas = { unidad: unidadId, filas: data ?? [] }
     }
@@ -3237,6 +3249,7 @@
       const meta = (l.moneda === 'USD' ? 'En dólares' : 'En pesos') + (l.activa === false ? ' · inactiva' : '')
       return `<button type="button" class="ad-fila" data-lista="${esc(l.id)}">` +
         `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(l.nombre)}</span>` +
+        `${l.es_interna === true ? '<span class="ad-sello ad-sello--interna">Interna</span>' : ''}` +
         `${l.activa === false ? '<span class="ad-sello">Inactiva</span>' : ''}</span>` +
         `<span class="ad-fila__meta">${esc(meta)}</span></button>`
     }
@@ -3429,6 +3442,32 @@
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" id="ad-historial-cerrar">Cerrar</button></div>`
     }
 
+    // ── LA LISTA INTERNA (30/09/2026) ───────────────────────────────────────
+    // listas_precios.es_interna marca UNA lista por fábrica (índice único
+    // ux_lista_interna_por_unidad): el traspaso a otra fábrica (Stock) propone
+    // su precio con precio_venta() de la interna del ORIGEN.
+    // HUECO DE BASE: ninguna RPC la guarda —guardar_lista_precios no recibe
+    // es_interna (verificado con pg_get_functiondef el 30/09/2026) y la tabla
+    // no tiene policy de escritura—, así que el tilde MUESTRA el estado y
+    // queda trabado. Cuando exista la RPC, se cambia PUEDE_MARCAR_INTERNA.
+    const PUEDE_MARCAR_INTERNA = false
+
+    function textoListaInterna(meta) {
+      const empresa = empresaActual()?.nombre ?? 'esta fábrica'
+      const frase = meta?.es_interna === true
+        ? `Es la lista interna de ${empresa}: el traspaso a otra fábrica propone sus precios.`
+        : `No es la lista interna de ${empresa}.`
+      return PUEDE_MARCAR_INTERNA ? frase : frase + ' Todavía no se puede cambiar desde acá: la base no tiene cómo guardarlo.'
+    }
+
+    function pintarListaInterna(meta) {
+      const chk = document.getElementById('ad-lista-interna')
+      chk.checked = meta?.es_interna === true
+      // Trabado desde JS (no con el atributo): la base no tiene cómo guardarlo.
+      chk.disabled = !PUEDE_MARCAR_INTERNA
+      document.getElementById('ad-lista-interna-nota').textContent = textoListaInterna(meta)
+    }
+
     function textoPendientes(n) {
       return n ? `${n} ${n === 1 ? 'precio nuevo' : 'precios nuevos'} sin guardar.` : 'Sin precios nuevos.'
     }
@@ -3440,6 +3479,7 @@
       const meta = listaDe(l.id)
       document.getElementById('ad-lista-titulo').textContent = meta ? meta.nombre : 'Lista'
       document.getElementById('ad-btn-lista-activa').textContent = meta?.activa === false ? 'Activar' : 'Desactivar'
+      pintarListaInterna(meta)
       const grilla = document.getElementById('ad-lista-grilla')
       if (conValores) {
         grilla.innerHTML = htmlGrilla(l, hoy)

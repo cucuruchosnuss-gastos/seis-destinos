@@ -232,7 +232,11 @@ function datosBase() {
       { unidad_negocio_id: 'u-dolce', presentacion_id: 'dp1', marca_id: null, lote: 'D-1', cajas: 9, fecha: '2026-09-06' },
     ],
     listas_precios: [
-      { id: 'lc', unidad_negocio_id: 'u-nuss', nombre: 'Distribuidores', activa: true },
+      { id: 'lc', unidad_negocio_id: 'u-nuss', nombre: 'Distribuidores', activa: true, es_interna: false },
+      // Un nombre que dice "interna" SIN la marca: ya no cuenta.
+      { id: 'lx', unidad_negocio_id: 'u-nuss', nombre: 'Lista interna vieja', activa: true, es_interna: false },
+      // La interna de OTRA fábrica: no es la del origen.
+      { id: 'ld', unidad_negocio_id: 'u-dolce', nombre: 'Interna Dolce', activa: true, es_interna: true },
     ],
   }
 }
@@ -504,10 +508,14 @@ pendientes.push(async () => {
 // ══════════════════════════════════════════════════════════════════════════
 pendientes.push(async () => {
   const S = sandbox()
-  chk('lista interna: por nombre, sin acentos ni mayúsculas', S.listaInternaDe([{ id: 'a', nombre: 'Clientes', activa: true }, { id: 'b', nombre: 'Precio INTERNA fábricas', activa: true }])?.id === 'b')
-  chk('lista interna: "Interná" con acento también', S.listaInternaDe([{ id: 'c', nombre: 'Lista Interná', activa: true }])?.id === 'c')
-  chk('lista interna: una apagada no', S.listaInternaDe([{ id: 'b', nombre: 'Interna', activa: false }]) === null)
-  chk('lista interna: sin ninguna, null', S.listaInternaDe([{ id: 'x', nombre: 'Distribuidores', activa: true }]) === null)
+  chk('lista interna: la que tiene es_interna, NO por el nombre', S.listaInternaDe([{ id: 'a', nombre: 'Interna', activa: true, es_interna: false }, { id: 'b', nombre: 'Fábricas', activa: true, es_interna: true }])?.id === 'b')
+  chk('lista interna: un nombre que dice "interna" sin la marca no cuenta', S.listaInternaDe([{ id: 'c', nombre: 'Lista Interna', activa: true, es_interna: false }]) === null)
+  chk('lista interna: una desactivada con la marca SÍ (la marca es explícita)', S.listaInternaDe([{ id: 'b', nombre: 'Fábricas', activa: false, es_interna: true }])?.id === 'b')
+  chk('lista interna: es_interna con un valor raro no cuenta', S.listaInternaDe([{ id: 'b', nombre: 'X', activa: true, es_interna: 'true' }]) === null)
+  chk('lista interna: sin ninguna, null', S.listaInternaDe([{ id: 'x', nombre: 'Distribuidores', activa: true, es_interna: false }]) === null)
+  chk('lista interna: se pide a la base por es_interna (el doble ignora el select: se afirma sobre su texto)',
+    /\.select\('id, nombre, activa, es_interna'\)\s*\n\s*\.eq\('unidad_negocio_id', origen\)\s*\n\s*\.eq\('es_interna', true\)/.test(SCRIPT))
+  chk('lista interna: ya no se busca "interna" en el nombre', !/includes\('interna'\)/.test(SCRIPT))
 
   // Sin lista interna (los datos de hoy).
   let T = await abierto()
@@ -519,7 +527,7 @@ pendientes.push(async () => {
   chk('sin lista interna: no se pide precio_venta', !T.__llamadas.rpc.some(x => x[0] === 'precio_venta'))
 
   // Con lista interna.
-  const conLista = (d) => { d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true }) }
+  const conLista = (d) => { d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true, es_interna: true }) }
   T = await abierto({ datos: conLista, rpc: { precio_venta: (p) => ({ data: { precio_caja: p.p_marca_id ? 999 : 1500.5, sin_precio: false }, error: null }) } })
   T.agregarRenglonTrp('pp1', null)
   await esperar()
@@ -543,9 +551,17 @@ pendientes.push(async () => {
   chk('precio vaciado: queda sin precio', r.precio === null && /no deja deuda/.test(T.document.querySelector(`[data-trp-precio-nota="${r.id}"]`).textContent))
 
   // La lista no tiene precio / precio_venta falla.
+  {
+    const U = await abierto({ datos: conLista, rpc: { precio_venta: () => ({ data: null, error: { message: 'No tenés permiso para ver precios.' } }) } })
+    U.agregarRenglonTrp('pp1', null)
+    await esperar()
+    const rr = U.estado.trp.renglones[0]
+    const n = U.document.querySelector(`[data-trp-precio-nota="${rr.id}"]`).textContent
+    chk('error de precio_venta: el precio queda vacío (nunca 0)', rr.precio === null, rr.precio)
+    chk('error de precio_venta: dice el mensaje de la base TAL CUAL, no "no tiene precio"', /No tenés permiso para ver precios\./.test(n) && !/no tiene precio para esto/.test(n) && /vacío = sin deuda entre fábricas/.test(n), n)
+  }
   for (const [nombre, f] of [
     ['sin_precio', () => ({ data: { sin_precio: true, motivo: 'x' }, error: null })],
-    ['error', () => ({ data: null, error: { message: 'No tenés permiso para ver precios.' } })],
     ['precio_caja null', () => ({ data: { precio_caja: null, sin_precio: false }, error: null })],
   ]) {
     const U = await abierto({ datos: conLista, rpc: { precio_venta: f } })
@@ -816,7 +832,7 @@ pendientes.push(async () => {
   chk('lote: con decimales no se anota', !('X' in r.lotes))
 
   const U = await abierto({
-    datos: (d) => d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna', activa: true }),
+    datos: (d) => d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna', activa: true, es_interna: true }),
     rpc: { precio_venta: () => ({ data: { sin_precio: true, precio_caja: 500 }, error: null }) },
   })
   U.agregarRenglonTrp('pp1', null)
@@ -834,7 +850,7 @@ pendientes.push(async () => {
       d.producto_presentaciones.push({ id: 'dp-rara', producto_id: 'd1', nombre: 'Rara', con_cono: true, media_caja: false, unidades_por_caja: 77, activa: true, orden: 9 })
       d.marcas_personalizadas.push({ id: MARCA, nombre: XSS('cono'), activa: true, estado_alta: 'aprobada' })
       d.stock_terminado_movimientos.push({ unidad_negocio_id: 'u-nuss', presentacion_id: PRES, marca_id: MARCA, lote: 'R-1', cajas: 3, fecha: '2026-09-07' })
-      d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true })
+      d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true, es_interna: true })
     },
     rpc: { precio_venta: () => ({ data: { precio_caja: 10, sin_precio: false }, error: null }) },
   })

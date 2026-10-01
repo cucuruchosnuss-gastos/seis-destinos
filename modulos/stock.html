@@ -7649,7 +7649,7 @@
     // stock puede estar incompleto en vez de mostrar números cortados callada.
     const FILAS_POR_PAGINA_TRP = 1000
     const TOPE_PAGINAS_TRP = 20
-    const TEXTO_SIN_LISTA_TRP = 'Sin lista interna: escribí el precio por caja (vacío = sin deuda entre fábricas)'
+    const TEXTO_SIN_LISTA_TRP = 'Sin lista interna (se marca en Administración → Listas de precios), o tu usuario no la puede ver: escribí el precio por caja (vacío = sin deuda entre fábricas)'
 
     // Las fábricas entre las que se puede pasar: las de v_mis_unidades_stock,
     // que ya vienen SIN la fábrica de pruebas (cargarStock las pasa por
@@ -7756,14 +7756,14 @@
       return [...m.values()]
     }
 
-    // La lista INTERNA del origen: hoy (30/09/2026) ninguna lista está marcada
-    // como interna y listas_precios no tiene columna para eso, así que la
-    // regla es por NOMBRE: una lista activa del origen que diga "interna" (sin
-    // acentos ni mayúsculas). Quien no lee listas (sin tareas de retiros) no
-    // recibe ninguna y el precio queda para escribir.
+    // La lista INTERNA del origen: la que tiene listas_precios.es_interna
+    // (30/09/2026; una sola por fábrica, índice único ux_lista_interna_por_unidad).
+    // Ya NO se busca "interna" en el nombre. Se usa aunque esté desactivada:
+    // la marca es explícita, y precio_venta() no mira si la lista está activa.
+    // Quien no lee listas (sin tareas de retiros en el origen) no recibe
+    // ninguna y el precio queda para escribir.
     function listaInternaDe(listas) {
-      return (listas ?? []).filter(l => l && l.activa !== false)
-        .find(l => normalizar(l.nombre).includes('interna')) ?? null
+      return (listas ?? []).find(l => l && l.es_interna === true) ?? null
     }
 
     async function cargarListaInternaTrp(t) {
@@ -7773,9 +7773,9 @@
       let lista = null
       try {
         const { data, error } = await supabase.from('listas_precios')
-          .select('id, nombre, activa')
+          .select('id, nombre, activa, es_interna')
           .eq('unidad_negocio_id', origen)
-          .eq('activa', true)
+          .eq('es_interna', true)
           .order('nombre')
         if (error) throw error
         lista = listaInternaDe(data)
@@ -7797,6 +7797,7 @@
       r.precioEstado = 'buscando'
       pintarPrecioTrp(r)
       let res = null
+      let errorBase = null
       try {
         const { data, error } = await supabase.rpc('precio_venta', {
           p_lista_id: t.lista.id, p_presentacion_id: r.presentacionId, p_marca_id: r.marcaId ?? null, p_fecha: t.fecha || null,
@@ -7806,13 +7807,20 @@
       } catch (err) {
         console.error(err)
         res = null
+        // precio_venta exige retiros:precios en la fábrica de la lista: sin
+        // eso lanza. Ese mensaje se dice tal cual, no "la lista no tiene precio".
+        errorBase = String(err?.message ?? '').trim() || 'No se pudo leer el precio.'
       }
       if (estado.trp !== t || !t.renglones.includes(r)) return
       const crudo = res?.precio_caja
       const precio = crudo === null || crudo === undefined || crudo === '' ? NaN : Number(crudo)
+      r.errorPrecio = null
       if (res && res.sin_precio !== true && Number.isFinite(precio) && precio > 0) {
         r.precioEstado = 'propuesto'
         if (!r.precioTocado) { r.precio = precio; r.propuesta = t.lista.nombre }
+      } else if (errorBase) {
+        r.precioEstado = 'error'
+        r.errorPrecio = errorBase
       } else {
         r.precioEstado = 'sin_precio'
       }
@@ -8042,6 +8050,7 @@
       if (r.propuesta) return `Propuesto de la lista «${r.propuesta}»: podés cambiarlo.`
       if (t.lista === undefined || r.precioEstado === 'buscando') return 'Buscando el precio…'
       if (!t.lista) return TEXTO_SIN_LISTA_TRP
+      if (r.precioEstado === 'error') return `No se pudo leer el precio de la lista interna «${t.lista.nombre}»: ${r.errorPrecio} Escribí el precio por caja (vacío = sin deuda entre fábricas)`
       return `La lista «${t.lista.nombre}» no tiene precio para esto: escribí el precio por caja (vacío = sin deuda entre fábricas)`
     }
 
