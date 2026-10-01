@@ -1083,6 +1083,19 @@
     .pr-rm__anular { margin: 8px; display: flex; flex-direction: column; gap: 6px; }
     .pr-rm__anular-titulo { margin: 0; font-size: 14px; font-weight: 800; }
     .pr-rm__anular-nota { margin: 0; font-size: 12.5px; color: var(--p-gris); }
+    /* Una masa TIRADA (30/09/2026): se hizo y se tiró, y lo que se usó queda
+       descontado del stock. Se tachan el número y el detalle, NUNCA la etiqueta
+       "Tirada" ni su motivo, que es justo lo que tiene que leerse. */
+    .pr-rm__fila--tirada .pr-rm__nro, .pr-rm__fila--tirada .pr-rm__det { text-decoration: line-through; color: var(--p-gris); }
+    .pr-tirada { font-weight: 800; color: var(--p-mal); }
+    .pr-tirada__motivo { font-weight: 600; color: var(--p-mal-txt); }
+    .pr-rm__acciones { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px; }
+    .pr-rm__acciones .pr-rm__anular-btn { margin: 0; flex: 1 1 auto; }
+    .pr-btn--tirar { background: #fff; border-color: var(--p-mal); color: var(--p-mal-txt); font-weight: 800; }
+    .pr-rm__tirar-ejemplos { margin: 0; font-size: 12.5px; color: var(--p-gris); }
+    .pr-hm__masa--tirada .pr-hm__masa-l1, .pr-hm__masa--tirada .pr-hm__masa-l2 { text-decoration: line-through; }
+    .pr-masa-fila--tirada .pr-masa-fila__nro, .pr-masa-fila--tirada .pr-masa-fila__tam { text-decoration: line-through; }
+    .pr-como__tirada { color: var(--p-mal); }
     .pr-masa-chips { display: inline-flex; gap: 4px; }
     .pr-receta__tabla--modificar .pr-rec { min-height: 30px; }
     .pr-receta__tabla--modificar .pr-rec__paso { width: 30px; height: 30px; font-size: 18px; }
@@ -2889,10 +2902,11 @@
 
     function htmlMasaHist(m, elegida) {
       const origenHist = m.origen ? (ETIQUETA_ORIGEN[m.origen] ?? m.origen) : ''
-      return `<button type="button" class="pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}" title="${esc(origenHist)}">` +
+      const tirada = !m.anulada && esTirada(m)
+      return `<button type="button" class="pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}${tirada ? ' pr-hm__masa--tirada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}" title="${esc(origenHist)}">` +
         `<span class="pr-hm__masa-col"><span class="pr-hm__masa-l1">Masa ${esc(m.nro)}</span>` +
         `<span class="pr-hm__masa-l2">${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</span></span>` +
-        `<span class="pr-hm__masa-chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)}</span></button>`
+        `<span class="pr-hm__masa-chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : (tirada ? htmlTirada(m) : chipsDeMasa(m))}</span></button>`
     }
 
     // Cada ingrediente con su marca, cantidad y lote. Lo agregado (la receta
@@ -2941,11 +2955,12 @@
       const m = (h.masas ?? []).find(x => x.id === h.elegida)
       if (!m) return '<p class="pr-texto-suave">Tocá una masa para ver su detalle.</p>'
       const quien = (estado.personal ?? []).find(x => x.id === m.masero_id)?.nombre ?? ''
-      const chips = m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)
+      const chips = m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : (esTirada(m) ? '<span class="pr-tirada">Tirada</span>' : chipsDeMasa(m))
       const sub = [horaArgentina(m.hora) || '—', quien ? `la hizo ${esc(quien)}` : '', m.motivo ? `“${esc(m.motivo)}”` : ''].filter(Boolean).join(' · ')
       let html = `<div class="pr-hm__det-cab"><h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</h2>${chips}</div>` +
         `<p class="pr-hm__det-sub">${sub}</p>`
       if (m.anulada && m.anulada_motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se anuló:</span> ${esc(m.anulada_motivo)}</p>`
+      if (!m.anulada && esTirada(m)) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se tiró:</span> ${esc(m.descarte_motivo || 'sin motivo')} · lo que se usó quedó descontado del stock.</p>`
       const d = h.detalle && h.detalle.masaId === m.id ? h.detalle : null
       if (d && d.error) html += '<p class="pr-aviso pr-aviso--grave">No se pudo leer el detalle de esta masa.</p>'
       else if (!d || d.items == null) html += '<p class="pr-texto-suave">Cargando…</p>'
@@ -2962,7 +2977,7 @@
     function pintarHistMaq() {
       const h = estado.histMaq
       if (!h) return
-      const vivas = (h.masas ?? []).filter(x => !x.anulada).length
+      const vivas = (h.masas ?? []).filter(x => !x.anulada && !esTirada(x)).length
       document.getElementById('pr-hm-titulo').textContent = [h.maquinaNombre, h.turno ? `Turno ${String(h.turno).toLowerCase()}` : '',
         `lote ${h.lote}`, h.masas ? textoMasas(vivas) : ''].filter(Boolean).join(' · ')
       const lista = document.getElementById('pr-hm-lista')
@@ -4405,7 +4420,7 @@
       const ids = (turnos ?? []).map(t => t.id)
       let masas = [], paradas = [], sublotes = []
       if (ids.length) {
-        const r1 = await supabase.from('masas').select('turno_id, hora').in('turno_id', ids).eq('anulada', false)
+        const r1 = await supabase.from('masas').select('turno_id, hora, descartada').in('turno_id', ids).eq('anulada', false)
         if (r1.error) throw r1.error
         masas = r1.data ?? []
         const r2 = await supabase.from('paradas_produccion').select('id, turno_id, motivo, inicio').in('turno_id', ids).is('fin', null)
@@ -4427,7 +4442,11 @@
         return {
           maquina: m,
           turno,
-          masas: mias.length,
+          // Una masa TIRADA no suma en la cuenta de masas (30/09/2026). Pero
+          // sí cuenta para estimar el número de la próxima: la base numera con
+          // max(nro) + 1, tiradas incluidas.
+          masas: mias.filter(x => !esTirada(x)).length,
+          masasHechas: mias.length,
           // La hora de la última masa: la sala la muestra al lado de la cuenta.
           ultimaMasa: mias.reduce((a, x) => (a == null || String(x.hora ?? '') > String(a) ? x.hora : a), null),
           sublotes: turno ? (sublotes ?? []).filter(x => x.turno_id === turno.id).length : 0,
@@ -5181,7 +5200,7 @@
       // Las masas se MIRAN: cuántas van y cómo fueron las dos últimas. Las
       // carga el masero y desde acá no se editan.
       const { data: masas, error: e3 } = await supabase.from('masas')
-        .select('id, nro, hora, doble, origen, es_chocolate, masero_id').eq('turno_id', turnoId).eq('anulada', false).order('nro')
+        .select('id, nro, hora, doble, origen, es_chocolate, masero_id, descartada, descarte_motivo').eq('turno_id', turnoId).eq('anulada', false).order('nro')
       if (e3) throw e3
       const { data: paradas, error: e4 } = await supabase.from('paradas_produccion')
         .select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio')
@@ -5339,9 +5358,13 @@
 
     // 4a · Masas: cuántas, si alguna fue de chocolate y la última.
     function htmlMasasResumen(masas) {
-      const lista = masas ?? []
+      // Las tiradas no cuentan como masas del turno: se dicen aparte.
+      const todas = masas ?? []
+      const lista = todas.filter(m => !esTirada(m))
+      const tiradas = todas.length - lista.length
       const choco = lista.filter(m => m.es_chocolate).length
-      const sub = !lista.length ? 'todavía ninguna' : (choco ? `${choco} de chocolate` : (lista.length === 1 ? 'común' : 'todas comunes'))
+      const sub = (!lista.length ? 'todavía ninguna' : (choco ? `${choco} de chocolate` : (lista.length === 1 ? 'común' : 'todas comunes'))) +
+        (tiradas ? ` · ${tiradas === 1 ? '1 tirada' : `${tiradas} tiradas`}` : '')
       const ultima = lista[lista.length - 1]
       const quien = ultima ? apellidoDe(ultima.masero_id) : ''
       const pie = ultima ? `Última a las ${horaArgentina(ultima.hora) || '—'}${quien ? ` · ${quien}` : ''}` : 'Las carga el masero'
@@ -7040,7 +7063,9 @@
 
     // ¿Hay alguna masa de chocolate en el turno de la planilla?
     function hayMasaChocolate(p = estado.planilla) {
-      return (p?.masas ?? []).some(m => m.es_chocolate)
+      // Una masa de chocolate TIRADA no cuenta (lo mismo que la base en
+      // _chequear_masa_chocolate: `not anulada and not descartada`).
+      return (p?.masas ?? []).some(m => m.es_chocolate && !esTirada(m))
     }
 
     // Con cono o sin cono. La opción que no tiene ninguna presentación se ve
@@ -7631,7 +7656,7 @@
       const min = minutosParadas(p?.paradas)
       const encargado = p?.turno?.encargado_id ?? null
       const ops = [...(encargado ? [encargado] : []), ...(p?.operarios ?? []).filter(o => !o.hasta && o.empleado_id !== encargado).map(o => o.empleado_id)]
-      const masas = p?.masas ?? []
+      const masas = (p?.masas ?? []).filter(m => !esTirada(m))
       const choco = masas.filter(m => m.es_chocolate).length
       const prom = Number(ref?.promedio_kg)
       const celdas = [
@@ -8121,7 +8146,8 @@
       const difs = diferencias(cantidadesDesde('anterior', d.original, a), d.original)
       partes.push(difs.length ? `modificada: ${esc(textoDiferencias(difs, 2))}` : 'igual a la original')
       const choco = a.es_chocolate ? ' <span class="pr-como__choco">Era de CHOCOLATE.</span>' : ''
-      return partes.join(' · ') + choco
+      const tirada = anteriorFueTirada(a) ? ' <span class="pr-como__choco pr-como__tirada">Esa masa se TIRÓ.</span>' : ''
+      return partes.join(' · ') + choco + tirada
     }
 
     // El HTML (ya escapado) de un detalle, pasado a texto para un title: se
@@ -8184,7 +8210,7 @@
       // Qué masa y cuándo se cortan con "…" si no entran; el "· chocolate"
       // NUNCA (va aparte y no se achica): copiar una de chocolate sin saberlo
       // sale caro.
-      return `<span class="pr-como__cuando">Masa ${esc(a.nro)}${cuando ? ` · ${esc(cuando)}` : ''}</span>${a.es_chocolate ? ' <span class="pr-como__choco">· chocolate</span>' : ''}`
+      return `<span class="pr-como__cuando">Masa ${esc(a.nro)}${cuando ? ` · ${esc(cuando)}` : ''}</span>${a.es_chocolate ? ' <span class="pr-como__choco">· chocolate</span>' : ''}${anteriorFueTirada(a) ? ' <span class="pr-como__choco pr-como__tirada">· tirada</span>' : ''}`
     }
 
     // 4b · Arriba de la receta, en una fila: el número de masa, el tamaño
@@ -8830,7 +8856,7 @@
     async function elegirMaquinaSala(turnoId) {
       const e = maquinasAbiertas().find(x => x.turno.id === turnoId)
       if (!e) return
-      estado.salaTurno = { id: turnoId, lote: e.turno.lote, turno: e.turno.turno ?? null, maquinaId: e.maquina.id, maquinaNombre: e.maquina.nombre, nro: e.masas + 1 }
+      estado.salaTurno = { id: turnoId, lote: e.turno.lote, turno: e.turno.turno ?? null, maquinaId: e.maquina.id, maquinaNombre: e.maquina.nombre, nro: (e.masasHechas ?? e.masas) + 1 }
       // Una masa empezada antes (se recargó la tablet, se fue a otra pantalla)
       // se retoma con SU borrador y SU uuid.
       estado.masa = borradorEnCurso(turnoId)
@@ -9023,6 +9049,7 @@
     function mostrarReceta() {
       estado.errorReceta = null
       estado.anularUltima = null
+      estado.tirarUltima = null
       document.getElementById('pr-otro').hidden = true
       mostrarVista('pr-receta')
       pintarReceta()
@@ -9971,6 +9998,9 @@
         const filas = await leerMasasSala([t.id])
         if (turno !== estado.pedidoMasasReceta) return
         estado.masasReceta = filas
+        // Si la "Anterior" es una masa que se tiró, el botón lo tiene que decir:
+        // se redibujan las opciones ahora que se sabe.
+        if (anteriorFueTirada(estado.datosMasa?.anterior)) repintarOpcionesReceta()
       } catch (err) {
         if (turno !== estado.pedidoMasasReceta) return
         console.error('masas del turno (receta):', err)
@@ -9979,17 +10009,47 @@
       pintarMasasReceta()
     }
 
-    // La última masa que se puede anular: la de número más alto, no anulada.
+    // ── Masas TIRADAS (30/09/2026) ─────────────────────────────────────
+    //
+    // ANULAR = se registró de más: el stock vuelve. TIRAR = se hizo y se
+    // tiró: lo que se usó QUEDA descontado (`tirar_masa` pone
+    // `masas.descartada` y no toca el stock). Una tirada no suma en la cuenta
+    // de masas, no se puede anular (anularla devolvería ese stock) y en las
+    // listas va tachada con "Tirada" y su motivo.
+    function esTirada(m) {
+      return m?.descartada === true
+    }
+
+    function htmlTirada(m) {
+      return `<span class="pr-tirada">Tirada${m?.descarte_motivo ? `: <span class="pr-tirada__motivo">${esc(m.descarte_motivo)}</span>` : ''}</span>`
+    }
+
+    // ¿La "Anterior" que ofrece la base es una masa que se tiró? La base no
+    // la saltea (`_masa_anterior` no mira `descartada`), así que la pantalla
+    // lo dice cuando lo sabe: si es de este turno, está en las masas leídas.
+    function anteriorFueTirada(a) {
+      if (!a?.masa_id) return false
+      return (estado.masasReceta ?? []).some(m => m.id === a.masa_id && esTirada(m))
+    }
+
+    function repintarOpcionesReceta() {
+      const el = document.getElementById('pr-receta-opciones')
+      if (el && estado.masa && estado.datosMasa) el.innerHTML = htmlOpcionesReceta(estado.masa, estado.datosMasa)
+    }
+
+    // La última masa que se puede anular (o tirar): la de número más alto, ni
+    // anulada ni tirada.
     function ultimaMasaAnulable(masas) {
-      const vivas = (masas ?? []).filter(m => !m.anulada)
+      const vivas = (masas ?? []).filter(m => !m.anulada && !esTirada(m))
       return vivas.reduce((a, m) => (a == null || Number(m.nro) > Number(a.nro) ? m : a), null)
     }
 
     function htmlMasaReceta(m) {
-      return `<div class="pr-rm__fila${m.anulada ? ' pr-rm__fila--anulada' : ''}">` +
+      const tirada = !m.anulada && esTirada(m)
+      return `<div class="pr-rm__fila${m.anulada ? ' pr-rm__fila--anulada' : ''}${tirada ? ' pr-rm__fila--tirada' : ''}">` +
         `<span class="pr-rm__nro">Masa ${esc(m.nro)}</span>` +
         `<span class="pr-rm__det"><span class="pr-rm__tam pr-masa-tam">${m.doble ? 'Doble' : 'Simple'}</span> · <span class="pr-rm__hora">${esc(horaArgentina(m.hora) || '—')}</span></span>` +
-        `<span class="pr-rm__chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)}</span></div>`
+        `<span class="pr-rm__chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : (tirada ? htmlTirada(m) : chipsDeMasa(m))}</span></div>`
     }
 
     function htmlMasaRecetaPendiente(b) {
@@ -10011,13 +10071,29 @@
         `<button type="button" class="pr-btn pr-btn--peligro" id="pr-rm-anular-confirmar">Anular masa ${esc(m.nro)}</button></div></div>`
     }
 
+    // "Tirar la última masa": pide el motivo (obligatorio; el largo mínimo lo
+    // pone la base y su mensaje se muestra tal cual) y dice claro qué pasa con
+    // el stock antes de confirmar.
+    function htmlTirarUltima(m) {
+      const t = estado.tirarUltima
+      return '<div class="pr-rm__anular pr-rm__tirar" id="pr-rm-tirar">' +
+        `<p class="pr-rm__anular-titulo">Tirar la masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</p>` +
+        '<p class="pr-rm__anular-nota"><strong>La masa se tira: lo que se usó queda descontado del stock.</strong> Si se registró de más, no la tires: anulala.</p>' +
+        '<label class="pr-campo"><span class="pr-campo__rotulo">¿Por qué se tiró?</span>' +
+        '<input type="text" id="pr-rm-tirar-motivo" class="pr-input" maxlength="300" autocomplete="off"></label>' +
+        '<p class="pr-rm__tirar-ejemplos">Por ejemplo: “se puso el triple de azúcar”, “se cortó la luz”.</p>' +
+        `<p class="pr-error-pegado" id="pr-rm-tirar-error"${t?.error ? '' : ' hidden'}>${esc(t?.error ?? '')}</p>` +
+        '<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-rm-tirar-cancelar">Cancelar</button>' +
+        `<button type="button" class="pr-btn pr-btn--peligro" id="pr-rm-tirar-confirmar"${t?.enviando ? ' disabled' : ''}>Tirar masa ${esc(m.nro)}</button></div></div>`
+    }
+
     function pintarMasasReceta() {
       const cont = document.getElementById('pr-receta-masas')
       const t = estado.salaTurno
       if (!cont) return
       const centro = document.getElementById('pr-receta-centro')
       if (!t) { cont.innerHTML = ''; if (centro) centro.classList.remove('pr-receta-centro--atenuado'); return }
-      const cuantas = (estado.masasReceta ?? []).filter(m => !m.anulada).length
+      const cuantas = (estado.masasReceta ?? []).filter(m => !m.anulada && !esTirada(m)).length
       const titulo = `<h2 class="pr-rm__titulo" title="Masas del turno · ${esc(t.maquinaNombre)}${t.turno ? ` · ${esc(String(t.turno).toLowerCase())}` : ''}"><span>MASAS DEL TURNO</span><span class="pr-rm__cuenta">${esc(cuantas)}</span></h2>`
       const pend = borradoresPendientes().filter(b => b.turnoId === t.id)
       let cuerpo
@@ -10031,21 +10107,28 @@
       const ultima = ultimaMasaAnulable(estado.masasReceta)
       let pie = ''
       if (ultima && tieneTarea('cargar')) {
-        pie = estado.anularUltima && estado.anularUltima.masaId === ultima.id
-          ? htmlAnularUltima(ultima)
-          : '<button type="button" class="pr-btn pr-btn--secundario pr-rm__anular-btn" data-anular-ultima="1">Anular la última masa</button>'
+        if (estado.anularUltima && estado.anularUltima.masaId === ultima.id) pie = htmlAnularUltima(ultima)
+        else if (estado.tirarUltima && estado.tirarUltima.masaId === ultima.id) pie = htmlTirarUltima(ultima)
+        else {
+          pie = '<div class="pr-rm__acciones">' +
+            '<button type="button" class="pr-btn pr-btn--secundario pr-rm__anular-btn" data-anular-ultima="1">Anular la última masa</button>' +
+            '<button type="button" class="pr-btn pr-btn--tirar pr-rm__anular-btn" data-tirar-ultima="1">Tirar la última masa</button></div>'
+        }
       }
       cont.innerHTML = titulo + `<div class="pr-rm__lista">${cuerpo}</div>` + pie
       const input = document.getElementById('pr-rm-anular-motivo')
       if (input) input.value = estado.anularUltima?.motivo ?? ''
-      // 4f: mientras se anula, el centro queda al 35%.
-      if (centro) centro.classList.toggle('pr-receta-centro--atenuado', !!estado.anularUltima)
+      const inputTirar = document.getElementById('pr-rm-tirar-motivo')
+      if (inputTirar) inputTirar.value = estado.tirarUltima?.motivo ?? ''
+      // 4f: mientras se anula (o se tira), el centro queda al 35%.
+      if (centro) centro.classList.toggle('pr-receta-centro--atenuado', !!estado.anularUltima || !!estado.tirarUltima)
     }
 
     function pedirAnularUltima() {
       const ultima = ultimaMasaAnulable(estado.masasReceta)
       if (!ultima) return
       tocar()
+      estado.tirarUltima = null
       estado.anularUltima = { masaId: ultima.id, motivo: '', error: null }
       pintarMasasReceta()
       const input = document.getElementById('pr-rm-anular-motivo')
@@ -10055,6 +10138,46 @@
     function cancelarAnularUltima() {
       estado.anularUltima = null
       pintarMasasReceta()
+    }
+
+    function pedirTirarUltima() {
+      const ultima = ultimaMasaAnulable(estado.masasReceta)
+      if (!ultima) return
+      tocar()
+      estado.anularUltima = null
+      estado.tirarUltima = { masaId: ultima.id, motivo: '', error: null }
+      pintarMasasReceta()
+      const input = document.getElementById('pr-rm-tirar-motivo')
+      if (input) input.focus()
+    }
+
+    function cancelarTirarUltima() {
+      estado.tirarUltima = null
+      pintarMasasReceta()
+    }
+
+    // Un doble toque manda UNA vez (`enviando`). El error de la base, tal
+    // cual y pegado al botón.
+    async function confirmarTirarUltima() {
+      const t = estado.tirarUltima
+      if (!t || t.enviando) return
+      const motivo = String(t.motivo ?? '').trim()
+      if (!motivo) { t.error = 'Contá por qué se tiró: es obligatorio.'; return pintarMasasReceta() }
+      t.enviando = true
+      t.error = null
+      const btn = document.getElementById('pr-rm-tirar-confirmar')
+      if (btn) btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('tirar_masa', { p_masa_id: t.masaId, p_motivo: motivo })
+        if (error) throw error
+        estado.tirarUltima = null
+        mostrarExito('Masa tirada: lo que se usó queda descontado del stock.')
+        await cargarMasasReceta()
+      } catch (e) {
+        t.enviando = false
+        t.error = e?.message || 'No se pudo tirar la masa.'
+        pintarMasasReceta()
+      }
     }
 
     async function confirmarAnularUltima() {
@@ -10134,7 +10257,7 @@
     async function leerMasasSala(turnoIds) {
       if (!turnoIds.length) return []
       const { data, error } = await supabase.from('masas')
-        .select('id, turno_id, nro, hora, tipo_masa, doble, origen, es_chocolate, anulada, anulada_motivo, masero_id, motivo, receta_id')
+        .select('id, turno_id, nro, hora, tipo_masa, doble, origen, es_chocolate, anulada, anulada_motivo, descartada, descarte_motivo, masero_id, motivo, receta_id')
         .in('turno_id', turnoIds).order('hora')
       if (error) throw error
       return data ?? []
@@ -10162,11 +10285,14 @@
     }
 
     function htmlFilaMasaTurno(m, puedeAnular) {
+      // Una tirada no ofrece "Anular": anularla devolvería el stock que se usó.
+      const tirada = !m.anulada && esTirada(m)
       const estadoHtml = m.anulada
         ? `<span class="pr-masa-fila__espera">Anulada${m.anulada_motivo ? `: ${esc(m.anulada_motivo)}` : ''}</span>`
+        : tirada ? htmlTirada(m)
         : '<span class="pr-masa-fila__ok">✓ Enviada</span>' +
           (puedeAnular ? `<button type="button" class="pr-btn pr-btn--secundario" data-anular-masa="${esc(m.id)}">Anular</button>` : '')
-      return `<div class="pr-masa-fila${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
+      return `<div class="pr-masa-fila${m.anulada ? ' pr-masa-fila--anulada' : ''}${tirada ? ' pr-masa-fila--tirada' : ''}">` +
         `<span class="pr-masa-fila__nro">${esc(m.nro)}</span>` +
         `<span class="pr-masa-fila__hora">${esc(horaArgentina(m.hora) || '—')}</span>` +
         `<span class="pr-masa-fila__maq">${esc(nombreDeTurno(m.turno_id))}</span>` +
@@ -10205,7 +10331,7 @@
 
     function pedirAnularMasa(masaId) {
       const m = (estado.masasTurno ?? []).find(x => x.id === masaId)
-      if (!m) return
+      if (!m || esTirada(m)) return
       estado.anulando = masaId
       const dlg = document.getElementById('pr-anular-masa')
       document.getElementById('pr-anular-masa-titulo').textContent = `Anular la masa ${m.nro} (${m.tipo_masa}${m.doble ? ', doble' : ''})`
@@ -10287,9 +10413,13 @@
         if (ev.target.closest('[data-anular-ultima]')) { pedirAnularUltima(); return }
         if (ev.target.closest('#pr-rm-anular-cancelar')) { cancelarAnularUltima(); return }
         if (ev.target.closest('#pr-rm-anular-confirmar')) { confirmarAnularUltima(); return }
+        if (ev.target.closest('[data-tirar-ultima]')) { pedirTirarUltima(); return }
+        if (ev.target.closest('#pr-rm-tirar-cancelar')) { cancelarTirarUltima(); return }
+        if (ev.target.closest('#pr-rm-tirar-confirmar')) { confirmarTirarUltima(); return }
       })
       masasReceta.addEventListener('input', ev => {
         if (ev.target.id === 'pr-rm-anular-motivo' && estado.anularUltima) estado.anularUltima.motivo = ev.target.value
+        if (ev.target.id === 'pr-rm-tirar-motivo' && estado.tirarUltima) estado.tirarUltima.motivo = ev.target.value
       })
       // 4h · El historial de una máquina.
       const histMaq = document.getElementById('pr-hist-maq')

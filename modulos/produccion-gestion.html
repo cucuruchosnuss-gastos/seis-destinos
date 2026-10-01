@@ -1647,6 +1647,18 @@
     .pg-rend--mejor .pg-rend__lote, .pg-rend--mejor .pg-rend__valor { color: var(--verde-oscuro); font-weight: 800; }
     .pg-rend--mejor .pg-rend__relleno { background: var(--verde); }
     .pg-rend__frase { grid-column: 1 / -1; margin: 0; font-size: 13px; font-weight: 700; color: var(--bordo-oscuro); }
+    /* Masas tiradas (30/09/2026): el número de la semana, los kilos que se
+       perdieron y el reparto por máquina y por motivo. En bordó: es pérdida. */
+    .pg-tir__cab { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+    .pg-tir__n { font-family: var(--fuente-titulo); font-size: 34px; font-weight: 800; line-height: 1; color: var(--bordo-oscuro); }
+    .pg-tir__que { font-size: 15px; font-weight: 700; }
+    .pg-tir__dif { font-size: 13px; color: var(--pg-texto-2); }
+    .pg-tir__kg { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--bordo-oscuro); }
+    .pg-tir__sub { margin: 12px 0 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pg-texto-2); }
+    .pg-tir__lista { list-style: none; margin: 0; padding: 0; }
+    .pg-tir__fila { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 14px; }
+    .pg-tir__fila span:first-child { overflow-wrap: anywhere; min-width: 0; }
+    .pg-tir__fila span:last-child { font-weight: 800; white-space: nowrap; }
     @media (max-width: 899px) {
       /* La etiqueta y el valor ARRIBA de la barra (1c): la barra usa todo el ancho. */
       .pg-rend, .pr-ind:not(.pg-ind--ancha) .pg-rend { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
@@ -4050,6 +4062,102 @@
         botonConos() + '</div>'
     }
 
+    // MASAS TIRADAS (30/09/2026): las que se hicieron y se tiraron
+    // (`masas.descartada`, la pone tirar_masa). Lo que se usó QUEDA
+    // descontado del stock. `indicadores_produccion` no las trae (ni las
+    // separa: sus "masas" de la semana las cuentan), así que esta tarjeta lee
+    // sus datos aparte —`leerTiradas`— y falla SOLA: `propia: true`.
+    // La semana son los 7 días que terminan en el día elegido arriba (por la
+    // fecha del TURNO, como la tarjeta Semana); se compara con los 7 de antes.
+    async function leerTiradas(unidadId, fin) {
+      try {
+        const desde = sumarDias(fin, -13), corte = sumarDias(fin, -6)
+        const { data: turnos, error: e1 } = await supabase.from('turnos_produccion')
+          .select('id, maquina_id, fecha').eq('unidad_negocio_id', unidadId).gte('fecha', desde).lte('fecha', fin)
+        if (e1) throw e1
+        const ids = (turnos ?? []).map(t => t.id)
+        let masas = [], items = [], maquinas = []
+        if (ids.length) {
+          const r1 = await supabase.from('masas').select('id, turno_id, doble, descarte_motivo')
+            .in('turno_id', ids).eq('descartada', true).eq('anulada', false)
+          if (r1.error) throw r1.error
+          masas = r1.data ?? []
+        }
+        if (masas.length) {
+          const r2 = await supabase.from('masa_items').select('masa_id, insumo_id, cantidad_kg').in('masa_id', masas.map(m => m.id))
+          if (r2.error) throw r2.error
+          items = r2.data ?? []
+          const r3 = await supabase.from('maquinas').select('id, nombre').eq('unidad_negocio_id', unidadId)
+          if (r3.error) throw r3.error
+          maquinas = r3.data ?? []
+        }
+        return { datos: resumenTiradas({ turnos: turnos ?? [], masas, items, maquinas, corte }), error: null }
+      } catch (err) {
+        console.error('masas tiradas:', err)
+        return { datos: null, error: err?.message || 'No hubo respuesta del servidor. Revisá la conexión.' }
+      }
+    }
+
+    // De las filas leídas a lo que dibuja la tarjeta. Los kilos son los de los
+    // renglones CON insumo (lo que descontó stock: la materia prima que se
+    // perdió); el agua y un "otro" no descuentan. `cantidad_kg` ya es ×2 en
+    // una doble.
+    function resumenTiradas({ turnos, masas, items, maquinas, corte }) {
+      const turnoDe = new Map(turnos.map(t => [t.id, t]))
+      const nombreMaq = new Map(maquinas.map(m => [m.id, m.nombre]))
+      const semana = [], antes = []
+      for (const m of masas) {
+        const t = turnoDe.get(m.turno_id)
+        if (!t) continue
+        const donde = String(t.fecha) >= corte ? semana : antes
+        donde.push({ ...m, maquina_id: t.maquina_id })
+      }
+      const enSemana = new Set(semana.map(m => m.id))
+      let kg = 0
+      for (const it of items) {
+        if (!it.insumo_id || !enSemana.has(it.masa_id)) continue
+        const v = Number(it.cantidad_kg)
+        if (Number.isFinite(v)) kg += v
+      }
+      const contar = (lista, clave, nombre) => {
+        const mapa = new Map()
+        for (const m of lista) {
+          const k = clave(m)
+          const act = mapa.get(k) ?? { nombre: nombre(m), n: 0 }
+          act.n += 1
+          mapa.set(k, act)
+        }
+        return [...mapa.values()].sort((a, z) => z.n - a.n || String(a.nombre).localeCompare(String(z.nombre), 'es'))
+      }
+      return {
+        semana: semana.length,
+        anterior: antes.length,
+        kg: Math.round(kg * 1000) / 1000,
+        porMaquina: contar(semana, m => m.maquina_id ?? '', m => nombreMaq.get(m.maquina_id) ?? 'Máquina sin nombre'),
+        // El motivo lo escribe una persona: se agrupa sin mayúsculas ni
+        // espacios de más, y se muestra como se escribió la primera vez.
+        porMotivo: contar(semana, m => String(m.descarte_motivo ?? '').trim().toLocaleLowerCase('es').replace(/\s+/g, ' '),
+          m => String(m.descarte_motivo ?? '').trim() || 'Sin motivo'),
+      }
+    }
+
+    function renderTiradas(d) {
+      if (!d || typeof d !== 'object' || !Number.isInteger(d.semana)) return null
+      const antes = Number.isInteger(d.anterior) ? d.anterior : null
+      const textoAntes = antes === null ? '' : `La semana anterior: ${antes === 1 ? '1 tirada' : `${antes} tiradas`}.`
+      if (d.semana === 0) return htmlSinDatosInd('Ninguna masa tirada', textoAntes || 'En los últimos 7 días no se tiró ninguna masa.')
+      const dif = diferenciaInd(d.semana, antes)
+      const filas = lista => '<ul class="pg-tir__lista">' + lista.map(x =>
+        `<li class="pg-tir__fila"><span>${esc(x.nombre)}</span><span>${esc(enteroInd(x.n))}</span></li>`).join('') + '</ul>'
+      return '<div class="pg-tir">' +
+        `<div class="pg-tir__cab"><span class="pg-tir__n">${esc(enteroInd(d.semana))}</span>` +
+        `<span class="pg-tir__que">${d.semana === 1 ? 'masa tirada' : 'masas tiradas'}</span>` +
+        `<span class="pg-tir__dif">${esc(dif.texto)} contra la semana anterior</span></div>` +
+        `<p class="pg-tir__kg">${esc(formatearNumeroAr(numeroInd(d.kg), { decimales: 3, minimos: 0 }))} kg de materia prima perdidos</p>` +
+        '<h3 class="pg-tir__sub">Por máquina</h3>' + filas(d.porMaquina ?? []) +
+        '<h3 class="pg-tir__sub">Por motivo</h3>' + filas(d.porMotivo ?? []) + '</div>'
+    }
+
     const TARJETAS_INDICADORES = [
       { id: 'ahora', titulo: 'Ahora', render: renderAhora, contexto: contextoAhora },
       { id: 'hoy', titulo: 'Hoy', render: renderHoy, contexto: contextoHoy },
@@ -4057,6 +4165,7 @@
       { id: 'semana', titulo: 'Semana', render: renderSemana, contexto: contextoSemana },
       { id: 'rendimiento', titulo: 'Rendimiento de la harina', render: renderRendimiento, contexto: () => 'unidades por kilo · de peor a mejor', ancha: true },
       { id: 'scrap', titulo: 'Scrap por lote de harina', render: renderScrap, contexto: () => '% de la masa · 30 días' },
+      { id: 'tiradas', titulo: 'Masas tiradas', render: renderTiradas, contexto: () => '7 días · lo que se usó quedó descontado', propia: true },
     ]
 
     // La falla de una tarjeta: el texto, y el detalle PEGADO a "Reintentar".
@@ -4068,9 +4177,17 @@
     }
 
     function htmlTarjetaIndicador(t, datos, error, cargando) {
+      // Una tarjeta con datos PROPIOS (las masas tiradas) no depende de la
+      // RPC: usa lo que leyó ella, y si falla, falla sola.
+      if (t.propia) {
+        const p = estado.tiradas ?? { cargando: true }
+        cargando = !!p.cargando
+        error = p.error ?? null
+        datos = p.datos ?? null
+      }
       let cuerpo, ctx = ''
       if (cargando) cuerpo = '<p class="pr-ind__vacio">Cargando…</p>'
-      else if (error) cuerpo = htmlFallaInd('No se pudieron cargar los indicadores.', error)
+      else if (error) cuerpo = htmlFallaInd(t.propia ? 'No se pudieron leer las masas tiradas.' : 'No se pudieron cargar los indicadores.', error)
       else {
         try { cuerpo = t.render(datos); ctx = t.contexto ? t.contexto(datos) : '' } catch (err) { console.error(`indicador ${t.id}:`, err); cuerpo = null }
         if (cuerpo == null) cuerpo = htmlFallaInd('Esta tarjeta no se pudo cargar. Las demás están bien.', 'Vino un dato que la pantalla no entiende.')
@@ -4109,10 +4226,13 @@
       const cont = document.getElementById('pr-indicadores')
       pintarDiaIndicadores()
       if (!estado.unidadId) { cont.innerHTML = sinUnidadPorBarra() ? `<div class="pr-aviso">${esc(textoSinProduccionEnBarra())}</div>` : ''; return }
+      estado.tiradas = { cargando: true }
       cont.innerHTML = htmlIndicadores(null, null, true)
       let datos = null, error = null
       const params = { p_unidad_negocio_id: estado.unidadId }
       if (estado.fechaInd) params.p_fecha = estado.fechaInd
+      // Las masas tiradas se leen en paralelo y por su cuenta: nunca tiran.
+      const tiradas = leerTiradas(params.p_unidad_negocio_id, estado.fechaInd ?? hoyArgentina())
       try {
         const { data, error: e } = await supabase.rpc('indicadores_produccion', params)
         if (e) throw e
@@ -4121,7 +4241,9 @@
         console.error('indicadores_produccion:', err)
         error = err?.message || 'No hubo respuesta del servidor. Revisá la conexión.'
       }
+      const tir = await tiradas
       if (turno !== turnoIndicadores) return
+      estado.tiradas = tir
       estado.indicadores = { unidadId: params.p_unidad_negocio_id, datos, error }
       cont.innerHTML = htmlIndicadores(datos, error)
       pintarNumerosMenu()
@@ -7148,7 +7270,7 @@
       // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
       // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
       const operarios = await leer(supabase.from('turno_operarios').select('empleado_id, desde, hasta').eq('turno_id', turnoId).order('desde'))
-      const masas = await leer(supabase.from('masas').select('id, nro, hora, tipo_masa, doble, origen, receta_id, masero_id, anulada, anulada_motivo, es_chocolate').eq('turno_id', turnoId).order('nro'))
+      const masas = await leer(supabase.from('masas').select('id, nro, hora, tipo_masa, doble, origen, receta_id, masero_id, anulada, anulada_motivo, descartada, descarte_motivo, es_chocolate').eq('turno_id', turnoId).order('nro'))
       const ids = masas.map(m => m.id)
       const items = ids.length ? await leer(supabase.from('masa_items').select('masa_id, ingrediente_id, ingrediente_libre, insumo_id, lote, lote_fuera_de_stock, cantidad_simple_kg, cantidad_kg').in('masa_id', ids)) : []
       const recetas = [...new Set(masas.map(m => m.receta_id))]
@@ -7301,7 +7423,9 @@
       return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
         `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · <span class="pr-masa-tam">${textoTamanoMasa(m)}</span>` +
         `${chips ? ` ${chips}` : ''} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
-        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +
+        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}`
+          : m.descartada === true ? `<br><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock`
+          : `<br>${esc(dif)}`) +
         `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
     }
 
@@ -7419,7 +7543,8 @@
         `<div class="pg-turno__enc"><span class="pr-dato__rotulo">Encargado</span> <strong>${esc(nom(t.encargado_id))}</strong></div></div>` +
         `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado)}</div></div>`
       const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
-      const vivas = d.masas.filter(m => !m.anulada).length
+      // Las tiradas no cuentan como masas del turno (sí su consumo, que quedó descontado).
+      const vivas = d.masas.filter(m => !m.anulada && m.descartada !== true).length
       const tot = totalSublotes(d)
       const anulados = d.producido.filter(p => p.anulado).length
       const producido = d.producido.length ? d.producido.map(p => htmlSubloteHistorial(p, d)).join('')

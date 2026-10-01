@@ -248,6 +248,9 @@ esperas.push((async () => {
   M.estado.personal = [{ id: 'p1', nombre: marca('quienHm') }]
   chequearMarcas(chk, 'detalle del historial', M.htmlDetalleHist({ elegida: 'z', masas: [{ id: 'z', nro: marca('detNro'), hora: null, doble: true, masero_id: 'p1',
     motivo: marca('motHm'), anulada: true, anulada_motivo: marca('anMot') }], detalle: null }), ['detNro', 'quienHm', 'motHm', 'anMot'])
+  // Una masa TIRADA (30/09/2026): su motivo lo escribió una persona.
+  chequearMarcas(chk, 'detalle de una masa tirada', M.htmlDetalleHist({ elegida: 'z', masas: [{ id: 'z', nro: 3, hora: null, doble: false, masero_id: 'p1',
+    anulada: false, descartada: true, descarte_motivo: marca('tirMot') }], detalle: null }), ['tirMot'])
 })())
 
 fin()

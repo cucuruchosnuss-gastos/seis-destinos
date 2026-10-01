@@ -208,6 +208,8 @@ const NUEVAS_GESTION = [
   'htmlSinDatosInd', 'diaSemanaInd', 'textoDiaInd', 'diaCortoInd', 'fechaInd', 'tieneParadaInd', 'contextoAhora',
   'cajasDelDiaInd', 'sumaInd', 'htmlDiferenciaInd', 'contextoHoy', 'contextoSemana', 'rindePoco', 'gruposRendimiento',
   'renderScrap', 'htmlFallaInd', 'pintarDiaIndicadores', 'cambiarDiaIndicadores', 'htmlNumeroMenu', 'pintarNumerosMenu',
+  // Las masas tiradas (30/09/2026): su tarjeta, con datos propios.
+  'leerTiradas', 'resumenTiradas', 'renderTiradas',
   'pintarTituloConfig', 'tocarCono', 'conosDelFiltro', 'listaConosVisible', 'htmlFilaCono', 'elegirFiltroConos',
   'sinPinEnUnidad', 'rolesDe', 'deQuienHoja', 'pedirCerrarHoja', 'volverAHojaPines',
   'puedeCorregirSublote', 'htmlEditorSublote', 'horarioTurno', 'minutosParadasTurno', 'pintarDetalleHistorial',
@@ -292,6 +294,9 @@ const NUEVAS_PLANTA = [
   'elegirOpcionAgregar', 'sumarPasoAgregar', 'confirmarAgregarIngrediente', 'quitarAgregado', 'escribirOtroIngrediente',
   'cargarMasasReceta', 'ultimaMasaAnulable', 'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima',
   'pintarMasasReceta', 'pedirAnularUltima', 'cancelarAnularUltima', 'confirmarAnularUltima',
+  // Tirar una masa (30/09/2026): se hizo y se tiró, el stock no vuelve.
+  'esTirada', 'htmlTirada', 'anteriorFueTirada', 'repintarOpcionesReceta', 'htmlTirarUltima',
+  'pedirTirarUltima', 'cancelarTirarUltima', 'confirmarTirarUltima',
   'opcionesOtroInsumo', 'htmlPanelOtroInsumo', 'elegirInsumoOtro',
   // Parte 0 (28/09/2026): escribir un lote en la ventana, desde cualquier estado.
   'insumoParaEscribir', 'htmlEscribirLote', 'usarLoteEscrito', 'enfocarEscribir', 'abrirEscribirLote',

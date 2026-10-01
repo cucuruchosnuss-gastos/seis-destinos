@@ -141,6 +141,7 @@ const SEGURAS_PRODUCCION = [
   ['textoTamanoMasa(m)', 'constante del código: "SIMPLE" o "DOBLE"'],
   ['textoTamanoMasa(b)', 'constante del código: "SIMPLE" o "DOBLE"'],
   ['chipsDeMasa(m)', 'HTML constante del código (htmlChipsMasa): "Modificada" / "Chocolate" según banderas, sin datos de nadie'],
+  ['htmlTirada(m)', 'HTML armado en htmlTirada: "Tirada" fijo y el motivo de la base con esc() adentro (lo ejecuta test-produccion-tirar.js con texto malicioso)'],
   ['htmlChipsMasa({ modificada: !!b.cambiada, chocolate: esChocolate(b, estado.defineChocolate) })', 'HTML constante del código: los chips salen de dos booleanos'],
   ['htmlParadas(d.paradas, accionesParadaHistorial(t))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas y el id adentro'],
   ['manual', 'HTML ya escapado: htmlCeldaLote() lo arma arriba con esc() del ingrediente, o vacío'],

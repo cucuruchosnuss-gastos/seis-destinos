@@ -17,11 +17,11 @@ correrMutacionesProduccion({
   ],
   manuales: [
     { nombre: 'la lista trae las masas de todas las máquinas', de: '        const masas = await leerMasasSala([turnoId])', a: '        const masas = await leerMasasSala(maquinasAbiertas().map(x => x.turno.id))' },
-    { nombre: 'la anulada cuenta en el título', de: '      const vivas = (h.masas ?? []).filter(x => !x.anulada).length', a: '      const vivas = (h.masas ?? []).length' },
+    { nombre: 'la anulada cuenta en el título', de: '      const vivas = (h.masas ?? []).filter(x => !x.anulada && !esTirada(x)).length', a: '      const vivas = (h.masas ?? []).filter(x => !esTirada(x)).length' },
     { nombre: 'arranca elegida la primera y no la última', de: '      h.elegida = (ultima ?? masAlta)?.id ?? null', a: '      h.elegida = h.masas?.[0]?.id ?? null' },
     { nombre: 'la elegida no se marca', de: "aria-pressed=\"${elegida ? 'true' : 'false'}\" title=\"${esc(origenHist)}\">", a: "aria-pressed=\"false\" title=\"${esc(origenHist)}\">" },
     { nombre: 'el origen no va en el title', de: "aria-pressed=\"${elegida ? 'true' : 'false'}\" title=\"${esc(origenHist)}\">", a: "aria-pressed=\"${elegida ? 'true' : 'false'}\">" },
-    { nombre: 'la anulada no lo dice en la lista', de: "      return `<button type=\"button\" class=\"pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}\"", a: "      return `<button type=\"button\" class=\"pr-hm__masa\"" },
+    { nombre: 'la anulada no lo dice en la lista', de: "      return `<button type=\"button\" class=\"pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}${tirada", a: "      return `<button type=\"button\" class=\"pr-hm__masa${tirada" },
     { nombre: 'sin el tamaño en la lista', de: "<span class=\"pr-hm__masa-l2\">${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</span>", a: "<span class=\"pr-hm__masa-l2\">${esc(horaArgentina(m.hora) || '—')}</span>" },
     { nombre: 'la lista vuelve a la más vieja arriba', de: '        const orden = [...h.masas].sort((a, z) => Number(z.nro) - Number(a.nro))', a: '        const orden = [...h.masas].sort((a, z) => Number(a.nro) - Number(z.nro))' },
     { nombre: 'las pendientes (las más nuevas) van abajo', de: "        const filas = pend.map(htmlMasaRecetaPendiente).join('') + orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('')", a: "        const filas = orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('') + pend.map(htmlMasaRecetaPendiente).join('')" },

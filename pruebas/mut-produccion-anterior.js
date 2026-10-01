@@ -48,7 +48,7 @@ correrMutacionesProduccion({
     { nombre: '"Anterior" no se achica', de: '      height: 40px; min-width: 0; flex-shrink: 1; overflow: hidden; }', a: '      height: 40px; overflow: hidden; }' },
     { nombre: 'el detalle sin "…"', de: '.pr-como--apilado .pr-como__cuando { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }', a: '.pr-como--apilado .pr-como__cuando { min-width: 0; overflow: hidden; white-space: nowrap; }' },
     { nombre: 'el "· chocolate" se puede cortar', de: '    .pr-como--apilado .pr-como__choco { flex-shrink: 0; }\n', a: '' },
-    { nombre: 'el "· chocolate" adentro de lo que se corta', de: "</span>${a.es_chocolate ? ' <span class=\"pr-como__choco\">· chocolate</span>' : ''}`", a: "${a.es_chocolate ? ' <span class=\"pr-como__choco\">· chocolate</span>' : ''}</span>`" },
+    { nombre: 'el "· chocolate" adentro de lo que se corta', de: "</span>${a.es_chocolate ? ' <span class=\"pr-como__choco\">· chocolate</span>' : ''}${anteriorFueTirada(a)", a: "${a.es_chocolate ? ' <span class=\"pr-como__choco\">· chocolate</span>' : ''}</span>${anteriorFueTirada(a)" },
     { nombre: 'el grupo de segmentos no se achica', de: '    .pr-receta__comos { flex-shrink: 1; }\n', a: '' },
     { nombre: 'el chocolate vuelve a decir "de chocolate"', de: "' <span class=\"pr-como__choco\">· chocolate</span>'", a: "' <span class=\"pr-como__choco\">· de chocolate</span>'" },
     // Punto 1: el botón Registrar

@@ -60,7 +60,8 @@ const DATOS = {
 
 // EL ORDEN DEL CELULAR (decisión de Facu, 26/09/2026): Ahora · Hoy ·
 // Pendientes · Semana · Rendimiento, y después el scrap.
-const ORDEN = ['ahora', 'hoy', 'pendientes', 'semana', 'rendimiento', 'scrap']
+// 30/09/2026: al final, "Masas tiradas", con datos propios (no de la RPC).
+const ORDEN = ['ahora', 'hoy', 'pendientes', 'semana', 'rendimiento', 'scrap', 'tiradas']
 
 function armar({ tareas = [['ver', { todas: true }], ['configurar', { todas: true }]], rpc = null } = {}) {
   const S = construirProduccion(ARCHIVO)
@@ -83,8 +84,8 @@ esperas.push((async () => {
   await S.cargarIndicadores()
   const html = S.__doc.getElementById('pr-indicadores').innerHTML
   chk('se pide indicadores_produccion con la unidad elegida y sin fecha (hoy la pone la base)', JSON.stringify(S.__llamadas.rpc.find(l => l[0] === 'indicadores_produccion')?.[1]) === '{"p_unidad_negocio_id":"u-cn"}')
-  chk('una tarjeta por cada entrada de TARJETAS_INDICADORES', (html.match(/<section class="pr-tarjeta pr-ind[ "]/g) || []).length === S.TARJETAS_INDICADORES.length && S.TARJETAS_INDICADORES.length === 6)
-  chk('el orden del arreglo es el del celular: Ahora · Hoy · Pendientes · Semana · Rendimiento · Scrap', JSON.stringify(S.TARJETAS_INDICADORES.map(t => t.id)) === JSON.stringify(ORDEN), S.TARJETAS_INDICADORES.map(t => t.id).join(','))
+  chk('una tarjeta por cada entrada de TARJETAS_INDICADORES', (html.match(/<section class="pr-tarjeta pr-ind[ "]/g) || []).length === S.TARJETAS_INDICADORES.length && S.TARJETAS_INDICADORES.length === 7 && S.TARJETAS_INDICADORES.filter(t => !t.propia).length === 6)
+  chk('el orden del arreglo es el del celular: Ahora · Hoy · Pendientes · Semana · Rendimiento · Scrap · Masas tiradas', JSON.stringify(S.TARJETAS_INDICADORES.map(t => t.id)) === JSON.stringify(ORDEN), S.TARJETAS_INDICADORES.map(t => t.id).join(','))
   chk('… y se dibujan en ese orden', ORDEN.map(id => html.indexOf(`id="pr-ind-${id}"`)).every((x, i, a) => x >= 0 && (i === 0 || x > a[i - 1])))
   chk('ninguna regla de CSS reordena las tarjetas (el orden es uno solo)', !/\.pr-ind[^{]*\{[^}]*\border\s*:/.test(FUENTE) && !/#pr-ind-[a-z]+[^{]*\{[^}]*\border\s*:/.test(FUENTE))
   chk('rendimiento va a lo ancho', /<section class="pr-tarjeta pr-ind pg-ind--ancha" id="pr-ind-rendimiento"/.test(html))
@@ -225,7 +226,7 @@ esperas.push((async () => {
   T[1].render = viejo
   chk('un render que tira: esa tarjeta dice que no se pudo cargar y las otras se ven', NO_CARGO.test(tarjeta(h2, 'hoy')) && /Máquina 1/.test(tarjeta(h2, 'ahora')))
   chk('sin datos (null): todas lo dicen, sin romper', (S.htmlIndicadores(null, null).match(/Esta tarjeta no se pudo cargar/g) || []).length === 6)
-  chk('mientras carga: "Cargando…" en cada una, sin ceros', (S.htmlIndicadores(null, null, true).match(/Cargando…/g) || []).length === 6)
+  chk('mientras carga: "Cargando…" en cada una, sin ceros', (S.htmlIndicadores(null, null, true).match(/Cargando…/g) || []).length === 7)
 }
 
 // ── Si la RPC entera falla: cada tarjeta dice el error ───────────────────
@@ -236,7 +237,7 @@ esperas.push((async () => {
   chk('RPC con error: las seis tarjetas lo dicen', (html.match(/No se pudieron cargar los indicadores\./g) || []).length === 6)
   chk('… con el mensaje de la base, PEGADO a su Reintentar', (html.match(/role="alert">No tenés permiso para ver los indicadores de esta unidad\.[^<]*<\/div><button type="button" class="pr-btn pr-btn--secundario" data-ind-reintentar="1">Reintentar<\/button>/g) || []).length === 6)
   chk('… y la hora del error, en Argentina', new RegExp(`esta unidad\\. \\(\\d{2}:\\d{2}\\)<\\/div>`).test(html))
-  chk('… y la página sigue: las tarjetas están', (html.match(/pr-tarjeta pr-ind[ "]/g) || []).length === 6)
+  chk('… y la página sigue: las tarjetas están', (html.match(/pr-tarjeta pr-ind[ "]/g) || []).length === 7)
   chk('… y el menú no muestra un número viejo de planillas', S.__doc.getElementById('pr-menu-n-pendientes').hidden === true)
   const T = armar({ rpc: async () => { throw new Error('') } })
   await T.cargarIndicadores()
