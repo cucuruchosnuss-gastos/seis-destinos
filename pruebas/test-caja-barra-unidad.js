@@ -318,8 +318,10 @@ async function casos() {
     const S = nuevoSandbox({ elegida: U1 })
     await S.contarMovimientosDelMes()
     const q1 = S.__consultas.filter(c => c.tabla === 'caja_movimientos').pop()
-    const or = q1 && q1.filtros.find(f => f[0] === 'or')
-    chk('una unidad: cuenta las personas de la unidad y las cuentas de Empresa de la unidad', !!or && or[1] === 'empleado_id.in.(yo,p1),cuenta_id.in.(cE1)', or && or[1])
+    // Desde el 01/10/2026 la base dice de qué unidad es cada movimiento:
+    // se cuenta por caja_movimientos.unidad_negocio_id.
+    const eq = q1 && q1.filtros.find(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id')
+    chk('una unidad: cuenta por la unidad del movimiento', !!eq && eq[2] === U1, JSON.stringify(q1 && q1.filtros))
     chk('una unidad: desde el primero del mes', q1.filtros.some(f => f[0] === 'gte' && f[1] === 'fecha'))
 
     const X = nuevoSandbox({ elegida: U1 })
@@ -553,8 +555,12 @@ async function casos() {
     Q.estado.listadoCargado = true
     Q.alCambiarUnidadCaja({ elegida: U1, mostrar: true })
     chk('antes del init: el cambio se guarda y no dibuja nada', Q.estado.unidadElegida === U1 && Q.__el('lista-personas').innerHTML === '')
-    // Ficha de Empresa abierta: el cambio la repinta.
+    // Ficha de Empresa abierta: el cambio la repinta. Con un usuario que NO
+    // puede leer todas las cajas (solo ver_empresa, sin super_admin) la ficha
+    // sigue mostrando solo las cuentas de la Empresa y no vuelve a la base;
+    // el caso de quien sí puede lo prueba test-caja-unidad-movimientos.js.
     const F = nuevoSandbox()
+    F.estado.miEmpleado.rol_app = 'usuario'
     F.estado.personaAbierta = 'emp'
     F.estado.movimientos = MOVS_EMPRESA.map(x => ({ ...x }))
     F.alCambiarUnidadCaja({ elegida: U1, mostrar: true })
@@ -590,7 +596,13 @@ async function casos() {
     chk('el init espera la unidad de la barra junto con lo demás', !!pa && /promesaUnidad/.test(pa[1]), pa && pa[1])
     chk('el init pide la unidad a la barra', /unidadesDeLaBarra\(\)/.test(init))
     chk('el cambio de unidad se escucha', /alCambiarUnidad\(alCambiarUnidadCaja\)/.test(SRC))
-    chk('no se filtra por unidad en ninguna consulta con .eq', !/\.eq\('unidad_negocio_id'/.test(SRC))
+    // Desde el 01/10/2026 SÍ: caja_movimientos.unidad_negocio_id la completa
+    // el trigger en todas las filas (335 de 335 ese día), así que un .eq no
+    // descarta nulls. Solo en las dos consultas de movimientos.
+    const conEq = (SRC.match(/\.eq\('unidad_negocio_id'/g) || []).length
+    chk('se filtra por unidad con .eq solo en caja_movimientos (ficha de Empresa y Mov. del mes)', conEq === 2 &&
+      /\.eq\('unidad_negocio_id'/.test(extraerFn(SRC, 'cargarMovimientosFichaEmpresa')) &&
+      /\.eq\('unidad_negocio_id'/.test(extraerFn(SRC, 'contarMovimientosDelMes')), conEq)
   }
 
   // ── El selector viejo: Caja no tenía uno para mirar ────────────────────

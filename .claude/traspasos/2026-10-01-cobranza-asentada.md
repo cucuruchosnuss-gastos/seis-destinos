@@ -8,6 +8,12 @@ Tag de antes: `antes-de-cobranza-asentada-2026-10-01`.
 3. **Caja:** "Ingreso externo (préstamos, aportes)" solo para super_admin con la tarea explícita; en chico debajo del título "La plata de un cliente se carga en Cobranzas"; los ajustes (`ingreso_ajuste` / `egreso_ajuste`) como "Ajuste", en gris y sin editar.
 4. **`pruebas/test-ids-unicos.js`**: el buscador nuevo nació con el id `cob-buscar-cliente`, que ya era el del buscador del listado. Las suites daban verde (DOM falso); lo vio el recorrido de la maqueta (`e2e/18`). Ahora una prueba revisa todos los HTML.
 
+## Parte 2 — Caja, filtrar por empresa
+- `caja_movimientos.unidad_negocio_id` (verificado: el trigger `trg_completar_unidad_caja`, 335 de 335 filas con unidad). `unidadDeMovimiento()` la usa primero.
+- Con una empresa elegida en la barra, la **ficha de Empresa** trae TODOS los movimientos de esa empresa (de cualquier caja), con la persona y la cuenta en cada renglón, y arriba "Entradas y salidas · <empresa>". "Todos los movimientos" suma la misma tarjeta. Los saldos de las cuentas no se filtran.
+- **Decisiones:** (1) la tarjeta deja afuera los traspasos entre cuentas de una misma caja (no entran ni salen); un traspaso Empresa → persona de la misma empresa sí aparece en las dos puntas. (2) Solo con permiso para leer todas las cajas (`ver_listado`, `retiros_todos` o `movimientos_todos`, como la policy): sin eso, la ficha sigue con las cuentas de la Empresa y lo dice (si no, la lista saldría incompleta sin avisar). (3) "Mov. del mes" cuenta por la columna.
+- **Falta probar con sesión:** con Pablo y Nuss arriba, que aparezca un gasto de Nuss pagado desde "Efectivo Ema" y que no aparezca con Dolce; que las entradas y salidas cierren contra lo que Facu espera.
+
 ## Verificado contra la base (01/10/2026, solo lectura)
 - `cargar_cobranza_asentada` (10 parámetros, `p_proyecto_id` default null): exige `procesar` y cliente activo; reintento con el mismo `p_id` ya asentado → `{id, reintento: true}`; si no, `guardar_cobranza_completa` + `asentar_cobranza` → `{importe, saldo_cliente, id, asentada}`.
 - `guardar_cobranza_completa` le avisa a la base que trae transferencias (`sd.cobranza_trae_transferencias`): **una cobranza solo con transferencias ahora entra** (el hueco 3 de la rama de formas está cerrado en la base).

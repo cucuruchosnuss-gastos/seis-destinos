@@ -61,8 +61,8 @@ const comun = S.renderizarFilaMovimiento({ ...base, cobranza_id: null, descripci
 chk('fila: un movimiento común no dice nada de cobranzas', !/cobranza/i.test(comun))
 
 // ── Las consultas y el aviso del ingreso externo ────────────────────────────
-chk('la ficha y la de Empresa traen cobranza_id', (src.match(/contraparte_empleado_id, cobranza_id,\n/g) || []).length === 2)
-chk('"Todos los movimientos" trae cobranza_id', /\.select\('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id, cobranza_id'\)/.test(src))
+chk('la ficha y la de Empresa traen cobranza_id', (src.match(/contraparte_empleado_id, cobranza_id, unidad_negocio_id, empleado_id,\n/g) || []).length === 2)
+chk('"Todos los movimientos" trae cobranza_id', /\.select\('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id, cobranza_id, unidad_negocio_id'\)/.test(src))
 // 01/10/2026: el texto pasó a ir en chico debajo del título, como lo pidió Facu.
 chk('el aviso del ingreso externo existe, oculto, con el texto pedido',
   /<div id="aviso-ingreso-cliente" class="aviso-ingreso-cliente" hidden>La plata de un cliente se carga en <a href="cobranzas\.html">Cobranzas<\/a><\/div>/.test(src))

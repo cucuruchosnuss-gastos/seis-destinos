@@ -457,7 +457,13 @@ const SEGURAS = {
     'formatearFecha(m.fecha)': FECHA, signo: "literal '+' o '−'", 'importeHtml(m.monto, m.moneda)': IMPORTE,
     'htmlUnidadDeFila(unidadDeMovimiento(m))': UNIDAD_FILA,
   },
-  renderizarMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
+  renderizarMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
+  // Entradas y salidas de una unidad (01/10/2026); las ejecuta con marcas
+  // test-caja-unidad-movimientos.js.
+  htmlEntradasYSalidas: {
+    'importeHtml(por[mon].entradas, mon)': IMPORTE, 'importeHtml(por[mon].salidas, mon)': IMPORTE, filas: HTML_PROPIO,
+  },
+  renderizarTotalesFicha: { 'htmlEntradasYSalidas(movimientosVisibles(), nombre)': 'HTML de htmlEntradasYSalidas(), que escapa adentro' },
   renderizarRetiros: { 'retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
   renderizarTodosMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
   renderizarFilaSolicitud: {
@@ -472,7 +478,8 @@ const SEGURAS = {
     unidadHtml: HTML_PROPIO, saldo: 'importeHtml(saldoDeCuenta(c.id), c.moneda) armado arriba', accionesHtml: HTML_PROPIO,
   },
   renderizarTotalRetiros: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO, detalle: 'HTML de htmlDetallePorUnidad() (escapa adentro)' },
-  renderizarTotalMovimientos: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO, detalle: 'HTML de htmlDetallePorUnidad() (escapa adentro)' },
+  renderizarTotalMovimientos: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO, detalle: 'HTML de htmlDetallePorUnidad() (escapa adentro)',
+    'htmlEntradasYSalidas(movimientos, nombreEmpresa(estado.unidadElegida))': 'HTML de htmlEntradasYSalidas(), que escapa adentro' },
   poblarSelectorCuentaUnica: { 'opcionesCuenta(cuentasOperables(empleadoId), favoritaEfectivoARS(empleadoId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
   poblarSelectorCuentaPropia: { 'opcionesCuenta(cuentasOperables(empleadoPropioId), favoritaEfectivoARS(empleadoPropioId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
   actualizarSelectorCuentaContraparte: { 'opcionesCuenta(candidatas)': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },

@@ -49,6 +49,33 @@ test('cobranza ya asentada: con la barra en Nuss viene marcada Nuss', async ({ p
   expect(errores, errores.join('\n')).toEqual([]);
 });
 
+// Caja con una empresa elegida arriba (01/10/2026): la ficha de Empresa
+// muestra TODO lo de esa empresa, salga de la caja que salga.
+for (const ancho of [390, 1280]) {
+  test(`caja: con Nuss arriba aparece el gasto de Nuss pagado desde la caja de Beto; con Dolce no (${ancho} px)`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize({ width: ancho, height: 900 });
+    await page.goto(`${MAQUETA}/modulos/caja.html?maqueta=caja`);
+    await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
+    await page.reload();
+    await page.locator('#btn-empresa-atajo').first().click();
+    const lista = page.locator('#detalle-persona-movimientos');
+    await expect(lista).toContainText('Repuesto de la máquina de Nuss');
+    await expect(lista.locator('.tarjeta-movimiento', { hasText: 'Repuesto de la máquina de Nuss' })).toContainText('Beto Dolce');
+    await expect(page.locator('#detalle-persona-totales')).toContainText('Entradas y salidas');
+    const { doc, vista } = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, vista: window.innerWidth }));
+    expect(doc, `scroll horizontal: ${doc} px contra ${vista}`).toBeLessThanOrEqual(vista);
+    await captura(page, `caja-empresa-nuss-${ancho}`, info);
+    await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-d'));
+    await page.reload();
+    await page.locator('#btn-empresa-atajo').first().click();
+    await expect(page.locator('#detalle-persona-totales')).toContainText('Dolce Pasta');
+    await expect(lista).not.toContainText('Repuesto de la máquina de Nuss');
+    await expect(lista).toContainText('Depósito');
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+}
+
 for (const ancho of [390, 1280]) {
   test(`caja: ingreso externo para super_admin y el ajuste en gris, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);

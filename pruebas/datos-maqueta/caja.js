@@ -21,9 +21,11 @@ const cuenta = (id, empleado_id, nombre, medio, unidad_negocio_id = null, extra 
   cbu: null, numero_cuenta: null, alias: null, unidad_negocio_id, ...extra,
 });
 
-const mov = (id, empleado_id, cuenta_id, tipo, monto, descripcion = null, medio_pago = 'efectivo') => ({
+// unidad: caja_movimientos.unidad_negocio_id (01/10/2026), la que completa el
+// trigger de la base (la del gasto, la de la cuenta de empresa o la de la persona).
+const mov = (id, empleado_id, cuenta_id, tipo, monto, descripcion = null, medio_pago = 'efectivo', unidad = null) => ({
   id, empleado_id, cuenta_id, tipo, monto, moneda: 'ARS', medio_pago, fecha: hoy, descripcion,
-  gasto_id: null, contraparte_empleado_id: null, created_at: hoy + 'T12:00:00Z',
+  gasto_id: null, contraparte_empleado_id: null, created_at: hoy + 'T12:00:00Z', unidad_negocio_id: unidad,
 });
 
 module.exports = {
@@ -82,13 +84,16 @@ module.exports = {
       { cuenta_id: 'c-e-x', saldo: 1000 },
     ],
     caja_movimientos: [
-      mov('m-1', 'emp-ana', 'c-ana', 'egreso_retiro', 5000, 'Retiro de la semana'),
-      mov('m-2', 'emp-beto', 'c-beto', 'egreso_retiro', 3000, 'Retiro'),
-      mov('m-3', EMPRESA, 'c-e-n2', 'ingreso_externo', 250000, 'Cobranza de un cliente', 'transferencia'),
-      mov('m-4', EMPRESA, 'c-e-d1', 'ingreso_externo', 180000, 'Depósito', 'transferencia'),
+      mov('m-1', 'emp-ana', 'c-ana', 'egreso_retiro', 5000, 'Retiro de la semana', 'efectivo', 'u-n'),
+      mov('m-2', 'emp-beto', 'c-beto', 'egreso_retiro', 3000, 'Retiro', 'efectivo', 'u-d'),
+      mov('m-3', EMPRESA, 'c-e-n2', 'ingreso_externo', 250000, 'Cobranza de un cliente', 'transferencia', 'u-n'),
+      mov('m-4', EMPRESA, 'c-e-d1', 'ingreso_externo', 180000, 'Depósito', 'transferencia', 'u-d'),
       mov('m-5', EMPRESA, 'c-e-x', 'egreso_gasto', 1500, 'Caja chica'),
       // Un ajuste de saldo cargado desde la base (01/10/2026): "Ajuste", en gris.
-      mov('m-6', EMPRESA, 'c-e-n2', 'egreso_ajuste', 12500, 'Diferencia del arqueo de septiembre'),
+      mov('m-6', EMPRESA, 'c-e-n2', 'egreso_ajuste', 12500, 'Diferencia del arqueo de septiembre', 'efectivo', 'u-n'),
+      // Un gasto de Nuss pagado desde la caja personal de Beto (de Dolce
+      // Pasta): con Nuss elegido aparece en la ficha de Empresa; con Dolce, no.
+      mov('m-7', 'emp-beto', 'c-beto', 'egreso_gasto', 4200, 'Repuesto de la máquina de Nuss', 'efectivo', 'u-n'),
     ],
     caja_solicitudes_movimiento: [],
   },

@@ -748,6 +748,20 @@
       flex-shrink: 0;
     }
 
+    /* Entradas y salidas de una unidad (01/10/2026). */
+    .entradas-salidas__fila {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr;
+      gap: 0.25rem 0.75rem;
+      align-items: baseline;
+      margin-top: 0.5rem;
+    }
+    .entradas-salidas__rotulo { font-size: 0.8125rem; color: var(--color-texto-2); }
+    .entradas-salidas__monto { font-size: 1.0625rem; font-weight: 700; white-space: nowrap; }
+    @media (max-width: 480px) {
+      .entradas-salidas__fila { grid-template-columns: auto 1fr; }
+    }
+
     /* Ajuste de saldo: la fila entera en gris (fondo de pista y el importe en
        el gris secundario). Después de .tarjeta-movimiento y .movimiento__monto,
        con la misma especificidad o más, para no quedar pisada. */
@@ -1531,6 +1545,10 @@
 
       <div class="titulo-seccion-caja">Movimientos</div>
 
+      <!-- Ficha de Empresa con una unidad elegida (01/10/2026): las entradas y
+           salidas de esa unidad. La pinta renderizarTotalesFicha(). -->
+      <div id="detalle-persona-totales"></div>
+
       <div class="lista-filtros" id="filtros-detalle-movimientos"></div>
 
       <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
@@ -1923,6 +1941,9 @@
       listadoCargado:  false, // el listado general ya se dibujó (para repintarlo al cambiar la unidad)
       turnoMovDelMes:  0, // ver contarMovimientosDelMes()
       turnoMovimientosFicha: 0, // cargarMovimientos() y cargarMovimientosFichaEmpresa()
+      // La unidad cuyos movimientos (de TODAS las cajas) muestra la ficha de
+      // Empresa, o null si muestra solo las cuentas de la Empresa (01/10/2026).
+      movimientosPorUnidad: null,
       turnoRetiros:    0,
       turnoTodosMovimientos: 0,
     }
@@ -2482,7 +2503,14 @@
       return c.unidad_negocio_id || unidadDeEmpleado(c.empleado_id)
     }
 
+    // DESDE EL 01/10/2026 la base dice de qué empresa es cada movimiento
+    // (caja_movimientos.unidad_negocio_id, que completa el trigger
+    // trg_completar_unidad_caja: la del gasto, la de la cobranza, la de la
+    // cuenta si es de una empresa, y si no la de la persona). Esa manda: un
+    // gasto de Nuss pagado desde la caja de una persona de otra unidad es de
+    // Nuss. Lo de abajo queda solo para una fila que no trajo la columna.
     function unidadDeMovimiento(m) {
+      if (m?.unidad_negocio_id) return m.unidad_negocio_id
       const c = m?.cuenta_id ? estado.cuentasPorId[m.cuenta_id] : null
       return c ? unidadDeCuenta(c) : unidadDeEmpleado(m?.empleado_id)
     }
@@ -2876,16 +2904,10 @@
             .in('empleado_id', ids).gte('fecha', desde)
         }
       } else {
-        const personas = estado.empleados.filter(e => e.id !== estado.idEmpresa && unidadDeEmpleado(e.id) === elegida).map(e => e.id)
-        const cuentasEmpresa = Object.values(estado.cuentasPorId)
-          .filter(c => c.empleado_id === estado.idEmpresa && unidadDeCuenta(c) === elegida).map(c => c.id)
-        const condiciones = []
-        if (personas.length) condiciones.push(`empleado_id.in.(${personas.join(',')})`)
-        if (cuentasEmpresa.length) condiciones.push(`cuenta_id.in.(${cuentasEmpresa.join(',')})`)
-        if (condiciones.length) {
-          res = await supabase.from('caja_movimientos').select('id', { count: 'exact', head: true })
-            .or(condiciones.join(',')).gte('fecha', desde)
-        }
+        // Desde el 01/10/2026 la base dice de qué unidad es cada movimiento
+        // (caja_movimientos.unidad_negocio_id): se cuenta por esa columna.
+        res = await supabase.from('caja_movimientos').select('id', { count: 'exact', head: true })
+          .eq('unidad_negocio_id', elegida).gte('fecha', desde)
       }
       if (turno !== estado.turnoMovDelMes) return
       estado.movimientosDelMes = res.error ? null : (res.count || 0)
@@ -3670,7 +3692,7 @@
       const { data, error } = await supabase
         .from('caja_movimientos')
         .select(`
-          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id, cobranza_id,
+          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id, cobranza_id, unidad_negocio_id, empleado_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
@@ -3756,16 +3778,25 @@
     // cuenta_id IN cuentas de Empresa como filtro base — no empleado_id —
     // mismo criterio que ya usa renderizarSaldosDetalle() para el desglose
     // de saldos de esta misma ficha.
+    //
+    // CON UNA EMPRESA ELEGIDA EN LA BARRA (01/10/2026): la ficha de Empresa
+    // muestra TODOS los movimientos de esa empresa, salgan de la caja que
+    // salgan (caja_movimientos.unidad_negocio_id, ver unidadDeMovimiento): un
+    // gasto de Nuss pagado desde la caja de Emanuel aparece en Nuss, con la
+    // caja de donde salió en el renglón. Los saldos de cada cuenta, arriba,
+    // siguen siendo los de la cuenta entera. Con "Todas", como siempre.
     async function cargarMovimientosFichaEmpresa() {
       const turno = ++estado.turnoMovimientosFicha
       document.getElementById('estado-cargando-movimientos').hidden = false
       document.getElementById('detalle-persona-movimientos').innerHTML = ''
       document.getElementById('detalle-persona-vacio').hidden = true
 
+      const porUnidad = fichaEmpresaPorUnidad() ? estado.unidadElegida : null
       const cuentaIds = cuentasDe(estado.idEmpresa).map(c => c.id)
-      if (!cuentaIds.length) {
+      if (!porUnidad && !cuentaIds.length) {
         document.getElementById('estado-cargando-movimientos').hidden = true
         estado.movimientos = []
+        estado.movimientosPorUnidad = null
         renderizarMovimientos()
         return
       }
@@ -3773,10 +3804,10 @@
       let consulta = supabase
         .from('caja_movimientos')
         .select(`
-          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id, cobranza_id,
+          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id, cobranza_id, unidad_negocio_id, empleado_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
-        .in('cuenta_id', cuentaIds)
+      consulta = porUnidad ? consulta.eq('unidad_negocio_id', porUnidad) : consulta.in('cuenta_id', cuentaIds)
       consulta = aplicarFiltrosMovimientos(consulta, estado.filtrosFichaEmpresa)
 
       const { data, error } = await consulta
@@ -3784,14 +3815,91 @@
         .order('created_at', { ascending: false })
 
       if (turno !== estado.turnoMovimientosFicha) return
-      document.getElementById('estado-cargando-movimientos').hidden = true
 
       if (error) {
+        document.getElementById('estado-cargando-movimientos').hidden = true
         mostrarError('No se pudieron cargar los movimientos.')
         return
       }
+      // Las cuentas de las cajas de donde salió cada uno, para nombrarlas en
+      // el renglón (cuentas_caja se lee con cualquier sesión: no tiene saldo).
+      if (porUnidad) {
+        const conCuentas = new Set(Object.values(estado.cuentasPorId).map(c => c.empleado_id))
+        const faltan = [...new Set((data || []).map(m => m.empleado_id))].filter(id => id && !conCuentas.has(id))
+        if (faltan.length) await cargarCuentas(faltan)
+        if (turno !== estado.turnoMovimientosFicha) return
+      }
+      document.getElementById('estado-cargando-movimientos').hidden = true
       estado.movimientos = data || []
+      estado.movimientosPorUnidad = porUnidad
       renderizarMovimientos()
+    }
+
+    // ¿Puede leer los movimientos de TODAS las cajas? Lo mismo que la policy
+    // de caja_movimientos ("leer movimientos propios o con tarea"): ver_listado,
+    // retiros_todos o movimientos_todos, con el bypass de super_admin. Sin eso,
+    // "todo lo de Nuss" saldría incompleto sin avisar (las filas no llegan):
+    // la ficha de Empresa sigue mostrando solo sus cuentas y lo dice.
+    function puedeVerMovimientosDeTodos() {
+      return tieneTarea('ver_listado') || tieneTarea('retiros_todos') || tieneTarea('movimientos_todos')
+    }
+
+    function fichaEmpresaPorUnidad() {
+      return !!estado.unidadElegida && puedeVerMovimientosDeTodos()
+    }
+
+    // Las entradas y las salidas de una lista de movimientos, por moneda (nunca
+    // se suman monedas distintas). Entradas = todo tipo que empieza con
+    // "ingreso", salidas = "egreso" (la regla de las vistas de saldo), SIN los
+    // traspasos entre cuentas de una misma caja, que no entran ni salen.
+    function entradasYSalidas(movimientos) {
+      const por = {}
+      for (const m of movimientos ?? []) {
+        const tipo = String(m?.tipo ?? '')
+        if (tipo === 'ingreso_traspaso' || tipo === 'egreso_traspaso') continue
+        const monto = Number(m?.monto)
+        if (!Number.isFinite(monto)) continue
+        const moneda = m.moneda || 'ARS'
+        if (!por[moneda]) por[moneda] = { entradas: 0, salidas: 0 }
+        if (tipo.startsWith('ingreso')) por[moneda].entradas += monto
+        else if (tipo.startsWith('egreso')) por[moneda].salidas += monto
+      }
+      return por
+    }
+
+    function htmlEntradasYSalidas(movimientos, nombreUnidad) {
+      const por = entradasYSalidas(movimientos)
+      const monedas = Object.keys(por).sort((a, b) => (a === 'ARS' ? -1 : b === 'ARS' ? 1 : a.localeCompare(b)))
+      const filas = monedas.length
+        ? monedas.map(mon => `
+            <div class="entradas-salidas__fila">
+              <span class="entradas-salidas__rotulo">Entradas</span><span class="entradas-salidas__monto color-positivo">+ ${importeHtml(por[mon].entradas, mon)}</span>
+              <span class="entradas-salidas__rotulo">Salidas</span><span class="entradas-salidas__monto color-negativo">− ${importeHtml(por[mon].salidas, mon)}</span>
+            </div>`).join('')
+        : '<div class="nota-unidad-caja">No hay movimientos con estos filtros.</div>'
+      return `
+        <div class="stat-card-caja">
+          <div>
+            <div class="stat-card-caja__label">Entradas y salidas · ${esc(nombreUnidad || 'Unidad')}</div>
+            ${filas}
+            <div class="nota-unidad-caja">Todo lo de ${esc(nombreUnidad || 'esta unidad')}, salga de la caja que salga (sin los traspasos entre cuentas de una misma caja). Los saldos de cada cuenta, arriba, son los de la cuenta entera.</div>
+          </div>
+        </div>`
+    }
+
+    // Arriba de la lista de la ficha de Empresa: con una unidad elegida, sus
+    // entradas y salidas; si el usuario no puede leer todas las cajas, lo dice.
+    function renderizarTotalesFicha() {
+      const cont = document.getElementById('detalle-persona-totales')
+      if (!cont) return
+      const esEmpresa = !!estado.idEmpresa && estado.personaAbierta === estado.idEmpresa
+      if (!esEmpresa || !estado.unidadElegida) { cont.innerHTML = ''; return }
+      const nombre = nombreEmpresa(estado.unidadElegida)
+      if (!estado.movimientosPorUnidad) {
+        cont.innerHTML = `<div class="nota-unidad-caja">Con tu usuario se ven solo los movimientos de las cuentas de la Empresa de ${esc(nombre || 'esta unidad')}, no los de las cajas de las personas.</div>`
+        return
+      }
+      cont.innerHTML = htmlEntradasYSalidas(movimientosVisibles(), nombre)
     }
 
     // conUnidad: la etiqueta de unidad de la fila (ver htmlUnidadDeFila).
@@ -3870,6 +3978,10 @@
       const cont = document.getElementById('detalle-persona-movimientos')
       const movimientos = movimientosVisibles()
       const conUnidad = !!estado.idEmpresa && estado.personaAbierta === estado.idEmpresa
+      // Con todo lo de una unidad, cada renglón dice de qué caja salió: la
+      // persona (o Empresa) y, en la línea de la fecha, la cuenta.
+      const deTodasLasCajas = conUnidad && !!estado.movimientosPorUnidad
+      renderizarTotalesFicha()
 
       if (!movimientos.length) {
         cont.innerHTML = ''
@@ -3880,7 +3992,7 @@
       // OJO: no pasar renderizarFilaMovimiento directo a .map() — Array.map
       // manda (elemento, índice, array) y el índice pisaría el parámetro
       // { mostrarPersona } de la función.
-      cont.innerHTML = movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad })).join('')
+      cont.innerHTML = movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas })).join('')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4423,7 +4535,7 @@
 
       let consulta = supabase
         .from('caja_movimientos')
-        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id')
+        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, unidad_negocio_id')
         .eq('tipo', 'egreso_retiro')
 
       const { empleado_id, fecha_desde, fecha_hasta } = estado.filtrosRetiros
@@ -4605,6 +4717,7 @@
             ${detalle}
           </div>
         </div>
+        ${estado.unidadElegida ? htmlEntradasYSalidas(movimientos, nombreEmpresa(estado.unidadElegida)) : ''}
       `
     }
 
@@ -4617,7 +4730,7 @@
 
       let consulta = supabase
         .from('caja_movimientos')
-        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id, cobranza_id')
+        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id, cobranza_id, unidad_negocio_id')
 
       const { empleado_ids } = estado.filtrosTodosMovimientos
       if (empleado_ids?.length) consulta = consulta.in('empleado_id', empleado_ids)
@@ -5257,7 +5370,9 @@
           const cuentas = new Set(cuentasOperables(estado.idEmpresa).map(c => String(c.id)))
           const podo = podarFiltro(estado.filtrosFichaEmpresa.cuenta_ids, id => cuentas.has(id))
           renderizarFiltrosFichaEmpresa()
-          if (podo) cargarMovimientosFichaEmpresa()
+          // Con otra unidad (o con Todas) la consulta es otra: se vuelve a pedir.
+          const porUnidadAhora = fichaEmpresaPorUnidad() ? estado.unidadElegida : null
+          if (podo || porUnidadAhora !== (estado.movimientosPorUnidad ?? null)) cargarMovimientosFichaEmpresa()
           else renderizarMovimientos()
         }
       }

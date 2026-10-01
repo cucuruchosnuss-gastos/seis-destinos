@@ -58,8 +58,9 @@ correrMutaciones({
       de: '      if (turno !== estado.turnoMovDelMes) return\n', a: '' },
     { nombre: 'el conteo del mes: un error se vuelve 0',
       de: 'estado.movimientosDelMes = res.error ? null : (res.count || 0)', a: 'estado.movimientosDelMes = res.count || 0' },
-    { nombre: 'el conteo del mes no cuenta las cuentas de Empresa de la unidad',
-      de: "        if (cuentasEmpresa.length) condiciones.push(`cuenta_id.in.(${cuentasEmpresa.join(',')})`)\n", a: '' },
+    // Desde el 01/10/2026 el conteo de una unidad va por la unidad del movimiento.
+    { nombre: 'el conteo del mes de una unidad cuenta otra unidad',
+      de: ".eq('unidad_negocio_id', elegida).gte('fecha', desde)", a: ".eq('unidad_negocio_id', 'otra').gte('fecha', desde)" },
     { nombre: 'el conteo del mes con una unidad cuenta todo',
       de: '      if (!elegida) {\n        const ids = estado.empleados.map(e => e.id)', a: '      if (true) {\n        const ids = estado.empleados.map(e => e.id)' },
     // ── Fichas ────────────────────────────────────────────────────────────
