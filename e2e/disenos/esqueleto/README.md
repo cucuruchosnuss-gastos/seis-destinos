@@ -58,6 +58,8 @@ Los grises pasaron de azulados a **cálidos** para que no haya azules y conviva 
 
 **Sin azules. El naranja nunca marca validez**: es el ítem activo, la fábrica elegida, los botones, los interruptores prendidos. Bien o mal lo dicen verde y bordó.
 
+**La única excepción a "sin azules" (30/09/2026, pedido de Facu): el CELESTE de las formas de pago electrónicas.** Las etiquetas de forma de pago (`.forma-pago` de `css/main.css`) van: efectivo en verde, cheque de papel en naranja, **e-cheque y transferencia en celeste** (`--celeste` #0284C7, `--celeste-suave` #E0F2FE, `--celeste-oscuro` #075985; 6,6:1 el oscuro sobre el suave), la transferencia con su propio ícono (dos flechas). Solo en esas etiquetas chicas, siempre con el nombre escrito al lado: nunca en fondos grandes, botones ni nada que se toque. Las usan Cobranzas, Cobranzas por asentar y la cartera de cheques de Administración.
+
 ### Por qué esta tipografía
 - **Bricolage Grotesque**: grotesca con carácter (terminales y anchos variables), muy firme en números grandes (`$ 4.380.000`, `142`). Se usa solo en títulos, saludo y números grandes, con `letter-spacing: -0.03em` y `font-variant-numeric: tabular-nums`.
 - **Figtree**: geométrica cálida, muy legible en 13–15 px, con buena ñ y acentos. Todo lo demás.

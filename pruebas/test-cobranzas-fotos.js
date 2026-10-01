@@ -117,6 +117,9 @@ const PRELUDIO = `
   function hoyArgentina(){ return '2026-09-21' }
   async function urlDeFoto(){ return null } function abrirVisor(){}
   var puedeCargar = () => true
+  // El chofer: sin cobranzas:procesar no ve e-cheques ni transferencias
+  // (30/09/2026). Esta suite prueba las fotos, no eso.
+  var puedeProcesar = () => false
   var SUBTITULO_VISTA_COB = { listado: 'Listado', form: 'Nueva cobranza' }
   var reintentoFotos = null
   var contadorLecturas = null
@@ -138,6 +141,8 @@ const FUNCIONES = [
   // El botón de agregar un cheque que no se leyó (22/09/2026)
   'pintarBotonChequeMano', 'agregarFotos', 'formularioVacio',
   'abrirFormularioNuevo', 'abrirFormularioLocal', 'abrirFormularioEdicion', 'chequeDesdeBase',
+  // E-cheques y transferencias (30/09/2026)
+  'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'textoOpcional', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'htmlDatosCheque', 'textoDiasHastaPago', 'esFechaIso', 'diasEntre', 'formatearFechaCob',
 ]
 const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR', 'MQ_ESCRITORIO',
   'TEXTO_BOTON_CHEQUE_MANO']

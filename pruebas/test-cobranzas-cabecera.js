@@ -136,6 +136,8 @@ const FUNCIONES = [
   // tarjeta
   'htmlTarjetaCheque', 'escribirImporteEnCampo', 'estadoRenglon', 'erroresDeCheque', 'chequeParaBase', 'dvBcra',
   'textoOpcional', 'origenDatosDe',
+  // E-cheques y transferencias (30/09/2026)
+  'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas',
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA', 'PAGINA',

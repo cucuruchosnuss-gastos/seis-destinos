@@ -836,6 +836,24 @@ if (SOLO !== 'render') {
     ['botonUnidad', 'HTML armado en htmlDetalle(): un <button> con textos literales del código ("Cambiar" / "Asignar unidad")'],
     ['filaUnidad', 'HTML armado en htmlDetalle(): literales del código + escCob(c.unidad_negocio_nombre) + botonUnidad'],
     ['unidadTabla', 'HTML armado en htmlFilaCobranza(): un <span> literal con escCob(nombreUni), o el literal "sin unidad" (barra de unidad, 28/09/2026)'],
+    // E-cheques y transferencias (30/09/2026). Las ejecuta con marcas
+    // test-cobranzas-formas.js.
+    ["htmlEtiquetaForma('echeck')", 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
+    ["htmlEtiquetaForma('transferencia')", 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
+    ['htmlEtiquetaForma(forma)', 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
+    ['cabecera', 'HTML armado en htmlEcheckForm() / htmlTransferenciaForm(): literales del código + htmlEtiquetaForma() + escCob() de cada dato'],
+    ['htmlDatosCheque(echequeParaBase(e), hoyArgentina())', 'HTML armado por htmlDatosCheque(), que escapa adentro'],
+    ['htmlOpcionesCuentas(t)', 'HTML armado por htmlOpcionesCuentas(), que escapa adentro (escCob del id y del nombre)'],
+    ['sinCuentas', 'HTML armado en htmlTransferenciaForm(): un aviso literal o escCob() del texto con el nombre de la unidad'],
+    ["fila('efectivo', t.efectivo)", 'HTML armado por fila() de htmlResumenFormas(): htmlEtiquetaForma() + escCob(formatearImporte())'],
+    ["fila('cheque', t.cheques)", 'HTML armado por fila() de htmlResumenFormas(): htmlEtiquetaForma() + escCob(formatearImporte())'],
+    ["fila('echeck', t.echecks)", 'HTML armado por fila() de htmlResumenFormas(): htmlEtiquetaForma() + escCob(formatearImporte())'],
+    ["fila('transferencia', t.transferencias)", 'HTML armado por fila() de htmlResumenFormas(): htmlEtiquetaForma() + escCob(formatearImporte())'],
+    ['htmlTransferenciasDetalle(d)', 'HTML armado por htmlTransferenciasDetalle(), que escapa adentro'],
+    ["transf.map(t => htmlTransferenciaDetalle(t, d.cuentas)).join('')", 'HTML armado por htmlTransferenciaDetalle(), que escapa adentro'],
+    ["echecks.map((e, i) => htmlEcheckForm(e, i, admin)).join('')", 'HTML armado por htmlEcheckForm(), que escapa adentro'],
+    ["transf.map((t, i) => htmlTransferenciaForm(t, i, admin)).join('')", 'HTML armado por htmlTransferenciaForm(), que escapa adentro'],
+    ['htmlResumenFormas(totalesPorForma(f))', 'HTML armado por htmlResumenFormas(), que escapa adentro'],
   ])
   const malas = []
   for (const x of aRevisar) {

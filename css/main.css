@@ -78,6 +78,16 @@
   --azul:            #1F5FAD;
   --azul-suave:      #E7EFFA;
   --azul-oscuro:     #164680;
+  /* CELESTE (30/09/2026): la ÚNICA excepción a "sin azules" del sistema
+     visual, y solo para las ETIQUETAS de las formas de pago electrónicas
+     (e-cheque y transferencia; ver .forma-pago más abajo). El efectivo va en
+     verde y el cheque de papel en naranja. Anotado en el README del
+     esqueleto (e2e/disenos/esqueleto/README.md). Nunca en fondos grandes ni
+     en botones. Contraste medido: --celeste-oscuro sobre --celeste-suave
+     6,6:1 (lo recalcula pruebas/test-cobranzas-formas.js). */
+  --celeste:         #0284C7;
+  --celeste-suave:   #E0F2FE;
+  --celeste-oscuro:  #075985;
 
   --radio-tarjeta:  16px;
   --radio-input:    12px;
@@ -899,6 +909,39 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 
 .toast--exito {
   background: var(--color-exito);
+}
+
+/* ─── Etiquetas de forma de pago (30/09/2026) ────────────────────────────────
+   Las comparten Cobranzas, Administración (Cobranzas por asentar y la cartera
+   de cheques): efectivo en verde, cheque de papel en naranja, e-cheque y
+   transferencia en celeste (la única excepción a "sin azules"), la
+   transferencia con su ícono. El texto dice la forma: el color no va solo. */
+.forma-pago {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.forma-pago--efectivo      { background: var(--verde-suave);   color: var(--verde-oscuro); }
+.forma-pago--cheque        { background: var(--naranja-suave); color: var(--naranja-oscuro); }
+.forma-pago--echeck,
+.forma-pago--transferencia { background: var(--celeste-suave); color: var(--celeste-oscuro); }
+.forma-pago__icono {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+}
+.formas-pago {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  vertical-align: middle;
 }
 
 /* ─── Alerta inline ──────────────────────────────────────────────────────── */

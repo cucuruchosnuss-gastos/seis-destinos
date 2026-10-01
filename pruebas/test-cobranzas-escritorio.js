@@ -150,6 +150,8 @@ const FUNCIONES = [
   'soltarSeleccionFueraDelListado', 'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'marcarFilaSeleccionada', 'mostrarVistaCob', 'abrirDetalle',
   'volverDelDetalle', 'pintarBotonVolver',
+  // E-cheques y transferencias (30/09/2026)
+  'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'textoOpcional', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'htmlDatosCheque', 'textoDiasHastaPago', 'diasEntre',
 ]
 const CONSTANTES = ['ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'SUBTITULO_VISTA_COB', 'MQ_ESCRITORIO', 'ETIQUETA_ESTADO_COBRANZA']
 
@@ -451,7 +453,8 @@ async function pruebas() {
     chk('baseline f3633ba: se pudo leer (si no, esta verificación no mide nada)', base.length > 100000 && base.includes('<style>'), base.length)
     const SALIERON = /cob-pestana|cob-cartera|cob-tabla|cob-btn--elegido/
     // cob-unidad-: la nota y la marca "Sin unidad" de la barra de unidad (28/09/2026).
-    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^\.cob-unidad-/
+    // cob-resumen-formas / cob-formas-linea: las cuatro formas de pago (30/09/2026).
+    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^\.cob-unidad-|^\.cob-resumen-formas|^\.cob-formas-linea/
     // (29/09/2026) El sistema visual nuevo cambió en TODA la app los tintes
     // azulados escritos a mano por los cálidos (rgba(26,42,82) → rgba(28,26,23),
     // #55617d → #6B645A): se comparan con esa traducción aplicada.
