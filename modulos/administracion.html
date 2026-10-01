@@ -6378,6 +6378,10 @@
     /* Cada dato se corta con puntos suspensivos; el separador " · " sale del
        CSS, así un dato vacío no deja dos puntos seguidos. */
     .chq-tarjeta__dato { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* La etiqueta de la forma de pago (30/09/2026) va en el renglón de abajo, antes
+       del número, y no se achica: arriba no entraba al lado de un importe de
+       cientos de miles. */
+    .chq-tarjeta__l2 > .forma-pago { flex: 0 0 auto; font-size: 0.625rem; padding: 0.0625rem 0.375rem; }
     /* Con una unidad elegida en la barra de arriba: la marca de un cheque SIN
        unidad, primera en el renglón y sin cortarse (va después de la regla
        de .chq-tarjeta__dato, que tiene la misma especificidad). */
@@ -8302,9 +8306,9 @@
           <div class="chq-tarjeta__cuerpo">
             <div class="chq-tarjeta__l1">
               <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
-              <span class="chq-tarjeta__pago">${esc(pago)}</span>${htmlFormaCheque(ch)}
+              <span class="chq-tarjeta__pago">${esc(pago)}</span>
             </div>
-            <div class="chq-tarjeta__l2">${marcaSinUnidad}${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
+            <div class="chq-tarjeta__l2">${marcaSinUnidad}${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}${htmlFormaCheque(ch)}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
             <span class="chq-oculto">${esc(textoUnidad)}</span>
           </div>
           ${accion ? `<div class="chq-tarjeta__lado">${accion}</div>` : ''}

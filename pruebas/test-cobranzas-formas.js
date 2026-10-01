@@ -534,6 +534,7 @@ async function pruebas() {
     chk('la fila usa el total con las transferencias en las dos vistas',
       (fuente.match(/escCob\(formatearImporte\(total\)\)/g) || []).length === 2 && !/formatearImporte\(c\.total\)/.test(fuente.slice(fuente.indexOf('function htmlFilaCobranza'), fuente.indexOf('async function refrescarListado'))))
     chk('la fila dibuja la línea de etiquetas y la tabla también', /\$\{htmlLineaFormas\(formas\)\}/.test(fuente) && /cob-formas-tabla">\$\{formas\.map\(htmlEtiquetaForma\)/.test(fuente))
+    chk('en la tabla, las etiquetas en UN renglón (la fila no crece)', /\.cob-formas-tabla \{ display: flex; flex-wrap: nowrap; overflow: hidden;/.test(fuente))
     chk('en la compu la línea del celular se esconde', /\.cob-maestro--activo \.cob-fila > \.cob-formas-linea \{ display: none; \}/.test(fuente))
   }
 

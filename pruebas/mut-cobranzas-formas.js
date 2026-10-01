@@ -172,6 +172,8 @@ correrMutaciones({
       de: 'total: totalConTransferencias(c, f.transferencias),', a: 'total: c.total,' },
     { nombre: 'la fila sin la línea de etiquetas',
       de: '          </div>\n          ${htmlLineaFormas(formas)}\n', a: '          </div>\n' },
+    { nombre: 'en la tabla las etiquetas se parten en varios renglones',
+      de: '.cob-formas-tabla { display: flex; flex-wrap: nowrap;', a: '.cob-formas-tabla { display: flex; flex-wrap: wrap;' },
     { nombre: 'en la compu la línea del celular queda a la vista',
       de: '      .cob-maestro--activo .cob-fila > .cob-fila__meta,\n      .cob-maestro--activo .cob-fila > .cob-formas-linea { display: none; }', a: '      .cob-maestro--activo .cob-fila > .cob-fila__meta { display: none; }' },
   ],

@@ -62,3 +62,24 @@ module.exports = {
     mis_pendientes: [{ modulo: 'cobranzas', clave: 'por_controlar', cantidad: 3, texto: 'Cobranzas por controlar' }],
   },
 };
+
+// LAS CUATRO FORMAS DE PAGO (30/09/2026): una cobranza con efectivo, un cheque
+// de papel, un e-cheque y una transferencia. v_cobranzas no suma la
+// transferencia (160.000); la pantalla la lee aparte y muestra 190.000.
+{
+  const t = module.exports.tablas
+  const ID = '00000000-0000-4000-8000-000000000008'
+  t.v_cobranzas.push(cob(ID, { cliente: 'Distribuidora Anatolia (cuatro formas)', cliente_normalizado: 'distribuidoraanatoliacuatroformas', fecha: '2026-09-25',
+    efectivo: 10000, cantidad_cheques: 2, total_cheques: 150000, total: 160000 }))
+  t.cobranza_cheques = [
+    { id: 'p8', cobranza_id: ID, foto_id: 'f8', es_echeck: false, banco_codigo: '007', sucursal_codigo: '123', codigo_postal: '5000', numero: '70000001',
+      cuenta: '00012345678', tipo: 'diferido', fecha_emision: '2026-09-20', fecha_pago: '2026-10-20', importe: 100000, estado: 'en_cartera', titulares: [], origen_datos: 'ocr' },
+    { id: 'e8', cobranza_id: ID, foto_id: null, es_echeck: true, banco_codigo: '007', sucursal_codigo: null, codigo_postal: null, numero: '00000042',
+      cuenta: null, tipo: 'diferido', fecha_emision: '2026-09-20', fecha_pago: '2026-10-30', importe: 50000, estado: 'en_cartera', titulares: [], origen_datos: 'manual' },
+  ]
+  t.cobranza_transferencias = [
+    { id: 't8', cobranza_id: ID, cuenta_id: 'cta-banco-nuss', importe: 30000, fecha: '2026-09-25', referencia: 'Op. 4455', created_at: '2026-09-25T15:00:00Z' },
+  ]
+  t.cuentas_caja = [{ id: 'cta-banco-nuss', nombre: 'Banco Macro · Nuss', unidad_negocio_id: 'u-n', medio: 'banco', moneda: 'ARS', empleado_id: 'emp-empresa', activa: true }]
+  t.v_empleados_publico.push({ id: 'emp-empresa', nombre: 'Empresa', unidad_negocio_id: null, tiene_acceso: false, tipo: 'empresa', activo: false })
+}

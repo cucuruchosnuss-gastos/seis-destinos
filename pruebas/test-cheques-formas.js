@@ -38,9 +38,10 @@ chk('tabla: la celda del banco lleva la etiqueta del cheque de papel y el banco'
 chk('tabla: la celda del banco lleva la etiqueta del e-cheque', banco(filaE) === ECHEQ + ' Banco de la Nación', banco(filaE))
 chk('tabla: el title del banco sigue siendo solo el nombre', /chq-tabla__banco" title="Banco de la Nación"/.test(filaE))
 
-const l1 = (h) => (h.match(/<div class="chq-tarjeta__l1">([\s\S]*?)<\/div>/) || [])[1] || ''
-chk('celular: arriba, al lado de cuándo se cobra, la etiqueta del papel', l1(S.htmlTarjetaCheque(papel, cob)).trim().endsWith(PAPEL))
-chk('celular: arriba, la etiqueta del e-cheque', l1(S.htmlTarjetaCheque(echeck, cob)).trim().endsWith(ECHEQ))
+const l2 = (h) => (h.match(/<div class="chq-tarjeta__l2">([\s\S]*?)<\/div>/) || [])[1] || ''
+chk('celular: la etiqueta del papel en el renglón de abajo, antes del número', l2(S.htmlTarjetaCheque(papel, cob)).includes(PAPEL + '<span class="chq-tarjeta__dato chq-tarjeta__num">'))
+chk('celular: la etiqueta del e-cheque en el renglón de abajo, antes del número', l2(S.htmlTarjetaCheque(echeck, cob)).includes(ECHEQ + '<span class="chq-tarjeta__dato chq-tarjeta__num">'))
+chk('celular: la etiqueta no se achica', /\.chq-tarjeta__l2 > \.forma-pago \{ flex: 0 0 auto;/.test(FUENTE))
 
 chk('la consulta de la cartera trae es_echeck', /from\('cobranza_cheques'\)\.select\(\s*'id, cobranza_id, foto_id, es_echeck,/.test(FUENTE))
 
