@@ -234,6 +234,14 @@
       font-family: var(--p-titulo); font-size: 18px; font-weight: 800; color: var(--p-tinta); padding: 0 10px;
     }
     .pr-cab__volver:active { background: var(--p-tinte); }
+    /* "Listo" arriba del teclado de la tablet (su "bottom" lo pone
+       revisarTeclado() con visualViewport). */
+    .pr-listo {
+      position: fixed; right: 12px; bottom: 8px; z-index: 80; min-height: 48px; min-width: 112px; padding: 0 22px;
+      border: 0; border-radius: 12px; background: var(--p-acento); color: #fff;
+      font-family: var(--p-titulo); font-size: 18px; font-weight: 800;
+      box-shadow: 0 4px 14px rgba(28, 26, 23, 0.25);
+    }
     /* "¿Salir sin guardar?": la pregunta de antes de perder algo a medio cargar. */
     .pr-confirma-fondo { position: fixed; inset: 0; z-index: 70; background: rgba(28, 26, 23, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
     .pr-confirma { background: var(--p-tarjeta); border-radius: 16px; padding: 20px; max-width: 440px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
@@ -1771,7 +1779,7 @@
             <h2 class="pr-lp__titulo" id="pr-corregir-titulo" tabindex="-1"></h2>
             <label class="pr-campo" id="pr-corregir-campo-cajas">
               <span class="pr-campo__rotulo">Cajas</span>
-              <input type="text" id="pr-corregir-cajas" class="pr-input" autocomplete="off">
+              <input type="text" id="pr-corregir-cajas" class="pr-input" inputmode="numeric" enterkeyhint="done" autocomplete="off">
             </label>
             <label class="pr-campo">
               <span class="pr-campo__rotulo">¿Por qué?</span>
@@ -1856,7 +1864,7 @@
               <div class="pr-ag__cajas-centro">
                 <div class="pr-contador">
                   <button type="button" class="pr-contador__paso" data-cajas-paso="-1" aria-label="Una caja menos">&minus;</button>
-                  <input type="text" id="pr-agregar-cajas" class="pr-contador__valor" autocomplete="off" aria-label="Cajas">
+                  <input type="text" id="pr-agregar-cajas" class="pr-contador__valor" inputmode="numeric" enterkeyhint="done" autocomplete="off" aria-label="Cajas">
                   <button type="button" class="pr-contador__paso" data-cajas-paso="1" aria-label="Una caja más">+</button>
                 </div>
                 <div class="pr-calculo">
@@ -1959,7 +1967,7 @@
             <div class="pr-cierre-caja" id="pr-cierre-campo-hora">
               <div class="pr-cierre-caja__dato">
                 <span class="pr-cierre-caja__rotulo" id="pr-cierre-hora-rotulo">SE APAGÓ EL FUEGO A LAS</span>
-                <input type="text" id="pr-cierre-hora" class="pr-cierre-num" inputmode="numeric" autocomplete="off" aria-label="Hora">
+                <input type="text" id="pr-cierre-hora" class="pr-cierre-num" inputmode="numeric" enterkeyhint="done" autocomplete="off" aria-label="Hora">
               </div>
               <button type="button" class="pr-cierre-paso" data-hora-paso="-5" aria-label="Cinco minutos menos">&minus;5</button>
               <button type="button" class="pr-cierre-paso" data-hora-paso="5" aria-label="Cinco minutos más">+5</button>
@@ -1969,7 +1977,7 @@
             <div class="pr-cierre-caja" id="pr-cierre-campo-scrap">
               <div class="pr-cierre-caja__dato">
                 <span class="pr-cierre-caja__rotulo">SCRAP</span>
-                <span class="pr-cierre-scrap"><input type="text" id="pr-cierre-scrap" class="pr-cierre-num" autocomplete="off" placeholder="—" aria-label="Scrap en kilos"><span class="pr-cierre-kg">kg</span></span>
+                <span class="pr-cierre-scrap"><input type="text" id="pr-cierre-scrap" class="pr-cierre-num" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="—" aria-label="Scrap en kilos"><span class="pr-cierre-kg">kg</span></span>
               </div>
               <button type="button" class="pr-cierre-paso" data-scrap-paso="-1" aria-label="Un kilo menos">&minus;</button>
               <button type="button" class="pr-cierre-paso" data-scrap-paso="1" aria-label="Un kilo más">+</button>
@@ -1985,7 +1993,7 @@
                   <span>La máquina se rompió y no volvió</span>
                 </button>
               </div>
-              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000"></textarea>
+              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000" autocomplete="off"></textarea>
               <p class="pr-campo__nota" id="pr-cierre-obs-nota" hidden></p>
             </div>
             <!-- Lo que hay que confirmar antes de mandar: una parada sin
@@ -2113,7 +2121,7 @@
             </label>
             <label class="pr-campo">
               <span class="pr-campo__rotulo">Cuánto, en kilos</span>
-              <input type="text" id="pr-otro-kg" class="pr-input" autocomplete="off">
+              <input type="text" id="pr-otro-kg" class="pr-input" inputmode="decimal" enterkeyhint="done" autocomplete="off">
             </label>
           </div>
           <p class="pr-error-pegado" id="pr-otro-error" hidden></p>
@@ -2148,7 +2156,7 @@
             <span class="pr-campo__rotulo">Cantidad (kg)</span>
             <span class="pr-rec__cant">
               <button type="button" class="pr-rec__paso" id="pr-agregar-ing-menos" aria-label="Menos">−</button>
-              <input type="text" class="pr-rec__num" id="pr-agregar-ing-kg" aria-label="Kilos del ingrediente agregado">
+              <input type="text" class="pr-rec__num" id="pr-agregar-ing-kg" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Kilos del ingrediente agregado">
               <button type="button" class="pr-rec__paso" id="pr-agregar-ing-mas" aria-label="Más">+</button>
             </span>
             <p class="pr-agregar-ing__guia" id="pr-agregar-ing-guia" hidden>Para chocolate van de 600 a 700 g.</p>
@@ -2223,6 +2231,10 @@
         <div class="pr-cerrado__lista" id="pr-cerrado-lista" data-scroll-propio></div>
         <button type="button" class="pr-prim" id="pr-cerrado-volver">Volver a las máquinas</button>
       </section>
+      <!-- EL TECLADO DE LA TABLET (01/10/2026): con el teclado en pantalla
+           abierto, "Listo" arriba de él lo cierra (y el campo que se está
+           escribiendo queda a la vista). Lo maneja revisarTeclado(). -->
+      <button type="button" class="pr-listo" id="pr-teclado-listo" hidden>Listo</button>
     </main>
 
   </div>
@@ -2939,6 +2951,64 @@
       }
       await ir()
       return 'cambio'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL TECLADO DE LA TABLET (01/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // En la tablet, el teclado en pantalla tapa la mitad de abajo y no tiene
+    // un "Listo" a mano. Con visualViewport se sabe cuánto queda a la vista:
+    // si el teclado está abierto sobre un campo de texto, aparece "Listo"
+    // pegado arriba del teclado (lo cierra) y el campo se trae a la vista.
+    // Los campos de número ya piden el teclado numérico (inputmode) y ninguno
+    // sugiere palabras guardadas (autocomplete="off"). El PIN no usa el
+    // teclado del sistema: tiene el suyo, en pantalla.
+    const MARGEN_TECLADO = 120
+
+    function campoDeTexto(el) {
+      if (!el) return false
+      if (el.tagName === 'TEXTAREA') return true
+      return el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'hidden', 'date', 'range'].includes(String(el.type ?? 'text'))
+    }
+
+    // El teclado está abierto si la parte visible es bastante más baja que la ventana.
+    function tecladoAbierto(vv = window.visualViewport, alto = window.innerHeight) {
+      return !!vv && Number.isFinite(vv.height) && alto - vv.height > MARGEN_TECLADO
+    }
+
+    function revisarTeclado() {
+      const b = document.getElementById('pr-teclado-listo')
+      if (!b) return false
+      const vv = window.visualViewport
+      const activo = document.activeElement
+      const abierto = campoDeTexto(activo) && tecladoAbierto(vv)
+      b.hidden = !abierto
+      document.body?.classList?.toggle('pr-teclado-abierto', abierto)
+      if (!abierto) return false
+      const abajo = Math.max(0, window.innerHeight - (vv.height + (vv.offsetTop || 0)))
+      b.style.bottom = `${Math.round(abajo + 8)}px`
+      // El campo que se escribe, arriba del teclado.
+      const r = activo.getBoundingClientRect?.()
+      if (r && (r.bottom > (vv.offsetTop || 0) + vv.height - 60 || r.top < (vv.offsetTop || 0))) activo.scrollIntoView?.({ block: 'center' })
+      return true
+    }
+
+    function cerrarTeclado() {
+      const a = document.activeElement
+      if (campoDeTexto(a)) a.blur?.()
+      return revisarTeclado()
+    }
+
+    function conectarTeclado() {
+      const vv = window.visualViewport
+      vv?.addEventListener?.('resize', revisarTeclado)
+      vv?.addEventListener?.('scroll', revisarTeclado)
+      document.addEventListener('focusin', revisarTeclado)
+      document.addEventListener('focusout', () => setTimeout(revisarTeclado, 0))
+      const b = document.getElementById('pr-teclado-listo')
+      // pointerdown: que tocar "Listo" no le saque el foco al campo antes de tiempo.
+      b?.addEventListener('pointerdown', ev => ev.preventDefault())
+      b?.addEventListener('click', cerrarTeclado)
     }
 
     function pintarCabeceraVista() {
@@ -4702,6 +4772,8 @@
       // Deslizar para recargar (o cualquier salida de la página): lo que está
       // a medio cargar queda guardado para cuando se vuelva a esa sección.
       window.addEventListener('pagehide', guardarCargaAMedias)
+      // "Listo" arriba del teclado de la tablet.
+      conectarTeclado()
       // Cualquier toque cuenta como uso, para el cierre por inactividad.
       for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, tocar)
       // Un solo reloj: el cierre por inactividad y la cuenta regresiva del
@@ -9974,7 +10046,7 @@
       const cant = editable
         ? '<span class="pr-rec__cant">' +
           `<button type="button" class="pr-rec__paso" data-menos="${esc(id)}" aria-label="Menos ${esc(it.ingrediente)}"${kg <= 0 ? ' disabled' : ''}>−</button>` +
-          `<input type="text" class="pr-rec__num${aleja ? ' pr-rec__num--aleja' : ''}" data-cant="${esc(id)}" aria-label="Kilos de ${esc(it.ingrediente)}">` +
+          `<input type="text" class="pr-rec__num${aleja ? ' pr-rec__num--aleja' : ''}" data-cant="${esc(id)}" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Kilos de ${esc(it.ingrediente)}">` +
           `<button type="button" class="pr-rec__paso" data-mas="${esc(id)}" aria-label="Más ${esc(it.ingrediente)}">+</button></span>`
         : `<span class="pr-rec__cant pr-rec__cant--fija"><span class="pr-rec__valor" data-valor="${esc(id)}">${htmlCantidadGrande(kg)}</span></span>`
       let accionRenglon = ''
@@ -10009,7 +10081,7 @@
         `<span class="pr-rec__marca">${esc(marca)}</span></span>` +
         '<span class="pr-rec__cant">' +
         `<button type="button" class="pr-rec__paso" data-menos-otro="${esc(o.id)}" aria-label="Menos ${esc(o.nombre)}"${(o.kg ?? 0) <= 0 ? ' disabled' : ''}>−</button>` +
-        `<input type="text" class="pr-rec__num" data-cant-otro="${esc(o.id)}" aria-label="Kilos de ${esc(o.nombre)}">` +
+        `<input type="text" class="pr-rec__num" data-cant-otro="${esc(o.id)}" inputmode="decimal" enterkeyhint="done" autocomplete="off" aria-label="Kilos de ${esc(o.nombre)}">` +
         `<button type="button" class="pr-rec__paso" data-mas-otro="${esc(o.id)}" aria-label="Más ${esc(o.nombre)}">+</button>` +
         '</span>' +
         '<span class="pr-rec__lote-celda"><span class="pr-rec__nota">no descuenta stock</span></span>' +

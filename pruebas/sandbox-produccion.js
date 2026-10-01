@@ -294,6 +294,8 @@ const NUEVAS_PLANTA = [
   'htmlLatMaquina', 'htmlLatSecciones', 'htmlLatSala', 'htmlLatConexion', 'htmlLateral', 'lateralVisible',
   // Lo que queda a medio cargar al recargar deslizando (01/10/2026)
   'guardarCargaAMedias', 'tomarCargaAMedias',
+  // El teclado de la tablet: "Listo" arriba del teclado (01/10/2026)
+  'campoDeTexto', 'tecladoAbierto', 'revisarTeclado', 'cerrarTeclado',
   'pintarLateral', 'htmlBandaQuien', 'pintarBandaQuien', 'cancelarOtroModo', 'cambiarDePersona',
   'irASeccion', 'abrirLoProducido', 'mostrarHistorialMaquina',
   // Sala de masa con dos modos (28/09/2026): la masa nueva, lo que queda de
@@ -362,6 +364,7 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES',
   // Lo que queda a medio cargar al recargar (01/10/2026)
   'CLAVE_AGREGAR_A_MEDIAS', 'CLAVE_PARADA_A_MEDIAS', 'CAMPOS_AGREGAR_A_MEDIAS',
+  'MARGEN_TECLADO',
   // El botón de volver (30/09/2026)
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
@@ -544,7 +547,7 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
       __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
-      __uuids(){ return __uuids }, __timeouts, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo },
+      __uuids(){ return __uuids }, __timeouts, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo }, __win: window,
       ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }
