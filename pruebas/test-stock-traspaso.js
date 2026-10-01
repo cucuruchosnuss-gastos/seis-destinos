@@ -149,7 +149,7 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'esc', 'normalizar', 'hoyLocal', 'tieneTarea', 'nombreDeUnidadBarra', 'cargarStock',
-  'unidadesTraspaso', 'puedeTraspasar', 'nuevoTraspaso', 'destinoPorDefectoTrp',
+  'unidadesTraspaso', 'puedeTraspasar', 'nuevoUuidTrp', 'nuevoTraspaso','destinoPorDefectoTrp',
   'cargarCatalogoTrp', 'cargarStockTrp', 'agruparStockTrp', 'listaInternaDe', 'cargarListaInternaTrp',
   'proponerPrecioTrp', 'presentacionTrp', 'presentacionesOrigenTrp', 'presentacionEnDestinoTrp',
   'textoFaltaEnDestinoTrp', 'lotesTrp', 'stockPresentacionTrp', 'conosTrp', 'nombreConoTrp',
@@ -607,7 +607,9 @@ pendientes.push(async () => {
       { presentacion_id: 'pp1c', marca_id: 'm1', lotes: [{ lote: 'L-a', cajas: 4 }], precio_caja: null },
     ],
     p_fecha: '2026-09-30', p_observaciones: 'para el finde',
+    p_client_uuid: t.clientUuid,
   }
+  chk('payload: la clave de idempotencia es un uuid', /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(String(t.clientUuid)), t.clientUuid)
   chk('payload: exacto (claves, marca null sin cono, lotes con cajas enteras, precio null si vacío)', JSON.stringify(p) === JSON.stringify(esperado), p)
   t.obs = '   '
   chk('payload: observaciones vacías viajan null', S.parametrosTraspaso(t).p_observaciones === null)
@@ -651,7 +653,9 @@ pendientes.push(async () => {
   U.anotarPedidoTrp(U.estado.trp.renglones[0].id, 3)
   U.completarRenglonTrp(U.estado.trp.renglones[0].id)
   await U.confirmarTraspaso()
-  chk('corte de red: avisa que no se sabe si entró', /No se pudo saber si el traspaso entró/.test(el(U, 'trp-error').textContent))
+  chk('corte de red: avisa que no se sabe si entró y que reintentar no lo duplica', /no se sabe si el traspaso entró/.test(el(U, 'trp-error').textContent) && /no se pasa dos veces/.test(el(U, 'trp-error').textContent), el(U, 'trp-error').textContent)
+  chk('corte de red: ya NO manda a revisar el stock del destino antes de reintentar', !/fijate|Antes de volver a mandarlo|Stock terminado/.test(el(U, 'trp-error').textContent))
+  chk('el archivo ya no dice "antes de volver a mandarlo"', !/Antes de volver a mandarlo/.test(SCRIPT))
 
   // Fecha de mañana: no se manda.
   const V = await abierto()
@@ -664,6 +668,53 @@ pendientes.push(async () => {
   V.estado.trp.fecha = '2026-09-30'
   V.estado.trp.destinoId = 'u-nuss'
   chk('origen = destino: no se manda', V.faltanTraspaso(V.estado.trp).some(f => /dos fábricas distintas/.test(f)))
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 9b. IDEMPOTENCIA: la MISMA clave en cada reintento (p_client_uuid)
+// ══════════════════════════════════════════════════════════════════════════
+pendientes.push(async () => {
+  let intento = 0
+  const S = await abierto({
+    rpc: {
+      traspasar_producto_terminado: () => {
+        intento++
+        if (intento === 1) throw new Error('red')
+        return { data: { traspaso_id: 'tr-1', reintento: true }, error: null }
+      },
+    },
+  })
+  const t = S.estado.trp
+  const clave = t.clientUuid
+  S.agregarRenglonTrp('pp1', null)
+  S.anotarPedidoTrp(t.renglones[0].id, 3)
+  S.completarRenglonTrp(t.renglones[0].id)
+  await S.confirmarTraspaso()
+  chk('reintento: después del corte la lista sigue y la clave no cambió', t.renglones.length === 1 && t.clientUuid === clave)
+  await S.confirmarTraspaso()
+  await esperar()
+  const llamadas = S.__llamadas.rpc.filter(x => x[0] === 'traspasar_producto_terminado').map(x => x[1].p_client_uuid)
+  chk('reintento: las dos llamadas mandan la MISMA clave', llamadas.length === 2 && llamadas[0] === clave && llamadas[1] === clave, llamadas)
+  chk('reintento: "ya había entrado" se dice como ÉXITO, sin error', /ya había entrado/.test(S.__llamadas.exitos[0] ?? '') && /No se pasó dos veces/.test(S.__llamadas.exitos[0] ?? '') && el(S, 'trp-error').hidden === true, S.__llamadas.exitos)
+  chk('reintento: no inventa una deuda (la base no devuelve el importe)', !/le debe/.test(S.__llamadas.exitos[0] ?? ''))
+  chk('después del éxito: el próximo traspaso tiene OTRA clave', !!t.clientUuid && t.clientUuid !== clave)
+
+  // Un error de la base (rechazo, la transacción se revierte): la clave sigue.
+  const U = await abierto({ rpc: { traspasar_producto_terminado: () => ({ data: null, error: { message: 'Poné las cajas de cada lote.' } }) } })
+  const k = U.estado.trp.clientUuid
+  U.agregarRenglonTrp('pp1', null)
+  U.anotarPedidoTrp(U.estado.trp.renglones[0].id, 3)
+  U.completarRenglonTrp(U.estado.trp.renglones[0].id)
+  await U.confirmarTraspaso()
+  chk('error de la base: la clave no cambia', U.estado.trp.clientUuid === k)
+
+  // Cambiar el origen vacía la lista: otro traspaso, otra clave.
+  const V = await abierto()
+  const k1 = V.estado.trp.clientUuid
+  V.pedirCambioOrigenTrp('u-dolce')
+  await esperar()
+  chk('cambiar el origen: otra clave', V.estado.trp.origenId === 'u-dolce' && V.estado.trp.clientUuid !== k1 && !!V.estado.trp.clientUuid)
+  chk('dos traspasos nuevos no comparten clave', V.nuevoTraspaso().clientUuid !== V.nuevoTraspaso().clientUuid)
 })
 
 // ══════════════════════════════════════════════════════════════════════════

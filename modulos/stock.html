@@ -7626,8 +7626,23 @@
     //  - Busca en el destino el producto con el MISMO nombre, con_cono,
     //    media_caja y unidades_por_caja (activa). Si no está, rechaza: acá se
     //    avisa ANTES, con su mismo texto, y ese renglón no se deja confirmar.
-    //  - No tiene clave de idempotencia: un reintento después de un corte de
-    //    red puede pasarlo dos veces. El error de conexión lo dice.
+    //  - IDEMPOTENCIA (30/09/2026): recibe p_client_uuid. La clave se genera UNA
+    //    vez, al empezar el traspaso (nuevoTraspaso), y viaja IGUAL en cada
+    //    reintento; si la base ya lo tiene, devuelve {traspaso_id, reintento:
+    //    true} sin volver a pasarlo, y eso se dice como éxito. La clave se
+    //    renueva SOLO cuando el traspaso terminó bien o cuando se cambia el
+    //    origen (ahí la lista se vacía: es otro traspaso).
+
+    // Un uuid nuevo para el traspaso (la clave de idempotencia).
+    function nuevoUuidTrp() {
+      if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+      const b = new Uint8Array(16)
+      globalThis.crypto.getRandomValues(b)
+      b[6] = (b[6] & 0x0f) | 0x40
+      b[8] = (b[8] & 0x3f) | 0x80
+      const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
+      return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+    }
 
     // Lo que se lee del stock terminado de a una página (PostgREST corta en
     // 1000) y el tope de páginas: pasado el tope, la pantalla dice que el
@@ -7661,6 +7676,8 @@
         lista: undefined,
         enviando: false, intentado: false, errorBase: null, exito: null,
         origenPendiente: null,
+        // La clave de idempotencia: la MISMA en cada reintento.
+        clientUuid: nuevoUuidTrp(),
       }
       t.destinoId = destinoPorDefectoTrp(t)
       return t
@@ -7953,6 +7970,7 @@
         p_items: t.renglones.map(r => itemParaBaseTrp(t, r)),
         p_fecha: t.fecha || null,
         p_observaciones: String(t.obs ?? '').trim() || null,
+        p_client_uuid: t.clientUuid,
       }
     }
 
@@ -8331,6 +8349,8 @@
       t.intentado = false
       t.errorBase = null
       t.exito = null
+      // Otro origen vacía la lista: es otro traspaso, con su propia clave.
+      t.clientUuid = nuevoUuidTrp()
       if (!t.destinoId || t.destinoId === t.origenId) t.destinoId = destinoPorDefectoTrp(t)
       t.stock = null
       t.lista = undefined
@@ -8473,6 +8493,11 @@
     function textoExitoTrp(t, data, cajas) {
       const origen = nombreDeUnidadBarra(t.origenId)
       const destino = nombreDeUnidadBarra(t.destinoId)
+      // La base ya lo tenía con esta misma clave (el primer intento entró y se
+      // cortó la respuesta): NO se pasó dos veces. No devuelve el importe.
+      if (data?.reintento === true) {
+        return `Listo: este traspaso de ${origen} a ${destino} ya había entrado (se había cortado la conexión al mandarlo). No se pasó dos veces.`
+      }
       const crudo = data?.importe
       const importe = crudo === null || crudo === undefined || crudo === '' ? null : Number(crudo)
       return `Listo: pasaron ${textoCajasTrp(cajas)} de ${origen} a ${destino}. ` +
@@ -8506,10 +8531,14 @@
         t.intentado = false
         t.eligiendo = null
         t.stock = null
+        // Terminó: el próximo traspaso es otro, con su propia clave.
+        t.clientUuid = nuevoUuidTrp()
         cargarStockTrp(t).then(() => { if (estado.trp === t) renderizarTraspaso() })
       } catch (err) {
         console.error(err)
-        t.errorBase = 'No se pudo saber si el traspaso entró: falló la conexión. Antes de volver a mandarlo, fijate en el stock terminado de la fábrica de destino (Producción → Stock terminado) que no esté ya pasado.'
+        // La clave NO cambia: volver a confirmar manda la misma, y si el
+        // primero ya había entrado la base lo dice sin pasarlo dos veces.
+        t.errorBase = 'Falló la conexión y no se sabe si el traspaso entró. Tocá «Confirmar el traspaso» de nuevo: si ya había entrado, no se pasa dos veces.'
       } finally {
         t.enviando = false
         renderizarTraspaso()
