@@ -184,6 +184,22 @@
     .pr-cab__titulo--solo { color: var(--p-tinta); }
     .pr-cab__reloj { font-size: 16px; font-weight: 700; color: var(--p-tinta-2); white-space: nowrap; }
     @media (orientation: portrait) { .pr-cab__reloj { display: none; } }
+    /* El botón de volver: misma posición y mismo tamaño en todas las
+       pantallas de los dos modos (ancho fijo: "Inicio" y "Atrás" miden lo mismo). */
+    .pr-cab__volver {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      width: 112px; min-height: 44px; flex-shrink: 0; box-sizing: border-box;
+      border: 1.5px solid var(--p-borde-boton); border-radius: 12px; background: var(--p-tarjeta);
+      font-family: var(--p-titulo); font-size: 18px; font-weight: 800; color: var(--p-tinta); padding: 0 10px;
+    }
+    .pr-cab__volver:active { background: var(--p-tinte); }
+    /* "¿Salir sin guardar?": la pregunta de antes de perder algo a medio cargar. */
+    .pr-confirma-fondo { position: fixed; inset: 0; z-index: 70; background: rgba(28, 26, 23, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .pr-confirma { background: var(--p-tarjeta); border-radius: 16px; padding: 20px; max-width: 440px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+    .pr-confirma__titulo { margin: 0; font-family: var(--p-titulo); font-size: 22px; font-weight: 800; color: var(--p-tinta); }
+    .pr-confirma__texto { margin: 0; font-size: 16px; color: var(--p-tinta-2); }
+    .pr-confirma__botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .pr-confirma__botones .pr-btn { min-height: 52px; }
 
     /* ── Piezas comunes ── */
     .pr-tarjeta { background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 12px; }
@@ -1334,6 +1350,20 @@
          modo kiosco. En "¿Quién sos?" no se dibuja: esa pantalla es completa. -->
     <aside class="pr-lateral" id="pr-barra" hidden aria-label="Barra de la planta"></aside>
 
+    <!-- "¿Salir sin guardar?" (30/09/2026): antes de irse de algo a medio
+         cargar (el botón de volver, otra pestaña de máquina). Nunca confirm():
+         no se puede estilar y algunos webviews lo bloquean. -->
+    <div class="pr-confirma-fondo" id="pr-confirma" hidden>
+      <div class="pr-confirma" role="alertdialog" aria-modal="true" aria-labelledby="pr-confirma-titulo">
+        <p class="pr-confirma__titulo" id="pr-confirma-titulo"></p>
+        <p class="pr-confirma__texto" id="pr-confirma-texto"></p>
+        <div class="pr-confirma__botones">
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-confirma-no">No, seguir</button>
+          <button type="button" class="pr-btn pr-btn--accion" id="pr-confirma-si"></button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mientras el acceso maestro está activo se dice arriba de todo, porque
          todo lo que se haga queda a nombre de esa persona. -->
     <div class="pr-maestro" id="pr-maestro" hidden>
@@ -1374,6 +1404,12 @@
            1": lo elegido), el título de la pantalla y, apaisada, el reloj. Una
            sola línea de 36 px; la pinta pintarCabecera(). -->
       <header class="pr-cab" id="pr-cab" hidden>
+        <!-- EL BOTÓN DE VOLVER (30/09/2026): en toda pantalla que no sea el
+             Inicio, arriba a la izquierda y siempre igual. Vuelve al Inicio DEL
+             MODO (nunca cambia de modo: eso pide PIN); en los pasos de Agregar
+             producto y de anotar una parada, al paso anterior. Lo pinta
+             pintarVolver(). -->
+        <button type="button" class="pr-cab__volver" id="pr-cab-volver" hidden><svg class="pr-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="pr-cab-volver-texto">Inicio</span></button>
         <span class="pr-cab__ctx" id="pr-cab-ctx"></span>
         <span class="pr-cab__sep" id="pr-cab-sep" aria-hidden="true"></span>
         <h1 class="pr-cab__titulo" id="pr-cab-titulo"></h1>
@@ -2689,7 +2725,94 @@
       const t = document.getElementById('pr-cab-titulo')
       t.textContent = c.titulo
       t.classList?.toggle('pr-cab__titulo--solo', !c.ctx)
+      pintarVolver()
       tocarReloj()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL BOTÓN DE VOLVER (30/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Para salir de una sección había que buscar "Inicio" en la barra. Ahora
+    // cada pantalla que no es el Inicio tiene "‹ Inicio" arriba a la izquierda.
+    // Vuelve al Inicio DEL MODO en el que se está (nunca cambia de modo: eso
+    // pide PIN y va por "Cambiar a…"). En los pasos de Agregar producto y de
+    // anotar una parada vuelve al paso anterior ("‹ Atrás"), y en el primero
+    // al Inicio. Si hay algo a medio cargar que se perdería, pregunta antes.
+    const VISTAS_INICIO = ['pr-produccion', 'pr-sala']
+
+    // { tipo: 'paso' | 'paso-parada' | 'inicio', texto, paso } o null (en el
+    // Inicio no hay botón).
+    function destinoVolver() {
+      const v = estado.vista
+      if (!v || VISTAS_INICIO.includes(v)) return null
+      if (v === 'pr-agregar-prod') {
+        const a = estado.agregar
+        const pasos = a ? pasosAgregar(a, estado.catalogo) : []
+        const i = pasos.findIndex(x => x.clave === a?.paso)
+        if (i > 0) return { tipo: 'paso', texto: 'Atrás', paso: pasos[i - 1].clave }
+      }
+      return { tipo: 'inicio', texto: 'Inicio' }
+    }
+
+    // ¿Se perdería algo yendo al Inicio? Solo lo que NO se guarda solo: el
+    // cierre y la masa ya tienen su borrador en la tablet.
+    function aMedioCargar() {
+      switch (estado.vista) {
+        case 'pr-abrir': return (estado.abrir?.filas ?? []).some(f => f.elegida && !f.bloqueada)
+        case 'pr-agregar-prod': return !!(estado.agregar && (estado.agregar.productoId || estado.agregar.corrige))
+        default: return false
+      }
+    }
+
+    function pintarVolver() {
+      const b = document.getElementById('pr-cab-volver')
+      if (!b) return
+      const d = lateralVisible() ? destinoVolver() : null
+      b.hidden = !d
+      if (!d) return
+      document.getElementById('pr-cab-volver-texto').textContent = d.texto
+      b.setAttribute('aria-label', d.tipo === 'inicio' ? `Volver al Inicio de ${estado.modo === 'masa' ? 'Sala de masa' : 'Producción'}` : 'Volver al paso anterior')
+    }
+
+    function irAlInicioDelModo() {
+      return estado.modo === 'masa' ? mostrarSala() : mostrarTablero()
+    }
+
+    function volverEnPlanta() {
+      tocar()
+      const d = destinoVolver()
+      if (!d) return 'nada'
+      if (d.tipo === 'paso') { irAPasoAgregar(d.paso); return 'paso' }
+      if (aMedioCargar()) {
+        pedirConfirmacion({ titulo: '¿Salir sin guardar?', texto: 'Lo que estás cargando todavía no se guardó y se va a perder.', si: 'Sí, salir' },
+          () => irAlInicioDelModo())
+        return 'pregunta'
+      }
+      irAlInicioDelModo()
+      return 'inicio'
+    }
+
+    // La pregunta de antes de perder algo. accion() corre solo con "Sí".
+    function pedirConfirmacion({ titulo, texto, si }, accion) {
+      estado.confirma = { titulo, texto, si, accion }
+      pintarConfirma()
+      document.getElementById('pr-confirma-no').focus?.()
+    }
+
+    function pintarConfirma() {
+      const c = estado.confirma
+      document.getElementById('pr-confirma').hidden = !c
+      if (!c) return
+      document.getElementById('pr-confirma-titulo').textContent = c.titulo
+      document.getElementById('pr-confirma-texto').textContent = c.texto
+      document.getElementById('pr-confirma-si').textContent = c.si
+    }
+
+    function responderConfirma(si) {
+      const c = estado.confirma
+      estado.confirma = null
+      pintarConfirma()
+      if (si && c?.accion) return c.accion()
     }
 
     // "Máquina 4 · turno nuevo" con UNA máquina elegida; con varias, cuántas.
@@ -3174,6 +3297,8 @@
       // Irse de "Asignar PIN" por cualquier camino (otro modo, Salir, el
       // cierre por inactividad) borra el PIN a medio tipear de la memoria.
       if (id !== 'pr-asignar') estado.asignar = null
+      // Una pregunta de "¿Salir sin guardar?" es de la pantalla que se deja.
+      if (estado.confirma) { estado.confirma = null; pintarConfirma() }
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       pintarCabecera()
@@ -4248,6 +4373,12 @@
         if (t) { mostrarHistorialMaquina(t.dataset.lateralTurno); return }
         const b = ev.target.closest('[data-modo]'); if (b && !b.disabled) tocarModo(b.dataset.modo)
       })
+      // El botón de volver y la pregunta "¿Salir sin guardar?" (30/09/2026).
+      document.getElementById('pr-cab-volver').addEventListener('click', volverEnPlanta)
+      document.getElementById('pr-confirma-no').addEventListener('click', () => responderConfirma(false))
+      document.getElementById('pr-confirma-si').addEventListener('click', () => responderConfirma(true))
+      document.getElementById('pr-confirma').addEventListener('click', ev => { if (ev.target.id === 'pr-confirma') responderConfirma(false) })
+      document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && estado.confirma) responderConfirma(false) })
       // La banda de "¿Quién sos?" también se repinta entera.
       document.getElementById('pr-quien-banda').addEventListener('click', ev => {
         const ir = ev.target.closest('#pr-quien-ir-masa')
@@ -7376,6 +7507,8 @@
       const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0
       confirmar.textContent = a.corrige ? 'Guardar la corrección'
         : (n ? `Agregar ${formatearNumeroAr(n, { decimales: 0 })} ${n === 1 ? 'caja' : 'cajas'} a lo producido` : 'Agregar a lo producido')
+      // "‹ Atrás" o "‹ Inicio" según el paso.
+      pintarVolver()
     }
 
     // La caja y el embolsado viajan SIEMPRE: el embolsado es el efectivo (con

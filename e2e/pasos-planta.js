@@ -76,6 +76,11 @@ const PASOS_PLANTA = [
     await page.locator('#pr-barra [data-seccion="cierre"]').click()
     await expect(page.locator('#pr-cierre')).toBeVisible()
   }],
+  // El botón de volver (30/09/2026): "‹ Inicio" lleva al Inicio del modo.
+  ['volver-inicio', async (page) => {
+    await page.locator('#pr-cab-volver').click()
+    await expect(page.locator('#pr-produccion')).toBeVisible()
+  }],
   ['ir-a-sala', async (page) => {
     await page.locator('#pr-barra [data-modo="masa"]').click()
     await persona(page, 'Agustín Barrera').click()
@@ -104,6 +109,10 @@ const PASOS_PLANTA = [
     await page.locator('#pr-lote-panel-cerrar').click()
     await page.locator('[data-lateral-turno]').first().click()
     await expect(page.locator('#pr-hist-maq')).toBeVisible()
+  }],
+  ['volver-sala', async (page) => {
+    await page.locator('#pr-cab-volver').click()
+    await expect(page.locator('#pr-sala')).toBeVisible()
   }],
 ]
 

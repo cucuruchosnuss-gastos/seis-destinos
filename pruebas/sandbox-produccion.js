@@ -328,6 +328,8 @@ const NUEVAS_PLANTA = [
   'recetaCambioDesdeAnterior', 'nuevosEnReceta', 'otrosDeLaAnterior', 'textoCambioReceta', 'leerRecetaDeLaAnterior',
   // "Anterior (última)": qué masa fue y cuándo (30/09/2026).
   'diaDeLaMasa', 'cuandoFueLaAnterior', 'leerTurnoDeLaAnterior',
+  // El botón de volver y "¿Salir sin guardar?" (30/09/2026).
+  'destinoVolver', 'aMedioCargar', 'pintarVolver', 'irAlInicioDelModo', 'volverEnPlanta', 'pedirConfirmacion', 'pintarConfirma', 'responderConfirma',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -340,7 +342,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'MOTIVOS_PARADA', 'OTRO_MOTIVO', 'COLOR_TAMANO', 'COLOR_CHOCO',
   'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES',
   // Recargar (30/09/2026)
-  'VISTAS_A_MEDIO_CARGAR']
+  'VISTAS_A_MEDIO_CARGAR',
+  // El botón de volver (30/09/2026)
+  'VISTAS_INICIO']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
