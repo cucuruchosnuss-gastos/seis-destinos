@@ -4,6 +4,7 @@
 
 const SEGURAS_CHEQUES = [
   ['cantidadCartera', 'número: conteo calculado en resumenCartera()'],
+  ['htmlFormaCheque(ch)', 'HTML constante de htmlFormaCheque() (30/09/2026): una de dos etiquetas fijas del código, sin nada de la base'],
   ['htmlTablaCheques(visibles, estado.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
   ['htmlAvisoVencimientos(estado.vencimientos, !!estado.filtros.soloVencen)', 'HTML armado por htmlAvisoVencimientos(), que escapa adentro'],
   ['celdaPago', 'HTML ya escapado: se arma arriba con esc() de la fecha y de la etiqueta del plazo'],

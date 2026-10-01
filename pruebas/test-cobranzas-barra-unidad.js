@@ -108,6 +108,8 @@ const FUNCIONES = [
   'unidadDeCobranza', 'cobranzasVisibles', 'pasaFiltroUnidad', 'filtroUnidadDeConsulta',
   'nombreUnidadElegida', 'pintarNotaUnidad', 'aplicarUnidadBarra', 'alCambiarUnidadCob',
   'parametrosResumen', 'cargarResumen', 'pintarResumen', 'numeroDeResumen', 'htmlResumen',
+  // E-cheques y transferencias (30/09/2026)
+  'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'textoOpcional', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila', 'htmlDatosCheque', 'textoDiasHastaPago', 'diasEntre',
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA', 'PAGINA', 'UUID_COB',
@@ -348,7 +350,13 @@ async function pruebas() {
     try {
       baseline = execSync(`git show ${BASELINE}:modulos/cobranzas.html`, { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     } catch { baseline = '' }
-    const form = (t) => { const i = t.indexOf('<div id="cob-vista-form" hidden>'); return i === -1 ? '' : t.slice(i, t.indexOf('<!-- ══ BARRA FIJA', i)) }
+    // Las dos piezas que sumó el 30/09/2026 (e-cheques y transferencias: el
+    // resumen de las cuatro formas y su sección) son de Administración y no
+    // piden unidad: se sacan para comparar (test-cobranzas-formas.js las prueba).
+    const sinFormas = (t) => t
+      .replace(/\n\n {6}<!-- Arriba de la cobranza, el total de las cuatro formas[\s\S]*?<div class="cob-resumen-formas" id="cob-resumen-formas" hidden><\/div>/, '')
+      .replace(/\n\n {6}<!-- E-cheques y transferencias \(30\/09\/2026\)[\s\S]*?<button type="button" class="cob-btn cob-btn--chico" id="cob-btn-transferencia">\+ Agregar transferencia<\/button>\n {8}<\/div>\n {6}<\/div>/, '')
+    const form = (t) => { const i = t.indexOf('<div id="cob-vista-form" hidden>'); return i === -1 ? '' : sinFormas(t.slice(i, t.indexOf('<!-- ══ BARRA FIJA', i))) }
     chk(`baseline ${BASELINE}: se pudo leer (si no, esta verificación no mide nada)`, baseline.length > 100000 && form(baseline).length > 1000)
     chk(`el formulario de carga es IDÉNTICO al de ${BASELINE} (no pide unidad)`, form(baseline) === form(FUENTE) && form(FUENTE).length > 1000)
     chk('el formulario de carga no nombra ninguna unidad', !/unidad/i.test(form(FUENTE)))

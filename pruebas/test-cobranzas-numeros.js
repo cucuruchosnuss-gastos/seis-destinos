@@ -113,6 +113,8 @@ const FUNCIONES = [
   // Para mostrar
   'numeroDeResumen', 'htmlResumen', 'tieneTarea',
   'htmlChequeDetalle', 'normalizarCliente', 'textoSalidaCheque', 'htmlLinkChequeEnCartera',
+  // E-cheques y transferencias (30/09/2026)
+  'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila',
 ]
 const CONSTANTES = [
   'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_CHEQUE', 'ESTADOS_COBRANZA', 'ETIQUETA_ESTADO_COBRANZA', 'puedeProcesar',
@@ -381,10 +383,15 @@ async function main() {
     chk('identificadores: el CUIT va en dígitos, sin puntos', b.titulares[0].cuit === '20123456783', b.titulares[0].cuit)
     chk('identificadores: los renglones de la banda no se enlazan como número',
       !/enlazarCampoNumero\([^)]*data-r[123]/.test(FUENTE) && !/data-r[123][^>]*placeholder="0,00"/.test(FUENTE))
-    // Solo dos campos se enlazan: el efectivo y el importe del cheque.
+    // Solo se enlazan IMPORTES: el efectivo, el del cheque de papel y (desde
+    // el 30/09/2026) el de cada e-cheque y transferencia (campoImporte).
+    // Ningún identificador.
     const enlaces = [...FUENTE.matchAll(/enlazarCampoNumero\(([^,)]+)/g)].map(m => m[1].trim())
-    chk('solo se enlazan el efectivo y el importe del cheque', enlaces.length === 2 &&
-      enlaces.some(e => e.includes("'cob-efectivo'")) && enlaces.some(e => e === 'inp'), enlaces)
+    chk('solo se enlazan el efectivo, el importe del cheque y el de e-cheques / transferencias', enlaces.length === 3 &&
+      enlaces.some(e => e.includes("'cob-efectivo'")) && enlaces.some(e => e === 'inp') && enlaces.some(e => e === 'campoImporte'), enlaces)
+    chk('el campo enlazado de e-cheques y transferencias es solo el importe (data-importe-forma)',
+      /querySelectorAll\('\[data-importe-forma\]'\)\.forEach\(campoImporte =>/.test(FUENTE) &&
+      (FUENTE.match(/data-importe-forma placeholder/g) || []).length === 2)
   }
 
   // ══ 7. Estático: no queda un parser propio ni una lectura con Number/parseFloat

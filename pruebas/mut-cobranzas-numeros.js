@@ -44,7 +44,8 @@ correrMutaciones({
     { nombre: 'el efectivo que viaja se lee con parseFloat',
       de: '      return leerNumeroAr(v) ?? 0', a: `      return ${PF('v')} ?? 0` },
     { nombre: 'el total del formulario suma con parseFloat',
-      de: '.reduce((acc, c) => acc + (leerNumeroAr(c.importe) ?? 0), 0)', a: `.reduce((acc, c) => acc + (${PF('c.importe')} || 0), 0)` },
+      // Desde el 30/09/2026 el total suma las cuatro formas con sumaImportes().
+      de: '.reduce((acc, x) => acc + (leerNumeroAr(x?.importe) ?? 0), 0)', a: `.reduce((acc, x) => acc + (${PF('x?.importe')} || 0), 0)` },
     { nombre: '"el efectivo no se entiende" se decide con Number',
       de: "if (efectivoCrudo !== '' && leerNumeroAr(f.efectivo) === null) {", a: "if (efectivoCrudo !== '' && Number(f.efectivo) === null) {" },
     { nombre: '"el efectivo no se entiende" se decide con parseFloat',

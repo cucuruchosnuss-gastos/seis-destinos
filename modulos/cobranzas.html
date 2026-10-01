@@ -1012,7 +1012,8 @@
       }
       .cob-maestro--activo .cob-fila:hover { box-shadow: none; transform: none; background: var(--cob-hover-fila); }
       .cob-maestro--activo .cob-fila > .cob-fila__linea,
-      .cob-maestro--activo .cob-fila > .cob-fila__meta { display: none; }
+      .cob-maestro--activo .cob-fila > .cob-fila__meta,
+      .cob-maestro--activo .cob-fila > .cob-formas-linea { display: none; }
       .cob-maestro--activo .cob-fila__tabla {
         display: grid;
         grid-template-columns: var(--cob-cols-tabla);
@@ -1077,6 +1078,53 @@
       overflow-wrap: anywhere;
     }
     .cob-unidad-sin { font-style: italic; }
+    /* Las cuatro formas de pago (30/09/2026): el resumen de arriba del
+       formulario (solo Administración o si ya hay e-cheques o
+       transferencias) y la línea de etiquetas del listado y del detalle. Las
+       etiquetas (.forma-pago) son de css/main.css. */
+    .cob-resumen-formas {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: var(--radio-tarjeta);
+      padding: 0.75rem 1rem;
+      margin: 0 0 0.75rem;
+    }
+    .cob-resumen-formas__filas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      gap: 0.375rem 0.75rem;
+    }
+    .cob-resumen-formas__fila {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .cob-resumen-formas__importe { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .cob-resumen-formas__total {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--color-borde);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .cob-formas-linea {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.375rem;
+    }
+    /* En la tabla de la compu, en UN renglón: la celda del cliente es angosta
+       y la fila no puede crecer; lo que no entra se corta (la cobranza abierta
+       al costado las muestra todas). */
+    .cob-formas-tabla { display: flex; flex-wrap: nowrap; overflow: hidden; margin-top: 0.25rem; }
+    /* La etiqueta dentro del rótulo del tipo de cheque, que va en mayúsculas:
+       la etiqueta conserva su forma, igual que en el resto de la app. */
+    .cob-cheque__tipo .forma-pago { text-transform: none; letter-spacing: 0; margin-right: 0.25rem; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1180,6 +1228,11 @@
 
       <div class="cob-aviso" id="cob-form-aviso" hidden></div>
 
+      <!-- Arriba de la cobranza, el total de las cuatro formas de pago. Solo
+           para Administración, o si la cobranza ya trae e-cheques o
+           transferencias: al chofer no le cambia nada. -->
+      <div class="cob-resumen-formas" id="cob-resumen-formas" hidden></div>
+
       <div class="cob-seccion">
         <div class="cob-seccion__titulo">Quién y cuándo</div>
         <div class="cob-campo">
@@ -1219,6 +1272,21 @@
           <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" id="cob-btn-cheque-mano" aria-describedby="cob-ayuda-cheque-mano">+ Agregar un cheque que no se leyó</button>
         </div>
         <div class="cob-campo__ayuda" id="cob-ayuda-cheque-mano" hidden>Primero sacá la foto</div>
+      </div>
+
+      <!-- E-cheques y transferencias (30/09/2026): las carga Administración
+           (cobranzas:procesar). El chofer no ve esta sección, salvo que edite
+           una cobranza que ya las tenga: ahí se ven y no se tocan. La pinta
+           pintarFormasNuevas(); el hidden lo saca el JS. -->
+      <div class="cob-seccion" id="cob-seccion-formas" hidden>
+        <div class="cob-seccion__titulo">E-cheques y transferencias</div>
+        <div class="cob-aviso" id="cob-formas-aviso" hidden>Los cargó Administración: se ven, pero no se pueden cambiar desde acá.</div>
+        <div id="cob-lista-echecks"></div>
+        <div id="cob-lista-transferencias"></div>
+        <div class="cob-acciones" id="cob-formas-acciones" hidden>
+          <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-echeck">+ Agregar e-cheque</button>
+          <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-transferencia">+ Agregar transferencia</button>
+        </div>
       </div>
 
       <div class="cob-seccion">
@@ -1565,6 +1633,613 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // E-CHEQUES Y TRANSFERENCIAS (30/09/2026)
+    //
+    // Además del efectivo y de los cheques de papel con foto, una cobranza
+    // puede traer:
+    //  - E-CHEQUES: un cheque electrónico. No hay papel, ni foto, ni banda de
+    //    chequera: viaja en p_cheques con es_echeck = true, sin foto, sin
+    //    sucursal / cuenta / dígitos (la base pone ceros y no los valida) y
+    //    origen 'manual'. Lo que sí exige la base: banco de 3 dígitos, número
+    //    de 8, tipo, emisión, pago si es diferido e importe > 0.
+    //  - TRANSFERENCIAS: plata que entró a una cuenta de banco de la Empresa.
+    //    Viaja en p_transferencias de guardar_cobranza_completa (la base la
+    //    guarda en cobranza_transferencias y, al asentar, la mete en esa
+    //    cuenta de banco).
+    // Las carga Administración (cobranzas:procesar). EL CHOFER NO LAS VE en su
+    // formulario, salvo que edite una cobranza que ya las tenga: ahí se ven
+    // y no se tocan. Los e-cheques viajan igual en p_cheques, porque
+    // editar_cobranza REEMPLAZA todos los cheques: si no viajaran, se
+    // borrarían. Las transferencias no las toca editar_cobranza.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // LA ETIQUETA DE CADA FORMA DE PAGO (30/09/2026): efectivo en verde,
+    // cheque de papel en naranja, e-cheque y transferencia en CELESTE (la
+    // única excepción a "sin azules" del sistema visual: anotada en el README
+    // del esqueleto), y la transferencia con su propio ícono (dos flechas).
+    // El CSS es compartido (.forma-pago de css/main.css): las mismas
+    // etiquetas salen en Administración y en la cartera de cheques.
+    // Todo es texto fijo del código: no hay nada de la base acá adentro.
+    function htmlEtiquetaForma(forma) {
+      if (forma === 'efectivo') return '<span class="forma-pago forma-pago--efectivo">Efectivo</span>'
+      if (forma === 'cheque') return '<span class="forma-pago forma-pago--cheque">Cheque</span>'
+      if (forma === 'echeck') return '<span class="forma-pago forma-pago--echeck">E-cheque</span>'
+      if (forma === 'transferencia') {
+        return '<span class="forma-pago forma-pago--transferencia"><svg class="forma-pago__icono" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 5h10M9 2l3 3-3 3M14 11H4M7 8l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Transferencia</span>'
+      }
+      return ''
+    }
+
+    // Qué formas trae una cobranza, en el orden fijo de la pantalla. Recibe
+    // cantidades (y el efectivo): una forma en cero no se nombra.
+    function formasPresentes({ efectivo = 0, papel = 0, echecks = 0, transferencias = 0 } = {}) {
+      const formas = []
+      if (Number(efectivo) > 0) formas.push('efectivo')
+      if (Number(papel) > 0) formas.push('cheque')
+      if (Number(echecks) > 0) formas.push('echeck')
+      if (Number(transferencias) > 0) formas.push('transferencia')
+      return formas
+    }
+
+    // La línea de etiquetas del listado y del detalle. Sin formas, nada.
+    function htmlLineaFormas(formas) {
+      if (!formas?.length) return ''
+      return `<div class="cob-formas-linea">${formas.map(htmlEtiquetaForma).join('')}</div>`
+    }
+
+    // LAS FORMAS DE CADA COBRANZA DEL LISTADO (30/09/2026). v_cobranzas no
+    // separa los e-cheques de los cheques de papel ni trae las transferencias
+    // (ni las suma en su total), así que por cada página se leen aparte:
+    // cobranza_cheques (es_echeck) y cobranza_transferencias (importe). La
+    // policy de las dos es la de su cobranza: quien ve la cobranza, las ve.
+    // NUNCA tira: si falla, la fila dice lo que sabe de la vista (efectivo y
+    // cheques) y el total queda el de la vista.
+    async function cargarFormasDe(ids, turno) {
+      if (!ids.length) return
+      try {
+        const [ch, tr] = await Promise.all([
+          supabase.from('cobranza_cheques').select('cobranza_id, es_echeck').in('cobranza_id', ids),
+          supabase.from('cobranza_transferencias').select('cobranza_id, importe').in('cobranza_id', ids),
+        ])
+        if (ch.error) throw ch.error
+        if (tr.error) throw tr.error
+        if (turno !== turnoListado) return
+        if (!estado.formasCob) estado.formasCob = new Map()
+        for (const id of ids) estado.formasCob.set(id, { papel: 0, echecks: 0, transferencias: [] })
+        for (const x of ch.data ?? []) {
+          const f = estado.formasCob.get(x.cobranza_id)
+          if (f) { if (x.es_echeck) f.echecks++; else f.papel++ }
+        }
+        for (const x of tr.data ?? []) estado.formasCob.get(x.cobranza_id)?.transferencias.push(x)
+        renderizarListado()
+      } catch (err) {
+        console.error('No se pudieron leer las formas de pago del listado:', err)
+      }
+    }
+
+    // Las formas y el total de una fila del listado. Sin lo leído aparte, lo
+    // que dice la vista: el efectivo y los cheques (sin distinguir e-cheques).
+    function formasDeFila(c) {
+      const f = estado.formasCob?.get?.(c.id)
+      if (!f) {
+        return { formas: formasPresentes({ efectivo: c.efectivo, papel: c.cantidad_cheques }), total: c.total }
+      }
+      return {
+        formas: formasPresentes({ efectivo: c.efectivo, papel: f.papel, echecks: f.echecks, transferencias: f.transferencias.length }),
+        total: totalConTransferencias(c, f.transferencias),
+      }
+    }
+
+    function echequeVacio() {
+      return {
+        id: crypto.randomUUID(),
+        banco_codigo: '', numero: '',
+        tipo: 'diferido',
+        fecha_emision: hoyArgentina(), fecha_pago: '',
+        importe: '',
+      }
+    }
+
+    function echequeDesdeBase(ch) {
+      return {
+        id: ch.id,
+        banco_codigo: ch.banco_codigo ?? '', numero: ch.numero ?? '',
+        tipo: ch.tipo ?? 'diferido',
+        fecha_emision: ch.fecha_emision ?? '', fecha_pago: ch.fecha_pago ?? '',
+        importe: ch.importe ?? '',
+      }
+    }
+
+    // Lo que la base exige a un e-cheque (CHECK de la tabla), dicho ANTES de
+    // mandar. Los identificadores (banco y número) van como TEXTO: llevan
+    // ceros a la izquierda.
+    function erroresDeEcheque(e) {
+      const errores = []
+      if (!/^[0-9]{3}$/.test(String(e?.banco_codigo ?? ''))) errores.push('El código del banco tiene que tener 3 números (el Galicia es 007).')
+      if (!/^[0-9]{8}$/.test(String(e?.numero ?? ''))) errores.push('El número del e-cheque tiene que tener 8 números.')
+      if (e?.tipo !== 'comun' && e?.tipo !== 'diferido') errores.push('Elegí si es a la vista o diferido.')
+      if (!esFechaIso(e?.fecha_emision)) errores.push('Falta la fecha de emisión.')
+      if (e?.tipo === 'diferido') {
+        if (!esFechaIso(e?.fecha_pago)) errores.push('Un e-cheque diferido necesita la fecha de pago.')
+        else if (esFechaIso(e?.fecha_emision)) {
+          const d = diasEntre(e.fecha_emision, e.fecha_pago)
+          if (d < 0) errores.push('La fecha de pago no puede ser anterior a la de emisión.')
+          else if (d > DIAS_MAXIMO_DIFERIDO) errores.push(`Entre emisión y pago no puede haber más de ${DIAS_MAXIMO_DIFERIDO} días.`)
+        }
+      }
+      const importe = leerNumeroAr(e?.importe)
+      if (!(importe > 0)) errores.push('El importe tiene que ser mayor a cero.')
+      return errores
+    }
+
+    // La fila TAL CUAL viaja en p_cheques. Sin foto, sin chequera y origen
+    // 'manual' (CHECK chk_cheque_foto: foto o es_echeck o manual).
+    function echequeParaBase(e) {
+      const diferido = e.tipo === 'diferido'
+      return {
+        id: e.id, foto_id: null, es_echeck: true,
+        banco_codigo: String(e.banco_codigo ?? ''), sucursal_codigo: null, codigo_postal: null, dv_ruta: null,
+        numero: String(e.numero ?? ''), dv_numero: null, cuenta: null, dv_cuenta: null,
+        tipo: e.tipo,
+        fecha_emision: esFechaIso(e.fecha_emision) ? e.fecha_emision : null,
+        fecha_pago: diferido && esFechaIso(e.fecha_pago) ? e.fecha_pago : null,
+        importe: leerNumeroAr(e.importe),
+        importe_letras: null, titulares: [], beneficiario: null,
+        origen_datos: 'manual', ocr_propuesto: null,
+      }
+    }
+
+    function transferenciaVacia(fecha) {
+      return { id: crypto.randomUUID(), cuenta_id: '', cuenta_nombre: '', importe: '', fecha: fecha || hoyArgentina(), referencia: '' }
+    }
+
+    // `cuentas`: Map id → { nombre } (las cuentas de banco que se pudieron
+    // leer). El nombre se guarda en la transferencia para poder mostrarla en
+    // el borrador sin señal.
+    function transferenciaDesdeBase(t, cuentas) {
+      return {
+        id: t.id, cuenta_id: t.cuenta_id ?? '',
+        cuenta_nombre: cuentas?.get?.(t.cuenta_id)?.nombre ?? '',
+        importe: t.importe ?? '', fecha: t.fecha ?? '', referencia: t.referencia ?? '',
+      }
+    }
+
+    function erroresDeTransferencia(t) {
+      const errores = []
+      if (!t?.cuenta_id) errores.push('Elegí la cuenta de banco donde entró.')
+      const importe = leerNumeroAr(t?.importe)
+      if (!(importe > 0)) errores.push('El importe tiene que ser mayor a cero.')
+      if (t?.fecha && !esFechaIso(t.fecha)) errores.push('La fecha no se entiende.')
+      else if (esFechaIso(t?.fecha) && diasEntre(hoyArgentina(), t.fecha) > 0) errores.push('La fecha no puede ser posterior a hoy.')
+      if (String(t?.referencia ?? '').trim().length > 100) errores.push('La referencia puede tener hasta 100 letras.')
+      return errores
+    }
+
+    function transferenciaParaBase(t) {
+      return {
+        cuenta_id: t.cuenta_id,
+        importe: leerNumeroAr(t.importe),
+        fecha: esFechaIso(t.fecha) ? t.fecha : null,
+        referencia: textoOpcional(t.referencia),
+      }
+    }
+
+    // La suma de los importes que se entienden (lo que no se entiende no suma:
+    // ya lo dice motivosParaNoGuardar).
+    function sumaImportes(lista) {
+      return (lista ?? []).reduce((acc, x) => acc + (leerNumeroAr(x?.importe) ?? 0), 0)
+    }
+
+    // Las cuatro formas de pago del formulario y el total.
+    function totalesPorForma(f) {
+      if (!f) return { efectivo: 0, cheques: 0, echecks: 0, transferencias: 0, total: 0 }
+      const efectivo = efectivoDelFormulario()
+      const cheques = sumaImportes((f.cheques ?? []).filter(c => c.confirmado))
+      const echecks = sumaImportes(f.echecks)
+      const transferencias = sumaImportes(f.transferencias)
+      return { efectivo, cheques, echecks, transferencias, total: efectivo + cheques + echecks + transferencias }
+    }
+
+    // ¿Se guarda con guardar_cobranza_completa? Solo quien tiene
+    // cobranzas:procesar (Administración) y solo si hay e-cheques o
+    // transferencias (o las había: sacar la última también hay que mandarlo).
+    // El chofer sigue con guardar_cobranza / editar_cobranza, que funcionan
+    // sin señal exactamente como antes.
+    function usaCobranzaCompleta(f) {
+      if (!f || !puedeProcesar()) return false
+      return (f.echecks?.length ?? 0) > 0 || (f.transferencias?.length ?? 0) > 0 || !!f.teniaTransferencias
+    }
+
+    // El nombre de cada cuenta de banco, por id (cuentas_caja se lee con
+    // cualquier sesión: no tiene saldo). Usa lo ya leído y pide el resto.
+    // NUNCA tira: sin nombre, la transferencia dice "Cuenta de banco".
+    async function nombresDeCuentas(ids) {
+      const mapa = new Map()
+      const faltan = []
+      for (const id of new Set((ids ?? []).filter(Boolean))) {
+        const c = estado.cuentasBanco?.get?.(id) ?? estado.cuentasNombres?.get?.(id)
+        if (c) mapa.set(id, c)
+        else faltan.push(id)
+      }
+      if (!faltan.length) return mapa
+      try {
+        const { data, error } = await supabase.from('cuentas_caja').select('id, nombre, unidad_negocio_id').in('id', faltan)
+        if (error) throw error
+        if (!estado.cuentasNombres) estado.cuentasNombres = new Map()
+        for (const c of data ?? []) {
+          mapa.set(c.id, c)
+          estado.cuentasNombres.set(c.id, c)
+        }
+      } catch (err) {
+        console.error('No se pudieron leer los nombres de las cuentas:', err)
+      }
+      return mapa
+    }
+
+    // La suma de importes que vienen de la BASE (números). Un importe ausente
+    // o que no es un número no suma.
+    function sumaDeImportes(filas) {
+      return (filas ?? []).reduce((acc, x) => {
+        const v = x?.importe
+        if (v === null || v === undefined || v === '') return acc
+        const n = Number(v)
+        return Number.isFinite(n) ? acc + n : acc
+      }, 0)
+    }
+
+    // El total de una cobranza leída de v_cobranzas MÁS sus transferencias:
+    // v_cobranzas.total es efectivo + cheques y no las suma (hueco de base al
+    // 30/09/2026). Un total ausente sigue ausente ("—"): nunca un "$ 0,00".
+    function totalConTransferencias(c, transferencias) {
+      const t = c?.total
+      if (t === null || t === undefined || t === '' || !Number.isFinite(Number(t))) return null
+      return Number(t) + sumaDeImportes(transferencias)
+    }
+
+    // Las transferencias de una cobranza, en el detalle: importe, a qué cuenta
+    // de banco entró, fecha y referencia. Todo texto de la base va escapado.
+    function htmlTransferenciasDetalle(d) {
+      const transf = d?.transferencias ?? []
+      if (d?.transferenciasError) {
+        return `
+        <div class="cob-seccion">
+          <div class="cob-seccion__titulo">Transferencias</div>
+          <div class="cob-aviso">No se pudieron leer las transferencias de esta cobranza: el total puede no incluirlas.</div>
+        </div>`
+      }
+      if (!transf.length) return ''
+      return `
+        <div class="cob-seccion">
+          <div class="cob-seccion__titulo">Transferencias</div>
+          ${transf.map(t => htmlTransferenciaDetalle(t, d.cuentas)).join('')}
+        </div>`
+    }
+
+    // Una transferencia en el detalle. `cuentas`: Map id → { nombre }.
+    function htmlTransferenciaDetalle(t, cuentas) {
+      const cuenta = cuentas?.get?.(t.cuenta_id)?.nombre || 'Cuenta de banco'
+      return `
+            <div class="cob-cheque cob-transferencia">
+              <div class="cob-cheque__top">
+                <span class="cob-cheque__monto">${escCob(formatearImporte(t.importe))}</span>
+                ${htmlEtiquetaForma('transferencia')}
+              </div>
+              <div class="cob-cheque__pie">Entró en ${escCob(cuenta)}${esFechaIso(t.fecha) ? ` · ${escCob(formatearFechaCob(t.fecha))}` : ''}</div>
+              ${t.referencia ? `<div class="cob-cheque__sub">Referencia: ${escCob(t.referencia)}</div>` : ''}
+            </div>`
+    }
+
+    // ── E-cheques y transferencias en el FORMULARIO ───────────────────────
+
+    // Las cuentas de banco de la Empresa que se pueden elegir para una
+    // transferencia: en pesos, sin la fábrica de pruebas (ya filtradas al
+    // cargar), y de la unidad de la barra si hay una elegida. La que ya
+    // tiene la transferencia se ofrece siempre, aunque la barra la deje
+    // afuera: si no, el select la perdería.
+    function cuentasParaElegir(actualId) {
+      const todas = estado.cuentasBancoLista ?? []
+      const elegida = estado.unidadElegida
+      const lista = elegida ? todas.filter(c => c.unidad_negocio_id === elegida) : todas.slice()
+      if (actualId && !lista.some(c => c.id === actualId)) {
+        const actual = todas.find(c => c.id === actualId) ?? estado.cuentasNombres?.get?.(actualId)
+        if (actual) lista.unshift(actual)
+      }
+      return lista
+    }
+
+    function nombreUnidadCob(id) {
+      return (estado.unidades ?? []).find(u => u.id === id)?.nombre ?? ''
+    }
+
+    function htmlOpcionesCuentas(t) {
+      const lista = cuentasParaElegir(t.cuenta_id)
+      const nombreConUnidad = (c) => {
+        const uni = nombreUnidadCob(c.unidad_negocio_id)
+        return uni ? `${c.nombre} · ${uni}` : c.nombre
+      }
+      const yaEsta = lista.some(c => c.id === t.cuenta_id)
+      return `<option value="">Elegí la cuenta de banco</option>` +
+        (t.cuenta_id && !yaEsta ? `<option value="${escCob(t.cuenta_id)}" selected>${escCob(t.cuenta_nombre || 'Cuenta de banco')}</option>` : '') +
+        lista.map(c => `<option value="${escCob(c.id)}"${c.id === t.cuenta_id ? ' selected' : ''}>${escCob(nombreConUnidad(c))}</option>`).join('')
+    }
+
+    function htmlEcheckForm(e, i, editable) {
+      const errores = e.tocado ? erroresDeEcheque(e) : []
+      const cabecera = `
+          <div class="cob-cheque__cabecera">
+            <div class="cob-cheque__resumen">
+              <div class="cob-cheque__titulo">${htmlEtiquetaForma('echeck')} E-cheque ${escCob(i + 1)}</div>
+              <div class="cob-cheque__sub">${escCob(nombreBanco(e.banco_codigo))}</div>
+            </div>
+            ${editable ? `<button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-echeck="${escCob(e.id)}">Quitar</button>` : ''}
+          </div>`
+      if (!editable) {
+        return `
+        <div class="cob-cheque cob-echeck" data-echeck="${escCob(e.id)}">${cabecera}
+          <div class="cob-cheque__top"><span class="cob-cheque__monto">${escCob(formatearImporte(leerNumeroAr(e.importe)))}</span></div>
+          ${htmlDatosCheque(echequeParaBase(e), hoyArgentina())}
+        </div>`
+      }
+      return `
+        <div class="cob-cheque cob-echeck${errores.length ? ' cob-cheque--error' : ''}" data-echeck="${escCob(e.id)}">${cabecera}
+          <div class="cob-cheque__cuerpo">
+            <div class="cob-campo">
+              <label>Banco (los 3 números del código)</label>
+              <input type="text" inputmode="numeric" maxlength="3" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="banco_codigo" value="${escCob(e.banco_codigo)}" placeholder="007">
+            </div>
+            <div class="cob-campo">
+              <label>Número del e-cheque (8 números)</label>
+              <input type="text" inputmode="numeric" maxlength="8" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="numero" value="${escCob(e.numero)}">
+            </div>
+            <div class="cob-campo">
+              <label>Tipo</label>
+              <div class="cob-chips">
+                <button type="button" class="cob-chip ${e.tipo === 'comun' ? 'cob-chip--activo' : ''}" data-echeck-tipo="comun" data-echeck-id="${escCob(e.id)}">A la vista</button>
+                <button type="button" class="cob-chip ${e.tipo === 'diferido' ? 'cob-chip--activo' : ''}" data-echeck-tipo="diferido" data-echeck-id="${escCob(e.id)}">Diferido</button>
+              </div>
+            </div>
+            <div class="cob-campo">
+              <label>Fecha de emisión</label>
+              <input type="date" data-echeck-id="${escCob(e.id)}" data-echeck-campo="fecha_emision" value="${escCob(e.fecha_emision)}">
+            </div>
+            <div class="cob-campo" ${e.tipo === 'diferido' ? '' : 'hidden'}>
+              <label>Fecha de pago</label>
+              <input type="date" data-echeck-id="${escCob(e.id)}" data-echeck-campo="fecha_pago" value="${escCob(e.fecha_pago)}">
+            </div>
+            <div class="cob-campo">
+              <label>Importe</label>
+              <input type="text" inputmode="decimal" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="importe" data-importe-forma placeholder="0,00">
+            </div>
+            <div class="cob-campo__error" data-echeck-errores="${escCob(e.id)}"${errores.length ? '' : ' hidden'}>${errores.map(escCob).join('<br>')}</div>
+          </div>
+        </div>`
+    }
+
+    function htmlTransferenciaForm(t, i, editable) {
+      const errores = t.tocado ? erroresDeTransferencia(t) : []
+      const cuenta = t.cuenta_nombre || estado.cuentasBanco?.get?.(t.cuenta_id)?.nombre || 'Cuenta de banco'
+      const cabecera = `
+          <div class="cob-cheque__cabecera">
+            <div class="cob-cheque__resumen">
+              <div class="cob-cheque__titulo">${htmlEtiquetaForma('transferencia')} Transferencia ${escCob(i + 1)}</div>
+            </div>
+            ${editable ? `<button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-transf="${escCob(t.id)}">Quitar</button>` : ''}
+          </div>`
+      if (!editable) {
+        return `
+        <div class="cob-cheque cob-transferencia" data-transf="${escCob(t.id)}">${cabecera}
+          <div class="cob-cheque__top"><span class="cob-cheque__monto">${escCob(formatearImporte(leerNumeroAr(t.importe)))}</span></div>
+          <div class="cob-cheque__pie">Entró en ${escCob(cuenta)}${esFechaIso(t.fecha) ? ` · ${escCob(formatearFechaCob(t.fecha))}` : ''}</div>
+          ${t.referencia ? `<div class="cob-cheque__sub">Referencia: ${escCob(t.referencia)}</div>` : ''}
+        </div>`
+      }
+      const sinCuentas = estado.cuentasBancoError
+        ? '<div class="cob-aviso">No se pudieron leer las cuentas de banco de la Empresa. Revisá la conexión y volvé a abrir la cobranza.</div>'
+        : (cuentasParaElegir(t.cuenta_id).length ? '' : `<div class="cob-aviso">${escCob(estado.unidadElegida
+          ? 'La Empresa no tiene cuentas de banco en pesos en ' + (nombreUnidadCob(estado.unidadElegida) || 'esta unidad') + ' (cambiá la unidad de arriba para ver las otras).'
+          : 'La Empresa no tiene cuentas de banco en pesos.')}</div>`)
+      return `
+        <div class="cob-cheque cob-transferencia${errores.length ? ' cob-cheque--error' : ''}" data-transf="${escCob(t.id)}">${cabecera}
+          <div class="cob-cheque__cuerpo">
+            <div class="cob-campo">
+              <label>Cuenta de banco donde entró</label>
+              <select data-transf-id="${escCob(t.id)}" data-transf-campo="cuenta_id">${htmlOpcionesCuentas(t)}</select>
+              ${sinCuentas}
+            </div>
+            <div class="cob-campo">
+              <label>Importe</label>
+              <input type="text" inputmode="decimal" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="importe" data-importe-forma placeholder="0,00">
+            </div>
+            <div class="cob-campo">
+              <label>Fecha</label>
+              <input type="date" data-transf-id="${escCob(t.id)}" data-transf-campo="fecha" value="${escCob(t.fecha)}">
+            </div>
+            <div class="cob-campo">
+              <label>Referencia (opcional)</label>
+              <input type="text" maxlength="100" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="referencia" value="${escCob(t.referencia)}" placeholder="Número de operación">
+            </div>
+            <div class="cob-campo__error" data-transf-errores="${escCob(t.id)}"${errores.length ? '' : ' hidden'}>${errores.map(escCob).join('<br>')}</div>
+          </div>
+        </div>`
+    }
+
+    function pintarFormasNuevas() {
+      const seccion = document.getElementById('cob-seccion-formas')
+      const f = estado.form
+      if (!f) { seccion.hidden = true; return }
+      const admin = puedeProcesar()
+      const echecks = f.echecks ?? []
+      const transf = f.transferencias ?? []
+      seccion.hidden = !admin && !echecks.length && !transf.length
+      document.getElementById('cob-formas-acciones').hidden = !admin
+      document.getElementById('cob-formas-aviso').hidden = admin
+      document.getElementById('cob-lista-echecks').innerHTML = echecks.map((e, i) => htmlEcheckForm(e, i, admin)).join('')
+      document.getElementById('cob-lista-transferencias').innerHTML = transf.map((t, i) => htmlTransferenciaForm(t, i, admin)).join('')
+      // Los importes con el formato argentino y escritos con ponerNumero:
+      // nunca un value="${número}" en la plantilla.
+      if (admin) {
+        seccion.querySelectorAll('[data-importe-forma]').forEach(campoImporte => {
+          enlazarCampoNumero(campoImporte, { decimales: 2 })
+          const lista = campoImporte.dataset.echeckId ? echecks : transf
+          const fila = lista.find(x => x.id === (campoImporte.dataset.echeckId || campoImporte.dataset.transfId))
+          const n = leerNumeroAr(fila?.importe)
+          if (n !== null) ponerNumero(campoImporte, n)
+        })
+      }
+      pintarResumenFormas()
+    }
+
+    // Arriba de la cobranza: las cuatro formas con su etiqueta y el total.
+    // Solo para Administración o si la cobranza ya trae e-cheques o
+    // transferencias: el formulario del chofer queda como siempre.
+    function pintarResumenFormas() {
+      const cont = document.getElementById('cob-resumen-formas')
+      const f = estado.form
+      const mostrar = !!f && (puedeProcesar() || (f.echecks?.length ?? 0) > 0 || (f.transferencias?.length ?? 0) > 0)
+      cont.hidden = !mostrar
+      cont.innerHTML = mostrar ? htmlResumenFormas(totalesPorForma(f)) : ''
+    }
+
+    function htmlResumenFormas(t) {
+      const fila = (forma, importe) => `
+          <div class="cob-resumen-formas__fila">${htmlEtiquetaForma(forma)}<span class="cob-resumen-formas__importe">${escCob(formatearImporte(importe))}</span></div>`
+      return `
+        <div class="cob-resumen-formas__filas">
+          ${fila('efectivo', t.efectivo)}${fila('cheque', t.cheques)}${fila('echeck', t.echecks)}${fila('transferencia', t.transferencias)}
+        </div>
+        <div class="cob-resumen-formas__total"><span>Total de la cobranza</span><span>${escCob(formatearImporte(t.total))}</span></div>`
+    }
+
+    function echeckDelForm(id) {
+      return (estado.form?.echecks ?? []).find(e => e.id === id) ?? null
+    }
+    function transfDelForm(id) {
+      return (estado.form?.transferencias ?? []).find(t => t.id === id) ?? null
+    }
+
+    function agregarEcheck() {
+      const f = estado.form
+      if (!f || !puedeProcesar()) return
+      if (!f.echecks) f.echecks = []
+      f.echecks.push(echequeVacio())
+      guardarBorrador()
+      pintarFormasNuevas()
+      pintarTotalYGuardado()
+    }
+
+    function agregarTransferencia() {
+      const f = estado.form
+      if (!f || !puedeProcesar()) return
+      if (!f.transferencias) f.transferencias = []
+      f.transferencias.push(transferenciaVacia(f.fecha))
+      guardarBorrador()
+      pintarFormasNuevas()
+      pintarTotalYGuardado()
+    }
+
+    function quitarEcheck(id) {
+      const f = estado.form
+      if (!f || !puedeProcesar()) return
+      f.echecks = (f.echecks ?? []).filter(e => e.id !== id)
+      guardarBorrador()
+      pintarFormasNuevas()
+      pintarTotalYGuardado()
+    }
+
+    function quitarTransferencia(id) {
+      const f = estado.form
+      if (!f || !puedeProcesar()) return
+      f.transferencias = (f.transferencias ?? []).filter(t => t.id !== id)
+      guardarBorrador()
+      pintarFormasNuevas()
+      pintarTotalYGuardado()
+    }
+
+    // Un campo de un e-cheque cambió. El tipo repinta la tarjeta (aparece o
+    // se va la fecha de pago); lo demás actualiza sin repintar, para no
+    // sacarle el foco al campo.
+    function actualizarEcheck(id, campo, valor) {
+      const e = echeckDelForm(id)
+      if (!e || !puedeProcesar()) return
+      e[campo] = valor
+      if (campo === 'tipo' && valor === 'comun') e.fecha_pago = ''
+      e.tocado = true
+      guardarBorrador()
+      if (campo === 'tipo') pintarFormasNuevas()
+      else pintarErroresForma('echeck', id, erroresDeEcheque(e))
+      pintarTotalYGuardado()
+    }
+
+    function actualizarTransferencia(id, campo, valor) {
+      const t = transfDelForm(id)
+      if (!t || !puedeProcesar()) return
+      t[campo] = valor
+      if (campo === 'cuenta_id') {
+        t.cuenta_nombre = (estado.cuentasBancoLista ?? []).find(c => c.id === valor)?.nombre ?? ''
+      }
+      t.tocado = true
+      guardarBorrador()
+      pintarErroresForma('transf', id, erroresDeTransferencia(t))
+      pintarTotalYGuardado()
+    }
+
+    function pintarErroresForma(tipo, id, errores) {
+      const clave = tipo === 'echeck' ? 'echeckErrores' : 'transfErrores'
+      const caja = [...(document.querySelectorAll?.(`[data-${tipo}-errores]`) ?? [])].find(x => x.dataset?.[clave] === id)
+      if (!caja) return
+      caja.hidden = !errores.length
+      caja.innerHTML = errores.map(escCob).join('<br>')
+    }
+
+    // Un solo listener por sección (delegación): las tarjetas se repintan y
+    // los listeners no se pierden ni se duplican.
+    function alEscribirEnFormas(ev) {
+      const el = ev?.target
+      const d = el?.dataset ?? {}
+      if (d.echeckId && d.echeckCampo) actualizarEcheck(d.echeckId, d.echeckCampo, el.value)
+      else if (d.transfId && d.transfCampo) actualizarTransferencia(d.transfId, d.transfCampo, el.value)
+    }
+
+    function alTocarEnFormas(ev) {
+      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-quitar-echeck], [data-quitar-transf]')
+      if (!el) return
+      const d = el.dataset
+      if (d.echeckTipo) actualizarEcheck(d.echeckId, 'tipo', d.echeckTipo)
+      else if (d.quitarEcheck) quitarEcheck(d.quitarEcheck)
+      else if (d.quitarTransf) quitarTransferencia(d.quitarTransf)
+    }
+
+    // Las cuentas de banco de la Empresa (para las transferencias): las de la
+    // persona ficticia tipo 'empresa', activas, de banco y en pesos, sin la
+    // fábrica de pruebas. Solo para quien puede cargar transferencias.
+    // NUNCA tira: si falla, la tarjeta lo dice.
+    async function cargarCuentasBanco() {
+      if (!puedeProcesar()) return
+      try {
+        const [emp, cuentas] = await Promise.all([
+          supabase.from('v_empleados_publico').select('id').eq('tipo', 'empresa'),
+          supabase.from('cuentas_caja').select('id, nombre, medio, moneda, unidad_negocio_id, empleado_id, activa').eq('medio', 'banco').eq('activa', true).order('nombre'),
+        ])
+        if (emp.error) throw emp.error
+        if (cuentas.error) throw cuentas.error
+        const empresa = new Set((emp.data ?? []).map(e => e.id))
+        await asegurarFabrica()
+        const lista = sinUnidadesDePrueba(
+          (cuentas.data ?? []).filter(c => empresa.has(c.empleado_id) && c.moneda === 'ARS' && c.activa !== false && c.medio === 'banco'),
+          estado.fabrica, c => c.unidad_negocio_id)
+        estado.cuentasBancoLista = lista
+        estado.cuentasBanco = new Map(lista.map(c => [c.id, c]))
+        estado.cuentasBancoError = false
+      } catch (err) {
+        console.error('No se pudieron leer las cuentas de banco:', err)
+        estado.cuentasBancoLista = []
+        estado.cuentasBanco = new Map()
+        estado.cuentasBancoError = true
+      }
+      if (estado.form) pintarFormasNuevas()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -1841,6 +2516,9 @@
         estado.cobranzas = estado.cobranzas.concat(filas)
         estado.hayMas = filas.length === PAGINA
         renderizarListado()
+        // Las formas de pago de esta página (e-cheques y transferencias):
+        // llegan después y repintan; la lista no las espera.
+        cargarFormasDe(filas.map(x => x.id), turno)
       } catch (err) {
         if (turno !== turnoListado) return
         console.error('No se pudo cargar el listado:', err)
@@ -2114,6 +2792,9 @@
     // hay nada que recargar: ese listado ya sale con la unidad.
     function alCambiarUnidadCob(e) {
       if (!aplicarUnidadBarra(e)) return
+      // Las cuentas de banco que se ofrecen para una transferencia siguen a
+      // la unidad de la barra.
+      if (estado.form && (estado.form.transferencias?.length ?? 0) > 0) pintarFormasNuevas()
       if (!estado.listadoPedido) return
       renderizarListado()
       cargarCobranzas({ reiniciar: true })
@@ -2170,13 +2851,17 @@
       const fechaCorta = formatearFechaCob(c.fecha).slice(0, 5)
       const textoCantidad = cantidad > 0 ? String(cantidad) : '—'
       const textoEfectivoCelda = efectivo > 0 ? formatearImporte(efectivo) : '—'
+      // Las cuatro formas de pago (30/09/2026): sus etiquetas debajo del
+      // cliente, y el total con las transferencias (la vista no las suma).
+      const { formas, total } = formasDeFila(c)
 
       return `
         <div class="tarjeta-lista cob-fila cob-fila--${escCob(c.estado)}${seleccionada ? ' cob-fila--seleccionada' : ''}"${seleccionada ? ' aria-current="true"' : ''} data-cobranza="${escCob(c.id)}">
           <div class="cob-fila__linea">
             <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
-            <span class="cob-fila__total">${escCob(formatearImporte(c.total))}</span>
+            <span class="cob-fila__total">${escCob(formatearImporte(total))}</span>
           </div>
+          ${htmlLineaFormas(formas)}
           <div class="cob-fila__meta">
             <span class="cob-fila__estado cob-fila__estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
             <span class="cob-fila__detalle">${metaFila}</span>
@@ -2186,10 +2871,10 @@
           ${c.editada ? '<div class="cob-fila__meta"><span>Editada después de cargarla</span></div>' : ''}
           <div class="cob-fila__tabla">
             <span class="cob-celda cob-celda--fecha">${escCob(fechaCorta)}</span>
-            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}${unidadTabla}</span>
+            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}${unidadTabla}${formas.length ? `<span class="formas-pago cob-formas-tabla">${formas.map(htmlEtiquetaForma).join('')}</span>` : ''}</span>
             <span class="cob-celda cob-celda--num cob-celda--cheques${cantidad > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoCantidad)}</span>
             <span class="cob-celda cob-celda--num${efectivo > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoEfectivoCelda)}</span>
-            <span class="cob-celda cob-celda--num cob-celda--total">${escCob(formatearImporte(c.total))}</span>
+            <span class="cob-celda cob-celda--num cob-celda--total">${escCob(formatearImporte(total))}</span>
             <span class="cob-celda cob-celda--quien">${escCob(c.cargada_por_nombre || '—')}</span>
             <span class="cob-celda cob-fila__estado cob-fila__estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
           </div>
@@ -2631,11 +3316,14 @@
       try {
         // Consultas SEPARADAS y nunca embeds: estas tablas tienen FKs que los
         // vuelven ambiguos en PostgREST.
-        const [cab, cheques, fotos, hist] = await Promise.all([
+        const [cab, cheques, fotos, hist, transf] = await Promise.all([
           supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
           supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_fotos').select('id, storage_path, subida_por, ocr_modelo, created_at').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_historial').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
+          // Las transferencias (30/09/2026). Su policy deja leerlas a quien
+          // cargó la cobranza o a quien tiene cobranzas:procesar.
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (turno !== turnoDetalle) return
         if (cab.error) throw cab.error
@@ -2659,6 +3347,10 @@
           ;(emps ?? []).forEach(e => nombres.set(e.id, e.nombre))
         }
         if (turno !== turnoDetalle) return
+        const transferenciasError = !!transf?.error
+        const transferencias = transferenciasError ? [] : (transf?.data ?? [])
+        const cuentas = await nombresDeCuentas(transferencias.map(t => t.cuenta_id))
+        if (turno !== turnoDetalle) return
 
         estado.detalle = {
           cabecera: cab.data,
@@ -2666,6 +3358,7 @@
           fotos: fotos.data ?? [],
           historial: hist.data ?? [],
           nombres,
+          transferencias, transferenciasError, cuentas,
         }
         renderizarDetalle()
       } catch (err) {
@@ -2690,12 +3383,24 @@
       const anulada = c.estado === 'anulada'
       const etiquetaEstado = ETIQUETA_ESTADO_COBRANZA[c.estado] ?? c.estado
 
+      // Las cuatro formas de pago (30/09/2026). Los e-cheques vienen en
+      // d.cheques con es_echeck; las transferencias aparte. v_cobranzas NO
+      // suma las transferencias en su total (hueco de base): se suman acá.
+      const transf = d.transferencias ?? []
+      const echecks = (d.cheques ?? []).filter(ch => ch.es_echeck)
+      const papel = (d.cheques ?? []).filter(ch => !ch.es_echeck)
       const datos = [
         ['Fecha de la cobranza', formatearFechaCob(c.fecha)],
         ['Efectivo', Number(c.efectivo ?? 0) > 0 ? formatearImporte(c.efectivo) : 'Sin efectivo'],
-        ['Cheques', `${Number(c.cantidad_cheques ?? 0)} · ${formatearImporte(c.total_cheques ?? 0)}`],
-        ['Total', formatearImporte(c.total)],
       ]
+      if (echecks.length) {
+        datos.push(['Cheques', `${papel.length} · ${formatearImporte(sumaDeImportes(papel))}`])
+        datos.push(['E-cheques', `${echecks.length} · ${formatearImporte(sumaDeImportes(echecks))}`])
+      } else {
+        datos.push(['Cheques', `${Number(c.cantidad_cheques ?? 0)} · ${formatearImporte(c.total_cheques ?? 0)}`])
+      }
+      if (transf.length) datos.push(['Transferencias', `${transf.length} · ${formatearImporte(sumaDeImportes(transf))}`])
+      datos.push(['Total', formatearImporte(totalConTransferencias(c, transf))])
       if (c.comprobante_referencia) datos.push(['Remito o factura', c.comprobante_referencia])
       if (c.observaciones) datos.push(['Observaciones', c.observaciones])
       if (c.cargada_por_nombre) datos.push(['Cargada por', c.cargada_por_nombre])
@@ -2723,6 +3428,7 @@
             <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
             <span class="cob-estado cob-estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
           </div>
+          ${htmlLineaFormas(formasPresentes({ efectivo: Number(c.efectivo ?? 0), papel: papel.length, echecks: echecks.length, transferencias: transf.length }))}
           ${anulada && c.motivo_anulacion
             ? `<div class="cob-aviso cob-aviso--grave" style="margin-top:.625rem">Anulada: ${escCob(c.motivo_anulacion)}</div>` : ''}
           <div style="margin-top:.75rem">
@@ -2749,8 +3455,10 @@
           ${avisoSalidos}
           ${d.cheques.length
             ? d.cheques.map(ch => htmlChequeDetalle(ch, d.nombres)).join('')
-            : '<div class="cob-campo__ayuda">Esta cobranza no tiene cheques: fue todo en efectivo.</div>'}
-        </div>`
+            : transf.length
+              ? '<div class="cob-campo__ayuda">Esta cobranza no tiene cheques.</div>'
+              : '<div class="cob-campo__ayuda">Esta cobranza no tiene cheques: fue todo en efectivo.</div>'}
+        </div>${htmlTransferenciasDetalle(d)}`
 
       const fotos = d.fotos.length ? `
         <div class="cob-seccion">
@@ -2830,10 +3538,12 @@
         <div class="cob-cheque">
           <div class="cob-cheque__top">
             <span class="cob-cheque__monto">${escCob(formatearImporte(ch.importe))}</span>
-            <span class="cob-cheque__tipo">${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}</span>
+            <span class="cob-cheque__tipo">${htmlEtiquetaForma(ch.es_echeck ? 'echeck' : 'cheque')} ${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}</span>
           </div>
           ${htmlDatosCheque(ch, hoyArgentina())}
-          <div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · cuenta <span class="cob-cheque__num">${escCob(ch.cuenta ?? '—')}</span></div>
+          ${ch.es_echeck
+            ? `<div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · e-cheque, sin papel</div>`
+            : `<div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · cuenta <span class="cob-cheque__num">${escCob(ch.cuenta ?? '—')}</span></div>`}
           ${benef ? `<div class="cob-cheque__sub">Páguese a: ${escCob(benef)}</div>` : ''}
           <div class="cob-cheque__sub"><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado)}</span>${
             salido ? ` ${escCob(textoSalidaCheque(ch.estado, ch.salida_fecha, ch.salida_destino))}` : ''}</div>
@@ -2847,7 +3557,7 @@
               ${titulares.map(t => `<div class="cob-cheque__sub">${escCob(t.nombre ?? 'Sin nombre')}${t.cuit ? ` · CUIT ${escCob(t.cuit)}` : ''}</div>`).join('')}
             </div>` : ''}
           <div class="cob-acciones">
-            <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" data-ver-foto="${escCob(ch.foto_id ?? '')}">Ver la foto</button>
+            ${ch.es_echeck ? '' : `<button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" data-ver-foto="${escCob(ch.foto_id ?? '')}">Ver la foto</button>`}
             ${htmlLinkChequeEnCartera(ch)}
           </div>
         </div>`
@@ -3059,6 +3769,12 @@
         observaciones: '',
         fotos: [],    // { id, storage_path, blob, subida, leida, ocr_crudo, ocr_modelo, error }
         cheques: [],  // ver chequeVacio()
+        // Las dos formas de pago que carga Administración (ver echequeVacio()
+        // y transferenciaVacia()). Un borrador viejo no las trae: todo lo que
+        // las lee usa `?? []`.
+        echecks: [],
+        transferencias: [],
+        teniaTransferencias: false,
         actualizado: Date.now(),
       }
     }
@@ -3129,14 +3845,22 @@
     // valida por ruta.
     async function abrirFormularioEdicion(cobranzaId) {
       try {
-        const [cab, cheques, fotos] = await Promise.all([
+        const [cab, cheques, fotos, transf] = await Promise.all([
           supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
           supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_fotos').select('id, storage_path, ocr_crudo, ocr_modelo').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (cab.error) throw cab.error
         if (!cab.data) { mostrarError('No se encontró la cobranza.'); return }
         const c = cab.data
+        // Los e-cheques van aparte de los de papel: no tienen foto ni chequera.
+        const todosCheques = cheques.data ?? []
+        // Las transferencias: si no se pudieron leer, NO se puede guardar con
+        // guardar_cobranza_completa (mandaría la lista vacía y las borraría).
+        const transferenciasError = !!transf?.error
+        const filasTransf = transferenciasError ? [] : (transf?.data ?? [])
+        const cuentasLeidas = await nombresDeCuentas(filasTransf.map(t => t.cuenta_id))
 
         estado.form = {
           id: c.id,
@@ -3153,7 +3877,11 @@
             id: f.id, storage_path: f.storage_path, blob: null,
             subida: true, leida: true, ocr_crudo: f.ocr_crudo ?? null, ocr_modelo: f.ocr_modelo ?? null,
           })),
-          cheques: (cheques.data ?? []).map(ch => chequeDesdeBase(ch)),
+          cheques: todosCheques.filter(ch => !ch.es_echeck).map(ch => chequeDesdeBase(ch)),
+          echecks: todosCheques.filter(ch => ch.es_echeck).map(ch => echequeDesdeBase(ch)),
+          transferencias: filasTransf.map(t => transferenciaDesdeBase(t, cuentasLeidas)),
+          teniaTransferencias: filasTransf.length > 0,
+          transferenciasError,
           actualizado: Date.now(),
         }
         pintarFormulario()
@@ -3536,6 +4264,7 @@
 
       pintarEstadoFotos()
       pintarCheques()
+      pintarFormasNuevas()
       pintarTotalYGuardado()
       // Con el formulario en pantalla, las fotos pendientes se reintentan
       // solas. Idempotente: si ya estaban corriendo, no arranca otro.
@@ -4117,13 +4846,12 @@
 
     // ── Total y habilitación del botón ────────────────────────────────────
 
+    // Las cuatro formas: efectivo, cheques de papel confirmados, e-cheques y
+    // transferencias (totalesPorForma).
     function totalDelFormulario() {
       const f = estado.form
       if (!f) return 0
-      const cheques = f.cheques
-        .filter(c => c.confirmado)
-        .reduce((acc, c) => acc + (leerNumeroAr(c.importe) ?? 0), 0)
-      return cheques + efectivoDelFormulario()
+      return totalesPorForma(f).total
     }
 
     // EL ÚNICO lugar donde el campo vacío de efectivo se convierte en 0. Vacío
@@ -4148,8 +4876,27 @@
       if (sinConfirmar) motivos.push(`Quedan ${sinConfirmar} ${sinConfirmar === 1 ? 'cheque' : 'cheques'} sin confirmar.`)
 
       const confirmados = f.cheques.filter(c => c.confirmado).length
-      if (confirmados === 0 && efectivoDelFormulario() <= 0) {
-        motivos.push('Cargá al menos un cheque o un importe en efectivo.')
+      const echecks = f.echecks ?? []
+      const transferencias = f.transferencias ?? []
+      echecks.forEach((e, i) => {
+        erroresDeEcheque(e).forEach(t => motivos.push(`E-cheque ${i + 1}: ${t}`))
+      })
+      transferencias.forEach((t, i) => {
+        erroresDeTransferencia(t).forEach(x => motivos.push(`Transferencia ${i + 1}: ${x}`))
+      })
+      if (confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
+        // HUECO DE BASE (30/09/2026): guardar_cobranza_completa escribe las
+        // transferencias DESPUÉS de los cheques, y _cobranza_escribir_detalle
+        // rechaza "La cobranza no tiene ni cheques ni efectivo." antes de que
+        // lleguen. Una cobranza solo con transferencias hoy no entra.
+        motivos.push(transferencias.length
+          ? 'Una cobranza solo con transferencias todavía no se puede guardar: la base pide al menos un cheque, un e-cheque o algo de efectivo.'
+          : 'Cargá al menos un cheque o un importe en efectivo.')
+      }
+      // Sin poder leer las transferencias que ya tenía, guardarla con
+      // guardar_cobranza_completa las borraría: no se deja.
+      if (f.transferenciasError && puedeProcesar()) {
+        motivos.push('No se pudieron leer las transferencias de esta cobranza: cerrala y volvé a abrirla antes de guardar.')
       }
       const efectivoCrudo = String(f.efectivo ?? '').trim()
       if (efectivoCrudo !== '' && leerNumeroAr(f.efectivo) === null) {
@@ -4161,6 +4908,7 @@
     function pintarTotalYGuardado() {
       const motivos = motivosParaNoGuardar()
       document.getElementById('cob-total').textContent = formatearImporte(totalDelFormulario())
+      pintarResumenFormas()
       // El disabled se aplica DESDE JS y no como atributo del HTML: si el
       // script fallara, el botón queda usable en vez de dejar el formulario
       // inutilizable.
@@ -4265,11 +5013,19 @@
           id: x.id, storage_path: x.storage_path,
           ocr_crudo: x.ocr_crudo ?? null, ocr_modelo: x.ocr_modelo ?? null,
         })),
-        p_cheques: f.cheques.filter(c => c.confirmado).map(chequeParaBase),
+        // Los e-cheques viajan SIEMPRE con los de papel: editar_cobranza
+        // reemplaza todos los cheques, así que dejarlos afuera los borraría.
+        p_cheques: f.cheques.filter(c => c.confirmado).map(chequeParaBase)
+          .concat((f.echecks ?? []).map(echequeParaBase)),
       }
+      // Administración con e-cheques o transferencias: guardar_cobranza_completa
+      // (alta o edición según exista el id) con la lista ENTERA de
+      // transferencias (la base borra y reinserta).
+      const completa = usaCobranzaCompleta(f)
+      if (completa) payload.p_transferencias = (f.transferencias ?? []).map(transferenciaParaBase)
 
       try {
-        const rpc = f.modo === 'edicion' ? 'editar_cobranza' : 'guardar_cobranza'
+        const rpc = completa ? 'guardar_cobranza_completa' : (f.modo === 'edicion' ? 'editar_cobranza' : 'guardar_cobranza')
         const { data, error } = await supabase.rpc(rpc, payload)
         if (error) {
           // Distinguir "no hubo red" de "el servidor dijo que no" es lo que
@@ -4526,6 +5282,14 @@
 
       document.getElementById('cob-btn-cheque-mano').addEventListener('click', agregarChequeAMano)
 
+      // ── E-cheques y transferencias (Administración) ──
+      document.getElementById('cob-btn-echeck').addEventListener('click', agregarEcheck)
+      document.getElementById('cob-btn-transferencia').addEventListener('click', agregarTransferencia)
+      const seccionFormas = document.getElementById('cob-seccion-formas')
+      seccionFormas.addEventListener('input', alEscribirEnFormas)
+      seccionFormas.addEventListener('change', alEscribirEnFormas)
+      seccionFormas.addEventListener('click', alTocarEnFormas)
+
       document.getElementById('cob-btn-guardar').addEventListener('click', guardarCobranza)
 
       // ── Visor ──
@@ -4627,6 +5391,9 @@
       asegurarUnidades().then(() => {
         if (estado.detalle?.historial?.some(h => h.accion === 'unidad_asignada')) renderizarDetalle()
       })
+      // Las cuentas de banco de la Empresa, para las transferencias: solo
+      // Administración, y sin frenar el resto de la carga.
+      cargarCuentasBanco()
       await Promise.all([cargarBancos(), cargarRepartidores()])
       // El primer listado espera a la barra (ya venía cargando en paralelo),
       // pero no para siempre: si tarda, sale sin filtro y se recarga al llegar.

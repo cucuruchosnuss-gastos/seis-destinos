@@ -1391,3 +1391,35 @@ module.exports = {
   },
   "uid": "uid-maqueta"
 };
+
+// LAS CUATRO FORMAS DE PAGO (30/09/2026): una cobranza por asentar con
+// efectivo, un cheque de papel, un e-cheque (sin foto) y una transferencia a
+// la cuenta de banco de la Empresa. Va al final: las pantallas que se comparan
+// con el diseño siguen mostrando arriba las de antes. Sus dos cheques también
+// aparecen en la cartera, con su etiqueta.
+{
+  const t = module.exports.tablas
+  const ID = 'd4444444-4444-4444-8444-444444444444'
+  module.exports.rpc.cobranzas_por_asentar.push({
+    cobranza_id: ID, fecha: '2026-09-29', cliente_escrito: 'Anatolia', cargada_por: 'Mariano Chofer',
+    efectivo: 10000, cheques: 2, total: 190000, moneda: 'ARS',
+    observaciones: 'Pagó con todo: efectivo, un cheque, un e-cheque y una transferencia.',
+    sugeridos: [{ cliente_id: 'c1', nombre: 'Distribuidora Anatolia', empresa: 'Cucuruchos Nuss' }],
+  })
+  t.v_cobranzas.push({ id: ID, cliente: 'Anatolia', estado: 'registrada', fecha: '2026-09-29', cargada_por_nombre: 'Mariano Chofer', unidad_negocio_id: null, unidad_negocio_nombre: null })
+  t.cobranzas.push({ id: ID, cliente_id: null })
+  const cheque = (id, extra) => ({
+    sucursal_codigo: '123', codigo_postal: '5000', dv_ruta: 0, dv_numero: 0, cuenta: '00012345678', dv_cuenta: 0,
+    salida_fecha: null, salida_destino: null, salida_por: null, salida_registrada_en: null, salida_proveedor_id: null,
+    id, cobranza_id: ID, estado: 'en_cartera', tipo: 'diferido', fecha_emision: '2026-09-20', ...extra,
+  })
+  t.cobranza_cheques.push(
+    cheque('chq-formas-papel', { foto_id: 'foto-d4', es_echeck: false, banco_codigo: '007', numero: '70000001', importe: 100000, fecha_pago: '2026-10-20' }),
+    cheque('chq-formas-echeck', { foto_id: null, es_echeck: true, banco_codigo: '011', numero: '00000042', cuenta: '00000000000', importe: 50000, fecha_pago: '2026-10-30' }),
+  )
+  t.cobranza_fotos.push({ id: 'foto-d4', cobranza_id: ID, storage_path: 'uid-chofer/' + ID + '/foto-d4.jpg' })
+  t.cobranza_transferencias = [
+    { id: 'tr-d4', cobranza_id: ID, cuenta_id: 'cta-banco-nuss', importe: 30000, fecha: '2026-09-29', referencia: 'Op. 4455', created_at: '2026-09-29T15:00:00Z' },
+  ]
+  t.cuentas_caja = (t.cuentas_caja ?? []).concat([{ id: 'cta-banco-nuss', nombre: 'Banco Macro · Nuss', unidad_negocio_id: 'u-n' }])
+}

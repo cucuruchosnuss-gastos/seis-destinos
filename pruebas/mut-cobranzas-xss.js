@@ -79,6 +79,9 @@ function anclaUnica(texto, centro, largoInicial) {
 const EQUIVALENTES = [{
   expr: "escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')",
   motivo: "las dos ramas son literales del código sin ningún carácter escapable: escCob('Diferido') === 'Diferido' y escCob('Común') === 'Común', así que la página sale idéntica",
+}, {
+  expr: 'escCob(i + 1)',
+  motivo: 'un número de orden (índice + 1) de los e-cheques y transferencias del formulario (30/09/2026): no tiene ningún carácter escapable',
 }]
 
 const mutaciones = []
@@ -105,7 +108,7 @@ for (const x of objetivo) {
 }
 
 // Los .map(escCob) también se mutan.
-for (const m of ['cambios.map(escCob).join', 'errores.map(escCob).join', 'todo.map(escCob).join']) {
+for (const m of ['cambios.map(escCob).join', 'cob-aviso--grave">${errores.map(escCob).join', 'todo.map(escCob).join']) {
   const veces = src.split(m).length - 1
   if (veces !== 1) { ambiguas.push(`«${m}» aparece ${veces} veces`); continue }
   mutaciones.push({

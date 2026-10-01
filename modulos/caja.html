@@ -1589,6 +1589,9 @@
       <h2 id="movimiento-titulo">Registrar ingreso</h2>
 
       <div id="aviso-retiro-personal" class="aviso-retiro-personal" hidden></div>
+      <!-- Ingreso externo (30/09/2026): la plata de un cliente va por
+           Cobranzas, que baja su deuda al asentarla. -->
+      <div id="aviso-ingreso-cliente" class="aviso-retiro-personal" hidden>Si es plata de un cliente, cargala en <a href="cobranzas.html">Cobranzas</a> para que baje su deuda.</div>
 
       <div class="formulario" style="margin-top:1rem;">
         <div class="grupo-campo" id="grupo-contraparte" style="display:none;">
@@ -2525,7 +2528,25 @@
 
     // TEXTO PLANO: también alimenta el export a Excel. Escapar su resultado
     // donde entra a HTML (trae nombres de personas).
+    // UN MOVIMIENTO QUE VIENE DE UNA COBRANZA (30/09/2026). Lo escribe
+    // asentar_cobranza (caja_movimientos.cobranza_id): el efectivo en la caja
+    // de efectivo de la Empresa de la fábrica del cliente y cada transferencia
+    // en su cuenta de banco, con la descripción "Cobranza de <cliente> del
+    // dd/mm/aaaa" o "Cobranza de <cliente> · <referencia>" (leído con
+    // pg_get_functiondef). El cliente sale de esa descripción: es el nombre
+    // del padrón (clientes.nombre), que quien mira la caja puede no poder leer
+    // por su cuenta. Sin descripción reconocible, "Cobranza" a secas.
+    function clienteDeCobranza(m) {
+      const d = String(m?.descripcion ?? '')
+      const r = /^Cobranza de (.+?)(?: del \d{2}\/\d{2}\/\d{4}| · [\s\S]*)?$/.exec(d)
+      return r ? r[1].trim() : ''
+    }
+
     function etiquetaMovimiento(m) {
+      if (m.cobranza_id) {
+        const cliente = clienteDeCobranza(m)
+        return cliente ? 'Cobranza de ' + cliente : 'Cobranza'
+      }
       if (m.tipo === 'egreso_transferencia') {
         return 'Entregado a ' + (estado.nombresEmpleados[m.contraparte_empleado_id] || '—')
       }
@@ -3598,7 +3619,7 @@
       const { data, error } = await supabase
         .from('caja_movimientos')
         .select(`
-          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id,
+          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id, cobranza_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
@@ -3701,7 +3722,7 @@
       let consulta = supabase
         .from('caja_movimientos')
         .select(`
-          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id,
+          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id, cobranza_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .in('cuenta_id', cuentaIds)
@@ -3752,6 +3773,14 @@
       const nombreCuenta = m.cuenta_id ? estado.cuentasPorId[m.cuenta_id]?.nombre : null
       const etiquetaMedio = nombreCuenta || MEDIO_PAGO_LABEL_CAJA[m.medio_pago] || m.medio_pago
 
+      // Un movimiento de una cobranza no se edita ni se borra desde Caja (no
+      // hay cómo: Caja no tiene RPC para tocar un movimiento). Si está mal, se
+      // corrige reabriendo la cobranza en Administración. Mismo criterio del
+      // href que el del gasto: encodeURIComponent y comillas DOBLES.
+      const refCobranza = m.cobranza_id
+        ? `<div class="movimiento__referencia">Viene de una cobranza asentada: no se edita ni se borra desde Caja — <a href="administracion.html?seccion=cobranzas&amp;cobranza=${encodeURIComponent(m.cobranza_id)}">Ver la cobranza →</a></div>`
+        : ''
+
       return `
         <div class="tarjeta-movimiento">
           <div class="movimiento__cabecera">
@@ -3762,6 +3791,7 @@
               <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${esc(etiquetaMedio)}${conUnidad ? htmlUnidadDeFila(unidadDeMovimiento(m)) : ''}</div>
               ${m.descripcion ? `<div class="movimiento__descripcion">${esc(m.descripcion)}</div>` : ''}
               ${refGasto}
+              ${refCobranza}
             </div>
             <div class="movimiento__monto">${signo} ${importeHtml(m.monto, m.moneda)}</div>
           </div>
@@ -4528,7 +4558,7 @@
 
       let consulta = supabase
         .from('caja_movimientos')
-        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id')
+        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id, cobranza_id')
 
       const { empleado_ids } = estado.filtrosTodosMovimientos
       if (empleado_ids?.length) consulta = consulta.in('empleado_id', empleado_ids)
@@ -4809,6 +4839,8 @@
       grupoCuentaPropia.style.display = 'none'
       grupoCuentaContraparte.style.display = 'none'
       grupoCuentaUnica.style.display = 'none'
+      // Solo en el ingreso externo: la plata de un cliente va por Cobranzas.
+      document.getElementById('aviso-ingreso-cliente').hidden = !(tipo === 'ingreso' && subtipo === 'externo')
 
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true

@@ -758,6 +758,9 @@
         <h1 class="ad-titulo">Cobranzas por asentar</h1>
       </div>
       <p class="ad-texto-suave">Las cargan los choferes con el nombre que ellos le dan al cliente. Elegí a qué cliente corresponde cada una y asentala: recién ahí baja la deuda del cliente.</p>
+      <!-- Administración también carga cobranzas enteras, con e-cheques y
+           transferencias (30/09/2026): se cargan en Cobranzas. -->
+      <p class="ad-texto-suave"><a class="ad-link" id="ad-cobranzas-cargar" href="cobranzas.html">Cargar una cobranza (con e-cheques o transferencias) &rsaquo;</a></p>
       <div id="ad-cobranzas-aviso"></div>
       <p class="ad-cuenta" id="ad-cobranzas-cuenta"></p>
       <div class="ad-lista" id="ad-cobranzas-lista"></div>
@@ -4530,6 +4533,7 @@
     function cobranzasVacio() {
       return {
         lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null,
+        transferencias: new Map(), cuentasTransf: new Map(), errorTransf: null,
         clientes: null, errorClientes: null, asentando: null, hechos: new Map(),
       }
     }
@@ -4566,7 +4570,7 @@
       if (!ids.length) return { cheques, fotos }
       const [ch, fo] = await Promise.all([
         supabase.from('cobranza_cheques')
-          .select('id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado')
+          .select('id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado')
           .in('cobranza_id', ids).order('created_at'),
         supabase.from('cobranza_fotos').select('id, cobranza_id, storage_path').in('cobranza_id', ids),
       ])
@@ -4575,6 +4579,41 @@
       for (const x of ch.data ?? []) cheques.set(x.cobranza_id, [...(cheques.get(x.cobranza_id) ?? []), x])
       for (const x of fo.data ?? []) fotos.set(x.id, x)
       return { cheques, fotos }
+    }
+
+    // Las transferencias de varias cobranzas (30/09/2026) y el nombre de la
+    // cuenta de banco donde entró cada una (cuentas_caja: se lee con
+    // cualquier sesión, no tiene saldo). NUNCA tira: si no se pudieron leer,
+    // `error` lo dice y la tarjeta lo muestra (nunca "no tiene").
+    async function leerTransferenciasDe(ids) {
+      const transferencias = new Map(), cuentas = new Map()
+      if (!ids.length) return { transferencias, cuentas, error: null }
+      try {
+        const { data, error } = await supabase.from('cobranza_transferencias')
+          .select('id, cobranza_id, cuenta_id, importe, fecha, referencia')
+          .in('cobranza_id', ids).order('created_at')
+        if (error) throw error
+        for (const x of data ?? []) transferencias.set(x.cobranza_id, [...(transferencias.get(x.cobranza_id) ?? []), x])
+        const idsCuentas = [...new Set((data ?? []).map(x => x.cuenta_id).filter(Boolean))]
+        if (idsCuentas.length) {
+          const r = await supabase.from('cuentas_caja').select('id, nombre, unidad_negocio_id').in('id', idsCuentas)
+          if (!r.error) for (const c of r.data ?? []) cuentas.set(c.id, c)
+        }
+        return { transferencias, cuentas, error: null }
+      } catch (err) {
+        console.error('No se pudieron leer las transferencias:', err)
+        return { transferencias, cuentas, error: 'No se pudieron leer las transferencias de esta cobranza: el detalle puede estar incompleto.' }
+      }
+    }
+
+    // La suma de importes que vienen de la base (un importe ausente no suma).
+    function sumaImportesCob(filas) {
+      return (filas ?? []).reduce((acc, x) => {
+        const v = x?.importe
+        if (v === null || v === undefined || v === '') return acc
+        const n = Number(v)
+        return Number.isFinite(n) ? acc + n : acc
+      }, 0)
     }
 
     // El nombre de cada banco (bancos_bcra). Si no se puede leer, el cheque
@@ -4656,11 +4695,71 @@
       return `Le queda un saldo de ${importeCob(n)}.`
     }
 
+    // La etiqueta de cada forma de pago (30/09/2026; las clases viven en
+    // css/main.css y las usan también Cobranzas y la cartera de Cheques).
+    // Efectivo verde, cheque de papel naranja, e-cheque y transferencia
+    // celeste (la única excepción a "sin azules"); la transferencia con su
+    // ícono. El texto dice la forma: el color nunca va solo.
+    function htmlFormaPago(forma) {
+      if (forma === 'efectivo') return '<span class="forma-pago forma-pago--efectivo">Efectivo</span>'
+      if (forma === 'cheque') return '<span class="forma-pago forma-pago--cheque">Cheque</span>'
+      if (forma === 'echeck') return '<span class="forma-pago forma-pago--echeck">E-cheque</span>'
+      if (forma === 'transferencia') {
+        return '<span class="forma-pago forma-pago--transferencia"><svg class="forma-pago__icono" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 5h10M9 2l3 3-3 3M14 11H4M7 8l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Transferencia</span>'
+      }
+      return ''
+    }
+
+    // Un cheque de la cobranza. Un e-cheque no tiene papel ni foto.
     function htmlChequeCob(ch) {
       const pago = ch.tipo === 'diferido' ? 'paga el ' + fechaCorta(ch.fecha_pago) : 'a la vista'
       const linea = `${importeCob(ch.importe)} · ${nombreBanco(ch.banco_codigo)} · Nº ${ch.numero ?? '—'} · ${pago}`
-      const foto = ch.foto_id ? `<button type="button" class="ad-btn ad-btn--suave ad-cob__foto" data-cob-foto="${esc(ch.foto_id)}">Ver la foto</button>` : ''
-      return `<div class="ad-cob__cheque"><span class="ad-cob__cheque-texto">${esc(linea)}</span>${foto}</div>`
+      const foto = !ch.es_echeck && ch.foto_id ? `<button type="button" class="ad-btn ad-btn--suave ad-cob__foto" data-cob-foto="${esc(ch.foto_id)}">Ver la foto</button>` : ''
+      return `<div class="ad-cob__cheque">${htmlFormaPago(ch.es_echeck ? 'echeck' : 'cheque')}<span class="ad-cob__cheque-texto">${esc(linea)}</span>${foto}</div>`
+    }
+
+    // Una transferencia: importe, la cuenta de banco donde entró, fecha y
+    // referencia. `cuentas`: Map id → { nombre }.
+    function htmlTransferenciaCob(t, cuentas) {
+      const cuenta = cuentas?.get?.(t.cuenta_id)?.nombre || 'una cuenta de banco'
+      const partes = [importeCob(t.importe), 'entró en ' + cuenta]
+      if (esFechaIso(t.fecha)) partes.push(fechaCorta(t.fecha))
+      if (limpio(t.referencia)) partes.push('Ref. ' + limpio(t.referencia))
+      return `<div class="ad-cob__cheque">${htmlFormaPago('transferencia')}<span class="ad-cob__cheque-texto">${esc(partes.join(' · '))}</span></div>`
+    }
+
+    // Las etiquetas de las formas de pago que trae la cobranza, en una fila.
+    // Sin la lista de cheques (no se pudieron ver), alcanza con la cantidad.
+    function htmlFormasDeCobranza(c, cheques, transf) {
+      const lista = cheques ?? []
+      const formas = []
+      if (Number(c.efectivo) > 0) formas.push('efectivo')
+      if (lista.some(ch => !ch.es_echeck) || (!lista.length && Number(c.cheques) > 0)) formas.push('cheque')
+      if (lista.some(ch => ch.es_echeck)) formas.push('echeck')
+      if ((transf ?? []).length) formas.push('transferencia')
+      if (!formas.length) return ''
+      return `<div class="formas-pago" style="margin-top:0.5rem">${formas.map(htmlFormaPago).join('')}</div>`
+    }
+
+    function htmlTransferenciasCob(transf, cuentas, error) {
+      if (error) return `<div class="ad-aviso">${esc(error)}</div>`
+      const lista = transf ?? []
+      if (!lista.length) return ''
+      return `<div class="ad-cob__cheques">${lista.map(t => htmlTransferenciaCob(t, cuentas)).join('')}</div>`
+    }
+
+    // Lo que hace asentar_cobranza con la plata (leído con pg_get_functiondef
+    // el 30/09/2026): el efectivo entra en la caja de efectivo de la Empresa
+    // de la fábrica del cliente, cada transferencia en su cuenta de banco, y
+    // los cheques (papel y e-cheques) quedan en la cartera.
+    function textoDondeVaLaPlata(c, cheques, transf) {
+      const partes = []
+      if (Number(c.efectivo) > 0) partes.push('el efectivo entra en la caja de efectivo de la Empresa de la fábrica de ese cliente')
+      if ((transf ?? []).length) partes.push((transf.length === 1 ? 'la transferencia se anota' : 'cada transferencia se anota') + ' en su cuenta de banco')
+      if ((cheques ?? []).length || Number(c.cheques) > 0) partes.push('los cheques quedan en la cartera')
+      if (!partes.length) return ''
+      const t = partes.length === 1 ? partes[0] : partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1]
+      return 'Al asentar, ' + t + '.'
     }
 
     function htmlChequesCob(c, cheques) {
@@ -4774,7 +4873,7 @@
       if (estado.cobranzas.asentando === a) repintarAsentar()
     }
 
-    function htmlPanelAsentar(c, a) {
+    function htmlPanelAsentar(c, a, { cheques = null, transferencias = null } = {}) {
       // Los tres primeros sugeridos (ya vienen ordenados por parecido), como
       // botones; el resto va de lista inicial en el buscador.
       const botones = a.sugeridos.slice(0, SUGERIDOS_EN_BOTONES)
@@ -4783,7 +4882,8 @@
           `<div class="ad-opciones-clientes">${botones.map(s => htmlOpcionCliente(s, a.cliente?.id, true)).join('')}</div>`
         : `<p class="ad-texto-suave">${esc('Ningún cliente se llama «' + limpio(c.escrito) + '» ni tiene ese apodo. Buscalo:')}</p>`
       const elegido = a.cliente
-        ? `<div class="ad-aviso">${esc('Se va a asentar en la cuenta de ' + a.cliente.nombre + (a.cliente.empresa ? ' (' + a.cliente.empresa + ')' : '') + ': baja su deuda en ' + importeCob(c.total, c.moneda) + '.')}</div>`
+        ? `<div class="ad-aviso">${esc('Se va a asentar en la cuenta de ' + a.cliente.nombre + (a.cliente.empresa ? ' (' + a.cliente.empresa + ')' : '') + ': baja su deuda en ' + importeCob(c.total, c.moneda) + '.')}` +
+          `${textoDondeVaLaPlata(c, cheques, transferencias) ? `<br>${esc(textoDondeVaLaPlata(c, cheques, transferencias))}` : ''}</div>`
         : ''
       return `<div class="ad-panel" id="ad-asentar-panel">` +
         `<h3 class="ad-subtitulo" style="margin-top:0">¿De qué cliente es?</h3>${sugeridos}` +
@@ -4805,26 +4905,40 @@
     // La tarjeta de una cobranza: lo que escribió el chofer bien grande, quién
     // la cargó y cuándo, efectivo, cheques (con su foto), total y
     // observaciones. `conAcciones`: en la lista, el botón Asentar.
-    function htmlTarjetaCobranza(c, { cheques = null, asentando = null, hecho = null, conAcciones = true } = {}) {
-      const datos = [
-        ['Efectivo', Number(c.efectivo) > 0 ? importeCob(c.efectivo, c.moneda) : 'Sin efectivo'],
-        ['Cheques', String(Number(c.cheques) || 0)],
-        ['Total', importeCob(c.total, c.moneda)],
-      ]
+    function htmlTarjetaCobranza(c, { cheques = null, asentando = null, hecho = null, conAcciones = true, transferencias = null, cuentas = null, errorTransf = null } = {}) {
+      // Las cuatro formas de pago (30/09/2026). Los e-cheques vienen entre
+      // los cheques (es_echeck); las transferencias aparte. El total de
+      // cobranzas_por_asentar() ya las suma (_total_cobranza).
+      const lista = cheques ?? []
+      const echecks = lista.filter(ch => ch.es_echeck)
+      const transf = transferencias ?? []
+      const datos = [['Efectivo', Number(c.efectivo) > 0 ? importeCob(c.efectivo, c.moneda) : 'Sin efectivo']]
+      if (echecks.length) {
+        datos.push(['Cheques', String(lista.length - echecks.length)])
+        datos.push(['E-cheques', `${echecks.length} · ${importeCob(sumaImportesCob(echecks), c.moneda)}`])
+      } else {
+        datos.push(['Cheques', String(Number(c.cheques) || 0)])
+      }
+      if (transf.length) datos.push(['Transferencias', `${transf.length} · ${importeCob(sumaImportesCob(transf), c.moneda)}`])
+      datos.push(['Total', importeCob(c.total, c.moneda)])
       if (limpio(c.observaciones)) datos.push(['Observaciones', limpio(c.observaciones)])
       const meta = 'Lo cargó ' + (c.cargadaPor || 'alguien') + ' · ' + fechaCorta(c.fecha)
       let pie = ''
       if (hecho) pie = htmlHechoCob(hecho) + `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" data-cobranza-listo="${esc(c.id)}">Listo</button></div>`
-      else if (asentando) pie = htmlPanelAsentar(c, asentando)
+      else if (asentando) pie = htmlPanelAsentar(c, asentando, { cheques, transferencias: transf })
       else if (conAcciones && puedeAsentar() && c.estado === 'registrada') {
-        pie = `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-asentar="${esc(c.id)}">Asentar</button></div>`
+        // Sumarle un e-cheque o una transferencia se hace en Cobranzas, con
+        // su formulario (allá se ve si esta persona puede editarla).
+        pie = `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-asentar="${esc(c.id)}">Asentar</button>` +
+          `<a class="ad-btn ad-btn--suave" data-cobranza-editar href="cobranzas.html?cobranza=${encodeURIComponent(c.id)}&amp;volver=${encodeURIComponent('administracion.html?seccion=cobranzas')}">Sumar e-cheques o transferencias</a></div>`
       }
       return `<article class="ad-tarjeta ad-cob${hecho ? ' ad-cob--hecha' : ''}" data-cobranza="${esc(c.id)}">` +
         `<div class="ad-cob__rotulo">Lo que escribió el chofer</div>` +
         `<div class="ad-cob__escrito">${esc('«' + (limpio(c.escrito) || '—') + '»')}</div>` +
         `<div class="ad-fila__meta">${esc(meta)}</div>` +
+        `${htmlFormasDeCobranza(c, lista, transf)}` +
         `<div class="ad-datos" style="margin-top:0.625rem">${datos.map(([k, v]) => htmlDatoAd(k, v)).join('')}</div>` +
-        `${htmlChequesCob(c, cheques)}${pie}</article>`
+        `${htmlChequesCob(c, cheques)}${htmlTransferenciasCob(transf, cuentas, errorTransf)}${pie}</article>`
     }
 
     function htmlListaCobranzas() {
@@ -4836,6 +4950,8 @@
         const c = datosCobranza(f)
         return htmlTarjetaCobranza(c, {
           cheques: cb.cheques.get(c.id) ?? [],
+          transferencias: cb.transferencias.get(c.id) ?? [],
+          cuentas: cb.cuentasTransf, errorTransf: cb.errorTransf,
           asentando: cb.asentando?.id === c.id ? cb.asentando : null,
           hecho: cb.hechos.get(c.id) ?? null,
         })
@@ -4888,6 +5004,11 @@
           console.error('No se pudieron leer los cheques:', err)
           estado.cobranzas.errorCheques = 'No se pudieron leer los cheques. Revisá la conexión.'
         }
+        const t = await leerTransferenciasDe(lista.map(f => f.cobranza_id))
+        if (turno !== turnoCobranzas) return
+        estado.cobranzas.transferencias = t.transferencias
+        estado.cobranzas.cuentasTransf = t.cuentas
+        estado.cobranzas.errorTransf = t.error
       } catch (err) {
         if (turno !== turnoCobranzas) return
         console.error('No se pudieron leer las cobranzas por asentar:', err)
@@ -5046,7 +5167,18 @@
         try { sugeridos = (await leerPorAsentar()).find(f => f.cobranza_id === id)?.sugeridos ?? [] } catch (err) { console.error('No se pudieron leer los sugeridos:', err) }
       }
       const { cheques, fotos } = await leerChequesDe([id])
-      return { fila: { ...v.data, cobranza_id: id, sugeridos }, clienteId, cliente, cheques: cheques.get(id) ?? [], fotos }
+      // v_cobranzas.total es efectivo + cheques: NO suma las transferencias
+      // (hueco de base al 30/09/2026). Se suman acá; un total ausente sigue
+      // ausente ("—").
+      const tr = await leerTransferenciasDe([id])
+      const transferencias = tr.transferencias.get(id) ?? []
+      const totalVista = v.data.total
+      const total = totalVista === null || totalVista === undefined || totalVista === '' || !Number.isFinite(Number(totalVista))
+        ? null : Number(totalVista) + sumaImportesCob(transferencias)
+      return {
+        fila: { ...v.data, total, cobranza_id: id, sugeridos }, clienteId, cliente, cheques: cheques.get(id) ?? [], fotos,
+        transferencias, cuentasTransf: tr.cuentas, errorTransf: tr.error,
+      }
     }
 
     function htmlCobranzaAbierta(d) {
@@ -5062,6 +5194,7 @@
       const cabecera = `<div class="ad-aviso${c.estado === 'anulada' ? ' ad-aviso--grave' : ''}">${esc(estadoTxt + '.')}</div>`
       const tarjeta = htmlTarjetaCobranza(c, {
         cheques: d.cheques, conAcciones: true,
+        transferencias: d.transferencias ?? [], cuentas: d.cuentasTransf ?? null, errorTransf: d.errorTransf ?? null,
         asentando: cb.asentando?.id === c.id ? cb.asentando : null,
         hecho: d.hecho ?? null,
       })
@@ -6245,6 +6378,10 @@
     /* Cada dato se corta con puntos suspensivos; el separador " · " sale del
        CSS, así un dato vacío no deja dos puntos seguidos. */
     .chq-tarjeta__dato { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* La etiqueta de la forma de pago (30/09/2026) va en el renglón de abajo, antes
+       del número, y no se achica: arriba no entraba al lado de un importe de
+       cientos de miles. */
+    .chq-tarjeta__l2 > .forma-pago { flex: 0 0 auto; font-size: 0.625rem; padding: 0.0625rem 0.375rem; }
     /* Con una unidad elegida en la barra de arriba: la marca de un cheque SIN
        unidad, primera en el renglón y sin cortarse (va después de la regla
        de .chq-tarjeta__dato, que tiene la misma especificidad). */
@@ -7702,7 +7839,7 @@
       pintarFiltrosCheques()
       const { q, sinResultados } = aplicarFiltrosCheques(
         supabase.from('cobranza_cheques').select(
-          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id'),
+          'id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id'),
         estado.filtros)
       if (sinResultados) {
         estado.filas = []; estado.error = null; estado.tope = false
@@ -7968,6 +8105,16 @@
       return `<th scope="col" class="${esc(clase)}" aria-sort="${esc(ariaSort)}"><button type="button" class="chq-th-orden${activo ? ' chq-th-orden--activo' : ''}" data-orden="${esc(campo)}">${rotulo}<span class="chq-th-orden__flecha" aria-hidden="true">${esc(flecha)}</span></button></th>`
     }
 
+    // LA ETIQUETA DE LA FORMA DE PAGO de cada cheque de la cartera
+    // (30/09/2026): el de papel en naranja y el e-cheque en celeste (la única
+    // excepción a "sin azules"). Las clases son de css/main.css, las mismas de
+    // Cobranzas y de Cobranzas por asentar. Texto fijo del código.
+    function htmlFormaCheque(ch) {
+      return ch?.es_echeck
+        ? '<span class="forma-pago forma-pago--echeck">E-cheque</span>'
+        : '<span class="forma-pago forma-pago--cheque">Cheque</span>'
+    }
+
     function htmlFilaCheque(ch, cob) {
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
       // Un cheque común no tiene fecha de pago: es "a la vista".
@@ -7990,7 +8137,7 @@
         <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0"${htmlAriaElegido(ch)}>
           ${estado.seleccion.activa ? `<td class="chq-tabla__elegir">${htmlCasillaElegir(ch)}</td>` : ''}
           <td>${esc(ch.numero ?? '—')}</td>
-          <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${esc(nombreBanco(ch.banco_codigo))}</td>
+          <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${htmlFormaCheque(ch)} ${esc(nombreBanco(ch.banco_codigo))}</td>
           <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
           <td class="chq-tabla__fecha chq-tabla__pago">${celdaPago}</td>
           <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
@@ -8161,7 +8308,7 @@
               <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
               <span class="chq-tarjeta__pago">${esc(pago)}</span>
             </div>
-            <div class="chq-tarjeta__l2">${marcaSinUnidad}${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
+            <div class="chq-tarjeta__l2">${marcaSinUnidad}${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}${htmlFormaCheque(ch)}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
             <span class="chq-oculto">${esc(textoUnidad)}</span>
           </div>
           ${accion ? `<div class="chq-tarjeta__lado">${accion}</div>` : ''}
