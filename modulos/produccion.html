@@ -10500,6 +10500,10 @@
       document.getElementById('pr-anular-masa-confirmar').addEventListener('click', confirmarAnularMasa)
       window.addEventListener('online', reintentarPendientes)
       setInterval(() => { if (borradoresPendientes().length) reintentarPendientes() }, 30000)
+      // El tiempo real (30/09/2026): con la red de vuelta se rearma ya, y con
+      // el canal caído la pantalla se vuelve a leer cada 15 segundos.
+      window.addEventListener('online', alVolverLaRed)
+      setInterval(() => { revisarVivo() }, CADA_REVISION_VIVO_MS)
     }
 
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
@@ -10700,10 +10704,25 @@
     // otras fábricas. Por eso el filtro va DOS veces: en la suscripción
     // (turnos por unidad_negocio_id, el resto por turno_id de los turnos de
     // ESTA fábrica) y otra vez al recibir, en cambioEsDeMiFabrica().
+    //
+    // UN NOMBRE NUEVO POR CANAL (30/09/2026). supabase.channel(nombre)
+    // DEVUELVE EL CANAL QUE YA EXISTE con ese nombre (realtime-js 2.117), y
+    // removeChannel lo saca de la lista recién cuando el servidor confirma
+    // que se fue. Rearmarlo con el mismo nombre (al volver del bloqueo, al
+    // abrir o cerrar una máquina) devolvía el canal viejo, que se estaba
+    // cerrando: "Tiempo real: CLOSED" y varios segundos sin avisos. Por eso
+    // cada canal lleva su número.
+    //
+    // RED DE SEGURIDAD: mientras el canal no está conectado, la pantalla se
+    // vuelve a leer sola cada 15 segundos (revisarVivo), así lo cargado en
+    // la otra tablet aparece igual, aunque el tiempo real esté caído.
     let canalVivo = null
     let claveCanalVivo = ''
     let relojVivo = null
     let reconexionVivo = null
+    let nroCanalVivo = 0
+    const CADA_REVISION_VIVO_MS = 15000
+    const QUIETO_PARA_REVISAR_MS = 10000
     const TABLAS_VIVAS = ['masas', 'produccion_items', 'paradas_produccion', 'turno_operarios']
 
     // Los turnos vivos de la fábrica: abiertos o pendientes de completar, más
@@ -10745,13 +10764,23 @@
       estado.turnosVivos = ids
       const clave = estado.unidadId + '|' + [...ids].sort().join(',')
       if (canalVivo && clave === claveCanalVivo) return
-      if (canalVivo) { try { supabase.removeChannel(canalVivo) } catch { /* nada */ } canalVivo = null }
+      if (canalVivo) {
+        const viejo = canalVivo
+        canalVivo = null
+        try { Promise.resolve(supabase.removeChannel(viejo)).catch(() => { /* nada */ }) } catch { /* nada */ }
+      }
       claveCanalVivo = clave
-      let ch = supabase.channel('planta-' + estado.unidadId)
+      // La clave del tiempo real al día (una tablet que estuvo congelada
+      // puede tener la vieja); sin un setAuth en la librería, sigue igual.
+      try { await supabase.realtime?.setAuth?.() } catch { /* nada */ }
+      if (canalVivo || claveCanalVivo !== clave) return
+      let ch = supabase.channel('planta-' + estado.unidadId + '-' + (++nroCanalVivo))
       for (const { tabla, filtro } of filtrosTiempoReal(estado.unidadId, ids)) {
         ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: tabla, filter: filtro }, pl => alCambioVivo(tabla, pl))
       }
       canalVivo = ch
+      // Hasta que el canal nuevo diga SUBSCRIBED, la red de seguridad lee.
+      estado.vivo = 'conectando'
       ch.subscribe(status => {
         if (ch !== canalVivo) return
         estado.vivo = status
@@ -10776,6 +10805,27 @@
       }, 5000)
     }
 
+    // La red de seguridad: con el canal caído (o todavía sin conectar), la
+    // pantalla se vuelve a leer, como si hubiera llegado un aviso. No con la
+    // tablet escondida ni mientras alguien está tocando la pantalla (lo que
+    // se está escribiendo no se toca igual: ver refrescarVivo).
+    function revisarVivo(ahora = Date.now(), doc = document) {
+      if (!estado.sesionPlanta || !estado.unidadId) return false
+      if (doc?.visibilityState === 'hidden') return false
+      if (estado.vivo === 'SUBSCRIBED') return false
+      const toque = estado.ultimoToque ? new Date(estado.ultimoToque).getTime() : 0
+      if (toque && ahora - toque < QUIETO_PARA_REVISAR_MS) return false
+      refrescarVivo({ forzar: true }).catch(err => console.error('tiempo real (revisar):', err))
+      return true
+    }
+
+    // Volvió la red: el canal se rearma ya, sin esperar los 5 segundos.
+    function alVolverLaRed() {
+      claveCanalVivo = ''
+      conectarTiempoReal()
+      return true
+    }
+
     // Llegó un cambio: se filtra y se redibuja una sola vez por ráfaga (una
     // masa escribe su fila y sus renglones casi juntos).
     function alCambioVivo(tabla, payload) {
@@ -10791,10 +10841,10 @@
     // Redibuja lo que se está viendo con los cambios acumulados. Lo que se
     // está ESCRIBIENDO (el PIN, una masa a medio armar, un producto a medio
     // elegir, el cierre) no se toca: solo se leen de nuevo sus datos.
-    async function refrescarVivo() {
+    async function refrescarVivo({ forzar = false } = {}) {
       const cambios = estado.cambiosVivos ?? []
       estado.cambiosVivos = []
-      if (!cambios.length) return
+      if (!cambios.length && !forzar) return
       // Un turno que dejó de estar abierto: la máquina se suelta (la planilla
       // y la sala), como cuando se cierra desde esta tablet.
       for (const { tabla, fila } of cambios) {

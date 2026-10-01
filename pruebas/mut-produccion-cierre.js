@@ -155,7 +155,7 @@ correrMutacionesProduccion({
 
     // ── Masas ───────────────────────────────────────────────────────────
     { nombre: "el resumen de masas toma la primera como última", de: "      const ultima = lista[lista.length - 1]\n      const quien = ultima ? apellidoDe(ultima.masero_id)", a: "      const ultima = lista[0]\n      const quien = ultima ? apellidoDe(ultima.masero_id)" },
-    { nombre: "las masas anuladas también cuentan", de: "es_chocolate, masero_id').eq('turno_id', turnoId).eq('anulada', false).order('nro')", a: "es_chocolate, masero_id').eq('turno_id', turnoId).order('nro')" },
+    { nombre: "las masas anuladas también cuentan", de: "es_chocolate, masero_id, descartada, descarte_motivo').eq('turno_id', turnoId).eq('anulada', false).order('nro')", a: "es_chocolate, masero_id, descartada, descarte_motivo').eq('turno_id', turnoId).order('nro')" },
     { nombre: "el resumen de masas no dice las de chocolate", de: "(choco ? `${choco} de chocolate` : (lista.length === 1", a: "(false ? `${choco} de chocolate` : (lista.length === 1" },
     { nombre: "las masas se pueden tocar desde la planilla", de: "<div class=\"pr-res pr-res--masas\" id=\"pr-planilla-masas\"></div>", a: "<button type=\"button\" class=\"pr-res pr-res--masas\" id=\"pr-planilla-masas\"></button>" },
 

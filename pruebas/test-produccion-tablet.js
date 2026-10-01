@@ -195,6 +195,44 @@ esperas.push((async () => {
   R.__tablas.turnos_produccion = () => ({ data: [{ id: 't37' }, { id: 't38' }, { id: 't39' }], error: null })
   await R.conectarTiempoReal()
   chk('3. con un turno nuevo, se rearma y se quita el viejo', R.__canales.length === antes + 1 && R.__canales[0].quitado === true)
+  // (30/09/2026) channel() devuelve el canal que existe con ese nombre (el
+  // sandbox imita a realtime-js): rearmarlo con el mismo nombre devolvía el
+  // viejo, que se estaba cerrando. Cada canal tiene que ser uno NUEVO.
+  const nuevo = R.__canales[R.__canales.length - 1], viejo = R.__canales[R.__canales.length - 2]
+  chk('3. el canal rearmado es OTRO objeto, con otro nombre (no el que se está cerrando)',
+    !!nuevo && !!viejo && nuevo !== viejo && nuevo.nombre !== viejo.nombre && /^planta-u-cn-\d+$/.test(nuevo.nombre), R.__canales.map(c => c.nombre))
+  chk('3. … y escucha las cinco tablas otra vez (no se le suman al viejo)', nuevo?.ons?.length === 5 && viejo?.ons?.length === 5, [nuevo?.ons?.length, viejo?.ons?.length])
+  chk('3. mientras el nuevo no conecta, el estado dice que no está conectado', R.estado.vivo === 'conectando', R.estado.vivo)
+  // Volver del bloqueo con los mismos turnos: también un canal nuevo.
+  const V = armar()
+  await V.conectarTiempoReal()
+  V.__canales[0].estadoCb('SUBSCRIBED')
+  V.claveCanalVivo = ''
+  await V.alVolverLaRed()
+  await new Promise(r => setTimeout(r, 0))
+  chk('3. al volver la red se rearma YA, con un canal nuevo', V.__canales.length === 2 && V.__canales[0].quitado === true && V.__canales[1] !== V.__canales[0], V.__canales.map(c => c.nombre))
+  chk('3. el aviso de "volvió la red" y la revisión cada 15 s están instalados',
+    /addEventListener\('online', alVolverLaRed\)/.test(FUENTE) && /setInterval\(\(\) => \{ revisarVivo\(\) \}, CADA_REVISION_VIVO_MS\)/.test(FUENTE) && V.CADA_REVISION_VIVO_MS === 15000)
+
+  // La red de seguridad: con el canal caído, la pantalla se vuelve a leer.
+  const Q = armar()
+  Q.estado.sesionPlanta = { empleado_id: 'emp-tablet' }
+  await Q.abrirPlanilla('t37')
+  const docVisible = { visibilityState: 'visible' }
+  Q.estado.vivo = 'SUBSCRIBED'
+  chk('3. con el canal conectado, la red de seguridad no lee nada', Q.revisarVivo(Date.now(), docVisible) === false)
+  Q.estado.vivo = 'CLOSED'
+  Q.estado.ultimoToque = Date.now()
+  chk('3. con alguien tocando la pantalla, no se relee', Q.revisarVivo(Date.now(), docVisible) === false)
+  Q.estado.ultimoToque = Date.now() - 60000
+  chk('3. con la tablet escondida, no se relee', Q.revisarVivo(Date.now(), { visibilityState: 'hidden' }) === false)
+  Q.__tablas.masas = [{ id: 'mz9', nro: 1, hora: '2026-09-30T10:00:00Z', doble: false, origen: 'original', es_chocolate: false }]
+  chk('3. con el canal caído y la pantalla quieta, se relee', Q.revisarVivo(Date.now(), docVisible) === true)
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0))
+  chk('3. … y la masa que cargó la otra tablet aparece aunque el tiempo real esté caído', Q.estado.planilla?.masas?.some(m => m.id === 'mz9'), Q.estado.planilla?.masas)
+  const sinSesion = armar()
+  sinSesion.estado.sesionPlanta = null
+  chk('3. sin la sesión de la tablet, no se relee', sinSesion.revisarVivo(Date.now(), docVisible) === false)
   chk('3. al volver del bloqueo se rearma el canal', /async function alReanudar\(\) \{[\s\S]{0,1500}?claveCanalVivo = ''\s+conectarTiempoReal\(\)\s+\}\n\n    \/\/ ═══/.test(FUENTE))
   chk('3. init conecta el tiempo real', /siguientePaso\(\)\s+iniciarReloj\(\)\s+registrarPantalla\(\)\s+conectarTiempoReal\(\)/.test(FUENTE))
 })())

@@ -309,7 +309,7 @@ const NUEVAS_PLANTA = [
   'asegurarPersonal',
   // Tiempo real y el tamaño de la pantalla (28/09/2026)
   'leerTurnosVivos', 'filtrosTiempoReal', 'cambioEsDeMiFabrica', 'conectarTiempoReal', 'programarReconexionVivo',
-  'alCambioVivo', 'refrescarVivo', 'textoPantalla', 'registrarPantalla', 'alReanudar',
+  'alCambioVivo', 'refrescarVivo', 'revisarVivo', 'alVolverLaRed', 'textoPantalla', 'registrarPantalla', 'alReanudar',
   // La tablet real, parte C (28/09/2026): el reloj, las etiquetas de operarios,
   // los productos, la ventana de lotes, el renglón en una línea y corregir todo
   'textoReloj', 'htmlReloj', 'tocarReloj', 'iniciarReloj', 'htmlTagsOperarios', 'partesNombreProducto',
@@ -335,7 +335,7 @@ const CONST_SOLO_GESTION = ['PESTANAS_CONFIG', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_T
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION', 'CONDICIONES_EMPAQUE']
 // ICONO primero: ICONO_MODO y otras lo usan al declararse.
 const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
-  'TABLAS_VIVAS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR',
+  'TABLAS_VIVAS', 'CADA_REVISION_VIVO_MS', 'QUIETO_PARA_REVISAR_MS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR',
   // Planta v2 (28/09/2026)
   'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'MOTIVOS_PARADA', 'OTRO_MOTIVO', 'COLOR_TAMANO', 'COLOR_CHOCO',
   'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES',
@@ -407,7 +407,7 @@ const PRELUDIO = `
   var camposPlanillaEnlazados = false
   var lecturaPersonal = null
   var relojPlanta = null
-  var canalVivo = null, claveCanalVivo = '', relojVivo = null, reconexionVivo = null
+  var canalVivo = null, claveCanalVivo = '', relojVivo = null, reconexionVivo = null, nroCanalVivo = 0
   var __registros = []
   function registrarError(r) { __registros.push(r) }
   // El tiempo real (js/salud.js, 30/09/2026): se anota el corte y la vuelta.
@@ -455,14 +455,19 @@ const PRELUDIO = `
     rpc(nombre, params) { __llamadas.rpc.push([nombre, params]); return Promise.resolve(__rpc(nombre, params)) },
     // Un canal de tiempo real simulado: guarda cada .on() y el callback de
     // .subscribe(), así la suite dispara cambios y estados a mano.
+    // Como realtime-js 2.117: un canal con el MISMO nombre que todavía no
+    // terminó de cerrarse se devuelve en vez de crear otro (removeChannel lo
+    // saca recién cuando el servidor confirma: __cerrarCanal).
     channel(nombre) {
-      const c = { nombre, ons: [], estadoCb: null, quitado: false,
+      const existe = __canales.find(x => x.nombre === nombre && !x.cerrado)
+      if (existe) return existe
+      const c = { nombre, ons: [], estadoCb: null, quitado: false, cerrado: false,
         on(tipo, cfg, cb) { this.ons.push({ tipo, cfg, cb }); return this },
         subscribe(cb) { this.estadoCb = cb; return this } }
       __canales.push(c)
       return c
     },
-    removeChannel(c) { c.quitado = true },
+    removeChannel(c) { c.quitado = true; return Promise.resolve('ok') },
   }
   function mostrarError(m) { __llamadas.errores.push(m) }
   function mostrarExito(m) { __llamadas.exitos.push(m) }

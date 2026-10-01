@@ -38,7 +38,7 @@ const FUENTE_G = leer(ARCHIVO_G)
 const { chk, esperas, fin } = arnes()
 
 // Baseline FIJO: el commit anterior al cambio (el botón "Anterior (última)").
-const BASE = '2b35240'
+const BASE = 'ae653a3'
 const RAIZ = path.join(__dirname, '..')
 function enBase(ruta) {
   try { return execSync(`git show ${BASE}:${ruta}`, { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }) } catch { return null }

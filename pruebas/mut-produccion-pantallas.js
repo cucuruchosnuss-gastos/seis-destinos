@@ -35,7 +35,7 @@ correrMutacionesProduccion({
     // 11. lo producido
     { nombre: 'el producto sin familia', de: "(familia ? `<span class=\"pr-ag__familia\">${esc(familia)}</span>` :", a: "(false ? '' :" },
     // Planta v2: el chocolate en su grupo y en marrón (COLOR_CHOCO).
-    { nombre: 'el chocolate no va en su botón marrón', de: '        if (col.choco) {\n', a: '        if (false) {\n' },
+    { nombre: 'el chocolate no va en su botón marrón', de: '        if (col.choco && !col.elegido) {\n', a: '        if (false) {\n' },
     { nombre: 'el marrón del chocolate pasa a azul', de: "const COLOR_CHOCO = { mini: 'oklch(0.44 0.07 55)'", a: "const COLOR_CHOCO = { mini: 'oklch(0.44 0.07 250)'" },
     { nombre: 'el marrón del chocolate con letra oscura', de: '.pr-ag__producto--choco { color: #fff;', a: '.pr-ag__producto--choco { color: #111;' },
     { nombre: 'el chocolate sin su grupo aparte', de: '<span class="pr-ag__rotulo">DE CHOCOLATE</span>', a: '' },

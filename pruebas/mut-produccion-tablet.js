@@ -44,8 +44,8 @@ correrMutacionesProduccion({
     { nombre: 'un cierre de otra tablet no suelta la máquina', de: '        await maquinaCerrada(fila.id)\n        if (mirandola) {', a: '        if (mirandola) {' },
     { nombre: 'un cierre de otra tablet no avisa', de: "          mostrarError('Esta planilla se cerró desde otra tablet.')\n", a: '' },
     { nombre: 'con los mismos turnos rearma el canal', de: '      if (canalVivo && clave === claveCanalVivo) return\n', a: '' },
-    { nombre: 'el canal viejo no se quita', de: "      if (canalVivo) { try { supabase.removeChannel(canalVivo) } catch { /* nada */ } canalVivo = null }", a: '      canalVivo = null' },
-    { nombre: 'el canal caído no se anota', de: "          registrarError({ evento: 'planta', mensaje: 'Tiempo real: ' + status })\n", a: '' },
+    { nombre: 'el canal viejo no se quita', de: "        try { Promise.resolve(supabase.removeChannel(viejo)).catch(() => { /* nada */ }) } catch { /* nada */ }\n", a: '' },
+    { nombre: 'el canal caído no se avisa a salud', de: "          tiempoRealCaido(status)\n", a: '' },
     { nombre: 'al reanudar no se rearma el canal', de: "      claveCanalVivo = ''\n      conectarTiempoReal()\n    }\n\n    // ═══", a: '    }\n\n    // ═══' },
     { nombre: 'init no conecta el tiempo real', de: '      registrarPantalla()\n      conectarTiempoReal()\n    }\n\n    init()', a: '      registrarPantalla()\n    }\n\n    init()' },
     // 4. pantalla
@@ -54,5 +54,17 @@ correrMutacionesProduccion({
     { nombre: 'la pantalla sin DPR', de: "· DPR ${Math.round(dpr * 100) / 100} · ${orientacion}`, detalle", a: "· ${orientacion}`, detalle" },
     { nombre: 'la pantalla no dice si está instalada', de: 'dpr, orientacion, instalada })', a: 'dpr, orientacion })' },
     { nombre: 'init no registra la pantalla', de: '      iniciarReloj()\n      registrarPantalla()\n', a: '      iniciarReloj()\n' },
+    // 3. tiempo real (30/09/2026): un canal nuevo cada vez y la red de seguridad
+    { nombre: 'el canal se rearma con el mismo nombre (vuelve el viejo)', de: "supabase.channel('planta-' + estado.unidadId + '-' + (++nroCanalVivo))", a: "supabase.channel('planta-' + estado.unidadId)" },
+    { nombre: 'el canal nuevo arranca como conectado', de: "      estado.vivo = 'conectando'\n", a: '' },
+    { nombre: 'la red de seguridad lee con el canal conectado', de: "      if (estado.vivo === 'SUBSCRIBED') return false\n", a: '' },
+    { nombre: 'la red de seguridad lee con la tablet escondida', de: "      if (doc?.visibilityState === 'hidden') return false\n", a: '' },
+    { nombre: 'la red de seguridad lee mientras alguien toca', de: '      if (toque && ahora - toque < QUIETO_PARA_REVISAR_MS) return false\n', a: '' },
+    { nombre: 'la red de seguridad lee sin la sesión de la tablet', de: '      if (!estado.sesionPlanta || !estado.unidadId) return false\n', a: '' },
+    { nombre: 'refrescar sin cambios no lee nada aunque se fuerce', de: 'if (!cambios.length && !forzar) return', a: 'if (!cambios.length) return' },
+    { nombre: 'la red de seguridad no fuerza', de: 'refrescarVivo({ forzar: true }).catch(', a: 'refrescarVivo().catch(' },
+    { nombre: 'volver la red no rearma', de: "    function alVolverLaRed() {\n      claveCanalVivo = ''\n      conectarTiempoReal()\n", a: '    function alVolverLaRed() {\n' },
+    { nombre: 'sin el aviso de la red', de: "      window.addEventListener('online', alVolverLaRed)\n", a: '' },
+    { nombre: 'sin la revisión cada 15 s', de: '      setInterval(() => { revisarVivo() }, CADA_REVISION_VIVO_MS)\n', a: '' },
   ],
 })
