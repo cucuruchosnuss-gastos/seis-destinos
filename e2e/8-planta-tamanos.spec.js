@@ -43,6 +43,14 @@ for (const [ancho, alto] of TAMANOS) {
         for (const a of m.afuera) problemas.push(`${nombre}: se sale de su recuadro ${a}`);
         for (const c of m.cortadas) problemas.push(`${nombre}: palabra cortada ${c}`);
         for (const l of m.lote) problemas.push(`${nombre}: el lote en dos renglones ${l}`);
+        // La barra lateral nunca scrollea (01/10/2026: sin "Recargar"
+        // entran todos sus botones).
+        const barra = await page.evaluate(() => {
+          const b = document.getElementById('pr-barra');
+          if (!b || b.hidden) return null;
+          return { alto: b.scrollHeight > b.clientHeight + 1, ancho: b.scrollWidth > b.clientWidth + 1, sh: b.scrollHeight, ch: b.clientHeight };
+        });
+        if (barra?.alto || barra?.ancho) problemas.push(`${nombre}: la barra lateral scrollea ${JSON.stringify(barra)}`);
       });
     }
     expect(errores, errores.join('\n')).toEqual([]);

@@ -40,6 +40,7 @@ const BASES = [
   '3918fd8', // Terminar la tablet, parte 4: las paradas con horarios
   '5ca92bb', // Terminar la tablet, parte 5: lo que se leía mal (el último archivo entero, antes de partirlo)
   '1867987', // Punto de partida de "La planta con dos modos" (27/09/2026): el login adentro, el acceso maestro y Asignar PIN
+  'a9f54d7', // Pestañas de las máquinas (01/10/2026): el último con el botón "Recargar"
 ]
 
 // La mudanza a la gestión (25/09/2026): lo que salió de acá está en
@@ -237,6 +238,11 @@ const RETIRADOS = [
     'Paradas (30/09/2026): anotar una parada que ya pasó es ahora la pantalla de Paradas misma, que es lo más común (motivo de ' +
     'motivos_parada, a qué hora paró con un reloj de ruedas, cuánto duró y el resumen): se guarda con "Guardar la parada" ' +
     '(#pr-btn-guardar-parada). Las paradas del turno se ven y se corrigen en su ventana ("Ver", #pr-btn-ver-paradas).'],
+  ['control:button#pr-btn-recargar[type=button]',
+    'Sin "Recargar" (01/10/2026, pedido de Facu): ocupaba lugar en la barra lateral y la hacía scrollear; se volvió a recargar ' +
+    'deslizando la pantalla hacia abajo (el bloqueo del zoom sigue). Un producto o una parada a medio cargar se guardan al recargar.'],
+  ['control:button#pr-recargar-si[type=button]', 'Sin "Recargar" (01/10/2026): era el "Sí, recargar" de su pregunta.'],
+  ['control:button#pr-recargar-no[type=button]', 'Sin "Recargar" (01/10/2026): era el "No, seguir" de su pregunta.'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

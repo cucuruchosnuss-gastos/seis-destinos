@@ -252,7 +252,10 @@ const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJET
   'NOMBRE_TIPO_STOCK_TERMINADO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
-const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
+const RETIRADAS = [
+  // "Recargar" se fue (01/10/2026): vuelve el deslizar para recargar.
+  'hayAlgoAMedioCargar', 'htmlConfirmaRecargar', 'pedirRecargar', 'recargarPantalla',
+  'unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
   'TAREAS_PRODUCCION', 'puedeEntrar', 'CLAVE_UNIDAD',
   // Se fueron de la gestión con su diseño (26/09/2026): el botón
   // "Configuración" con su burbuja y la fila de pestañas (el menú nombra
@@ -289,8 +292,8 @@ const NUEVAS_PLANTA = [
   // "¿Quién sos?".
   'htmlBotonOtroModo', 'puestoEnLateral', 'htmlLatPersona', 'maquinaElegida',
   'htmlLatMaquina', 'htmlLatSecciones', 'htmlLatSala', 'htmlLatConexion', 'htmlLateral', 'lateralVisible',
-  // Recargar sin "deslizar para recargar" (30/09/2026)
-  'hayAlgoAMedioCargar', 'htmlConfirmaRecargar', 'pedirRecargar', 'recargarPantalla',
+  // Lo que queda a medio cargar al recargar deslizando (01/10/2026)
+  'guardarCargaAMedias', 'tomarCargaAMedias',
   'pintarLateral', 'htmlBandaQuien', 'pintarBandaQuien', 'cancelarOtroModo', 'cambiarDePersona',
   'irASeccion', 'abrirLoProducido', 'mostrarHistorialMaquina',
   // Sala de masa con dos modos (28/09/2026): la masa nueva, lo que queda de
@@ -357,8 +360,8 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // Planta v2 (28/09/2026)
   'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'COLOR_TAMANO', 'COLOR_CHOCO',
   'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES',
-  // Recargar (30/09/2026)
-  'VISTAS_A_MEDIO_CARGAR',
+  // Lo que queda a medio cargar al recargar (01/10/2026)
+  'CLAVE_AGREGAR_A_MEDIAS', 'CLAVE_PARADA_A_MEDIAS', 'CAMPOS_AGREGAR_A_MEDIAS',
   // El botón de volver (30/09/2026)
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
