@@ -57,7 +57,12 @@ function filtrar(filas, params) {
 }
 
 async function backendSimulado(page, { tablas = {}, rpc = {} } = {}) {
-  const estado = { sinRed: false, pedidos: [], refrescos: 0, refrescoFalla: false };
+  const estado = { sinRed: false, pedidos: [], refrescos: 0, refrescoFalla: false, sockets: 0 };
+  // El tiempo real NUNCA va al servidor de verdad (30/09/2026): la sesión de
+  // acá es de mentira (sub …ab1e) y Supabase la rechazaba con
+  // "JwtSignatureError" en sus registros, cada vez que corría esta prueba.
+  // El socket queda abierto y mudo: el canal no se suscribe y la planta sigue.
+  await page.routeWebSocket(/\/realtime\/v1\//, () => { estado.sockets++; });
   await page.route(`${URL_SUPABASE}/**`, async (route) => {
     const req = route.request();
     const url = new URL(req.url());
@@ -96,6 +101,7 @@ async function backendSimulado(page, { tablas = {}, rpc = {} } = {}) {
   return {
     get pedidos() { return estado.pedidos; },
     get refrescos() { return estado.refrescos; },
+    get sockets() { return estado.sockets; },
     sinRed(v) { estado.sinRed = !!v; },
     refrescoFalla(v) { estado.refrescoFalla = !!v; },
   };

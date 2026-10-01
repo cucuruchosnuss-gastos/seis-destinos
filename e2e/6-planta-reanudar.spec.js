@@ -90,6 +90,12 @@ test('congelada 5 minutos: vuelve a la MISMA pantalla, con los mismos datos, sin
   expect(errores).toEqual([]);
 });
 
+test('el tiempo real de esta prueba no sale al servidor de verdad (su sesión es de mentira)', async ({ page }) => {
+  const { b, errores } = await abrirPlanta(page);
+  await expect.poll(() => b.sockets).toBeGreaterThan(0);
+  expect(errores).toEqual([]);
+});
+
 test('el token vence mientras está congelada: al volver se renueva solo, sin ir al login', async ({ page, context }) => {
   const { b } = await abrirPlanta(page, { venceEn: 120 });
   const volver = await congelar(page, context, 90);
