@@ -773,6 +773,74 @@
       color: var(--color-texto-2);
     }
 
+    /* ── Saldo corriente (30/09/2026): el saldo de la cuenta después de cada
+       movimiento, debajo del importe, como en un extracto. Verde si queda en
+       cero o más, bordó si queda negativo, gris si no se sabe ("—"). ───── */
+    .movimiento__lado {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.1875rem;
+      flex-shrink: 0;
+    }
+
+    .movimiento__saldo {
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .movimiento__saldo--positivo { color: var(--verde); }
+    .movimiento__saldo--negativo { color: var(--bordo); }
+    .movimiento__saldo--sin { color: var(--color-texto-suave); font-weight: 500; }
+
+    .aviso-saldo-corriente {
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+      border-radius: 10px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+    }
+
+    .saldo-apertura {
+      background: var(--color-superficie);
+      border: 1px dashed var(--color-borde);
+      border-radius: 12px;
+      padding: 0.625rem 1rem;
+    }
+
+    .saldo-apertura__titulo {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+    }
+
+    .saldo-apertura__renglon {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+    }
+
+    .saldo-apertura__cuenta {
+      color: var(--color-texto-2);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .saldo-apertura__monto {
+      margin-left: auto;
+      font-weight: 700;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .saldo-apertura__monto--sin { color: var(--color-texto-suave); }
+
     /* ── Botones de medio de pago (2 opciones) ────────────────────────────── */
 
     .grilla-medio-pago-caja {
@@ -1946,6 +2014,12 @@
       movimientosPorUnidad: null,
       turnoRetiros:    0,
       turnoTodosMovimientos: 0,
+      // El saldo corriente de cada lista (30/09/2026, ver leerSaldoCorriente):
+      // null = la lista no lo pidió; { estado: 'cargando' | 'listo' | 'error' |
+      // 'incompleto', resultado, desde }.
+      saldoFicha:      null,
+      saldoRetiros:    null,
+      saldoTodos:      null,
     }
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
@@ -3666,6 +3740,228 @@
     })
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SALDO CORRIENTE (30/09/2026) — el saldo de la cuenta DESPUÉS de cada
+    // movimiento, como en un extracto bancario.
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Las reglas, y no hay que aflojar ninguna:
+    //   - POR CUENTA, de lo más viejo a lo más nuevo: fecha, después created_at,
+    //     después id. La lista se muestra al revés (lo más nuevo arriba), pero el
+    //     saldo se acumula en este orden.
+    //   - El SIGNO es el de las vistas v_caja_saldos*: todo tipo que empieza con
+    //     'ingreso' suma y el resto resta (`tipo like 'ingreso%'`, leído con
+    //     pg_get_viewdef el 30/09/2026). La misma regla que el "+" / "−" de la
+    //     fila (renderizarFilaMovimiento).
+    //   - Sobre TODA la historia de la cuenta, leída aparte de a 1000 filas con
+    //     el conteo exacto (leerHistoriaCaja), nunca sobre lo que se ve: con un
+    //     filtro de fechas, de tipo o de unidad, el saldo de cada renglón sigue
+    //     siendo el de la cuenta. Si no se pudo leer toda, no se muestra nada.
+    //   - El ÚLTIMO saldo de cada cuenta tiene que dar lo mismo que
+    //     v_caja_saldos_cuenta (lo que se ve arriba). Si no da, esa cuenta no
+    //     muestra ningún saldo ("—") y la pantalla lo dice: un número que no
+    //     cierra es peor que ninguno.
+    //   - Todo en CENTAVOS enteros: sumar decimales en coma flotante deriva.
+    //   - Un saldo que no se sabe es "—", nunca "$ 0".
+    const PAGINA_HISTORIA_CAJA = 1000
+    const PAGINAS_MAX_HISTORIA_CAJA = 20
+
+    // null si no es un número (un dato ausente no se vuelve 0).
+    function centavosCaja(valor) {
+      if (valor === null || valor === undefined || valor === '') return null
+      const n = Number(valor)
+      return Number.isFinite(n) ? Math.round(n * 100) : null
+    }
+
+    // Cuánto mueve el saldo un movimiento, en centavos y con signo.
+    function efectoEnSaldo(m) {
+      const c = centavosCaja(m?.monto)
+      if (c === null) return null
+      return String(m.tipo ?? '').startsWith('ingreso') ? c : -c
+    }
+
+    // Orden cronológico: fecha, created_at, id (de lo más viejo a lo más nuevo).
+    function compararCronologico(a, b) {
+      const fa = String(a.fecha ?? ''), fb = String(b.fecha ?? '')
+      if (fa !== fb) return fa < fb ? -1 : 1
+      const ta = Date.parse(a.created_at), tb = Date.parse(b.created_at)
+      if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) return ta < tb ? -1 : 1
+      const ca = String(a.created_at ?? ''), cb = String(b.created_at ?? '')
+      if (ca !== cb) return ca < cb ? -1 : 1
+      const ia = String(a.id ?? ''), ib = String(b.id ?? '')
+      return ia < ib ? -1 : ia > ib ? 1 : 0
+    }
+
+    // historia: TODAS las filas de las cuentas ({ id, cuenta_id, tipo, monto,
+    // moneda, fecha, created_at }). saldosVista: filas de v_caja_saldos_cuenta.
+    // desde: 'AAAA-MM-DD' (el primer día del filtro) o null.
+    // Devuelve { porMovimiento: Map(id -> centavos), cuentas: Map(cuentaId -> {
+    //   moneda, final, vista, cierra, apertura }) }, con los importes en
+    // centavos. porMovimiento solo tiene los de las cuentas que CIERRAN.
+    function calcularSaldoCorriente(historia, saldosVista, desde = null) {
+      const porCuenta = new Map()
+      for (const m of historia || []) {
+        if (!m?.cuenta_id) continue
+        if (!porCuenta.has(m.cuenta_id)) porCuenta.set(m.cuenta_id, [])
+        porCuenta.get(m.cuenta_id).push(m)
+      }
+      const vista = new Map((saldosVista || []).map(s => [s.cuenta_id, centavosCaja(s.saldo)]))
+      const porMovimiento = new Map()
+      const cuentas = new Map()
+      for (const [cuentaId, movs] of porCuenta) {
+        const orden = [...movs].sort(compararCronologico)
+        let saldo = 0
+        let apertura = 0
+        let valido = true
+        const parciales = []
+        for (const m of orden) {
+          const efecto = efectoEnSaldo(m)
+          if (efecto === null) { valido = false; break }
+          saldo += efecto
+          if (desde && String(m.fecha) < desde) apertura = saldo
+          parciales.push([m.id, saldo])
+        }
+        const v = vista.has(cuentaId) ? vista.get(cuentaId) : null
+        const cierra = valido && v !== null && v === saldo
+        if (cierra) for (const [id, s] of parciales) porMovimiento.set(id, s)
+        cuentas.set(cuentaId, {
+          moneda: orden[0]?.moneda || 'ARS',
+          final: valido ? saldo : null,
+          vista: v,
+          cierra,
+          apertura: cierra && desde ? apertura : null,
+        })
+      }
+      return { porMovimiento, cuentas }
+    }
+
+    // TODA la historia de esas cuentas, de a 1000 filas (el tope de PostgREST),
+    // con el conteo exacto: termina cuando leyó tantas filas como dice el
+    // conteo. Si el conteo no llega, si una página falla o si son más de
+    // 20.000, devuelve null: no se sabe toda la historia.
+    async function leerHistoriaCaja(ids) {
+      const filas = []
+      let total = null
+      for (let pagina = 0; pagina < PAGINAS_MAX_HISTORIA_CAJA; pagina++) {
+        const ini = pagina * PAGINA_HISTORIA_CAJA
+        const { data, error, count } = await supabase
+          .from('caja_movimientos')
+          .select('id, cuenta_id, tipo, monto, moneda, fecha, created_at', { count: 'exact' })
+          .in('cuenta_id', ids)
+          .order('fecha', { ascending: true })
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(ini, ini + PAGINA_HISTORIA_CAJA - 1)
+        if (error) return { error: true }
+        if (total === null) total = Number.isFinite(count) ? count : null
+        if (total === null) return { filas: null }
+        const pag = data || []
+        filas.push(...pag)
+        if (filas.length >= total || !pag.length) break
+      }
+      return { filas: filas.length === total ? filas : null }
+    }
+
+    // El saldo corriente de esas cuentas: { estado: 'listo', resultado, desde }
+    // o { estado: 'error' | 'incompleto', desde }. NUNCA tira.
+    async function leerSaldoCorriente(cuentaIds, desde = null) {
+      const ids = [...new Set((cuentaIds || []).filter(Boolean))]
+      if (!ids.length) return { estado: 'listo', resultado: calcularSaldoCorriente([], [], desde), desde }
+      try {
+        const [hist, vista] = await Promise.all([
+          leerHistoriaCaja(ids),
+          supabase.from('v_caja_saldos_cuenta').select('cuenta_id, saldo').in('cuenta_id', ids),
+        ])
+        if (hist.error || vista.error) return { estado: 'error', desde }
+        if (!hist.filas) return { estado: 'incompleto', desde }
+        return { estado: 'listo', resultado: calcularSaldoCorriente(hist.filas, vista.data || [], desde), desde }
+      } catch (e) {
+        console.error('[caja] saldo corriente', e)
+        return { estado: 'error', desde }
+      }
+    }
+
+    // El primer día de un filtro de períodos ("sep-26"): el más viejo.
+    function desdeDePeriodos(periodos) {
+      if (!periodos?.length) return null
+      return periodos.map(p => periodoARango(p).desde).sort()[0] || null
+    }
+
+    // Las cuentas de una lista, sin repetir, en el orden en que aparecen.
+    function cuentasDeLista(movimientos) {
+      return [...new Set((movimientos || []).map(m => m.cuenta_id).filter(Boolean))]
+    }
+
+    // Un importe en centavos (HTML), escrito IGUAL que el saldo de la cuenta de
+    // arriba ("$ -8.000,00"), así el último se compara de un vistazo.
+    function htmlCentavos(centavos, moneda) {
+      if (centavos === null || centavos === undefined) return '—'
+      return importeHtml(centavos / 100, moneda)
+    }
+
+    // El saldo de la cuenta después de ESTE movimiento (debajo del importe).
+    // sc: el saldo corriente de la lista; sin él (una lista que no lo pide) no
+    // se dibuja nada.
+    function htmlSaldoDeFila(m, sc) {
+      if (!sc) return ''
+      if (sc.estado === 'cargando') return '<div class="movimiento__saldo movimiento__saldo--sin">Saldo …</div>'
+      const s = (sc.estado === 'listo' && m.cuenta_id) ? sc.resultado.porMovimiento.get(m.id) : undefined
+      if (s === undefined || s === null) {
+        return '<div class="movimiento__saldo movimiento__saldo--sin" title="No se sabe el saldo de la cuenta después de este movimiento">Saldo —</div>'
+      }
+      const clase = s < 0 ? 'movimiento__saldo--negativo' : 'movimiento__saldo--positivo'
+      return `<div class="movimiento__saldo ${clase}">Saldo ${htmlCentavos(s, m.moneda)}</div>`
+    }
+
+    // Cómo se nombra una cuenta en los avisos: en una lista que mezcla
+    // personas, con su dueño adelante.
+    function nombreCuentaSaldo(cuentaId, conDueno) {
+      const c = estado.cuentasPorId[cuentaId]
+      const nombre = c?.nombre || 'una cuenta'
+      if (!conDueno || !c) return nombre
+      const dueno = estado.nombresEmpleados[c.empleado_id]
+      return dueno ? `${dueno} · ${nombre}` : nombre
+    }
+
+    // Lo que no se pudo calcular se DICE arriba de la lista.
+    function htmlAvisoSaldoCorriente(sc, cuentas, conDueno = false) {
+      if (!sc || sc.estado === 'cargando') return ''
+      const aviso = (texto) => `<div class="aviso-saldo-corriente" role="status">${texto}</div>`
+      if (sc.estado === 'error') {
+        return aviso('No se pudo leer el saldo de la cuenta después de cada movimiento. Revisá la conexión y volvé a abrir la lista.')
+      }
+      if (sc.estado !== 'listo') {
+        return aviso('Estas cuentas tienen más movimientos de los que se pueden leer de una vez: no se muestra el saldo después de cada movimiento, para no mostrar un número que no cierra.')
+      }
+      const malas = cuentas.map(id => [id, sc.resultado.cuentas.get(id)]).filter(([, c]) => c && !c.cierra)
+      return malas.map(([id, c]) => aviso(
+        `El saldo de «${esc(nombreCuentaSaldo(id, conDueno))}» no cierra: la cuenta dice ${htmlCentavos(c.vista, c.moneda)} y sus movimientos suman ${htmlCentavos(c.final, c.moneda)}. ` +
+        'No se muestra el saldo de cada movimiento de esa cuenta. Recargá la página; si sigue, avisale a administración.'
+      )).join('')
+    }
+
+    // Con un filtro de fechas, el renglón de abajo de todo (lo más viejo):
+    // "Saldo al 01/09/2026", el saldo de cada cuenta ANTES del primer día del
+    // filtro, calculado con todos sus movimientos anteriores.
+    function htmlAperturaSaldo(sc, cuentas, conDueno = false) {
+      if (!sc || !sc.desde || !cuentas.length) return ''
+      const renglones = cuentas.map(id => {
+        let valor = '—'
+        let clase = 'saldo-apertura__monto--sin'
+        if (sc.estado === 'cargando') valor = '…'
+        else if (sc.estado === 'listo') {
+          const c = sc.resultado.cuentas.get(id)
+          if (c?.cierra && c.apertura !== null) {
+            valor = htmlCentavos(c.apertura, c.moneda)
+            clase = c.apertura < 0 ? 'movimiento__saldo--negativo' : 'movimiento__saldo--positivo'
+          }
+        }
+        const etiqueta = cuentas.length > 1 || conDueno ? `<span class="saldo-apertura__cuenta">${esc(nombreCuentaSaldo(id, conDueno))}</span>` : ''
+        return `<div class="saldo-apertura__renglon">${etiqueta}<span class="saldo-apertura__monto ${clase}">${valor}</span></div>`
+      }).join('')
+      return `<div class="saldo-apertura"><div class="saldo-apertura__titulo">Saldo al ${esc(formatearFecha(sc.desde))}</div>${renglones}</div>`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // CARGA + RENDER — Movimientos
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -3708,7 +4004,8 @@
         return
       }
       estado.movimientos = data || []
-      renderizarMovimientos()
+      // La ficha de una persona no tiene filtro de fechas: sin "Saldo al".
+      await cargarSaldoFicha(turno, null)
     }
 
     // Copia estructural fresca de renderizarFiltrosTodosMovimientos() (que
@@ -3832,7 +4129,10 @@
       document.getElementById('estado-cargando-movimientos').hidden = true
       estado.movimientos = data || []
       estado.movimientosPorUnidad = porUnidad
-      renderizarMovimientos()
+      // Con períodos tildados, el renglón "Saldo al" arranca del más viejo.
+      // El saldo es SIEMPRE el de la cuenta entera (toda su historia, sin el
+      // filtro de unidad ni de fechas): ver leerSaldoCorriente.
+      await cargarSaldoFicha(turno, desdeDePeriodos(estado.filtrosFichaEmpresa.periodos))
     }
 
     // ¿Puede leer los movimientos de TODAS las cajas? Lo mismo que la policy
@@ -3903,7 +4203,9 @@
     }
 
     // conUnidad: la etiqueta de unidad de la fila (ver htmlUnidadDeFila).
-    function renderizarFilaMovimiento(m, { mostrarPersona = false, conUnidad = false } = {}) {
+    // saldo: el saldo corriente de la lista (ver htmlSaldoDeFila); sin él, la
+    // fila no dice el saldo de la cuenta.
+    function renderizarFilaMovimiento(m, { mostrarPersona = false, conUnidad = false, saldo = null } = {}) {
       // La misma regla que las vistas de saldo (v_caja_saldos*, 29/09/2026):
       // todo tipo que empieza con "ingreso" suma, también la devolución de un
       // gasto anulado (ingreso_reversion_gasto), que antes salía con "−".
@@ -3960,7 +4262,10 @@
               ${refCobranza}
               ${refAjuste}
             </div>
-            <div class="movimiento__monto">${signo} ${importeHtml(m.monto, m.moneda)}</div>
+            <div class="movimiento__lado">
+              <div class="movimiento__monto">${signo} ${importeHtml(m.monto, m.moneda)}</div>
+              ${htmlSaldoDeFila(m, saldo)}
+            </div>
           </div>
         </div>
       `
@@ -3992,7 +4297,46 @@
       // OJO: no pasar renderizarFilaMovimiento directo a .map() — Array.map
       // manda (elemento, índice, array) y el índice pisaría el parámetro
       // { mostrarPersona } de la función.
-      cont.innerHTML = movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas })).join('')
+      // Con todo lo de una unidad, la lista mezcla cajas de otras personas: el
+      // saldo va SOLO en los renglones cuya cuenta se puede leer entera (ver
+      // cuentaConSaldoLegible); en los demás no se dibuja nada.
+      const sc = estado.saldoFicha
+      const legible = m => !deTodasLasCajas || cuentaConSaldoLegible(m.cuenta_id)
+      const cuentas = cuentasDeLista(movimientos).filter(id => !deTodasLasCajas || cuentaConSaldoLegible(id))
+      cont.innerHTML = htmlAvisoSaldoCorriente(sc, cuentas, deTodasLasCajas) +
+        movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas, saldo: legible(m) ? sc : null })).join('') +
+        htmlAperturaSaldo(sc, cuentas, deTodasLasCajas)
+    }
+
+    // ¿Se puede mostrar el saldo corriente de esta cuenta en una lista que
+    // mezcla cajas? Solo si se sabe de quién es la cuenta y quien mira puede
+    // leer TODOS sus movimientos (la policy de caja_movimientos: los propios, o
+    // ver_listado / retiros_todos / movimientos_todos). Si no, la historia
+    // leída podría estar incompleta y la vista v_caja_saldos_cuenta (que
+    // respeta el mismo RLS) cerraría igual contra un número falso.
+    function cuentaConSaldoLegible(cuentaId) {
+      const c = cuentaId ? estado.cuentasPorId[cuentaId] : null
+      if (!c) return false
+      if (puedeVerMovimientosDeTodos()) return true
+      return !!estado.miEmpleado && c.empleado_id === estado.miEmpleado.id
+    }
+
+    // Las cuentas de la ficha abierta cuyo saldo corriente se pide.
+    function cuentasConSaldoFicha() {
+      const cuentas = cuentasDeLista(estado.movimientos)
+      return estado.movimientosPorUnidad ? cuentas.filter(cuentaConSaldoLegible) : cuentas
+    }
+
+    // Después de dibujar la lista de la ficha: lee el saldo corriente de sus
+    // cuentas y la vuelve a dibujar. Con el MISMO turno que la lista: si
+    // mientras tanto se abrió otra ficha, no pisa nada.
+    async function cargarSaldoFicha(turno, desde) {
+      estado.saldoFicha = { estado: 'cargando', desde }
+      renderizarMovimientos()
+      const sc = await leerSaldoCorriente(cuentasConSaldoFicha(), desde)
+      if (turno !== estado.turnoMovimientosFicha) return
+      estado.saldoFicha = sc
+      renderizarMovimientos()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4556,6 +4900,13 @@
       }
 
       estado.retiros = data || [] // el último resultado de la consulta; lo que se ve lo recorta la unidad
+      // El saldo corriente: cada retiro lleva el saldo de SU cuenta (la lista
+      // mezcla personas). Con "desde", el renglón "Saldo al" de cada cuenta.
+      estado.saldoRetiros = { estado: 'cargando', desde: fecha_desde || null }
+      renderizarRetiros()
+      const sc = await leerSaldoCorriente(cuentasDeLista(estado.retiros), fecha_desde || null)
+      if (turno !== estado.turnoRetiros) return
+      estado.saldoRetiros = sc
       renderizarRetiros()
     }
 
@@ -4575,7 +4926,11 @@
         return
       }
       document.getElementById('estado-vacio-retiros').hidden = true
-      lista.innerHTML = retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join('')
+      const sc = estado.saldoRetiros
+      const cuentas = cuentasDeLista(retiros)
+      lista.innerHTML = htmlAvisoSaldoCorriente(sc, cuentas, true) +
+        retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true, saldo: sc })).join('') +
+        htmlAperturaSaldo(sc, cuentas, true)
     }
 
     // Se llama una sola vez, la primera vez que se entra a la pestaña
@@ -4749,6 +5104,14 @@
       }
 
       estado.todosMovimientos = data || []
+      // El saldo corriente: cada renglón lleva el saldo de SU cuenta (la lista
+      // mezcla personas y cuentas).
+      const desde = desdeDePeriodos(estado.filtrosTodosMovimientos.periodos)
+      estado.saldoTodos = { estado: 'cargando', desde }
+      renderizarTodosMovimientos()
+      const sc = await leerSaldoCorriente(cuentasDeLista(estado.todosMovimientos), desde)
+      if (turno !== estado.turnoTodosMovimientos) return
+      estado.saldoTodos = sc
       renderizarTodosMovimientos()
     }
 
@@ -4771,7 +5134,11 @@
         return
       }
       document.getElementById('estado-vacio-todos-movimientos').hidden = true
-      lista.innerHTML = movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join('')
+      const sc = estado.saldoTodos
+      const cuentas = cuentasDeLista(movimientos)
+      lista.innerHTML = htmlAvisoSaldoCorriente(sc, cuentas, true) +
+        movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true, saldo: sc })).join('') +
+        htmlAperturaSaldo(sc, cuentas, true)
     }
 
     // Carga perezosa de la pestaña "Todos los movimientos" — ver cambiarTabCaja.
