@@ -182,7 +182,12 @@ esperas.push((async () => {
   await R.conectarTiempoReal()
   const antes = R.__canales.length
   R.__canales[0].estadoCb('CHANNEL_ERROR')
-  chk('3. si el canal se cae, lo anota', R.__registros.some(r => /Tiempo real: CHANNEL_ERROR/.test(r.mensaje)))
+  // (30/09/2026) Cortarse es normal: se avisa a js/salud.js, que lo anota
+  // recién si no volvió en 2 minutos (test-salud-tiempo-real.js).
+  chk('3. si el canal se cae, se lo avisa a salud (tiempoRealCaido), sin anotarlo en el momento',
+    R.__tiempoReal().some(x => x[0] === 'caido' && x[1] === 'CHANNEL_ERROR') && !R.__registros.some(r => /Tiempo real/.test(r.mensaje ?? '')))
+  R.__canales[0].estadoCb('SUBSCRIBED')
+  chk('3. … y cuando vuelve, tiempoRealConectado', R.__tiempoReal().some(x => x[0] === 'conectado'))
   chk('3. … y programa la reconexión', /function programarReconexionVivo\(\) \{[\s\S]{0,200}?setTimeout\(\(\) => \{[\s\S]{0,120}?claveCanalVivo = ''[\s\S]{0,60}?conectarTiempoReal\(\)/.test(FUENTE))
   // Sin cambios de turnos no se rearma el canal.
   await R.conectarTiempoReal()

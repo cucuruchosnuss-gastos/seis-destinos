@@ -155,6 +155,12 @@ module.exports = {
     ],
   },
   rpc: {
+    // La tarjeta de Seguridad cuenta con errores_resumen (30/09/2026): los
+    // mismos 3 de 7 días de errores_app de arriba, y algo informativo que no cuenta.
+    errores_resumen: [
+      { clave: 'x is not defined', titulo: 'Error sin explicación todavía', gravedad: 'error', veces: 2 },
+      { clave: 'Tiempo real: CHANNEL_ERROR%', titulo: 'La conexión en vivo no pudo arrancar', gravedad: 'aviso', veces: 1 },
+    ],
     mis_pendientes: [
       { modulo: 'cobranzas', clave: 'por_controlar', cantidad: 5, texto: 'Cobranzas por controlar' },
       { modulo: 'cheques', clave: 'por_vencer', cantidad: 3, texto: 'Cheques que vencen esta semana' },

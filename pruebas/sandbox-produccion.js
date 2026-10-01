@@ -403,6 +403,10 @@ const PRELUDIO = `
   var canalVivo = null, claveCanalVivo = '', relojVivo = null, reconexionVivo = null
   var __registros = []
   function registrarError(r) { __registros.push(r) }
+  // El tiempo real (js/salud.js, 30/09/2026): se anota el corte y la vuelta.
+  var __tiempoReal = []
+  function tiempoRealCaido(estado) { __tiempoReal.push(['caido', estado]) }
+  function tiempoRealConectado() { __tiempoReal.push(['conectado']) }
   var __canales = []
   var reintentando = false
   var relojBandaExito = null
@@ -499,7 +503,7 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
       __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
-      __uuids(){ return __uuids }, __nav: navigator, __canales, __registros, __canalVivo(){ return canalVivo },
+      __uuids(){ return __uuids }, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo },
       ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }

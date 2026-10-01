@@ -2049,7 +2049,7 @@
 
   <script type="module">
     import { verificarSesion, iniciarSesion } from '../js/auth.js'
-    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion, registrarError, marcarPlantaInstalada, olvidarPlantaInstalada } from '../js/salud.js'
+    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion, registrarError, marcarPlantaInstalada, olvidarPlantaInstalada, tiempoRealCaido, tiempoRealConectado } from '../js/salud.js'
     import {
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
@@ -10518,9 +10518,12 @@
       ch.subscribe(status => {
         if (ch !== canalVivo) return
         estado.vivo = status
+        // Cortarse y reconectarse es normal: se registra solo si no volvió
+        // en 2 minutos, una vez (js/salud.js, 30/09/2026).
+        if (status === 'SUBSCRIBED') tiempoRealConectado()
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.error('tiempo real:', status)
-          registrarError({ evento: 'planta', mensaje: 'Tiempo real: ' + status })
+          tiempoRealCaido(status)
           programarReconexionVivo()
         }
       })

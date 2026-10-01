@@ -388,8 +388,14 @@ esperas.push((async () => {
     chk('accesos: dice que muestra todas las unidades', /todas las unidades/.test(a.nota))
     const e = await S.cargarEmpleados(ctxFalso(S, { sb, fabrica }))
     chk('empleados: activos, sin pie', e.valor === '3' && e.sinPie === true, e.valor)
-    const s = await S.cargarSeguridad(ctxFalso(S, { sb: sbFalso({ tablas: { errores_app: [{ id: 'e1', creado_en: '2026-09-27T10:00:00Z' }, { id: 'e2', creado_en: '2026-09-01T10:00:00Z' }] } }) }))
-    chk('seguridad: errores de 7 días; las sesiones, Pronto', s.valor === '1' && s.ctx[0].v === 'Pronto', s.valor)
+    // (30/09/2026) errores_resumen sin lo informativo: las veces de errores y avisos.
+    const sbS = sbFalso({ rpc: { errores_resumen: [{ gravedad: 'error', veces: 2 }, { gravedad: 'aviso', veces: 1 }, { gravedad: 'info', veces: 40 }] } })
+    const s = await S.cargarSeguridad(ctxFalso(S, { sb: sbS }))
+    chk('seguridad: errores y avisos sin arreglar (nunca lo informativo); las sesiones, Pronto', s.valor === '3' && s.ctx[0].v === 'Pronto', s.valor)
+    chk('seguridad: pide errores_resumen de 7 días SIN lo informativo', JSON.stringify(sbS.llamadas.find(l => l[0] === 'rpc' && l[1] === 'errores_resumen')?.[2]) === JSON.stringify({ p_dias: 7, p_incluir_info: false }))
+    let tiro = false
+    try { await S.cargarSeguridad(ctxFalso(S, { sb: sbFalso({ rpc: {} }) })) } catch { tiro = true }
+    chk('seguridad: si errores_resumen devuelve null, la tarjeta falla (nunca "0")', tiro)
   }
   // Cada tarjeta por separado: una que falla no tumba a las otras.
   {

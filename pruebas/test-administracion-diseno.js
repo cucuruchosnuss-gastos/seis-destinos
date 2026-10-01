@@ -96,6 +96,8 @@ async function pruebas() {
       ], error: null }
       if (n === 'retiros_por_revisar') return { data: [{ item_id: 'i1', cliente: 'Los Forte ' + MAL, que: 'Mini', faltante: 14, unidad: 'cajas' }], error: null }
       if (n === 'clientes_con_saldo') return { data: [{ cliente_id: 'k1', saldo: 4120000 }, { cliente_id: 'k2', saldo: -50 }, { cliente_id: 'k3', saldo: null }], error: null }
+      // Errores (30/09/2026): errores_resumen; lo informativo no cuenta.
+      if (n === 'errores_resumen') return { data: [{ clave: 'x', gravedad: 'error', veces: 1 }, { clave: 'y', gravedad: 'info', veces: 9 }], error: null }
       return { data: [], error: null }
     })
     S.__tablas.listas_precios = [{ id: 'l1', nombre: 'Heladerías ' + MAL, activa: true, unidad_negocio_id: 'u-n' }]
@@ -104,7 +106,6 @@ async function pruebas() {
       { importe: 120000, tipo: 'comun', fecha_emision: '2026-09-01', fecha_pago: null },
     ]
     S.__tablas.registro_seguridad = [{ id: 'r1' }, { id: 'r2' }]
-    S.__tablas.errores_app = [{ id: 'e1' }]
     S.__tablas.ordenes_retiro = [{ id: 'o1' }]
     S.estado.empresas[0].nombre = 'Nuss ' + MAL
     await S.mostrarInicio()
@@ -134,12 +135,13 @@ async function pruebas() {
     const S = nuevo()
     await S.mostrarInicio()
     await esperar()
-    chk('sin permiso no consulta lo que no puede ver', !S.__llamadas.consultas.some(c => ['cobranza_cheques', 'registro_seguridad', 'errores_app'].includes(c[0])))
+    chk('sin permiso no consulta lo que no puede ver', !S.__llamadas.consultas.some(c => ['cobranza_cheques', 'registro_seguridad', 'errores_app'].includes(c[0])) &&
+      !S.__llamadas.rpc.some(r => r[0] === 'errores_resumen'))
   }
   {
     const S = nuevo({ rol: 'super_admin' })
     S.__tablas.cobranza_cheques = () => ({ data: null, error: { message: 'sin red' } })
-    S.__tablas.errores_app = () => ({ data: null, error: { message: 'sin red' } })
+    S.__setRpc(async (n) => n === 'errores_resumen' ? { data: null, error: { message: 'sin red' } } : { data: [], error: null })
     await S.mostrarInicio()
     await esperar()
     const h = html(S, 'ad-secciones')

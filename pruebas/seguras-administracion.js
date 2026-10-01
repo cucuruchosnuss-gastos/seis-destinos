@@ -5,7 +5,9 @@
 const SEGURAS_ADMINISTRACION = [
   ['htmlSelloOrden(o)', 'HTML constante del código: htmlSelloOrden() devuelve uno de tres sellos fijos'],
   [`partes.join('<span aria-hidden="true">·</span>')`, 'HTML ya escapado: cada parte la arma htmlOtrasCuentas() con esc(), unidas por un separador constante'],
-  ['cuentas', 'HTML ya escapado: htmlGrupoCliente() arma cada botón con esc() y htmlSelloEmpresa()'],
+  ['DIAS_ERRORES', 'constante numérica del código (7)'],
+  ['grav.clase','constante del código: una clase de GRAVEDAD_ERROR (la de error si la gravedad no se conoce)'],
+  ['cuentas','HTML ya escapado: htmlGrupoCliente() arma cada botón con esc() y htmlSelloEmpresa()'],
   ['quien', 'HTML ya escapado: htmlOtrasCuentas() arma el botón (o el <strong>) con esc() del id, la unidad y el nombre'],
   ['avisoSinLista', 'HTML ya escapado: htmlResumenClientesLista() lo arma con esc() del texto y htmlNombresCortos(), o vacío'],
   ['htmlNombresCortos(sinLista)', 'HTML ya escapado: htmlNombresCortos() devuelve esc() de los nombres unidos'],

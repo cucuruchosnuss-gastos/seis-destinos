@@ -664,13 +664,17 @@ export async function cargarEmpleados(ctx) {
   return { estado: 'ok', etiqueta: 'Empleados activos', valor: entero(reales.length), ctx: [], resolver: [], nota: 'Muestra todas las unidades.', sinPie: true }
 }
 
+// Los errores de la app (30/09/2026): errores_resumen(7, sin lo informativo),
+// la misma cuenta que la burbuja de Administración: las veces de los errores
+// y avisos SIN arreglar, nunca lo informativo (el tiempo real que se
+// reconecta, las medidas de la pantalla). null (no es super_admin) es un error.
 export async function cargarSeguridad(ctx) {
-  const desde = new Date(+ctx.ahora - 7 * MS_DIA).toISOString()
-  const filas = await consulta(ctx.sb.from('errores_app').select('id, creado_en').gte('creado_en', desde).limit(TOPE_FILAS))
-  const n = (filas ?? []).length
+  const grupos = await consulta(ctx.sb.rpc('errores_resumen', { p_dias: 7, p_incluir_info: false }))
+  if (!Array.isArray(grupos)) throw new Error('errores_resumen devolvió null')
+  const n = grupos.filter(g => g?.gravedad !== 'info').reduce((a, g) => a + (Number(g?.veces) || 0), 0)
   return {
-    estado: 'ok', etiqueta: 'Errores de la app · 7 días', valor: entero(n),
-    ctx: [{ k: 'Sesiones abiertas', v: 'Pronto', tono: 'suave' }], resolver: [], nota: avisoParcial(filas) ?? '', sinPie: true,
+    estado: 'ok', etiqueta: 'Errores y avisos sin arreglar · 7 días', valor: entero(n),
+    ctx: [{ k: 'Sesiones abiertas', v: 'Pronto', tono: 'suave' }], resolver: [], nota: '', sinPie: true,
   }
 }
 

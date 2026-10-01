@@ -78,7 +78,9 @@ const FUNCIONES_BASE = [
   'confirmarAsentar', 'quitarHecho', 'leerCobranza', 'htmlCobranzaAbierta', 'pintarCobranza', 'abrirCobranza', 'recargarCobranza',
   'volverDeCobranza', 'pedirReabrir', 'cancelarReabrir', 'confirmarReabrir', 'verFotoCobranza', 'cerrarVisorCobranza',
   // Errores de la app (27/09/2026)
-  'etiquetaDispositivo', 'leerErrores', 'erroresFiltrados', 'htmlOpcionesFiltro', 'momentoAr', 'htmlFilaError', 'pintarErrores', 'mostrarErrores',
+  // (en castellano, con errores_resumen, desde el 30/09/2026)
+  'leerErrores', 'contarErrores', 'momentoAr', 'listaCorta', 'htmlArreglarError', 'htmlTipoError', 'pintarErrores', 'mostrarErrores',
+  'cambiarInfoErrores', 'abrirArreglarError', 'cancelarArreglarError', 'confirmarArreglarError',
   // Seguridad (27/09/2026)
   'leerSeguridad', 'htmlFilaSeguridad', 'pintarSeguridad', 'mostrarSeguridad',
   // Retiros por revisar (28/09/2026)
@@ -92,7 +94,7 @@ const CONSTANTES_BASE = [
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
-  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'MAX_ERRORES', 'ETIQUETA_EVENTO_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
+  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'DIAS_ERRORES', 'GRAVEDAD_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'RENGLONES_POR_HOJA',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
@@ -198,7 +200,7 @@ const PRELUDIO = `
     saldos: null, errorSaldos: null, busquedaClientes: '', mostrarApagados: false, apagados: null, interruptor: null, alta: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
     cobranzas: { lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null, clientes: null, errorClientes: null, asentando: null, hechos: new Map() },
     cobranza: null, bancos: null,
-    errores: { filas: null, error: null, pantalla: '', dispositivo: '', evento: '' },
+    errores: { grupos: null, error: null, info: false, arreglando: null },
     seguridad: { filas: null, error: null },
     revisar: { filas: null, error: null, aceptando: null, hechos: [] },
   }

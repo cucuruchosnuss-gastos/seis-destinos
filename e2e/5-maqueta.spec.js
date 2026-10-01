@@ -190,9 +190,13 @@ const PANTALLAS = [
   ['modulos/administracion.html', 'administracion-super', [
     ['errores', async (page) => {
       await page.locator('[data-seccion="errores"]').click()
-      await expect(page.locator('#ad-errores-lista')).toContainText('SM-X135 · Android 14 · app instalada')
-      await page.locator('#ad-errores-pantalla').selectOption('produccion')
-      await expect(page.locator('#ad-errores-cuenta')).toHaveText('1 de 2')
+      // En castellano y por tipo (30/09/2026): sin lo informativo, y con el tilde, también.
+      await expect(page.locator('#ad-errores-lista')).toContainText('La conexión en vivo no pudo arrancar')
+      await expect(page.locator('#ad-errores-cuenta')).toHaveText('2 tipos · 5 veces en 7 días')
+      await page.locator('#ad-errores-info').check()
+      await expect(page.locator('#ad-errores-lista')).toContainText('Se cortó internet un momento')
+      await page.locator('[data-error-arreglar]').first().click()
+      await expect(page.locator('#ad-errores-nota')).toBeVisible()
     }],
     ['seguridad', async (page) => {
       await page.locator('#ad-errores-volver').click()

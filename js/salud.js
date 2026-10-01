@@ -116,6 +116,35 @@ export async function registrarError({ evento = 'error', mensaje, detalle = null
   } catch { /* el registro nunca rompe nada */ }
 }
 
+// ── EL TIEMPO REAL (30/09/2026) ──────────────────────────────────────────────
+// Que la conexión en vivo se corte y se reconecte es NORMAL (la red de la
+// fábrica, la tablet que se bloquea): no es un error, y registrarlo cada vez
+// llenaba "Errores de la app" de cosas que no lo son. Se registra UNA vez por
+// corte, y solo si pasaron 2 minutos sin poder reconectar. El mensaje empieza
+// con "Tiempo real: <estado>", el patrón de errores_conocidos.
+export const ESPERA_TIEMPO_REAL_MS = 2 * 60 * 1000
+let caidaTiempoReal = null
+
+// El canal avisó que se cayó (CHANNEL_ERROR, TIMED_OUT o CLOSED). Si ya había
+// un corte en curso, solo se actualiza el estado: el reloj sigue corriendo.
+export function tiempoRealCaido(estado, { evento = 'planta', programar = globalThis.setTimeout, registrar = registrarError } = {}) {
+  if (caidaTiempoReal) { caidaTiempoReal.estado = estado; return }
+  // La espera corre UNA sola vez por corte: una sola anotación.
+  const caida = { estado, timer: null }
+  caidaTiempoReal = caida
+  caida.timer = programar(() => {
+    if (caidaTiempoReal !== caida) return
+    registrar({ evento, mensaje: 'Tiempo real: ' + caida.estado + ' (no se pudo reconectar en 2 minutos)' })
+  }, ESPERA_TIEMPO_REAL_MS)
+}
+
+// El canal volvió (SUBSCRIBED): el corte terminó sin registrarse nada.
+export function tiempoRealConectado({ cancelar = globalThis.clearTimeout } = {}) {
+  if (!caidaTiempoReal) return
+  try { cancelar(caidaTiempoReal.timer) } catch { /* nada */ }
+  caidaTiempoReal = null
+}
+
 // Manda lo que quedó en la cola (al volver la red o al reanudar).
 export async function vaciarCola() {
   const cola = leerCola()

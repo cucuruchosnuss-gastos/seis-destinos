@@ -1,10 +1,20 @@
-// ADMINISTRACIÓN — Errores de la app (27/09/2026), solo super_admin.
+// ADMINISTRACIÓN — Errores de la app, EN CASTELLANO (30/09/2026; la sección
+// nació el 27/09/2026), solo super_admin.
 //
-// Lo que anota js/salud.js en errores_app desde todas las pantallas, filtrable
-// por pantalla, dispositivo y tipo.
+// Pedido de Facu: la sección mostraba 99+ "errores" que no lo son (el tiempo
+// real reconectándose, las medidas de pantalla, cortes de internet) y en
+// lenguaje técnico. Ahora sale de errores_resumen(p_dias, p_incluir_info):
+//  - una tarjeta por TIPO: título, explicación y "qué hacer" en castellano,
+//    cuántas veces, la primera y la última, en qué pantallas y a quién;
+//  - por gravedad: error (bordó), aviso (amarillo), info (gris); por defecto
+//    SIN lo informativo, con un tilde "Mostrar también lo informativo";
+//  - "Marcar como arreglado" con nota obligatoria → marcar_errores_arreglados;
+//  - el mensaje original solo en "Ver detalle", plegado;
+//  - la burbuja y la portada cuentan solo errores y avisos sin arreglar;
+//  - solo super_admin.
+// Se EJECUTAN las funciones reales del módulo.
 //
 //   node pruebas/test-administracion-errores.js
-// Con la zona de la máquina en UTC: una hora sin la zona de Argentina da otra.
 process.env.TZ = 'UTC'
 const path = require('path')
 const fs = require('fs')
@@ -15,80 +25,172 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/
 const src = fs.readFileSync(ARCHIVO, 'utf8')
 console.log(`ARCHIVO ${ARCHIVO} (${src.length} bytes)`)
 const { chk, fin } = arnes()
-const esperar = async () => { for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r)) }
+const esperar = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)) }
+const copia = (x) => JSON.parse(JSON.stringify(x))
 
-const UA_TABLET = 'Mozilla/5.0 (Linux; Android 14; SM-X135 Build/UP1A) AppleWebKit/537.36 Chrome/140 Safari/537.36 · app instalada · 800x1280 · portrait-primary'
-const UA_PC = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140 · navegador · 1440x900 · landscape-primary'
-const FILAS = [
-  { id: 'e1', empleado_id: 'emp-t', pantalla: 'produccion', mensaje: 'Al volver no se pudo revisar la sesión: Failed to fetch', detalle: 'visible', url: 'https://x/modulos/produccion.html', dispositivo: UA_TABLET, evento: 'reanudar', creado_en: '2026-09-27T12:00:00Z' },
-  { id: 'e2', empleado_id: 'emp-1', pantalla: 'administracion', mensaje: 'x is not defined', detalle: 'at f', url: 'https://x/modulos/administracion.html', dispositivo: UA_PC, evento: 'error', creado_en: '2026-09-27T11:00:00Z' },
-  { id: 'e3', empleado_id: null, pantalla: 'produccion', mensaje: 'registrar_masa: 42501 permission denied', detalle: null, url: null, dispositivo: UA_TABLET, evento: 'rpc', creado_en: '2026-09-27T10:00:00Z' },
+// Lo que devuelve errores_resumen: ya ordenado por gravedad (la base).
+const GRUPOS = [
+  { clave: 'x is not defined', titulo: 'Error sin explicación todavía', explicacion: 'Todavía no está explicado: pasáselo al chat de arquitectura con el detalle.', que_hacer: null,
+    gravedad: 'error', rango: 1, veces: 3, primera: '2026-09-28T12:00:00Z', ultima: '2026-09-30T13:05:00Z', pantallas: ['administracion'], personas: ['Facundo Usabarrena'], ejemplo: 'x is not defined · at f (administracion.html:12)' },
+  { clave: 'Tiempo real: CHANNEL_ERROR%', titulo: 'La conexión en vivo no pudo arrancar', explicacion: 'La tablet no pudo conectarse para ver los cambios en vivo.', que_hacer: 'Si pasa seguido, revisá el wifi de la planta.',
+    gravedad: 'aviso', rango: 2, veces: 2, primera: '2026-09-29T09:00:00Z', ultima: '2026-09-30T10:00:00Z', pantallas: ['produccion'], personas: ['Tablet Producción · Cucuruchos Nuss'], ejemplo: 'Tiempo real: CHANNEL_ERROR (no se pudo reconectar en 2 minutos)' },
 ]
+const INFO = { clave: '%px × %px%', titulo: 'Medidas de la pantalla', explicacion: 'Se anota una vez por sesión.', que_hacer: null, gravedad: 'info', rango: 3, veces: 40,
+  primera: '2026-09-24T09:00:00Z', ultima: '2026-09-30T10:00:00Z', pantallas: ['produccion', 'dashboard', 'gastos', 'caja', 'stock'], personas: [], ejemplo: 'pantalla 1000px × 540px' }
 
-function nuevo(rol = 'super_admin') {
+function nuevo({ rol = 'super_admin', grupos = GRUPOS, rpc = null } = {}) {
   const S = construirAdministracion(ARCHIVO)
   S.estado.miRolApp = rol
-  S.__tablas.errores_app = FILAS
-  S.__tablas.v_empleados_publico = [{ id: 'emp-t', nombre: 'Tablet Producción · Cucuruchos Nuss' }, { id: 'emp-1', nombre: 'Facundo' }]
+  S.__setRpc(rpc ?? (async (n, p) => {
+    if (n === 'errores_resumen') return { data: rol === 'super_admin' ? copia(p.p_incluir_info ? [...grupos, INFO] : grupos) : null, error: null }
+    if (n === 'marcar_errores_arreglados') return { data: 3, error: null }
+    return { data: null, error: null }
+  }))
   return S
 }
-const html = (S, id) => S.__els.get(id)?.innerHTML ?? ''
+const html = (S) => S.__els.get('ad-errores-lista')?.innerHTML ?? ''
+const llamadas = (S, n) => S.__llamadas.rpc.filter(r => r[0] === n)
 
 async function pruebas() {
+  // ── Solo super_admin ───────────────────────────────────────────────────────
   {
     const S = nuevo()
-    chk('un super_admin ve la sección', S.seccionesVisibles().some(s => s.id === 'errores'))
-    const U = nuevo('usuario')
-    U.estado.misTareas = new Map([['retiros:ver', { todas: true }], ['retiros:precios', { todas: true }], ['cobranzas:procesar', null], ['cobranzas:ver_todo', null]])
-    chk('nadie más la ve, tenga las tareas que tenga', !U.seccionesVisibles().some(s => s.id === 'errores'))
-    await U.mostrarErrores()
-    chk('y abrirla sin ser super_admin vuelve a la portada, sin leer nada', U.estado.vista === 'ad-vista-inicio' && !U.__llamadas.consultas.some(c => c[0] === 'errores_app'))
+    chk('la sección es solo para super_admin', S.seccionesVisibles().some(s => s.id === 'errores'))
+    S.estado.miRolApp = 'usuario'
+    chk('un usuario común no la ve', !S.seccionesVisibles().some(s => s.id === 'errores'))
+    await S.mostrarErrores()
+    chk('y si la abre, vuelve a la portada sin preguntar nada', S.estado.vista !== 'ad-vista-errores' && !llamadas(S, 'errores_resumen').length)
   }
+
+  // ── La lista: por tipo, en castellano, sin lo informativo ───────────────────
   {
     const S = nuevo()
     await S.mostrarErrores()
-    await esperar()
-    const q = S.__llamadas.consultas.find(c => c[0] === 'errores_app')
-    chk('lee errores_app, los más nuevos primero', !!q && q[1].some(f => f[0] === 'order' && f[1] === 'creado_en'))
-    const h = html(S, 'ad-errores-lista')
-    chk('una tarjeta por error', (h.match(/data-error-app=/g) || []).length === 3)
-    chk('el tipo en palabras', /Al volver de estar bloqueada/.test(h) && /Falló una consulta/.test(h))
-    chk('quién (por v_empleados_publico) y "Sin sesión" si no había', /Tablet Producción · Cucuruchos Nuss/.test(h) && /Sin sesión/.test(h))
-    chk('la hora en Argentina', /27\/09\/2026,? 09:00/.test(h), (h.match(/\d\d\/\d\d\/\d{4},? \d\d:\d\d/) || [])[0])
-    chk('el dispositivo en corto', /SM-X135 · Android 14 · app instalada/.test(h) && /Windows · navegador/.test(h))
-    chk('el detalle, plegado', /<details><summary>Detalle<\/summary>/.test(h))
-    chk('la cuenta', S.__els.get('ad-errores-cuenta').textContent === '3 de 3')
-    chk('el filtro de pantallas trae las que hay', /<option value="produccion">produccion<\/option>/.test(html(S, 'ad-errores-pantalla')) && /Todas las pantallas/.test(html(S, 'ad-errores-pantalla')))
-    chk('el filtro de dispositivos, en corto', /<option value="SM-X135 · Android 14 · app instalada">/.test(html(S, 'ad-errores-dispositivo')))
-    chk('el filtro de tipos, en palabras', /<option value="reanudar">Al volver de estar bloqueada<\/option>/.test(html(S, 'ad-errores-evento')))
-    S.estado.errores.pantalla = 'produccion'
-    S.pintarErrores()
-    chk('filtrar por pantalla', (html(S, 'ad-errores-lista').match(/data-error-app=/g) || []).length === 2 && S.__els.get('ad-errores-cuenta').textContent === '2 de 3')
-    S.estado.errores.dispositivo = 'Windows · navegador'
-    S.pintarErrores()
-    chk('y por dispositivo (se combinan)', /No hay errores con esos filtros/.test(html(S, 'ad-errores-lista')))
-    S.estado.errores = { ...S.estado.errores, pantalla: '', dispositivo: '', evento: 'rpc' }
-    S.pintarErrores()
-    chk('y por tipo', (html(S, 'ad-errores-lista').match(/data-error-app=/g) || []).length === 1)
+    const r = llamadas(S, 'errores_resumen')
+    chk('errores_resumen de 7 días, SIN lo informativo por defecto', r.length === 1 && JSON.stringify(r[0][1]) === JSON.stringify({ p_dias: 7, p_incluir_info: false }), JSON.stringify(r))
+    const h = html(S)
+    chk('una tarjeta por TIPO (2), no por cada vez', (h.match(/data-error-tipo=/g) ?? []).length === 2)
+    chk('el título y la explicación en castellano', /La conexión en vivo no pudo arrancar/.test(h) && /La tablet no pudo conectarse para ver los cambios en vivo\./.test(h))
+    chk('"Qué hacer" cuando lo hay', /<strong>Qué hacer:<\/strong> Si pasa seguido, revisá el wifi de la planta\./.test(h))
+    chk('cuántas veces, la primera y la última (hora de Argentina)', /3 veces · primera 28\/09\/2026, 09:00 · última 30\/09\/2026, 10:05/.test(h), h.slice(0, 700))
+    chk('singular: "2 veces" / "1 vez"', /2 veces/.test(h) && S.htmlTipoError({ ...GRUPOS[0], veces: 1 }).includes('1 vez ·'))
+    chk('en qué pantallas y a quién', /En: administracion · A: Facundo Usabarrena/.test(h) && /En: produccion · A: Tablet Producción · Cucuruchos Nuss/.test(h))
+    chk('sin personas dice "—"', S.htmlTipoError(INFO).includes('A: —'))
+    chk('más de 4 pantallas: "y N más"', S.htmlTipoError(INFO).includes('En: produccion, dashboard, gastos, caja y 1 más'))
+    chk('el mensaje original solo en "Ver detalle", plegado', /<details><summary>Ver detalle<\/summary><p class="ad-error-app__detalle">x is not defined · at f/.test(h) &&
+      h.indexOf('x is not defined · at f') > h.indexOf('<details>'))
+    chk('el error en bordó, el aviso en amarillo', /class="ad-tarjeta ad-error-app ad-error-app--error" data-error-tipo="x is not defined"/.test(h) && /ad-error-app--aviso" data-error-tipo="Tiempo real: CHANNEL_ERROR%"/.test(h))
+    chk('los rótulos: Error y Aviso', /ad-error-app__grav">Error</.test(h) && /ad-error-app__grav">Aviso</.test(h))
+    chk('el orden de la base se respeta (el error primero)', h.indexOf('ad-error-app--error') < h.indexOf('ad-error-app--aviso'))
+    chk('la cuenta: tipos y veces', S.__els.get('ad-errores-cuenta').textContent === '2 tipos · 5 veces en 7 días', S.__els.get('ad-errores-cuenta').textContent)
+    chk('no se lee más errores_app directo', !/from\('errores_app'\)/.test(src))
   }
   {
+    // "Mostrar también lo informativo".
     const S = nuevo()
-    S.__tablas.errores_app = () => ({ data: null, error: { message: 'x' } })
     await S.mostrarErrores()
+    S.cambiarInfoErrores(true)
     await esperar()
-    chk('si no se puede leer, se dice en bordó', /ad-aviso--grave">No se pudieron leer los errores de la app/.test(html(S, 'ad-errores-lista')))
+    const r = llamadas(S, 'errores_resumen')
+    chk('el tilde vuelve a pedir CON lo informativo', r.length === 2 && r[1][1].p_incluir_info === true)
+    chk('lo informativo en gris, al final', /ad-error-app--info" data-error-tipo="%px × %px%"/.test(html(S)) && /ad-error-app__grav">Informativo</.test(html(S)) &&
+      html(S).indexOf('ad-error-app--info') > html(S).indexOf('ad-error-app--aviso'))
+    chk('el tilde queda marcado', S.__els.get('ad-errores-info').checked === true)
+    chk('el cambio del tilde llama a cambiarInfoErrores', /getElementById\('ad-errores-info'\)\.addEventListener\('change', \(e\) => cambiarInfoErrores\(e\.target\.checked\)\)/.test(src))
   }
   {
+    // Nada sin arreglar.
+    const S = nuevo({ grupos: [] })
+    await S.mostrarErrores()
+    chk('sin nada, lo dice en palabras', /No hay errores ni avisos sin arreglar en los últimos 7 días\./.test(html(S)) && S.__els.get('ad-errores-cuenta').textContent === '')
+  }
+  {
+    // Falla o null: se dice, nunca "no hay errores".
+    const S = nuevo({ rpc: async () => ({ data: null, error: { message: 'x' } }) })
+    await S.mostrarErrores()
+    chk('si la base falla, lo dice', /No se pudieron leer los errores de la app/.test(html(S)) && !/No hay errores/.test(html(S)))
+    const S2 = nuevo({ rpc: async () => ({ data: null, error: null }) })
+    await S2.mostrarErrores()
+    chk('null (no es super_admin para la base) no se lee como "no hay errores"', /No se pudieron leer los errores de la app/.test(html(S2)))
+  }
+
+  // ── Marcar como arreglado ──────────────────────────────────────────────────
+  {
     const S = nuevo()
-    chk('etiqueta: iPhone', S.etiquetaDispositivo('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) · navegador · 390x844 · portrait-primary') === 'iPhone · navegador')
-    chk('etiqueta: sin datos', S.etiquetaDispositivo(null) === 'Sin datos')
-    S.estado.nombres = new Map([['emp-x', marca('quien')]])
-    const mala = { id: marca('id'), empleado_id: 'emp-x', pantalla: marca('pantalla'), mensaje: marca('mensaje'), detalle: marca('detalle'), url: marca('url'), dispositivo: marca('disp'), evento: marca('evento'), creado_en: '2026-09-27T12:00:00Z' }
-    chequearMarcas(chk, 'fila de error', S.htmlFilaError(mala), ['id', 'quien', 'pantalla', 'mensaje', 'detalle', 'url', 'disp', 'evento'])
-    S.estado.errores = { filas: [mala], error: null, pantalla: '', dispositivo: '', evento: '' }
+    await S.mostrarErrores()
+    chk('cada tarjeta tiene "Marcar como arreglado"', (html(S).match(/data-error-arreglar=/g) ?? []).length === 2)
+    S.abrirArreglarError('x is not defined')
+    const h = html(S)
+    chk('abre la nota en ESA tarjeta (y en ninguna otra)', (h.match(/id="ad-errores-nota"/g) ?? []).length === 1 && h.indexOf('id="ad-errores-nota"') > h.indexOf('data-error-tipo="x is not defined"') && h.indexOf('id="ad-errores-nota"') < h.indexOf('data-error-tipo="Tiempo real'))
+    await S.confirmarArreglarError()
+    chk('sin nota no se manda nada y se dice', !llamadas(S, 'marcar_errores_arreglados').length && /Escribí qué se hizo\./.test(html(S)))
+    S.estado.errores.arreglando.nota = '  arreglado en e5ddb89  '
+    S.__llamadas.rpc.length = 0
+    await S.confirmarArreglarError()
+    await esperar()
+    const m = llamadas(S, 'marcar_errores_arreglados')
+    chk('marca con la clave y la nota (sin espacios de los bordes)', m.length === 1 && JSON.stringify(m[0][1]) === JSON.stringify({ p_clave: 'x is not defined', p_nota: 'arreglado en e5ddb89' }), JSON.stringify(m))
+    chk('avisa cuántos registros y que si vuelve aparece', S.__llamadas.exitos.some(t => /Marcado como arreglado \(3 registros\)\. Si vuelve a pasar, aparece de nuevo\./.test(t)))
+    chk('y vuelve a leer la lista', llamadas(S, 'errores_resumen').length === 1 && S.estado.errores.arreglando === null)
+    chk('el clic y la nota se escuchan', /if \(\(b = e\.target\.closest\('\[data-error-arreglar\]'\)\)\) abrirArreglarError\(b\.dataset\.errorArreglar\)/.test(src) &&
+      /else if \(e\.target\.closest\('#ad-errores-si'\)\) confirmarArreglarError\(\)/.test(src) &&
+      /if \(e\.target\.id === 'ad-errores-nota' && estado\.errores\.arreglando\) estado\.errores\.arreglando\.nota = e\.target\.value/.test(src))
+  }
+  {
+    // El error de la base, tal cual; un doble toque manda una vez.
+    const pendientes = []
+    const S = nuevo({ rpc: async (n, p) => {
+      if (n === 'errores_resumen') return { data: copia(GRUPOS), error: null }
+      if (n === 'marcar_errores_arreglados') return new Promise(r => pendientes.push(() => r({ data: null, error: { message: 'Contá qué se hizo (por ejemplo: "arreglado en e5ddb89").' } })))
+      return { data: null, error: null }
+    } })
+    await S.mostrarErrores()
+    S.abrirArreglarError('x is not defined')
+    S.estado.errores.arreglando.nota = 'ok'
+    const p1 = S.confirmarArreglarError()
+    await esperar()
+    chk('mientras guarda, el botón se traba', /id="ad-errores-si" disabled/.test(html(S)))
+    const p2 = S.confirmarArreglarError()
+    await esperar()
+    chk('un doble toque manda una sola vez', llamadas(S, 'marcar_errores_arreglados').length === 1)
+    for (const f of pendientes) f()
+    await Promise.all([p1, p2])
+    chk('el error de la base va tal cual, pegado', /Contá qué se hizo \(por ejemplo: &quot;arreglado en e5ddb89&quot;\)\./.test(html(S)) && /class="ad-error-pegado"/.test(html(S)))
+    chk('la nota escrita se conserva', /<textarea[^>]*>ok<\/textarea>/.test(html(S)))
+    S.cancelarArreglarError()
+    chk('Cancelar cierra la nota', !/id="ad-errores-nota"/.test(html(S)) && S.estado.errores.arreglando === null)
+  }
+
+  // ── La burbuja y la portada: solo errores y avisos sin arreglar ─────────────
+  {
+    const S = nuevo()
+    const n = await S.contarErrores()
+    const r = llamadas(S, 'errores_resumen')
+    chk('cuenta con errores_resumen SIN lo informativo', r.length === 1 && r[0][1].p_incluir_info === false)
+    chk('suma las veces de errores y avisos (3 + 2)', n === 5, String(n))
+    const S2 = nuevo({ rpc: async () => ({ data: [...copia(GRUPOS), INFO], error: null }) })
+    chk('aunque viniera lo informativo, no se cuenta', (await S2.contarErrores()) === 5)
+    chk('la portada cuenta con contarErrores (no errores_app)', /contarErrores\(\)\.then\(n => \{ p\.errores7 = n \}\)/.test(src))
+    const S3 = nuevo({ rpc: async () => ({ data: null, error: { message: 'x' } }) })
+    let tiro = false
+    try { await S3.contarErrores() } catch { tiro = true }
+    chk('si falla, tira (la portada dice "No se pudo contar", nunca 0)', tiro)
+  }
+
+  // ── XSS ────────────────────────────────────────────────────────────────────
+  {
+    const g = { clave: marca('clave'), titulo: marca('titulo'), explicacion: marca('explicacion'), que_hacer: marca('que'), gravedad: marca('grav'), veces: 1,
+      primera: '2026-09-30T10:00:00Z', ultima: '2026-09-30T10:00:00Z', pantallas: [marca('pantalla')], personas: [marca('persona')], ejemplo: marca('ejemplo') }
+    const S = nuevo({ grupos: [g] })
+    await S.mostrarErrores()
+    chequearMarcas(chk, 'la tarjeta de un tipo', html(S), ['clave', 'titulo', 'explicacion', 'que', 'pantalla', 'persona', 'ejemplo'])
+    S.abrirArreglarError(g.clave)
+    S.estado.errores.arreglando.nota = marca('nota')
+    S.estado.errores.arreglando.error = marca('error')
     S.pintarErrores()
-    chequearMarcas(chk, 'filtros', html(S, 'ad-errores-pantalla') + html(S, 'ad-errores-evento'), ['pantalla', 'evento'])
+    chequearMarcas(chk, 'la nota y el error', html(S), ['nota', 'error'])
+    chk('una gravedad desconocida se trata como error (no inventa una clase)', /ad-error-app--error"/.test(html(S)))
   }
 }
 
-pruebas().then(fin).catch(e => { console.log('EXCEPCIÓN:', e && e.stack || e); console.log('ROJO'); process.exit(1) })
+pruebas().then(() => fin()).catch(e => { chk('las pruebas corren sin excepción', false, e.stack); fin() })
