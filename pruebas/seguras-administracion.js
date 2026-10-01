@@ -39,6 +39,13 @@ const SEGURAS_ADMINISTRACION = [
   ['elegido', 'HTML ya escapado: htmlPanelAsentar() lo arma con esc() del texto, o vacío'],
   ["datos.map(([k, v]) => htmlDatoAd(k, v)).join('')", 'HTML armado por htmlDatoAd(), que escapa rótulo y valor'],
   ['htmlChequesCob(c, cheques)', 'HTML armado por htmlChequesCob(), que escapa los avisos y usa htmlChequeCob()'],
+  // E-cheques y transferencias (30/09/2026)
+  ["htmlFormaPago(ch.es_echeck ? 'echeck' : 'cheque')", 'HTML constante de htmlFormaPago(): una etiqueta fija del código, sin datos de la base'],
+  ["htmlFormaPago('transferencia')", 'HTML constante de htmlFormaPago(): la etiqueta fija de la transferencia, con su ícono'],
+  ["formas.map(htmlFormaPago).join('')", 'HTML constante de htmlFormaPago(): las formas salen de una lista fija del código'],
+  ['lista.map(t => htmlTransferenciaCob(t, cuentas)).join(\'\')', 'HTML armado por htmlTransferenciaCob(), que escapa importe, cuenta, fecha y referencia'],
+  ['htmlTransferenciasCob(transf, cuentas, errorTransf)', 'HTML armado por htmlTransferenciasCob(), que escapa el aviso y usa htmlTransferenciaCob()'],
+  ['htmlFormasDeCobranza(c, lista, transf)', 'HTML armado por htmlFormasDeCobranza(), etiquetas fijas del código'],
   ['pie', 'HTML armado en htmlTarjetaCobranza(): htmlHechoCob() / htmlPanelAsentar() (escapan) o un botón con esc() del id'],
   // El proyecto del Taller al asentar (28/09/2026)
   ['opciones', 'HTML ya escapado: htmlProyectoAsentar() arma cada <option> con esc() del id y del nombre'],

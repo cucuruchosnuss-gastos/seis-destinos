@@ -72,6 +72,7 @@ const FUNCIONES_BASE = [
   'puedeVerLaCobranza', 'aparearCobranzas',
   'puedeAsentar', 'puedeVerTodasLasCobranzas', 'cobranzasVacio', 'datosCobranza', 'leerPorAsentar', 'leerChequesDe', 'asegurarBancos',
   'nombreBanco', 'asegurarClientesAsentar', 'nombreEmpresa', 'clientesParaAsentar', 'importeCob', 'textoSaldoCliente', 'htmlChequeCob',
+  'htmlFormaPago', 'htmlTransferenciaCob', 'htmlTransferenciasCob', 'textoDondeVaLaPlata', 'htmlFormasDeCobranza', 'leerTransferenciasDe', 'sumaImportesCob',
   'htmlChequesCob', 'htmlOpcionCliente', 'htmlResultadosAsentar', 'htmlResultadosLocales', 'claveBusquedaCliente', 'buscaEnLaListaLocal', 'textoSaldoCorto', 'consultarClientesAsentar', 'esClienteDelTaller', 'proyectosDelCliente', 'htmlProyectoAsentar', 'cargarProyectosAsentar', 'htmlPanelAsentar', 'htmlHechoCob', 'htmlTarjetaCobranza',
   'htmlListaCobranzas', 'porAsentarPendientes', 'pintarCobranzas', 'enfocarBuscadorAsentar', 'mostrarCobranzas', 'abrirAsentar',
   'repintarAsentar', 'repintarResultadosAsentar', 'buscarClienteAsentar', 'elegirClienteAsentar', 'cancelarAsentar', 'parametrosAsentar',

@@ -26,6 +26,7 @@ correrMutaciones({
     { expr: "esc('Escribí al menos ' + MIN_LETRAS_BUSCAR + ' letras para buscar entre los clientes de todas las empresas.')", motivo: 'texto constante del código' },
     { expr: "esc(resto.length === 1 ? 'Otro parecido a lo que escribió el chofer:' : 'Otros parecidos a lo que escribió el chofer:')", motivo: 'uno de dos textos constantes' },
     { expr: 'esc(d.error)', motivo: 'texto constante del código: lo pone recargarCobranza()' },
+    { expr: 'esc(textoDondeVaLaPlata(c, cheques, transferencias))', motivo: 'textos constantes del código (30/09/2026): textoDondeVaLaPlata() no lleva nada de la base' },
     { expr: "esc(d.clienteId ? 'la deuda vuelve a la cuenta del cliente' : 'no tiene cuenta de cliente que tocar')", motivo: 'uno de dos textos constantes' },
   ],
   manuales: [
