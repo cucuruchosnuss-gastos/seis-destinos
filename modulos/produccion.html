@@ -982,8 +982,13 @@
     .pr-receta-centro { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; transition: opacity 0.15s; }
     .pr-receta-centro--atenuado { opacity: 0.35; }
     .pr-receta { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
-    .pr-receta__opciones { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-    .pr-seg-rec { display: flex; gap: 3px; background: var(--p-caja); border-radius: 12px; padding: 4px; }
+    /* Simple / Doble y Original / Anterior / Modificar: SIEMPRE en una fila y
+       de alto fijo (30/09/2026, Facu en la tablet real): un detalle largo en
+       "Anterior" bajaba a otro renglón y achicaba la receta. Lo que no entra
+       se corta con "…" adentro del botón, nunca empuja la receta. */
+    .pr-receta__opciones { display: flex; gap: 8px; flex-wrap: nowrap; flex-shrink: 0; min-width: 0; }
+    .pr-seg-rec { display: flex; gap: 3px; background: var(--p-caja); border-radius: 12px; padding: 4px; min-width: 0; flex-shrink: 0; }
+    .pr-receta__comos { flex-shrink: 1; }
     .pr-seg-rec__op, .pr-como {
       min-height: 40px; padding: 0 12px; border-radius: 9px; border: 0; background: transparent; color: var(--p-tinta-2);
       font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;
@@ -991,6 +996,13 @@
     .pr-seg-rec__op[aria-pressed="true"], .pr-como[aria-pressed="true"] { background: var(--p-acento); color: #fff; font-weight: 800; }
     .pr-como:disabled { opacity: 0.4; }
     .pr-como__detalle { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
+    /* "Anterior (última)" con cuándo fue debajo, en chico. */
+    .pr-como--apilado { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; line-height: 1.15; padding-top: 3px; padding-bottom: 3px;
+      height: 40px; min-width: 0; flex-shrink: 1; overflow: hidden; }
+    .pr-como--apilado .pr-como__titulo { white-space: nowrap; }
+    .pr-como--apilado .pr-como__detalle { font-size: 12px; display: flex; gap: 4px; max-width: 100%; min-width: 0; white-space: nowrap; overflow: hidden; }
+    .pr-como--apilado .pr-como__cuando { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .pr-como--apilado .pr-como__choco { flex-shrink: 0; }
     .pr-como__choco { color: var(--p-choco); font-weight: 800; }
     .pr-como[aria-pressed="true"] .pr-como__choco { color: #fff; }
     .pr-receta__motivo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -1042,7 +1054,14 @@
     .pr-receta__pie { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
     .pr-receta__falta { margin: 0; }
     .pr-receta__error--aviso { color: var(--p-mal); font-weight: 700; }
-    .pr-receta__registrar { min-height: var(--p-prim); height: var(--p-prim); width: 100%; border-radius: 14px; border: 0; background: var(--p-acento); color: #fff; font-size: 19px; font-weight: 800; }
+    .pr-receta__registrar { min-height: var(--p-prim); height: var(--p-prim); width: 100%; border-radius: 14px; border: 0; background: var(--p-acento); color: #fff; font-size: 19px; font-weight: 800;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* La confirmación va EN el botón, sin mover la receta (30/09/2026): mientras
+       guarda, naranja pálido "Registrando masa…"; guardada, verde "Masa 8
+       registrada ✓" unos segundos; sin señal, "guardada en la tablet". */
+    .pr-receta__registrar--guardando, .pr-receta__registrar--guardando:disabled { background: var(--p-acento-suave); color: var(--p-acento-osc); opacity: 1; }
+    .pr-receta__registrar--ok, .pr-receta__registrar--ok:disabled { background: var(--p-bien); color: #fff; opacity: 1; }
+    .pr-receta__registrar--pendiente, .pr-receta__registrar--pendiente:disabled { background: var(--p-mal-suave); color: var(--p-mal-txt); opacity: 1; }
     .pr-otro { background: #fff; border: 1px solid var(--p-borde); border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
     .pr-otro__campos { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
 
@@ -1897,11 +1916,6 @@
            "Anular la última masa". Registrar va directo a la base y deja lista
            la masa siguiente: no hay pantalla de resumen. -->
       <section id="pr-receta" hidden>
-        <div class="pr-banda pr-banda--ok" id="pr-sala-exito" hidden>
-          <span class="pr-banda__tilde" aria-hidden="true">✓</span>
-          <span class="pr-banda__titulo" id="pr-sala-exito-titulo"></span>
-          <span class="pr-banda__detalle" id="pr-sala-exito-detalle"></span>
-        </div>
         <div class="pr-receta-grid">
         <div class="pr-receta-centro" id="pr-receta-centro">
         <div class="pr-receta">
@@ -2123,7 +2137,7 @@
       defineChocolate: null, // los ingredientes con define_chocolate, de la tabla
       errorSala: null,     // lo que salió mal al leer la receta y los lotes
       errorReceta: null,   // lo que dijo la base al rechazar la masa
-      exitoMasa: null,     // la banda verde de "Masa N registrada"
+      exitoMasa: null,     // el botón Registrar en verde "Masa N registrada ✓" (o "guardada en la tablet")
       masasTurno: null,
       enviandoMasa: false,
       anulando: null,
@@ -8098,10 +8112,11 @@
     // Lo que dice el botón "Usar la anterior" ANTES de copiarla: cuál fue, si
     // venía modificada y —esto es lo que no se puede perder— si era de
     // CHOCOLATE. Copiar una masa de chocolate sin saberlo sale caro.
-    function detalleAnterior(d) {
+    function detalleAnterior(d, ahora = new Date()) {
       const a = d?.anterior
       if (!a) return 'No hay una masa anterior de este tipo en esta máquina.'
-      const partes = [`Igual a la masa ${esc(a.nro)} de las ${esc(horaArgentina(a.hora) || '—')}`]
+      const cuando = cuandoFueLaAnterior(a, ahora)
+      const partes = [`La última masa de esta máquina, del turno que sea: masa ${esc(a.nro)}${cuando ? `, ${esc(cuando)}` : ''}`]
       if (a.es_de_hoy === false) partes.push(`del lote ${esc(a.lote)}, de otro día`)
       const difs = diferencias(cantidadesDesde('anterior', d.original, a), d.original)
       partes.push(difs.length ? `modificada: ${esc(textoDiferencias(difs, 2))}` : 'igual a la original')
@@ -8117,18 +8132,59 @@
         .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
     }
 
-    function htmlComo(clave, titulo, detalleHtml, habilitado, elegida = false, tituloLargo = '') {
-      return `<button type="button" class="pr-como" data-base="${esc(clave)}" aria-pressed="${elegida ? 'true' : 'false'}"${habilitado ? '' : ' disabled'}${tituloLargo ? ` title="${esc(tituloLargo)}"` : ''}>` +
+    // apilado: el detalle va DEBAJO del título, en chico ("Anterior (última)"
+    // con "Masa 2 · hoy 10:40" abajo); si no, al lado.
+    function htmlComo(clave, titulo, detalleHtml, habilitado, elegida = false, tituloLargo = '', apilado = false) {
+      return `<button type="button" class="pr-como${apilado ? ' pr-como--apilado' : ''}" data-base="${esc(clave)}" aria-pressed="${elegida ? 'true' : 'false'}"${habilitado ? '' : ' disabled'}${tituloLargo ? ` title="${esc(tituloLargo)}"` : ''}>` +
         `<span class="pr-como__titulo">${esc(titulo)}</span>${detalleHtml ? `<span class="pr-como__detalle">${detalleHtml}</span>` : ''}</button>`
     }
 
-    // Lo que va al lado de "Anterior": cuál fue y, si era de CHOCOLATE, se
-    // dice ANTES de copiarla (copiar una masa de chocolate sin saberlo sale
-    // caro). El detalle largo queda en el title del botón.
-    function detalleAnteriorCorto(d) {
+    // El día de una masa (hora de Argentina) contra hoy: 'hoy', 'ayer' o
+    // 'antes'; null si la hora no se puede leer. Se mira la HORA de la masa y
+    // no la fecha del turno: una masa de las 2 de la mañana de un turno Noche
+    // de ayer se hizo hoy.
+    function diaDeLaMasa(momento, ahora = new Date()) {
+      if (momento == null || momento === '') return null
+      const d = new Date(momento)
+      if (Number.isNaN(d.getTime())) return null
+      const dia = hoyArgentina(d)
+      const hoy = hoyArgentina(ahora)
+      if (dia === hoy) return 'hoy'
+      const [y, m, dd] = hoy.split('-').map(Number)
+      const ayer = new Date(Date.UTC(y, m - 1, dd - 1)).toISOString().slice(0, 10)
+      return dia === ayer ? 'ayer' : 'antes'
+    }
+
+    // Cuándo fue la masa anterior, para el botón "Anterior (última)":
+    // "hoy 10:40", "ayer, turno Tarde" o "28/09". El turno sale de
+    // turnos_produccion (leerTurnoDeLaAnterior): si no se pudo leer, dice
+    // "ayer" a secas. Sin hora, '' — nunca se inventa cuándo.
+    function cuandoFueLaAnterior(a, ahora = new Date()) {
+      const cual = diaDeLaMasa(a?.hora, ahora)
+      if (cual === 'hoy') {
+        const h = horaArgentina(a.hora)
+        return h ? `hoy ${h}` : 'hoy'
+      }
+      if (cual === 'ayer') return a.turno_nombre ? `ayer, turno ${a.turno_nombre}` : 'ayer'
+      if (cual === 'antes') {
+        const [, m, dd] = hoyArgentina(new Date(a.hora)).split('-')
+        return `${dd}/${m}`
+      }
+      return ''
+    }
+
+    // Lo que va debajo de "Anterior (última)": qué masa fue y cuándo —la
+    // anterior es la última de ESA máquina, del turno que sea, y puede ser de
+    // ayer—, y si era de CHOCOLATE, se dice ANTES de copiarla (copiar una masa
+    // de chocolate sin saberlo sale caro). El detalle largo queda en el title.
+    function detalleAnteriorCorto(d, ahora = new Date()) {
       const a = d?.anterior
       if (!a) return 'no hay'
-      return `igual a la ${esc(a.nro)}${a.es_de_hoy === false ? ' (otro día)' : ''}${a.es_chocolate ? ' <span class="pr-como__choco">· de chocolate</span>' : ''}`
+      const cuando = cuandoFueLaAnterior(a, ahora)
+      // Qué masa y cuándo se cortan con "…" si no entran; el "· chocolate"
+      // NUNCA (va aparte y no se achica): copiar una de chocolate sin saberlo
+      // sale caro.
+      return `<span class="pr-como__cuando">Masa ${esc(a.nro)}${cuando ? ` · ${esc(cuando)}` : ''}</span>${a.es_chocolate ? ' <span class="pr-como__choco">· chocolate</span>' : ''}`
     }
 
     // 4b · Arriba de la receta, en una fila: el número de masa, el tamaño
@@ -8150,7 +8206,7 @@
       const hayAnterior = !!d?.anterior
       const comos = '<span class="pr-seg-rec pr-receta__comos" role="group" aria-label="De dónde sale la masa">' +
         htmlComo('original', 'Original', `v${esc(d.original.version)}`, true, como === 'original') +
-        htmlComo('anterior', 'Anterior', detalleAnteriorCorto(d), hayAnterior, como === 'anterior', textoDeHtml(detalleAnterior(d))) +
+        htmlComo('anterior', hayAnterior ? 'Anterior (última)' : 'Anterior', detalleAnteriorCorto(d), hayAnterior, como === 'anterior', textoDeHtml(detalleAnterior(d)), hayAnterior) +
         htmlComo('modificar', 'Modificar', '', true, como === 'modificar', dePartida(d)) +
         '</span>'
       return `${tamanoReceta}${comos}${tiposReceta}`
@@ -8588,7 +8644,7 @@
       }
       // Con Modificar, el motivo es obligatorio (lo pide la pantalla; la base
       // lo guarda en masas.motivo). Con Original o Anterior no se pide.
-      if (b.como === 'modificar' && String(b.motivo ?? '').trim().length < 3) {
+      if (b.como === 'modificar' && !pasaAChocolate(b, estado.defineChocolate) && String(b.motivo ?? '').trim().length < 3) {
         faltan.push('escribir por qué la modificás (al menos 3 letras)')
       }
       return faltan
@@ -8624,6 +8680,19 @@
       const { data, error } = await supabase.from('ingredientes').select('id, define_chocolate')
       if (error) throw error
       return new Set((data ?? []).filter(x => x.define_chocolate === true).map(x => x.id))
+    }
+
+    // Pasar a chocolate ya es el motivo (30/09/2026, Facu): si la masa de
+    // partida (b.base: la original o la anterior) NO es de chocolate y la que
+    // se registra SÍ (se le puso cacao), con Modificar no se pide motivo,
+    // aunque también se hayan tocado otros ingredientes, y viaja
+    // MOTIVO_PASADA_A_CHOCOLATE. Si la de partida YA era de chocolate, se pide
+    // como siempre. Sin saber qué define el chocolate, se pide (lado seguro).
+    // La base no exige el motivo: registrar_masa lo guarda si viene (p_motivo).
+    const MOTIVO_PASADA_A_CHOCOLATE = 'Pasada a chocolate'
+    function pasaAChocolate(b, definen) {
+      if (!b || b.como !== 'modificar' || !definen) return false
+      return !esChocolate({ cantidades: b.base ?? {} }, definen) && esChocolate(b, definen)
     }
 
     function esChocolate(b, definen) {
@@ -8666,7 +8735,9 @@
       }
       // El motivo va SOLO con Modificar, y adentro del payload congelado: un
       // reintento manda el mismo. Con Original o Anterior, null.
-      const motivo = b.como === 'modificar' ? String(b.motivo ?? '').trim() : ''
+      // Pasada a chocolate sin motivo escrito: viaja 'Pasada a chocolate'.
+      const escrito = b.como === 'modificar' ? String(b.motivo ?? '').trim() : ''
+      const motivo = escrito || (pasaAChocolate(b, estado.defineChocolate) ? MOTIVO_PASADA_A_CHOCOLATE : '')
       return {
         p_turno_id: b.turnoId,
         p_tipo_masa: b.tipo,
@@ -8814,6 +8885,14 @@
           console.error('receta de la masa anterior:', err)
           estado.datosMasa.anterior.receta = null
         }
+        // De qué turno fue (solo hace falta si fue ayer). Si no se puede
+        // leer, el botón dice "ayer" a secas: no se inventa el turno.
+        try {
+          estado.datosMasa.anterior.turno_nombre = await leerTurnoDeLaAnterior(estado.datosMasa.anterior)
+        } catch (err) {
+          console.error('turno de la masa anterior:', err)
+          estado.datosMasa.anterior.turno_nombre = null
+        }
       }
       await leerStockMasa()
       // Qué ingredientes definen el chocolate es configuración y solo sirve
@@ -8825,6 +8904,17 @@
         console.error('ingredientes que definen el chocolate:', err)
         estado.defineChocolate = null
       }
+    }
+
+    // datos_para_masa trae la hora de la masa anterior pero no de qué turno
+    // (Mañana / Tarde / Noche) fue su lote: se lee de turnos_produccion por
+    // el lote, que es único (turnos_produccion_lote_key). Solo cuando fue
+    // AYER, que es el único caso donde el botón "Anterior (última)" lo dice.
+    async function leerTurnoDeLaAnterior(ant, ahora = new Date()) {
+      if (ant?.lote == null || diaDeLaMasa(ant.hora, ahora) !== 'ayer') return null
+      const { data, error } = await supabase.from('turnos_produccion').select('turno').eq('lote', ant.lote).maybeSingle()
+      if (error) throw error
+      return data?.turno ?? null
     }
 
     // datos_para_masa no dice con qué receta se hizo la masa anterior: se lee
@@ -8936,7 +9026,6 @@
       document.getElementById('pr-otro').hidden = true
       mostrarVista('pr-receta')
       pintarReceta()
-      pintarBandaExito()
       cargarMasasReceta()
       pintarPendientes()
     }
@@ -9144,10 +9233,24 @@
       falta.textContent = texto
       falta.hidden = !texto
       falta.classList.toggle('pr-receta__error--aviso', !estado.errorReceta && !pendiente.length && !!textoAvisos)
-      btn.textContent = `Registrar masa ${b.nro ?? ''}${etiquetaBorrador(b) === 'modificada' ? ' · modificada' : ''}`.replace(/\s+·/, ' ·').trim()
+      // El botón dice el estado SIN mover nada (alto y ancho fijos): naranja
+      // pálido mientras guarda, verde "Masa N registrada ✓" unos segundos,
+      // "guardada en la tablet" sin señal, y de nuevo "Registrar masa".
+      const e = estado.enviandoMasa ? null : estado.exitoMasa
+      btn.classList.toggle('pr-receta__registrar--guardando', !!estado.enviandoMasa)
+      btn.classList.toggle('pr-receta__registrar--ok', e?.tipo === 'ok')
+      btn.classList.toggle('pr-receta__registrar--pendiente', e?.tipo === 'pendiente')
+      btn.textContent = estado.enviandoMasa ? 'Registrando masa…'
+        : e ? e.texto
+        : `Registrar masa ${b.nro ?? ''}${etiquetaBorrador(b) === 'modificada' ? ' · modificada' : ''}`.replace(/\s+·/, ' ·').trim()
+      btn.title = e?.detalle ?? ''
+      // Pasar a chocolate ya es el motivo: el campo lo dice en vez de pedirlo.
+      const motivoCampo = document.getElementById('pr-receta-motivo')
+      if (motivoCampo) motivoCampo.placeholder = pasaAChocolate(b, estado.defineChocolate) ? 'pasada a chocolate: no hace falta motivo' : '¿por qué la modificás?'
       // El botón NO se deshabilita por lo que falta: el error pegado se diría
-      // y nadie podría tocarlo. Se traba solo mientras se manda.
-      btn.disabled = !!estado.enviandoMasa
+      // y nadie podría tocarlo. Se traba mientras se manda y mientras dice
+      // "registrada" (un doble toque no registra la masa siguiente sin querer).
+      btn.disabled = !!estado.enviandoMasa || !!e
     }
 
     function cambiarCantidad(ingredienteId, kg) {
@@ -9657,9 +9760,10 @@
         pintarPieReceta()
         return
       }
-      if (r.resultado === 'ok') mostrarBandaExito(b, r.data ?? {})
-      // Sin conexión no hace falta banda: la masa quedó guardada y a la
-      // derecha figura "esperando conexión", con el "no la cargues de nuevo".
+      // La confirmación va EN el botón, sin mover la receta: verde "Masa N
+      // registrada ✓" unos segundos. Sin señal la masa quedó guardada en la
+      // tablet (a la derecha figura "esperando conexión") y el botón lo dice.
+      mostrarRegistrada(b, r.resultado === 'ok' ? (r.data ?? {}) : null)
       soltarEnCurso(b.turnoId)
       await siguienteMasa(b, r.resultado === 'ok' ? (r.data ?? {}) : null)
     }
@@ -9975,16 +10079,21 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SALA DE MASA — la banda verde de "registrada"
+    // SALA DE MASA — "Masa N registrada ✓", en el botón
     // ═══════════════════════════════════════════════════════════════════════
     //
-    // El ORIGEN que se muestra acá es el que devolvió la base, no el del
-    // borrador: es el único que cuenta. Se va sola a los 6 segundos.
+    // (30/09/2026, Facu en la tablet real.) Antes era una banda verde arriba de
+    // la receta que la achicaba unos segundos y la dejaba para scrollear. Ahora
+    // la confirmación va EN el botón Registrar, que tiene alto y ancho fijos:
+    // verde "Masa 8 registrada ✓" durante MS_BOTON_REGISTRADA y vuelve a
+    // "Registrar masa". Mientras está en verde no se puede tocar: un doble
+    // toque no registra la masa siguiente sin querer. El detalle (máquina,
+    // lote, ORIGEN que devolvió la base, hora) va en el title del botón.
 
-    const MS_BANDA_EXITO = 6000
-    let relojBandaExito = null
+    const MS_BOTON_REGISTRADA = 2500
+    let relojBotonRegistrada = null
 
-    function detalleBandaExito(b, res) {
+    function detalleMasaRegistrada(b, res) {
       const partes = [b.maquinaNombre, `lote ${res.lote ?? b.lote}`, b.doble ? 'doble' : 'simple']
       if (res.origen) partes.push((ETIQUETA_ORIGEN[res.origen] ?? res.origen).toLowerCase())
       if (res.es_chocolate) partes.push('chocolate')
@@ -9998,23 +10107,21 @@
       return horaArgentina(new Date())
     }
 
-    function mostrarBandaExito(b, res) {
-      estado.exitoMasa = { titulo: `Masa ${res.nro ?? b.nro ?? ''} registrada`.replace(/\s+/g, ' ').trim(), detalle: detalleBandaExito(b, res) }
-      pintarBandaExito()
-      if (relojBandaExito) clearTimeout(relojBandaExito)
-      relojBandaExito = setTimeout(ocultarBandaExito, MS_BANDA_EXITO)
+    // res null = sin señal: la masa quedó guardada en la tablet y se manda sola.
+    function mostrarRegistrada(b, res) {
+      const nro = res ? (res.nro ?? b.nro) : b.nro
+      estado.exitoMasa = res
+        ? { tipo: 'ok', texto: `Masa ${nro ?? ''} registrada ✓`.replace(/\s+/g, ' ').trim(), detalle: detalleMasaRegistrada(b, res) }
+        : { tipo: 'pendiente', texto: `Masa ${nro ?? ''} guardada en la tablet`.replace(/\s+/g, ' ').trim(),
+            detalle: 'Sin señal: se manda sola cuando vuelva. No la cargues de nuevo.' }
+      if (relojBotonRegistrada) clearTimeout(relojBotonRegistrada)
+      relojBotonRegistrada = setTimeout(ocultarRegistrada, MS_BOTON_REGISTRADA)
+      pintarPieReceta()
     }
 
-    function ocultarBandaExito() {
+    function ocultarRegistrada() {
       estado.exitoMasa = null
-      pintarBandaExito()
-    }
-
-    function pintarBandaExito() {
-      const e = estado.exitoMasa
-      document.getElementById('pr-sala-exito').hidden = !e
-      document.getElementById('pr-sala-exito-titulo').textContent = e?.titulo ?? ''
-      document.getElementById('pr-sala-exito-detalle').textContent = e?.detalle ?? ''
+      pintarPieReceta()
     }
 
     // ═══════════════════════════════════════════════════════════════════════

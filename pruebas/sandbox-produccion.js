@@ -106,14 +106,14 @@ const FUNCIONES_BASE = [
   'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'textoCantidad',
   'diferenciaDeMasa', 'seAleja',
   'ingredientesConLote', 'pideLote', 'insumosDe', 'lotesIniciales', 'opcionesLote', 'indiceLote', 'estadoLote',
-  'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate',
+  'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate', 'pasaAChocolate',
   'parametrosRegistrarMasa', 'esErrorDeRed', 'enviarMasa', 'reintentarPendientes', 'textoPendientes', 'pintarPendientes',
   'elegirMaquinaSala', 'cargarTiposMasa', 'cargarDatosMasa', 'elegirTipoMasa', 'elegirTamano', 'elegirComo',
   'mostrarReceta', 'etiquetaBorrador', 'htmlCabeceraReceta', 'htmlCeldaLote', 'htmlCeldaQueda',
   'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilasReceta', 'pintarReceta', 'pintarPieReceta',
   'cambiarCantidad', 'sumarPaso', 'elegirOpcionLote', 'escribirLoteManual',
   'abrirOtro', 'cerrarOtro', 'faltaParaOtro', 'agregarOtro', 'quitarOtro', 'cambiarCantidadOtro', 'sumarPasoOtro',
-  'registrarMasa', 'detalleBandaExito', 'horaDeAhoraAr', 'mostrarBandaExito', 'ocultarBandaExito', 'pintarBandaExito',
+  'registrarMasa', 'detalleMasaRegistrada', 'horaDeAhoraAr', 'mostrarRegistrada', 'ocultarRegistrada',
   'leerMasasSala', 'nombreDeTurno', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno', 'mostrarMasasTurno',
   'pintarMasasTurno', 'pedirAnularMasa', 'confirmarAnularMasa',
   // B6 + rediseño parte 5: configuración
@@ -321,6 +321,8 @@ const NUEVAS_PLANTA = [
   'mostrarEntrar', 'errorEntrar', 'conReintento', 'textoDeHtml',
   // La receta que cambia en medio del turno (30/09/2026).
   'recetaCambioDesdeAnterior', 'nuevosEnReceta', 'otrosDeLaAnterior', 'textoCambioReceta', 'leerRecetaDeLaAnterior',
+  // "Anterior (última)": qué masa fue y cuándo (30/09/2026).
+  'diaDeLaMasa', 'cuandoFueLaAnterior', 'leerTurnoDeLaAnterior',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -342,7 +344,7 @@ const CONSTANTES_BASE = [
   'MINUTOS_INACTIVIDAD', 'LARGO_PIN', 'LARGO_PIN_MAESTRO',
   'ZONA_AR', 'TURNOS', 'CTX_PLANILLA',
   'PREFIJO_BORRADOR_MASA', 'PREFIJO_MASA_EN_CURSO', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
-  'UMBRAL_ALEJADA', 'MS_BANDA_EXITO',
+  'UMBRAL_ALEJADA', 'MS_BOTON_REGISTRADA', 'MOTIVO_PASADA_A_CHOCOLATE',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION',
   'EMBOLSADOS', 'TEXTO_EMBOLSADO', 'CONDICIONES_EMPAQUE',
@@ -409,7 +411,7 @@ const PRELUDIO = `
   function tiempoRealConectado() { __tiempoReal.push(['conectado']) }
   var __canales = []
   var reintentando = false
-  var relojBandaExito = null
+  var relojBotonRegistrada = null
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
   var turnoIndicadores = 0
@@ -418,7 +420,10 @@ const PRELUDIO = `
   var navigator = { onLine: true, wakeLock: null }
   var window = { location, scrollTo(){}, addEventListener(){}, lucide: null, confirm: () => true }
   var history = { replaceState(){}, pushState(){}, back(){} }
-  function setTimeout(f) { return 0 } function clearTimeout(){} function setInterval(){ return 0 } function clearInterval(){}
+  // Los timers no corren: se anotan [función, ms] en __timeouts, así una
+  // suite puede disparar a mano el que le interesa (30/09/2026).
+  var __timeouts = []
+  function setTimeout(f, ms) { __timeouts.push([f, ms]); return 0 } function clearTimeout(){} function setInterval(){ return 0 } function clearInterval(){}
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [] }
   var __tablas = {}
@@ -503,7 +508,7 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
       __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
-      __uuids(){ return __uuids }, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo },
+      __uuids(){ return __uuids }, __timeouts, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo },
       ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }

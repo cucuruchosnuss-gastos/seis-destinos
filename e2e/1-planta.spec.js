@@ -111,7 +111,8 @@ test.describe('planta', () => {
       const vacios = page.locator('#pr-receta-filas [data-lote].pr-rec__lote--vacio');
       expect(await vacios.count(), 'la primera masa del día tiene que llegar con lotes vacíos').toBeGreaterThan(0);
       await page.locator('#pr-receta-registrar').click();
-      await expect(page.locator('#pr-sala-exito')).toBeHidden();
+      // La confirmación va EN el botón (30/09/2026): sin lotes no dice "registrada".
+      await expect(page.locator('#pr-receta-registrar')).not.toContainText(/registrada/);
       await expect(page.locator('#pr-receta')).toContainText(/lote/i);
       await captura(page, 'masa-sin-lotes', info);
     });
@@ -135,8 +136,7 @@ test.describe('planta', () => {
       }
       await captura(page, 'masa-con-lotes', info);
       await page.locator('#pr-receta-registrar').click();
-      await expect(page.locator('#pr-sala-exito')).toBeVisible();
-      await expect(page.locator('#pr-sala-exito-titulo')).toContainText(/masa/i);
+      await expect(page.locator('#pr-receta-registrar')).toContainText(/Masa \d+ (registrada ✓|guardada en la tablet)/);
       // Registrar deja lista la masa SIGUIENTE de la misma máquina.
       await expect(page.locator('#pr-receta')).toBeVisible();
       await expect(page.locator('#pr-receta-masas')).toContainText(/Masas del turno/);

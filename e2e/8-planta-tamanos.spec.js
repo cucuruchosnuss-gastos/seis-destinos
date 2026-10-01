@@ -88,6 +88,67 @@ for (const [ancho, alto] of TAMANOS) {
   });
 }
 
+// SALA DE MASA SIN MOVER LA RECETA (30/09/2026, Facu en la tablet real):
+//  - "Anterior (última)" con el texto más largo ("Masa 128 · ayer, turno
+//    Mañana · chocolate": datos produccion-choco y el reloj en el día después
+//    del de la maqueta) deja los segmentos en UNA fila de alto fijo, con "…"
+//    si no entra;
+//  - registrar una masa NO cambia el alto de la lista de ingredientes: la
+//    confirmación va EN el botón ("Masa 128 registrada ✓", verde) y vuelve a
+//    "Registrar masa" a los 2,5 s, sin ninguna leyenda que empuje la receta.
+for (const [ancho, alto] of TAMANOS) {
+  test(`registrar y "Anterior" de chocolate no mueven la receta a ${ancho}×${alto}`, async ({ page }, info) => {
+    test.setTimeout(3 * 60 * 1000);
+    await page.setViewportSize({ width: ancho, height: alto });
+    const errores = vigilarErrores(page);
+    await page.goto(`${MAQUETA}/modulos/produccion.html?maqueta=produccion-choco`);
+    const hasta = PASOS_PLANTA.findIndex(([n]) => n === 'receta');
+    for (const [, fn] of PASOS_PLANTA.slice(0, hasta)) await fn(page);
+    // Recién en la sala, el reloj pasa al día después del de la maqueta
+    // (2099-12-31), a las 12 de Argentina: la anterior es de AYER y el botón
+    // dice su turno. (Antes, el tablero de Producción cambiaría de cara.)
+    await page.clock.setFixedTime(new Date('2100-01-01T15:00:00Z'));
+    await PASOS_PLANTA[hasta][1](page);
+    const detalle = page.locator('#pr-receta-opciones [data-base="anterior"] .pr-como__detalle');
+    await expect(page.locator('#pr-receta-opciones [data-base="anterior"] .pr-como__titulo')).toHaveText('Anterior (última)');
+    await expect(detalle).toContainText('Masa 128 · ayer, turno Mañana');
+    await expect(detalle).toContainText('chocolate');
+    const fila = await page.evaluate(() => {
+      const o = document.getElementById('pr-receta-opciones');
+      const hijos = [...o.children].map(h => h.getBoundingClientRect());
+      const ant = o.querySelector('[data-base="anterior"]');
+      const det = ant.querySelector('.pr-como__detalle');
+      return {
+        alto: o.getBoundingClientRect().height,
+        tops: [...new Set(hijos.map(r => Math.round(r.top)))],
+        altoAnterior: ant.getBoundingClientRect().height,
+        detalleEnUnaLinea: det.getBoundingClientRect().height < 20,
+        detalleDentro: det.getBoundingClientRect().right <= ant.getBoundingClientRect().right + 1,
+      };
+    });
+    await captura(page, `choco-anterior-${ancho}x${alto}`, info);
+    expect(fila.tops.length, `los segmentos en una fila: ${JSON.stringify(fila)}`).toBe(1);
+    expect(fila.alto, `la fila de segmentos no crece: ${JSON.stringify(fila)}`).toBeLessThanOrEqual(52);
+    expect(fila.altoAnterior, `"Anterior" de alto fijo: ${JSON.stringify(fila)}`).toBeLessThanOrEqual(44);
+    expect(fila.detalleEnUnaLinea && fila.detalleDentro, `el detalle en una línea y adentro: ${JSON.stringify(fila)}`).toBe(true);
+    const altoLista = () => page.evaluate(() => Math.round(document.getElementById('pr-receta-filas').getBoundingClientRect().height));
+    const antes = await altoLista();
+    const m1 = await page.evaluate(`(${medirPantalla.toString()})()`);
+    expect(m1.scroll || m1.scrollX, `sin scroll antes de registrar: ${JSON.stringify(m1)}`).toBe(false);
+    const boton = page.locator('#pr-receta-registrar');
+    await boton.click();
+    await expect(boton).toHaveText(/registrada ✓/);
+    const durante = await altoLista();
+    await captura(page, `choco-registrada-${ancho}x${alto}`, info);
+    const m2 = await page.evaluate(`(${medirPantalla.toString()})()`);
+    expect(m2.scroll || m2.scrollX, `sin scroll con "registrada": ${JSON.stringify(m2)}`).toBe(false);
+    expect(durante, `la lista no cambia de alto al registrar (antes ${antes}, durante ${durante})`).toBe(antes);
+    await expect(boton).toHaveText(/^Registrar masa/, { timeout: 6000 });
+    expect(await altoLista(), 'y tampoco al volver a "Registrar masa"').toBe(antes);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+}
+
 // El medidor mide de verdad: una página que scrollea y una palabra partida
 // ponen la prueba en rojo (así un cero no es "no miré").
 test('el medidor detecta el scroll, lo que se sale y la palabra cortada', async ({ page }) => {

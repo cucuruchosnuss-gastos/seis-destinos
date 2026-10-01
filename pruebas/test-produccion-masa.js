@@ -218,7 +218,7 @@ esperas.push((async () => {
   // "Parte de la masa 9." de Modificar (ver el informe: el comentario de
   // detalleAnteriorCorto dice que el detalle largo va en el title y no va).
   chk('"Original" dice la versión vigente', /data-base="original"[^>]*><span class="pr-como__titulo">Original<\/span><span class="pr-como__detalle">v7<\/span>/.test(opciones))
-  chk('"Anterior" dice cuál fue', /data-base="anterior"[^>]*><span class="pr-como__titulo">Anterior<\/span><span class="pr-como__detalle">igual a la 9<\/span>/.test(opciones), opciones)
+  chk('"Anterior (última)" dice cuál fue y cuándo', /data-base="anterior"[^>]*><span class="pr-como__titulo">Anterior \(última\)<\/span><span class="pr-como__detalle"><span class="pr-como__cuando">Masa 9 · 23\/09<\/span><\/span>/.test(opciones), opciones)
   chk('"Modificar" sin detalle', /data-base="modificar"[^>]*><span class="pr-como__titulo">Modificar<\/span><\/button>/.test(opciones))
   chk('el tipo de masa se eligió solo (hay uno)', S.estado.tipoMasa === 'Común')
   chk('datos_para_masa con el turno y el tipo', JSON.stringify(S.__llamadas.rpc.find(([n]) => n === 'datos_para_masa')?.[1]) === '{"p_turno_id":"t1","p_tipo_masa":"Común"}')
@@ -251,9 +251,9 @@ esperas.push((async () => {
   const CH = armar({ datos: { ...DATOS, anterior: { ...ANTERIOR, es_chocolate: true } } })
   await CH.mostrarSala(); await CH.elegirMaquinaSala('t1')
   chk('si la anterior fue de CHOCOLATE, lo dice ANTES de copiarla, en el botón "Anterior"',
-    /data-base="anterior"[^>]*><span class="pr-como__titulo">Anterior<\/span><span class="pr-como__detalle">igual a la 9 <span class="pr-como__choco">· de chocolate<\/span>/.test(CH.__doc.getElementById('pr-receta-opciones').innerHTML),
+    /data-base="anterior"[^>]*><span class="pr-como__titulo">Anterior \(última\)<\/span><span class="pr-como__detalle"><span class="pr-como__cuando">Masa 9 · 23\/09<\/span> <span class="pr-como__choco">· chocolate<\/span>/.test(CH.__doc.getElementById('pr-receta-opciones').innerHTML),
     CH.__doc.getElementById('pr-receta-opciones').innerHTML)
-  chk('… y si no fue de chocolate no lo dice', !/de chocolate/.test(opciones))
+  chk('… y si no fue de chocolate no lo dice', !/pr-como__choco/.test(opciones))
   const OTRODIA = armar({ datos: { ...DATOS, anterior: { ...ANTERIOR, es_de_hoy: false } } })
   await OTRODIA.mostrarSala(); await OTRODIA.elegirMaquinaSala('t1')
   chk('la anterior es de otro día: arranca con Original', OTRODIA.estado.masa?.como === 'original')
@@ -533,19 +533,19 @@ esperas.push((async () => {
   await OK.registrarMasa()
   chk('registrada: queda lista la masa siguiente de la MISMA máquina', OK.estado.vista === 'pr-receta' && OK.estado.salaTurno?.id === 't1' &&
     OK.estado.masa?.nro === 4 && OK.estado.masa.client_uuid !== uuidOk)
-  chk('… con la banda verde', OK.__doc.getElementById('pr-sala-exito').hidden === false &&
-    OK.__doc.getElementById('pr-sala-exito-titulo').textContent === 'Masa 3 registrada')
-  chk('… que dice máquina, lote, tamaño, ORIGEN DE LA BASE y hora', OK.__doc.getElementById('pr-sala-exito-detalle').textContent === 'Máquina 1 · lote 7023 · simple · modificada · 10:41',
-    OK.__doc.getElementById('pr-sala-exito-detalle').textContent)
-  chk('el origen de la banda es el que calculó la base, no el del borrador', OK.etiquetaBorrador({ cambiada: false, partida: 'original' }) === 'original')
+  const btnOk = OK.__doc.getElementById('pr-receta-registrar')
+  chk('… y el BOTÓN dice "Masa 3 registrada ✓" (sin banda que empuje la receta)', btnOk.textContent === 'Masa 3 registrada ✓', btnOk.textContent)
+  chk('… trabado mientras lo dice (un doble toque no registra la siguiente)', btnOk.disabled === true)
+  chk('… con máquina, lote, tamaño, ORIGEN DE LA BASE y hora en el title', btnOk.title === 'Máquina 1 · lote 7023 · simple · modificada · 10:41', btnOk.title)
+  chk('el origen del botón es el que calculó la base, no el del borrador', OK.etiquetaBorrador({ cambiada: false, partida: 'original' }) === 'original')
   chk('… la que se mandó ya no queda en la tablet', OK.localStorage.getItem('produccion.masa.' + uuidOk) === null)
   chk('… y se vuelven a leer la receta y los lotes (la anterior cambió)', OK.__llamadas.rpc.filter(([n]) => n === 'datos_para_masa').length === 2)
   chk('… y la siguiente sigue con Original, como la anterior', OK.estado.masa.como === 'original')
-  chk('la banda se va sola: hay un reloj y una forma de apagarla', OK.MS_BANDA_EXITO === 6000)
-  OK.ocultarBandaExito()
-  chk('… y apagada no se ve', OK.__doc.getElementById('pr-sala-exito').hidden === true)
-  const choco = OK.detalleBandaExito({ maquinaNombre: 'M', lote: 1, doble: true }, { lote: 2, origen: 'original', es_chocolate: true, hora: '2026-09-23T13:41:00Z' })
-  chk('una doble de chocolate lo dice en la banda', choco === 'M · lote 2 · doble · original · chocolate · 10:41', choco)
+  chk('el verde se va solo: 2,5 segundos', OK.MS_BOTON_REGISTRADA === 2500)
+  OK.ocultarRegistrada()
+  chk('… y vuelve a "Registrar masa 4", se puede tocar', btnOk.textContent === 'Registrar masa 4' && btnOk.disabled === false && btnOk.title === '', btnOk.textContent)
+  const choco = OK.detalleMasaRegistrada({ maquinaNombre: 'M', lote: 1, doble: true }, { lote: 2, origen: 'original', es_chocolate: true, hora: '2026-09-23T13:41:00Z' })
+  chk('una doble de chocolate lo dice en el title del botón', choco === 'M · lote 2 · doble · original · chocolate · 10:41', choco)
   // Después de una modificada (una de chocolate), la siguiente sale con Anterior.
   const MR = await hastaLaReceta(armar({ rpc: conStock(async (n) => n === 'registrar_masa'
     ? { data: { masa_id: 'm9', nro: 3, origen: 'modificada', lote: 7023 }, error: null }
@@ -749,7 +749,7 @@ esperas.push((async () => {
   chequearMarcas(chk, 'arriba de la receta', X.htmlOpcionesReceta(bm, malos), ['nroAnt', 'version', 'tipoA', 'tipoB'])
   // El detalle largo de "Anterior" (hora, diferencias) y de dónde parte
   // "Modificar" van en el title del botón, en texto y escapados una vez.
-  chk('el title de "Anterior" dice el detalle largo', /data-base="anterior"[^>]*title="Igual a la masa /.test(X.htmlOpcionesReceta(bm, malos)))
+  chk('el title de "Anterior" dice el detalle largo', /data-base="anterior"[^>]*title="La última masa de esta máquina, del turno que sea: masa /.test(X.htmlOpcionesReceta(bm, malos)))
   chk('el title de "Modificar" dice de dónde parte', /data-base="modificar"[^>]*title="Parte de /.test(X.htmlOpcionesReceta(bm, malos)))
   chk('textoDeHtml saca etiquetas y deshace las entidades de esc()', X.textoDeHtml('<b>a &amp; &lt;x&gt; &quot;y&quot; &#39;z&#39;</b>') === 'a & <x> "y" \'z\'')
   chequearMarcas(chk, 'detalle corto de la anterior', X.detalleAnteriorCorto(malos), ['nroAnt'])
