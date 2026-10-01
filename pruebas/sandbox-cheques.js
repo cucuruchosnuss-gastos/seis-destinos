@@ -16,6 +16,8 @@ const FUNCIONES = [
   'ordenarCheques', 'resumenCartera', 'cargarResumenCheques', 'pintarSelectorBancos',
   'pintarCartera', 'htmlCartera', 'pintarFiltrosCheques', 'limpiarFiltrosCheques',
   'renderizarCheques', 'htmlTablaCheques', 'htmlFilaCheque', 'htmlSalidaCheque',
+  // la etiqueta de la forma de pago (30/09/2026)
+  'htmlFormaCheque',
   // vencimiento (Parte 6)
   'plazoPresentacion', 'estadoVencimiento', 'textoVencimiento', 'textoVencimientoCorto', 'resumenVencimientos', 'filasVisibles',
   'alternarSoloVencen', 'htmlAvisoVencimientos',

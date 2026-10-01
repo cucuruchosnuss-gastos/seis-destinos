@@ -1012,7 +1012,8 @@
       }
       .cob-maestro--activo .cob-fila:hover { box-shadow: none; transform: none; background: var(--cob-hover-fila); }
       .cob-maestro--activo .cob-fila > .cob-fila__linea,
-      .cob-maestro--activo .cob-fila > .cob-fila__meta { display: none; }
+      .cob-maestro--activo .cob-fila > .cob-fila__meta,
+      .cob-maestro--activo .cob-fila > .cob-formas-linea { display: none; }
       .cob-maestro--activo .cob-fila__tabla {
         display: grid;
         grid-template-columns: var(--cob-cols-tabla);
@@ -1117,6 +1118,7 @@
       gap: 0.25rem;
       margin-top: 0.375rem;
     }
+    .cob-formas-tabla { display: flex; margin-top: 0.25rem; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1660,6 +1662,66 @@
         return '<span class="forma-pago forma-pago--transferencia"><svg class="forma-pago__icono" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 5h10M9 2l3 3-3 3M14 11H4M7 8l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Transferencia</span>'
       }
       return ''
+    }
+
+    // Qué formas trae una cobranza, en el orden fijo de la pantalla. Recibe
+    // cantidades (y el efectivo): una forma en cero no se nombra.
+    function formasPresentes({ efectivo = 0, papel = 0, echecks = 0, transferencias = 0 } = {}) {
+      const formas = []
+      if (Number(efectivo) > 0) formas.push('efectivo')
+      if (Number(papel) > 0) formas.push('cheque')
+      if (Number(echecks) > 0) formas.push('echeck')
+      if (Number(transferencias) > 0) formas.push('transferencia')
+      return formas
+    }
+
+    // La línea de etiquetas del listado y del detalle. Sin formas, nada.
+    function htmlLineaFormas(formas) {
+      if (!formas?.length) return ''
+      return `<div class="cob-formas-linea">${formas.map(htmlEtiquetaForma).join('')}</div>`
+    }
+
+    // LAS FORMAS DE CADA COBRANZA DEL LISTADO (30/09/2026). v_cobranzas no
+    // separa los e-cheques de los cheques de papel ni trae las transferencias
+    // (ni las suma en su total), así que por cada página se leen aparte:
+    // cobranza_cheques (es_echeck) y cobranza_transferencias (importe). La
+    // policy de las dos es la de su cobranza: quien ve la cobranza, las ve.
+    // NUNCA tira: si falla, la fila dice lo que sabe de la vista (efectivo y
+    // cheques) y el total queda el de la vista.
+    async function cargarFormasDe(ids, turno) {
+      if (!ids.length) return
+      try {
+        const [ch, tr] = await Promise.all([
+          supabase.from('cobranza_cheques').select('cobranza_id, es_echeck').in('cobranza_id', ids),
+          supabase.from('cobranza_transferencias').select('cobranza_id, importe').in('cobranza_id', ids),
+        ])
+        if (ch.error) throw ch.error
+        if (tr.error) throw tr.error
+        if (turno !== turnoListado) return
+        if (!estado.formasCob) estado.formasCob = new Map()
+        for (const id of ids) estado.formasCob.set(id, { papel: 0, echecks: 0, transferencias: [] })
+        for (const x of ch.data ?? []) {
+          const f = estado.formasCob.get(x.cobranza_id)
+          if (f) { if (x.es_echeck) f.echecks++; else f.papel++ }
+        }
+        for (const x of tr.data ?? []) estado.formasCob.get(x.cobranza_id)?.transferencias.push(x)
+        renderizarListado()
+      } catch (err) {
+        console.error('No se pudieron leer las formas de pago del listado:', err)
+      }
+    }
+
+    // Las formas y el total de una fila del listado. Sin lo leído aparte, lo
+    // que dice la vista: el efectivo y los cheques (sin distinguir e-cheques).
+    function formasDeFila(c) {
+      const f = estado.formasCob?.get?.(c.id)
+      if (!f) {
+        return { formas: formasPresentes({ efectivo: c.efectivo, papel: c.cantidad_cheques }), total: c.total }
+      }
+      return {
+        formas: formasPresentes({ efectivo: c.efectivo, papel: f.papel, echecks: f.echecks, transferencias: f.transferencias.length }),
+        total: totalConTransferencias(c, f.transferencias),
+      }
     }
 
     function echequeVacio() {
@@ -2448,6 +2510,9 @@
         estado.cobranzas = estado.cobranzas.concat(filas)
         estado.hayMas = filas.length === PAGINA
         renderizarListado()
+        // Las formas de pago de esta página (e-cheques y transferencias):
+        // llegan después y repintan; la lista no las espera.
+        cargarFormasDe(filas.map(x => x.id), turno)
       } catch (err) {
         if (turno !== turnoListado) return
         console.error('No se pudo cargar el listado:', err)
@@ -2780,13 +2845,17 @@
       const fechaCorta = formatearFechaCob(c.fecha).slice(0, 5)
       const textoCantidad = cantidad > 0 ? String(cantidad) : '—'
       const textoEfectivoCelda = efectivo > 0 ? formatearImporte(efectivo) : '—'
+      // Las cuatro formas de pago (30/09/2026): sus etiquetas debajo del
+      // cliente, y el total con las transferencias (la vista no las suma).
+      const { formas, total } = formasDeFila(c)
 
       return `
         <div class="tarjeta-lista cob-fila cob-fila--${escCob(c.estado)}${seleccionada ? ' cob-fila--seleccionada' : ''}"${seleccionada ? ' aria-current="true"' : ''} data-cobranza="${escCob(c.id)}">
           <div class="cob-fila__linea">
             <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
-            <span class="cob-fila__total">${escCob(formatearImporte(c.total))}</span>
+            <span class="cob-fila__total">${escCob(formatearImporte(total))}</span>
           </div>
+          ${htmlLineaFormas(formas)}
           <div class="cob-fila__meta">
             <span class="cob-fila__estado cob-fila__estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
             <span class="cob-fila__detalle">${metaFila}</span>
@@ -2796,10 +2865,10 @@
           ${c.editada ? '<div class="cob-fila__meta"><span>Editada después de cargarla</span></div>' : ''}
           <div class="cob-fila__tabla">
             <span class="cob-celda cob-celda--fecha">${escCob(fechaCorta)}</span>
-            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}${unidadTabla}</span>
+            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}${unidadTabla}${formas.length ? `<span class="formas-pago cob-formas-tabla">${formas.map(htmlEtiquetaForma).join('')}</span>` : ''}</span>
             <span class="cob-celda cob-celda--num cob-celda--cheques${cantidad > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoCantidad)}</span>
             <span class="cob-celda cob-celda--num${efectivo > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoEfectivoCelda)}</span>
-            <span class="cob-celda cob-celda--num cob-celda--total">${escCob(formatearImporte(c.total))}</span>
+            <span class="cob-celda cob-celda--num cob-celda--total">${escCob(formatearImporte(total))}</span>
             <span class="cob-celda cob-celda--quien">${escCob(c.cargada_por_nombre || '—')}</span>
             <span class="cob-celda cob-fila__estado cob-fila__estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
           </div>
@@ -3353,6 +3422,7 @@
             <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
             <span class="cob-estado cob-estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
           </div>
+          ${htmlLineaFormas(formasPresentes({ efectivo: Number(c.efectivo ?? 0), papel: papel.length, echecks: echecks.length, transferencias: transf.length }))}
           ${anulada && c.motivo_anulacion
             ? `<div class="cob-aviso cob-aviso--grave" style="margin-top:.625rem">Anulada: ${escCob(c.motivo_anulacion)}</div>` : ''}
           <div style="margin-top:.75rem">
@@ -3462,7 +3532,7 @@
         <div class="cob-cheque">
           <div class="cob-cheque__top">
             <span class="cob-cheque__monto">${escCob(formatearImporte(ch.importe))}</span>
-            <span class="cob-cheque__tipo">${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}</span>
+            <span class="cob-cheque__tipo">${htmlEtiquetaForma(ch.es_echeck ? 'echeck' : 'cheque')} ${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}</span>
           </div>
           ${htmlDatosCheque(ch, hoyArgentina())}
           ${ch.es_echeck

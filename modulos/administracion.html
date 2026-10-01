@@ -7835,7 +7835,7 @@
       pintarFiltrosCheques()
       const { q, sinResultados } = aplicarFiltrosCheques(
         supabase.from('cobranza_cheques').select(
-          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id'),
+          'id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id'),
         estado.filtros)
       if (sinResultados) {
         estado.filas = []; estado.error = null; estado.tope = false
@@ -8101,6 +8101,16 @@
       return `<th scope="col" class="${esc(clase)}" aria-sort="${esc(ariaSort)}"><button type="button" class="chq-th-orden${activo ? ' chq-th-orden--activo' : ''}" data-orden="${esc(campo)}">${rotulo}<span class="chq-th-orden__flecha" aria-hidden="true">${esc(flecha)}</span></button></th>`
     }
 
+    // LA ETIQUETA DE LA FORMA DE PAGO de cada cheque de la cartera
+    // (30/09/2026): el de papel en naranja y el e-cheque en celeste (la única
+    // excepción a "sin azules"). Las clases son de css/main.css, las mismas de
+    // Cobranzas y de Cobranzas por asentar. Texto fijo del código.
+    function htmlFormaCheque(ch) {
+      return ch?.es_echeck
+        ? '<span class="forma-pago forma-pago--echeck">E-cheque</span>'
+        : '<span class="forma-pago forma-pago--cheque">Cheque</span>'
+    }
+
     function htmlFilaCheque(ch, cob) {
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
       // Un cheque común no tiene fecha de pago: es "a la vista".
@@ -8123,7 +8133,7 @@
         <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0"${htmlAriaElegido(ch)}>
           ${estado.seleccion.activa ? `<td class="chq-tabla__elegir">${htmlCasillaElegir(ch)}</td>` : ''}
           <td>${esc(ch.numero ?? '—')}</td>
-          <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${esc(nombreBanco(ch.banco_codigo))}</td>
+          <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${htmlFormaCheque(ch)} ${esc(nombreBanco(ch.banco_codigo))}</td>
           <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
           <td class="chq-tabla__fecha chq-tabla__pago">${celdaPago}</td>
           <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
@@ -8292,7 +8302,7 @@
           <div class="chq-tarjeta__cuerpo">
             <div class="chq-tarjeta__l1">
               <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
-              <span class="chq-tarjeta__pago">${esc(pago)}</span>
+              <span class="chq-tarjeta__pago">${esc(pago)}</span>${htmlFormaCheque(ch)}
             </div>
             <div class="chq-tarjeta__l2">${marcaSinUnidad}${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
             <span class="chq-oculto">${esc(textoUnidad)}</span>

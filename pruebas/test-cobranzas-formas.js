@@ -101,6 +101,9 @@ const PRELUDIO = `
   function guardarBorrador(){}
   function pintarEstadoFotos(){} function pintarCheques(){} function iniciarReintentosFotos(){}
   function escribirImporteEnCampo(){}
+  var turnoListado = 0
+  var __repintadas = 0
+  function renderizarListado(){ __repintadas++ }
   function hoyArgentina(){ return '2026-09-30' }
   async function urlDeFoto(){ return null }
   var promesaFabrica = null
@@ -121,7 +124,7 @@ const FUNCIONES = [
   'formularioVacio', 'pintarFormulario', 'pintarBotonChequeMano', 'abrirFormularioEdicion',
   'htmlEtiquetaForma', 'echequeVacio', 'echequeDesdeBase', 'erroresDeEcheque', 'echequeParaBase',
   'transferenciaVacia', 'transferenciaDesdeBase', 'erroresDeTransferencia', 'transferenciaParaBase',
-  'sumaImportes', 'totalesPorForma', 'usaCobranzaCompleta', 'nombresDeCuentas', 'sumaDeImportes',
+  'sumaImportes', 'totalesPorForma', 'usaCobranzaCompleta', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila', 'sumaDeImportes',
   'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlTransferenciaDetalle', 'cuentasParaElegir',
   'nombreUnidadCob', 'htmlOpcionesCuentas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'pintarFormasNuevas',
   'pintarResumenFormas', 'htmlResumenFormas', 'echeckDelForm', 'transfDelForm', 'agregarEcheck',
@@ -141,7 +144,7 @@ function sandbox({ tareas = ['cargar'], rol = 'usuario' } = {}) {
   const S = construirCon(ARCHIVO, {
     preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
     retorno: `estado, __els, __llamadas, __rpcs(){ return __rpcs }, __setRpc(f){ __rpcImpl = f },
-      __setTablas(t){ __tablas = t }, __consultas(){ return __consultas }`,
+      __setTablas(t){ __tablas = t }, __consultas(){ return __consultas }, __repintadas(){ return __repintadas }, __turno(n){ turnoListado = n }`,
   })
   S.estado.misTareas = new Set(tareas.map(t => 'cobranzas:' + t))
   S.estado.miRolApp = rol
@@ -468,6 +471,9 @@ async function pruebas() {
     chk('detalle: el e-cheque dice "sin papel" y no ofrece "Ver la foto"', h.includes('e-cheque, sin papel') && (h.match(/data-ver-foto=/g) || []).length === 1, tarjetaE.length)
     chk('detalle: la transferencia con su cuenta y referencia, escapadas', /Entró en/.test(h) && h.includes(MAL_ESC) && !h.includes(MAL))
     chk('detalle: la transferencia lleva su etiqueta', /cob-transferencia[\s\S]*forma-pago--transferencia/.test(h))
+    const lineaDet = (h.match(/<div class="cob-formas-linea">([\s\S]*?)<\/div>/) || [])[1] || ''
+    chk('detalle: arriba, la línea con las cuatro formas', ['efectivo', 'cheque', 'echeck', 'transferencia'].every(f => lineaDet.includes('forma-pago--' + f)), lineaDet)
+    chk('detalle: cada cheque con su etiqueta (papel naranja, e-cheque celeste)', /cob-cheque__tipo"><span class="forma-pago forma-pago--cheque">/.test(h) && /cob-cheque__tipo"><span class="forma-pago forma-pago--echeck">/.test(h))
     const hSin = S.htmlDetalle({ ...d, cheques: cheques.slice(0, 1), transferencias: [] })
     chk('detalle sin e-cheques ni transferencias: la fila de cheques de siempre', /Cheques<\/span>\s*<span class="cob-dato__v">2 · \$\s1\.700,00/.test(hSin) && !/E-cheques|Transferencias/.test(hSin))
     chk('detalle sin transferencias: el total de v_cobranzas', /Total<\/span>\s*<span class="cob-dato__v">\$\s1\.800,00/.test(hSin))
@@ -479,6 +485,56 @@ async function pruebas() {
     chk('detalle sin cheques pero con transferencias: no dice "fue todo en efectivo"', !/fue todo en efectivo/.test(hSoloT) && /no tiene cheques/.test(hSoloT))
     chk('totalConTransferencias: null sigue null', S.totalConTransferencias({ total: null }, transferencias) === null && S.totalConTransferencias({ total: 10 }, []) === 10)
     chk('sumaDeImportes: un importe ausente no suma', S.sumaDeImportes([{ importe: null }, { importe: '' }, { importe: 5 }, { importe: 'x' }]) === 5)
+  }
+
+  // ══ 6b. EL LISTADO: las etiquetas de cada fila y el total ═════════════════
+  {
+    const S = sandbox(CHOFER)
+    chk('formasPresentes: el orden fijo y sin las que están en cero',
+      JSON.stringify(S.formasPresentes({ efectivo: 5, papel: 1, echecks: 2, transferencias: 1 })) === '["efectivo","cheque","echeck","transferencia"]' &&
+      JSON.stringify(S.formasPresentes({ efectivo: 0, papel: 0, echecks: 1 })) === '["echeck"]')
+    chk('htmlLineaFormas: sin formas no dibuja nada', S.htmlLineaFormas([]) === '' && S.htmlLineaFormas(null) === '')
+    chk('htmlLineaFormas: una etiqueta por forma, en su línea',
+      /^<div class="cob-formas-linea"><span class="forma-pago forma-pago--efectivo">Efectivo<\/span><span class="forma-pago forma-pago--transferencia"><svg/.test(S.htmlLineaFormas(['efectivo', 'transferencia'])))
+    const c = { id: 'c1', efectivo: 100, cantidad_cheques: 2, total: 1800 }
+    const sin = S.formasDeFila(c)
+    chk('formasDeFila sin lo leído aparte: lo que dice la vista', JSON.stringify(sin.formas) === '["efectivo","cheque"]' && sin.total === 1800)
+    S.__setTablas({
+      cobranza_cheques: { data: [{ cobranza_id: 'c1', es_echeck: false }, { cobranza_id: 'c1', es_echeck: true }], error: null },
+      cobranza_transferencias: { data: [{ cobranza_id: 'c1', importe: 300 }], error: null },
+    })
+    await S.cargarFormasDe(['c1', 'c2'], 0)
+    const con = S.formasDeFila(c)
+    chk('cargarFormasDe: separa el e-cheque del de papel y suma la transferencia',
+      JSON.stringify(con.formas) === '["efectivo","cheque","echeck","transferencia"]' && con.total === 2100, con)
+    chk('cargarFormasDe: una cobranza sin nada aparte queda con cero', JSON.stringify(S.formasDeFila({ id: 'c2', efectivo: 5, cantidad_cheques: 0, total: 5 }).formas) === '["efectivo"]')
+    chk('cargarFormasDe: repinta el listado', S.__repintadas() === 1)
+    chk('cargarFormasDe: lee es_echeck y el importe de la transferencia, en UNA consulta por tabla, con .in()',
+      S.__consultas().filter(q => q.tabla === 'cobranza_cheques').length === 1 &&
+      S.__consultas().some(q => q.tabla === 'cobranza_cheques' && q.filtros.some(f => f[0] === 'select' && /es_echeck/.test(f[1])) && q.filtros.some(f => f[0] === 'in')) &&
+      S.__consultas().some(q => q.tabla === 'cobranza_transferencias' && q.filtros.some(f => f[0] === 'select' && /importe/.test(f[1]))))
+    chk('formasDeFila: un total ausente sigue ausente aunque haya transferencias', S.formasDeFila({ ...c, total: null }).total === null)
+    // Una respuesta de un listado viejo no pisa el nuevo.
+    const S2 = sandbox(CHOFER)
+    S2.__setTablas({
+      cobranza_cheques: { data: [{ cobranza_id: 'c1', es_echeck: true }], error: null },
+      cobranza_transferencias: { data: [], error: null },
+    })
+    S2.__turno(3)
+    await S2.cargarFormasDe(['c1'], 2)
+    chk('cargarFormasDe: con otro turno no guarda ni repinta', S2.__repintadas() === 0 && S2.formasDeFila(c).formas.includes('cheque') && !S2.formasDeFila(c).formas.includes('echeck'))
+    const S3 = sandbox(CHOFER)
+    S3.__setTablas({ cobranza_cheques: { data: null, error: { message: 'x' } }, cobranza_transferencias: { data: [], error: null } })
+    await S3.cargarFormasDe(['c1'], 0)
+    chk('cargarFormasDe: si falla no tira, no repinta y la fila queda con lo de la vista', S3.__repintadas() === 0 && S3.formasDeFila(c).total === 1800)
+  }
+  {
+    const fuente = fs.readFileSync(ARCHIVO, 'utf8')
+    chk('el listado pide las formas de cada página después de pintarla', /renderizarListado\(\)\n\s*\/\/[^\n]*\n[^\n]*\n\s*cargarFormasDe\(filas\.map\(x => x\.id\), turno\)/.test(fuente))
+    chk('la fila usa el total con las transferencias en las dos vistas',
+      (fuente.match(/escCob\(formatearImporte\(total\)\)/g) || []).length === 2 && !/formatearImporte\(c\.total\)/.test(fuente.slice(fuente.indexOf('function htmlFilaCobranza'), fuente.indexOf('async function refrescarListado'))))
+    chk('la fila dibuja la línea de etiquetas y la tabla también', /\$\{htmlLineaFormas\(formas\)\}/.test(fuente) && /cob-formas-tabla">\$\{formas\.map\(htmlEtiquetaForma\)/.test(fuente))
+    chk('en la compu la línea del celular se esconde', /\.cob-maestro--activo \.cob-fila > \.cob-formas-linea \{ display: none; \}/.test(fuente))
   }
 
   // ══ 7. XSS: todo texto de la base escapado en las tarjetas del formulario ═

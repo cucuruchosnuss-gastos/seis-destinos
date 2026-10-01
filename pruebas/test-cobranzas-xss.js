@@ -143,7 +143,10 @@ if (SOLO !== 'estatico') {
     // campos que SÍ salen a la página.
     chequearMarcas('htmlChequeDetalle (común, sin beneficiario)', htmlComun,
       ['ch_foto_c', 'ch_banco_c', 'ch_numero_c', 'ch_cuenta_c'])
-    chk('htmlChequeDetalle: un cheque común no dibuja la fecha de pago', !/pago /.test(htmlComun))
+    // La clase de la etiqueta (forma-pago, 30/09/2026) no es la fecha de pago.
+    chk('htmlChequeDetalle: un cheque común no dibuja la fecha de pago', !/pago /.test(htmlComun.replace(/forma-pago[\w-]*/g, '')))
+    chk('htmlChequeDetalle: un cheque de papel lleva su etiqueta naranja', htmlComun.includes('<span class="forma-pago forma-pago--cheque">Cheque</span>'))
+    chk('htmlChequeDetalle: un e-cheque lleva la suya y no ofrece la foto', (() => { const e = S2.htmlChequeDetalle({ ...comun, es_echeck: true }); return e.includes('forma-pago--echeck') && !e.includes('data-ver-foto') })())
   }
 
   // ── htmlTarjetaCheque ───────────────────────────────────────────────────
@@ -666,7 +669,7 @@ if (SOLO !== 'estatico') {
 
     const det = S33.htmlChequeDetalle(dif, new Map())
     chk('3.3 detalle: el importe va solo arriba, con el chip de tipo al lado',
-      /<div class="cob-cheque__top">\s*<span class="cob-cheque__monto">\$\s827\.500,00<\/span>\s*<span class="cob-cheque__tipo">Diferido<\/span>/.test(det))
+      /<div class="cob-cheque__top">\s*<span class="cob-cheque__monto">\$\s827\.500,00<\/span>\s*<span class="cob-cheque__tipo"><span class="forma-pago forma-pago--cheque">Cheque<\/span> Diferido<\/span>/.test(det))
     chk('3.3 detalle: banco y cuenta al pie, después de los datos',
       /<div class="cob-cheque__pie">Banco de Galicia · cuenta <span class="cob-cheque__num">09420314667<\/span><\/div>/.test(det) &&
       det.indexOf('cob-cheque__pie') > det.indexOf('cob-cheque__datos'))
@@ -840,6 +843,10 @@ if (SOLO !== 'render') {
     // test-cobranzas-formas.js.
     ["htmlEtiquetaForma('echeck')", 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
     ["htmlEtiquetaForma('transferencia')", 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
+    ["htmlEtiquetaForma(ch.es_echeck ? 'echeck' : 'cheque')", 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
+    ["formas.map(htmlEtiquetaForma).join('')", 'HTML de htmlEtiquetaForma(): las formas salen de formasPresentes(), una lista fija del código'],
+    ['htmlLineaFormas(formas)', 'HTML armado por htmlLineaFormas(): etiquetas fijas del código'],
+    ['htmlLineaFormas(formasPresentes({ efectivo: Number(c.efectivo ?? 0), papel: papel.length, echecks: echecks.length, transferencias: transf.length }))', 'HTML armado por htmlLineaFormas(): etiquetas fijas del código'],
     ['htmlEtiquetaForma(forma)', 'HTML de htmlEtiquetaForma(): texto fijo del código, sin nada de la base'],
     ['cabecera', 'HTML armado en htmlEcheckForm() / htmlTransferenciaForm(): literales del código + htmlEtiquetaForma() + escCob() de cada dato'],
     ['htmlDatosCheque(echequeParaBase(e), hoyArgentina())', 'HTML armado por htmlDatosCheque(), que escapa adentro'],

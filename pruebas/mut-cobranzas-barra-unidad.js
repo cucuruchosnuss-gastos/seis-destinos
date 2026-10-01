@@ -58,7 +58,8 @@ correrMutaciones({
     { nombre: 'la unidad de la tabla sin escapar',
       de: '`<span class="cob-unidad-tabla">${escCob(nombreUni)}</span>`', a: '`<span class="cob-unidad-tabla">${nombreUni}</span>`' },
     { nombre: 'la tabla de escritorio pierde la unidad',
-      de: '${escCob(c.cliente)}${unidadTabla}</span>', a: '${escCob(c.cliente)}</span>' },
+      // Desde el 30/09/2026 detrás de la unidad van las etiquetas de las formas de pago.
+      de: '${escCob(c.cliente)}${unidadTabla}${formas.length', a: '${escCob(c.cliente)}${formas.length' },
     { nombre: 'la tabla de escritorio pierde "sin unidad"',
       de: "data-sin-unidad=\"tabla\">sin unidad</span>' : ''", a: "data-sin-unidad=\"tabla\"></span>' : ''" },
     // ── La nota y el vacío ───────────────────────────────────────────────
