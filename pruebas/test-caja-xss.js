@@ -453,7 +453,7 @@ const SEGURAS = {
   },
   renderizarAccionesDetalle: { "botones.join('')": 'botones literales del código' },
   renderizarFilaMovimiento: {
-    personaHtml: HTML_PROPIO, sublineaContraparte: HTML_PROPIO, refGasto: HTML_PROPIO,
+    personaHtml: HTML_PROPIO, sublineaContraparte: HTML_PROPIO, refGasto: HTML_PROPIO, refCobranza: HTML_PROPIO,
     'formatearFecha(m.fecha)': FECHA, signo: "literal '+' o '−'", 'importeHtml(m.monto, m.moneda)': IMPORTE,
     'htmlUnidadDeFila(unidadDeMovimiento(m))': UNIDAD_FILA,
   },
