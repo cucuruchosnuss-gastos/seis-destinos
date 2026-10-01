@@ -344,6 +344,8 @@ const NUEVAS_PLANTA = [
   'minutosDeRueda', 'htmlColumnaRueda', 'htmlRueda', 'alinearRuedas', 'fijarRuedaPorScroll', 'ponerValorRueda', 'tocarRueda',
   'htmlMotivosParada', 'htmlDuracionesParada', 'htmlHorasParadaNueva', 'pintarResumenParada', 'pintarParadaNueva', 'elegirMotivoParada',
   'elegirDuracionParada', 'escribirDetalleParada', 'guardarParadaNueva', 'abrirVentanaParadas', 'cerrarVentanaParadas',
+  // Las pestañas de las máquinas (01/10/2026).
+  'nombreCortoMaquina', 'turnoDePantalla', 'pestanasMaquinas', 'htmlPestanasMaquinas', 'pintarPestanasMaquinas', 'cambiarDeMaquina',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -360,7 +362,8 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // El botón de volver (30/09/2026)
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
-  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA']
+  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA',
+  'VISTAS_CON_PESTANAS']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

@@ -184,6 +184,43 @@
     .pr-cab__titulo--solo { color: var(--p-tinta); }
     .pr-cab__reloj { font-size: 16px; font-weight: 700; color: var(--p-tinta-2); white-space: nowrap; }
     @media (orientation: portrait) { .pr-cab__reloj { display: none; } }
+    /* LAS PESTAÑAS DE LAS MÁQUINAS (01/10/2026): una fila, nunca dos, y sin
+       scroll. Con tres o más la cabecera se "aprieta": las pestañas se
+       achican y el reloj muestra solo la hora (la fecha vuelve con menos
+       máquinas). La activa, bien marcada en el naranja de lo elegido; un
+       puntito bordó si esa máquina está parada ahora. */
+    .pr-cab__reloj--hora { display: none; }
+    .pr-cab--apretada .pr-cab__reloj { display: none; }
+    .pr-cab--apretada .pr-cab__reloj--hora { display: inline; }
+    @media (orientation: portrait) { .pr-cab--apretada .pr-cab__reloj--hora { display: none; } }
+    .pr-cab__maquinas { display: flex; align-items: stretch; gap: 4px; flex: 0 1 auto; min-width: 0; }
+    .pr-pest {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      flex: 0 1 auto; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px;
+      border: 1.5px solid var(--p-borde-boton); border-radius: 12px; background: var(--p-tarjeta);
+      font-family: var(--p-titulo); font-size: 17px; font-weight: 700; color: var(--p-tinta-2);
+      white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums;
+    }
+    .pr-pest:active { background: var(--p-tinte); }
+    .pr-pest--activa { border: 2px solid var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); font-size: 20px; font-weight: 800; }
+    .pr-pest__sep { color: var(--p-suave); font-weight: 600; }
+    .pr-pest--activa .pr-pest__sep { color: var(--p-acento); }
+    .pr-pest__punto { width: 10px; height: 10px; border-radius: 50%; background: var(--p-mal); flex-shrink: 0; }
+    .pr-cab--apretada .pr-pest { padding: 0 8px; font-size: 15px; gap: 4px; }
+    .pr-cab--apretada .pr-pest--activa { font-size: 17px; }
+    .pr-cab--muy-apretada .pr-pest { padding: 0 6px; font-size: 14px; }
+    .pr-cab--muy-apretada .pr-pest--activa { font-size: 15px; }
+    .pr-cab--muy-apretada .pr-pest__sep { display: none; }
+    /* Con pestañas, el título va en una línea y se corta con "…" si no entra. */
+    .pr-cab--maquinas .pr-cab__titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 3em; }
+    /* Parada, con tres o más máquinas, el título cede su lugar a las
+       pestañas: la sección ya va marcada en la barra de arriba. */
+    @media (orientation: portrait) {
+      .pr-cab--apretada .pr-cab__titulo { display: none; }
+      .pr-cab--apretada .pr-pest { padding: 0 6px; font-size: 14px; }
+      .pr-cab--apretada .pr-pest--activa { font-size: 14px; }
+      .pr-cab--apretada .pr-cab__maquinas { gap: 3px; }
+    }
     /* El botón de volver: misma posición y mismo tamaño en todas las
        pantallas de los dos modos (ancho fijo: "Inicio" y "Atrás" miden lo mismo). */
     .pr-cab__volver {
@@ -1460,10 +1497,17 @@
              producto y de anotar una parada, al paso anterior. Lo pinta
              pintarVolver(). -->
         <button type="button" class="pr-cab__volver" id="pr-cab-volver" hidden><svg class="pr-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="pr-cab-volver-texto">Inicio</span></button>
+        <!-- LAS PESTAÑAS DE LAS MÁQUINAS (01/10/2026): en Planilla, Lo
+             producido, Paradas, Cerrar planilla y la receta de Sala de masa,
+             las máquinas abiertas del turno ("M1 · 7033"), como las de un
+             navegador. Reemplazan al "Lote 7033 · Máquina 1" de esas
+             pantallas. Las pinta pintarPestanasMaquinas(). -->
+        <nav class="pr-cab__maquinas" id="pr-cab-maquinas" aria-label="Máquinas abiertas" hidden></nav>
         <span class="pr-cab__ctx" id="pr-cab-ctx"></span>
         <span class="pr-cab__sep" id="pr-cab-sep" aria-hidden="true"></span>
         <h1 class="pr-cab__titulo" id="pr-cab-titulo"></h1>
         <span class="pr-reloj pr-cab__reloj" data-reloj aria-label="Fecha y hora"></span>
+        <span class="pr-reloj pr-cab__reloj pr-cab__reloj--hora" data-reloj-hora aria-label="Hora"></span>
       </header>
       <section class="pr-tarjeta" id="pr-inicio">
         <h1 class="pr-titulo">Planta</h1>
@@ -2790,15 +2834,124 @@
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // LAS PESTAÑAS DE LAS MÁQUINAS (01/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Con dos máquinas abiertas, para pasar de la Máquina 1 a la 2 había que
+    // volver al Inicio y entrar de nuevo. Ahora, arriba de Planilla, Lo
+    // producido, Paradas y Cerrar planilla (y de la receta en Sala de masa),
+    // una fila de pestañas con las máquinas abiertas del turno. Tocar otra
+    // cambia de máquina y se queda en la MISMA sección. Con una sola, la
+    // pestaña igual se ve: dice en cuál se está.
+    const VISTAS_CON_PESTANAS = ['pr-planilla', 'pr-agregar-prod', 'pr-paradas', 'pr-cierre', 'pr-receta']
+
+    // "Máquina 1" → "M1"; un nombre que no termina en número queda entero
+    // ("Máquina robot" → "Robot"). Sin nombre, "Máq.".
+    function nombreCortoMaquina(nombre) {
+      const s = String(nombre ?? '').trim()
+      const resto = s.replace(/^M[aá]quina\s*/i, '')
+      if (!s) return 'Máq.'
+      if (/^\d+$/.test(resto)) return 'M' + resto
+      return resto ? resto.charAt(0).toLocaleUpperCase('es') + resto.slice(1) : s
+    }
+
+    // La máquina de la pantalla: la de la receta en Sala de masa, la de la
+    // planilla en Producción (o la que se está abriendo, mientras carga).
+    function turnoDePantalla() {
+      if (estado.vista === 'pr-receta') return estado.salaTurno?.id ?? null
+      return estado.planilla?.turno?.id ?? estado.planillaPedida ?? null
+    }
+
+    // [{ turnoId, nombre, lote, parada, activa }] o null (sin pestañas).
+    function pestanasMaquinas() {
+      if (!VISTAS_CON_PESTANAS.includes(estado.vista)) return null
+      const actualId = turnoDePantalla()
+      if (!actualId) return null
+      const lista = maquinasAbiertas().map(e => ({ turnoId: e.turno.id, nombre: e.maquina?.nombre ?? '', lote: e.turno.lote, parada: !!e.parada }))
+      // Una planilla que no está entre las abiertas (pendiente de completar)
+      // igual tiene su pestaña: dice en cuál se está.
+      if (!lista.some(x => x.turnoId === actualId)) {
+        const p = estado.vista === 'pr-receta' ? null : estado.planilla
+        const t = estado.vista === 'pr-receta' ? estado.salaTurno : null
+        if (p?.turno?.id === actualId) lista.unshift({ turnoId: actualId, nombre: p.maquinaNombre ?? '', lote: p.turno.lote, parada: false })
+        else if (t) lista.unshift({ turnoId: actualId, nombre: t.maquinaNombre ?? '', lote: t.lote, parada: false })
+        else return null
+      }
+      return lista.map(x => {
+        const activa = x.turnoId === actualId
+        // La activa en Producción mira su planilla, que está más al día que el tablero.
+        const parada = activa && estado.vista !== 'pr-receta' && estado.planilla?.turno?.id === actualId
+          ? !!paradaEnCurso(estado.planilla.paradas) : x.parada
+        return { ...x, parada, activa }
+      })
+    }
+
+    function htmlPestanasMaquinas(lista) {
+      return (lista ?? []).map(x => {
+        const corto = nombreCortoMaquina(x.nombre)
+        const leer = `${x.nombre || corto}, lote ${x.lote ?? '—'}${x.parada ? ', parada' : ''}`
+        return `<button type="button" class="pr-pest${x.activa ? ' pr-pest--activa' : ''}" data-pestana-turno="${esc(x.turnoId)}"` +
+          `${x.activa ? ' aria-current="page"' : ''} aria-label="${esc(leer)}" title="${esc(leer)}">` +
+          (x.parada ? '<span class="pr-pest__punto" aria-hidden="true"></span>' : '') +
+          `<span class="pr-pest__maq">${esc(corto)}</span><span class="pr-pest__sep" aria-hidden="true">·</span>` +
+          `<span class="pr-pest__lote">${esc(x.lote ?? '—')}</span></button>`
+      }).join('')
+    }
+
+    // Pinta las pestañas en la cabecera; devuelve si hay.
+    function pintarPestanasMaquinas() {
+      const nav = document.getElementById('pr-cab-maquinas')
+      const cab = document.getElementById('pr-cab')
+      if (!nav || !cab) return false
+      const lista = lateralVisible() ? pestanasMaquinas() : null
+      nav.hidden = !lista
+      nav.innerHTML = lista ? htmlPestanasMaquinas(lista) : ''
+      const n = lista?.length ?? 0
+      cab.classList?.toggle('pr-cab--maquinas', !!lista)
+      cab.classList?.toggle('pr-cab--apretada', n >= 3)
+      cab.classList?.toggle('pr-cab--muy-apretada', n >= 6)
+      return !!lista
+    }
+
+    // Tocar otra pestaña: la misma sección, en la otra máquina. Si hay algo a
+    // medio cargar que se perdería (un producto o una parada empezados),
+    // pregunta antes. En Sala de masa no hace falta: la masa a medias queda
+    // guardada en la tablet y se retoma al volver a esa máquina.
+    async function cambiarDeMaquina(turnoId) {
+      tocar()
+      const v = estado.vista
+      if (!turnoId || !VISTAS_CON_PESTANAS.includes(v)) return 'nada'
+      if (turnoId === turnoDePantalla()) return 'misma'
+      if (v === 'pr-receta') { await elegirMaquinaSala(turnoId); return 'sala' }
+      const ir = async () => {
+        if (v === 'pr-agregar-prod') return abrirLoProducido(turnoId)
+        if (v === 'pr-paradas') return abrirPlanilla(turnoId, 'pr-paradas')
+        if (v === 'pr-cierre') {
+          await abrirPlanilla(turnoId)
+          if (estado.planilla?.turno?.id === turnoId && estado.vista === 'pr-planilla') return mostrarCierre()
+          return
+        }
+        return abrirPlanilla(turnoId)
+      }
+      if (aMedioCargar()) {
+        pedirConfirmacion({ titulo: '¿Dejar esto sin guardar?', texto: 'Lo que estás cargando en esta máquina todavía no se guardó y se va a perder.', si: 'Sí, cambiar de máquina' }, ir)
+        return 'pregunta'
+      }
+      await ir()
+      return 'cambio'
+    }
+
     function pintarCabeceraVista() {
       const cab = document.getElementById('pr-cab')
       if (!cab) return
       const c = lateralVisible() ? cabeceraDeVista() : null
       cab.hidden = !c
-      if (!c) return
+      if (!c) { pintarPestanasMaquinas(); return }
+      // Con pestañas, el "Lote 7033 · Máquina 1" lo dice la pestaña activa.
+      const conPestanas = pintarPestanasMaquinas()
       document.getElementById('pr-cab-ctx').textContent = c.ctx
-      document.getElementById('pr-cab-ctx').hidden = !c.ctx
-      document.getElementById('pr-cab-sep').hidden = !c.ctx
+      document.getElementById('pr-cab-ctx').hidden = conPestanas || !c.ctx
+      document.getElementById('pr-cab-sep').hidden = conPestanas || !c.ctx
       const t = document.getElementById('pr-cab-titulo')
       t.textContent = c.titulo
       t.classList?.toggle('pr-cab__titulo--solo', !c.ctx)
@@ -4459,6 +4612,11 @@
       })
       // El botón de volver y la pregunta "¿Salir sin guardar?" (30/09/2026).
       document.getElementById('pr-cab-volver').addEventListener('click', volverEnPlanta)
+      // Las pestañas de las máquinas se repintan enteras: por delegación.
+      document.getElementById('pr-cab-maquinas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-pestana-turno]')
+        if (b) cambiarDeMaquina(b.dataset.pestanaTurno)
+      })
       document.getElementById('pr-confirma-no').addEventListener('click', () => responderConfirma(false))
       document.getElementById('pr-confirma-si').addEventListener('click', () => responderConfirma(true))
       document.getElementById('pr-confirma').addEventListener('click', ev => { if (ev.target.id === 'pr-confirma') responderConfirma(false) })
@@ -5964,6 +6122,8 @@
 
     async function abrirPlanilla(turnoId, vista = 'pr-planilla') {
       enlazarCamposPlanilla()
+      const pedidoPlanilla = (estado.pedidoPlanilla = (estado.pedidoPlanilla ?? 0) + 1)
+      estado.planillaPedida = turnoId
       estado.planilla = null
       estado.opsPlanilla = { buscando: false, busqueda: '', guardando: false }
       estado.corregir = null
@@ -5982,8 +6142,12 @@
       mostrarVista(vista)
       const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
       try {
-        { const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre } }
+        const l = await leerPlanilla(turnoId)
+        // Otra pestaña tocada mientras esta cargaba: gana la última.
+        if (pedidoPlanilla !== estado.pedidoPlanilla) return
+        estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre }
       } catch (err) {
+        if (pedidoPlanilla !== estado.pedidoPlanilla) return
         console.error('planilla:', err)
         registrarError({ evento: 'planta', mensaje: 'No se pudo leer la planilla: ' + (err?.message ?? err) })
         document.getElementById('pr-planilla-producido').innerHTML = ''
@@ -6000,6 +6164,7 @@
         console.error('catálogo de productos:', err)
         estado.catalogo = null
       }
+      if (pedidoPlanilla !== estado.pedidoPlanilla) return
       pintarPlanilla()
     }
 
