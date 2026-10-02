@@ -1,6 +1,7 @@
 # Pruebas en un navegador real (Chromium con Playwright) contra un servidor
-# estático con el repo tal cual y la base real. Cada push a main y todas las
-# noches a las 5 de la mañana de Argentina (08:00 UTC).
+# estático con el repo tal cual y la base real. Cada push a main, cada push a
+# una rama ci-prueba/** y todas las noches a las 5 de la mañana de Argentina
+# (08:00 UTC). La concurrency "navegador" las pone en fila: nunca dos a la vez.
 #
 # Los recorridos de la planta, la gestión y Accesos necesitan los secretos
 # E2E_PLANTA_EMAIL, E2E_GESTION_EMAIL y E2E_SERVICE_ROLE_KEY (Settings →
@@ -10,7 +11,7 @@ name: Navegador
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'ci-prueba/**']
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
