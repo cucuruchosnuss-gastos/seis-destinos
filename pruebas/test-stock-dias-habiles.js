@@ -22,6 +22,7 @@
 
 const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
+const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES } = require('./cantidades-comun')
 const { arnes, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
 const { fuenteNumeros } = require('./numeros-comun')
@@ -41,7 +42,10 @@ const STUBS = new Set([
 // pasaFiltroUnidad y sinUnidadesDePrueba son las REALES de js/ (extraerFn las
 // encuentra por el import del módulo).
 const RENDERS = ['esc', 'pasaFiltroUnidad', 'sinUnidadesDePrueba', 'alCambiarBarra', 'cargarStock', 'renderizarStock',
-  'numeroCobertura', 'mapaCobertura', 'coberturaDe', 'nivelCobertura', 'textoCobertura', 'textoEstimado', 'htmlCobertura']
+  'numeroCobertura', 'mapaCobertura', 'coberturaDe', 'nivelCobertura', 'textoCobertura', 'textoEstimado', 'htmlCobertura',
+  // Las de js/cantidades.js (02/10/2026, tarea de la vista preferida):
+  // importadas, se suman a mano, igual que en test-stock-xss.js.
+  ...FUNCIONES_CANTIDADES]
 
 function clausura(src) {
   const nombresFn = new Set([...src.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]))
@@ -172,7 +176,7 @@ let MOLDE = null
 try { MOLDE = clausura(SRC) } catch (e) { chk('la clausura de funciones se arma', false, String(e && e.stack || e)) }
 
 function nuevo() {
-  const S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones: MOLDE.funciones, constantes: MOLDE.constantes, retorno: RETORNO })
+  const S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones: MOLDE.funciones, constantes: [...CONSTANTES_CANTIDADES, ...MOLDE.constantes], retorno: RETORNO })
   const E = S.estado
   E.miRolApp = 'usuario'
   E.misTareas = new Set(['stock:ver'])
