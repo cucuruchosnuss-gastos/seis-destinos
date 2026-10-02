@@ -201,11 +201,13 @@ const FUNCIONES = [
   // La barra de unidad (28/09/2026): el modal de pago usa los saldos DE la
   // unidad de la ficha y la lista de movimientos la filtra por unidad.
   'saldosFichaDeUnidad', 'pasaFiltroUnidad', 'etiquetaUnidad',
+  // el saldo inicial de un proveedor (30/09/2026)
+  'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
 
 function sandbox() {
   const S = construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL'],
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'NUMERO_SALDO_INICIAL'],
     retorno: `estado, __els, __errores, __doc: document, IDS_CAMPOS_MONTO,
       __llamadas(){ return __llamadas }, __limpiar(){ __llamadas = []; __errores.length = 0 },
       __setFrom(r){ __from = r }, __setRpc(n, d){ __rpcData[n] = d }, __opciones(){ return __opciones },
@@ -549,10 +551,11 @@ async function main() {
     chk('no queda toLocaleString', !/toLocaleString\(/.test(codigo))
     chk('no queda ningún type="number"', !/type="number"/.test(FUENTE))
     chk('el prefill del crédito ya no re-lee el texto de la <option>', !/selectedOptions/.test(codigo) && !/match\(\/saldo/.test(codigo))
-    chk('ningún .value de un monto se asigna o se lee a mano', !/getElementById\('(campo-monto-pago|campo-monto-credito)'\)\.value/.test(codigo))
+    chk('ningún .value de un monto se asigna o se lee a mano', !/getElementById\('(campo-monto-pago|campo-monto-credito|campo-saldo-inicial-importe)'\)\.value/.test(codigo))
     chk('el formulario de "Cargar importe" no guarda texto', !/form\.texto|texto: ''/.test(codigo))
     chk('ninguna plantilla de monto-fifo / campo-importe-sin lleva value=', !/(monto-fifo|campo-importe-sin)[^>]*value=/.test(codigo))
-    chk('IDS_CAMPOS_MONTO son exactamente pago y crédito', /const IDS_CAMPOS_MONTO = \['campo-monto-pago', 'campo-monto-credito'\]/.test(codigo))
+    // El tercero es el importe del saldo inicial de un proveedor (30/09/2026).
+    chk('IDS_CAMPOS_MONTO son exactamente pago, crédito y saldo inicial', /const IDS_CAMPOS_MONTO = \['campo-monto-pago', 'campo-monto-credito', 'campo-saldo-inicial-importe'\]/.test(codigo))
     chk('los montos se enlazan con 2 decimales', /enlazarCampoNumero\(document\.getElementById\(id\), \{ decimales: 2 \}\)/.test(codigo))
     const enlaces = codigo.split('\n').filter(l => /enlazarCampoNumero\(/.test(l)).map(l => l.trim())
     chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo)',
@@ -561,7 +564,7 @@ async function main() {
     const iEnlace = codigo.indexOf('\n    enlazarCamposMonto()\n'), iListener = codigo.indexOf("document.getElementById('campo-monto-pago').addEventListener('input'")
     chk('el enlace corre al iniciar, ANTES del listener de sugerencias', iEnlace !== -1 && iListener !== -1 && iEnlace < iListener, [iEnlace, iListener])
     const S = sandbox()
-    chk('enlazarCamposMonto enlaza los 2 (type=text)', S.IDS_CAMPOS_MONTO.every(id => S.__els.get(id).type === 'text'))
+    chk('enlazarCamposMonto enlaza los 3 (type=text)', S.IDS_CAMPOS_MONTO.length === 3 && S.IDS_CAMPOS_MONTO.every(id => S.__els.get(id).type === 'text'))
   }
 
   const total = ok + fallas.length

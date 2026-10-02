@@ -7626,15 +7626,30 @@
     //  - Busca en el destino el producto con el MISMO nombre, con_cono,
     //    media_caja y unidades_por_caja (activa). Si no está, rechaza: acá se
     //    avisa ANTES, con su mismo texto, y ese renglón no se deja confirmar.
-    //  - No tiene clave de idempotencia: un reintento después de un corte de
-    //    red puede pasarlo dos veces. El error de conexión lo dice.
+    //  - IDEMPOTENCIA (30/09/2026): recibe p_client_uuid. La clave se genera UNA
+    //    vez, al empezar el traspaso (nuevoTraspaso), y viaja IGUAL en cada
+    //    reintento; si la base ya lo tiene, devuelve {traspaso_id, reintento:
+    //    true} sin volver a pasarlo, y eso se dice como éxito. La clave se
+    //    renueva SOLO cuando el traspaso terminó bien o cuando se cambia el
+    //    origen (ahí la lista se vacía: es otro traspaso).
+
+    // Un uuid nuevo para el traspaso (la clave de idempotencia).
+    function nuevoUuidTrp() {
+      if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+      const b = new Uint8Array(16)
+      globalThis.crypto.getRandomValues(b)
+      b[6] = (b[6] & 0x0f) | 0x40
+      b[8] = (b[8] & 0x3f) | 0x80
+      const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
+      return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+    }
 
     // Lo que se lee del stock terminado de a una página (PostgREST corta en
     // 1000) y el tope de páginas: pasado el tope, la pantalla dice que el
     // stock puede estar incompleto en vez de mostrar números cortados callada.
     const FILAS_POR_PAGINA_TRP = 1000
     const TOPE_PAGINAS_TRP = 20
-    const TEXTO_SIN_LISTA_TRP = 'Sin lista interna: escribí el precio por caja (vacío = sin deuda entre fábricas)'
+    const TEXTO_SIN_LISTA_TRP = 'Sin lista interna (se marca en Administración → Listas de precios), o tu usuario no la puede ver: escribí el precio por caja (vacío = sin deuda entre fábricas)'
 
     // Las fábricas entre las que se puede pasar: las de v_mis_unidades_stock,
     // que ya vienen SIN la fábrica de pruebas (cargarStock las pasa por
@@ -7661,6 +7676,8 @@
         lista: undefined,
         enviando: false, intentado: false, errorBase: null, exito: null,
         origenPendiente: null,
+        // La clave de idempotencia: la MISMA en cada reintento.
+        clientUuid: nuevoUuidTrp(),
       }
       t.destinoId = destinoPorDefectoTrp(t)
       return t
@@ -7739,14 +7756,14 @@
       return [...m.values()]
     }
 
-    // La lista INTERNA del origen: hoy (30/09/2026) ninguna lista está marcada
-    // como interna y listas_precios no tiene columna para eso, así que la
-    // regla es por NOMBRE: una lista activa del origen que diga "interna" (sin
-    // acentos ni mayúsculas). Quien no lee listas (sin tareas de retiros) no
-    // recibe ninguna y el precio queda para escribir.
+    // La lista INTERNA del origen: la que tiene listas_precios.es_interna
+    // (30/09/2026; una sola por fábrica, índice único ux_lista_interna_por_unidad).
+    // Ya NO se busca "interna" en el nombre. Se usa aunque esté desactivada:
+    // la marca es explícita, y precio_venta() no mira si la lista está activa.
+    // Quien no lee listas (sin tareas de retiros en el origen) no recibe
+    // ninguna y el precio queda para escribir.
     function listaInternaDe(listas) {
-      return (listas ?? []).filter(l => l && l.activa !== false)
-        .find(l => normalizar(l.nombre).includes('interna')) ?? null
+      return (listas ?? []).find(l => l && l.es_interna === true) ?? null
     }
 
     async function cargarListaInternaTrp(t) {
@@ -7756,9 +7773,9 @@
       let lista = null
       try {
         const { data, error } = await supabase.from('listas_precios')
-          .select('id, nombre, activa')
+          .select('id, nombre, activa, es_interna')
           .eq('unidad_negocio_id', origen)
-          .eq('activa', true)
+          .eq('es_interna', true)
           .order('nombre')
         if (error) throw error
         lista = listaInternaDe(data)
@@ -7780,6 +7797,7 @@
       r.precioEstado = 'buscando'
       pintarPrecioTrp(r)
       let res = null
+      let errorBase = null
       try {
         const { data, error } = await supabase.rpc('precio_venta', {
           p_lista_id: t.lista.id, p_presentacion_id: r.presentacionId, p_marca_id: r.marcaId ?? null, p_fecha: t.fecha || null,
@@ -7789,13 +7807,20 @@
       } catch (err) {
         console.error(err)
         res = null
+        // precio_venta exige retiros:precios en la fábrica de la lista: sin
+        // eso lanza. Ese mensaje se dice tal cual, no "la lista no tiene precio".
+        errorBase = String(err?.message ?? '').trim() || 'No se pudo leer el precio.'
       }
       if (estado.trp !== t || !t.renglones.includes(r)) return
       const crudo = res?.precio_caja
       const precio = crudo === null || crudo === undefined || crudo === '' ? NaN : Number(crudo)
+      r.errorPrecio = null
       if (res && res.sin_precio !== true && Number.isFinite(precio) && precio > 0) {
         r.precioEstado = 'propuesto'
         if (!r.precioTocado) { r.precio = precio; r.propuesta = t.lista.nombre }
+      } else if (errorBase) {
+        r.precioEstado = 'error'
+        r.errorPrecio = errorBase
       } else {
         r.precioEstado = 'sin_precio'
       }
@@ -7953,6 +7978,7 @@
         p_items: t.renglones.map(r => itemParaBaseTrp(t, r)),
         p_fecha: t.fecha || null,
         p_observaciones: String(t.obs ?? '').trim() || null,
+        p_client_uuid: t.clientUuid,
       }
     }
 
@@ -8024,6 +8050,7 @@
       if (r.propuesta) return `Propuesto de la lista «${r.propuesta}»: podés cambiarlo.`
       if (t.lista === undefined || r.precioEstado === 'buscando') return 'Buscando el precio…'
       if (!t.lista) return TEXTO_SIN_LISTA_TRP
+      if (r.precioEstado === 'error') return `No se pudo leer el precio de la lista interna «${t.lista.nombre}»: ${r.errorPrecio} Escribí el precio por caja (vacío = sin deuda entre fábricas)`
       return `La lista «${t.lista.nombre}» no tiene precio para esto: escribí el precio por caja (vacío = sin deuda entre fábricas)`
     }
 
@@ -8331,6 +8358,8 @@
       t.intentado = false
       t.errorBase = null
       t.exito = null
+      // Otro origen vacía la lista: es otro traspaso, con su propia clave.
+      t.clientUuid = nuevoUuidTrp()
       if (!t.destinoId || t.destinoId === t.origenId) t.destinoId = destinoPorDefectoTrp(t)
       t.stock = null
       t.lista = undefined
@@ -8473,6 +8502,11 @@
     function textoExitoTrp(t, data, cajas) {
       const origen = nombreDeUnidadBarra(t.origenId)
       const destino = nombreDeUnidadBarra(t.destinoId)
+      // La base ya lo tenía con esta misma clave (el primer intento entró y se
+      // cortó la respuesta): NO se pasó dos veces. No devuelve el importe.
+      if (data?.reintento === true) {
+        return `Listo: este traspaso de ${origen} a ${destino} ya había entrado (se había cortado la conexión al mandarlo). No se pasó dos veces.`
+      }
       const crudo = data?.importe
       const importe = crudo === null || crudo === undefined || crudo === '' ? null : Number(crudo)
       return `Listo: pasaron ${textoCajasTrp(cajas)} de ${origen} a ${destino}. ` +
@@ -8506,10 +8540,14 @@
         t.intentado = false
         t.eligiendo = null
         t.stock = null
+        // Terminó: el próximo traspaso es otro, con su propia clave.
+        t.clientUuid = nuevoUuidTrp()
         cargarStockTrp(t).then(() => { if (estado.trp === t) renderizarTraspaso() })
       } catch (err) {
         console.error(err)
-        t.errorBase = 'No se pudo saber si el traspaso entró: falló la conexión. Antes de volver a mandarlo, fijate en el stock terminado de la fábrica de destino (Producción → Stock terminado) que no esté ya pasado.'
+        // La clave NO cambia: volver a confirmar manda la misma, y si el
+        // primero ya había entrado la base lo dice sin pasarlo dos veces.
+        t.errorBase = 'Falló la conexión y no se sabe si el traspaso entró. Tocá «Confirmar el traspaso» de nuevo: si ya había entrado, no se pasa dos veces.'
       } finally {
         t.enviando = false
         renderizarTraspaso()

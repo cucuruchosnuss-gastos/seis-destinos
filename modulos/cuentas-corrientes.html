@@ -749,6 +749,41 @@
     .remito-cc__info { min-width: 0; overflow-wrap: anywhere; }
     .remito-cc__items { color: var(--color-texto-suave); white-space: nowrap; }
 
+    /* EL SALDO INICIAL DE UN PROVEEDOR (30/09/2026). Lo que se le debía al
+       arrancar el sistema, por fábrica (registrar_saldo_inicial_proveedor).
+       Naranja solo en lo que se toca (los chips de la fábrica y el botón);
+       el error de la base, en bordó y pegado al botón. */
+    .saldo-inicial__proveedor { font-weight: 700; margin: -0.25rem 0 0.25rem; overflow-wrap: anywhere; }
+    .saldo-inicial__nota { font-size: 0.8125rem; color: var(--color-texto-2); margin: 0 0 0.75rem; }
+    .ficha-unidad-cc__chip--elegido { background: var(--color-acento); color: #fff; }
+    .ficha-unidad-cc__chip--elegido:hover { background: var(--color-acento-hover); }
+    #campo-saldo-inicial-moneda {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 1rem;
+    }
+    .saldo-inicial__error { font-size: 0.8125rem; color: var(--bordo); margin: 0.75rem 0 0; overflow-wrap: anywhere; }
+    .btn-saldo-inicial-padron {
+      min-height: 36px;
+      padding: 0 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--color-acento);
+      background: #fff;
+      color: var(--color-acento);
+      font-family: var(--fuente);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-saldo-inicial-padron:hover { background: var(--color-acento-suave); }
+
 
     /* ── Modales (mismo patrón bottom-sheet que ya usan caja.html/gastos.html) */
 
@@ -1493,6 +1528,54 @@
   </div><!-- /modal-editar-proveedor -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — SALDO INICIAL DE UN PROVEEDOR (30/09/2026)
+
+       Lo que se le debía al proveedor al arrancar el sistema, en UNA fábrica
+       (la cuenta corriente es por unidad de negocio). Lo guarda
+       registrar_saldo_inicial_proveedor como una factura pendiente con número
+       "SALDO-INICIAL": se paga como cualquier factura. Pide la tarea
+       cuentas_corrientes:registrar_pago (la misma que la función).
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-saldo-inicial" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-saldo-inicial" title="Cerrar">✕</button>
+      <h2>Cargar saldo inicial</h2>
+      <p class="saldo-inicial__proveedor" id="saldo-inicial-proveedor"></p>
+      <p class="saldo-inicial__nota">Lo que se le debía a este proveedor al arrancar el sistema. Entra en su cuenta de esa fábrica como una deuda y se paga como cualquier factura. Se carga una sola vez por fábrica y moneda.</p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label>Fábrica</label>
+          <div class="ficha-unidad-cc__chips" id="saldo-inicial-unidades"></div>
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-saldo-inicial-importe">Importe que se le debía</label>
+          <input type="text" id="campo-saldo-inicial-importe" placeholder="0,00" inputmode="decimal">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-saldo-inicial-moneda">Moneda</label>
+          <select id="campo-saldo-inicial-moneda"></select>
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-saldo-inicial-fecha">Al día</label>
+          <input type="date" id="campo-saldo-inicial-fecha">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-saldo-inicial-observacion">Observación <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-saldo-inicial-observacion" maxlength="200" placeholder="Saldo inicial al arrancar el sistema">
+        </div>
+      </div>
+
+      <p class="saldo-inicial__error" id="saldo-inicial-error" role="alert" hidden></p>
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-saldo-inicial">Cancelar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-saldo-inicial">Cargar saldo inicial</button>
+      </div>
+    </div>
+  </div><!-- /modal-saldo-inicial -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — ELEGIR UNIDAD DE NEGOCIO
 
        La cuenta corriente se lleva por proveedor + unidad, pero el padrón es
@@ -1659,6 +1742,9 @@
       estadoPorFacturaHistorial: {},
       // gasto_id → "Cheque endosado 072-43300023" (cargarEtiquetasDePagos).
       etiquetasPagoHistorial: new Map(),
+      // factura_pendiente_id del saldo inicial → su observación
+      // (cargarObservacionesSaldoInicial).
+      obsSaldoInicialHistorial: new Map(),
       historialCargadoUnaVez: false,
       ficha: null,        // { proveedorId, unidadId, nombre }
       // Facturas en 'sin_importe' (id, proveedor_id, unidad_negocio_id,
@@ -1761,7 +1847,8 @@
     // formatearNumeroEditable() y formatearImporteEnVivo() propios: el parser
     // viejo borraba TODOS los puntos, así que un "387300.50" pegado se leía
     // como 38.730.050. Todos son importes: 2 decimales.
-    const IDS_CAMPOS_MONTO = ['campo-monto-pago', 'campo-monto-credito']
+    // El tercero es el importe del saldo inicial de un proveedor (30/09/2026).
+    const IDS_CAMPOS_MONTO = ['campo-monto-pago', 'campo-monto-credito', 'campo-saldo-inicial-importe']
 
     function enlazarCamposMonto() {
       for (const id of IDS_CAMPOS_MONTO) enlazarCampoNumero(document.getElementById(id), { decimales: 2 })
@@ -2399,7 +2486,7 @@
         return `
           <div class="fila-pago-aplicacion">
             <div class="fila-fifo__info">
-              <div class="fila-fifo__numero">Factura ${esc(fp?.numero_comprobante || '—')}</div>
+              <div class="fila-fifo__numero">${esc(nombreFactura(fp?.numero_comprobante))}</div>
               <div class="fila-fifo__meta">${esc(fp?.razon_social || '')}${categoria}</div>
             </div>
             <div class="fila-pago-aplicacion__monto">${importeHtml(a.monto_aplicado, gasto?.moneda)}</div>
@@ -2415,7 +2502,7 @@
           return `<div>Sobrante: ${importeHtml(c.monto_original, c.moneda)} — sigue como crédito a favor, sin aplicar todavía.</div>`
         }
         const lineas = aplicacionesCredito.map(ac =>
-          `<div>${importeHtml(ac.monto_aplicado, c.moneda)} se aplicó a la Factura ${esc(ac.facturas_pendientes?.numero_comprobante || '—')}</div>`
+          `<div>${importeHtml(ac.monto_aplicado, c.moneda)} se aplicó a: ${esc(nombreFactura(ac.facturas_pendientes?.numero_comprobante))}</div>`
         ).join('')
         const restante = Number(c.monto_disponible) > 0
           ? `<div>${importeHtml(c.monto_disponible, c.moneda)} sigue disponible como crédito a favor.</div>`
@@ -2672,6 +2759,10 @@
       vacioEl.hidden = true
 
       const puedeEditar = tieneTarea('cuentas_corrientes', 'alta_proveedor')
+      // Desde el padrón se llega también al proveedor que todavía no tiene
+      // ningún movimiento (su ficha no abre): es justo el que necesita su
+      // saldo inicial.
+      const puedeSaldoInicial = puedeCargarSaldoInicial()
 
       listaEl.innerHTML = provs.map(p => {
         const subtitulo = [p.cuit || 'Sin CUIT', p.direccion].filter(Boolean).join(' · ')
@@ -2720,6 +2811,7 @@
             <div class="proveedor-cc__derecha">
               ${saldoHtml}
               ${htmlSinImporte(sinImporte)}
+              ${puedeSaldoInicial ? `<button type="button" class="btn-saldo-inicial-padron" data-id="${esc(p.id)}" title="Cargar el saldo inicial" aria-label="Cargar el saldo inicial de este proveedor">Saldo inicial</button>` : ''}
               ${puedeEditar ? `<button type="button" class="btn-icono-accion btn-editar-padron" data-id="${esc(p.id)}" title="Editar" aria-label="Editar proveedor">✏️</button>` : ''}
             </div>
           </div>
@@ -2733,6 +2825,14 @@
           e.stopPropagation()
           const prov = estado.maestros.proveedores.find(x => x.id === btn.dataset.id)
           if (prov) abrirModalEditarProveedor(prov)
+        })
+      })
+      // Igual que el ✏️: está dentro de la tarjeta clickeable.
+      listaEl.querySelectorAll('.btn-saldo-inicial-padron').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const prov = estado.maestros.proveedores.find(x => x.id === btn.dataset.id)
+          if (prov) abrirModalSaldoInicial(prov.id, prov.razon_social, null)
         })
       })
       listaEl.querySelectorAll('.tarjeta-padron').forEach(card => {
@@ -2825,6 +2925,159 @@
       // La razón social también se muestra en la lista de saldos de la
       // pestaña, que quedó detrás del padrón.
       cargarSaldos()
+    }
+
+    // ── Modal: saldo inicial de un proveedor (30/09/2026) ─────────────────
+    // registrar_saldo_inicial_proveedor(p_proveedor_id, p_unidad_negocio_id,
+    // p_importe, p_fecha, p_moneda, p_observacion) → uuid (verificado con
+    // pg_get_functiondef el 30/09/2026): pide tiene_tarea('cuentas_corrientes',
+    // 'registrar_pago') (con bypass de super_admin, SIN alcance por unidad),
+    // un importe mayor a cero y la fábrica; rechaza un segundo saldo inicial
+    // del mismo proveedor en la misma fábrica y moneda; lo guarda como una
+    // factura pendiente con número 'SALDO-INICIAL'. Sus mensajes ya vienen en
+    // castellano: se muestran TAL CUAL, pegados al botón.
+    //
+    // La cuenta corriente es por fábrica: viene puesta la de la ficha o la de
+    // la barra; con "Todas" se elige acá mismo, sin cambiar la barra (regla f).
+    // Las monedas, las del CHECK de facturas_pendientes.moneda.
+    const MONEDAS_SALDO_INICIAL = ['ARS', 'USD', 'EUR', 'BRL', 'PYG', 'UYU', 'CLP', 'BOB', 'GBP', 'MXN', 'COP', 'PEN']
+    let saldoInicial = null   // { proveedorId, nombre, unidadId, enviando, error }
+
+    function puedeCargarSaldoInicial() {
+      return tieneTarea('cuentas_corrientes', 'registrar_pago')
+    }
+
+    // Las fábricas que se ofrecen: las reales (la de pruebas solo para una
+    // cuenta de prueba), como todo selector del módulo.
+    function unidadesSaldoInicial() {
+      return unidadesParaElegir(estado.maestros.unidades)
+    }
+
+    // Un chip por fábrica; la elegida, llena.
+    function htmlUnidadesSaldoInicial(unidades, elegida) {
+      return (unidades ?? []).map(u => {
+        const es = u.id === elegida
+        return `<button type="button" class="ficha-unidad-cc__chip${es ? ' ficha-unidad-cc__chip--elegido' : ''}" data-si-unidad="${esc(u.id)}" aria-pressed="${es ? 'true' : 'false'}">${esc(u.nombre)}</button>`
+      }).join('')
+    }
+
+    // Lo que viaja a la base, o el motivo por el que no se manda nada.
+    function parametrosSaldoInicial({ proveedorId, unidadId, importe, moneda, fecha, observacion }) {
+      if (!proveedorId) return { error: 'Falta el proveedor.' }
+      if (!unidadId) return { error: 'Elegí la fábrica.' }
+      if (importe == null) return { error: 'Escribí el importe que se le debía.' }
+      if (!(importe > 0)) return { error: 'El importe tiene que ser mayor a cero.' }
+      if (!fecha) return { error: 'Elegí la fecha.' }
+      const obs = String(observacion ?? '').trim()
+      return {
+        params: {
+          p_proveedor_id: proveedorId,
+          p_unidad_negocio_id: unidadId,
+          p_importe: importe,
+          p_fecha: fecha,
+          p_moneda: moneda || 'ARS',
+          p_observacion: obs || null,
+        },
+      }
+    }
+
+    function renderizarSaldoInicial() {
+      if (!saldoInicial) return
+      document.getElementById('saldo-inicial-proveedor').textContent = saldoInicial.nombre || ''
+      document.getElementById('saldo-inicial-unidades').innerHTML = htmlUnidadesSaldoInicial(unidadesSaldoInicial(), saldoInicial.unidadId)
+      const err = document.getElementById('saldo-inicial-error')
+      err.textContent = saldoInicial.error || ''
+      err.hidden = !saldoInicial.error
+      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
+      const btn = document.getElementById('btn-confirmar-saldo-inicial')
+      btn.disabled = !!saldoInicial.enviando
+      btn.textContent = saldoInicial.enviando ? 'Cargando…' : 'Cargar saldo inicial'
+    }
+
+    function abrirModalSaldoInicial(proveedorId, nombre, unidadId = null) {
+      if (!puedeCargarSaldoInicial() || !proveedorId) return
+      const unidades = unidadesSaldoInicial()
+      // La de la ficha, si no la de la barra; con una sola fábrica, esa.
+      let elegida = unidadId || estado.unidadElegida || null
+      if (elegida && !unidades.some(u => u.id === elegida)) elegida = null
+      if (!elegida && unidades.length === 1) elegida = unidades[0].id
+      saldoInicial = { proveedorId, nombre, unidadId: elegida, enviando: false, error: null }
+      ponerNumero(document.getElementById('campo-saldo-inicial-importe'), null)
+      document.getElementById('campo-saldo-inicial-moneda').innerHTML =
+        MONEDAS_SALDO_INICIAL.map(m => `<option value="${esc(m)}"${m === 'ARS' ? ' selected' : ''}>${esc(m)}</option>`).join('')
+      document.getElementById('campo-saldo-inicial-moneda').value = 'ARS'
+      document.getElementById('campo-saldo-inicial-fecha').value = fechaISO(new Date())
+      document.getElementById('campo-saldo-inicial-observacion').value = ''
+      renderizarSaldoInicial()
+      document.getElementById('modal-saldo-inicial').hidden = false
+    }
+
+    function cerrarModalSaldoInicial() {
+      // Mientras se manda no se cierra: la respuesta tiene que verse.
+      if (saldoInicial?.enviando) return
+      document.getElementById('modal-saldo-inicial').hidden = true
+      saldoInicial = null
+    }
+
+    function elegirUnidadSaldoInicial(unidadId) {
+      if (!saldoInicial || saldoInicial.enviando) return
+      saldoInicial.unidadId = unidadId || null
+      saldoInicial.error = null
+      renderizarSaldoInicial()
+    }
+
+    async function confirmarSaldoInicial() {
+      const s = saldoInicial
+      // Un doble toque manda una sola vez.
+      if (!s || s.enviando) return
+      const r = parametrosSaldoInicial({
+        proveedorId: s.proveedorId,
+        unidadId: s.unidadId,
+        importe: montoDeCampo('campo-saldo-inicial-importe'),
+        moneda: document.getElementById('campo-saldo-inicial-moneda').value,
+        fecha: document.getElementById('campo-saldo-inicial-fecha').value,
+        observacion: document.getElementById('campo-saldo-inicial-observacion').value,
+      })
+      if (r.error) { s.error = r.error; renderizarSaldoInicial(); return }
+      s.enviando = true
+      s.error = null
+      renderizarSaldoInicial()
+      let error = null
+      try {
+        ;({ error } = await supabase.rpc('registrar_saldo_inicial_proveedor', r.params))
+      } catch (e) {
+        error = { message: 'No hay conexión: el saldo inicial no se cargó. Probá de nuevo.' }
+      }
+      s.enviando = false
+      if (error) {
+        s.error = error.message || 'No se pudo cargar el saldo inicial.'
+        if (saldoInicial === s) renderizarSaldoInicial()
+        return
+      }
+      mostrarExito(`Saldo inicial cargado en la cuenta de ${nombreUnidad(s.unidadId)}.`)
+      if (saldoInicial === s) cerrarModalSaldoInicial()
+      await refrescarTrasSaldoInicial(s.proveedorId)
+    }
+
+    // Lo que muestra el saldo nuevo: la lista, el padrón y, si está abierta,
+    // la ficha de ese proveedor.
+    async function refrescarTrasSaldoInicial(proveedorId) {
+      const cargas = []
+      if (tieneTarea('cuentas_corrientes', 'ver_todo')) cargas.push(cargarSaldos())
+      if (!document.getElementById('vista-padron').hidden) cargas.push(cargarPadronSaldos())
+      const ficha = estado.ficha
+      if (ficha && ficha.proveedorId === proveedorId) {
+        cargas.push((async () => {
+          const ids = await unidadesDelProveedor(proveedorId)
+          if (estado.ficha !== ficha) return
+          if (ids) ficha.unidades = unidadesDeFicha(ids)
+          await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+          if (estado.ficha !== ficha) return
+          renderizarFichaUnidad()
+          renderizarFichaBanner()
+        })())
+      }
+      await Promise.all(cargas)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3116,13 +3369,15 @@
       // del rango (ver cargarEstadosDeFacturas): la búsqueda y la unidad se
       // aplican después, sin volver a consultar.
       const idsFactura = [...new Set(filas.filter(m => m.tipo === 'factura' && m.factura_pendiente_id).map(m => m.factura_pendiente_id))]
-      const [estados, etiquetasPago] = await Promise.all([
+      const [estados, etiquetasPago, obsSaldoInicial] = await Promise.all([
         idsFactura.length ? cargarEstadosDeFacturas(idsFactura) : {},
         cargarEtiquetasDePagos(filas),
+        cargarObservacionesSaldoInicial(filas),
       ])
       if (turno !== turnoHistorial) return
       estado.estadoPorFacturaHistorial = estados
       estado.etiquetasPagoHistorial = etiquetasPago
+      estado.obsSaldoInicialHistorial = obsSaldoInicial
 
       cargandoEl.hidden = true
       estado.historialCrudo = filas
@@ -3163,9 +3418,55 @@
       return mapa
     }
 
+    // ── EL SALDO INICIAL DE UN PROVEEDOR (30/09/2026) ──────────────────────
+    // registrar_saldo_inicial_proveedor lo guarda como una factura pendiente
+    // con número 'SALDO-INICIAL' (y modulo_origen 'saldo_inicial', que la
+    // vista no trae). La vista lo devuelve como una "factura" con esa
+    // referencia, y también los intereses y créditos aplicados a ella llevan
+    // ese número: en pantalla y en el Excel se dice "Saldo inicial", nunca
+    // "Factura SALDO-INICIAL". El número es el mismo que usa la función para
+    // no cargarlo dos veces.
+    const NUMERO_SALDO_INICIAL = 'SALDO-INICIAL'
+    function esSaldoInicial(m) {
+      return m?.referencia === NUMERO_SALDO_INICIAL
+    }
+    // Cómo se nombra un comprobante de facturas_pendientes por su número.
+    function nombreFactura(numero) {
+      return numero === NUMERO_SALDO_INICIAL ? 'Saldo inicial' : `Factura ${numero || '—'}`
+    }
+    // El número a secas (las listas para pagar o aplicar un crédito).
+    function numeroParaMostrar(numero) {
+      return numero === NUMERO_SALDO_INICIAL ? 'Saldo inicial' : (numero || '(sin número)')
+    }
+    // El tipo de un movimiento: la factura del saldo inicial es "Saldo inicial".
+    function etiquetaTipoMovimiento(m) {
+      if (m?.tipo === 'factura' && esSaldoInicial(m)) return 'Saldo inicial'
+      return TIPO_MOVIMIENTO_LABEL[m?.tipo] || m?.tipo || ''
+    }
+
+    // La observación de cada saldo inicial (factura_pendiente_id → texto),
+    // para mostrarla como su referencia. Una consulta con los ids de los
+    // saldos iniciales de las filas; si falla, queda "Saldo inicial".
+    async function cargarObservacionesSaldoInicial(filas) {
+      const ids = [...new Set((filas ?? []).filter(m => m.tipo === 'factura' && esSaldoInicial(m) && m.factura_pendiente_id).map(m => m.factura_pendiente_id))]
+      const mapa = new Map()
+      if (!ids.length) return mapa
+      const { data, error } = await supabase.from('facturas_pendientes').select('id, observaciones').in('id', ids)
+      if (error) { console.error('No se pudieron leer las observaciones de los saldos iniciales:', error); return mapa }
+      for (const f of data ?? []) {
+        const t = String(f.observaciones ?? '').trim()
+        if (t) mapa.set(f.id, t)
+      }
+      return mapa
+    }
+
     // La referencia de un movimiento: la del cheque endosado si el pago es
-    // uno; si no, la de la vista.
-    function referenciaMovimiento(m, etiquetas) {
+    // uno; la observación (o "Saldo inicial") si es el saldo inicial; si no,
+    // la de la vista.
+    function referenciaMovimiento(m, etiquetas, observaciones) {
+      if (esSaldoInicial(m)) {
+        return (m.tipo === 'factura' && observaciones?.get(m.factura_pendiente_id)) || 'Saldo inicial'
+      }
       return (m?.tipo === 'pago' && etiquetas?.get(m.gasto_id)) || m?.referencia || ''
     }
 
@@ -3198,14 +3499,14 @@
           ? '<div class="fila-movimiento__monto fila-movimiento__monto--falta">Falta importe</div>'
           : `<div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>`
         const unidadNombre = etiquetaUnidad(m.unidad_negocio_id)
-        const referencia = referenciaMovimiento(m, estado.etiquetasPagoHistorial)
+        const referencia = referenciaMovimiento(m, estado.etiquetasPagoHistorial, estado.obsSaldoInicialHistorial)
         const badgeEstado = m.tipo === 'factura'
           ? badgeEstadoFactura(estado.estadoPorFacturaHistorial[m.factura_pendiente_id])
           : ''
         return `
           <div class="tarjeta-lista fila-movimiento">
             <div style="flex:1; min-width:0;">
-              <span class="chip-tipo-mov chip-tipo-mov--${esc(m.tipo)}">${esc(TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo)}</span>
+              <span class="chip-tipo-mov chip-tipo-mov--${esc(m.tipo)}">${esc(etiquetaTipoMovimiento(m))}</span>
               <div class="fila-movimiento__referencia">${esc(m.proveedorNombre)}${referencia ? ` — ${esc(referencia)}` : ''}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${esc(unidadNombre)} · ${formatearFecha(m.fecha)}</div>
             </div>
@@ -3224,8 +3525,8 @@
         'Proveedor':  m.proveedorNombre,
         'Unidad':     etiquetaUnidad(m.unidad_negocio_id),
         'Fecha':      formatearFecha(m.fecha),
-        'Tipo':       TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo,
-        'Referencia': referenciaMovimiento(m, estado.etiquetasPagoHistorial),
+        'Tipo':       etiquetaTipoMovimiento(m),
+        'Referencia': referenciaMovimiento(m, estado.etiquetasPagoHistorial, estado.obsSaldoInicialHistorial),
         // Vacío y no 0: una descarga sin importe no vale cero.
         'Monto':      m.monto == null ? '' : Number(m.monto),
         'Moneda':     m.moneda || '',
@@ -3425,6 +3726,7 @@
         <div class="banner-ficha-cc__acciones">
           ${tieneTarea('cuentas_corrientes', 'registrar_pago') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--primario" id="btn-registrar-pago" ${dis}>Registrar pago</button>` : ''}
           ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${hayCreditos ? '' : 'hidden'} ${dis}>Aplicar crédito</button>` : ''}
+          ${puedeCargarSaldoInicial() ? '<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-saldo-inicial-ficha">Cargar saldo inicial</button>' : ''}
         </div>
         ${todas ? `<div class="banner-ficha-cc__ayuda">Registrar un pago o aplicar un crédito es de una unidad: elegila abajo.</div>` : ''}`
 
@@ -3466,6 +3768,11 @@
 
       document.getElementById('btn-registrar-pago')?.addEventListener('click', abrirModalPago)
       document.getElementById('btn-aplicar-credito-ficha')?.addEventListener('click', abrirModalAplicarCreditoDesdeFicha)
+      // El saldo inicial NO se deshabilita en "todas las unidades": el modal
+      // pide la fábrica ahí mismo.
+      document.getElementById('btn-saldo-inicial-ficha')?.addEventListener('click', () => {
+        if (estado.ficha) abrirModalSaldoInicial(estado.ficha.proveedorId, estado.ficha.nombre, estado.ficha.unidadId)
+      })
     }
 
     async function cargarFichaMovimientos() {
@@ -3507,15 +3814,17 @@
       // Las cantidades del ingreso vinculado a cada descarga sin importe: es lo
       // único que hay para ponerle precio.
       const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
-      const [cantidades, etiquetasPago] = await Promise.all([
+      const [cantidades, etiquetasPago, obsSaldoInicial] = await Promise.all([
         idsSinImporte.length ? cargarCantidadesSinImporte(idsSinImporte) : new Map(),
         cargarEtiquetasDePagos(data ?? []),
+        cargarObservacionesSaldoInicial(data ?? []),
       ])
       if (estado.ficha !== ficha) return
 
       cargandoEl.hidden = true
 
       estado.ficha.etiquetasPago    = etiquetasPago
+      estado.ficha.obsSaldoInicial  = obsSaldoInicial
       estado.ficha.movimientosRaw   = data ?? []
       estado.ficha.estadoPorFactura = estadoPorFactura
       estado.ficha.cantidadesSinImporte = cantidades
@@ -3593,7 +3902,7 @@
         const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
-        const referencia = referenciaMovimiento(m, estado.ficha.etiquetasPago) || '—'
+        const referencia = referenciaMovimiento(m, estado.ficha.etiquetasPago, estado.ficha.obsSaldoInicial) || '—'
         const badgeEstado = m.tipo === 'factura'
           ? badgeEstadoFactura(estadoPorFactura[m.factura_pendiente_id])
           : ''
@@ -3601,7 +3910,7 @@
           <div class="tarjeta-lista fila-movimiento">
             <span class="punto-tipo-mov punto-tipo-mov--${esc(m.tipo)}"></span>
             <div style="flex:1; min-width:0;">
-              <div class="fila-movimiento__tipo">${esc(TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo)}</div>
+              <div class="fila-movimiento__tipo">${esc(etiquetaTipoMovimiento(m))}</div>
               <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
             </div>
@@ -4059,7 +4368,7 @@
 
       facturasParaCredito = data ?? []
       poblarSelect('campo-factura-credito', data ?? [],
-        f => ({ value: f.id, label: `${formatearFecha(f.fecha_factura)} — ${f.numero_comprobante || '(sin número)'} — saldo ${formatearImporte(f.saldo_pendiente, credito.moneda)}` }),
+        f => ({ value: f.id, label: `${formatearFecha(f.fecha_factura)} — ${numeroParaMostrar(f.numero_comprobante)} — saldo ${formatearImporte(f.saldo_pendiente, credito.moneda)}` }),
         '— Seleccioná una factura —')
 
       document.getElementById('aplicar-credito-paso-elegir').hidden = true
@@ -4271,7 +4580,7 @@
 
       facturasParaPago = (abiertas || []).map(f => ({
         id: f.id,
-        numero: f.numero_comprobante || '(sin número)',
+        numero: numeroParaMostrar(f.numero_comprobante),
         fecha: f.fecha_factura,
         saldo: Number(f.saldo_pendiente) || 0,
         checked: sugeridasPorId.has(f.id),
@@ -4572,6 +4881,17 @@
     document.getElementById('btn-cancelar-editar-proveedor').addEventListener('click', cerrarModalEditarProveedor)
     document.querySelector('#modal-editar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalEditarProveedor)
     document.getElementById('btn-confirmar-editar-proveedor').addEventListener('click', confirmarEditarProveedor)
+
+    // ── Modal: saldo inicial de un proveedor ──────────────────────────────
+    // Su importe se enlaza con los demás (IDS_CAMPOS_MONTO, enlazarCamposMonto).
+    document.getElementById('btn-cerrar-saldo-inicial').addEventListener('click', cerrarModalSaldoInicial)
+    document.getElementById('btn-cancelar-saldo-inicial').addEventListener('click', cerrarModalSaldoInicial)
+    document.querySelector('#modal-saldo-inicial .modal-cc__backdrop').addEventListener('click', cerrarModalSaldoInicial)
+    document.getElementById('btn-confirmar-saldo-inicial').addEventListener('click', confirmarSaldoInicial)
+    document.getElementById('saldo-inicial-unidades').addEventListener('click', (ev) => {
+      const b = ev.target.closest?.('[data-si-unidad]')
+      if (b) elegirUnidadSaldoInicial(b.dataset.siUnidad)
+    })
 
     // ── Cargar importe de una descarga sin importe (delegado: se redibuja) ─
     const listaMovFicha = document.getElementById('lista-movimientos-ficha')

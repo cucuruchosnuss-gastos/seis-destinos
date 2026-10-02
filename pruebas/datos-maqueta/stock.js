@@ -134,7 +134,9 @@ module.exports = {
       { unidad_negocio_id: NUSS, presentacion_id: 'pp-bombon', marca_id: null, lote: '7035-1', cajas: 6, fecha: '2026-09-18' },
     ],
     listas_precios: [
-      { id: 'lp-interna', unidad_negocio_id: NUSS, nombre: 'Lista interna entre fábricas', activa: true },
+      // La lista interna se marca con es_interna (30/09/2026), no por el nombre.
+      { id: 'lp-interna', unidad_negocio_id: NUSS, nombre: 'Entre fábricas', activa: true, es_interna: true },
+      { id: 'lp-dist', unidad_negocio_id: NUSS, nombre: 'Distribuidores', activa: true, es_interna: false },
     ],
   },
   rpc: {

@@ -570,14 +570,28 @@ module.exports = {
         "unidad_negocio_id": "u-n",
         "nombre": "Mayoristas",
         "moneda": "ARS",
-        "activa": true
+        "activa": true,
+        "es_base": true
       },
+      // Sale de Mayoristas con un 10 % (30/09/2026): sus precios sin cono se
+      // ven con el recargo y no se editan acá.
       {
         "id": "l2",
         "unidad_negocio_id": "u-n",
         "nombre": "Minoristas",
         "moneda": "ARS",
-        "activa": true
+        "activa": true,
+        "base_id": "l1",
+        "recargo_pct": 10
+      },
+      // La lista interna de la fábrica (30/09/2026): la del traspaso.
+      {
+        "id": "l3",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Entre fábricas",
+        "moneda": "ARS",
+        "activa": true,
+        "es_interna": true
       }
     ],
     "lista_precios_items": [
@@ -980,6 +994,37 @@ module.exports = {
           "conito_unitario": 8.5, "papel_conito": "comun", "lista": "Mayoristas", "recargo_pct": 0, "sin_precio": false } }
       ],
       "__defecto": { "sin_precio": true, "motivo": "El producto no tiene precio en la lista base." }
+    },
+    // La grilla completa (30/09/2026): lista_completa() con el sin cono, el
+    // con cono (sin cono por unidad + el conito colocado) y los cuatro conitos.
+    "lista_completa": {
+      "__segun": [
+        { "si": { "p_lista_id": "l1" }, "r": {
+          "lista": "Mayoristas",
+          "productos": [
+            { "producto_id": "p1", "producto": "Cucurucho grande", "tipo_masa": "Común", "reventa": false,
+              "sin_cono": { "precio_unitario": 30, "precio_caja": 3000, "unidades_por_caja": 100, "producto_unitario": 30, "conito_unitario": 0, "lista": "Mayoristas", "recargo_pct": 0, "sin_precio": false },
+              "con_cono": { "precio_unitario": 38.5, "precio_caja": 3850, "unidades_por_caja": 100, "producto_unitario": 30, "conito_unitario": 8.5, "papel_conito": "comun", "lista": "Mayoristas", "recargo_pct": 0, "sin_precio": false } },
+            { "producto_id": "p2", "producto": "Cucurucho chico", "tipo_masa": "Común", "reventa": false,
+              "sin_cono": { "sin_precio": true, "motivo": "El producto no tiene precio en la lista base." }, "con_cono": null },
+            { "producto_id": "p3", "producto": "Cucurucho choco", "tipo_masa": "Chocolate", "reventa": false,
+              "sin_cono": { "precio_unitario": 110, "precio_caja": 5500, "unidades_por_caja": 50, "producto_unitario": 110, "conito_unitario": 0, "lista": "Mayoristas", "recargo_pct": 0, "sin_precio": false }, "con_cono": null }
+          ],
+          "conito": { "comun_suelto": 7.25, "comun_colocado": 8.5, "ilustracion_suelto": 11.5, "ilustracion_colocado": 13 } } },
+        { "si": { "p_lista_id": "l2" }, "r": {
+          "lista": "Minoristas",
+          "productos": [
+            { "producto_id": "p1", "producto": "Cucurucho grande", "tipo_masa": "Común", "reventa": false,
+              "sin_cono": { "precio_unitario": 33, "precio_caja": 3300, "unidades_por_caja": 100, "producto_unitario": 33, "conito_unitario": 0, "lista": "Minoristas", "recargo_pct": 10, "sin_precio": false },
+              "con_cono": { "precio_unitario": 42.35, "precio_caja": 4235, "unidades_por_caja": 100, "producto_unitario": 33, "conito_unitario": 9.35, "papel_conito": "comun", "lista": "Minoristas", "recargo_pct": 10, "sin_precio": false } },
+            { "producto_id": "p2", "producto": "Cucurucho chico", "tipo_masa": "Común", "reventa": false,
+              "sin_cono": { "sin_precio": true, "motivo": "El producto no tiene precio en la lista base." }, "con_cono": null },
+            { "producto_id": "p3", "producto": "Cucurucho choco", "tipo_masa": "Chocolate", "reventa": false,
+              "sin_cono": { "precio_unitario": 121, "precio_caja": 6050, "unidades_por_caja": 50, "producto_unitario": 121, "conito_unitario": 0, "lista": "Minoristas", "recargo_pct": 10, "sin_precio": false }, "con_cono": null }
+          ],
+          "conito": { "comun_suelto": 8, "comun_colocado": 9.35, "ilustracion_suelto": 12.65, "ilustracion_colocado": null } } }
+      ],
+      "__defecto": "ERROR:No tenés permiso para ver precios."
     },
     // Endosar a un proveedor (29/09/2026): el buscador, con la deuda por fábrica.
     "proveedores_para_endoso": [
