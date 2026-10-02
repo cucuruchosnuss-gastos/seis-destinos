@@ -34,6 +34,11 @@ correrMutaciones({
     { nombre: 'inventa "0 abiertas" sin saber', de: "Number.isInteger(sesiones) && sesiones > 0 ?", a: 'true ?' },
     { nombre: 'Mi cuenta no lleva al dashboard', de: "new URL('dashboard.html?cuenta=mi-cuenta', raiz)", a: "new URL('dashboard.html', raiz)" },
     { nombre: 'el nombre sale de la ficha (Apellido Nombre)', de: "  yo.nombreVisible = meta.nombre_completo || meta.full_name || yo.nombre || ''", a: "  yo.nombreVisible = yo.nombre || ''" },
+    // pasarBarraAUnidad (02/10/2026): un módulo pasa la barra a una unidad.
+    { nombre: 'pasarBarraAUnidad acepta una unidad que no es de la persona', de: '  if (!estado.unidades.some(u => u.id === id)) return false\n  elegirUnidad(id)', a: '  elegirUnidad(id)' },
+    { nombre: 'pasarBarraAUnidad no cambia la barra', de: '  elegirUnidad(id)\n  return estado.elegida === id', a: '  return estado.elegida === id' },
+    { nombre: 'pasarBarraAUnidad dice que sí sin mirar', de: '  return estado.elegida === id\n}', a: '  return true\n}' },
+    { nombre: 'pasarBarraAUnidad antes de cargar tira', de: '  if (!estado || !id) return false\n  if (!estado.unidades', a: '  if (!estado.unidades' },
     { nombre: 'con una unidad no marca "sin fábricas"', de: "  nav.classList.toggle('barra-arriba--sin-fabricas', !estado.mostrar)\n", a: '' },
   ],
 })

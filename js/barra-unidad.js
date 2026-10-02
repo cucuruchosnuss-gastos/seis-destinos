@@ -219,7 +219,21 @@ export function alCambiarUnidad(fn) {
   return () => suscriptores.delete(fn)
 }
 
-// Cambia la elección (la usan los chips; un módulo no debería llamarla).
+// Que la barra muestre ESA unidad, pedido desde un MÓDULO (02/10/2026):
+// Cobranzas, al elegir la empresa de una cobranza nueva, pasa la barra a esa
+// empresa (pedido de Facu). Devuelve si la barra quedó en esa unidad: false
+// si la persona no la tiene en la barra (con UNA sola unidad la barra no
+// aparece y no se cambia nada) o si la barra todavía no terminó de cargar.
+// Si ya estaba elegida, no vuelve a avisar.
+export function pasarBarraAUnidad(id) {
+  if (!estado || !id) return false
+  if (!estado.unidades.some(u => u.id === id)) return false
+  elegirUnidad(id)
+  return estado.elegida === id
+}
+
+// Cambia la elección (la usan los chips y pasarBarraAUnidad; un módulo llama a
+// pasarBarraAUnidad, que dice si se pudo).
 export function elegirUnidad(id) {
   if (!estado) return
   const nueva = resolverElegida(id || TODAS, estado.unidades)

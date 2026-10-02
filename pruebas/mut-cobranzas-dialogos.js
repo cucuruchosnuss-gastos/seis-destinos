@@ -50,7 +50,7 @@ correrMutaciones({
       de: "      document.removeEventListener('keydown', teclaEnDialogo)\n", a: '' },
     // ── Elegir foto ─────────────────────────────────────────────────────────
     { nombre: 'con una sola foto abre el diálogo',
-      de: '      if (f.fotos.length === 1) {\n        f.cheques.push', a: '      if (false) {\n        f.cheques.push' },
+      de: '      if (fotos.length === 1) {\n        f.cheques.push', a: '      if (false) {\n        f.cheques.push' },
     { nombre: 'el botón de la foto elige la siguiente (índice corrido)',
       de: "cerrarDialogo(Number(b.dataset.elegirFoto))", a: "cerrarDialogo(Number(b.dataset.elegirFoto) + 1)" },
     { nombre: 'el botón dice "Foto 0" (sin el +1)',
@@ -60,11 +60,11 @@ correrMutaciones({
     { nombre: 'cancelar no avisa',
       de: "        mostrarError('No se agregó el cheque: hay que decir a qué foto corresponde.')\n", a: '' },
     { nombre: 'sin la guarda de foto (red detrás del botón deshabilitado)',
-      de: '      if (!f.fotos.length) {\n        mostrarError(', a: '      if (false) {\n        mostrarError(' },
+      de: '      if (!fotos.length) {\n        mostrarError(', a: '      if (false) {\n        mostrarError(' },
     // ── Estático: vuelve un nativo ──────────────────────────────────────────
     { nombre: 'vuelve window.confirm al descartar',
       de: '      if (!si) return\n      await dbBorrar', a: "      if (!si || !window.confirm('¿Seguro?')) return\n      await dbBorrar" },
     { nombre: 'vuelve un alert() suelto',
-      de: "      if (!f) return\n      // La foto es OBLIGATORIA", a: "      if (!f) { alert('sin formulario'); return }\n      // La foto es OBLIGATORIA" },
+      de: "      if (!f) return\n      const fotos = fotosDeTipo(f, 'cheque')\n      // Quien controla", a: "      if (!f) { alert('sin formulario'); return }\n      const fotos = fotosDeTipo(f, 'cheque')\n      // Quien controla" },
   ],
 })

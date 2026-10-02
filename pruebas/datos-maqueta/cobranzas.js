@@ -90,6 +90,21 @@ module.exports = {
   t.cobranza_transferencias = [
     { id: 't8', cobranza_id: ID, cuenta_id: 'cta-banco-nuss', importe: 30000, fecha: '2026-09-25', referencia: 'Op. 4455', created_at: '2026-09-25T15:00:00Z' },
   ]
-  t.cuentas_caja = [{ id: 'cta-banco-nuss', nombre: 'Banco Macro · Nuss', unidad_negocio_id: 'u-n', medio: 'banco', moneda: 'ARS', empleado_id: 'emp-empresa', activa: true }]
+  t.cuentas_caja = [
+    { id: 'cta-banco-nuss', nombre: 'Banco Macro · Nuss', unidad_negocio_id: 'u-n', medio: 'banco', moneda: 'ARS', empleado_id: 'emp-empresa', activa: true },
+    // (02/10/2026) Una cuenta de banco de Dolce Pasta: una transferencia de
+    // una cobranza de Dolce ofrece SOLO esta.
+    { id: 'cta-banco-dolce', nombre: 'Banco Galicia · Dolce', unidad_negocio_id: 'u-d', medio: 'banco', moneda: 'ARS', empleado_id: 'emp-empresa', activa: true },
+  ]
   t.v_empleados_publico.push({ id: 'emp-empresa', nombre: 'Empresa', unidad_negocio_id: null, tiene_acceso: false, tipo: 'empresa', activo: false })
+}
+
+// "¿CÓMO PAGÓ?" (02/10/2026): lo que propone el lector nuevo de comprobantes
+// (ocr-cobranza-comprobantes) al subir una captura de una transferencia.
+module.exports.funciones = {
+  'ocr-cobranza-comprobantes': {
+    ok: true, modelo: 'maqueta', tipo: 'transferencia', crudo: { comprobantes: [{}] },
+    propuestos: [{ importe: 150000, fecha: '2026-09-26', banco_origen: 'Mercado Pago', ordenante: 'J Y M SA', cuit_ordenante: '30719434777',
+      referencia: '000123456789', controles: { cuit_ok: true, fecha_ok: true } }],
+  },
 }

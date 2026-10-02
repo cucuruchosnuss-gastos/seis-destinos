@@ -165,10 +165,10 @@ function montar(S, f) {
   S.estado.form = f
   const bloque = bloqueEfectivo()
   if (!bloque) throw new Error('no se encontró el bloque del efectivo en conectarTodo')
-  new Function('document', 'estado', 'enlazarCampoNumero', 'guardarBorrador', 'pintarTotalYGuardado', `
+  new Function('document', 'estado', 'enlazarCampoNumero', 'guardarBorrador', 'pintarTotalYGuardado', 'pintarFormasPago', `
     const campos = [['cob-efectivo', 'efectivo']]
     ${bloque}
-  `)({ getElementById: (id) => S.__els.get(id) }, S.estado, S.enlazarCampoNumero, async () => {}, S.pintarTotalYGuardado)
+  `)({ getElementById: (id) => S.__els.get(id) }, S.estado, S.enlazarCampoNumero, async () => {}, S.pintarTotalYGuardado, S.pintarFormasPago)
   S.pintarFormulario()
 }
 

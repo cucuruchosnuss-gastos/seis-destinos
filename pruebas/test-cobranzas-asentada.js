@@ -2,9 +2,10 @@
 //
 // Quien controla las cobranzas (cobranzas:procesar) carga y asienta en un
 // solo paso:
-//  - PRIMERO la EMPRESA (botones grandes con su logo o su color; si la barra de
-//    arriba tiene una sola fábrica elegida, viene marcada esa), sin la fábrica
-//    de pruebas;
+//  - PRIMERO la EMPRESA (botones grandes con su logo o su color), sin la
+//    fábrica de pruebas. Desde el 02/10/2026 NO viene marcada aunque la barra
+//    de arriba tenga una fábrica elegida, y al tocarla la barra pasa a esa
+//    (pasarBarraAUnidad de js/barra-unidad.js, stubeada acá);
 //  - DESPUÉS un cliente ACTIVO de ESA empresa, de la lista de
 //    buscar_clientes(p_busqueda, p_unidad_negocio_id), con buscador;
 //  - con el Taller, el proyecto;
@@ -63,6 +64,9 @@ const PRELUDIO = `
   }
 
   var __llamadas = { exitos: [], errores: [], vistas: [], subtitulos: [] }
+  // js/barra-unidad.js tiene su propio estado: se stubea y se anota.
+  var __barra = []
+  function pasarBarraAUnidad(id){ __barra.push(id); return true }
   function mostrarExito(m){ __llamadas.exitos.push(m) } function mostrarError(m){ __llamadas.errores.push(m) }
   function mostrarVistaCob(v, o){ __llamadas.vistas.push(v); __llamadas.subtitulos.push(o?.subtitulo ?? null) }
   function guardarBorrador(){}
@@ -128,7 +132,7 @@ function clientesDe(unidad) {
 function sandbox({ tareas = ['cargar', 'ver_todo', 'procesar'], rol = 'usuario', barra = null, fabrica = FABRICA, fabricaLista = true } = {}) {
   const S = construirCon(ARCHIVO, {
     preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-    retorno: `estado, __els, __llamadas, __rpcs(){ return __rpcs }, __setRpc(f){ __rpcImpl = f }, MS_BUSCAR_CLIENTE`,
+    retorno: `estado, __els, __llamadas, __rpcs(){ return __rpcs }, __setRpc(f){ __rpcImpl = f }, MS_BUSCAR_CLIENTE, __barra(){ return __barra }`,
   })
   S.estado.misTareas = new Set(tareas.map(t => 'cobranzas:' + t))
   S.estado.miRolApp = rol
@@ -225,16 +229,26 @@ async function pruebas() {
     S.abrirFormularioNuevo()
     await esperar()
     const emp = el(S, 'cob-empresas').innerHTML
-    chk('barra en Dolce Pasta: viene marcada Dolce Pasta', S.estado.form.unidad_id === 'u-dolce' &&
-      /data-empresa="u-dolce" aria-pressed="true"/.test(emp) && (emp.match(/aria-pressed="true"/g) || []).length === 1)
+    // (02/10/2026) Pedido de Facu: la empresa se elige SIEMPRE.
+    chk('barra en Dolce Pasta: la empresa NO viene marcada', S.estado.form.unidad_id === null &&
+      !/aria-pressed="true"/.test(emp) && (emp.match(/aria-pressed="false"/g) || []).length === 4, emp)
+    chk('el rótulo pregunta de qué empresa es', /id="cob-rotulo-empresa">¿De qué empresa es la cobranza\?</.test(FUENTE))
+    chk('sin empresa no busca clientes aunque la barra tenga una', rpcs(S, 'buscar_clientes').length === 0)
+    chk('sin empresa, lo que falta es la empresa', S.motivosParaNoGuardar().includes('Elegí la empresa de la cobranza.'))
+    chk('abrir el formulario no toca la barra', S.__barra().length === 0)
+    S.elegirEmpresa('u-nuss')
+    await esperar()
+    chk('elegir la empresa pasa la barra a esa', JSON.stringify(S.__barra()) === '["u-nuss"]', JSON.stringify(S.__barra()))
     const b = rpcs(S, 'buscar_clientes')
-    chk('y ya busca los clientes de ESA empresa, sin texto', b.length === 1 && b[0].params.p_unidad_negocio_id === 'u-dolce' && b[0].params.p_busqueda === null,
+    chk('y busca los clientes de ESA empresa, sin texto', b.length === 1 && b[0].params.p_unidad_negocio_id === 'u-nuss' && b[0].params.p_busqueda === null,
       JSON.stringify(b))
+    S.elegirEmpresa('u-prueba')
+    chk('una empresa que no se ofrece no toca la barra', JSON.stringify(S.__barra()) === '["u-nuss"]')
   }
   {
     const S = sandbox({ ...PROCESAR, barra: 'u-prueba' })
     S.abrirFormularioNuevo()
-    chk('barra en una unidad que no se ofrece: no queda marcada', S.estado.form.unidad_id === null)
+    chk('barra en una unidad que no se ofrece: tampoco queda marcada', S.estado.form.unidad_id === null)
   }
 
   // ══ 3. DESPUÉS, SOLO LOS CLIENTES DE ESA EMPRESA ══════════════════════════
@@ -355,6 +369,8 @@ async function pruebas() {
   {
     const S = sandbox({ ...PROCESAR, barra: 'u-dolce' })
     S.abrirFormularioNuevo()
+    // La empresa ya no viene marcada (02/10/2026): se elige.
+    S.elegirEmpresa('u-dolce')
     await esperar()
     const f = conCheque(S, S.estado.form)
     f.efectivo = '99.000,00'

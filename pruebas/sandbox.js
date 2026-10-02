@@ -15,18 +15,36 @@ const { fuenteConComun } = require('./fuente-cobranzas')
 // La cobranza ya asentada (01/10/2026), y lo que usa de js/barra-unidad.js.
 // Exportadas: toda suite que arme el formulario de Cobranzas las necesita
 // (motivosParaNoGuardar, subirCobranza y pintarFormulario las llaman).
+// ¿Cómo pagó? (02/10/2026): los cuatro botones, las secciones, los
+// comprobantes de e-cheques y transferencias y el lector nuevo. Van dentro de
+// FUNCIONES_ASENTAR porque pintarFormulario / subirCobranza las llaman.
+const FUNCIONES_PAGO = [
+  'tipoFoto', 'fotosDeTipo', 'formasOfrecidas', 'formaTieneDatos', 'formaAbierta', 'formaVisible', 'abrirForma', 'cerrarForma',
+  'pintarFormasPago', 'alTocarFormasPago', 'alTocarCerrarForma', 'elegirArchivoComprobante', 'agregarPropuestos', 'leerComprobante',
+  'htmlAvisoComprobante', 'htmlComprobantes', 'abrirComprobante', 'pintarComprobantes', 'comprobantesSinUso', 'fotosParaBase',
+  'htmlBancosOrigen', 'textoOrigenComprobante', 'htmlBotonComprobante', 'echequeVacio', 'echequeDesdeOcr', 'digitosONull', 'avisoCuit',
+  'camposEcheque', 'origenDatosEcheque', 'transferenciaVacia', 'transferenciaDesdeOcr', 'camposTransferencia', 'origenDatosTransferencia',
+  'esPdf', 'textoMb', 'prepararArchivo', 'cuitValidoCob',
+]
+const CONSTANTES_PAGO = [
+  'FORMAS_PAGO', 'SECCION_FORMA', 'TEXTO_OTRO_COMPROBANTE', 'TEXTO_PRIMER_COMPROBANTE', 'TIPOS_COMPROBANTE', 'BANCOS_ORIGEN',
+  'BYTES_MAXIMO_ARCHIVO', 'TEXTO_BOTON_CHEQUE_MANO_ADMIN',
+]
+
 const FUNCIONES_ASENTAR = [
-  'estadoAsentarVacio', 'esFormAsentado', 'empresasParaAsentar', 'empresaInicialAsentar', 'unidadDelForm', 'esTaller',
+  'estadoAsentarVacio', 'esFormAsentado', 'empresasParaAsentar', 'unidadDelForm', 'esTaller',
   'htmlMarcaEmpresa', 'htmlEmpresas', 'textoSaldoCliente', 'htmlOpcionClienteAsentar', 'htmlClientesAsentar',
   'clientesDeLaEmpresa', 'buscarClientesAsentar', 'alEscribirClienteAsentar', 'soltarClienteAsentar', 'elegirEmpresa',
   'elegirClienteAsentar', 'cambiarClienteAsentar', 'proyectosDelClienteCob', 'htmlProyectoAsentar', 'faltaProyectoAsentar',
   'proyectoParaBase', 'cargarProyectosAsentar', 'ponerLogosEmpresas', 'pintarAsentar', 'alTocarEnAsentar', 'alElegirProyecto',
   'textoCobranzaAsentada', 'subirCobranzaAsentada',
   'ordenarUnidades', 'logoUnidad', 'nombreCorto', 'inicialesDe',
+  ...FUNCIONES_PAGO,
 ]
 const CONSTANTES_ASENTAR = [
   'MS_BUSCAR_CLIENTE', 'MIN_LETRAS_CLIENTE', 'TOPE_CLIENTES_BUSCADOS', 'ETIQUETA_ESTADO_PROYECTO_COB',
   'MARCA_FABRICA', 'NOMBRE_CORTO', 'ORDEN_PREFIJO',
+  ...CONSTANTES_PAGO,
 ]
 
 const FUNCIONES = [
@@ -127,6 +145,9 @@ const PRELUDIO = `
   // toasts, los refrescos y el replaceState del link directo.
   var __llamadas = { abrirDetalle: [], vistas: [], errores: [], exitos: [], refrescar: 0, replace: [], orden: [] }
   function abrirDetalle(id, op){ __llamadas.abrirDetalle.push([id, op]); __llamadas.orden.push('abrir') }
+  // js/barra-unidad.js tiene su propio estado: se stubea.
+  var __barra = []
+  function pasarBarraAUnidad(id){ __barra.push(id); return true }
 
   var estado = {
     sesion: { user: { id: 'uid-de-prueba' } },
@@ -207,4 +228,4 @@ function construir(rutaHtml) {
   })
 }
 
-module.exports = { construir, construirCon, scriptModulo, FUNCIONES, CONSTANTES, FUNCIONES_ASENTAR, CONSTANTES_ASENTAR }
+module.exports = { construir, construirCon, scriptModulo, FUNCIONES, CONSTANTES, FUNCIONES_ASENTAR, CONSTANTES_ASENTAR, FUNCIONES_PAGO, CONSTANTES_PAGO }

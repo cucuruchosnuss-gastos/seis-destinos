@@ -17,7 +17,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { construirCon } = require('./sandbox')
+const { construirCon, FUNCIONES_PAGO, CONSTANTES_PAGO } = require('./sandbox')
 // Las funciones de números de js/utils.js (leerNumeroAr, ponerNumero…),
 // con su código REAL: el módulo las importa desde el 21/09/2026.
 const { fuenteNumeros } = require('./numeros-comun')
@@ -138,11 +138,13 @@ const FUNCIONES = [
   'textoOpcional', 'origenDatosDe',
   // E-cheques y transferencias (30/09/2026)
   'sumaDeImportes', 'totalConTransferencias', 'htmlTransferenciasDetalle', 'htmlEtiquetaForma', 'totalesPorForma', 'sumaImportes', 'erroresDeEcheque', 'erroresDeTransferencia', 'pintarResumenFormas', 'htmlResumenFormas', 'usaCobranzaCompleta', 'echequeParaBase', 'transferenciaParaBase', 'pintarFormasNuevas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'cuentasParaElegir', 'htmlOpcionesCuentas', 'nombreUnidadCob', 'echequeDesdeBase', 'transferenciaDesdeBase', 'nombresDeCuentas', 'formasPresentes', 'htmlLineaFormas', 'cargarFormasDe', 'formasDeFila',
+  // ¿Cómo pagó? (02/10/2026)
+  ...FUNCIONES_PAGO, 'esFormAsentado',
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA', 'PAGINA',
   'ETIQUETA_ESTADO_CHEQUE', 'DIAS_MAXIMO_DIFERIDO', 'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
-  'puedeVerCartera', 'UUID_COB',
+  'puedeVerCartera', 'UUID_COB', ...CONSTANTES_PAGO,
 ]
 
 function sandbox() {

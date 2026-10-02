@@ -44,7 +44,7 @@ correrMutaciones({
     { nombre: 'la subida trata todo error como falta de red',
       de: '            if (esErrorDeRed(err)) {\n              // Falta de señal', a: '            if (true) {\n              // Falta de señal' },
     { nombre: 'el OCR no mira el error original de red (.context)',
-      de: 'if (esErrorDeRed(err) || esErrorDeRed(err?.context)) {', a: 'if (esErrorDeRed(err)) {' },
+      de: 'el error original viaja en .context.\n          if (esErrorDeRed(err) || esErrorDeRed(err?.context)) {', a: 'el error original viaja en .context.\n          if (esErrorDeRed(err)) {' },
     { nombre: 'el error del lector ignora el mensaje de la función',
       de: '        if (cuerpo?.mensaje) return String(cuerpo.mensaje)\n', a: '' },
     // ── El contador ─────────────────────────────────────────────────────────
@@ -86,11 +86,11 @@ correrMutaciones({
       de: '        if ((foto.intentosLector ?? 0) >= MAX_INTENTOS_LECTOR) continue\n', a: '' },
     // ── El botón de agregar un cheque que no se leyó (22/09/2026) ──────────
     { nombre: 'el botón queda habilitado sin foto',
-      de: '      btn.disabled = !hayFoto\n', a: '      btn.disabled = false\n' },
+      de: '      btn.disabled = !admin && !hayFoto\n', a: '      btn.disabled = false\n' },
     { nombre: 'hayFoto no mira las fotos (habilitado con cualquier formulario)',
-      de: '      const hayFoto = !!f && f.fotos.length > 0\n', a: '      const hayFoto = !!f\n' },
+      de: "      const hayFoto = !!f && fotosDeTipo(f, 'cheque').length > 0\n", a: '      const hayFoto = !!f\n' },
     { nombre: 'el aviso "Primero sacá la foto" nunca se ve',
-      de: "      document.getElementById('cob-ayuda-cheque-mano').hidden = hayFoto\n",
+      de: "      document.getElementById('cob-ayuda-cheque-mano').hidden = admin || hayFoto\n",
       a: "      document.getElementById('cob-ayuda-cheque-mano').hidden = true\n" },
     { nombre: 'el texto vuelve al viejo (el que pone JS)',
       de: "    const TEXTO_BOTON_CHEQUE_MANO = '+ Agregar un cheque que no se leyó'",
@@ -103,6 +103,6 @@ correrMutaciones({
     { nombre: 'no se recalcula al cambiar las fotos',
       de: '    function pintarEstadoFotos() {\n      pintarBotonChequeMano()\n', a: '    function pintarEstadoFotos() {\n' },
     { nombre: 'solo se deshabilita, nunca se vuelve a habilitar (se recalcula a medias)',
-      de: '      btn.disabled = !hayFoto\n', a: '      if (!hayFoto) btn.disabled = true\n' },
+      de: '      btn.disabled = !admin && !hayFoto\n', a: '      if (!admin && !hayFoto) btn.disabled = true\n' },
   ],
 })

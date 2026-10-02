@@ -79,5 +79,16 @@ export const supabase = {
     onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } } },
   },
   storage: { from() { return { createSignedUrl: async () => ({ data: null, error: null }), upload: async () => ({ data: null, error: null }) } } },
-  functions: { invoke: async () => ({ data: null, error: { message: 'sin funciones en la maqueta' } }) },
+  // Una Edge Function responde lo que diga "funciones" en los datos
+  // (02/10/2026: el lector de comprobantes de Cobranzas). Sin datos, falla
+  // como una función que no está publicada.
+  functions: {
+    invoke: async (nombreFn, op) => {
+      console.log('[maqueta] función', nombreFn, op?.body)
+      const r = DATOS.funciones?.[nombreFn]
+      if (r === undefined) return { data: null, error: { message: 'sin funciones en la maqueta' } }
+      if (typeof r === 'string' && r.startsWith('ERROR:')) return { data: null, error: { message: r.slice(6) } }
+      return { data: r, error: null }
+    },
+  },
 }

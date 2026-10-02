@@ -114,12 +114,17 @@ const PRELUDIO = `
   async function dbBorrar(store, id) { __llamadas.dbBorrar.push([store, id]) }
   async function refrescarLocales() { __llamadas.refrescarLocales++ }
   var estado = { form: null }
+  // El chofer: sin cobranzas:procesar (Administración carga a mano sin foto,
+  // y eso lo prueba test-cobranzas-cuatro-botones.js).
+  var puedeProcesar = () => false
 `
 
 const FUNCIONES = [
   'enfocablesDe', 'teclaEnDialogo', 'abrirDialogo', 'cerrarDialogo',
   'confirmarConDialogo', 'elegirFotoConDialogo', 'agregarChequeAMano',
   'descartarBorradorLocal', 'chequeVacio', 'conectarDialogos',
+  // Solo las fotos de cheques (02/10/2026).
+  'tipoFoto', 'fotosDeTipo',
   // El diálogo de la unidad se fue con el asentado a Administración (27/09/2026).
 ]
 
