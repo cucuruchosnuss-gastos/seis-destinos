@@ -23,10 +23,18 @@ const cuenta = (id, empleado_id, nombre, medio, unidad_negocio_id = null, extra 
 
 // unidad: caja_movimientos.unidad_negocio_id (01/10/2026), la que completa el
 // trigger de la base (la del gasto, la de la cuenta de empresa o la de la persona).
-const mov = (id, empleado_id, cuenta_id, tipo, monto, descripcion = null, medio_pago = 'efectivo', unidad = null) => ({
-  id, empleado_id, cuenta_id, tipo, monto, moneda: 'ARS', medio_pago, fecha: hoy, descripcion,
-  gasto_id: null, contraparte_empleado_id: null, created_at: hoy + 'T12:00:00Z', unidad_negocio_id: unidad,
+// fecha: para el saldo corriente (30/09/2026), los movimientos viejos de cada cuenta.
+const mov = (id, empleado_id, cuenta_id, tipo, monto, descripcion = null, medio_pago = 'efectivo', unidad = null, fecha = hoy) => ({
+  id, empleado_id, cuenta_id, tipo, monto, moneda: 'ARS', medio_pago, fecha, descripcion,
+  gasto_id: null, contraparte_empleado_id: null, created_at: fecha + 'T12:00:00Z', unidad_negocio_id: unidad,
 });
+
+// El SALDO CORRIENTE (30/09/2026): la cuenta de Ana tiene varios movimientos y
+// uno la deja negativa; el último saldo de cada cuenta coincide con
+// v_caja_saldos_cuenta (por eso cada cuenta lleva su ingreso de agosto), con
+// los ajustes de por medio (e-1b suma, m-6 resta) y el gasto de Nuss pagado
+// desde la caja de Beto (m-7), que con Nuss elegido aparece en la ficha de
+// Empresa con el saldo de la cuenta ENTERA de Beto.
 
 module.exports = {
   uid: UID,
@@ -68,14 +76,14 @@ module.exports = {
     ],
     v_caja_saldos: [
       { empleado_id: YO, moneda: 'ARS', saldo: 15000 },
-      { empleado_id: 'emp-ana', moneda: 'ARS', saldo: 42000 },
+      { empleado_id: 'emp-ana', moneda: 'ARS', saldo: -8000 },
       { empleado_id: 'emp-beto', moneda: 'ARS', saldo: 8500 },
       { empleado_id: 'emp-carla', moneda: 'ARS', saldo: 120000 },
       { empleado_id: EMPRESA, moneda: 'ARS', saldo: 2951000 },
     ],
     v_caja_saldos_cuenta: [
       { cuenta_id: 'c-yo', saldo: 15000 },
-      { cuenta_id: 'c-ana', saldo: 42000 },
+      { cuenta_id: 'c-ana', saldo: -8000 },
       { cuenta_id: 'c-beto', saldo: 8500 },
       { cuenta_id: 'c-carla', saldo: 120000 },
       { cuenta_id: 'c-e-n1', saldo: 350000 },
@@ -84,6 +92,19 @@ module.exports = {
       { cuenta_id: 'c-e-x', saldo: 1000 },
     ],
     caja_movimientos: [
+      mov('a-1', 'emp-ana', 'c-ana', 'ingreso', 100000, 'Entrega de la semana', 'efectivo', 'u-n', '2026-09-01'),
+      mov('a-2', 'emp-ana', 'c-ana', 'egreso_gasto', 20000, 'Combustible', 'efectivo', 'u-n', '2026-09-02'),
+      mov('a-3', 'emp-ana', 'c-ana', 'egreso_retiro', 90000, 'Retiro', 'efectivo', 'u-n', '2026-09-10'),
+      mov('a-4', 'emp-ana', 'c-ana', 'ingreso_reversion_gasto', 7000, 'Gasto anulado', 'efectivo', 'u-n', '2026-09-20'),
+      mov('y-0', YO, 'c-yo', 'ingreso', 15000, 'Saldo inicial', 'efectivo', 'u-n', '2026-08-01'),
+      mov('b-0', 'emp-beto', 'c-beto', 'ingreso', 15700, 'Saldo inicial', 'efectivo', 'u-d', '2026-08-15'),
+      mov('c-0', 'emp-carla', 'c-carla', 'ingreso', 120000, 'Saldo inicial', 'transferencia', 'u-d', '2026-08-01'),
+      mov('e-1', EMPRESA, 'c-e-n1', 'ingreso', 345000, 'Saldo inicial', 'efectivo', 'u-n', '2026-08-01'),
+      // Un ajuste que SUMA (01/10/2026): el saldo corriente lo cuenta igual.
+      mov('e-1b', EMPRESA, 'c-e-n1', 'ingreso_ajuste', 5000, 'Sobrante del arqueo de agosto', 'efectivo', 'u-n', '2026-09-01'),
+      mov('e-2', EMPRESA, 'c-e-n2', 'ingreso', 1562500, 'Saldo inicial', 'transferencia', 'u-n', '2026-08-01'),
+      mov('e-3', EMPRESA, 'c-e-d1', 'ingreso', 620000, 'Saldo inicial', 'transferencia', 'u-d', '2026-08-01'),
+      mov('e-4', EMPRESA, 'c-e-x', 'ingreso', 2500, 'Saldo inicial', 'efectivo', null, '2026-08-01'),
       mov('m-1', 'emp-ana', 'c-ana', 'egreso_retiro', 5000, 'Retiro de la semana', 'efectivo', 'u-n'),
       mov('m-2', 'emp-beto', 'c-beto', 'egreso_retiro', 3000, 'Retiro', 'efectivo', 'u-d'),
       mov('m-3', EMPRESA, 'c-e-n2', 'ingreso_externo', 250000, 'Cobranza de un cliente', 'transferencia', 'u-n'),

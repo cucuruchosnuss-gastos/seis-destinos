@@ -24,7 +24,7 @@ const src = leer(ARCHIVO)
 const { chk, fin } = arnes()
 
 const FUNCIONES = ['esc', 'importeHtml', 'formatearImporte', 'clienteDeCobranza', 'etiquetaMovimiento',
-  'renderizarFilaMovimiento', 'tieneTareaExplicita', 'puedoIngresoExterno', 'renderizarAccionesDetalle']
+  'renderizarFilaMovimiento', 'htmlCentavos', 'htmlSaldoDeFila', 'tieneTareaExplicita', 'puedoIngresoExterno', 'renderizarAccionesDetalle']
 const CONSTANTES = ['TIPO_LABEL', 'MEDIO_PAGO_LABEL_CAJA', 'TITULO_INGRESO_EXTERNO', 'TIPO_MOVIMIENTO_OPCIONES']
 
 const PRELUDIO = `

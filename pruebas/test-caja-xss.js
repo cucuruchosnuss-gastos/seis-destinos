@@ -403,6 +403,10 @@ const FECHA = 'formatearFecha() de una columna DATE (caja_movimientos.fecha / ca
 const CLASE = 'clase CSS: ternario de literales del código'
 // La etiqueta de unidad de una fila (barra de unidad, 28/09/2026).
 const UNIDAD_FILA = 'HTML de htmlUnidadDeFila(): literal del código o esc(nombre de la unidad) (ejecutada con marcas en test-caja-barra-unidad.js)'
+const SALDO_FILA = 'HTML de htmlSaldoDeFila(): literales e htmlCentavos() (ejecutada en test-caja-saldo-corriente.js)'
+const CENTAVOS = 'htmlCentavos() = importeHtml() de un número del código, con "−" literal'
+const SALDO_AVISO = 'HTML de htmlAvisoSaldoCorriente(): esc() del nombre de la cuenta (ejecutada con marcas en test-caja-saldo-corriente.js)'
+const SALDO_APERTURA = 'HTML de htmlAperturaSaldo(): esc() del nombre de la cuenta (ejecutada con marcas en test-caja-saldo-corriente.js)'
 const SEGURAS = {
   formatearImporteCentavosSuaves: {
     simbolo: "'$' o esc(moneda), armado en la línea de arriba",
@@ -456,16 +460,38 @@ const SEGURAS = {
     personaHtml: HTML_PROPIO, sublineaContraparte: HTML_PROPIO, refGasto: HTML_PROPIO, refCobranza: HTML_PROPIO, refAjuste: HTML_PROPIO,
     'formatearFecha(m.fecha)': FECHA, signo: "literal '+' o '−'", 'importeHtml(m.monto, m.moneda)': IMPORTE,
     'htmlUnidadDeFila(unidadDeMovimiento(m))': UNIDAD_FILA,
+    'htmlSaldoDeFila(m, saldo)': SALDO_FILA,
   },
-  renderizarMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
+  // El saldo corriente (30/09/2026): ejecutado con marcas en test-caja-saldo-corriente.js.
+  htmlSaldoDeFila: {
+    clase: "literal 'movimiento__saldo--positivo' o '--negativo'",
+    'htmlCentavos(s, m.moneda)': CENTAVOS,
+  },
+  htmlAvisoSaldoCorriente: { texto: 'texto del código con esc(nombre de la cuenta) e htmlCentavos(), armado abajo' },
+  htmlAperturaSaldo: {
+    etiqueta: 'esc(nombreCuentaSaldo()) armado arriba, o ""',
+    clase: 'literal de las clases del saldo',
+    valor: "literal '—' / '…' o htmlCentavos()",
+    renglones: 'HTML propio del map de arriba',
+  },
+  renderizarMovimientos: {
+    'movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas, saldo: legible(m) ? sc : null })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas',
+    'htmlAvisoSaldoCorriente(sc, cuentas, deTodasLasCajas)': SALDO_AVISO, 'htmlAperturaSaldo(sc, cuentas, deTodasLasCajas)': SALDO_APERTURA,
+  },
+  renderizarRetiros: {
+    'retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true, saldo: sc })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas',
+    'htmlAvisoSaldoCorriente(sc, cuentas, true)': SALDO_AVISO, 'htmlAperturaSaldo(sc, cuentas, true)': SALDO_APERTURA,
+  },
+  renderizarTodosMovimientos: {
+    'movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true, saldo: sc })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas',
+    'htmlAvisoSaldoCorriente(sc, cuentas, true)': SALDO_AVISO, 'htmlAperturaSaldo(sc, cuentas, true)': SALDO_APERTURA,
+  },
   // Entradas y salidas de una unidad (01/10/2026); las ejecuta con marcas
   // test-caja-unidad-movimientos.js.
   htmlEntradasYSalidas: {
     'importeHtml(por[mon].entradas, mon)': IMPORTE, 'importeHtml(por[mon].salidas, mon)': IMPORTE, filas: HTML_PROPIO,
   },
   renderizarTotalesFicha: { 'htmlEntradasYSalidas(movimientosVisibles(), nombre)': 'HTML de htmlEntradasYSalidas(), que escapa adentro' },
-  renderizarRetiros: { 'retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
-  renderizarTodosMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
   renderizarFilaSolicitud: {
     nota: HTML_PROPIO, botonNegativo: HTML_PROPIO, acciones: HTML_PROPIO,
     importe: 'importeHtml(s.monto, s.moneda) armado arriba', 'formatearFecha(s.fecha)': FECHA,
