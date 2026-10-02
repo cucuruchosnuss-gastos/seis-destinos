@@ -21,8 +21,8 @@
 //                    fechas que existen. Ver normalizar.js.
 // El OCR PROPONE; la persona confirma o corrige en pantalla.
 //
-// NO ESTÁ PUBLICADA todavía: la publica Claude después de auditarla, con sus
-// DOS archivos (index.ts y normalizar.js).
+// Publicada por Claude el 02/10/2026 después de auditarla (rama
+// ci-prueba/cobranzas-cuatro-botones, 0d73a72), con sus DOS archivos.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { TIPOS, mimeDe, normalizarRespuesta, rutaValida } from './normalizar.js'
