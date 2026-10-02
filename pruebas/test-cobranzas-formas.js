@@ -203,7 +203,7 @@ async function pruebas() {
     S.estado.form = f
     S.pintarFormasNuevas()
     chk('chofer: la sección de e-cheques y transferencias queda oculta', el(S, 'cob-seccion-formas').hidden === true)
-    chk('chofer: sin botones de agregar', el(S, 'cob-formas-acciones').hidden === true)
+    chk('chofer: solo se le ofrecen Efectivo y Cheque (sin agregar e-cheques ni transferencias)', JSON.stringify(S.formasOfrecidas()) === '["efectivo","cheque"]')
     chk('chofer: sin el resumen de las cuatro formas', el(S, 'cob-resumen-formas').hidden === true && el(S, 'cob-resumen-formas').innerHTML === '')
     S.agregarEcheck(); S.agregarTransferencia()
     chk('chofer: agregarEcheck / agregarTransferencia no hacen nada', f.echecks.length === 0 && f.transferencias.length === 0)
@@ -226,7 +226,8 @@ async function pruebas() {
     S.pintarFormasNuevas()
     chk('chofer con formas ajenas: la sección se ve', el(S, 'cob-seccion-formas').hidden === false)
     chk('chofer con formas ajenas: el aviso "Los cargó Administración" se ve', el(S, 'cob-formas-aviso').hidden === false)
-    chk('chofer con formas ajenas: sin botones de agregar', el(S, 'cob-formas-acciones').hidden === true)
+    chk('chofer con formas ajenas: no se le ofrecen para agregar', !S.formasOfrecidas().includes('echeque') && !S.formasOfrecidas().includes('transferencia'))
+    chk('chofer con formas ajenas: las dos secciones con datos se ven', el(S, 'cob-seccion-echecks').hidden === false && el(S, 'cob-seccion-transferencias').hidden === false)
     const htmlE = el(S, 'cob-lista-echecks').innerHTML, htmlT = el(S, 'cob-lista-transferencias').innerHTML
     chk('chofer con formas ajenas: el e-cheque se ve sin campos ni "Quitar"', /E-cheque 1/.test(htmlE) && !/data-echeck-campo|data-quitar-echeck|<input/.test(htmlE), htmlE.slice(0, 300))
     chk('chofer con formas ajenas: la transferencia se ve sin campos ni "Quitar"', /Transferencia 1/.test(htmlT) && !/data-transf-campo|data-quitar-transf|<select|<input/.test(htmlT))
@@ -248,7 +249,10 @@ async function pruebas() {
     const S = sandbox(ADMIN)
     const f = formConCheque(S)
     S.pintarFormasNuevas()
-    chk('admin: la sección se ve con los botones de agregar', el(S, 'cob-seccion-formas').hidden === false && el(S, 'cob-formas-acciones').hidden === false)
+    chk('admin: se le ofrecen las cuatro formas', JSON.stringify(S.formasOfrecidas()) === '["efectivo","cheque","echeque","transferencia"]')
+    chk('admin: sin tocar nada, la sección de e-cheques y transferencias no se ve (se abre con su botón)', el(S, 'cob-seccion-formas').hidden === true)
+    S.abrirForma('echeque')
+    chk('admin: al abrir E-cheque, la sección se ve', el(S, 'cob-seccion-formas').hidden === false && el(S, 'cob-seccion-echecks').hidden === false)
     chk('admin: sin el aviso de "Los cargó Administración"', el(S, 'cob-formas-aviso').hidden === true)
     chk('admin: el resumen de las cuatro formas se ve aunque no haya nada', el(S, 'cob-resumen-formas').hidden === false)
     const res = el(S, 'cob-resumen-formas').innerHTML
@@ -271,6 +275,19 @@ async function pruebas() {
     S.actualizarEcheck(id, 'fecha_pago', '2026-10-30')
     S.actualizarEcheck(id, 'importe', '2.500,50')
     chk('admin: un e-cheque completo ya no frena', !S.motivosParaNoGuardar().some(m => /^E-cheque/.test(m)), S.motivosParaNoGuardar().join(' | '))
+    {
+      // Solo un e-cheque: sin cheques de papel, sin efectivo, sin transferencias.
+      const S2 = sandbox(ADMIN)
+      const g = formConCheque(S2, { cheques: [], fotos: [] })
+      S2.agregarEcheck()
+      const e2 = g.echecks[0].id
+      S2.actualizarEcheck(e2, 'banco_codigo', '007')
+      S2.actualizarEcheck(e2, 'numero', '00012345')
+      S2.actualizarEcheck(e2, 'fecha_pago', '2026-10-30')
+      S2.actualizarEcheck(e2, 'importe', '2.500,50')
+      const m2 = S2.motivosParaNoGuardar()
+      chk('admin: con solo un e-cheque (sin nada más) se puede guardar', !g.cheques.length && !g.transferencias.length && !m2.length, m2.join(' | '))
+    }
     S.actualizarEcheck(id, 'tipo', 'comun')
     chk('admin: pasar a "a la vista" borra la fecha de pago', f.echecks[0].tipo === 'comun' && f.echecks[0].fecha_pago === '')
 
@@ -293,7 +310,8 @@ async function pruebas() {
     const ll = S.__rpcs()[0]
     chk('admin: guarda con guardar_cobranza_completa', r.ok && ll?.nombre === 'guardar_cobranza_completa', ll?.nombre)
     chk('admin: p_transferencias con cuenta, importe NÚMERO, fecha y referencia sin espacios',
-      JSON.stringify(ll?.params.p_transferencias) === JSON.stringify([{ cuenta_id: 'cta-dolce', importe: 10000, fecha: '2026-09-30', referencia: 'op 123' }]),
+      JSON.stringify(ll?.params.p_transferencias) === JSON.stringify([{ cuenta_id: 'cta-dolce', importe: 10000, fecha: '2026-09-30', referencia: 'op 123',
+        banco_origen: null, ordenante: null, cuit_ordenante: null, foto_id: null, origen_datos: 'manual', ocr_propuesto: null }]),
       JSON.stringify(ll?.params.p_transferencias))
     const e = ll?.params.p_cheques.find(c => c.es_echeck)
     chk('e-cheque en p_cheques: sin foto, sin chequera, origen manual', e && e.foto_id === null && e.sucursal_codigo === null &&
@@ -322,19 +340,26 @@ async function pruebas() {
       ll?.nombre === 'guardar_cobranza_completa' && Array.isArray(ll.params.p_transferencias) && ll.params.p_transferencias.length === 0, JSON.stringify(ll))
   }
   {
-    // EL HUECO DE LA BASE: solo transferencias.
+    // Solo transferencias: el hueco de la base se cerró (verificado el
+    // 02/10/2026: guardar_cobranza_completa avisa que trae transferencias).
     const S = sandbox(ADMIN)
     const f = S.formularioVacio('id-solo'); f.cliente = 'X'
     f.transferencias = [{ id: 't1', cuenta_id: 'cta-nuss', importe: '500', fecha: '2026-09-30', referencia: '' }]
     S.estado.form = f
     const m = S.motivosParaNoGuardar()
-    chk('solo transferencias: no se deja guardar y se dice por qué (la base lo rechaza)', m.some(x => /solo con transferencias todavía no se puede guardar/.test(x)), m.join(' | '))
+    chk('solo transferencias: Administración ya la puede guardar', !m.length, m.join(' | '))
+    const C = sandbox(CHOFER)
+    const fc = C.formularioVacio('id-solo-c'); fc.cliente = 'X'
+    fc.transferencias = [{ id: 't1', cuenta_id: 'cta-nuss', importe: '500', fecha: '2026-09-30', referencia: '' }]
+    C.estado.form = fc
+    chk('solo transferencias, el chofer (editar_cobranza no avisa): se dice por qué', C.motivosParaNoGuardar().some(x => /solo con transferencias la guarda Administración/.test(x)), C.motivosParaNoGuardar().join(' | '))
+    chk('sin nada, el chofer: el mensaje de siempre', (() => { C.estado.form = C.formularioVacio('z2'); C.estado.form.cliente = 'X'; return C.motivosParaNoGuardar().includes('Cargá al menos un cheque o un importe en efectivo.') })())
     f.efectivo = '100'
     chk('transferencias + efectivo: ya se puede', !S.motivosParaNoGuardar().length, S.motivosParaNoGuardar().join(' | '))
     f.efectivo = ''; f.echecks = [echequeValido(S)]
     chk('transferencias + e-cheque: ya se puede', !S.motivosParaNoGuardar().length, S.motivosParaNoGuardar().join(' | '))
     f.echecks = []
-    chk('sin nada: el mensaje de siempre', S.formularioVacio('z') && (() => { S.estado.form = S.formularioVacio('z'); S.estado.form.cliente = 'X'; return S.motivosParaNoGuardar().includes('Cargá al menos un cheque o un importe en efectivo.') })())
+    chk('sin nada, Administración: las cuatro formas', S.formularioVacio('z') && (() => { S.estado.form = S.formularioVacio('z'); S.estado.form.cliente = 'X'; return S.motivosParaNoGuardar().includes('Cargá al menos una forma de pago: efectivo, un cheque, un e-cheque o una transferencia.') })())
   }
   {
     // Las transferencias no se pudieron leer.
@@ -561,9 +586,10 @@ async function pruebas() {
 
   // ══ 8. EL FUENTE, EL CSS Y EL CONTRASTE ════════════════════════════════════
   {
-    chk('fuente: la sección de formas arranca oculta en el HTML', /<div class="cob-seccion" id="cob-seccion-formas" hidden>/.test(FUENTE))
+    chk('fuente: la sección de formas arranca oculta en el HTML', /<div id="cob-seccion-formas" hidden>/.test(FUENTE) &&
+      /<div class="cob-seccion" id="cob-seccion-echecks" hidden>/.test(FUENTE) && /<div class="cob-seccion" id="cob-seccion-transferencias" hidden>/.test(FUENTE))
     chk('fuente: el resumen arranca oculto en el HTML', /<div class="cob-resumen-formas" id="cob-resumen-formas" hidden><\/div>/.test(FUENTE))
-    chk('fuente: los botones "+ Agregar e-cheque" y "+ Agregar transferencia"', /id="cob-btn-echeck">\+ Agregar e-cheque</.test(FUENTE) && /id="cob-btn-transferencia">\+ Agregar transferencia</.test(FUENTE))
+    chk('fuente: "Cargar a mano" en e-cheques y transferencias (los mismos ids)', /id="cob-btn-echeck">&#9998; Cargar a mano</.test(FUENTE) && /id="cob-btn-transferencia">&#9998; Cargar a mano</.test(FUENTE))
     chk('fuente: las cuentas de banco se cargan en el init', /\n\s+cargarCuentasBanco\(\)\n/.test(FUENTE))
     chk('fuente: los listeners delegados de la sección', /seccionFormas\.addEventListener\('input', alEscribirEnFormas\)/.test(FUENTE) &&
       /seccionFormas\.addEventListener\('click', alTocarEnFormas\)/.test(FUENTE))

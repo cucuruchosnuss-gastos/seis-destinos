@@ -20,10 +20,12 @@ correrMutaciones({
     { nombre: 'el cliente escrito a mano sigue a la vista',
       de: '      libre.hidden = activo\n', a: '      libre.hidden = false\n' },
     // La empresa
-    { nombre: 'no viene marcada la de la barra',
-      de: '        estado.form.unidad_id = empresaInicialAsentar()', a: '        estado.form.unidad_id = null' },
-    { nombre: 'viene marcada la de la barra aunque no se ofrezca',
-      de: "      return (!lista.length || lista.some(u => u.id === e)) ? e : null", a: '      return e' },
+    // (02/10/2026) La empresa ya no viene marcada: se elige, y elegirla pasa
+    // la barra de arriba a esa.
+    { nombre: 'viene marcada la de la barra',
+      de: '        estado.form.unidad_id = null\n', a: '        estado.form.unidad_id = estado.unidadElegida\n' },
+    { nombre: 'elegir la empresa no pasa la barra a esa',
+      de: '      pasarBarraAUnidad(id)\n', a: '' },
     { nombre: 'la fábrica de pruebas aparece',
       de: '      return ordenarUnidades(sinUnidadesDePrueba(activas, estado.fabrica ?? FABRICA_SIN_DATOS))', a: '      return ordenarUnidades(activas)' },
     { nombre: 'se ofrecen antes de saber cuál es la de pruebas',
@@ -74,7 +76,7 @@ correrMutaciones({
     { nombre: 'cambiar de empresa no suelta la cuenta de banco',
       de: "        if (t.cuenta_id && c && c.unidad_negocio_id !== id) { t.cuenta_id = ''; t.cuenta_nombre = '' }", a: '' },
     { nombre: 'las cuentas no siguen a la empresa elegida',
-      de: "const elegida = (esFormAsentado(f) && f.unidad_id) ? f.unidad_id : estado.unidadElegida", a: 'const elegida = estado.unidadElegida' },
+      de: '      if (esFormAsentado(f)) lista = f.unidad_id', a: '      if (false) lista = f.unidad_id' },
     // Lo que falta
     { nombre: 'no pide la empresa',
       de: "        if (!f.unidad_id) motivos.push('Elegí la empresa de la cobranza.')\n        else if", a: '        if' },

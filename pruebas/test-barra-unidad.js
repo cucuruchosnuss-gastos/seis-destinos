@@ -27,7 +27,7 @@ const { chk, esperas, fin } = arnes()
 const FUNCIONES = ['escUni', 'logoUnidad', 'nombreCorto', 'inicialesDe', 'colorPersona', 'nombreDePila', 'htmlUsuario', 'htmlMenuUsuario',
   'htmlMarcaCelular', 'debeMostrarseUnidad', 'idsDeLaPersona', 'ordenarUnidades',
   'resolverElegida', 'pasaFiltroUnidad', 'filtrarPorUnidad', 'htmlBarraUnidad', 'leerGuardada', 'guardarElegida', 'avisar',
-  'estadoUnidad', 'unidadesDeLaBarra', 'alCambiarUnidad', 'elegirUnidad', 'pintar', 'cargarUnidadesDeLaPersona', 'instalarBarraUnidad']
+  'estadoUnidad', 'unidadesDeLaBarra', 'alCambiarUnidad', 'pasarBarraAUnidad', 'elegirUnidad', 'pintar', 'cargarUnidadesDeLaPersona', 'instalarBarraUnidad']
 
 function construir() {
   let codigo = `
@@ -249,6 +249,15 @@ esperas.push((async () => {
   // Otra pestaña cambió la elección.
   a.s.__oyentes.storage[0]({ key: 'barraUnidad.elegida', newValue: 'u-taller' })
   chk('sigue lo que eligió otra pestaña', a.s.estadoUnidad().elegida === 'u-taller')
+  // Un MÓDULO pasa la barra a una unidad (02/10/2026: la empresa de una
+  // cobranza nueva).
+  oido = null
+  chk('pasarBarraAUnidad: pasa a esa unidad y dice que sí', a.s.pasarBarraAUnidad('u-dolce') === true && a.s.estadoUnidad().elegida === 'u-dolce')
+  chk('pasarBarraAUnidad: avisa, guarda y repinta como un chip', oido?.elegida === 'u-dolce' && a.s.__ls.get('barraUnidad.elegida') === 'u-dolce' && /data-unidad="u-dolce" aria-pressed="true"/.test(a.nav.innerHTML))
+  const antesMod = a.s.__eventos.length
+  chk('pasarBarraAUnidad: la misma no vuelve a avisar', a.s.pasarBarraAUnidad('u-dolce') === true && a.s.__eventos.length === antesMod)
+  chk('pasarBarraAUnidad: una unidad que no es de la persona no cambia nada', a.s.pasarBarraAUnidad('u-robot') === false && a.s.estadoUnidad().elegida === 'u-dolce')
+  chk('pasarBarraAUnidad: sin id no cambia nada', a.s.pasarBarraAUnidad(null) === false && a.s.estadoUnidad().elegida === 'u-dolce')
 
   // Un usuario con su unidad y un alcance: dos y Todas.
   const b = await instalar({ yo: { id: 'e2', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [{ alcance: { unidades: ['u-dolce'] } }] }, { guardado: 'u-dolce' })
@@ -268,6 +277,7 @@ esperas.push((async () => {
   const dn = await instalarCon({ yo: { id: 'e8', nombre: 'Usabarrena Facundo', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [], meta: { nombre_completo: 'Facundo Usabarrena' } })
   chk('el nombre sale del registro (nombre de pila, no el apellido)', />Facundo</.test(dn.nav.innerHTML) && /barra-arriba__ini[^>]*>FU</.test(dn.nav.innerHTML), dn.nav.innerHTML)
   chk('con UNA sola unidad la elección es null (no se filtra)', d.s.estadoUnidad().elegida === null && d.s.estadoUnidad().mostrar === false)
+  chk('con UNA sola unidad pasarBarraAUnidad dice que no y no cambia nada', d.s.pasarBarraAUnidad('u-nuss') === false && d.s.estadoUnidad().elegida === null)
 
   // Cuenta de prueba: ve la de prueba.
   const e = await instalar({ yo: { id: 'e5', rol_app: 'usuario', unidad_negocio_id: 'u-robot' }, tareas: [{ alcance: { unidades: ['u-nuss'] } }] },
@@ -297,6 +307,7 @@ esperas.push((async () => {
   s2.__setPromesa(Promise.resolve())
   listo = await s2.unidadesDeLaBarra()
   chk('antes de cargar: sin unidades, sin elección', listo.elegida === null && listo.unidades.length === 0)
+  chk('antes de cargar: pasarBarraAUnidad dice que no', s2.pasarBarraAUnidad('u-nuss') === false)
 })())
 
 // ── 3. Las pantallas y el CSS ────────────────────────────────────────────────

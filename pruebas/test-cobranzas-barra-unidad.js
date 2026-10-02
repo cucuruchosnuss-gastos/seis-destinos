@@ -330,7 +330,7 @@ async function pruebas() {
   // ══ 7. EL FUENTE ═══════════════════════════════════════════════════════════
   {
     chk('import: trae la barra de js/barra-unidad.js',
-      /import \{ unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad[^}]*\} from '\.\.\/js\/barra-unidad\.js'/.test(FUENTE))
+      /import \{ unidadesDeLaBarra, alCambiarUnidad, (pasarBarraAUnidad, )?pasaFiltroUnidad[^}]*\} from '\.\.\/js\/barra-unidad\.js'/.test(FUENTE))
     const ini = FUENTE.indexOf('async function init()')
     const cuerpo = FUENTE.slice(ini, FUENTE.indexOf('\n    init()', ini))
     chk('init: se suscribe a los cambios de la barra', /alCambiarUnidad\(alCambiarUnidadCob\)/.test(cuerpo))
@@ -362,7 +362,12 @@ async function pruebas() {
       .replace(/\n\n {6}<!-- E-cheques y transferencias \(30\/09\/2026\)[\s\S]*?<button type="button" class="cob-btn cob-btn--chico" id="cob-btn-transferencia">\+ Agregar transferencia<\/button>\n {8}<\/div>\n {6}<\/div>/, '')
     const form = (t) => { const i = t.indexOf('<div id="cob-vista-form" hidden>'); return i === -1 ? '' : sinFormas(t.slice(i, t.indexOf('<!-- ══ BARRA FIJA', i))) }
     chk(`baseline ${BASELINE}: se pudo leer (si no, esta verificación no mide nada)`, baseline.length > 100000 && form(baseline).length > 1000)
-    chk(`el formulario de carga es IDÉNTICO al de ${BASELINE} (no pide unidad)`, form(baseline) === form(FUENTE) && form(FUENTE).length > 1000)
+    // (02/10/2026) El formulario se rediseñó A PROPÓSITO ("¿Cómo pagó?" con
+    // cuatro botones): ya no es idéntico al del baseline. Lo que esta suite
+    // protege es que no le pida la unidad al chofer: sin ningún control con
+    // "unidad" en su id y sin la palabra (abajo). El rediseño lo prueba
+    // test-cobranzas-cuatro-botones.js.
+    chk('el formulario de carga no tiene ningún control de unidad', form(FUENTE).length > 1000 && !/id="[^"]*unidad[^"]*"/i.test(form(FUENTE)))
     chk('el formulario de carga no nombra ninguna unidad', !/unidad/i.test(form(FUENTE)))
   }
 

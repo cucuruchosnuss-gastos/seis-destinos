@@ -162,6 +162,66 @@
 
     .cob-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; margin-top: 0.75rem; }
 
+    /* ¿CÓMO PAGÓ? (02/10/2026): cuatro botones grandes (dos por fila en el
+       celular, cuatro en la compu). El naranja marca la sección abierta (es lo
+       que se toca), nunca validez; la etiqueta de color de cada forma es la de
+       main.css (.forma-pago). */
+    .cob-formas-botones {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    @media (min-width: 600px) {
+      .cob-formas-botones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    .cob-forma-btn {
+      min-height: 64px;
+      padding: 0.625rem 0.5rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-forma-btn .forma-pago { font-size: 0.9375rem; padding: 0.25rem 0.625rem; }
+    .cob-forma-btn[aria-pressed="true"] {
+      border-color: var(--naranja);
+      background: var(--naranja-suave);
+      box-shadow: 0 0 0 2px var(--naranja-suave);
+    }
+    .cob-forma-cabecera {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+    }
+    .cob-forma-cabecera .cob-seccion__titulo { margin-bottom: 0; }
+    .cob-comprobante-pdf {
+      width: 100%;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: var(--color-superficie);
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: var(--color-texto-2, var(--color-texto));
+      cursor: pointer;
+    }
+
     /* ── Barra fija de abajo ─────────────────────────────────────────────── */
 
     .cob-barra-fija {
@@ -1328,10 +1388,12 @@
         <!-- Quien controla las cobranzas (cobranzas:procesar) la carga YA
              ASENTADA (01/10/2026): primero la empresa, después un cliente de
              la lista de esa empresa. La pinta pintarAsentar(); el hidden lo
-             saca el JS. El chofer sigue con el cliente escrito a mano. -->
+             saca el JS. El chofer sigue con el cliente escrito a mano.
+             La empresa NO viene marcada aunque la barra de arriba tenga una
+             (02/10/2026): se elige siempre, y al tocarla la barra pasa a esa. -->
         <div id="cob-asentar" hidden>
           <div class="cob-campo">
-            <div class="cob-campo__rotulo" id="cob-rotulo-empresa">Empresa de la cobranza</div>
+            <div class="cob-campo__rotulo" id="cob-rotulo-empresa">¿De qué empresa es la cobranza?</div>
             <div class="cob-empresas" id="cob-empresas" role="group" aria-labelledby="cob-rotulo-empresa"></div>
           </div>
           <div class="cob-campo" id="cob-campo-clientes" hidden>
@@ -1355,25 +1417,64 @@
         </div>
       </div>
 
-      <div class="cob-seccion">
-        <div class="cob-seccion__titulo">Cheques</div>
+      <!-- ¿CÓMO PAGÓ? (02/10/2026): cuatro botones grandes. Tocar uno abre su
+           sección; se pueden abrir varias, y una abierta y VACÍA se puede
+           cerrar. El chofer ve solo Efectivo y Cheque (los otros dos los
+           esconde pintarFormasPago() desde JS). Al editar, las secciones con
+           datos vienen abiertas. -->
+      <div class="cob-seccion" id="cob-seccion-como-pago">
+        <div class="cob-seccion__titulo" id="cob-rotulo-como-pago">¿Cómo pagó?</div>
+        <div class="cob-formas-botones" id="cob-formas-botones" role="group" aria-labelledby="cob-rotulo-como-pago">
+          <button type="button" class="cob-forma-btn" data-abrir-forma="efectivo" aria-pressed="false" aria-controls="cob-seccion-efectivo"><span class="forma-pago forma-pago--efectivo">Efectivo</span></button>
+          <button type="button" class="cob-forma-btn" data-abrir-forma="cheque" aria-pressed="false" aria-controls="cob-seccion-cheques"><span class="forma-pago forma-pago--cheque">Cheque</span></button>
+          <button type="button" class="cob-forma-btn" data-abrir-forma="echeque" aria-pressed="false" aria-controls="cob-seccion-echecks" hidden><span class="forma-pago forma-pago--echeck">E-cheque</span></button>
+          <button type="button" class="cob-forma-btn" data-abrir-forma="transferencia" aria-pressed="false" aria-controls="cob-seccion-transferencias" hidden><span class="forma-pago forma-pago--transferencia">Transferencia</span></button>
+        </div>
+        <div class="cob-campo__ayuda" id="cob-formas-ayuda">Tocá cómo pagó. Si pagó de varias formas, abrí todas las que hagan falta.</div>
+      </div>
+
+      <div class="cob-seccion" id="cob-seccion-efectivo" hidden>
+        <div class="cob-forma-cabecera">
+          <div class="cob-seccion__titulo">Efectivo</div>
+          <button type="button" class="cob-btn cob-btn--chico" data-cerrar-forma="efectivo" hidden>Cerrar</button>
+        </div>
+        <div class="cob-campo">
+          <label for="cob-efectivo">Importe en efectivo</label>
+          <!-- type="text" + inputmode: type="number" DESCARTA la coma del
+               teclado es-AR y "8,5" se guardaría como 85. -->
+          <input type="text" inputmode="decimal" id="cob-efectivo" autocomplete="off" placeholder="0">
+          <div class="cob-campo__error" id="cob-error-efectivo" hidden></div>
+        </div>
+      </div>
+
+      <div class="cob-seccion" id="cob-seccion-cheques" hidden>
+        <div class="cob-forma-cabecera">
+          <div class="cob-seccion__titulo">Cheques</div>
+          <button type="button" class="cob-btn cob-btn--chico" data-cerrar-forma="cheque" hidden>Cerrar</button>
+        </div>
 
         <div class="cob-acciones" style="margin-top:0">
           <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-camara">&#128247; Sacar foto</button>
-          <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-galeria">&#128194; Elegir de la galería</button>
+          <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-galeria">&#128194; Galería</button>
+          <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-archivo-cheque">&#128206; Archivo</button>
         </div>
-        <!-- Dos inputs: `capture` fuerza la cámara, y el otro abre la galería.
-             Con uno solo no se puede ofrecer las dos cosas. -->
+        <!-- Tres inputs: `capture` fuerza la cámara, el de la galería abre las
+             fotos, y el de archivo deja elegir de las carpetas (solo imágenes:
+             un cheque va al lector de cheques, que lee fotos). -->
         <input type="file" id="cob-file-camara" accept="image/*" capture="environment" hidden>
         <input type="file" id="cob-file-galeria" accept="image/*" multiple hidden>
+        <input type="file" id="cob-file-archivo-cheque" accept="image/jpeg,image/png,image/webp" multiple hidden>
 
         <div class="cob-campo__ayuda">Una foto puede tener varios cheques. Se leen solos y después los revisás.</div>
 
         <div id="cob-fotos-estado"></div>
         <div id="cob-lista-cheques"></div>
 
-        <!-- Sin ninguna foto el botón queda deshabilitado con el motivo a la
-             vista. El disabled y el aviso los pone pintarBotonChequeMano()
+        <!-- El chofer agrega un cheque que el lector no leyó, vinculado a una
+             foto (sin foto el botón queda deshabilitado con el motivo a la
+             vista). Quien controla (cobranzas:procesar) lo ve como «Cargar a
+             mano» y puede cargarlo sin foto: la base lo acepta solo a él. El
+             texto, el disabled y el aviso los pone pintarBotonChequeMano()
              DESDE JS: si el script fallara, el HTML no deja un botón muerto. -->
         <div class="cob-acciones">
           <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" id="cob-btn-cheque-mano" aria-describedby="cob-ayuda-cheque-mano">+ Agregar un cheque que no se leyó</button>
@@ -1381,31 +1482,58 @@
         <div class="cob-campo__ayuda" id="cob-ayuda-cheque-mano" hidden>Primero sacá la foto</div>
       </div>
 
-      <!-- E-cheques y transferencias (30/09/2026): las carga Administración
-           (cobranzas:procesar). El chofer no ve esta sección, salvo que edite
-           una cobranza que ya las tenga: ahí se ven y no se tocan. La pinta
-           pintarFormasNuevas(); el hidden lo saca el JS. -->
-      <div class="cob-seccion" id="cob-seccion-formas" hidden>
-        <div class="cob-seccion__titulo">E-cheques y transferencias</div>
+      <!-- E-cheques y transferencias: las carga Administración
+           (cobranzas:procesar). El chofer no las ve, salvo que edite una
+           cobranza que ya las tenga: ahí se ven y no se tocan. Cada una con
+           foto, galería, archivo (imagen o PDF) y «Cargar a mano»; lo que lee
+           el lector nuevo (ocr-cobranza-comprobantes) se PROPONE y la persona
+           confirma o corrige. Los pinta pintarFormasNuevas(). -->
+      <div id="cob-seccion-formas" hidden>
         <div class="cob-aviso" id="cob-formas-aviso" hidden>Los cargó Administración: se ven, pero no se pueden cambiar desde acá.</div>
-        <div id="cob-lista-echecks"></div>
-        <div id="cob-lista-transferencias"></div>
-        <div class="cob-acciones" id="cob-formas-acciones" hidden>
-          <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-echeck">+ Agregar e-cheque</button>
-          <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-transferencia">+ Agregar transferencia</button>
+
+        <div class="cob-seccion" id="cob-seccion-echecks" hidden>
+          <div class="cob-forma-cabecera">
+            <div class="cob-seccion__titulo">E-cheques</div>
+            <button type="button" class="cob-btn cob-btn--chico" data-cerrar-forma="echeque" hidden>Cerrar</button>
+          </div>
+          <div class="cob-acciones" data-acciones-comprobante="echeque" style="margin-top:0">
+            <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="echeque" data-origen="camara">&#128247; Sacar foto</button>
+            <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="echeque" data-origen="galeria">&#128194; Galería</button>
+            <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="echeque" data-origen="archivo">&#128206; Archivo</button>
+            <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-echeck">&#9998; Cargar a mano</button>
+          </div>
+          <div class="cob-campo__ayuda" data-ayuda-comprobante="echeque">La captura del banco o el PDF del e-cheque: se lee solo y después lo revisás.</div>
+          <div id="cob-comprobantes-echeque"></div>
+          <div id="cob-lista-echecks"></div>
         </div>
+
+        <div class="cob-seccion" id="cob-seccion-transferencias" hidden>
+          <div class="cob-forma-cabecera">
+            <div class="cob-seccion__titulo">Transferencias</div>
+            <button type="button" class="cob-btn cob-btn--chico" data-cerrar-forma="transferencia" hidden>Cerrar</button>
+          </div>
+          <div class="cob-acciones" data-acciones-comprobante="transferencia" style="margin-top:0">
+            <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="transferencia" data-origen="camara">&#128247; Sacar foto</button>
+            <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="transferencia" data-origen="galeria">&#128194; Galería</button>
+            <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="transferencia" data-origen="archivo">&#128206; Archivo</button>
+            <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-transferencia">&#9998; Cargar a mano</button>
+          </div>
+          <div class="cob-campo__ayuda" data-ayuda-comprobante="transferencia">La captura o el PDF del comprobante: se lee solo y después lo revisás.</div>
+          <div id="cob-comprobantes-transferencia"></div>
+          <div id="cob-lista-transferencias"></div>
+        </div>
+
+        <!-- Los archivos de e-cheques y transferencias: imagen o PDF. Uno solo
+             por tipo de origen; el tipo de comprobante lo guarda
+             estado.comprobanteDestino al tocar el botón. -->
+        <input type="file" id="cob-file-comprobante-camara" accept="image/*" capture="environment" hidden>
+        <input type="file" id="cob-file-comprobante-galeria" accept="image/*" multiple hidden>
+        <input type="file" id="cob-file-comprobante-archivo" accept="image/jpeg,image/png,image/webp,application/pdf" multiple hidden>
+        <datalist id="cob-bancos-origen"></datalist>
       </div>
 
       <div class="cob-seccion">
-        <div class="cob-seccion__titulo">Efectivo y datos del pago</div>
-        <div class="cob-campo">
-          <label for="cob-efectivo">Efectivo (opcional)</label>
-          <!-- type="text" + inputmode: type="number" DESCARTA la coma del
-               teclado es-AR y "8,5" se guardaría como 85. -->
-          <input type="text" inputmode="decimal" id="cob-efectivo" autocomplete="off" placeholder="0">
-          <div class="cob-campo__ayuda">Dejalo vacío si no hubo efectivo.</div>
-          <div class="cob-campo__error" id="cob-error-efectivo" hidden></div>
-        </div>
+        <div class="cob-seccion__titulo">Datos del pago</div>
         <div class="cob-campo">
           <label for="cob-referencia">Remito o factura que paga (opcional)</label>
           <input type="text" id="cob-referencia" maxlength="100" autocomplete="off"
@@ -1510,7 +1638,7 @@
     // La barra de unidad de negocio de arriba (js/barra-unidad.js, 28/09/2026):
     // la elección de la fábrica y el aviso cuando cambia. Es el mismo módulo que
     // carga el <script> del <head>: el navegador lo ejecuta una sola vez.
-    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad, ordenarUnidades, logoUnidad, nombreCorto, MARCA_FABRICA, inicialesDe } from '../js/barra-unidad.js'
+    import { unidadesDeLaBarra, alCambiarUnidad, pasarBarraAUnidad, pasaFiltroUnidad, ordenarUnidades, logoUnidad, nombreCorto, MARCA_FABRICA, inicialesDe } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1734,7 +1862,8 @@
         }
       }
       if (!(Number(ch.importe) > 0)) e.push('El importe tiene que ser mayor a cero.')
-      if (!ch.foto_id) e.push('El cheque tiene que estar vinculado a una foto.')
+      // Sin foto solo lo acepta la base a quien controla (cobranzas:procesar).
+      if (!ch.foto_id && !puedeProcesar()) e.push('El cheque tiene que estar vinculado a una foto.')
       return e
     }
 
@@ -1842,24 +1971,62 @@
       }
     }
 
+    // Un e-cheque en el formulario. Los identificadores (banco, número,
+    // sucursal, código postal, cuenta, CUIT) van como TEXTO: llevan ceros a la
+    // izquierda. sucursal, código postal y cuenta no tienen campo: llegan del
+    // CMC-7 que lee el lector nuevo y viajan si tienen su largo. foto_id es el
+    // comprobante (captura o PDF) de ESTA cobranza; ocr_propuesto, lo que
+    // propuso el lector (null si se cargó a mano).
     function echequeVacio() {
       return {
         id: crypto.randomUUID(),
         banco_codigo: '', numero: '',
+        sucursal_codigo: '', codigo_postal: '', cuenta: '',
         tipo: 'diferido',
         fecha_emision: hoyArgentina(), fecha_pago: '',
         importe: '',
+        emisor: '', cuit_emisor: '',
+        foto_id: null, ocr_propuesto: null,
       }
     }
 
     function echequeDesdeBase(ch) {
+      const t = Array.isArray(ch.titulares) ? (ch.titulares[0] ?? {}) : {}
+      // Los '000' / '0000' / '00000000000' que pone la base cuando no se
+      // mandaron se leen como "no hay dato".
+      const dato = (v, relleno) => (v && v !== relleno ? v : '')
       return {
         id: ch.id,
         banco_codigo: ch.banco_codigo ?? '', numero: ch.numero ?? '',
+        sucursal_codigo: dato(ch.sucursal_codigo, '000'), codigo_postal: dato(ch.codigo_postal, '0000'), cuenta: dato(ch.cuenta, '00000000000'),
         tipo: ch.tipo ?? 'diferido',
         fecha_emision: ch.fecha_emision ?? '', fecha_pago: ch.fecha_pago ?? '',
         importe: ch.importe ?? '',
+        emisor: t.nombre ?? '', cuit_emisor: t.cuit ?? '',
+        foto_id: ch.foto_id ?? null, ocr_propuesto: ch.ocr_propuesto ?? null,
+        origen_datos_previo: ch.origen_datos ?? null,
       }
+    }
+
+    // Un e-cheque PROPUESTO por el lector nuevo (ocr-cobranza-comprobantes):
+    // entra con los datos cargados y la persona confirma o corrige. Con fecha
+    // de pago es diferido; sin ella, a la vista.
+    function echequeDesdeOcr(pr, fotoId) {
+      const e = echequeVacio()
+      e.banco_codigo = pr?.banco_codigo ?? ''
+      e.numero = pr?.numero ?? ''
+      e.sucursal_codigo = pr?.sucursal_codigo ?? ''
+      e.codigo_postal = pr?.codigo_postal ?? ''
+      e.cuenta = pr?.cuenta ?? ''
+      e.fecha_emision = pr?.fecha_emision ?? ''
+      e.fecha_pago = pr?.fecha_pago ?? ''
+      e.tipo = e.fecha_pago ? 'diferido' : 'comun'
+      e.importe = typeof pr?.importe === 'number' && Number.isFinite(pr.importe) ? pr.importe : ''
+      e.emisor = pr?.emisor ?? ''
+      e.cuit_emisor = pr?.cuit_emisor ?? ''
+      e.foto_id = fotoId ?? null
+      e.ocr_propuesto = pr ?? null
+      return e
     }
 
     // Lo que la base exige a un e-cheque (CHECK de la tabla), dicho ANTES de
@@ -1881,28 +2048,78 @@
       }
       const importe = leerNumeroAr(e?.importe)
       if (!(importe > 0)) errores.push('El importe tiene que ser mayor a cero.')
+      const cuit = String(e?.cuit_emisor ?? '').replace(/\D/g, '')
+      if (cuit && cuit.length !== 11) errores.push('El CUIT del emisor tiene que tener 11 números.')
       return errores
     }
 
-    // La fila TAL CUAL viaja en p_cheques. Sin foto, sin chequera y origen
-    // 'manual' (CHECK chk_cheque_foto: foto o es_echeck o manual).
-    function echequeParaBase(e) {
+    // Un identificador de N dígitos, o null: lo que no tiene su largo no viaja.
+    function digitosONull(v, largo) {
+      const d = String(v ?? '').replace(/\D/g, '')
+      return d.length === largo ? d : null
+    }
+
+    // El dígito verificador de un CUIT se AVISA, no bloquea: viene impreso en
+    // el comprobante y el papel manda sobre nuestra validación (el mismo
+    // criterio que los titulares del cheque). Sin CUIT, nada.
+    function avisoCuit(v) {
+      const cuit = String(v ?? '').replace(/\D/g, '')
+      if (cuit.length !== 11) return ''
+      return cuitValidoCob(cuit) ? '' : 'El CUIT no cierra con su dígito verificador: revisalo contra el comprobante.'
+    }
+
+    // Lo que se compara para saber si la persona TOCÓ lo que propuso el
+    // lector: 'manual' sin propuesta, 'ocr' si quedó igual, 'ocr_corregido' si
+    // cambió algo. Sirve para medir el lector sin preguntárselo a nadie.
+    function camposEcheque(e) {
       const diferido = e.tipo === 'diferido'
       return {
-        id: e.id, foto_id: null, es_echeck: true,
-        banco_codigo: String(e.banco_codigo ?? ''), sucursal_codigo: null, codigo_postal: null, dv_ruta: null,
-        numero: String(e.numero ?? ''), dv_numero: null, cuenta: null, dv_cuenta: null,
+        banco_codigo: digitosONull(e.banco_codigo, 3), numero: digitosONull(e.numero, 8),
+        fecha_emision: esFechaIso(e.fecha_emision) ? e.fecha_emision : null,
+        fecha_pago: diferido && esFechaIso(e.fecha_pago) ? e.fecha_pago : null,
+        importe: leerNumeroAr(e.importe),
+        emisor: textoOpcional(e.emisor), cuit_emisor: digitosONull(e.cuit_emisor, 11),
+      }
+    }
+    function origenDatosEcheque(e) {
+      const pr = e?.ocr_propuesto
+      if (!pr) return 'manual'
+      const a = camposEcheque(e)
+      const igual = (pr.banco_codigo ?? null) === a.banco_codigo && (pr.numero ?? null) === a.numero &&
+        (pr.fecha_emision ?? null) === a.fecha_emision && (pr.fecha_pago ?? null) === a.fecha_pago &&
+        Number(pr.importe ?? NaN) === Number(a.importe ?? NaN) &&
+        (pr.emisor ?? null) === a.emisor && (pr.cuit_emisor ?? null) === a.cuit_emisor
+      return igual ? 'ocr' : 'ocr_corregido'
+    }
+
+    // La fila TAL CUAL viaja en p_cheques. Sin chequera (es_echeck) y con su
+    // comprobante si tiene uno (CHECK chk_cheque_foto: foto o es_echeck o
+    // manual). El emisor va en titulares, como el titular de un cheque.
+    function echequeParaBase(e) {
+      const diferido = e.tipo === 'diferido'
+      const nombre = textoOpcional(e.emisor)
+      const cuit = digitosONull(e.cuit_emisor, 11)
+      return {
+        id: e.id, foto_id: e.foto_id ?? null, es_echeck: true,
+        banco_codigo: String(e.banco_codigo ?? ''),
+        sucursal_codigo: digitosONull(e.sucursal_codigo, 3), codigo_postal: digitosONull(e.codigo_postal, 4), dv_ruta: null,
+        numero: String(e.numero ?? ''), dv_numero: null, cuenta: digitosONull(e.cuenta, 11), dv_cuenta: null,
         tipo: e.tipo,
         fecha_emision: esFechaIso(e.fecha_emision) ? e.fecha_emision : null,
         fecha_pago: diferido && esFechaIso(e.fecha_pago) ? e.fecha_pago : null,
         importe: leerNumeroAr(e.importe),
-        importe_letras: null, titulares: [], beneficiario: null,
-        origen_datos: 'manual', ocr_propuesto: null,
+        importe_letras: null,
+        titulares: nombre !== null || cuit !== null ? [{ nombre, cuit }] : [],
+        beneficiario: null,
+        origen_datos: origenDatosEcheque(e), ocr_propuesto: e.ocr_propuesto ?? null,
       }
     }
 
     function transferenciaVacia(fecha) {
-      return { id: crypto.randomUUID(), cuenta_id: '', cuenta_nombre: '', importe: '', fecha: fecha || hoyArgentina(), referencia: '' }
+      return {
+        id: crypto.randomUUID(), cuenta_id: '', cuenta_nombre: '', importe: '', fecha: fecha || hoyArgentina(), referencia: '',
+        banco_origen: '', ordenante: '', cuit_ordenante: '', foto_id: null, ocr_propuesto: null,
+      }
     }
 
     // `cuentas`: Map id → { nombre } (las cuentas de banco que se pudieron
@@ -1913,7 +2130,25 @@
         id: t.id, cuenta_id: t.cuenta_id ?? '',
         cuenta_nombre: cuentas?.get?.(t.cuenta_id)?.nombre ?? '',
         importe: t.importe ?? '', fecha: t.fecha ?? '', referencia: t.referencia ?? '',
+        banco_origen: t.banco_origen ?? '', ordenante: t.ordenante ?? '', cuit_ordenante: t.cuit_ordenante ?? '',
+        foto_id: t.foto_id ?? null, ocr_propuesto: t.ocr_propuesto ?? null,
+        origen_datos_previo: t.origen_datos ?? null,
       }
+    }
+
+    // Una transferencia PROPUESTA por el lector nuevo. La cuenta propia donde
+    // entró NO la lee: se elige siempre.
+    function transferenciaDesdeOcr(pr, fotoId, fechaCobranza) {
+      const t = transferenciaVacia(fechaCobranza)
+      t.importe = typeof pr?.importe === 'number' && Number.isFinite(pr.importe) ? pr.importe : ''
+      if (pr?.fecha) t.fecha = pr.fecha
+      t.banco_origen = pr?.banco_origen ?? ''
+      t.ordenante = pr?.ordenante ?? ''
+      t.cuit_ordenante = pr?.cuit_ordenante ?? ''
+      t.referencia = pr?.referencia ?? ''
+      t.foto_id = fotoId ?? null
+      t.ocr_propuesto = pr ?? null
+      return t
     }
 
     function erroresDeTransferencia(t) {
@@ -1923,16 +2158,47 @@
       if (!(importe > 0)) errores.push('El importe tiene que ser mayor a cero.')
       if (t?.fecha && !esFechaIso(t.fecha)) errores.push('La fecha no se entiende.')
       else if (esFechaIso(t?.fecha) && diasEntre(hoyArgentina(), t.fecha) > 0) errores.push('La fecha no puede ser posterior a hoy.')
-      if (String(t?.referencia ?? '').trim().length > 100) errores.push('La referencia puede tener hasta 100 letras.')
+      if (String(t?.referencia ?? '').trim().length > 100) errores.push('El número de operación puede tener hasta 100 letras.')
+      const cuit = String(t?.cuit_ordenante ?? '').replace(/\D/g, '')
+      if (cuit && cuit.length !== 11) errores.push('El CUIT de quien transfirió tiene que tener 11 números.')
       return errores
     }
 
-    function transferenciaParaBase(t) {
+    function camposTransferencia(t) {
       return {
-        cuenta_id: t.cuenta_id,
         importe: leerNumeroAr(t.importe),
         fecha: esFechaIso(t.fecha) ? t.fecha : null,
+        banco_origen: textoOpcional(t.banco_origen),
+        ordenante: textoOpcional(t.ordenante),
+        cuit_ordenante: digitosONull(t.cuit_ordenante, 11),
         referencia: textoOpcional(t.referencia),
+      }
+    }
+    function origenDatosTransferencia(t) {
+      const pr = t?.ocr_propuesto
+      if (!pr) return 'manual'
+      const a = camposTransferencia(t)
+      const igual = Number(pr.importe ?? NaN) === Number(a.importe ?? NaN) &&
+        (pr.fecha ?? null) === a.fecha && (pr.banco_origen ?? null) === a.banco_origen &&
+        (pr.ordenante ?? null) === a.ordenante && (pr.cuit_ordenante ?? null) === a.cuit_ordenante &&
+        (pr.referencia ?? null) === a.referencia
+      return igual ? 'ocr' : 'ocr_corregido'
+    }
+
+    function transferenciaParaBase(t) {
+      const c = camposTransferencia(t)
+      return {
+        cuenta_id: t.cuenta_id,
+        importe: c.importe,
+        fecha: c.fecha,
+        // El número de operación va en referencia (texto, tal cual).
+        referencia: c.referencia,
+        banco_origen: c.banco_origen,
+        ordenante: c.ordenante,
+        cuit_ordenante: c.cuit_ordenante,
+        foto_id: t.foto_id ?? null,
+        origen_datos: origenDatosTransferencia(t),
+        ocr_propuesto: t.ocr_propuesto ?? null,
       }
     }
 
@@ -2030,6 +2296,8 @@
     // Una transferencia en el detalle. `cuentas`: Map id → { nombre }.
     function htmlTransferenciaDetalle(t, cuentas) {
       const cuenta = cuentas?.get?.(t.cuenta_id)?.nombre || 'Cuenta de banco'
+      // Desde dónde vino (02/10/2026): el banco de origen y quién transfirió.
+      const desde = [t.banco_origen, t.ordenante].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
       return `
             <div class="cob-cheque cob-transferencia">
               <div class="cob-cheque__top">
@@ -2037,24 +2305,313 @@
                 ${htmlEtiquetaForma('transferencia')}
               </div>
               <div class="cob-cheque__pie">Entró en ${escCob(cuenta)}${esFechaIso(t.fecha) ? ` · ${escCob(formatearFechaCob(t.fecha))}` : ''}</div>
+              ${desde ? `<div class="cob-cheque__sub">Desde ${escCob(desde)}</div>` : ''}
               ${t.referencia ? `<div class="cob-cheque__sub">Referencia: ${escCob(t.referencia)}</div>` : ''}
+              ${t.foto_id ? `<div class="cob-acciones"><button type="button" class="cob-btn cob-btn--chico" data-ver-comprobante="${escCob(t.foto_id)}">Ver el comprobante</button></div>` : ''}
             </div>`
+    }
+
+    // ── ¿CÓMO PAGÓ? (02/10/2026) ──────────────────────────────────────────
+    //
+    // Cuatro botones grandes: Efectivo, Cheque, E-cheque y Transferencia.
+    // Tocar uno abre su sección; se pueden abrir varias, y una abierta y
+    // VACÍA se puede cerrar (una con datos no: cerrarla escondería lo que se va
+    // a guardar). El chofer ve solo Efectivo y Cheque; E-cheque y Transferencia
+    // los carga quien tiene cobranzas:procesar. Al editar, las secciones con
+    // datos vienen abiertas: lo decide formaTieneDatos(), no una marca.
+    // Lo que la persona abrió a mano vive en f.abiertas (en el borrador: se
+    // conserva sin señal y al recargar).
+    const FORMAS_PAGO = ['efectivo', 'cheque', 'echeque', 'transferencia']
+    const SECCION_FORMA = {
+      efectivo: 'cob-seccion-efectivo', cheque: 'cob-seccion-cheques',
+      echeque: 'cob-seccion-echecks', transferencia: 'cob-seccion-transferencias',
+    }
+    const TEXTO_OTRO_COMPROBANTE = {
+      echeque: '+ Otro e-cheque: sacale foto a la captura, elegila de la galería o de un archivo (imagen o PDF), o cargalo a mano.',
+      transferencia: '+ Otra transferencia: sacale foto al comprobante, elegilo de la galería o de un archivo (imagen o PDF), o cargala a mano.',
+    }
+    const TEXTO_PRIMER_COMPROBANTE = {
+      echeque: 'La captura del banco o el PDF del e-cheque: se lee solo y después lo revisás.',
+      transferencia: 'La captura o el PDF del comprobante: se lee solo y después lo revisás.',
+    }
+
+    // El tipo de una foto del formulario. Un borrador viejo no lo trae: todas
+    // eran fotos de cheques.
+    function tipoFoto(foto) {
+      return foto?.tipo === 'echeque' || foto?.tipo === 'transferencia' ? foto.tipo : 'cheque'
+    }
+    function fotosDeTipo(f, tipo) {
+      return (f?.fotos ?? []).filter(x => tipoFoto(x) === tipo)
+    }
+
+    function formasOfrecidas() {
+      return puedeProcesar() ? FORMAS_PAGO.slice() : ['efectivo', 'cheque']
+    }
+
+    function formaTieneDatos(f, forma) {
+      if (!f) return false
+      if (forma === 'efectivo') return String(f.efectivo ?? '').trim() !== ''
+      if (forma === 'cheque') return (f.cheques?.length ?? 0) > 0 || fotosDeTipo(f, 'cheque').length > 0
+      if (forma === 'echeque') return (f.echecks?.length ?? 0) > 0 || fotosDeTipo(f, 'echeque').length > 0
+      if (forma === 'transferencia') return (f.transferencias?.length ?? 0) > 0 || fotosDeTipo(f, 'transferencia').length > 0
+      return false
+    }
+
+    function formaAbierta(f, forma) {
+      return formaTieneDatos(f, forma) || f?.abiertas?.[forma] === true
+    }
+
+    // La sección se ve si está abierta y la persona la puede usar, o si ya
+    // tiene datos (el chofer ve, sin tocarlos, los e-cheques y transferencias
+    // que cargó Administración).
+    function formaVisible(f, forma) {
+      return !!f && formaAbierta(f, forma) && (formasOfrecidas().includes(forma) || formaTieneDatos(f, forma))
+    }
+
+    function abrirForma(forma) {
+      const f = estado.form
+      if (!f || !formasOfrecidas().includes(forma)) return
+      if (formaAbierta(f, forma)) {
+        // Tocar el botón de una abierta y vacía la cierra; con datos, no.
+        if (!formaTieneDatos(f, forma)) cerrarForma(forma)
+        return
+      }
+      if (!f.abiertas) f.abiertas = {}
+      f.abiertas[forma] = true
+      guardarBorrador()
+      pintarFormasPago()
+      pintarTotalYGuardado()
+      if (forma === 'efectivo') document.getElementById('cob-efectivo')?.focus?.()
+    }
+
+    function cerrarForma(forma) {
+      const f = estado.form
+      if (!f || formaTieneDatos(f, forma)) return
+      if (!f.abiertas) f.abiertas = {}
+      f.abiertas[forma] = false
+      guardarBorrador()
+      pintarFormasPago()
+      pintarTotalYGuardado()
+    }
+
+    function pintarFormasPago() {
+      const f = estado.form
+      if (!f) return
+      const ofrecidas = formasOfrecidas()
+      const admin = puedeProcesar()
+      document.querySelectorAll('[data-abrir-forma]').forEach(b => {
+        const forma = b.dataset.abrirForma
+        b.hidden = !ofrecidas.includes(forma)
+        b.setAttribute('aria-pressed', formaAbierta(f, forma) ? 'true' : 'false')
+      })
+      for (const forma of FORMAS_PAGO) {
+        document.getElementById(SECCION_FORMA[forma]).hidden = !formaVisible(f, forma)
+      }
+      // "Cerrar" solo en una sección vacía que la persona puede usar.
+      document.querySelectorAll('[data-cerrar-forma]').forEach(b => {
+        const forma = b.dataset.cerrarForma
+        b.hidden = formaTieneDatos(f, forma) || !ofrecidas.includes(forma)
+      })
+      const contenedor = document.getElementById('cob-seccion-formas')
+      contenedor.hidden = !formaVisible(f, 'echeque') && !formaVisible(f, 'transferencia')
+      document.getElementById('cob-formas-aviso').hidden = admin || contenedor.hidden
+      // Subir y cargar a mano: solo quien controla (la base rechaza a los demás).
+      document.querySelectorAll('[data-acciones-comprobante]').forEach(el => { el.hidden = !admin })
+      document.querySelectorAll('[data-ayuda-comprobante]').forEach(el => {
+        const tipo = el.dataset.ayudaComprobante
+        el.hidden = !admin
+        el.textContent = formaTieneDatos(f, tipo) ? TEXTO_OTRO_COMPROBANTE[tipo] : TEXTO_PRIMER_COMPROBANTE[tipo]
+      })
+    }
+
+    function alTocarFormasPago(ev) {
+      const b = ev?.target?.closest?.('[data-abrir-forma]')
+      if (b) abrirForma(b.dataset.abrirForma)
+    }
+
+    function alTocarCerrarForma(ev) {
+      const b = ev?.target?.closest?.('[data-cerrar-forma]')
+      if (b) cerrarForma(b.dataset.cerrarForma)
+    }
+
+    // ── Comprobantes de e-cheques y transferencias ────────────────────────
+    // Foto, galería o archivo (imagen o PDF): se sube al bucket con su tipo y
+    // su mime y lo lee el lector nuevo (ocr-cobranza-comprobantes). Lo que lee
+    // se PROPONE; si el lector falla o no está publicado, se avisa y queda una
+    // tarjeta vacía con el comprobante adjunto, para cargarla a mano.
+    const TIPOS_COMPROBANTE = ['echeque', 'transferencia']
+
+    function elegirArchivoComprobante(tipo, origen) {
+      if (!puedeProcesar() || !TIPOS_COMPROBANTE.includes(tipo)) return
+      if (!['camara', 'galeria', 'archivo'].includes(origen)) return
+      estado.comprobanteDestino = tipo
+      document.getElementById('cob-file-comprobante-' + origen).click()
+    }
+
+    // Lo que se propone desde el comprobante leído, en la lista de su tipo.
+    // Un comprobante sin nada leído deja UNA tarjeta vacía con él adjunto.
+    function agregarPropuestos(f, foto, propuestos) {
+      const tipo = tipoFoto(foto)
+      const lista = Array.isArray(propuestos) ? propuestos : []
+      if (tipo === 'echeque') {
+        if (!f.echecks) f.echecks = []
+        if (lista.length) lista.forEach(pr => f.echecks.push(echequeDesdeOcr(pr, foto.id)))
+        else f.echecks.push(Object.assign(echequeVacio(), { foto_id: foto.id }))
+      } else if (tipo === 'transferencia') {
+        if (!f.transferencias) f.transferencias = []
+        if (lista.length) lista.forEach(pr => f.transferencias.push(transferenciaDesdeOcr(pr, foto.id, f.fecha)))
+        else f.transferencias.push(Object.assign(transferenciaVacia(f.fecha), { foto_id: foto.id }))
+      }
+    }
+
+    // La lectura de UN comprobante (la subida ya la hizo procesarFoto). Un
+    // corte de red deja la foto esperando (se reintenta); cualquier otra falla
+    // del lector la da por leída SIN datos: se avisa y se carga a mano, con el
+    // comprobante igual adjunto. Devuelve true si agregó algo a la lista.
+    async function leerComprobante(f, foto) {
+      try {
+        const { data, error } = await supabase.functions.invoke('ocr-cobranza-comprobantes', {
+          body: { storage_path: foto.storage_path, tipo: tipoFoto(foto) },
+        })
+        if (error) throw error
+        foto.leida = true
+        foto.ocr_modelo = data?.modelo ?? null
+        foto.ocr_crudo = data?.crudo ?? null
+        const propuestos = data?.ok && Array.isArray(data.propuestos) ? data.propuestos : []
+        foto.error = propuestos.length ? null
+          : (data?.mensaje || 'No se pudo leer el comprobante.') + ' Cargalo a mano: el comprobante queda adjunto.'
+        agregarPropuestos(f, foto, propuestos)
+        await guardarBorrador()
+        return true
+      } catch (err) {
+        console.error('Falló la lectura del comprobante:', err)
+        if (esErrorDeRed(err) || esErrorDeRed(err?.context)) {
+          foto.error = null
+          marcarFotoEnMemoria(foto, { errorRed: true })
+          return false
+        }
+        const detalle = await mensajeDelLector(err)
+        foto.leida = true
+        foto.error = `El lector no pudo leer el comprobante (${detalle}). Cargalo a mano: el comprobante queda adjunto.`
+        agregarPropuestos(f, foto, [])
+        await guardarBorrador()
+        return true
+      }
+    }
+
+    function htmlAvisoComprobante(foto, i) {
+      const n = `Comprobante ${i + 1}`
+      let texto = ''
+      if (foto.enCurso && foto.fase === 'subiendo') texto = 'subiendo…'
+      else if (foto.enCurso && foto.fase === 'leyendo') texto = 'leyendo… (tarda unos segundos)'
+      else if (foto.error) texto = foto.error
+      else if (!foto.subida) texto = 'sin señal: se sube solo cuando vuelva.'
+      else if (!foto.leida) texto = foto.errorRed ? 'sin señal: se lee solo cuando vuelva.' : 'esperando para leerse.'
+      return texto ? `<div class="cob-aviso">${escCob(n)}: ${escCob(texto)}</div>` : ''
+    }
+
+    function htmlComprobantes(f, tipo) {
+      const fotos = fotosDeTipo(f, tipo)
+      if (!fotos.length) return ''
+      const minis = fotos.map((foto, i) => {
+        const mini = foto.mime === 'application/pdf'
+          ? `<button type="button" class="cob-comprobante-pdf" data-ver-comprobante="${escCob(foto.id)}">PDF</button>`
+          : `<img data-comprobante-foto="${escCob(foto.id)}" alt="Comprobante ${i + 1}">`
+        return `
+            <div class="cob-foto">${mini}<div class="cob-foto__pie">Comprobante ${i + 1}</div></div>`
+      }).join('')
+      return `<div class="cob-fotos" style="margin:.75rem 0">${minis}
+          </div>${fotos.map((foto, i) => htmlAvisoComprobante(foto, i)).join('')}`
+    }
+
+    // Una imagen se abre en el visor; un PDF, en una pestaña nueva (el visor
+    // es un <img>).
+    async function abrirComprobante(fotoId) {
+      const foto = (estado.form?.fotos ?? []).find(x => x.id === fotoId)
+        ?? (estado.detalle?.fotos ?? []).find(x => x.id === fotoId)
+      if (!foto) { mostrarError('No se encontró el comprobante.'); return }
+      if (foto.mime !== 'application/pdf') { abrirVisor(foto, 'Comprobante'); return }
+      const url = await urlDeFoto(foto)
+      if (!url) { mostrarError('No se pudo abrir el comprobante. Revisá la señal.'); return }
+      window.open(url, '_blank', 'noopener')
+    }
+
+    function pintarComprobantes() {
+      const f = estado.form
+      if (!f) return
+      for (const tipo of TIPOS_COMPROBANTE) {
+        const cont = document.getElementById('cob-comprobantes-' + tipo)
+        cont.innerHTML = htmlComprobantes(f, tipo)
+        ;(cont.querySelectorAll?.('[data-comprobante-foto]') ?? []).forEach(async (img) => {
+          const foto = f.fotos.find(x => x.id === img.dataset.comprobanteFoto)
+          const url = await urlDeFoto(foto)
+          if (url) img.src = url
+          img.addEventListener('click', () => abrirVisor(foto, 'Comprobante'))
+        })
+      }
+    }
+
+    // Los comprobantes de e-cheques y transferencias que ninguna tarjeta usa
+    // (la persona quitó la tarjeta): no viajan.
+    function comprobantesSinUso(f) {
+      return (f?.fotos ?? []).filter(x => {
+        const tipo = tipoFoto(x)
+        if (tipo === 'echeque') return !(f.echecks ?? []).some(e => e.foto_id === x.id)
+        if (tipo === 'transferencia') return !(f.transferencias ?? []).some(t => t.foto_id === x.id)
+        return false
+      })
+    }
+
+    // Las fotos que viajan en p_fotos: las de cheques con algún cheque
+    // CONFIRMADO, y los comprobantes con su e-cheque o su transferencia. Una
+    // foto nueva lleva su tipo y su mime; una que ya está en la base viaja sin
+    // ellos (la base la encuentra por id y no la vuelve a insertar, y así el
+    // chofer que edita una cobranza con e-cheques no manda un tipo que la base
+    // le rechazaría).
+    function fotosParaBase(f) {
+      const usadas = (f?.fotos ?? []).filter(x => {
+        const tipo = tipoFoto(x)
+        if (tipo === 'cheque') return (f.cheques ?? []).some(c => c.confirmado && c.foto_id === x.id)
+        return !comprobantesSinUso(f).includes(x)
+      })
+      return usadas.map(x => {
+        const fila = { id: x.id, storage_path: x.storage_path, ocr_crudo: x.ocr_crudo ?? null, ocr_modelo: x.ocr_modelo ?? null }
+        if (!x.enBase) { fila.tipo = tipoFoto(x); fila.mime = x.mime || 'image/jpeg' }
+        return fila
+      })
+    }
+
+    // Bancos y billeteras argentinas para sugerir en "Banco de origen". Es
+    // texto libre: lo que no está en la lista se escribe igual.
+    const BANCOS_ORIGEN = [
+      'Banco Macro', 'Banco de la Nación Argentina', 'Banco Santander', 'Banco Galicia', 'BBVA',
+      'Banco Provincia', 'Banco Ciudad', 'Banco Credicoop', 'ICBC', 'Banco Patagonia', 'Banco Supervielle',
+      'Banco Hipotecario', 'Banco Comafi', 'HSBC', 'Banco Itaú', 'Banco de Córdoba (Bancor)', 'Nuevo Banco de Santa Fe',
+      'Banco Municipal de Rosario', 'Banco del Sol', 'Brubank', 'Banco Columbia', 'Banco Industrial (BIND)',
+      'Mercado Pago', 'Ualá', 'Naranja X', 'Personal Pay', 'Cuenta DNI', 'MODO', 'Prex', 'Lemon',
+    ]
+    function htmlBancosOrigen() {
+      return BANCOS_ORIGEN.map(b => `<option value="${escCob(b)}"></option>`).join('')
     }
 
     // ── E-cheques y transferencias en el FORMULARIO ───────────────────────
 
     // Las cuentas de banco de la Empresa que se pueden elegir para una
     // transferencia: en pesos, sin la fábrica de pruebas (ya filtradas al
-    // cargar), y de la unidad de la barra si hay una elegida. La que ya
-    // tiene la transferencia se ofrece siempre, aunque la barra la deje
-    // afuera: si no, el select la perdería.
+    // cargar). Ya asentada: SOLO las de la empresa elegida en el formulario
+    // (la base mete la transferencia en esa cuenta), y ninguna hasta elegir la
+    // empresa. Si no, las de la unidad de la barra (o todas con "Todas"). La
+    // que ya tiene la transferencia se ofrece siempre: si no, el select la
+    // perdería.
     function cuentasParaElegir(actualId) {
       const todas = estado.cuentasBancoLista ?? []
-      // Ya asentada: las cuentas de la empresa elegida en el formulario (la
-      // base mete la transferencia en esa cuenta). Si no, las de la barra.
       const f = estado.form
-      const elegida = (esFormAsentado(f) && f.unidad_id) ? f.unidad_id : estado.unidadElegida
-      const lista = elegida ? todas.filter(c => c.unidad_negocio_id === elegida) : todas.slice()
+      let lista
+      if (esFormAsentado(f)) lista = f.unidad_id ? todas.filter(c => c.unidad_negocio_id === f.unidad_id) : []
+      else {
+        const elegida = estado.unidadElegida
+        lista = elegida ? todas.filter(c => c.unidad_negocio_id === elegida) : todas.slice()
+      }
       if (actualId && !lista.some(c => c.id === actualId)) {
         const actual = todas.find(c => c.id === actualId) ?? estado.cuentasNombres?.get?.(actualId)
         if (actual) lista.unshift(actual)
@@ -2078,8 +2635,22 @@
         lista.map(c => `<option value="${escCob(c.id)}"${c.id === t.cuenta_id ? ' selected' : ''}>${escCob(nombreConUnidad(c))}</option>`).join('')
     }
 
+    // "Leído del comprobante": lo propuso el lector. Si la persona cambió algo,
+    // "y corregido". Sin propuesta, nada.
+    function textoOrigenComprobante(origen) {
+      if (origen === 'ocr') return 'Leído del comprobante: revisalo antes de guardar.'
+      if (origen === 'ocr_corregido') return 'Leído del comprobante y corregido.'
+      return ''
+    }
+
+    function htmlBotonComprobante(fotoId) {
+      return fotoId ? `<button type="button" class="cob-btn cob-btn--chico" data-ver-comprobante="${escCob(fotoId)}">Ver el comprobante</button>` : ''
+    }
+
     function htmlEcheckForm(e, i, editable) {
       const errores = e.tocado ? erroresDeEcheque(e) : []
+      const origen = textoOrigenComprobante(origenDatosEcheque(e))
+      const avisoCuitE = avisoCuit(e.cuit_emisor)
       const cabecera = `
           <div class="cob-cheque__cabecera">
             <div class="cob-cheque__resumen">
@@ -2093,11 +2664,14 @@
         <div class="cob-cheque cob-echeck" data-echeck="${escCob(e.id)}">${cabecera}
           <div class="cob-cheque__top"><span class="cob-cheque__monto">${escCob(formatearImporte(leerNumeroAr(e.importe)))}</span></div>
           ${htmlDatosCheque(echequeParaBase(e), hoyArgentina())}
+          ${e.emisor ? `<div class="cob-cheque__sub">Emisor: ${escCob(e.emisor)}</div>` : ''}
         </div>`
       }
       return `
         <div class="cob-cheque cob-echeck${errores.length ? ' cob-cheque--error' : ''}" data-echeck="${escCob(e.id)}">${cabecera}
           <div class="cob-cheque__cuerpo">
+            <div class="cob-campo__ayuda" data-echeck-origen="${escCob(e.id)}"${origen ? '' : ' hidden'}>${escCob(origen)}</div>
+            ${e.foto_id ? `<div class="cob-acciones" style="margin-top:0">${htmlBotonComprobante(e.foto_id)}</div>` : ''}
             <div class="cob-campo">
               <label>Banco (los 3 números del código)</label>
               <input type="text" inputmode="numeric" maxlength="3" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="banco_codigo" value="${escCob(e.banco_codigo)}" placeholder="007">
@@ -2105,6 +2679,15 @@
             <div class="cob-campo">
               <label>Número del e-cheque (8 números)</label>
               <input type="text" inputmode="numeric" maxlength="8" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="numero" value="${escCob(e.numero)}">
+            </div>
+            <div class="cob-campo">
+              <label>Emisor (opcional)</label>
+              <input type="text" maxlength="150" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="emisor" value="${escCob(e.emisor)}" placeholder="Quién lo emitió">
+            </div>
+            <div class="cob-campo">
+              <label>CUIT del emisor (opcional)</label>
+              <input type="text" inputmode="numeric" maxlength="13" autocomplete="off" data-echeck-id="${escCob(e.id)}" data-echeck-campo="cuit_emisor" value="${escCob(e.cuit_emisor)}" placeholder="11 números">
+              <div class="cob-aviso" data-echeck-aviso-cuit="${escCob(e.id)}"${avisoCuitE ? '' : ' hidden'}>${escCob(avisoCuitE)}</div>
             </div>
             <div class="cob-campo">
               <label>Tipo</label>
@@ -2133,6 +2716,8 @@
     function htmlTransferenciaForm(t, i, editable) {
       const errores = t.tocado ? erroresDeTransferencia(t) : []
       const cuenta = t.cuenta_nombre || estado.cuentasBanco?.get?.(t.cuenta_id)?.nombre || 'Cuenta de banco'
+      const origen = textoOrigenComprobante(origenDatosTransferencia(t))
+      const avisoCuitT = avisoCuit(t.cuit_ordenante)
       const cabecera = `
           <div class="cob-cheque__cabecera">
             <div class="cob-cheque__resumen">
@@ -2141,26 +2726,30 @@
             ${editable ? `<button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-transf="${escCob(t.id)}">Quitar</button>` : ''}
           </div>`
       if (!editable) {
+        const desde = [t.banco_origen, t.ordenante].map(textoOpcional).filter(Boolean).join(' · ')
         return `
         <div class="cob-cheque cob-transferencia" data-transf="${escCob(t.id)}">${cabecera}
           <div class="cob-cheque__top"><span class="cob-cheque__monto">${escCob(formatearImporte(leerNumeroAr(t.importe)))}</span></div>
           <div class="cob-cheque__pie">Entró en ${escCob(cuenta)}${esFechaIso(t.fecha) ? ` · ${escCob(formatearFechaCob(t.fecha))}` : ''}</div>
+          ${desde ? `<div class="cob-cheque__sub">Desde ${escCob(desde)}</div>` : ''}
           ${t.referencia ? `<div class="cob-cheque__sub">Referencia: ${escCob(t.referencia)}</div>` : ''}
         </div>`
       }
+      const f = estado.form
       const sinCuentas = estado.cuentasBancoError
         ? '<div class="cob-aviso">No se pudieron leer las cuentas de banco de la Empresa. Revisá la conexión y volvé a abrir la cobranza.</div>'
-        : (cuentasParaElegir(t.cuenta_id).length ? '' : `<div class="cob-aviso">${escCob(estado.unidadElegida
-          ? 'La Empresa no tiene cuentas de banco en pesos en ' + (nombreUnidadCob(estado.unidadElegida) || 'esta unidad') + ' (cambiá la unidad de arriba para ver las otras).'
-          : 'La Empresa no tiene cuentas de banco en pesos.')}</div>`)
+        : (esFormAsentado(f) && !f.unidad_id)
+          ? '<div class="cob-aviso">Primero elegí la empresa de la cobranza: se ofrecen solo sus cuentas de banco.</div>'
+          : (cuentasParaElegir(t.cuenta_id).length ? '' : `<div class="cob-aviso">${escCob(esFormAsentado(f)
+            ? 'La empresa elegida no tiene cuentas de banco en pesos.'
+            : estado.unidadElegida
+              ? 'La Empresa no tiene cuentas de banco en pesos en ' + (nombreUnidadCob(estado.unidadElegida) || 'esta unidad') + ' (cambiá la unidad de arriba para ver las otras).'
+              : 'La Empresa no tiene cuentas de banco en pesos.')}</div>`)
       return `
         <div class="cob-cheque cob-transferencia${errores.length ? ' cob-cheque--error' : ''}" data-transf="${escCob(t.id)}">${cabecera}
           <div class="cob-cheque__cuerpo">
-            <div class="cob-campo">
-              <label>Cuenta de banco donde entró</label>
-              <select data-transf-id="${escCob(t.id)}" data-transf-campo="cuenta_id">${htmlOpcionesCuentas(t)}</select>
-              ${sinCuentas}
-            </div>
+            <div class="cob-campo__ayuda" data-transf-origen="${escCob(t.id)}"${origen ? '' : ' hidden'}>${escCob(origen)}</div>
+            ${t.foto_id ? `<div class="cob-acciones" style="margin-top:0">${htmlBotonComprobante(t.foto_id)}</div>` : ''}
             <div class="cob-campo">
               <label>Importe</label>
               <input type="text" inputmode="decimal" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="importe" data-importe-forma placeholder="0,00">
@@ -2170,8 +2759,26 @@
               <input type="date" data-transf-id="${escCob(t.id)}" data-transf-campo="fecha" value="${escCob(t.fecha)}">
             </div>
             <div class="cob-campo">
-              <label>Referencia (opcional)</label>
-              <input type="text" maxlength="100" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="referencia" value="${escCob(t.referencia)}" placeholder="Número de operación">
+              <label>Banco de origen</label>
+              <input type="text" maxlength="80" autocomplete="off" list="cob-bancos-origen" data-transf-id="${escCob(t.id)}" data-transf-campo="banco_origen" value="${escCob(t.banco_origen)}" placeholder="Banco o billetera desde donde transfirió">
+            </div>
+            <div class="cob-campo">
+              <label>Quién transfirió (opcional)</label>
+              <input type="text" maxlength="150" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="ordenante" value="${escCob(t.ordenante)}" placeholder="Nombre o razón social">
+            </div>
+            <div class="cob-campo">
+              <label>CUIT de quien transfirió (opcional)</label>
+              <input type="text" inputmode="numeric" maxlength="13" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="cuit_ordenante" value="${escCob(t.cuit_ordenante)}" placeholder="11 números">
+              <div class="cob-aviso" data-transf-aviso-cuit="${escCob(t.id)}"${avisoCuitT ? '' : ' hidden'}>${escCob(avisoCuitT)}</div>
+            </div>
+            <div class="cob-campo">
+              <label>Número de operación</label>
+              <input type="text" maxlength="100" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="referencia" value="${escCob(t.referencia)}" placeholder="El que figura en el comprobante">
+            </div>
+            <div class="cob-campo">
+              <label>Cuenta propia donde entró</label>
+              <select data-transf-id="${escCob(t.id)}" data-transf-campo="cuenta_id">${htmlOpcionesCuentas(t)}</select>
+              ${sinCuentas}
             </div>
             <div class="cob-campo__error" data-transf-errores="${escCob(t.id)}"${errores.length ? '' : ' hidden'}>${errores.map(escCob).join('<br>')}</div>
           </div>
@@ -2185,11 +2792,11 @@
       const admin = puedeProcesar()
       const echecks = f.echecks ?? []
       const transf = f.transferencias ?? []
-      seccion.hidden = !admin && !echecks.length && !transf.length
-      document.getElementById('cob-formas-acciones').hidden = !admin
-      document.getElementById('cob-formas-aviso').hidden = admin
+      pintarFormasPago()
       document.getElementById('cob-lista-echecks').innerHTML = echecks.map((e, i) => htmlEcheckForm(e, i, admin)).join('')
       document.getElementById('cob-lista-transferencias').innerHTML = transf.map((t, i) => htmlTransferenciaForm(t, i, admin)).join('')
+      document.getElementById('cob-bancos-origen').innerHTML = admin ? htmlBancosOrigen() : ''
+      pintarComprobantes()
       // Los importes con el formato argentino y escritos con ponerNumero:
       // nunca un value="${número}" en la plantilla.
       if (admin) {
@@ -2232,11 +2839,14 @@
       return (estado.form?.transferencias ?? []).find(t => t.id === id) ?? null
     }
 
+    // "Cargar a mano" de un e-cheque o una transferencia (y "+ Otro…").
     function agregarEcheck() {
       const f = estado.form
       if (!f || !puedeProcesar()) return
       if (!f.echecks) f.echecks = []
       f.echecks.push(echequeVacio())
+      if (!f.abiertas) f.abiertas = {}
+      f.abiertas.echeque = true
       guardarBorrador()
       pintarFormasNuevas()
       pintarTotalYGuardado()
@@ -2247,6 +2857,8 @@
       if (!f || !puedeProcesar()) return
       if (!f.transferencias) f.transferencias = []
       f.transferencias.push(transferenciaVacia(f.fecha))
+      if (!f.abiertas) f.abiertas = {}
+      f.abiertas.transferencia = true
       guardarBorrador()
       pintarFormasNuevas()
       pintarTotalYGuardado()
@@ -2281,7 +2893,7 @@
       e.tocado = true
       guardarBorrador()
       if (campo === 'tipo') pintarFormasNuevas()
-      else pintarErroresForma('echeck', id, erroresDeEcheque(e))
+      else pintarErroresForma('echeck', id, erroresDeEcheque(e), avisoCuit(e.cuit_emisor), textoOrigenComprobante(origenDatosEcheque(e)))
       pintarTotalYGuardado()
     }
 
@@ -2294,16 +2906,24 @@
       }
       t.tocado = true
       guardarBorrador()
-      pintarErroresForma('transf', id, erroresDeTransferencia(t))
+      pintarErroresForma('transf', id, erroresDeTransferencia(t), avisoCuit(t.cuit_ordenante), textoOrigenComprobante(origenDatosTransferencia(t)))
       pintarTotalYGuardado()
     }
 
-    function pintarErroresForma(tipo, id, errores) {
-      const clave = tipo === 'echeck' ? 'echeckErrores' : 'transfErrores'
-      const caja = [...(document.querySelectorAll?.(`[data-${tipo}-errores]`) ?? [])].find(x => x.dataset?.[clave] === id)
-      if (!caja) return
-      caja.hidden = !errores.length
-      caja.innerHTML = errores.map(escCob).join('<br>')
+    // Repinta, sin tocar los campos (para no sacarles el foco), los errores,
+    // el aviso del CUIT y el "Leído del comprobante" de UNA tarjeta.
+    function pintarErroresForma(tipo, id, errores, avisoDelCuit = '', origen = '') {
+      const buscar = (sufijo, clave) => [...(document.querySelectorAll?.(`[data-${tipo}-${sufijo}]`) ?? [])].find(x => x.dataset?.[clave] === id)
+      const prefijo = tipo === 'echeck' ? 'echeck' : 'transf'
+      const caja = buscar('errores', prefijo + 'Errores')
+      if (caja) {
+        caja.hidden = !errores.length
+        caja.innerHTML = errores.map(escCob).join('<br>')
+      }
+      const aviso = buscar('aviso-cuit', prefijo + 'AvisoCuit')
+      if (aviso) { aviso.hidden = !avisoDelCuit; aviso.textContent = avisoDelCuit }
+      const linea = buscar('origen', prefijo + 'Origen')
+      if (linea) { linea.hidden = !origen; linea.textContent = origen }
     }
 
     // Un solo listener por sección (delegación): las tarjetas se repintan y
@@ -2316,12 +2936,14 @@
     }
 
     function alTocarEnFormas(ev) {
-      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-quitar-echeck], [data-quitar-transf]')
+      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-quitar-echeck], [data-quitar-transf], [data-ver-comprobante], [data-subir-comprobante]')
       if (!el) return
       const d = el.dataset
       if (d.echeckTipo) actualizarEcheck(d.echeckId, 'tipo', d.echeckTipo)
       else if (d.quitarEcheck) quitarEcheck(d.quitarEcheck)
       else if (d.quitarTransf) quitarTransferencia(d.quitarTransf)
+      else if (d.verComprobante) abrirComprobante(d.verComprobante)
+      else if (d.subirComprobante) elegirArchivoComprobante(d.subirComprobante, d.origen)
     }
 
     // Las cuentas de banco de la Empresa (para las transferencias): las de la
@@ -2397,14 +3019,10 @@
       return ordenarUnidades(sinUnidadesDePrueba(activas, estado.fabrica ?? FABRICA_SIN_DATOS))
     }
 
-    // La que viene marcada: la fábrica elegida en la barra, si es una de las
-    // que se ofrecen (con las unidades todavía sin leer, se le cree a la barra).
-    function empresaInicialAsentar() {
-      const e = estado.unidadElegida
-      if (!e) return null
-      const lista = empresasParaAsentar()
-      return (!lista.length || lista.some(u => u.id === e)) ? e : null
-    }
+    // La empresa NO viene marcada (02/10/2026, pedido de Facu): aunque la
+    // barra de arriba tenga una fábrica elegida, se pregunta siempre. Antes
+    // venía marcada la de la barra (empresaInicialAsentar) y era fácil
+    // asentar en la fábrica equivocada sin mirar.
 
     function unidadDelForm(f) {
       return (estado.unidades ?? []).find(u => u.id === f?.unidad_id) ?? null
@@ -2539,6 +3157,10 @@
       const f = estado.form
       if (!esFormAsentado(f)) return
       if (!empresasParaAsentar().some(u => u.id === id)) return
+      // La barra de arriba pasa a esa empresa (pedido de Facu): lo que se ve
+      // después en la app es de la fábrica de la cobranza. Si la persona tiene
+      // una sola fábrica, la barra no cambia y no pasa nada.
+      pasarBarraAUnidad(id)
       if (f.unidad_id === id) return
       f.unidad_id = id
       soltarClienteAsentar(f)
@@ -3652,26 +4274,39 @@
     async function agregarChequeAMano() {
       const f = estado.form
       if (!f) return
-      // La foto es OBLIGATORIA: un cheque sin foto no se puede verificar
-      // después contra nada, y el servidor lo rechaza igual. El botón ya
-      // queda deshabilitado sin fotos (pintarBotonChequeMano); esto es la red.
-      if (!f.fotos.length) {
+      const fotos = fotosDeTipo(f, 'cheque')
+      // Quien controla (cobranzas:procesar) carga a mano SIN foto si no hay
+      // ninguna (02/10/2026): la base se lo acepta solo a él. Con fotos, el
+      // cheque se vincula a una, igual que el del chofer: se puede controlar
+      // contra el papel.
+      if (!fotos.length && puedeProcesar()) {
+        f.cheques.push(chequeVacio(null))
+        if (!f.abiertas) f.abiertas = {}
+        f.abiertas.cheque = true
+        guardarBorrador(); pintarFormulario()
+        return
+      }
+      // Al chofer la foto le es OBLIGATORIA: un cheque sin foto no se puede
+      // verificar después contra nada, y el servidor lo rechaza ("Cheque X:
+      // falta la foto del cheque."). El botón ya queda deshabilitado sin
+      // fotos (pintarBotonChequeMano); esto es la red.
+      if (!fotos.length) {
         mostrarError('Primero sacá la foto del cheque: cada cheque tiene que estar vinculado a una foto.')
         return
       }
-      if (f.fotos.length === 1) {
-        f.cheques.push(chequeVacio(f.fotos[0].id))
+      if (fotos.length === 1) {
+        f.cheques.push(chequeVacio(fotos[0].id))
       } else {
-        const i = await elegirFotoConDialogo(f.fotos)
+        const i = await elegirFotoConDialogo(fotos)
         // Mientras el diálogo está abierto tapa la pantalla, pero la
         // respuesta es asíncrona: si igual se cambió de formulario, el cheque
         // no se agrega a uno que ya no está en pantalla.
         if (estado.form !== f) return
-        if (!Number.isInteger(i) || i < 0 || i >= f.fotos.length) {
+        if (!Number.isInteger(i) || i < 0 || i >= fotos.length) {
           mostrarError('No se agregó el cheque: hay que decir a qué foto corresponde.')
           return
         }
-        f.cheques.push(chequeVacio(f.fotos[i].id))
+        f.cheques.push(chequeVacio(fotos[i].id))
       }
       guardarBorrador(); pintarCheques(); pintarTotalYGuardado()
     }
@@ -3822,11 +4457,11 @@
         const [cab, cheques, fotos, hist, transf] = await Promise.all([
           supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
           supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
-          supabase.from('cobranza_fotos').select('id, storage_path, subida_por, ocr_modelo, created_at').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_fotos').select('id, storage_path, subida_por, ocr_modelo, created_at, tipo, mime').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_historial').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           // Las transferencias (30/09/2026). Su policy deja leerlas a quien
           // cargó la cobranza o a quien tiene cobranzas:procesar.
-          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, foto_id').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (turno !== turnoDetalle) return
         if (cab.error) throw cab.error
@@ -3969,8 +4604,10 @@
           <div class="cob-fotos">
             ${d.fotos.map((f, i) => `
               <div class="cob-foto">
-                <img data-foto-detalle="${escCob(f.id)}" alt="Foto ${i + 1} de los cheques">
-                <div class="cob-foto__pie">Foto ${i + 1}</div>
+                ${f.mime === 'application/pdf'
+                  ? `<button type="button" class="cob-comprobante-pdf" data-ver-comprobante="${escCob(f.id)}">PDF</button>`
+                  : `<img data-foto-detalle="${escCob(f.id)}" alt="Foto ${i + 1} de los cheques">`}
+                <div class="cob-foto__pie">${f.tipo === 'transferencia' ? 'Transferencia' : f.tipo === 'echeque' ? 'E-cheque' : 'Foto'} ${i + 1}</div>
               </div>`).join('')}
           </div>
         </div>` : ''
@@ -4200,6 +4837,13 @@
         img.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
       })
 
+      // Los comprobantes de transferencias (02/10/2026): una imagen va al
+      // visor, un PDF a una pestaña nueva. Solo los del detalle: los del
+      // formulario los atiende alTocarEnFormas().
+      document.getElementById('cob-detalle-cuerpo')?.querySelectorAll?.('[data-ver-comprobante]').forEach(btn => {
+        btn.addEventListener('click', () => abrirComprobante(btn.dataset.verComprobante))
+      })
+
       document.querySelectorAll('[data-ver-foto]').forEach(btn => {
         btn.addEventListener('click', () => {
           const foto = d.fotos.find(f => f.id === btn.dataset.verFoto)
@@ -4270,7 +4914,9 @@
         efectivo: '',
         comprobante_referencia: '',
         observaciones: '',
-        fotos: [],    // { id, storage_path, blob, subida, leida, ocr_crudo, ocr_modelo, error }
+        // { id, storage_path, tipo ('cheque'|'echeque'|'transferencia'), mime,
+        //   blob, subida, leida, ocr_crudo, ocr_modelo, error, enBase }
+        fotos: [],
         cheques: [],  // ver chequeVacio()
         // Las dos formas de pago que carga Administración (ver echequeVacio()
         // y transferenciaVacia()). Un borrador viejo no las trae: todo lo que
@@ -4278,6 +4924,9 @@
         echecks: [],
         transferencias: [],
         teniaTransferencias: false,
+        // Las secciones de "¿Cómo pagó?" que la persona abrió (02/10/2026).
+        // Las que tienen datos se ven igual: ver formaAbierta().
+        abiertas: {},
         actualizado: Date.now(),
       }
     }
@@ -4327,11 +4976,12 @@
       estado.form = formularioVacio(crypto.randomUUID())
       estado.asentar = estadoAsentarVacio()
       // Quien controla las cobranzas la carga YA ASENTADA: empresa y cliente
-      // de la lista. Con una sola fábrica elegida arriba, viene marcada esa.
-      // (Si las empresas todavía no llegaron, el init repinta al llegar.)
+      // de la lista. La empresa NO viene marcada aunque la barra tenga una:
+      // se elige siempre. (Si las empresas todavía no llegaron, el init
+      // repinta al llegar.)
       if (puedeProcesar()) {
         estado.form.asentar = true
-        estado.form.unidad_id = empresaInicialAsentar()
+        estado.form.unidad_id = null
       }
       pintarFormulario()
       mostrarVistaCob('form', { subtitulo: puedeProcesar() ? 'Nueva cobranza (queda asentada)' : 'Nueva cobranza' })
@@ -4360,8 +5010,8 @@
         const [cab, cheques, fotos, transf] = await Promise.all([
           supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
           supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
-          supabase.from('cobranza_fotos').select('id, storage_path, ocr_crudo, ocr_modelo').eq('cobranza_id', cobranzaId).order('created_at'),
-          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_fotos').select('id, storage_path, ocr_crudo, ocr_modelo, tipo, mime').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (cab.error) throw cab.error
         if (!cab.data) { mostrarError('No se encontró la cobranza.'); return }
@@ -4385,8 +5035,11 @@
           efectivo: Number(c.efectivo ?? 0) > 0 ? c.efectivo : '',
           comprobante_referencia: c.comprobante_referencia ?? '',
           observaciones: c.observaciones ?? '',
+          // enBase: ya está en cobranza_fotos. Se manda sin tipo ni mime (la
+          // base la encuentra por id y no la vuelve a insertar).
           fotos: (fotos.data ?? []).map(f => ({
             id: f.id, storage_path: f.storage_path, blob: null,
+            tipo: f.tipo ?? 'cheque', mime: f.mime ?? null, enBase: true,
             subida: true, leida: true, ocr_crudo: f.ocr_crudo ?? null, ocr_modelo: f.ocr_modelo ?? null,
           })),
           cheques: todosCheques.filter(ch => !ch.es_echeck).map(ch => chequeDesdeBase(ch)),
@@ -4478,30 +5131,74 @@
       return new Promise(resolver => lienzo.toBlob(resolver, 'image/jpeg', calidad))
     }
 
-    async function agregarFotos(archivos) {
+    // El tope del bucket "cobranzas" (02/10/2026): 10 MB por archivo. Un PDF
+    // se sube tal cual, así que se mira ANTES de subir y se avisa claro.
+    const BYTES_MAXIMO_ARCHIVO = 10 * 1024 * 1024
+
+    function esPdf(archivo) {
+      return archivo?.type === 'application/pdf' || /\.pdf$/i.test(String(archivo?.name ?? ''))
+    }
+
+    function textoMb(bytes) {
+      return (Number(bytes) / (1024 * 1024)).toLocaleString('es-AR', { maximumFractionDigits: 1 })
+    }
+
+    // Lo que se sube de un archivo elegido: una imagen se comprime a JPEG (el
+    // PNG también: una captura de pantalla en PNG pesa varias veces más) y un
+    // PDF va tal cual. Un cheque va SIEMPRE con foto: el lector de cheques lee
+    // imágenes. Devuelve { blob, mime, extension } o null (y ya avisó).
+    async function prepararArchivo(archivo, tipo) {
+      if (esPdf(archivo)) {
+        if (tipo === 'cheque') {
+          mostrarError('Los cheques van con foto: un PDF no se puede leer como cheque.')
+          return null
+        }
+        if (Number(archivo.size) > BYTES_MAXIMO_ARCHIVO) {
+          mostrarError(`El PDF ${archivo.name ? '«' + archivo.name + '» ' : ''}pesa ${textoMb(archivo.size)} MB y el máximo es 10 MB: no se subió. Pedí uno más liviano o sacale una captura.`)
+          return null
+        }
+        return { blob: archivo, mime: 'application/pdf', extension: 'pdf' }
+      }
+      // Cada paso de red o de proceso va en SU PROPIO try/catch: si la
+      // compresión falla, el mensaje tiene que hablar de la compresión y no
+      // heredar el de otro bloque.
+      let blob = null
+      try {
+        blob = await comprimirFoto(archivo)
+      } catch (err) {
+        console.error('No se pudo preparar la foto:', err)
+        mostrarError('No se pudo preparar una de las fotos. Probá sacarla de nuevo.')
+        return null
+      }
+      if (!blob) { mostrarError('No se pudo preparar una de las fotos.'); return null }
+      if (Number(blob.size) > BYTES_MAXIMO_ARCHIVO) {
+        mostrarError(`La foto pesa ${textoMb(blob.size)} MB aun comprimida y el máximo es 10 MB: no se subió.`)
+        return null
+      }
+      return { blob, mime: 'image/jpeg', extension: 'jpg' }
+    }
+
+    // `tipo`: 'cheque' (va al lector de cheques) o 'echeque' / 'transferencia'
+    // (al lector nuevo; solo quien tiene cobranzas:procesar).
+    async function agregarFotos(archivos, tipo = 'cheque') {
       const f = estado.form
       if (!f) return
+      if (!['cheque', ...TIPOS_COMPROBANTE].includes(tipo)) return
+      if (tipo !== 'cheque' && !puedeProcesar()) return
       for (const archivo of archivos) {
-        // Cada paso de red o de proceso va en SU PROPIO try/catch: si la
-        // compresión falla, el mensaje tiene que hablar de la compresión y no
-        // heredar el de otro bloque.
-        let blob = null
-        try {
-          blob = await comprimirFoto(archivo)
-        } catch (err) {
-          console.error('No se pudo preparar la foto:', err)
-          mostrarError('No se pudo preparar una de las fotos. Probá sacarla de nuevo.')
-          continue
-        }
-        if (!blob) { mostrarError('No se pudo preparar una de las fotos.'); continue }
+        const listo = await prepararArchivo(archivo, tipo)
+        if (!listo) continue
 
         const foto = {
           id: crypto.randomUUID(),
           // La ruta es la que exige la política de Storage.
-          storage_path: `${estado.sesion.user.id}/${f.id}/${crypto.randomUUID()}.jpg`,
-          blob, subida: false, leida: false, ocr_crudo: null, ocr_modelo: null, error: null,
+          storage_path: `${estado.sesion.user.id}/${f.id}/${crypto.randomUUID()}.${listo.extension}`,
+          tipo, mime: listo.mime,
+          blob: listo.blob, subida: false, leida: false, ocr_crudo: null, ocr_modelo: null, error: null,
         }
         f.fotos.push(foto)
+        if (!f.abiertas) f.abiertas = {}
+        f.abiertas[tipo] = true
         await guardarBorrador()
         pintarFormulario()
         // Subir y leer en segundo plano: la persona puede seguir sacando fotos.
@@ -4566,7 +5263,7 @@
           pintarEstadoFotos()
           try {
             const { error } = await supabase.storage.from('cobranzas')
-              .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+              .upload(foto.storage_path, foto.blob, { contentType: foto.mime || 'image/jpeg', upsert: false })
             if (error) {
               // Si el archivo YA existe es porque un intento anterior sí subió y
               // no llegamos a marcarlo: tomarlo como subido evita reintentar para
@@ -4592,6 +5289,12 @@
 
         marcarFotoEnMemoria(foto, { fase: 'leyendo', leyendoDesde: Date.now() })
         pintarEstadoFotos()
+        // Un comprobante de e-cheque o de transferencia va al lector NUEVO
+        // (ocr-cobranza-comprobantes); un cheque, al de siempre.
+        if (tipoFoto(foto) !== 'cheque') {
+          leyoCheques = await leerComprobante(f, foto)
+          return
+        }
         try {
           const { data, error } = await supabase.functions.invoke('ocr-cheques', {
             body: { storage_path: foto.storage_path },
@@ -4792,28 +5495,37 @@
     // el render por el que pasa TODO cambio de fotos (agregar, abrir un
     // borrador o una edición, quitar).
     const TEXTO_BOTON_CHEQUE_MANO = '+ Agregar un cheque que no se leyó'
+    // Quien controla lo ve como "Cargar a mano" y siempre habilitado: puede
+    // cargar un cheque sin foto (la base se lo acepta solo a él). El chofer
+    // NO ve "Cargar a mano": ve el botón de siempre, que necesita una foto.
+    const TEXTO_BOTON_CHEQUE_MANO_ADMIN = '✎ Cargar a mano'
     function pintarBotonChequeMano() {
       const f = estado.form
-      const hayFoto = !!f && f.fotos.length > 0
+      const hayFoto = !!f && fotosDeTipo(f, 'cheque').length > 0
+      const admin = puedeProcesar()
       const btn = document.getElementById('cob-btn-cheque-mano')
-      btn.textContent = TEXTO_BOTON_CHEQUE_MANO
-      btn.disabled = !hayFoto
-      document.getElementById('cob-ayuda-cheque-mano').hidden = hayFoto
+      btn.textContent = admin ? TEXTO_BOTON_CHEQUE_MANO_ADMIN : TEXTO_BOTON_CHEQUE_MANO
+      btn.disabled = !admin && !hayFoto
+      document.getElementById('cob-ayuda-cheque-mano').hidden = admin || hayFoto
     }
 
     function pintarEstadoFotos() {
       pintarBotonChequeMano()
       const f = estado.form
       if (!f) return
+      // Los comprobantes de e-cheques y transferencias se pintan en su
+      // sección; acá van solo las fotos de cheques (02/10/2026).
+      pintarComprobantes()
+      const fotos = fotosDeTipo(f, 'cheque')
       const cont = document.getElementById('cob-fotos-estado')
-      if (!f.fotos.length) { cont.innerHTML = ''; asegurarContadorLecturas(); return }
+      if (!fotos.length) { cont.innerHTML = ''; asegurarContadorLecturas(); return }
 
       const ahora = Date.now()
-      const avisos = f.fotos.map((foto, i) => htmlAvisoFoto(foto, i, f, ahora)).join('')
+      const avisos = fotos.map((foto, i) => htmlAvisoFoto(foto, i, f, ahora)).join('')
 
       cont.innerHTML = `
         <div class="cob-fotos" style="margin:.75rem 0">
-          ${f.fotos.map((foto, i) => `
+          ${fotos.map((foto, i) => `
             <div class="cob-foto">
               <img data-foto-form="${escCob(foto.id)}" alt="Foto ${i + 1}">
               <div class="cob-foto__pie">Foto ${i + 1}${fotoLeidaSinProblemas(foto, f) ? ' ✓' : ''}</div>
@@ -4936,7 +5648,7 @@
     // ya validó— se pliega.
     function htmlTarjetaCheque(ch, f) {
       const foto = f.fotos.find(x => x.id === ch.foto_id)
-      const indiceFoto = f.fotos.findIndex(x => x.id === ch.foto_id) + 1
+      const indiceFoto = fotosDeTipo(f, 'cheque').findIndex(x => x.id === ch.foto_id) + 1
       const posicion = f.cheques.indexOf(ch) + 1
       const errores = ch.confirmado ? [] : erroresDeCheque(chequeParaBase(ch))
       const importeNum = leerNumeroAr(ch.importe)
@@ -5220,7 +5932,8 @@
       document.querySelectorAll('[data-mini]').forEach((boton) => {
         const ch = buscar(boton.dataset.mini)
         const foto = f.fotos.find(x => x.id === ch?.foto_id)
-        boton.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
+        // Un cheque cargado a mano por Administración puede no tener foto.
+        boton.addEventListener('click', () => foto ? abrirVisor(foto, 'Foto de los cheques') : mostrarError('Este cheque se cargó a mano, sin foto.'))
       })
 
       // Los tres renglones: se recalcula en vivo para que el ✓ o el rojo
@@ -5405,19 +6118,20 @@
       transferencias.forEach((t, i) => {
         erroresDeTransferencia(t).forEach(x => motivos.push(`Transferencia ${i + 1}: ${x}`))
       })
-      // Ya asentada, una cobranza solo con transferencias SÍ entra
-      // (cargar_cobranza_asentada pasa por guardar_cobranza_completa, que le
-      // avisa a la base que trae transferencias).
-      if (asentada && confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
-        if (!transferencias.length) motivos.push('Cargá al menos una forma de pago: efectivo, un cheque, un e-cheque o una transferencia.')
-      } else if (confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
-        // HUECO DE BASE (30/09/2026): guardar_cobranza_completa escribe las
-        // transferencias DESPUÉS de los cheques, y _cobranza_escribir_detalle
-        // rechaza "La cobranza no tiene ni cheques ni efectivo." antes de que
-        // lleguen. Una cobranza solo con transferencias hoy no entra.
-        motivos.push(transferencias.length
-          ? 'Una cobranza solo con transferencias todavía no se puede guardar: la base pide al menos un cheque, un e-cheque o algo de efectivo.'
-          : 'Cargá al menos un cheque o un importe en efectivo.')
+      // Una cobranza solo con transferencias SÍ entra si la guarda quien
+      // controla (02/10/2026, verificado contra la base):
+      // guardar_cobranza_completa —y cargar_cobranza_asentada, que pasa por
+      // ella— le avisa a _cobranza_escribir_detalle que trae transferencias
+      // (sd.cobranza_trae_transferencias). El chofer guarda con
+      // editar_cobranza, que no avisa: ahí la base pide un cheque o efectivo.
+      if (confirmados === 0 && echecks.length === 0 && efectivoDelFormulario() <= 0) {
+        if (asentada || puedeProcesar()) {
+          if (!transferencias.length) motivos.push('Cargá al menos una forma de pago: efectivo, un cheque, un e-cheque o una transferencia.')
+        } else {
+          motivos.push(transferencias.length
+            ? 'Una cobranza solo con transferencias la guarda Administración: cargá al menos un cheque o algo de efectivo.'
+            : 'Cargá al menos un cheque o un importe en efectivo.')
+        }
       }
       // Sin poder leer las transferencias que ya tenía, guardarla con
       // guardar_cobranza_completa las borraría: no se deja.
@@ -5443,10 +6157,16 @@
 
       const caja = document.getElementById('cob-form-pendientes')
       const f = estado.form
-      const fotosSinCheques = f ? f.fotos.filter(x => !f.cheques.some(c => c.foto_id === x.id)).length : 0
+      const fotosSinCheques = f ? fotosDeTipo(f, 'cheque').filter(x => !f.cheques.some(c => c.foto_id === x.id)).length : 0
       const extra = fotosSinCheques
         ? [`${fotosSinCheques} ${fotosSinCheques === 1 ? 'foto quedó' : 'fotos quedaron'} sin cheques y se ${fotosSinCheques === 1 ? 'descarta' : 'descartan'} al guardar.`]
         : []
+      // Un comprobante de e-cheque o de transferencia sin ninguna tarjeta que
+      // lo use tampoco se manda (la base no lo dejaría colgado).
+      const comprobantesSueltos = f ? comprobantesSinUso(f).length : 0
+      if (comprobantesSueltos) {
+        extra.push(`${comprobantesSueltos} ${comprobantesSueltos === 1 ? 'comprobante quedó' : 'comprobantes quedaron'} sin e-cheque ni transferencia y se ${comprobantesSueltos === 1 ? 'descarta' : 'descartan'} al guardar.`)
+      }
       const todo = motivos.concat(extra)
       caja.hidden = todo.length === 0
       if (todo.length) caja.innerHTML = todo.map(escCob).join('<br>')
@@ -5515,7 +6235,7 @@
         }
         try {
           const { error } = await supabase.storage.from('cobranzas')
-            .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+            .upload(foto.storage_path, foto.blob, { contentType: foto.mime || 'image/jpeg', upsert: false })
           if (error) {
             // Ya existía = un intento anterior sí la subió.
             if (!/exist/i.test(error.message ?? '')) throw error
@@ -5528,9 +6248,9 @@
         }
       }
 
-      // Las fotos sin ningún cheque no se mandan: no aportan nada y el
-      // servidor exige que cada foto exista en Storage.
-      const fotosConCheques = f.fotos.filter(x => f.cheques.some(c => c.confirmado && c.foto_id === x.id))
+      // Las fotos sin ningún cheque (y los comprobantes sin su e-cheque o su
+      // transferencia) no se mandan: no aportan nada y el servidor exige que
+      // cada foto exista en Storage. Ver fotosParaBase().
       const payload = {
         p_id: f.id,
         p_cliente: String(f.cliente).trim(),
@@ -5538,10 +6258,7 @@
         p_efectivo: efectivoDelFormulario(),
         p_comprobante_referencia: textoOpcional(f.comprobante_referencia),
         p_observaciones: textoOpcional(f.observaciones),
-        p_fotos: fotosConCheques.map(x => ({
-          id: x.id, storage_path: x.storage_path,
-          ocr_crudo: x.ocr_crudo ?? null, ocr_modelo: x.ocr_modelo ?? null,
-        })),
+        p_fotos: fotosParaBase(f),
         // Los e-cheques viajan SIEMPRE con los de papel: editar_cobranza
         // reemplaza todos los cheques, así que dejarlos afuera los borraría.
         p_cheques: f.cheques.filter(c => c.confirmado).map(chequeParaBase)
@@ -5677,7 +6394,10 @@
           // Fotos que quedaron sin subir o sin leer: se completan solas y la
           // cobranza pasa a 'para_revisar' para que alguien mire los cheques
           // que el OCR agregó mientras tanto.
-          const pendientes = f.fotos.filter(x => !x.leida)
+          // Solo las fotos de CHEQUES: los comprobantes de e-cheques y
+          // transferencias se leen con el formulario abierto (los carga
+          // Administración, que los revisa en el momento).
+          const pendientes = f.fotos.filter(x => !x.leida && tipoFoto(x) === 'cheque')
           if (!pendientes.length) continue
           let hubo = false
           for (const foto of pendientes) {
@@ -5705,7 +6425,7 @@
         if (!foto.blob) return false
         try {
           const { error } = await supabase.storage.from('cobranzas')
-            .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+            .upload(foto.storage_path, foto.blob, { contentType: foto.mime || 'image/jpeg', upsert: false })
           if (error && !/exist/i.test(error.message ?? '')) throw error
           foto.subida = true
         } catch (err) {
@@ -5795,23 +6515,39 @@
           if (!estado.form) return
           estado.form[prop] = el.value
           guardarBorrador()
+          // Con efectivo escrito, su sección ya no se puede cerrar.
+          if (prop === 'efectivo') pintarFormasPago()
           pintarTotalYGuardado()
         })
       })
 
       document.getElementById('cob-btn-camara').addEventListener('click', () => document.getElementById('cob-file-camara').click())
       document.getElementById('cob-btn-galeria').addEventListener('click', () => document.getElementById('cob-file-galeria').click())
+      document.getElementById('cob-btn-archivo-cheque').addEventListener('click', () => document.getElementById('cob-file-archivo-cheque').click())
+      // ¿Cómo pagó?: los cuatro botones y el "Cerrar" de cada sección vacía.
+      document.getElementById('cob-formas-botones').addEventListener('click', alTocarFormasPago)
+      document.getElementById('cob-vista-form').addEventListener('click', alTocarCerrarForma)
       // La cobranza ya asentada: empresa, cliente de la lista y proyecto.
       document.getElementById('cob-asentar').addEventListener('click', alTocarEnAsentar)
       document.getElementById('cob-asentar-buscar').addEventListener('input', alEscribirClienteAsentar)
       document.getElementById('cob-campo-proyecto').addEventListener('change', alElegirProyecto)
-      ;['cob-file-camara', 'cob-file-galeria'].forEach(id => {
+      ;['cob-file-camara', 'cob-file-galeria', 'cob-file-archivo-cheque'].forEach(id => {
         document.getElementById(id).addEventListener('change', async (ev) => {
           const archivos = [...(ev.target.files ?? [])]
           // El input se limpia SIEMPRE: sin esto, sacar dos veces la misma foto
           // no dispara el change la segunda vez.
           ev.target.value = ''
-          if (archivos.length) await agregarFotos(archivos)
+          if (archivos.length) await agregarFotos(archivos, 'cheque')
+        })
+      })
+      // Los comprobantes de e-cheques y transferencias: el tipo lo guardó
+      // elegirArchivoComprobante() al tocar el botón.
+      ;['cob-file-comprobante-camara', 'cob-file-comprobante-galeria', 'cob-file-comprobante-archivo'].forEach(id => {
+        document.getElementById(id).addEventListener('change', async (ev) => {
+          const archivos = [...(ev.target.files ?? [])]
+          ev.target.value = ''
+          const tipo = estado.comprobanteDestino
+          if (archivos.length && TIPOS_COMPROBANTE.includes(tipo)) await agregarFotos(archivos, tipo)
         })
       })
 

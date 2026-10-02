@@ -870,6 +870,14 @@ if (SOLO !== 'render') {
     ['htmlEmpresas(empresasParaAsentar(), f.unidad_id)', 'HTML armado por htmlEmpresas(), que escapa adentro'],
     ['htmlClientesAsentar(f, a)', 'HTML armado por htmlClientesAsentar(), que escapa adentro'],
     ['htmlP', 'HTML armado por htmlProyectoAsentar(), que escapa adentro'],
+    // ¿Cómo pagó? (02/10/2026). Las ejecuta con marcas
+    // test-cobranzas-cuatro-botones.js.
+    ['mini', 'HTML armado en htmlComprobantes(): un <button> literal con escCob(foto.id), o un <img> con escCob(foto.id) y el índice (un número)'],
+    ['minis', 'HTML armado en htmlComprobantes(): la unión de los mini (ver arriba)'],
+    ['htmlBotonComprobante(e.foto_id)', 'HTML armado por htmlBotonComprobante(): un <button> literal con escCob(fotoId)'],
+    ['htmlBotonComprobante(t.foto_id)', 'HTML armado por htmlBotonComprobante(): un <button> literal con escCob(fotoId)'],
+    ['htmlComprobantes(f, tipo)', 'HTML armado por htmlComprobantes(), que escapa adentro (y htmlAvisoComprobante(), que escapa el texto)'],
+    ['htmlBancosOrigen()', 'HTML armado por htmlBancosOrigen(): <option> con escCob() de cada banco de BANCOS_ORIGEN, una lista fija del código'],
   ])
   const malas = []
   for (const x of aRevisar) {
