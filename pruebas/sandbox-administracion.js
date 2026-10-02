@@ -46,6 +46,9 @@ const FUNCIONES_BASE = [
   'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
   'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
   'pintarPieFicha', 'llenarFicha', 'abrirFicha', 'elegirProveedorFicha', 'guardarFicha',
+  // Los apodos de la ficha (02/10/2026)
+  'agregarApodoALista', 'htmlApodosFicha', 'pintarApodosFicha', 'parametrosApodos', 'guardarApodos',
+  'agregarApodoFicha', 'quitarApodoFicha',
   // Listas de precios
   'htmlFilaLista', 'pintarListas', 'mostrarListas', 'abrirListaNueva', 'guardarListaNueva', 'listaDe', 'leerPreciosLista',
   'versionesDe', 'vigenteYProximo', 'filasGrilla', 'preciosAGuardar', 'calcularAumento', 'htmlFilaPrecio', 'htmlGrilla',

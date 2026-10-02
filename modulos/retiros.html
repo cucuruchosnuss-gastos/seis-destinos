@@ -225,6 +225,8 @@
     }
     .rt-resultado__texto { flex: 1; min-width: 0; line-height: 1.25; display: flex; flex-direction: column; }
     .rt-resultado__nombre { font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+    /* El apodo que coincidió, al lado del nombre: "SALVADOR LOFORTE · Turi". */
+    .rt-resultado__apodo { font-weight: 600; color: var(--color-texto-2); }
     .rt-resultado__detalle { font-size: 13.5px; color: var(--rt-texto-2); overflow-wrap: anywhere; }
     .rt-resultados .rt-texto-suave, .rt-resultados .rt-aviso { padding: 12px 14px; border: 0; border-radius: 0; }
     .rt-resaltado { background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; border-radius: 4px; padding: 0 3px; }
@@ -1760,14 +1762,18 @@
       const apodo = q ? apodos.find(a => normalizar(a).includes(q)) : null
       const rs = limpio(c.razon_social)
       const partes = []
-      if (apodo && !normalizar(c.nombre).includes(q)) partes.push(`apodo “${resaltar(apodo, busqueda)}”`)
+      // EL APODO QUE COINCIDIÓ VA AL LADO DEL NOMBRE (02/10/2026): buscando
+      // "Turi" se lee "SALVADOR LOFORTE · Turi", que es como lo nombran en el
+      // depósito. Solo si el nombre no coincide por sí solo.
+      const porApodo = !!apodo && !normalizar(c.nombre).includes(q)
       if (rs && rs !== limpio(c.nombre)) partes.push(q && normalizar(rs).includes(q) && !normalizar(c.nombre).includes(q) ? `razón social ${resaltar(rs, busqueda)}` : esc(rs))
       if (limpio(c.localidad)) partes.push(esc(limpio(c.localidad)))
       partes.push(esc(limpio(empresa) || 'Empresa sin nombre'))
       const otros = apodos.filter(a => a !== apodo)
       return `<button type="button" class="rt-resultado" data-cliente="${esc(c.id)}">` +
         `<span class="rt-resultado__ini" aria-hidden="true">${esc(iniciales(c.nombre))}</span>` +
-        `<span class="rt-resultado__texto"><span class="rt-resultado__nombre">${resaltar(c.nombre, busqueda)}</span>` +
+        `<span class="rt-resultado__texto"><span class="rt-resultado__nombre">${resaltar(c.nombre, busqueda)}` +
+        `${porApodo ? `<span class="rt-resultado__apodo"> · ${resaltar(apodo, busqueda)}</span>` : ''}</span>` +
         `<span class="rt-resultado__detalle">${partes.join(' · ')}</span>` +
         `${otros.length ? `<span class="rt-resultado__detalle">También: ${esc(otros.join(', '))}</span>` : ''}</span>` +
         `<svg class="rt-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>`
