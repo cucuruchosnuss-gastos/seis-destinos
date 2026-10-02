@@ -3440,6 +3440,7 @@
     // UNA vez y que la pantalla muestre solo lo de ella. Es el mismo archivo que
     // el <head> carga para dibujarla, así que el navegador lo ejecuta una vez.
     import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
+    import { DECIMALES_CANTIDAD, formatearCantidadStock, equivalenteEnBultos, cabezaBultos, textoBultos, cantidadSegunVista } from '../js/cantidades.js'
 
     mostrarBannerVersion()
 
@@ -3726,28 +3727,12 @@
       }
     }
 
-    // Cantidades del stock: separador de miles argentino y la unidad del
-    // catálogo. Hasta 3 decimales porque hay insumos en kg y litros donde el
-    // decimal importa, pero sin arrastrar ceros al pedo.
-    //
-    // Desde el 21/09/2026 sale de formatearNumeroAr() de js/utils.js y se ve
-    // igual que antes. Lo único que cambia es la AUSENCIA: null, undefined, ''
-    // o NaN dicen "—", sin unidad, y ya no "0 kg" —antes Number(n ?? 0)
-    // convertía "no hay dato" en un cero, que es una afirmación—. Un cero REAL
-    // (el número 0, un saldo que existe y es cero) sigue diciendo "0 kg": los
-    // call sites que tienen un cero real ya lo pasan como número (saldoDe()
-    // devuelve `?? 0`, el saldo del modal descarta el null antes de llamar).
-    function formatearCantidadStock(n, unidad) {
-      const num = formatearNumeroAr(n, { decimales: DECIMALES_CANTIDAD, minimos: 0 })
-      if (num === '—') return '—'
-      return `${num} ${unidad || ''}`.trim()
-    }
-
-    // Cuántos decimales admite una cantidad. Las unidades que se cuentan de a
-    // enteros (UNIDADES_ENTERAS, más abajo): 0. Kilos, litros y cualquier otra:
-    // 3, la misma decisión que Ingreso (21/09/2026) — alcanza para 0,300 kg de
-    // lecitina, y es lo que ya mostraba formatearCantidadStock.
-    const DECIMALES_CANTIDAD = 3
+    // formatearCantidadStock() y DECIMALES_CANTIDAD (3: alcanza para 0,300 kg
+    // de lecitina) viven en js/cantidades.js desde el 02/10/2026: la planta y
+    // la sala de masa dicen las cantidades con la MISMA regla. Un dato
+    // ausente dice "—", nunca "0 kg"; un cero de verdad sí dice "0 kg" (los
+    // call sites con un cero real lo pasan como número: saldoDe() devuelve
+    // `?? 0`, el saldo del modal descarta el null antes de llamar).
 
     // Unidades que se cuentan de a enteros. Un separador ahí NO es un decimal:
     // es el de miles. "47.000" cajas leído como 47 es un error de mil veces, y
@@ -3865,73 +3850,13 @@
     // 215 kg y en bidón de 5 kg, así que un campo fijo por insumo mentiría.
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Facu se maneja con cuartos y tercios. El resto se redondea al más cercano
-    // de estos siete cortes, así que el error máximo es un OCTAVO de bulto — y
-    // por eso los kilos exactos van siempre al lado, en gris.
-    const FRACCIONES = [
-      { valor: 0,     texto: '' },
-      { valor: 1 / 4, texto: '¼' },
-      { valor: 1 / 3, texto: '⅓' },
-      { valor: 1 / 2, texto: '½' },
-      { valor: 2 / 3, texto: '⅔' },
-      { valor: 3 / 4, texto: '¾' },
-      { valor: 1,     texto: '' },   // redondear a 1 SUBE el entero
-    ]
-
-    // EL EQUIVALENTE SALE DE DIVIDIR LOS KILOS, NO DE CONTAR BULTOS.
-    // Puede haber 250 bolsas en el depósito con 2 medio usadas y el sistema
-    // decir "248 + ¾". Para "cuánto tengo" es correcto; para "cuántos bultos
-    // cerrados hay" NO, y eso solo lo responde un recuento físico. La pantalla
-    // no lo presenta nunca como un conteo.
-    function equivalenteEnBultos(kilos, contenido) {
-      const c = Number(contenido)
-      if (!Number.isFinite(c) || c <= 0) return null
-      // Number(null) y Number('') son 0, que es finito: sin este guard, "no
-      // hay dato" se convertiría en "0 bultos", que es una afirmación.
-      if (kilos === null || kilos === undefined || kilos === '') return null
-      const n = Number(kilos)
-      if (!Number.isFinite(n)) return null
-
-      // El saldo puede ser negativo: se trabaja sobre la magnitud y el signo se
-      // reaplica al final, para no redondear hacia el lado equivocado.
-      const signo = n < 0 ? -1 : 1
-      const bultos = Math.abs(n) / c
-      let enteros = Math.floor(bultos)
-      const resto = bultos - enteros
-
-      let mejor = FRACCIONES[0]
-      for (const f of FRACCIONES) {
-        if (Math.abs(resto - f.valor) < Math.abs(resto - mejor.valor)) mejor = f
-      }
-      if (mejor.valor === 1) { enteros += 1; mejor = FRACCIONES[0] }
-
-      return { signo, enteros, fraccion: mejor.texto }
-    }
-
-    // Solo el CONTEO: "100 bultos", "3 bultos + ½". Sin la cola "de 25 kg".
-    //
-    // Existe porque en la vista 'bulto' el número va destacado a la derecha y
-    // el "de 25 kg" baja a la línea gris: ahí compite con el 100, que es el
-    // número que se busca de un vistazo. La palabra "bultos" SÍ se queda con el
-    // número — sin ella no se entiende de qué son 100.
-    //
-    // `textoBultos` la reusa en vez de duplicar la lógica: cómo se dice "100
-    // bultos" —el signo, el singular, la fracción— se decide en UN solo lugar,
-    // y sus NUEVE call sites siguen sin enterarse.
-    function cabezaBultos(kilos, contenido) {
-      const e = equivalenteEnBultos(kilos, contenido)
-      if (!e) return null
-      const menos = e.signo < 0 ? '−' : ''
-      const palabra = (e.enteros === 1 && !e.fraccion) ? 'bulto' : 'bultos'
-      const frac = e.fraccion ? ` + ${e.fraccion}` : ''
-      return `${menos}${formatearNumeroAr(e.enteros, { decimales: 0 })} ${palabra}${frac}`
-    }
-
-    function textoBultos(kilos, contenido, unidad) {
-      const cabeza = cabezaBultos(kilos, contenido)
-      if (!cabeza) return null
-      return `${cabeza} de ${formatearCantidadStock(contenido, unidad)}`
-    }
+    // FRACCIONES, equivalenteEnBultos(), cabezaBultos(), textoBultos() y la
+    // regla de la vista preferida (cantidadSegunVista) viven en
+    // js/cantidades.js desde el 02/10/2026: la planta y la sala de masa dicen
+    // "250 bultos" con la MISMA regla que esta pantalla. El equivalente sale
+    // de DIVIDIR los kilos, no de contar bultos, y redondea a cuartos y
+    // tercios (error máximo: un octavo de bulto; por eso los kilos exactos van
+    // al lado, en gris).
 
     // Los nombres que aparecen MÁS DE UNA VEZ entre las filas que se están
     // mostrando. Con eso, la marca de esas filas pasa a destacarse.
@@ -4657,58 +4582,27 @@
         const lotes = textoLotes(Number(f.lotes_distintos) || 0)
         const presentaciones = Number(f.presentaciones) || 0
         const sueltos = Number(f.kilos_sueltos) || 0
-        const kilos = formatearCantidadStock(f.cantidad_total, f.unidad_medida)
-
-        // Con UNA sola presentación los bultos son el dato principal y los
-        // kilos pasan a la línea gris. `contenido_unico` viene en null salvo
-        // que haya exactamente una, así que no hay que condicionarlo acá.
-        //
-        // Los KILOS SUELTOS (los que entraron sin presentación) NO se dividen:
-        // no se sabe en qué venían. Sumarlos a la división daría bultos que
-        // nadie puede ir a buscar al depósito.
-        // EN LA VISTA 'bulto' EL "de 25 kg" NO CUELGA DEL NUMERO: a la derecha
-        // va "100 bultos" a secas y la cola baja a la linea gris, porque
-        // compite con el 100, que es lo que se busca de un vistazo.
-        //
-        // Y LOS SUELTOS VAN CON LA COLA, NUNCA CON EL NUMERO: "+ 100 kg" NO
-        // son bultos, asi que colgarlos de "100 bultos" diria algo falso.
-        const cabeza = presentaciones === 1
-          ? cabezaBultos(Number(f.cantidad_total) - sueltos, f.contenido_unico)
-          : null
-        const cola = cabeza
-          ? `de ${formatearCantidadStock(f.contenido_unico, f.unidad_medida)}` +
-            (sueltos !== 0 ? ` + ${formatearCantidadStock(sueltos, f.unidad_medida)}` : '')
-          : null
-        // El texto completo, para cuando los bultos van en la linea gris (vista
-        // 'base'): ahi no hay nada que separar, se lee de corrido.
-        const conSueltos = cabeza ? `${cabeza} ${cola}` : null
-
         // LA VISTA PREFERIDA DECIDE QUÉ NÚMERO VA DESTACADO, no dónde va: la
-        // cantidad sigue SIEMPRE a la derecha (ver el bloque de más abajo). Lo
-        // que se intercambia es cuál de los dos ocupa ese lugar y cuál baja a
-        // la línea gris.
+        // cantidad sigue SIEMPRE a la derecha. La regla vive en
+        // js/cantidades.js (cantidadSegunVista) desde el 02/10/2026, y la usan
+        // también la planta y la sala de masa: la misma cantidad se dice igual
+        // en las tres pantallas.
         //
-        // LA CAÍDA AUTOMÁTICA ES EL CASO MAYORITARIO, NO EL BORDE: hoy hay 18
-        // filas de stock con `presentaciones = 0` contra 7 con una (los 18
-        // entraron por el recuento inicial, donde nadie declaró presentación).
-        // Un insumo marcado 'bulto' sin presentación cargada se muestra en su
-        // unidad, sin romperse ni mostrar vacío — la preferencia dice "cuando
-        // PUEDA, mostrame bultos", no "mostrame bultos o fallá".
+        // Con UNA sola presentación hay con qué armar los bultos
+        // (`contenido_unico` viene en null salvo que haya exactamente una);
+        // con varias, no existe "un" bulto que represente al total. Los KILOS
+        // SUELTOS (los que entraron sin presentación) NO se dividen y van con
+        // la cola, nunca con el número. En la vista 'bulto' el "de 25 kg" baja
+        // a la línea gris: a la derecha va "100 bultos" a secas.
         //
-        // Y NO HACE FALTA UN `if` PARA ESO: `conSueltos` ya viene en null
-        // cuando no hay con qué armar los bultos, porque textoBultos() rechaza
-        // un `contenido_unico` que no sirve. La decisión vive en UN solo lugar.
-        // Si alguna vez se "optimiza" ese camino, lo que se rompe no es un caso
-        // raro: es casi todo el listado, y SOLO para los insumos marcados
-        // 'bulto' —los que están en 'base' se ven igual—, así que pasaría
-        // desapercibido. Tiene mutación propia.
-        //
-        // Con VARIAS presentaciones tampoco aplica: no existe "un" bulto que
-        // represente al total, y ahí `conSueltos` también es null.
-        const enBultos = f.vista_preferida === 'bulto' && cabeza
-        // A la derecha, la CABEZA sola. La cola viaja a la gris junto al total.
-        const destacado = enBultos ? cabeza : kilos
-        const secundario = enBultos ? `${cola} · ${kilos}` : conSueltos
+        // LA CAÍDA AUTOMÁTICA ES EL CASO MAYORITARIO, NO EL BORDE: un insumo
+        // marcado 'bulto' sin presentación cargada se muestra en su unidad. Si
+        // alguna vez se "optimiza" ese camino, lo que se rompe es casi todo el
+        // listado y SOLO para los marcados 'bulto'. Tiene mutación propia.
+        const { destacado, secundario } = cantidadSegunVista({
+          cantidad: f.cantidad_total, unidad: f.unidad_medida, vista: f.vista_preferida,
+          contenido: presentaciones === 1 ? f.contenido_unico : null, sueltos,
+        })
 
         // LA CANTIDAD VA SIEMPRE A LA DERECHA, con o sin presentación. Antes
         // esto era condicional: sin desglose de bultos el número quedaba a la

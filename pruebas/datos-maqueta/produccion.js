@@ -171,6 +171,14 @@ module.exports = {
       { id: 'caja-1', nombre: 'Caja N°1', marca: 'Nuss' }, { id: 'caja-dp', nombre: 'Caja N°1', marca: 'Dolce Pasta' },
       { id: 'caja-si', nombre: 'Caja N°1', marca: 'Sin impresión' }, { id: 'emp-tiras', nombre: 'Tiras x4', marca: null },
       { id: 'emp-sep', nombre: 'Separador N°1', marca: null }, { id: 'emp-bolsa', nombre: 'Bolsa 100x80', marca: null },
+      // Bultos o kilos, como en Stock (02/10/2026): la harina La Clásica se
+      // mira en bultos de 25 kg (la sala dice "quedan 97 bultos").
+      { id: 'ins-h3', nombre: 'Harina 000', marca: 'La Clásica', vista_preferida: 'bulto' },
+    ],
+    v_stock_por_lote: [
+      { unidad_negocio_id: 'u-n', insumo_id: 'ins-h3', lote: '08/09/26', contenido_por_bulto: 25, saldo: 2425 },
+      { unidad_negocio_id: 'u-n', insumo_id: 'ins-h3', lote: '15/09/26', contenido_por_bulto: 25, saldo: 900 },
+      { unidad_negocio_id: 'u-n', insumo_id: 'ins-h3', lote: '22/09/26', contenido_por_bulto: 25, saldo: 1500 },
     ],
     v_stock_insumos: [],
   },

@@ -31,9 +31,11 @@ correrMutacionesProduccion({
     { expr: 'esc(hace)', motivo: 'duracionTexto(): dígitos y "min" / "h"' },
     { expr: 'esc(haceParada)', motivo: 'duracionTexto(): dígitos y "min" / "h"' },
     { expr: 'esc(e.masas)', motivo: 'un conteo de masas que arma leerTablero()' },
-    { expr: 'esc(textoCantidad(e.quedaAntes))', motivo: 'formatearNumeroAr() + " kg" o " g" de un número finito' },
+    { expr: 'esc(textoStockLote(e.quedaInsumo, e.quedaLote, e.quedaAntes))', motivo: 'textoStockLote() (02/10/2026): "N kg"/"N g" de textoCantidad(), o "N bultos + ½" de js/cantidades.js: dígitos, la coma, la fracción y texto fijo' },
+    { expr: 'esc(textoStockLote(o.insumo_id, o.lote, o.queda))', motivo: 'textoStockLote(): dígitos, la coma, la fracción y texto fijo (ver arriba)' },
     { expr: 'esc(textoCantidad(kg))', motivo: 'formatearNumeroAr() + " kg" o " g" de un número finito' },
     { expr: "esc(notas.join(' · '))", motivo: 'constantes del código: "el de la receta", "se terminó", "no alcanza"' },
+    { expr: 'esc(marca)', motivo: 'htmlFilaOtro: la constante "escrito a mano" o "escrito a mano · de la masa anterior"' },
   ],
   manuales: [
     { nombre: '"Anterior" sin su detalle largo en el title', de: "como === 'anterior', textoDeHtml(detalleAnterior(d)), hayAnterior) +", a: "como === 'anterior', '', hayAnterior) +" },
@@ -69,7 +71,7 @@ correrMutacionesProduccion({
     // ── "Queda" y el bloqueo de Registrar ────────────────────────────────
     { nombre: "\"quedan\" descuenta esta masa (tiene que ser lo que hay ANTES)", de: "      return { ...e, quedaAntes: q, noAlcanza:", a: "      return { ...e, quedaAntes: q == null ? null : redondearKg(q - e.consumo), noAlcanza:" },
     { nombre: 'una doble descuenta como una simple', de: "      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))", a: '      const consumo = redondearKg(b.cantidades[it.ingrediente_id] ?? 0)' },
-    { nombre: "nunca avisa que el lote no alcanza", de: "noAlcanza: q != null && q + 1e-9 < e.consumo }", a: "noAlcanza: false }" },
+    { nombre: "nunca avisa que el lote no alcanza", de: "noAlcanza: q != null && q + 1e-9 < e.consumo,", a: "noAlcanza: false," },
     // Terminar la tablet, parte 3: "terminado" ya no lo deduce la pantalla (un lote que no está en stock queda elegido con "sin ingreso cargado"); lo dice la persona con "Se terminó".
     { nombre: 'un lote que se terminó pasa como bueno', de: '      if (l && l.terminado) return { ...base, terminado: true, falta: true }', a: '      if (l && l.terminado) return base' },
     { nombre: 'un lote sin elegir no bloquea', de: '      if (!l || !ins) return { ...base, falta: true }', a: '      if (!l || !ins) return { ...base }' },

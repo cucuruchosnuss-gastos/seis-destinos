@@ -28,6 +28,7 @@
 const path = require('path')
 const { execFileSync } = require('child_process')
 const { construirCon, scriptModulo } = require('./sandbox')
+const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES } = require('./cantidades-comun')
 const { arnes, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
 const { fuenteNumeros } = require('./numeros-comun')
@@ -58,6 +59,8 @@ const RENDERS = [
   'renderizarTransito', 'renderizarTransfHistorial',
   'cargarUnidadesRecuento', 'unidadRecuentoPorBarra', 'renderizarChipsUnidadRecuento',
   'aplicarModoMov', 'renderizarUnidadMov', 'abrirModalTransferencia', 'renderizarOrigenTransf',
+  // Las de js/cantidades.js (02/10/2026): importadas, se suman a mano.
+  ...FUNCIONES_CANTIDADES,
 ]
 
 function clausura(src) {
@@ -161,7 +164,7 @@ let MOLDE = null
 try { MOLDE = clausura(SRC) } catch (e) { chk('la clausura de funciones se arma', false, String(e && e.stack || e)) }
 
 function nuevo() {
-  const S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones: MOLDE.funciones, constantes: MOLDE.constantes, retorno: RETORNO })
+  const S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones: MOLDE.funciones, constantes: [...CONSTANTES_CANTIDADES, ...MOLDE.constantes], retorno: RETORNO })
   const E = S.estado
   E.miRolApp = 'usuario'
   E.misTareas = new Set(['stock:ver', 'stock:ajustar_inventario', 'stock:dar_baja', 'stock:enviar_transferencia'])
