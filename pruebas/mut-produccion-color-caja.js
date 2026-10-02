@@ -34,7 +34,7 @@ correrMutacionesEnVarios([
     manuales: [
       { nombre: 'la planta ignora el color elegido', de: '      if (elegido) {\n        const [L, C, H] = elegido.lch', a: '      if (false) {\n        const [L, C, H] = elegido.lch' },
       { nombre: 'la planta con otro tono', de: "      violeta: { nombre: 'Violeta', lch: [0.52, 0.15, 300] },\n      marron: { nombre: 'Marrón', lch: [0.48, 0.07, 55] },\n      marron_claro: { nombre: 'Marrón claro', lch: [0.68, 0.07, 75] },\n      rosa: { nombre: 'Rosa', lch: [0.66, 0.13, 350] },\n      celeste_gris: { nombre: 'Celeste gris', lch: [0.52, 0.07, 195] },\n      oliva: { nombre: 'Oliva', lch: [0.58, 0.1, 120] },\n      terracota: { nombre: 'Terracota', lch: [0.56, 0.13, 35] },\n    }\n\n    function indiceDeNombre", a: "      violeta: { nombre: 'Violeta', lch: [0.5, 0.15, 300] },\n      marron: { nombre: 'Marrón', lch: [0.48, 0.07, 55] },\n      marron_claro: { nombre: 'Marrón claro', lch: [0.68, 0.07, 75] },\n      rosa: { nombre: 'Rosa', lch: [0.66, 0.13, 350] },\n      celeste_gris: { nombre: 'Celeste gris', lch: [0.52, 0.07, 195] },\n      oliva: { nombre: 'Oliva', lch: [0.58, 0.1, 120] },\n      terracota: { nombre: 'Terracota', lch: [0.56, 0.13, 35] },\n    }\n\n    function indiceDeNombre" },
-      { nombre: 'la planta no trae el color', de: ".select('id, nombre, tipo_masa, orden, color').eq('unidad_negocio_id', unidadId)", a: ".select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId)" },
+      { nombre: 'la planta no trae el color', de: ".select('id, nombre, tipo_masa, orden, color, origen_producto_id').eq('unidad_negocio_id', unidadId)", a: ".select('id, nombre, tipo_masa, orden, origen_producto_id').eq('unidad_negocio_id', unidadId)" },
     ],
   },
 ])

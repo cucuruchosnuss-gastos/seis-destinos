@@ -3208,12 +3208,27 @@
       return `${hoyArgentina(d)}T${horaArgentina(d)}:00-03:00`
     }
 
+    // El fin del turno de una planilla, como instante: su hora_fin en su fecha,
+    // o al día siguiente si no es posterior a la de inicio (la regla de
+    // _ts_turno). null si la planilla no tiene hora de fin.
+    function finDelTurnoMs(turno) {
+      const fin = normalizarHora(String(turno?.hora_fin ?? '').slice(0, 5))
+      if (!fin || !/^\d{4}-\d{2}-\d{2}$/.test(String(turno?.fecha ?? ''))) return null
+      const ini = normalizarHora(String(turno?.hora_inicio ?? '').slice(0, 5))
+      return instanteAr(turno.fecha, fin) + (ini && fin <= ini ? MS_DIA : 0)
+    }
+
     // Piso y tope del turno, en milisegundos.
     function limitesParada(turno, ahora = new Date()) {
       const piso = turno?.abierto_en ? new Date(turno.abierto_en).getTime() - PISO_APERTURA_MS
         : instanteAr(turno?.fecha ?? hoyArgentina(ahora), '00:00')
       const cerrado = turno?.estado === 'cerrado' && !!turno?.cerrado_en
-      const tope = Math.min(new Date(ahora).getTime(), cerrado ? new Date(turno.cerrado_en).getTime() : Infinity) + TOLERANCIA_FUTURO_MS
+      // Una planilla que ya no está abierta termina a su hora de fin del turno:
+      // cerrar_turno deja AHÍ la parada que no volvió, aunque se haya cerrado
+      // antes (13:54 con fin 15:00 → la parada vuelve a las 15:00). Esa hora
+      // vale como vuelta; si no, corregirla sin tocar nada daría error.
+      const finTurno = turno?.estado !== 'abierto' ? finDelTurnoMs(turno) : null
+      const tope = Math.max(Math.min(new Date(ahora).getTime(), cerrado ? new Date(turno.cerrado_en).getTime() : Infinity), finTurno ?? -Infinity) + TOLERANCIA_FUTURO_MS
       return { piso, tope, cerrado }
     }
 
@@ -3370,6 +3385,19 @@
     // EL ERROR VA AL ESTADO, NO AL DOM: el único que escribe el mensaje es este
     // render, que decide entre lo que falta y lo que contestó la base. Así un
     // repintado no tapa el error de la base (lo que pasó en el cierre).
+    // Corregir una parada que "no volvió en todo el turno": editar_parada
+    // conserva la marca SOLO si la vuelta queda en el fin del turno; con otra
+    // hora la apaga. Se dice antes de guardar.
+    function htmlNotaNoVolvio(f) {
+      if (f?.modo !== 'editar' || !f.parada?.hasta_fin_de_turno || !f.parada.fin) return ''
+      const finTurno = horaArgentina(f.parada.fin) || '—'
+      const h = resolverHorasParada(f, f.turno)
+      const igual = !h.error && !!h.fin && new Date(h.fin).getTime() === new Date(f.parada.fin).getTime()
+      return igual
+        ? `<p class="pr-hp__resumen">Sigue marcada «no volvió en todo el turno»: vuelve a las ${esc(finTurno)}, el fin del turno.</p>`
+        : `<p class="pr-hp__resumen">Con otra hora de vuelta deja de estar marcada «no volvió en todo el turno» (el fin del turno es a las ${esc(finTurno)}).</p>`
+    }
+
     function pintarEditorParada() {
       const f = estado.paradaForm
       if (!f) return
@@ -3380,7 +3408,7 @@
         const hasta = f.parada.fin ? (horaArgentina(f.parada.fin) || '—') : 'sigue'
         resumen.innerHTML = `<p class="pr-hp__resumen">${esc(desde)}–${esc(hasta)} · ${esc(f.parada.motivo)}</p>`
       } else {
-        resumen.innerHTML = ''
+        resumen.innerHTML = htmlNotaNoVolvio(f)
       }
       const cerrada = f.turno.estado === 'cerrado'
       document.getElementById('pr-parada-editor-campo-motivo').hidden = f.modo === 'borrar' && !cerrada

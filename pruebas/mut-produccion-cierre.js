@@ -21,6 +21,7 @@ correrMutacionesProduccion({
     'htmlPendientesCompletar', 'htmlFaltaCierre',
   ],
   equivalentes: [
+    { expr: 'esc(sufijo(t))', motivo: "sufijo() devuelve '', ' · cerrada a la fuerza' o ' · falta completar', escritos en el código" },
     { expr: 'esc(clases)', motivo: 'las clases de una parada salen del código (pr-parada-item, --curso, --programada): nada escapable' },
     { expr: 'esc(cat)', motivo: 'cat es una clave de NOMBRE_CATEGORIA_PARADA (programada / falla / otro) o null: una categoría desconocida no se dibuja' },
     { expr: 'esc(NOMBRE_CATEGORIA_PARADA[cat])', motivo: "'Programada' / 'Falla' / 'Otro', escritos en el código" },
@@ -201,8 +202,8 @@ correrMutacionesProduccion({
     { nombre: 'se pregunta siempre, aunque ya se confirmó', de: '      if (avisos.length && !b.confirmado) {', a: '      if (avisos.length) {' },
 
     // ── El borrador ─────────────────────────────────────────────────────
-    { nombre: 'no guarda el borrador', de: "      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota })\n", a: '' },
-    { nombre: 'el borrador pierde "se rompió"', de: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota }', a: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, rota: false }' },
+    { nombre: 'no guarda el borrador', de: "      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota, fin: b.fin })\n", a: '' },
+    { nombre: 'el borrador pierde "se rompió"', de: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota, fin: b.fin }', a: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, rota: false, fin: b.fin }' },
     { nombre: 'no recupera el borrador', de: '      const guardado = leerBorradorCierre(p.turno.id)', a: '      const guardado = null' },
     { nombre: 'el borrador se borra aunque falle', de: "        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre))\n        if (error) throw error", a: "        guardarPreferencia(claveBorradorCierre(turnoId), null)\n        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre))\n        if (error) throw error" },
     { nombre: 'el borrador no se borra al cerrar', de: '        // Recién ahora se borra el borrador: la base ya tiene todo.\n        guardarPreferencia(claveBorradorCierre(turnoId), null)\n', a: '' },

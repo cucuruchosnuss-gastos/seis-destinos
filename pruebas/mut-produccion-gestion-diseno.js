@@ -22,6 +22,7 @@ correrMutacionesProduccion({
     { expr: 'esc(textoEntero(p.cajas))', motivo: 'un número formateado' },
     { expr: 'esc(textoEntero(p.unidades))', motivo: 'un número formateado' },
     { expr: 'esc(textoSinCaja(p))', motivo: 'texto constante del código' },
+    { expr: 'esc(String(t.hora_fin).slice(0, 5))', motivo: 'turnos_produccion.hora_fin es una columna time: solo dígitos y ":"' },
     { expr: 'esc(horarioTurno(t))', motivo: 'días, horas y palabras que arma el código' },
     { expr: 'esc(horasMinutosInd(minParada))', motivo: 'minutos y horas formateados por el código' },
     { expr: 'esc(textoKg(Number(t.scrap_kg)))', motivo: 'un número formateado' },

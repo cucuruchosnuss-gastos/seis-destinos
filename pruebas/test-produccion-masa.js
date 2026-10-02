@@ -764,6 +764,8 @@ esperas.push((async () => {
     cantidades: { ...bm.cantidades, [marca('ingCero')]: 1 }, lotes: { ...bm.lotes, [marca('ingCero')]: { insumo_id: marca('insCero'), lote: marca('loteCero'), manual: false, sinLote: false } } }, malos),
     ['ingCero', 'ingCeroNom', 'insCeroMarca', 'loteCero'])
   chequearMarcas(chk, 'fila escrita a mano', X.htmlFilaOtro(bm.otros[0]), ['otroId', 'otroNombre'])
+  // Con Original o Anterior la fila no se edita: el nombre lo escribió el masero, igual se escapa.
+  chequearMarcas(chk, 'fila escrita a mano sin editar', X.htmlFilaOtro(bm.otros[0], false), ['otroNombre'])
   const opAg = X.opcionesAgregar({ ...bm, como: 'modificar' }, malos)
   chequearMarcas(chk, 'opción de "+ Agregar ingrediente"', opAg.map((o, i) => X.htmlOpcionAgregar(o, i, false)).join(''), ['ingCeroNom', 'insCeroMarca', 'loteCero'])
   X.estado.masa = { ...bm, como: 'modificar' }

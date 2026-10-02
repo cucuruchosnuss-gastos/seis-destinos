@@ -15,6 +15,7 @@ correrMutacionesProduccion({
     'htmlCeldaLote', 'htmlCeldaQueda', 'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno',
     'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima', 'htmlOpcionAgregar', 'htmlPanelOtroInsumo'],
   equivalentes: [
+    { expr: 'esc(marca)', motivo: "en htmlFilaOtro: 'escrito a mano' o 'escrito a mano · de la masa anterior', escritos en el código" },
     { expr: 'esc(textoMasas(e.masas))', motivo: 'un conteo con "masa"/"masas"' },
     { expr: "esc(horaArgentina(e.ultimaMasa) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
     { expr: "esc(horaArgentina(a.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },

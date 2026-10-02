@@ -26,7 +26,7 @@ correrMutacionesProduccion({
     { nombre: 'los motivos no se ordenan', de: "const lista = [...(data ?? [])].sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0))", a: 'const lista = [...(data ?? [])]' },
     { nombre: 'se leen también los inactivos', de: ".select('id, nombre, categoria, pide_detalle, orden').eq('activo', true).order('orden')", a: ".select('id, nombre, categoria, pide_detalle, orden').order('orden')" },
     { nombre: 'la limpieza también va en la grilla', de: 'const resto = motivos.filter(m => m !== lim)', a: 'const resto = motivos' },
-    { nombre: 'la limpieza en el naranja de lo elegido', de: '.pr-pa-limpieza { display: flex; align-items: center; gap: 10px; background: var(--p-teal-suave);', a: '.pr-pa-limpieza { display: flex; align-items: center; gap: 10px; background: var(--p-acento-suave);' },
+    { nombre: 'la limpieza en el naranja de lo elegido', de: '.pr-pa-limpieza { display: flex; flex-direction: column; gap: 4px; background: var(--p-teal-suave);', a: '.pr-pa-limpieza { display: flex; flex-direction: column; gap: 4px; background: var(--p-acento-suave);' },
     { nombre: 'sin los motivos no se puede escribir', de: "      if (motivos === null) return String(f?.textoLibre ?? '').trim()\n", a: "      if (motivos === null) return ''\n" },
     // "Otro motivo" exige el detalle.
     { nombre: '"Otro motivo" guarda sin detalle', de: "} else if (m.pide_detalle && String(f.detalle ?? '').trim().length < 2) faltan.push('Escribí qué pasó.')", a: '}' },
@@ -38,14 +38,14 @@ correrMutacionesProduccion({
     { nombre: 'la duración en segundos', de: 'const fin = new Date(h.inicio).getTime() + Number(f.duracion) * 60000', a: 'const fin = new Date(h.inicio).getTime() + Number(f.duracion) * 1000' },
     { nombre: '"Todavía no volvió" no la deja abierta', de: "      if (h.error || f.duracion === 'sigue') return h\n", a: '      if (h.error) return h\n' },
     { nombre: 'la vuelta futura no se avisa', de: '      if (fin > tope) {\n', a: '      if (false) {\n' },
-    { nombre: '"Todavía no volvió" con una parada en curso', de: "out += puedeQuedarAbierta(p) ? sigue : sigue.replace('<button ', '<button disabled ')", a: 'out += sigue' },
-    { nombre: 'al terminar también ofrece "Todavía no terminó"', de: "      if (!limpieza || f.limpieza === 'arranque') {\n", a: '      if (true) {\n' },
+    { nombre: '"Todavía no volvió" con una parada en curso', de: "const sigueHtml = puedeQuedarAbierta(p) ? sigue : sigue.replace('<button ', '<button disabled ')", a: 'const sigueHtml = sigue' },
+    { nombre: 'al terminar dice "Todavía no terminó" en vez de "Empezó ahora"', de: "      const ahoraLimpieza = limpieza && f.limpieza && f.limpieza !== 'arranque'\n", a: '      const ahoraLimpieza = false\n' },
     // La limpieza de planchas.
-    { nombre: 'la limpieza siempre "al arrancar"', de: "p_momento: f.limpieza === 'arranque' ? 'arranque' : 'final'", a: "p_momento: 'arranque'" },
-    { nombre: 'la limpieza sin elegir el momento se manda', de: "      if (!f.limpieza) return { error: 'Elegí si la limpieza fue al arrancar o al terminar.' }\n", a: '' },
+    { nombre: 'la limpieza siempre "al arrancar"', de: "p_momento: f.limpieza, p_minutos", a: "p_momento: 'arranque', p_minutos" },
+    { nombre: 'la limpieza sin elegir el momento se manda', de: "      if (!f.limpieza || !MOMENTOS_LIMPIEZA[f.limpieza]) return { error: 'Elegí si la limpieza fue al arrancar, en el medio o al terminar.' }\n", a: '' },
     { nombre: '"Paró ahora" también con la limpieza', de: "document.getElementById('pr-btn-parada').hidden = !puedeQuedarAbierta(p) || esLimpieza(m)", a: "document.getElementById('pr-btn-parada').hidden = !puedeQuedarAbierta(p)" },
     // Guardar, el error y el botón.
-    { nombre: 'el botón se traba por lo que falta', de: '      g.disabled = !!f.enviando\n', a: '      g.disabled = !!f.enviando || faltanParaParadaNueva(f, p, ahora).length > 0\n' },
+    { nombre: 'el botón se traba por lo que falta', de: "      const g = document.getElementById('pr-btn-guardar-parada')\n      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.\n      g.disabled = !!f.enviando\n", a: "      const g = document.getElementById('pr-btn-guardar-parada')\n      g.disabled = !!f.enviando || faltanParaParadaNueva(f, p, ahora).length > 0\n" },
     { nombre: 'el error de la base se tapa', de: "        f.errorBase = e?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'\n        return pintarResumenParada(ahora)", a: "        f.errorBase = 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'\n        return pintarResumenParada(ahora)" },
     { nombre: '"Paró ahora" sin motivo se manda igual', de: "      if (f.errorBase) return pintarResumenParada()\n      const btn = document.getElementById('pr-btn-parada')", a: "      const btn = document.getElementById('pr-btn-parada')" },
     { nombre: 'el botón de volver no suelta cuánto duró', de: "      if (f.duracion) return 'duracion'\n", a: '' },
