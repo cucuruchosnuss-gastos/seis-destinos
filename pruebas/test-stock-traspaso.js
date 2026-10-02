@@ -148,7 +148,7 @@ const PRELUDIO = `
 `
 
 const FUNCIONES = [
-  'esc', 'normalizar', 'hoyLocal', 'tieneTarea', 'nombreDeUnidadBarra', 'cargarStock',
+  'esc', 'normalizar', 'hoyLocal', 'tieneTarea', 'nombreDeUnidadBarra', 'cargarStock', 'mapaCobertura',
   'unidadesTraspaso', 'puedeTraspasar', 'nuevoUuidTrp', 'nuevoTraspaso','destinoPorDefectoTrp',
   'cargarCatalogoTrp', 'cargarStockTrp', 'agruparStockTrp', 'listaInternaDe', 'cargarListaInternaTrp',
   'proponerPrecioTrp', 'presentacionTrp', 'presentacionesOrigenTrp', 'presentacionEnDestinoTrp',

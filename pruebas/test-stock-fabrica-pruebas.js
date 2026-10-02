@@ -99,7 +99,7 @@ const PRELUDIO = `
 // saca la fábrica de pruebas por su cuenta (test-barra-unidad.js).
 const FUNCIONES = [
   'esc',
-  'cargarStock',
+  'cargarStock', 'mapaCobertura',
   'cargarUnidadesRecuento', 'renderizarChipsUnidadRecuento', 'unidadRecuentoPorBarra',
   'sinPermisoEnBarra', 'pintarAvisoUnidad', 'textoSinPermiso', 'nombreDeUnidadBarra',
   'cargarHistorial',

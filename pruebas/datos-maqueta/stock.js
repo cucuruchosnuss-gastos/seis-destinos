@@ -68,6 +68,17 @@ module.exports = {
       fila(NUSS, 'i-caja', 'Caja N°1', 1200, { tipo: 'insumo', categoria: 'Cajas', unidad_medida: 'un', marca: 'Nuss' }),
       fila(DOLCE, 'i-caja', 'Caja N°1', 300, { tipo: 'insumo', categoria: 'Cajas', unidad_medida: 'un', marca: 'Nuss' }),
     ],
+    // Para cuántos días hábiles alcanza (02/10/2026): la harina de Nuss en
+    // gris con la estimación de pocos días, la lecitina en rojo, las cajas de
+    // Nuss en amarillo, el azúcar de Dolce sin consumo (sin cartelito).
+    v_stock_cobertura: [
+      { unidad_negocio_id: NUSS, insumo_id: 'i-harina', insumo_nombre: 'Harina 000', marca: null, unidad_medida: 'kg', stock: '6250', dias_base: 1, consumo_diario: '550', dias_cobertura: '11.4', estimado_con_pocos_dias: true },
+      { unidad_negocio_id: DOLCE, insumo_id: 'i-harina', insumo_nombre: 'Harina 000', marca: null, unidad_medida: 'kg', stock: '500', dias_base: 12, consumo_diario: '50', dias_cobertura: '10.0', estimado_con_pocos_dias: false },
+      { unidad_negocio_id: NUSS, insumo_id: 'i-lecitina', insumo_nombre: 'Lecitina de soja con un nombre larguísimo para ver que no empuje el ancho', marca: null, unidad_medida: 'kg', stock: '12.5', dias_base: 12, consumo_diario: '6.4', dias_cobertura: '2.0', estimado_con_pocos_dias: false },
+      { unidad_negocio_id: DOLCE, insumo_id: 'i-azucar', insumo_nombre: 'Azúcar', marca: null, unidad_medida: 'kg', stock: '-3', dias_base: 12, consumo_diario: null, dias_cobertura: null, estimado_con_pocos_dias: false },
+      { unidad_negocio_id: NUSS, insumo_id: 'i-caja', insumo_nombre: 'Caja N°1', marca: 'Nuss', unidad_medida: 'un', stock: '1200', dias_base: 12, consumo_diario: '209', dias_cobertura: '5.7', estimado_con_pocos_dias: false },
+      { unidad_negocio_id: DOLCE, insumo_id: 'i-caja', insumo_nombre: 'Caja N°1', marca: 'Nuss', unidad_medida: 'un', stock: '300', dias_base: 12, consumo_diario: '10', dias_cobertura: '30.0', estimado_con_pocos_dias: false },
+    ],
     insumos: [
       insumo('i-harina', 'Harina 000'),
       insumo('i-lecitina', 'Lecitina de soja con un nombre larguísimo para ver que no empuje el ancho', { categoria: 'Aditivos' }),
