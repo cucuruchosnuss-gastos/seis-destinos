@@ -372,7 +372,15 @@ esperas.push((async () => {
     /max-height: min\(500px, calc\(100dvh - 24px\)\)/.test(reg('.pr-lp__caja')) && /overflow: hidden/.test(reg('.pr-lp__caja')))
   chk('escribir un lote que no está: apartado, con borde punteado', /border: 2px dashed var\(--p-acento\)/.test(reg('.pr-lp__manual')))
   chk('el lote puesto se lee en el recuadro del renglón, que ocupa su celda', /width: 100%/.test(reg('.pr-rec__lote')) && alto('.pr-rec__lote') >= 36)
-  chk('la fecha y lo que queda salen de stock_para_masa', /rpc\('stock_para_masa', \{ p_turno_id: estado\.salaTurno\.id \}\)/.test(FUENTE) && !/from\('v_stock_por_lote'\)/.test(FUENTE))
+  // Desde el 02/10/2026 la sala lee v_stock_por_lote, pero SOLO para saber
+  // cuánto trae un bulto de cada lote (bultos o kilos, como en Stock), y solo
+  // con stock:ver: la fecha y lo que queda siguen saliendo de stock_para_masa.
+  const usosPorLote = [...FUENTE.matchAll(/from\('v_stock_por_lote'\)\s*\.select\('([^']*)'\)/g)].map(m => m[1])
+  chk('la fecha y lo que queda salen de stock_para_masa', /rpc\('stock_para_masa', \{ p_turno_id: estado\.salaTurno\.id \}\)/.test(FUENTE) &&
+    FUENTE.split("from('v_stock_por_lote')").length - 1 === usosPorLote.length &&
+    usosPorLote.every(c => c === 'insumo_id, lote, contenido_por_bulto'), usosPorLote)
+  chk('v_stock_por_lote solo para el contenido del bulto, y solo con stock:ver',
+    /puedeVerStockEn\(estado\.unidadId\) !== true\) return\n\s*const \{ data: lotes, error: e2 \} = await supabase\.from\('v_stock_por_lote'\)/.test(FUENTE))
 }
 
 fin()

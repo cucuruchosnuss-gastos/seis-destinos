@@ -301,6 +301,10 @@ const NUEVAS_PLANTA = [
   // Sala de masa con dos modos (28/09/2026): la masa nueva, lo que queda de
   // cada lote, agregar un ingrediente, otro insumo y las masas del turno.
   'quedaDelLote', 'conQuedan', 'avisosDeLotes', 'comoInicial', 'htmlOpcionesReceta', 'leerStockMasa',
+  // Bultos o kilos, como en Stock (02/10/2026): lo propio de la planta y lo
+  // que importa de js/cantidades.js (extraerFn lo encuentra por el import).
+  'leerPresentacionesMasa', 'contenidoPorLote', 'textoStockLote', 'textoHayEmpaque',
+  'formatearCantidadStock', 'equivalenteEnBultos', 'cabezaBultos', 'cantidadSegunVista', 'textoSegunVista',
   'renglonesVisibles', 'siguienteMasa', 'anteriorDesdeBorrador', 'opcionesAgregar', 'opcionesAgregarFiltradas',
   'htmlOpcionAgregar', 'pintarAgregarIngrediente', 'abrirAgregarIngrediente', 'cerrarAgregarIngrediente',
   'elegirOpcionAgregar', 'sumarPasoAgregar', 'confirmarAgregarIngrediente', 'quitarAgregado', 'escribirOtroIngrediente',
@@ -369,7 +373,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
   'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA',
-  'VISTAS_CON_PESTANAS']
+  'VISTAS_CON_PESTANAS',
+  // De js/cantidades.js (02/10/2026)
+  'DECIMALES_CANTIDAD', 'FRACCIONES']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

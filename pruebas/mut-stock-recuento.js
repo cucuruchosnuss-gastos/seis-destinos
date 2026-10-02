@@ -52,7 +52,9 @@ correrMutaciones({
     { nombre: 'el botón no tiene listener',
       de: "        btn.addEventListener('click', () => ponerCeroRec(btn.dataset.cero))\n", a: '' },
     { nombre: 'el botón mide menos de 44px',
-      de: '      min-height: 2.75rem;\n      padding: 0 0.75rem;', a: '      min-height: 2rem;\n      padding: 0 0.75rem;' },
+      // Anclada a .rec-cero: el traspaso (.trp-quitar) tiene las mismas dos
+      // líneas y la mutación dejaba de ser única (02/10/2026).
+      de: '      min-width: 2.75rem;\n      min-height: 2.75rem;\n      padding: 0 0.75rem;', a: '      min-width: 2.75rem;\n      min-height: 2rem;\n      padding: 0 0.75rem;' },
     // ── Payload ───────────────────────────────────────────────────────────
     { nombre: 'guardar_conteo pierde la observación',
       de: "          observacion: i.observacion ?? '',\n", a: '' },

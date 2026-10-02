@@ -2248,6 +2248,7 @@
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    import { cantidadSegunVista, textoSegunVista } from '../js/cantidades.js'
 
     mostrarBannerVersion()
 
@@ -7588,11 +7589,17 @@
       if (!insumoIds.length) return { estado: 'ok', saldos: new Map() }
       try {
         const { data, error } = await supabase.from('v_stock_insumos')
-          .select('insumo_id, cantidad_total').eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)
+          .select('insumo_id, cantidad_total, unidad_medida, vista_preferida, presentaciones, contenido_unico, kilos_sueltos').eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)
         if (error) throw error
         const saldos = new Map()
-        for (const r of data ?? []) saldos.set(r.insumo_id, (saldos.get(r.insumo_id) ?? 0) + Number(r.cantidad_total))
-        return { estado: 'ok', saldos }
+        // La fila entera, para decir lo que hay como en Stock (bultos o su
+        // unidad, según la preferencia). Una por insumo: la unidad es una.
+        const filas = new Map()
+        for (const r of data ?? []) {
+          saldos.set(r.insumo_id, (saldos.get(r.insumo_id) ?? 0) + Number(r.cantidad_total))
+          filas.set(r.insumo_id, r)
+        }
+        return { estado: 'ok', saldos, filas }
       } catch (err) {
         console.error('stock del empaque:', err)
         return { estado: 'error', saldos: new Map() }
@@ -7638,8 +7645,22 @@
       if (!f.length) return ''
       const num = x => formatearNumeroAr(x, { decimales: 3, minimos: 0 })
       return '<div class="pr-aviso pr-aviso--grave">' + f.map(x =>
-        `${x.falta <= 1 ? 'Falta' : 'Faltan'} ${esc(num(x.falta))} ${esc(textoInsumoEmpaque(insumoDe(cat, x.insumoId)))}: hay ${esc(num(x.hay))}, se necesitan ${esc(num(x.necesita))}`).join('<br>') +
+        `${x.falta <= 1 ? 'Falta' : 'Faltan'} ${esc(num(x.falta))} ${esc(textoInsumoEmpaque(insumoDe(cat, x.insumoId)))}: hay ${esc(textoHayEmpaque(a, x.insumoId, x.hay, num))}, se necesitan ${esc(num(x.necesita))}`).join('<br>') +
         '<br>Se puede cargar igual.</div>'
+    }
+
+    // Lo que HAY de un insumo del empaque, como en Stock (02/10/2026): en
+    // bultos si así lo eligió Facu y hay con qué (con la cantidad en su unidad
+    // entre paréntesis, porque al lado va lo que falta en unidades); si no, el
+    // número. La regla es la de js/cantidades.js.
+    function textoHayEmpaque(a, insumoId, hay, num) {
+      const f = a?.stock?.filas?.get?.(insumoId)
+      if (!f) return num(hay)
+      const args = {
+        cantidad: f.cantidad_total, unidad: f.unidad_medida, vista: f.vista_preferida,
+        contenido: Number(f.presentaciones) === 1 ? f.contenido_unico : null, sueltos: Number(f.kilos_sueltos) || 0,
+      }
+      return cantidadSegunVista(args).enBultos ? textoSegunVista(args, { conKilos: true }) : num(hay)
     }
 
     function htmlEmbolsado(a, cat) {
@@ -9472,7 +9493,7 @@
         for (const l of ins.lotes ?? []) {
           out.push({
             insumo_id: ins.insumo_id, lote: l.lote, manual: false, sinLote: false, stock: Number(l.stock),
-            etiqueta: `Lote ${l.lote}${cola} · ${textoCantidad(Number(l.stock))}`,
+            etiqueta: `Lote ${l.lote}${cola} · ${textoStockLote(ins.insumo_id, l.lote, Number(l.stock))}`,
           })
         }
         if (ins.tipo !== 'materia_prima') {
@@ -9524,7 +9545,7 @@
 
     function conQuedan(e, insumoId, lote) {
       const q = quedaDelLote(insumoId, lote)
-      return { ...e, quedaAntes: q, noAlcanza: q != null && q + 1e-9 < e.consumo }
+      return { ...e, quedaAntes: q, noAlcanza: q != null && q + 1e-9 < e.consumo, quedaInsumo: insumoId, quedaLote: lote }
     }
     function estadoLote(it, b, datos) {
       const pide = pideLote(datos, b.cantidades, it.ingrediente_id)
@@ -9584,7 +9605,7 @@
         const e = estadoLote(it, b, datos)
         if (!e.pide || !e.noAlcanza) continue
         const lote = String(e.l?.lote ?? '').trim()
-        out.push(`Al lote ${lote} de ${String(it.ingrediente ?? '').toLowerCase()} le quedan ${textoCantidad(e.quedaAntes)} y esta masa lleva ${textoCantidad(e.consumo)}. Podés registrar igual.`)
+        out.push(`Al lote ${lote} de ${String(it.ingrediente ?? '').toLowerCase()} le quedan ${textoStockLote(e.quedaInsumo, e.quedaLote, e.quedaAntes, { conKilos: true })} y esta masa lleva ${textoCantidad(e.consumo)}. Podés registrar igual.`)
       }
       return out
     }
@@ -10015,7 +10036,7 @@
     // Va ADENTRO del recuadro del lote, debajo, en chico (Parte 0).
     function htmlCeldaQueda(e) {
       if (e.quedaAntes == null) return ''
-      return `<span class="pr-rec__queda${e.noAlcanza ? ' pr-rec__queda--poco' : ''}">quedan ${esc(textoCantidad(e.quedaAntes))}</span>`
+      return `<span class="pr-rec__queda${e.noAlcanza ? ' pr-rec__queda--poco' : ''}">quedan ${esc(textoStockLote(e.quedaInsumo, e.quedaLote, e.quedaAntes))}</span>`
     }
 
     // "25,00 kg" → el número grande y "kg" chico.
@@ -10253,6 +10274,76 @@
         estado.stockMasa = null
         estado.stockMasaError = true
       }
+      await leerPresentacionesMasa()
+    }
+
+    // ── Bultos o kilos, como en Stock (02/10/2026) ─────────────────────────
+    //
+    // En Stock cada insumo se muestra según insumos.vista_preferida: en BULTOS
+    // cuando Facu lo eligió así (la harina, el azúcar, la margarina) y se
+    // conoce lo que trae un bulto. La sala decía siempre kilos. Ahora "quedan"
+    // sale de la MISMA regla (js/cantidades.js, textoSegunVista): la misma
+    // cantidad se dice igual en Stock, en la planta y en la sala.
+    //
+    // De dónde sale cada dato:
+    //  - la preferencia, de insumos (la lee cualquier usuario con sesión);
+    //  - lo que trae un bulto DE ESE LOTE, de v_stock_por_lote (agrupa por
+    //    lote y presentación; pide stock:ver, que la cuenta de la tablet tiene
+    //    en su fábrica). Un lote con una sola presentación conocida tiene
+    //    contenido; con varias, o sin ninguna, no: ahí se dice en su unidad.
+    // Si cualquiera de las dos lecturas falla, todo sigue en kilos: nunca se
+    // frena la sala ni se inventa un bulto.
+    // → estado.presMasa = { vista: Map(insumo → 'bulto'), contenido: Map('insumo|lote' → número) }
+    async function leerPresentacionesMasa() {
+      const pres = { vista: new Map(), contenido: new Map() }
+      estado.presMasa = pres
+      try {
+        const { data: prefs, error } = await supabase.from('insumos').select('id, vista_preferida').eq('vista_preferida', 'bulto')
+        if (error) throw error
+        for (const p of prefs ?? []) pres.vista.set(p.id, p.vista_preferida)
+        const ids = [...pres.vista.keys()]
+        if (!ids.length || puedeVerStockEn(estado.unidadId) !== true) return
+        const { data: lotes, error: e2 } = await supabase.from('v_stock_por_lote')
+          .select('insumo_id, lote, contenido_por_bulto')
+          .eq('unidad_negocio_id', estado.unidadId).in('insumo_id', ids)
+        if (e2) throw e2
+        pres.contenido = contenidoPorLote(lotes)
+      } catch (err) {
+        console.error('bultos de la sala:', err)
+        pres.vista = new Map()
+        pres.contenido = new Map()
+      }
+    }
+
+    // 'insumo|lote' → lo que trae un bulto, SOLO si ese lote tiene una única
+    // presentación conocida. Un lote con una fila sin presentación (entró
+    // suelto) o con dos distintas no tiene "un" bulto.
+    function contenidoPorLote(filas) {
+      const vistos = new Map()
+      for (const f of filas ?? []) {
+        if (!f?.insumo_id || f.lote == null) continue
+        const clave = `${f.insumo_id}|${f.lote}`
+        const c = f.contenido_por_bulto === null || f.contenido_por_bulto === undefined || f.contenido_por_bulto === '' ? null : Number(f.contenido_por_bulto)
+        const v = Number.isFinite(c) && c > 0 ? c : null
+        if (!vistos.has(clave)) vistos.set(clave, v)
+        else if (vistos.get(clave) !== v) vistos.set(clave, null)
+      }
+      const out = new Map()
+      for (const [k, v] of vistos) if (v !== null) out.set(k, v)
+      return out
+    }
+
+    // Cuánto queda de un lote, dicho como en Stock. En bultos con la
+    // preferencia 'bulto' y un contenido conocido; si no, en su unidad (con
+    // los gramos de la sala abajo de un kilo, textoCantidad).
+    function textoStockLote(insumoId, lote, cantidad, { conKilos = false } = {}) {
+      const p = estado.presMasa
+      const vista = p?.vista?.get(insumoId) ?? 'base'
+      const contenido = p?.contenido?.get(`${insumoId}|${lote}`) ?? null
+      const unidad = estado.stockMasa?.get(insumoId)?.unidad_medida || 'kg'
+      const args = { cantidad, unidad, vista, contenido }
+      if (!cantidadSegunVista(args).enBultos) return textoCantidad(cantidad)
+      return textoSegunVista(args, { conKilos })
     }
 
     // 'dd/mm/aaaa', o '' si no se puede leer (nunca "NaN").
@@ -10307,7 +10398,7 @@
         `<span class="pr-lp__fila-col"><span class="pr-lp__fila-texto"><strong>${esc(f.marca)}</strong> ${lote}` +
         (viejo ? '<span class="pr-lp__fila-primero">EL MÁS VIEJO · USALO PRIMERO</span>' : '') + '</span>' +
         (sub ? `<span class="pr-lp__fila-fecha">${sub}</span>` : '') + '</span>' +
-        (f.queda != null ? `<span class="pr-lp__fila-queda"><strong>${esc(textoCantidad(f.queda))}</strong><span>quedan</span></span>` : '') +
+        (f.queda != null ? `<span class="pr-lp__fila-queda"><strong>${esc(textoStockLote(o.insumo_id, o.lote, f.queda))}</strong><span>quedan</span></span>` : '') +
         '</button>'
     }
 
@@ -10481,7 +10572,7 @@
         if (o.deLaReceta) notas.push('el de la receta')
         if (o.seTermino) notas.push('se terminó')
         else if (o.noAlcanza) notas.push('no alcanza')
-        const detalle = o.lote ? `Lote ${esc(o.lote)}${o.queda != null ? ` · quedan ${esc(textoCantidad(o.queda))}` : ''}` : 'Sin lote con saldo · escribí el lote'
+        const detalle = o.lote ? `Lote ${esc(o.lote)}${o.queda != null ? ` · quedan ${esc(textoStockLote(o.insumo_id, o.lote, o.queda))}` : ''}` : 'Sin lote con saldo · escribí el lote'
         return `<button type="button" class="pr-lp__tarjeta${o.seTermino || o.noAlcanza ? ' pr-lp__tarjeta--floja' : ''}" data-insumo-op="${i}" aria-pressed="${o.insumo_id === actual ? 'true' : 'false'}">` +
           `<span class="pr-lp__izq"><span class="pr-lp__marca">${esc(o.marca || o.nombre)}</span>` +
           (o.marca && o.nombre ? `<span class="pr-lp__insumo">${esc(o.nombre)}</span>` : '') +
@@ -10766,7 +10857,7 @@
     function htmlOpcionAgregar(o, i, elegida) {
       const quien = [o.marca || o.nombre].filter(Boolean).join('')
       const detalle = o.insumo_id
-        ? (o.lote ? `lote ${esc(o.lote)}${o.queda != null ? ` · quedan ${esc(textoCantidad(o.queda))}` : ''}` : 'sin lote con stock cargado')
+        ? (o.lote ? `lote ${esc(o.lote)}${o.queda != null ? ` · quedan ${esc(textoStockLote(o.insumo_id, o.lote, o.queda))}` : ''}` : 'sin lote con stock cargado')
         : 'no descuenta stock'
       return `<button type="button" class="pr-lp__tarjeta" data-agregar-op="${i}" aria-pressed="${elegida ? 'true' : 'false'}">` +
         `<span class="pr-lp__izq"><span class="pr-lp__marca">${esc(o.ingrediente)}${quien ? ` · ${esc(quien)}` : ''}</span>` +

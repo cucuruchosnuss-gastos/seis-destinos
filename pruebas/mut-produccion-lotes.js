@@ -10,7 +10,7 @@ correrMutacionesProduccion({
   escape: 'esc',
   funciones: ['htmlFilaLote', 'htmlPanelLote', 'htmlCeldaLote', 'htmlEscribirLote'],
   equivalentes: [
-    { expr: 'esc(textoCantidad(f.queda))', motivo: 'textoCantidad() de un número finito solo produce dígitos, la coma y "kg"/"g": sin esc() sale idéntico' },
+    { expr: 'esc(textoStockLote(o.insumo_id, o.lote, f.queda))', motivo: 'textoStockLote() (02/10/2026): textoCantidad() de un número finito, o "N bultos + ½" de js/cantidades.js: dígitos, la coma, la fracción y texto fijo: sin esc() sale idéntico' },
     { expr: 'esc(textoFechaLote(f.desde))', motivo: 'textoFechaLote() solo produce "dd/mm/aaaa" (dígitos y barras) o vacío: sin esc() sale idéntico' },
     { expr: 'esc(pl.errorEscribir)', motivo: 'errorEscribir solo toma el texto fijo "Escribí el lote." (usarLoteEscrito): sin esc() sale idéntico' },
   ],
