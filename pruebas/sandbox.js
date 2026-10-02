@@ -39,7 +39,7 @@ const FUNCIONES_ASENTAR = [
   'proyectoParaBase', 'cargarProyectosAsentar', 'ponerLogosEmpresas', 'pintarAsentar', 'alTocarEnAsentar', 'alElegirProyecto',
   'textoCobranzaAsentada', 'subirCobranzaAsentada',
   // El apodo que coincidió (02/10/2026)
-  'normalizarApodo', 'apodoQueCoincide', 'apodosDe',
+  'normalizarApodo', 'apodoQueCoincide',
   'ordenarUnidades', 'logoUnidad', 'nombreCorto', 'inicialesDe',
   ...FUNCIONES_PAGO,
 ]

@@ -1756,10 +1756,17 @@
     // coincidió (el apodo o la razón social, resaltado), la localidad y la
     // EMPRESA siempre (el mismo cliente existe en Nuss y en Dolce Pasta).
     // Nunca el saldo.
-    function htmlResultadoCliente(c, empresa, busqueda = '') {
+    //
+    // `coincide`: el apodo que coincidió SEGÚN LA BASE (el `apodo_coincide` de
+    // buscar_clientes, 02/10/2026; null = ninguno). Sin él (undefined: la
+    // búsqueda local del depósito, que no llama a la base) se busca entre los
+    // apodos del cliente, con la misma regla.
+    function htmlResultadoCliente(c, empresa, busqueda = '', coincide = undefined) {
       const q = normalizar(busqueda)
       const apodos = (Array.isArray(c.apodos) ? c.apodos : []).map(limpio).filter(Boolean)
-      const apodo = q ? apodos.find(a => normalizar(a).includes(q)) : null
+      const apodo = coincide !== undefined
+        ? (limpio(coincide) || null)
+        : (q ? apodos.find(a => normalizar(a).includes(q)) : null)
       const rs = limpio(c.razon_social)
       const partes = []
       // EL APODO QUE COINCIDIÓ VA AL LADO DEL NOMBRE (02/10/2026): buscando
@@ -1818,8 +1825,10 @@
         if (!r.filas.length) return `<div class="rt-texto-suave">Ningún cliente coincide con «${esc(q)}».</div>`
         return r.filas.slice(0, 8).map(x => {
           const local = clienteDe(x.cliente_id)
-          const c = local ?? { id: x.cliente_id, nombre: x.nombre, razon_social: x.razon_social, localidad: x.localidad, apodos: [] }
-          return htmlResultadoCliente(c, x.empresa || empresaActual()?.nombre, busqueda)
+          // Los apodos y el que coincidió vienen de la base (02/10/2026).
+          const apodos = Array.isArray(x.apodos) ? x.apodos : (local?.apodos ?? [])
+          const c = { ...(local ?? { id: x.cliente_id, nombre: x.nombre, razon_social: x.razon_social, localidad: x.localidad }), apodos }
+          return htmlResultadoCliente(c, x.empresa || empresaActual()?.nombre, busqueda, x.apodo_coincide ?? null)
         }).join('')
       }
       if (estado.errorClientes) return `<div class="rt-aviso rt-aviso--grave">${esc(estado.errorClientes)}</div>`

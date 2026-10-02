@@ -3063,39 +3063,25 @@
     }
 
     // ── El apodo que coincidió (02/10/2026) ───────────────────────────────
-    // buscar_clientes encuentra por apodo ("Turi" da SALVADOR LOFORTE) pero no
-    // devuelve los apodos: se leen aparte de `clientes` por id (apodosDe). Si
-    // esa lectura no deja (quien solo tiene tareas de Cobranzas no lee
-    // `clientes`) o falla, se muestra el nombre solo: nunca se inventa.
+    // buscar_clientes encuentra por apodo ("Turi" da SALVADOR LOFORTE) y, desde
+    // el 02/10/2026, devuelve en cada cliente `apodos` y `apodo_coincide` (el
+    // apodo que coincidió con lo escrito, o null). Antes los apodos se leían
+    // aparte de `clientes`, y quien solo tiene tareas de Cobranzas (Yanina) no
+    // tenía permiso: esa lectura se fue.
     function normalizarApodo(t) {
       return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
     }
 
-    // El apodo que coincide con lo buscado, si el NOMBRE no coincide por sí
-    // solo (ahí no hace falta decirlo). null si no hay.
+    // El apodo que coincidió (el `apodo_coincide` de la base), si el NOMBRE no
+    // coincide por sí solo: la base lo manda igual buscando "forte", y ahí
+    // "SALVADOR LOFORTE · Los Forte" no agrega nada. null si no hay.
     function apodoQueCoincide(c, busqueda) {
+      const apodo = String(c?.apodo_coincide ?? '').trim()
+      if (!apodo) return null
       const q = normalizarApodo(busqueda)
       if (q.length < MIN_LETRAS_CLIENTE) return null
       if (normalizarApodo(c?.nombre).includes(q)) return null
-      const apodos = Array.isArray(c?.apodos) ? c.apodos : []
-      return apodos.map(a => String(a ?? '').trim()).find(a => a && normalizarApodo(a).includes(q)) ?? null
-    }
-
-    // Les suma los apodos a los clientes que devolvió la búsqueda. Una
-    // respuesta que ya los traiga (si un día buscar_clientes los devuelve) se
-    // respeta tal cual.
-    async function apodosDe(clientes) {
-      const faltan = clientes.filter(c => !Array.isArray(c.apodos)).map(c => c.cliente_id)
-      if (!faltan.length) return clientes
-      try {
-        const { data, error } = await supabase.from('clientes').select('id, apodos').in('id', faltan)
-        if (error) throw error
-        const porId = new Map((data ?? []).map(x => [x.id, Array.isArray(x.apodos) ? x.apodos : []]))
-        return clientes.map(c => Array.isArray(c.apodos) ? c : { ...c, apodos: porId.get(c.cliente_id) ?? [] })
-      } catch (err) {
-        console.error('No se pudieron leer los apodos:', err)
-        return clientes
-      }
+      return apodo
     }
 
     function htmlOpcionClienteAsentar(c, busqueda = '') {
@@ -3165,10 +3151,7 @@
         })
         if (errRpc) throw errRpc
         if (data === null) error = 'Con tu usuario no se puede ver la lista de clientes de esta empresa.'
-        else {
-          clientes = clientesDeLaEmpresa(data, unidad, texto)
-          if (texto.length >= MIN_LETRAS_CLIENTE) clientes = await apodosDe(clientes)
-        }
+        else clientes = clientesDeLaEmpresa(data, unidad, texto)
       } catch (err) {
         console.error('No se pudo buscar los clientes:', err)
         error = 'No se pudo leer la lista de clientes. Revisá la conexión.'

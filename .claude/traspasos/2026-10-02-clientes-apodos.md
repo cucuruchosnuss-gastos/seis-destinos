@@ -8,7 +8,7 @@ Rama `ci-prueba/clientes-apodos`. Cero cambios de base.
 
 ## Lo que encontré en la base (solo lectura)
 - **SALVADOR LOFORTE existe en Nuss y en Dolce Pasta con el apodo "Turi", pero el de Dolce Pasta está APAGADO.** Por eso en Dolce Pasta "Turi" no lo trae: los clientes apagados no aparecen para cargar retiros ni para asentar cobranzas (regla vieja, a propósito). **Para que aparezca, hay que prenderlo** en Administración → Clientes → "Mostrar apagados" → el interruptor. No lo cambié: los datos los maneja el chat.
-- **`buscar_clientes` no devuelve los apodos.** Cobranzas los lee aparte de la tabla `clientes`, pero quien solo tiene tareas de Cobranzas (Yanina) no puede leer esa tabla: para ella aparece el cliente correcto, sin el "· Turi". **Pedido para el chat de la base:** que `buscar_clientes` devuelva `apodos` en cada fila (la pantalla ya lo usa si viene, sin consultar aparte).
+- ~~`buscar_clientes` no devuelve los apodos~~ — **resuelto la tarde del 02/10/2026**: la base devuelve `apodos` y `apodo_coincide`. Cobranzas y Órdenes de retiro usan `apodo_coincide`, y la lectura aparte de `clientes` (que Yanina no podía hacer) se sacó. Decisión: como la base manda `apodo_coincide` aunque el nombre también coincida ("forte" → "Los Forte"), la pantalla lo muestra solo cuando el nombre no coincide por sí solo.
 
 ## Decisiones tomadas sin consultar
 - El apodo se muestra **solo si el nombre no coincide por sí solo** (buscando "forte" no se agrega "· Los Forte").

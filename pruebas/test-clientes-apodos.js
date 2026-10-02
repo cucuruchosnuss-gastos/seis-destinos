@@ -4,10 +4,11 @@
 //  - Órdenes de retiro (el depósito): buscar "Turi" encuentra a SALVADOR
 //    LOFORTE por su apodo y el resultado dice "SALVADOR LOFORTE · Turi" (el
 //    apodo al lado del nombre, resaltado); si el nombre ya coincide, no;
-//  - Cobranzas (la cobranza ya asentada): buscar_clientes encuentra por apodo
-//    pero no devuelve los apodos; se leen aparte de `clientes` por id y el
-//    resultado dice "SALVADOR LOFORTE · Turi"; si no se pueden leer, el nombre
-//    solo (nunca se inventa);
+//  - buscar_clientes devuelve (desde el 02/10/2026) `apodos` y `apodo_coincide`
+//    en cada cliente: Cobranzas (la cobranza ya asentada) y Órdenes de retiro
+//    (cuando la base contesta) muestran "SALVADOR LOFORTE · Turi" con ese
+//    `apodo_coincide`, y NO leen los apodos aparte de `clientes` (Yanina no
+//    tiene permiso); el depósito sin permiso de buscar sigue con su lista;
 //  - la ficha del cliente (Administración): los apodos como etiquetas con una
 //    X; agregar y sacar se guarda AL MOMENTO con guardar_cliente, con los
 //    datos que pisa (nombre, localidad, teléfono, observaciones, activo)
@@ -60,6 +61,49 @@ const LOFORTE = { id: 'c-turi', nombre: 'SALVADOR LOFORTE', razon_social: null, 
   // Escapado.
   const mal = { id: marca('id'), nombre: 'Kiosco', apodos: [marca('apodo') + ' turi'], activo: true }
   chequearMarcas(chk, 'retiros: apodo al lado del nombre', S.htmlResultadoCliente(mal, 'E', 'turi'), ['id', 'apodo'])
+  // El que dice la base manda: con `coincide` no se busca en la lista.
+  chk('retiros: el apodo_coincide de la base manda', / · <mark class="rt-resaltado">Turi<\/mark>/.test(S.htmlResultadoCliente({ ...LOFORTE, apodos: [] }, 'E', 'Turi', 'Turi')))
+  chk('retiros: la base dice null → sin apodo', !/rt-resultado__apodo/.test(S.htmlResultadoCliente(LOFORTE, 'E', 'Turi', null)))
+  chequearMarcas(chk, 'retiros: el apodo_coincide escapado', S.htmlResultadoCliente({ id: 'x', nombre: 'K', apodos: [] }, 'E', 'turi', marca('apodoBase')), ['apodoBase'])
+}
+
+// ── Órdenes de retiro con la base (quien sí puede buscar) ───────────────────
+const { servidorBuscarClientes } = require('./buscar-clientes-comun')
+const PRELUDIO_TIMERS = `
+  var __tm = globalThis.__timersApodos = []
+  setTimeout = function (f, ms) { __tm.push({ f, cancelado: false }); return __tm.length }
+  clearTimeout = function (id) { if (id && __tm[id - 1]) __tm[id - 1].cancelado = true }
+`
+async function bloqueRetirosBase() {
+  const S = construirRetiros(RETIROS, { preludioExtra: PRELUDIO_TIMERS })
+  S.estado.empresaId = 'u-n'
+  // La lista local SIN los apodos (que el resultado los tome de la base).
+  S.estado.clientes = [{ ...LOFORTE, apodos: [] }]
+  S.estado.form = S.formVacio()
+  const servidor = servidorBuscarClientes({ clientes: [{ ...LOFORTE, unidad_negocio_id: 'u-n' }], empresas: { 'u-n': 'Cucuruchos Nuss' } })
+  S.__setRpc(async (n, p) => (n === 'buscar_clientes' ? { data: servidor(p), error: null } : { data: null, error: null }))
+  S.buscarClienteRetiro('Turi')
+  for (const t of globalThis.__timersApodos) if (!t.cancelado) { t.cancelado = true; await t.f() }
+  await esperar()
+  const res = S.__els.get('rt-clientes-resultados')?.innerHTML ?? ''
+  chk('retiros con la base: "SALVADOR LOFORTE · Turi" con el apodo_coincide', /SALVADOR LOFORTE<span class="rt-resultado__apodo"> · <mark class="rt-resaltado">Turi<\/mark>/.test(res), res)
+  chk('retiros con la base: los otros apodos, de la base', /También: Los Forte/.test(res), res)
+
+  // Lo que la búsqueda local no encuentra y la base sí: "JyM" coincide con el
+  // apodo "J y M" por la clave de _clave_nombre().
+  const R = construirRetiros(RETIROS, { preludioExtra: PRELUDIO_TIMERS })
+  R.estado.empresaId = 'u-n'
+  const JYM = { id: 'c-jym', nombre: 'Distribuciones del Centro', razon_social: null, apodos: ['J y M'], localidad: null, activo: true, unidad_negocio_id: 'u-n' }
+  R.estado.clientes = [JYM]
+  R.estado.form = R.formVacio()
+  const srv = servidorBuscarClientes({ clientes: [JYM], empresas: { 'u-n': 'Cucuruchos Nuss' } })
+  R.__setRpc(async (n, p) => (n === 'buscar_clientes' ? { data: srv(p), error: null } : { data: null, error: null }))
+  globalThis.__timersApodos.length = 0
+  R.buscarClienteRetiro('JyM')
+  for (const t of globalThis.__timersApodos) if (!t.cancelado) { t.cancelado = true; await t.f() }
+  await esperar()
+  const r2 = R.__els.get('rt-clientes-resultados')?.innerHTML ?? ''
+  chk('retiros con la base: el apodo por la clave ("JyM" → "J y M")', /Distribuciones del Centro<span class="rt-resultado__apodo"> · J y M<\/span>/.test(r2), r2)
 }
 
 // ═══ 2. COBRANZAS ═════════════════════════════════════════════════════════════
@@ -88,7 +132,7 @@ const PRELUDIO_COB = `
 function cobranzas() {
   return construirCon(COBRANZAS, {
     preludio: PRELUDIO_COB,
-    funciones: ['escCob', 'formatearImporte', 'textoSaldoCliente', 'normalizarApodo', 'apodoQueCoincide', 'apodosDe', 'htmlOpcionClienteAsentar'],
+    funciones: ['escCob', 'formatearImporte', 'textoSaldoCliente', 'normalizarApodo', 'apodoQueCoincide', 'htmlOpcionClienteAsentar'],
     constantes: ['MIN_LETRAS_CLIENTE'],
     retorno: `__consultas(){ return __consultas }, __setClientes(c){ __clientes = c }, __setError(e){ __errorClientes = e }`,
   })
@@ -97,38 +141,27 @@ const FILA = { cliente_id: 'c-turi', nombre: 'SALVADOR LOFORTE', razon_social: n
 
 async function bloqueCobranzas() {
   const C = cobranzas()
-  chk('cobranzas: el apodo que coincide', C.apodoQueCoincide({ nombre: 'SALVADOR LOFORTE', apodos: ['Los Forte', 'Turi'] }, 'turi') === 'Turi')
-  chk('cobranzas: sin acentos', C.apodoQueCoincide({ nombre: 'X', apodos: ['Turí'] }, 'TURI') === 'Turí')
-  chk('cobranzas: si el nombre coincide, ninguno', C.apodoQueCoincide({ nombre: 'SALVADOR LOFORTE', apodos: ['Los Forte'] }, 'forte') === null)
-  chk('cobranzas: con una letra, ninguno', C.apodoQueCoincide({ nombre: 'X', apodos: ['Turi'] }, 't') === null)
-  chk('cobranzas: sin apodos, ninguno', C.apodoQueCoincide({ nombre: 'X' }, 'turi') === null)
-
-  C.__setClientes([{ id: 'c-turi', apodos: ['Los Forte', 'Turi'] }])
-  const con = await C.apodosDe([{ ...FILA }])
-  chk('cobranzas: los apodos se leen de clientes, por id', con[0].apodos?.join() === 'Los Forte,Turi')
-  const q = C.__consultas()[0]
-  chk('cobranzas: la consulta pide solo id y apodos de esos clientes', q[0] === 'clientes' && q[1].some(f => f[0] === 'select' && f[1] === 'id, apodos') && q[1].some(f => f[0] === 'in' && f[1] === 'id' && f[2].join() === 'c-turi'), JSON.stringify(q))
-  const h = C.htmlOpcionClienteAsentar(con[0], 'Turi')
+  // Las filas como las devuelve la base (la simulada imita a la real).
+  const servidor = servidorBuscarClientes({ clientes: [{ ...LOFORTE, unidad_negocio_id: 'u-n' }], empresas: { 'u-n': 'Cucuruchos Nuss' } })
+  const [turi] = servidor({ p_busqueda: 'Turi', p_unidad_negocio_id: 'u-n' })
+  chk('la base simulada trae apodos y apodo_coincide', turi?.apodo_coincide === 'Turi' && turi.apodos.join() === 'Los Forte,Turi', JSON.stringify(turi))
+  chk('la base simulada: con una letra, apodo_coincide null', servidor({ p_busqueda: 'T', p_unidad_negocio_id: 'u-n' })[0].apodo_coincide === null)
+  chk('cobranzas: usa el apodo_coincide de la base', C.apodoQueCoincide(turi, 'Turi') === 'Turi')
+  chk('cobranzas: no lo busca por su cuenta (sin apodo_coincide, ninguno)', C.apodoQueCoincide({ nombre: 'X', apodos: ['Otro', 'Turi'], apodo_coincide: null }, 'turi') === null)
+  const forte = servidor({ p_busqueda: 'forte', p_unidad_negocio_id: 'u-n' })[0]
+  chk('la base manda apodo_coincide aunque el nombre coincida', forte.apodo_coincide === 'Los Forte')
+  chk('cobranzas: si el nombre coincide, no se agrega', C.apodoQueCoincide(forte, 'forte') === null)
+  chk('cobranzas: con una letra, ninguno', C.apodoQueCoincide({ nombre: 'X', apodo_coincide: 'Turi' }, 't') === null)
+  const h = C.htmlOpcionClienteAsentar(turi, 'Turi')
   chk('cobranzas: el resultado dice "SALVADOR LOFORTE · Turi"', /<span class="cob-cliente-op__nombre">SALVADOR LOFORTE<span class="cob-cliente-op__apodo"> · Turi<\/span><\/span>/.test(h), h)
-  chk('cobranzas: sin búsqueda, sin apodo', !/cob-cliente-op__apodo/.test(C.htmlOpcionClienteAsentar(con[0], '')))
-
-  // Sin permiso para leer clientes (RLS): llegan vacíos → el nombre solo.
-  const D = cobranzas()
-  D.__setClientes([])
-  const sin = await D.apodosDe([{ ...FILA }])
-  chk('cobranzas: sin poder leer los apodos, el nombre solo', !/cob-cliente-op__apodo/.test(D.htmlOpcionClienteAsentar(sin[0], 'Turi')))
-  const E = cobranzas()
-  E.__setError({ message: 'permiso' })
-  const err = await E.apodosDe([{ ...FILA }])
-  chk('cobranzas: si falla, los clientes quedan como estaban', err.length === 1 && err[0].cliente_id === 'c-turi' && !('apodos' in err[0]))
-  const F = cobranzas()
-  const yaTrae = await F.apodosDe([{ ...FILA, apodos: ['Turi'] }])
-  chk('cobranzas: si la base ya trae los apodos, no se consulta', F.__consultas().length === 0 && yaTrae[0].apodos.join() === 'Turi')
+  chk('cobranzas: sin búsqueda, sin apodo', !/cob-cliente-op__apodo/.test(C.htmlOpcionClienteAsentar(turi, '')))
+  chk('cobranzas: ninguna consulta aparte', C.__consultas().length === 0)
   // Escapado.
-  chequearMarcas(chk, 'cobranzas: el apodo al lado del nombre', C.htmlOpcionClienteAsentar({ ...FILA, apodos: [marca('apodoCob') + ' turi'] }, 'turi'), ['apodoCob'])
-  // El cableado: se piden los apodos solo con una búsqueda (2 letras o más).
+  chequearMarcas(chk, 'cobranzas: el apodo al lado del nombre', C.htmlOpcionClienteAsentar({ ...FILA, apodo_coincide: marca('apodoCob') }, 'turi'), ['apodoCob'])
+  // El cableado: la lectura aparte de los apodos se fue.
   const src = fs.readFileSync(COBRANZAS, 'utf8')
-  chk('cobranzas: los apodos se piden con la búsqueda escrita', /clientes = clientesDeLaEmpresa\(data, unidad, texto\)\n\s*if \(texto\.length >= MIN_LETRAS_CLIENTE\) clientes = await apodosDe\(clientes\)/.test(src))
+  chk('cobranzas: ya no lee clientes aparte', !/from\('clientes'\)/.test(src) && !/apodosDe/.test(src))
+  chk('cobranzas: la lista sale tal cual de la base', /else clientes = clientesDeLaEmpresa\(data, unidad, texto\)\n/.test(src))
   chk('cobranzas: la lista dibuja cada opción con la búsqueda', /a\.clientes\.map\(c => htmlOpcionClienteAsentar\(c, texto\)\)/.test(src))
 }
 
@@ -240,5 +273,5 @@ async function bloqueFicha() {
   chk('ficha: las X miden 44 px', /\.ad-apodo__quitar \{\n\s*min-width: 44px; min-height: 44px;/.test(FUENTE_ADMIN))
 }
 
-esperas.push(bloqueCobranzas().then(() => bloqueFicha()))
+esperas.push(bloqueRetirosBase().then(() => bloqueCobranzas()).then(() => bloqueFicha()))
 fin()

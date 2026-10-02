@@ -44,10 +44,12 @@ for (const ancho of [390, 1280]) {
     await page.setViewportSize({ width: ancho, height: 900 });
     await page.goto(`${MAQUETA}/modulos/cobranzas.html?maqueta=cobranzas`);
     await page.evaluate(() => {
+      // Como la devuelve la base desde el 02/10/2026: con apodos y
+      // apodo_coincide. Ya NO hay una tabla `clientes` que leer aparte.
       const fila = { cliente_id: 'c-turi', nombre: 'SALVADOR LOFORTE', razon_social: null, localidad: 'Córdoba', empresa: 'Cucuruchos Nuss',
-        unidad_negocio_id: 'u-n', activo: true, saldo: 120000, parecido: 1 };
+        unidad_negocio_id: 'u-n', activo: true, saldo: 120000, parecido: 1, apodos: ['Los Forte', 'Turi'], apodo_coincide: 'Turi' };
       sessionStorage.setItem('maqueta.cambios', JSON.stringify({
-        tablas: { clientes: [{ id: 'c-turi', apodos: ['Los Forte', 'Turi'] }] },
+        tablas: { clientes: 'ERROR:Con tu usuario no se puede leer esta tabla.' },
         rpc: { buscar_clientes: [fila] },
       }));
     });
@@ -57,6 +59,8 @@ for (const ancho of [390, 1280]) {
     await page.locator('#cob-asentar-buscar').fill('Turi');
     const op = page.locator('#cob-lista-clientes [data-cliente-id="c-turi"]');
     await expect(op.locator('.cob-cliente-op__nombre')).toHaveText('SALVADOR LOFORTE · Turi');
+    // Aunque la tabla clientes no se pueda leer (Yanina), el apodo sale.
+    expect(errores, errores.join('\n')).toEqual([]);
     await captura(page, `apodos-cobranzas-${ancho}`, info);
     await sinScroll(page);
     await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
