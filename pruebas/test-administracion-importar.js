@@ -28,8 +28,10 @@ const CLIENTES = [
 ]
 const LISTAS = [{ id: 'l1', nombre: 'Mayoristas', moneda: 'ARS', activa: true }]
 const CAT = {
-  productos: [{ id: 'p1', nombre: 'Cucurucho grande', categoria: 'cucuruchones' }],
-  presentaciones: [{ id: 'pr1', producto_id: 'p1', nombre: 'Caja x 100', activa: true }, { id: 'pr2', producto_id: 'p1', nombre: 'Media', activa: true }],
+  productos: [{ id: 'p1', nombre: 'Cucurucho grande', categoria: 'cucuruchones' }, { id: 'p2', nombre: 'Cucurucho chico', categoria: 'cucuruchones' }],
+  presentaciones: [{ id: 'pr1', producto_id: 'p1', nombre: 'Caja x 100', con_cono: false, media_caja: false, unidades_por_caja: 100, activa: true },
+    { id: 'pr1c', producto_id: 'p1', nombre: 'Caja x 100 con cono', con_cono: true, media_caja: false, unidades_por_caja: 100, activa: true },
+    { id: 'pr2', producto_id: 'p2', nombre: 'Caja x 200', con_cono: false, media_caja: false, unidades_por_caja: 200, activa: true }],
   marcas: [],
   insumos: [{ id: 'i1', nombre: 'Harina 000', marca: 'Molino', unidad_medida: 'kg', activo: true }],
 }
@@ -209,11 +211,13 @@ function preparar(S) {
   preparar(S)
   const filasG = S.filasGrilla(CAT)
   const pl = S.plantillaPrecios(filasG, [{ presentacion_id: 'pr1', precio_caja: 3000, vigente_desde: '2026-09-01' }], '2026-09-26')
-  chk('la plantilla de precios trae una fila por presentación y por insumo', pl.length === 1 + 3 && pl[1][0] === 'pr1' && pl[3][0] === 'ins:i1' && pl[3][1] === 'Insumo')
+  chk('la plantilla de precios trae una fila por PRODUCTO (su presentación sin cono) y por insumo', pl.length === 1 + 3 && pl[1][0] === 'pr1' && pl[2][0] === 'pr2' && pl[3][0] === 'ins:i1' && pl[3][1] === 'Insumo', pl.map(f => f[0]))
+  chk('la caja con cono no es una fila de la plantilla (se calcula)', !pl.some(f => f[0] === 'pr1c'))
   chk('con el precio que rige hoy en la lista', pl[1][5] === 3000 && pl[2][5] === '')
-  chk('y la columna de precio nuevo vacía', pl.slice(1).every(f => f[6] === ''))
-  const aoa = [pl[0], ['pr1', '', '', '', '', 3000, '3.300'], ['pr2', '', '', '', '', '', ''], ['ins:i1', '', '', '', '', '', '120,5'], ['zzz', '', '', '', '', '', '10'],
-    ['pr1', '', '', '', '', '', 'mil'], ['pr2', '', '', '', '', '', '3000']]
+  chk('la columna del con cono va antes del precio nuevo y dice que no se importa', pl[0][6] === 'Con cono hoy, la caja (no se importa)' && pl[0][7] === 'Precio nuevo')
+  chk('y la columna de precio nuevo vacía', pl.slice(1).every(f => f[7] === ''))
+  const aoa = [pl[0], ['pr1', '', '', '', '', 3000, '', '3.300'], ['pr2', '', '', '', '', '', '', ''], ['ins:i1', '', '', '', '', '', '', '120,5'], ['zzz', '', '', '', '', '', '', '10'],
+    ['pr1', '', '', '', '', '', '', 'mil'], ['pr2', '', '', '', '', '', '', '3000']]
   const r = S.validarPrecios(aoa, { filas: filasG, precios: [{ presentacion_id: 'pr1', precio_caja: 3000, vigente_desde: '2026-09-01' }, { presentacion_id: 'pr2', insumo_id: null, precio_caja: 3000, vigente_desde: '2026-09-01' }], hoy: '2026-09-26' })
   const f = (n) => r.filas.find(x => x.numero === n)
   chk('el mismo producto dos veces: error en las dos filas', f(2).estado === 'error' && f(6).estado === 'error')
@@ -225,15 +229,16 @@ function preparar(S) {
   esperas.push(S.procesarFilasImportar(aoa, 'p.xlsx').then(async () => {
     chk('sin lista elegida no arma la vista previa', S.estado.importar.filas === null && /Elegí primero la lista/.test(S.estado.importar.error))
     S.estado.importar.listaId = 'l1'
-    S.estado.importar.desde = '2026-10-01'
-    await S.procesarFilasImportar([pl[0], ['pr1', '', '', '', '', '', '3.300'], ['ins:i1', '', '', '', '', '', '120,5'], ['zzz', '', '', '', '', '', '1']], 'p.xlsx')
+    // Una fecha que no puede ser "hoy" (si fuera hoy, mandar hoyArgentina() pasaría igual).
+    S.estado.importar.desde = '2098-03-15'
+    await S.procesarFilasImportar([pl[0], ['pr1', '', '', '', '', '', '', '3.300'], ['ins:i1', '', '', '', '', '', '', '120,5'], ['zzz', '', '', '', '', '', '', '1']], 'p.xlsx')
     chk('los precios tampoco se guardan hasta confirmar', !S.__llamadas.rpc.some(x => x[0] === 'guardar_precios'))
     S.pedirGuardarImportacion()
-    chk('la confirmación dice la lista y la fecha', /en la lista «Mayoristas», que rigen desde el 01\/10\/2026/.test(S.__els.get('ad-importar-confirmar-texto').textContent))
+    chk('la confirmación dice la lista y la fecha', /en la lista «Mayoristas», que rigen desde el 15\/03\/2098/.test(S.__els.get('ad-importar-confirmar-texto').textContent))
     let p = null
     S.__setRpc(async (n, q) => { if (n === 'guardar_precios') p = q; return { data: { precios: 2 }, error: null } })
     await S.confirmarImportacion()
-    chk('guardar_precios en UNA llamada con la lista, la fecha y SOLO las filas buenas', p && p.p_lista_id === 'l1' && p.p_vigente_desde === '2026-10-01' &&
+    chk('guardar_precios en UNA llamada con la lista, la fecha y SOLO las filas buenas', p && p.p_lista_id === 'l1' && p.p_vigente_desde === '2098-03-15' &&
       JSON.stringify(p.p_items) === JSON.stringify([{ presentacion_id: 'pr1', precio_caja: 3300 }, { insumo_id: 'i1', precio_caja: 120.5 }]))
   }))
 }
