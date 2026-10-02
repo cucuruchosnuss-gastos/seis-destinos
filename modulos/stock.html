@@ -106,6 +106,45 @@
     }
     .stock-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
 
+    /* ── Se actualiza sola (02/10/2026) ───────────────────────────────────
+       Una línea chica: cuándo se leyó por última vez y "Actualizar". Con un
+       formulario abierto no refresca y dice "Hay datos nuevos". */
+    .stock-actualizado {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.625rem;
+      margin: -0.5rem 0 0.75rem;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      min-width: 0;
+    }
+    .stock-actualizado[hidden] { display: none; }
+    .stock-actualizado--nuevos .stock-actualizado__texto {
+      color: var(--color-texto);
+      font-weight: 700;
+    }
+    .stock-actualizado--error .stock-actualizado__texto { color: var(--bordo); font-weight: 600; }
+    .stock-actualizado__btn {
+      min-height: 32px;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radio-boton);
+      border: 1px solid var(--color-borde-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+    .stock-actualizado--nuevos .stock-actualizado__btn {
+      background: var(--color-acento);
+      border-color: var(--color-acento);
+      color: #fff;
+    }
+    .stock-actualizado__btn:disabled { opacity: 0.6; cursor: default; }
+
     /* ── Aviso de pendientes de revisión ──────────────────────────────────── */
 
     /* Trabajo acumulado que alguien tiene que resolver: tiene que molestar un
@@ -2265,6 +2304,14 @@
       </div>
     </header>
 
+    <!-- SE ACTUALIZA SOLA (02/10/2026): cuándo se leyó por última vez y un
+         botón para pedirlo ya. Con un formulario abierto no refresca: avisa
+         "Hay datos nuevos". Ver actualizarStock() en el script. -->
+    <div class="stock-actualizado" id="stock-actualizado" aria-live="off" hidden>
+      <span class="stock-actualizado__texto" id="stock-actualizado-texto"></span>
+      <button type="button" class="stock-actualizado__btn" id="btn-actualizar-stock">Actualizar</button>
+    </div>
+
     <!-- Sin NINGUNA de las dos tareas no hay nada que mostrar. -->
     <div class="estado-vacio-stock" id="sin-acceso" hidden>
       No tenés permiso para ver el stock ni el catálogo de insumos. Pedíselo a un administrador.
@@ -4266,9 +4313,12 @@
     // NO se filtra por unidad en la consulta: la RLS de la vista ya devuelve
     // solo las unidades del alcance. La barra de unidad de arriba es
     // comodidad, no seguridad.
-    async function cargarStock() {
+    // silencioso: el refresco automático (ver "SE ACTUALIZA SOLA"). No muestra
+    // el "Cargando…" ni un cartel de error —cada 2 minutos sin señal serían
+    // carteles al pedo—: devuelve si pudo, y la línea de arriba lo dice.
+    async function cargarStock({ silencioso = false } = {}) {
       const cargandoEl = document.getElementById('stock-cargando')
-      cargandoEl.hidden = false
+      if (!silencioso) cargandoEl.hidden = false
 
       const [unidades, filas] = await Promise.all([
         supabase.from('v_mis_unidades_stock').select('id, nombre').order('nombre'),
@@ -4280,8 +4330,8 @@
 
       if (unidades.error || filas.error) {
         console.error(unidades.error || filas.error)
-        mostrarError('Error al cargar el stock.')
-        return
+        if (!silencioso) mostrarError('Error al cargar el stock.')
+        return false
       }
 
       estado.unidadesStock = sinUnidadesDePrueba(unidades.data ?? [], estado.fabrica)
@@ -4293,6 +4343,7 @@
       await estado.barraLista
       estado.cargados.add('stock')
       renderizarStock()
+      return true
     }
 
     // Filtra por la unidad de la barra, DONDE SE ARMA LA LISTA y no en la
@@ -10271,6 +10322,165 @@
       if (document.visibilityState === 'visible' && estado.miEmpleadoId) cargarPendientesStock()
     })
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // SE ACTUALIZA SOLA (02/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Antes la pantalla no se refrescaba mientras estaba abierta: si en la sala
+    // de masa se cargaba una masa, quien tenía Stock abierto no lo veía. Ahora
+    // relee al volver a la pestaña (visibilitychange y focus) y cada 2 minutos
+    // mientras se ve, y arriba dice "Actualizado hace X min" con "Actualizar".
+    //
+    // NUNCA REFRESCA ENCIMA DE ALGO A MEDIO CARGAR: un modal abierto, un
+    // recuento con filas sin guardar (o guardando), un campo del recuento con
+    // el foco, o el traspaso. Ahí no toca nada: pregunta si cambió el stock
+    // (una consulta liviana) y, si cambió, dice "Hay datos nuevos" con el
+    // botón. El botón SÍ refresca, y en el recuento primero GUARDA lo contado
+    // (cargarItemsRecuento además conserva toda fila que siga sucia).
+
+    const CADA_REFRESCO_MS = 2 * 60 * 1000
+    // focus y visibilitychange llegan juntos al volver a la pestaña: dos
+    // refrescos seguidos no traen nada nuevo.
+    const MINIMO_ENTRE_REFRESCOS_MS = 15 * 1000
+    // Cada cuánto se reescribe "hace X min".
+    const CADA_RELOJ_MS = 30 * 1000
+
+    const auto = {
+      ultima: null,      // cuándo se leyó bien por última vez (ms)
+      intento: 0,        // cuándo se intentó por última vez (ms)
+      enCurso: false,
+      nuevos: false,     // hubo un cambio que no se dibujó por un formulario abierto
+      error: false,      // el último refresco no pudo leer
+    }
+
+    function textoActualizado(ultima, ahora) {
+      if (!Number.isFinite(ultima)) return ''
+      // Un reloj atrasado da negativo, y eso también es "recién".
+      const min = Math.floor((ahora - ultima) / 60000)
+      if (min < 1) return 'Actualizado recién'
+      if (min < 60) return `Actualizado hace ${min} min`
+      return `Actualizado hace ${Math.floor(min / 60)} h`
+    }
+
+    // Lo que importa del stock para saber si cambió: cuánto hay de cada
+    // insumo en cada unidad. Ordenada, así el orden de llegada no cuenta.
+    function huellaStock(filas) {
+      return (filas || [])
+        .map(f => `${f?.unidad_negocio_id}|${f?.insumo_id}|${f?.cantidad_total}`)
+        .sort()
+        .join(';')
+    }
+
+    // ¿Hay algo a medio cargar que un refresco pisaría?
+    function hayFormularioAbierto() {
+      if ([...document.querySelectorAll('.modal-stock')].some(m => !m.hidden)) return true
+      if (estado.sucios.size > 0 || estado.guardando) return true
+      if (estado.vista === 'traspaso') return true
+      const activo = document.activeElement
+      if (activo && typeof activo.closest === 'function' && activo.closest('#vista-recuento')
+          && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName || '')) return true
+      return false
+    }
+
+    function pintarActualizado() {
+      const caja = document.getElementById('stock-actualizado')
+      const texto = document.getElementById('stock-actualizado-texto')
+      const btn = document.getElementById('btn-actualizar-stock')
+      if (!Number.isFinite(auto.ultima)) { caja.hidden = true; return }
+      caja.hidden = false
+      caja.classList.toggle('stock-actualizado--nuevos', auto.nuevos)
+      caja.classList.toggle('stock-actualizado--error', !auto.nuevos && auto.error)
+      if (auto.enCurso) texto.textContent = 'Actualizando…'
+      else if (auto.nuevos) texto.textContent = 'Hay datos nuevos'
+      else if (auto.error) texto.textContent = `No se pudo actualizar · ${textoActualizado(auto.ultima, Date.now()).toLowerCase()}`
+      else texto.textContent = textoActualizado(auto.ultima, Date.now())
+      btn.disabled = auto.enCurso
+    }
+
+    // Lee el stock (solo cantidades) y dice si cambió respecto de lo dibujado.
+    // null = no se pudo saber.
+    async function stockCambio() {
+      if (!puedeVerStock()) return false
+      const { data, error } = await supabase.from('v_stock_insumos')
+        .select('unidad_negocio_id, insumo_id, cantidad_total')
+      if (error) { console.error(error); return null }
+      const huella = huellaStock(sinUnidadesDePrueba(data ?? [], estado.fabrica, f => f?.unidad_negocio_id))
+      // Contra lo DIBUJADO: estado.stock lo cambia también cada movimiento
+      // propio (que relee el stock), y eso no es un dato "nuevo".
+      return huella !== huellaStock(estado.stock)
+    }
+
+    // Relee lo que esta persona tiene a la vista. El stock siempre que ya se
+    // haya cargado (las otras vistas lo usan); el resto, solo la vista
+    // abierta. Devuelve si todo se pudo leer.
+    async function recargarLoVisible() {
+      const tareas = []
+      if (estado.cargados.has('stock')) tareas.push(cargarStock({ silencioso: true }))
+      if (estado.vista === 'catalogo' && puedeGestionar()) tareas.push(cargarInsumos())
+      if (estado.vista === 'recuento' && estado.cargados.has('recuento')) {
+        tareas.push(estado.recuento
+          ? cargarItemsRecuento().then(() => { renderizarChipsFiltroRec(); renderizarItemsRecuento() })
+          : cargarRecuento())
+      }
+      if (estado.vista === 'historial') tareas.push(cargarHistorial())
+      if (estado.vista === 'mermas') tareas.push(cargarMermas())
+      if (estado.vista === 'transito') tareas.push(cargarTransito())
+      tareas.push(cargarPendientesStock())
+      const res = await Promise.all(tareas)
+      return res.every(r => r !== false)
+    }
+
+    // forzado = lo pidió la persona con el botón.
+    async function actualizarStock({ forzado = false } = {}) {
+      if (auto.enCurso || !estado.miEmpleadoId) return
+      const ahora = Date.now()
+      if (!forzado && ahora - auto.intento < MINIMO_ENTRE_REFRESCOS_MS) return
+      // Sin señal no se intenta solo: cada intento sería un cartel de error.
+      if (!forzado && typeof navigator !== 'undefined' && navigator.onLine === false) return
+      auto.intento = ahora
+      auto.enCurso = true
+      pintarActualizado()
+      try {
+        if (!forzado && hayFormularioAbierto()) {
+          // No se toca nada: solo se averigua si hay algo nuevo.
+          const cambio = await stockCambio()
+          if (cambio) auto.nuevos = true
+          return
+        }
+        // El botón con un conteo pendiente: primero se guarda.
+        if (estado.sucios.size) await guardarConteoAhora()
+        const ok = await recargarLoVisible()
+        auto.error = !ok
+        if (ok) {
+          auto.ultima = Date.now()
+          auto.nuevos = false
+        }
+      } catch (err) {
+        console.error('actualizar stock:', err)
+        auto.error = true
+      } finally {
+        auto.enCurso = false
+        pintarActualizado()
+      }
+    }
+
+    // Arranca al final de init(): ahí ya está todo cargado por primera vez.
+    function iniciarActualizacionSola() {
+      auto.ultima = Date.now()
+      auto.intento = auto.ultima
+      pintarActualizado()
+      setInterval(() => {
+        if (document.visibilityState === 'visible') actualizarStock()
+      }, CADA_REFRESCO_MS)
+      setInterval(() => { if (!auto.enCurso) pintarActualizado() }, CADA_RELOJ_MS)
+    }
+
+    document.getElementById('btn-actualizar-stock').addEventListener('click', () => actualizarStock({ forzado: true }))
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') actualizarStock()
+    })
+    window.addEventListener('focus', () => actualizarStock())
+
     // stock.html?vista=catalogo: materia-prima.html linkea acá para revisar los
     // insumos nuevos. El valor se valida contra una LISTA CERRADA y además
     // contra las vistas que esta persona tiene (sin gestionar_catalogo, se
@@ -10442,6 +10652,7 @@
 
       if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()
       cargarPendientesStock()
+      iniciarActualizacionSola()
     }
 
     init()

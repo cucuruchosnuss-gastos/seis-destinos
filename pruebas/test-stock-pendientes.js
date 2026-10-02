@@ -283,7 +283,9 @@ const FILAS = [
   chk('init aplica el filtro solo si vino por el link al catálogo',
     /if \(desdeUrl === 'catalogo'\) aplicarFiltroDesdeUrl\(\)/.test(SCRIPT))
   const iInit = SCRIPT.indexOf('async function init()')
-  const iLlamada = SCRIPT.indexOf('      cargarPendientesStock()\n    }', iInit)
+  // Desde el 02/10/2026 detrás va iniciarActualizacionSola() (Stock se
+  // actualiza solo): las burbujas se piden igual al final de init.
+  const iLlamada = SCRIPT.indexOf('      cargarPendientesStock()\n      iniciarActualizacionSola()\n    }', iInit)
   chk('init llama a cargarPendientesStock al final', iInit !== -1 && iLlamada > iInit)
   chk('visibilitychange: recarga al volver a verse, solo después de init',
     /document\.visibilityState === 'visible' && estado\.miEmpleadoId\) cargarPendientesStock\(\)/.test(SCRIPT))
