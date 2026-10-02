@@ -76,7 +76,7 @@ correrMutaciones({
     { nombre: '"Siguiente" del destino siempre visible',
       de: 'if (b) b.hidden = !(viaVehiculos || unidadSeleccionada)', a: 'if (b) b.hidden = false' },
     { nombre: 'la grilla no actualiza el "Siguiente"',
-      de: '      actualizarBotonDestinoSiguiente()\n    }', a: '    }' },
+      de: '      actualizarBotonDestinoSiguiente()\n      pintarAvisoTaller()', a: '      pintarAvisoTaller()' },
     { nombre: '"Siguiente" del destino salta la categoría',
       de: "else if (unidadSeleccionada) irASubpaso('categoria')", a: "else if (unidadSeleccionada) irASubpaso('detalles')" },
     { nombre: 'el "Siguiente" del destino no se cablea',

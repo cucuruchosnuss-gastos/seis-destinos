@@ -112,9 +112,10 @@ const FUNCIONES = [
   'exportarExcel', 'cargarLista', 'unidadDeLaBarraParaWizard', 'unidadesElegibles', 'renderizarGrillaDestino', 'configEmpresa',
   'actualizarBotonDestinoSiguiente', 'avanzarDesdeDestino', 'resetearWizard', 'mostrarErrorProyecto', 'fechaISO',
   'pasaFiltroUnidad', 'esUnidadTaller', 'etiquetaProyectoGasto',
+  'unidadTallerElegible', 'debeAvisarTaller', 'pintarAvisoTaller',
 ]
 const CONSTANTES = ['ICONOS_CATEGORIA', 'PALETA_AVATAR', 'LOGOS_EMPRESA', 'LOGO_VEHICULOS', 'MEDIOS_PAGO_LABEL', 'OPCIONES_ORDEN',
-  'COLUMNAS_PROYECTO', 'TEXTO_GASTO_GENERAL']
+  'COLUMNAS_PROYECTO', 'TEXTO_GASTO_GENERAL', 'TEXTO_AVISO_TALLER']
 const RETORNO = `estado, __el(id){ return document.getElementById(id) }, __consultas, __errores, __excel(){ return __excel },
   __cambio(e){ __cbCambio(e) }, __hayCambio(){ return typeof __cbCambio === 'function' }, __base(l){ __gastosDeLaBase = l },
   __get(k){ return eval(k) }, __set(k, v){ eval(k + ' = v') }, __subpaso(){ return __subpaso }`

@@ -100,8 +100,10 @@ const S = construirCon(ARCHIVO, {
     // Lo que esas listas llaman desde el 28/09/2026 (barra de unidad y
     // proyecto del Taller).
     'actualizarBotonDestinoSiguiente', 'actualizarGrupoProyecto', 'esUnidadTaller', 'mostrarErrorProyecto',
-    'htmlSelectProyectoEdicion', 'unidadDeGasto'],
-  constantes: ['VALOR_GASTO_GENERAL', 'TEXTO_GASTO_GENERAL'],
+    'htmlSelectProyectoEdicion', 'unidadDeGasto',
+    // El aviso del Taller (02/10/2026): renderizarGrillaDestino lo pinta.
+    'unidadTallerElegible', 'debeAvisarTaller', 'pintarAvisoTaller'],
+  constantes: ['VALOR_GASTO_GENERAL', 'TEXTO_GASTO_GENERAL', 'TEXTO_AVISO_TALLER'],
   retorno: 'estado, __els, __multiselects, FABRICA_SIN_DATOS',
 })
 
