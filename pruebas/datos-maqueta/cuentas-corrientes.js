@@ -6,6 +6,11 @@
 // una, en la otra y SIN unidad, facturas sin proveedor, el historial y la
 // ficha de "Harinera Uno", que tiene movimientos en las dos.
 //
+// El saldo inicial (30/09/2026): "Molino del Centro" tiene su saldo inicial
+// cargado en Nuss (la factura 'SALDO-INICIAL' que guarda
+// registrar_saldo_inicial_proveedor), así su ficha y el historial muestran
+// el renglón "Saldo inicial". En el padrón, cada proveedor tiene su botón.
+//
 //   http://localhost:4180/modulos/cuentas-corrientes.html?maqueta=cuentas-corrientes
 'use strict';
 
@@ -40,24 +45,28 @@ module.exports = {
       { id: 'p2', razon_social: 'Cartonera del Sur SRL', nombre_fantasia: 'La Cartonera', cuit: '30222222229', direccion: null, activo: true, estado_alta: 'activo' },
       { id: 'p3', razon_social: 'Proveedor sin unidad todavía, con un nombre largo para ver el celular', nombre_fantasia: null, cuit: null, direccion: null, activo: true, estado_alta: 'activo' },
       { id: 'p4', razon_social: 'Pendiente de aprobar SA', nombre_fantasia: null, cuit: '30444444440', direccion: null, activo: false, estado_alta: 'pendiente_aceptacion' },
+      { id: 'p5', razon_social: 'Molino del Centro SRL', nombre_fantasia: null, cuit: '30555555551', direccion: 'Av. Circunvalación 1200', activo: true, estado_alta: 'activo' },
     ],
     v_saldo_proveedor: [
       { proveedor_id: 'p1', unidad_negocio_id: N, moneda: 'ARS', deuda_pendiente: 1250000.5, credito_disponible: 0 },
       { proveedor_id: 'p1', unidad_negocio_id: D, moneda: 'ARS', deuda_pendiente: 480000, credito_disponible: 0 },
       { proveedor_id: 'p2', unidad_negocio_id: D, moneda: 'ARS', deuda_pendiente: 0, credito_disponible: 35000 },
       { proveedor_id: 'p3', unidad_negocio_id: null, moneda: 'ARS', deuda_pendiente: 12000, credito_disponible: 0 },
+      { proveedor_id: 'p5', unidad_negocio_id: N, moneda: 'ARS', deuda_pendiente: 870000, credito_disponible: 0 },
     ],
     facturas_pendientes: [
       { id: 'f-n1', proveedor_id: 'p1', unidad_negocio_id: N, estado: 'pendiente', moneda: 'ARS', importe: 1250000.5, saldo_pendiente: 1250000.5, numero_comprobante: '0001-00012345', fecha_factura: '2026-10-02' },
       { id: 'f-d1', proveedor_id: 'p1', unidad_negocio_id: D, estado: 'parcial', moneda: 'ARS', importe: 600000, saldo_pendiente: 480000, numero_comprobante: '0002-00000077', fecha_factura: '2026-10-01' },
       { id: 'fsp-n', proveedor_id: null, unidad_negocio_id: N, estado: 'pendiente', razon_social: 'FERRETERIA KM 711', importe: 8500, moneda: 'ARS', fecha_factura: '2026-10-03' },
       { id: 'fsp-d', proveedor_id: null, unidad_negocio_id: D, estado: 'pendiente', razon_social: 'LIMPIEZA ROSARIO', importe: 4300, moneda: 'ARS', fecha_factura: '2026-10-02' },
+      { id: 'f-si-n', proveedor_id: 'p5', unidad_negocio_id: N, estado: 'pendiente', moneda: 'ARS', importe: 870000, saldo_pendiente: 870000, numero_comprobante: 'SALDO-INICIAL', fecha_factura: '2026-09-30', observaciones: 'Deuda del sistema viejo al 30/09/2026', modulo_origen: 'saldo_inicial' },
     ],
     v_cuenta_corriente_movimientos: [
       { proveedor_id: 'p1', unidad_negocio_id: N, moneda: 'ARS', fecha: '2026-10-02', tipo: 'factura', monto: 1250000.5, factura_pendiente_id: 'f-n1', gasto_id: null, credito_id: null, referencia: '0001-00012345', saldo_acumulado: 1250000.5, orden_desempate: 1 },
       { proveedor_id: 'p1', unidad_negocio_id: D, moneda: 'ARS', fecha: '2026-10-01', tipo: 'factura', monto: 600000, factura_pendiente_id: 'f-d1', gasto_id: null, credito_id: null, referencia: '0002-00000077', saldo_acumulado: 600000, orden_desempate: 1 },
       { proveedor_id: 'p1', unidad_negocio_id: D, moneda: 'ARS', fecha: '2026-10-03', tipo: 'pago', monto: -120000, factura_pendiente_id: null, gasto_id: 'g-1', credito_id: null, referencia: 'Transferencia', saldo_acumulado: 480000, orden_desempate: 2 },
       { proveedor_id: 'p2', unidad_negocio_id: D, moneda: 'ARS', fecha: '2026-10-02', tipo: 'pago', monto: -35000, factura_pendiente_id: null, gasto_id: 'g-2', credito_id: null, referencia: 'Efectivo', saldo_acumulado: -35000, orden_desempate: 1 },
+      { proveedor_id: 'p5', unidad_negocio_id: N, moneda: 'ARS', fecha: '2026-09-30', tipo: 'factura', monto: 870000, factura_pendiente_id: 'f-si-n', gasto_id: null, credito_id: null, referencia: 'SALDO-INICIAL', saldo_acumulado: 870000, orden_desempate: 1 },
     ],
     creditos_proveedor: [
       { id: 'cr-d', proveedor_id: 'p2', unidad_negocio_id: D, moneda: 'ARS', monto_original: 35000, monto_disponible: 35000, estado: 'disponible' },
@@ -66,5 +75,6 @@ module.exports = {
   rpc: {
     mis_pendientes: [],
     remitos_sin_facturar: [],
+    registrar_saldo_inicial_proveedor: 'si-nuevo',
   },
 };

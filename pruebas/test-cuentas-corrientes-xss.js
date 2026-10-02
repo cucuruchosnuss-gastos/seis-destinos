@@ -83,6 +83,8 @@ const RENDERS = [
   // La barra de unidad (28/09/2026): viene de js/barra-unidad.js por el import
   // del módulo (extraer.js la encuentra ahí), con su código real.
   'pasaFiltroUnidad',
+  // el saldo inicial de un proveedor (30/09/2026): los chips de la fábrica
+  'htmlUnidadesSaldoInicial',
 ]
 
 function clausura(src) {
@@ -318,6 +320,8 @@ async function correrRenders(S) {
   chequearMarcas(chk, 'unidad de la ficha: para operar se elige (Todas)', html('ficha-unidad-operar'), ['u1_nombre', 'u2_nombre'])
   chequearMarcas(chk, 'unidad de la ficha: ids y nombres marcados', S.htmlFichaUnidad({ fichaUnidad: null, barraUnidad: null,
     unidades: [{ id: marca('fu_id'), nombre: marca('fu_nombre') }], puedeOperar: true }), ['fu_id', 'fu_nombre'])
+  chequearMarcas(chk, 'saldo inicial: los chips de la fábrica con ids y nombres marcados', S.htmlUnidadesSaldoInicial(
+    [{ id: marca('si_id'), nombre: marca('si_nombre') }], null), ['si_id', 'si_nombre'])
   E.ficha.unidadId = 'u1'
   E.unidadElegida = 'u2'
   S.renderizarFichaUnidad()
@@ -508,6 +512,9 @@ const SEGURAS = {
     saldoHtml: HTML_PROPIO, 'htmlSinImporte(sinImporte)': SIN_IMPORTE,
   },
   htmlDesgloseResumen: { 'importeHtml(f.monto, f.moneda)': IMPORTE },
+  renderizarSaldoInicial: {
+    'htmlUnidadesSaldoInicial(unidadesSaldoInicial(), saldoInicial.unidadId)': 'htmlUnidadesSaldoInicial() escapa adentro (ejecutada con ids y nombres marcados)',
+  },
   renderizarFichaUnidad: {
     "htmlFichaUnidad({ fichaUnidad: estado.ficha.unidadId, barraUnidad: estado.unidadElegida, unidades: estado.ficha.unidades ?? [], puedeOperar: tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'aplicar_credito'), })":
       'htmlFichaUnidad() escapa adentro (ejecutada con ids y nombres marcados)',
