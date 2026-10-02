@@ -84,11 +84,18 @@ for (const ancho of [390, 1280]) {
     await page.locator('#btn-empresa-atajo').first().click();
     const boton = page.locator('#btn-detalle-ingreso-externo');
     await expect(boton).toHaveText('Ingreso externo (préstamos, aportes)');
-    const ajuste = page.locator('.tarjeta-movimiento--ajuste');
-    await expect(ajuste).toHaveCount(1);
-    await expect(ajuste).toContainText('Ajuste');
-    await expect(ajuste).toContainText('Diferencia del arqueo de septiembre');
-    await expect(ajuste).toContainText('no se edita ni se borra');
+    // La maqueta tiene DOS ajustes en las cuentas de la Empresa: uno que suma
+    // (e-1b, el del saldo corriente) y uno que resta (m-6). Cada uno se dibuja
+    // UNA vez: contar por su texto es lo que ataja un ajuste repetido.
+    const ajustes = page.locator('.tarjeta-movimiento--ajuste');
+    await expect(ajustes).toHaveCount(2);
+    for (const [texto, monto] of [['Sobrante del arqueo de agosto', '+ $ 5.000,00'], ['Diferencia del arqueo de septiembre', '− $ 12.500,00']]) {
+      const ajuste = ajustes.filter({ hasText: texto });
+      await expect(ajuste).toHaveCount(1);
+      await expect(ajuste).toContainText('Ajuste');
+      await expect(ajuste).toContainText(monto);
+      await expect(ajuste).toContainText('no se edita ni se borra');
+    }
     await boton.click();
     await expect(page.locator('#movimiento-titulo')).toHaveText('Ingreso externo (préstamos, aportes)');
     await expect(page.locator('#aviso-ingreso-cliente')).toHaveText('La plata de un cliente se carga en Cobranzas');
