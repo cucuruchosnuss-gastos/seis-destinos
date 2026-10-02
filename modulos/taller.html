@@ -336,10 +336,33 @@
       .tl-ficha { grid-template-columns: 360px minmax(0, 1fr); }
     }
 
+    /* Con el teclado del celular abierto en el formulario del proyecto, la
+       barra de abajo (js/barra-lateral.js, hasta 1023 px) se esconde: si no,
+       queda flotando arriba del teclado y tapa el campo que se escribe. */
+    @media (max-width: 1023.98px) {
+      body:has(#tl-vista-editor:not([hidden]) :is(input, textarea, select):focus) .barra-abajo { display: none !important; }
+    }
+
     /* ── Celular ───────────────────────────────────────────────────────── */
     @media (max-width: 760px) {
       .tl-app { padding: 12px; min-height: 0; }
       .tl-cabeza { gap: 8px; }
+      /* "+ Nuevo proyecto" en el celular (02/10/2026): primero en la barra de
+         la lista, a todo el ancho y alto para el pulgar. El valor de la hora
+         también se ve (lo consulta cualquiera que vea el Taller). */
+      #tl-btn-nuevo { order: -1; flex: 1 0 100%; height: 48px; font-size: 15.5px; }
+      #tl-acciones-extra { flex: 1 0 100%; }
+      #tl-acciones-extra .tl-btn { width: 100%; }
+      /* El formulario del proyecto a 390 px: letra de 16 px en los campos
+         (con menos, el celular agranda la pantalla al tocarlos), el "¿Para
+         quién es?" en dos botones parejos, y al escribir el campo queda por
+         encima de la barra de abajo. */
+      #tl-vista-editor .tl-input, #tl-vista-editor .tl-textarea, #tl-vista-editor .tl-campo select { font-size: 16px; min-height: 44px; }
+      #tl-vista-editor .tl-input:focus, #tl-vista-editor .tl-textarea:focus, #tl-vista-editor .tl-campo select:focus { scroll-margin-bottom: 96px; }
+      .tl-seg-editor { align-self: stretch; }
+      .tl-seg-editor .tl-seg__op { flex: 1 1 0; min-height: 44px; white-space: normal; line-height: 1.15; }
+      #tl-vista-editor .tl-fila-campos { grid-template-columns: minmax(0, 1fr); }
+      #tl-vista-editor .tl-panel { padding: 14px 12px; }
       .tl-pestanas { margin-left: 0; width: 100%; }
       .tl-pestana { flex: 1; justify-content: center; min-height: 44px; }
       .tl-btn { height: 44px; }
@@ -482,7 +505,9 @@
         <!-- El valor de la hora (lo ve todo el que ve el Taller; cambiarlo pide
              taller:precios) y "Nuevo proyecto" los agrega el JS. -->
         <span class="tl-acciones" id="tl-acciones-extra"></span>
-        <button type="button" class="tl-btn tl-btn--primario tl-solo-compu" id="tl-btn-nuevo" hidden>+ Nuevo proyecto</button>
+        <!-- También en el celular (02/10/2026): Facu crea proyectos desde el
+             teléfono. Ahí va primero y a todo el ancho (ver el CSS del celular). -->
+        <button type="button" class="tl-btn tl-btn--primario" id="tl-btn-nuevo" hidden>+ Nuevo proyecto</button>
       </div>
       <p class="tl-nota-unidad" id="tl-nota-unidad" hidden></p>
       <p class="tl-solo-lector" id="tl-cuenta" aria-live="polite"></p>
@@ -1042,7 +1067,7 @@
     function pintarAccionesLista() {
       document.getElementById('tl-btn-nuevo').hidden = !puedeGestionar()
       document.getElementById('tl-acciones-extra').innerHTML =
-        `<button type="button" class="tl-btn tl-solo-compu" id="tl-btn-valor-hora">${esc(textoBotonHora())}</button>`
+        `<button type="button" class="tl-btn" id="tl-btn-valor-hora">${esc(textoBotonHora())}</button>`
     }
 
     async function cargarProyectos() {
