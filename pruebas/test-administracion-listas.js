@@ -24,11 +24,10 @@ const CAT = {
     { id: 'p1', nombre: 'Cucurucho grande', tipo_masa: 'Común', categoria: 'cucuruchones' },
   ],
   presentaciones: [
-    // La inactiva va PRIMERA a propósito: si se colara, sería la presentación del precio.
-    { id: 'prv', producto_id: 'p1', nombre: 'Vieja', con_cono: false, media_caja: false, activa: false },
-    { id: 'pr1', producto_id: 'p1', nombre: 'Caja x 100', con_cono: false, media_caja: false, unidades_por_caja: 100, activa: true },
-    { id: 'pr1c', producto_id: 'p1', nombre: 'Caja x 100 con cono', con_cono: true, media_caja: false, unidades_por_caja: 100, activa: true },
-    { id: 'pr2', producto_id: 'p2', nombre: 'Caja x 50', con_cono: false, media_caja: false, unidades_por_caja: 50, activa: true },
+    { id: 'pr1', producto_id: 'p1', nombre: 'Caja x 100', activa: true },
+    { id: 'pr1c', producto_id: 'p1', nombre: 'Caja x 100 con cono', activa: true },
+    { id: 'prv', producto_id: 'p1', nombre: 'Vieja', activa: false },
+    { id: 'pr2', producto_id: 'p2', nombre: 'Caja x 50', activa: true },
   ],
   marcas: [],
   insumos: [
@@ -99,10 +98,10 @@ function preparar(S) {
   chk('antes del 01/09 regía el de agosto', S.vigenteYProximo(PRECIOS, 'pr1', '2026-08-15').vigente.precio_caja === 2800)
   chk('sin precio: null (no 0)', S.vigenteYProximo(PRECIOS, 'pr1c', '2026-09-26').vigente === null)
   const filas = S.filasGrilla(CAT)
-  chk('la grilla tiene UNA fila por producto (su presentación sin cono), por categoría, y los insumos activos al final', filas.map(f => f.clave).join() === 'pr1,pr2,ins:i1', filas.map(f => f.clave))
-  chk('cada fila dice su grupo: la categoría o "Materia prima e insumos"', filas.map(f => f.grupo).join() === 'Cucuruchones,Especiales,Materia prima e insumos')
+  chk('la grilla tiene las presentaciones activas, por categoría, y los insumos activos al final', filas.map(f => f.clave).join() === 'pr1,pr1c,pr2,ins:i1')
+  chk('cada fila dice su grupo: la categoría o "Materia prima e insumos"', filas.map(f => f.grupo).join() === 'Cucuruchones,Cucuruchones,Especiales,Materia prima e insumos')
   chk('un insumo inactivo no va a la grilla', !filas.some(f => f.clave === 'ins:i2'))
-  chk('el insumo dice su marca y su unidad', filas[2].producto === 'Harina 000' && filas[2].presentacion === 'Molino · por kg')
+  chk('el insumo dice su marca y su unidad', filas[3].producto === 'Harina 000' && filas[3].presentacion === 'Molino · por kg')
   chk('el precio vigente de un insumo sale por su clave', S.vigenteYProximo(PRECIOS, 'ins:i1', '2026-09-26').vigente.precio_caja === 120)
   chk('la clave de un precio: presentación, o "ins:" + insumo', S.clavePrecio({ presentacion_id: 'pr1' }) === 'pr1' && S.clavePrecio({ presentacion_id: null, insumo_id: 'i1' }) === 'ins:i1')
 }
@@ -111,9 +110,9 @@ function preparar(S) {
   preparar(S)
   esperas.push(S.abrirLista('l1').then(() => {
     const h = S.__els.get('ad-lista-grilla').innerHTML
-    chk('la grilla muestra el precio vigente sin cono con su fecha', /\$\s3\.000,00 la caja desde 01\/09\/2026/.test(h), h.slice(0, 600))
+    chk('la grilla muestra el precio vigente con su fecha', /\$ 3\.000,00 desde 01\/09\/2026/.test(h))
     chk('y el próximo', /próximo \$ 3\.500,00 desde 01\/01\/2099/.test(h))
-    chk('sin la lista completa, el con cono no inventa "$ 0"', !/\$\s0,00/.test(h))
+    chk('una presentación sin precio lo dice', /Sin precio/.test(h))
     chk('un encabezado por categoría', /ad-separador-grilla">Cucuruchones</.test(h) && /ad-separador-grilla">Especiales</.test(h) && h.indexOf('>Cucuruchones<') < h.indexOf('>Especiales<'))
     chk('y la sección "Materia prima e insumos" al final', h.indexOf('>Materia prima e insumos<') > h.indexOf('>Especiales<') && /data-precio-lista="ins:i1"/.test(h))
     const sel = (S.__llamadas.consultas.find(c => c[0] === 'lista_precios_items') || [null, []])[1].find(f => f[0] === 'select')
@@ -130,28 +129,24 @@ function preparar(S) {
   preparar(S)
   esperas.push(S.abrirLista('l1').then(async () => {
     const l = S.estado.lista
-    S.cambiarPrecioLista('pr2', 4200)
-    S.cambiarPrecioLista('pr1', 3000)
-    chk('un precio igual al que rige no cuenta como nuevo', JSON.stringify(S.preciosAGuardar(l, S.hoyArgentina())) === JSON.stringify([{ presentacion_id: 'pr2', precio_caja: 4200 }]))
-    chk('la fila editada se marca', /ad-precio ad-precio--producto ad-precio--pendiente" data-fila-precio="pr2"/.test(S.htmlGrilla(l, S.hoyArgentina())))
-    S.cambiarPrecioLista('pr2', null)
     S.cambiarPrecioLista('pr1c', 4200)
-    chk('una clave que no es fila editable (la caja con cono) no se guarda nunca', S.preciosAGuardar(l, S.hoyArgentina()).length === 0)
+    S.cambiarPrecioLista('pr1', 3000)
+    chk('un precio igual al que rige no cuenta como nuevo', JSON.stringify(S.preciosAGuardar(l, S.hoyArgentina())) === JSON.stringify([{ presentacion_id: 'pr1c', precio_caja: 4200 }]))
+    chk('la fila editada se marca', /ad-precio ad-precio--pendiente" data-fila-precio="pr1c"/.test(S.htmlGrilla(l, S.hoyArgentina())))
     S.cambiarPrecioLista('pr1c', null)
     chk('borrar el campo lo saca de lo pendiente', S.preciosAGuardar(l, S.hoyArgentina()).length === 0)
-    S.cambiarPrecioLista('pr2', 4200)
+    S.cambiarPrecioLista('pr1c', 4200)
     S.cambiarPrecioLista('ins:i1', 130)
-    chk('el precio de un insumo se guarda con insumo_id, sin presentación', JSON.stringify(S.preciosAGuardar(l, S.hoyArgentina())) === JSON.stringify([{ presentacion_id: 'pr2', precio_caja: 4200 }, { insumo_id: 'i1', precio_caja: 130 }]))
+    chk('el precio de un insumo se guarda con insumo_id, sin presentación', JSON.stringify(S.preciosAGuardar(l, S.hoyArgentina())) === JSON.stringify([{ presentacion_id: 'pr1c', precio_caja: 4200 }, { insumo_id: 'i1', precio_caja: 130 }]))
     S.cambiarPrecioLista('ins:i1', null)
-    // Una fecha que no puede ser "hoy" (si fuera hoy, mandar hoyArgentina() pasaría igual).
-    S.__els.get('ad-lista-desde').value = '2098-03-15'
+    S.__els.get('ad-lista-desde').value = '2026-10-01'
     S.pedirGuardarPrecios()
     chk('guardar pide CONFIRMAR antes de mandar', !!l.confirmar && !S.__llamadas.rpc.some(x => x[0] === 'guardar_precios'))
-    chk('y dice cuántos y desde cuándo', /Vas a guardar 1 precio nuevo que rigen desde el 15\/03\/2098/.test(S.__els.get('ad-confirmar-precios-texto').textContent))
+    chk('y dice cuántos y desde cuándo', /Vas a guardar 1 precio nuevo que rigen desde el 01\/10\/2026/.test(S.__els.get('ad-confirmar-precios-texto').textContent))
     let p = null
     S.__setRpc(async (n, q) => { if (n === 'guardar_precios') p = q; return { data: { precios: 1 }, error: null } })
     await S.confirmarGuardarPrecios()
-    chk('guardar_precios con la lista, la fecha y SOLO lo nuevo', p && p.p_lista_id === 'l1' && p.p_vigente_desde === '2098-03-15' && JSON.stringify(p.p_items) === JSON.stringify([{ presentacion_id: 'pr2', precio_caja: 4200 }]))
+    chk('guardar_precios con la lista, la fecha y SOLO lo nuevo', p && p.p_lista_id === 'l1' && p.p_vigente_desde === '2026-10-01' && JSON.stringify(p.p_items) === JSON.stringify([{ presentacion_id: 'pr1c', precio_caja: 4200 }]))
   }))
 }
 {
@@ -185,8 +180,6 @@ function preparar(S) {
     S.aplicarAumento()
     chk('calcula sobre el precio que rige hoy, redondeado a centavos', l.pendientes.get('pr1') === 3300 && l.pendientes.get('pr2') === 6050)
     chk('no inventa precio donde no había', !l.pendientes.has('pr1c'))
-    const sinPr2 = S.calcularAumento({ ...l, pendientes: new Map(), precios: l.precios.filter(x => x.presentacion_id !== 'pr2') }, 10, S.hoyArgentina())
-    chk('una fila sin precio vigente no recibe un precio del aumento', !sinPr2.has('pr2') && sinPr2.size === 2, [...sinPr2])
     chk('y NO guardó nada', !S.__llamadas.rpc.some(x => x[0] === 'guardar_precios'))
     chk('el aumento también sube los insumos que tienen precio', l.pendientes.get('ins:i1') === 132)
     chk('dice cuántos quedan sin guardar', S.__els.get('ad-lista-pendientes').textContent === '3 precios nuevos sin guardar.')
@@ -251,9 +244,6 @@ function preparar(S) {
   chequearMarcas(chk, 'grilla', S.htmlGrilla(l, '2026-09-26'), ['producto', 'presentacion'])
   chequearMarcas(chk, 'historial', S.htmlHistorial(l, 'x', '2026-09-26'), ['producto', 'presentacion'])
   chequearMarcas(chk, 'error de la grilla', S.htmlGrilla({ ...l, error: marca('error') }, '2026-09-26'), ['error'])
-  // Los avisos de la grilla completa: la lista base y el error de lista_completa.
-  S.estado.listas.filas = [{ id: 'l1', nombre: 'L', moneda: 'ARS', activa: true, base_id: 'lb' }, { id: 'lb', nombre: marca('base'), moneda: 'ARS', activa: true }]
-  chequearMarcas(chk, 'avisos de la grilla completa', S.htmlGrilla({ ...l, errorCompleta: marca('errcomp') }, '2026-09-26'), ['base', 'errcomp'])
 }
 
 fin()

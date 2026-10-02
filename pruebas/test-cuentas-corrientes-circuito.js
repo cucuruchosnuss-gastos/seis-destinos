@@ -69,10 +69,8 @@ const FUNCIONES = [
   'saldosFichaVisibles', 'creditosFichaDeUnidad',
   // El cheque endosado (29/09/2026): la referencia de un pago.
   'referenciaMovimiento',
-  // el saldo inicial de un proveedor (30/09/2026)
-  'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
-const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR', 'NUMERO_SALDO_INICIAL']
+const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR']
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,

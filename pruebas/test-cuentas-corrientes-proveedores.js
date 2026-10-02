@@ -102,10 +102,8 @@ const FUNCIONES = [
   'cargarHistorial', 'armarHistorial', 'renderizarListaHistorial', 'exportarExcelHistorial', 'abrirModalDetallePago',
   // lo nuevo
   'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento', 'renderizarLinkClientes',
-  // el saldo inicial de un proveedor (30/09/2026)
-  'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
-const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL']
+const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {

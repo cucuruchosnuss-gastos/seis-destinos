@@ -51,12 +51,6 @@ const FUNCIONES_BASE = [
   'versionesDe', 'vigenteYProximo', 'filasGrilla', 'preciosAGuardar', 'calcularAumento', 'htmlFilaPrecio', 'htmlGrilla',
   'htmlHistorial', 'textoPendientes', 'pintarLista', 'abrirLista', 'enlazarPorcentaje', 'cambiarPrecioLista', 'aplicarAumento',
   'descartarCambios', 'pedirGuardarPrecios', 'confirmarGuardarPrecios', 'cambiarActivaLista',
-  // La lista interna (30/09/2026)
-  'textoListaInterna', 'pintarListaInterna',
-  // La grilla completa: lista_completa (30/09/2026)
-  'leerListaCompleta', 'leerListaCompletaSegura', 'completaDelProducto', 'listaDerivada', 'filaEditable', 'numeroONull',
-  'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'chocanMismaFecha', 'textoChoqueMismaFecha',
-  'htmlFilaProducto', 'htmlConito', 'plantillaConito', 'textoConConoNuevo', 'pintarConConoNuevo', 'recargoDeLista',
   // Los clientes de una lista (30/09/2026)
   'clientesActivosEmpresa', 'htmlNombresCortos', 'htmlResumenClientesLista', 'htmlClientesLista', 'pintarClientesLista', 'cambiarListaCliente',
   // js/retiros-comun.js
@@ -109,10 +103,6 @@ const CONSTANTES_BASE = [
   'NOMBRE_CORTO', 'MARCA_FABRICA', 'COLOR_EMPRESA_SIN_MARCA', 'TEXTO_ELEGI_FABRICA',
   // El diseño "Administración" (29/09/2026)
   'PALETA_MODULO', 'TRAZO_ICONO', 'ICONO_SECCION', 'PESTANAS', 'PESTANA_DE_VISTA',
-  // La lista interna (30/09/2026)
-  'PUEDE_MARCAR_INTERNA',
-  // La grilla completa (30/09/2026)
-  'CONITOS',
 ]
 
 const PRELUDIO = `

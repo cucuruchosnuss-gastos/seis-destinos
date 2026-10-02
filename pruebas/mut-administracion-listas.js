@@ -36,7 +36,7 @@ correrMutaciones({
     { nombre: 'la grilla sin los insumos', de: "      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {", a: "      for (const i of []) {" },
     { nombre: 'la grilla con los insumos inactivos', de: "      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {", a: "      for (const i of (cat?.insumos ?? [])) {" },
     { nombre: 'el precio del insumo viaja como presentación', de: "        items.push(String(clave).startsWith('ins:')", a: "        items.push(false" },
-    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)", a: ".select('presentacion_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)" },
+    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)", a: ".select('presentacion_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)" },
     { nombre: 'sin encabezado por grupo', de: "        const sep = f.grupo !== grupo ? `<div class=\"ad-separador-grilla\">${esc(f.grupo)}</div>` : ''", a: "        const sep = ''" },
     // Guardar
     { nombre: 'un precio igual al vigente cuenta como nuevo', de: '        if (actual && Number(actual.precio_caja) === Number(precio)) continue\n', a: '' },

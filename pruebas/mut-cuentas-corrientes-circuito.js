@@ -63,7 +63,7 @@ correrMutaciones({
     { nombre: 'el padrón vuelve a $ 0,00',
       de: "${sinImporte ? '—' : '$ 0,00'}</div>\n            </div>`\n\n        return `\n          <div class=\"tarjeta-lista tarjeta-padron\"", a: "$ 0,00</div>\n            </div>`\n\n        return `\n          <div class=\"tarjeta-lista tarjeta-padron\"" },
     { nombre: 'el padrón no avisa',
-      de: '              ${htmlSinImporte(sinImporte)}\n              ${puedeSaldoInicial ?', a: '              ${puedeSaldoInicial ?' },
+      de: '              ${htmlSinImporte(sinImporte)}\n              ${puedeEditar ?', a: '              ${puedeEditar ?' },
     { nombre: 'el banner no dice que el saldo está incompleto',
       de: '                ${i === 0 ? avisoSinImporte : \'\'}\n', a: '' },
     { nombre: 'el banner sin saldo vuelve a $ 0,00 con descargas',

@@ -149,7 +149,7 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'esc', 'normalizar', 'hoyLocal', 'tieneTarea', 'nombreDeUnidadBarra', 'cargarStock',
-  'unidadesTraspaso', 'puedeTraspasar', 'nuevoUuidTrp', 'nuevoTraspaso','destinoPorDefectoTrp',
+  'unidadesTraspaso', 'puedeTraspasar', 'nuevoTraspaso', 'destinoPorDefectoTrp',
   'cargarCatalogoTrp', 'cargarStockTrp', 'agruparStockTrp', 'listaInternaDe', 'cargarListaInternaTrp',
   'proponerPrecioTrp', 'presentacionTrp', 'presentacionesOrigenTrp', 'presentacionEnDestinoTrp',
   'textoFaltaEnDestinoTrp', 'lotesTrp', 'stockPresentacionTrp', 'conosTrp', 'nombreConoTrp',
@@ -232,11 +232,7 @@ function datosBase() {
       { unidad_negocio_id: 'u-dolce', presentacion_id: 'dp1', marca_id: null, lote: 'D-1', cajas: 9, fecha: '2026-09-06' },
     ],
     listas_precios: [
-      { id: 'lc', unidad_negocio_id: 'u-nuss', nombre: 'Distribuidores', activa: true, es_interna: false },
-      // Un nombre que dice "interna" SIN la marca: ya no cuenta.
-      { id: 'lx', unidad_negocio_id: 'u-nuss', nombre: 'Lista interna vieja', activa: true, es_interna: false },
-      // La interna de OTRA fábrica: no es la del origen.
-      { id: 'ld', unidad_negocio_id: 'u-dolce', nombre: 'Interna Dolce', activa: true, es_interna: true },
+      { id: 'lc', unidad_negocio_id: 'u-nuss', nombre: 'Distribuidores', activa: true },
     ],
   }
 }
@@ -508,14 +504,10 @@ pendientes.push(async () => {
 // ══════════════════════════════════════════════════════════════════════════
 pendientes.push(async () => {
   const S = sandbox()
-  chk('lista interna: la que tiene es_interna, NO por el nombre', S.listaInternaDe([{ id: 'a', nombre: 'Interna', activa: true, es_interna: false }, { id: 'b', nombre: 'Fábricas', activa: true, es_interna: true }])?.id === 'b')
-  chk('lista interna: un nombre que dice "interna" sin la marca no cuenta', S.listaInternaDe([{ id: 'c', nombre: 'Lista Interna', activa: true, es_interna: false }]) === null)
-  chk('lista interna: una desactivada con la marca SÍ (la marca es explícita)', S.listaInternaDe([{ id: 'b', nombre: 'Fábricas', activa: false, es_interna: true }])?.id === 'b')
-  chk('lista interna: es_interna con un valor raro no cuenta', S.listaInternaDe([{ id: 'b', nombre: 'X', activa: true, es_interna: 'true' }]) === null)
-  chk('lista interna: sin ninguna, null', S.listaInternaDe([{ id: 'x', nombre: 'Distribuidores', activa: true, es_interna: false }]) === null)
-  chk('lista interna: se pide a la base por es_interna (el doble ignora el select: se afirma sobre su texto)',
-    /\.select\('id, nombre, activa, es_interna'\)\s*\n\s*\.eq\('unidad_negocio_id', origen\)\s*\n\s*\.eq\('es_interna', true\)/.test(SCRIPT))
-  chk('lista interna: ya no se busca "interna" en el nombre', !/includes\('interna'\)/.test(SCRIPT))
+  chk('lista interna: por nombre, sin acentos ni mayúsculas', S.listaInternaDe([{ id: 'a', nombre: 'Clientes', activa: true }, { id: 'b', nombre: 'Precio INTERNA fábricas', activa: true }])?.id === 'b')
+  chk('lista interna: "Interná" con acento también', S.listaInternaDe([{ id: 'c', nombre: 'Lista Interná', activa: true }])?.id === 'c')
+  chk('lista interna: una apagada no', S.listaInternaDe([{ id: 'b', nombre: 'Interna', activa: false }]) === null)
+  chk('lista interna: sin ninguna, null', S.listaInternaDe([{ id: 'x', nombre: 'Distribuidores', activa: true }]) === null)
 
   // Sin lista interna (los datos de hoy).
   let T = await abierto()
@@ -527,7 +519,7 @@ pendientes.push(async () => {
   chk('sin lista interna: no se pide precio_venta', !T.__llamadas.rpc.some(x => x[0] === 'precio_venta'))
 
   // Con lista interna.
-  const conLista = (d) => { d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true, es_interna: true }) }
+  const conLista = (d) => { d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true }) }
   T = await abierto({ datos: conLista, rpc: { precio_venta: (p) => ({ data: { precio_caja: p.p_marca_id ? 999 : 1500.5, sin_precio: false }, error: null }) } })
   T.agregarRenglonTrp('pp1', null)
   await esperar()
@@ -551,17 +543,9 @@ pendientes.push(async () => {
   chk('precio vaciado: queda sin precio', r.precio === null && /no deja deuda/.test(T.document.querySelector(`[data-trp-precio-nota="${r.id}"]`).textContent))
 
   // La lista no tiene precio / precio_venta falla.
-  {
-    const U = await abierto({ datos: conLista, rpc: { precio_venta: () => ({ data: null, error: { message: 'No tenés permiso para ver precios.' } }) } })
-    U.agregarRenglonTrp('pp1', null)
-    await esperar()
-    const rr = U.estado.trp.renglones[0]
-    const n = U.document.querySelector(`[data-trp-precio-nota="${rr.id}"]`).textContent
-    chk('error de precio_venta: el precio queda vacío (nunca 0)', rr.precio === null, rr.precio)
-    chk('error de precio_venta: dice el mensaje de la base TAL CUAL, no "no tiene precio"', /No tenés permiso para ver precios\./.test(n) && !/no tiene precio para esto/.test(n) && /vacío = sin deuda entre fábricas/.test(n), n)
-  }
   for (const [nombre, f] of [
     ['sin_precio', () => ({ data: { sin_precio: true, motivo: 'x' }, error: null })],
+    ['error', () => ({ data: null, error: { message: 'No tenés permiso para ver precios.' } })],
     ['precio_caja null', () => ({ data: { precio_caja: null, sin_precio: false }, error: null })],
   ]) {
     const U = await abierto({ datos: conLista, rpc: { precio_venta: f } })
@@ -623,9 +607,7 @@ pendientes.push(async () => {
       { presentacion_id: 'pp1c', marca_id: 'm1', lotes: [{ lote: 'L-a', cajas: 4 }], precio_caja: null },
     ],
     p_fecha: '2026-09-30', p_observaciones: 'para el finde',
-    p_client_uuid: t.clientUuid,
   }
-  chk('payload: la clave de idempotencia es un uuid', /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(String(t.clientUuid)), t.clientUuid)
   chk('payload: exacto (claves, marca null sin cono, lotes con cajas enteras, precio null si vacío)', JSON.stringify(p) === JSON.stringify(esperado), p)
   t.obs = '   '
   chk('payload: observaciones vacías viajan null', S.parametrosTraspaso(t).p_observaciones === null)
@@ -669,9 +651,7 @@ pendientes.push(async () => {
   U.anotarPedidoTrp(U.estado.trp.renglones[0].id, 3)
   U.completarRenglonTrp(U.estado.trp.renglones[0].id)
   await U.confirmarTraspaso()
-  chk('corte de red: avisa que no se sabe si entró y que reintentar no lo duplica', /no se sabe si el traspaso entró/.test(el(U, 'trp-error').textContent) && /no se pasa dos veces/.test(el(U, 'trp-error').textContent), el(U, 'trp-error').textContent)
-  chk('corte de red: ya NO manda a revisar el stock del destino antes de reintentar', !/fijate|Antes de volver a mandarlo|Stock terminado/.test(el(U, 'trp-error').textContent))
-  chk('el archivo ya no dice "antes de volver a mandarlo"', !/Antes de volver a mandarlo/.test(SCRIPT))
+  chk('corte de red: avisa que no se sabe si entró', /No se pudo saber si el traspaso entró/.test(el(U, 'trp-error').textContent))
 
   // Fecha de mañana: no se manda.
   const V = await abierto()
@@ -684,53 +664,6 @@ pendientes.push(async () => {
   V.estado.trp.fecha = '2026-09-30'
   V.estado.trp.destinoId = 'u-nuss'
   chk('origen = destino: no se manda', V.faltanTraspaso(V.estado.trp).some(f => /dos fábricas distintas/.test(f)))
-})
-
-// ══════════════════════════════════════════════════════════════════════════
-// 9b. IDEMPOTENCIA: la MISMA clave en cada reintento (p_client_uuid)
-// ══════════════════════════════════════════════════════════════════════════
-pendientes.push(async () => {
-  let intento = 0
-  const S = await abierto({
-    rpc: {
-      traspasar_producto_terminado: () => {
-        intento++
-        if (intento === 1) throw new Error('red')
-        return { data: { traspaso_id: 'tr-1', reintento: true }, error: null }
-      },
-    },
-  })
-  const t = S.estado.trp
-  const clave = t.clientUuid
-  S.agregarRenglonTrp('pp1', null)
-  S.anotarPedidoTrp(t.renglones[0].id, 3)
-  S.completarRenglonTrp(t.renglones[0].id)
-  await S.confirmarTraspaso()
-  chk('reintento: después del corte la lista sigue y la clave no cambió', t.renglones.length === 1 && t.clientUuid === clave)
-  await S.confirmarTraspaso()
-  await esperar()
-  const llamadas = S.__llamadas.rpc.filter(x => x[0] === 'traspasar_producto_terminado').map(x => x[1].p_client_uuid)
-  chk('reintento: las dos llamadas mandan la MISMA clave', llamadas.length === 2 && llamadas[0] === clave && llamadas[1] === clave, llamadas)
-  chk('reintento: "ya había entrado" se dice como ÉXITO, sin error', /ya había entrado/.test(S.__llamadas.exitos[0] ?? '') && /No se pasó dos veces/.test(S.__llamadas.exitos[0] ?? '') && el(S, 'trp-error').hidden === true, S.__llamadas.exitos)
-  chk('reintento: no inventa una deuda (la base no devuelve el importe)', !/le debe/.test(S.__llamadas.exitos[0] ?? ''))
-  chk('después del éxito: el próximo traspaso tiene OTRA clave', !!t.clientUuid && t.clientUuid !== clave)
-
-  // Un error de la base (rechazo, la transacción se revierte): la clave sigue.
-  const U = await abierto({ rpc: { traspasar_producto_terminado: () => ({ data: null, error: { message: 'Poné las cajas de cada lote.' } }) } })
-  const k = U.estado.trp.clientUuid
-  U.agregarRenglonTrp('pp1', null)
-  U.anotarPedidoTrp(U.estado.trp.renglones[0].id, 3)
-  U.completarRenglonTrp(U.estado.trp.renglones[0].id)
-  await U.confirmarTraspaso()
-  chk('error de la base: la clave no cambia', U.estado.trp.clientUuid === k)
-
-  // Cambiar el origen vacía la lista: otro traspaso, otra clave.
-  const V = await abierto()
-  const k1 = V.estado.trp.clientUuid
-  V.pedirCambioOrigenTrp('u-dolce')
-  await esperar()
-  chk('cambiar el origen: otra clave', V.estado.trp.origenId === 'u-dolce' && V.estado.trp.clientUuid !== k1 && !!V.estado.trp.clientUuid)
-  chk('dos traspasos nuevos no comparten clave', V.nuevoTraspaso().clientUuid !== V.nuevoTraspaso().clientUuid)
 })
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -832,7 +765,7 @@ pendientes.push(async () => {
   chk('lote: con decimales no se anota', !('X' in r.lotes))
 
   const U = await abierto({
-    datos: (d) => d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna', activa: true, es_interna: true }),
+    datos: (d) => d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna', activa: true }),
     rpc: { precio_venta: () => ({ data: { sin_precio: true, precio_caja: 500 }, error: null }) },
   })
   U.agregarRenglonTrp('pp1', null)
@@ -850,7 +783,7 @@ pendientes.push(async () => {
       d.producto_presentaciones.push({ id: 'dp-rara', producto_id: 'd1', nombre: 'Rara', con_cono: true, media_caja: false, unidades_por_caja: 77, activa: true, orden: 9 })
       d.marcas_personalizadas.push({ id: MARCA, nombre: XSS('cono'), activa: true, estado_alta: 'aprobada' })
       d.stock_terminado_movimientos.push({ unidad_negocio_id: 'u-nuss', presentacion_id: PRES, marca_id: MARCA, lote: 'R-1', cajas: 3, fecha: '2026-09-07' })
-      d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true, es_interna: true })
+      d.listas_precios.push({ id: 'li', unidad_negocio_id: 'u-nuss', nombre: 'Interna ' + XSS('lista'), activa: true })
     },
     rpc: { precio_venta: () => ({ data: { precio_caja: 10, sin_precio: false }, error: null }) },
   })

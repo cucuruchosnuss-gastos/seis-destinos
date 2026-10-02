@@ -118,10 +118,8 @@ const FUNCIONES = [
   'cargarFichaSaldos', 'cargarFichaMovimientos', 'cargarFichaCreditos', 'cargarFichaRemitos',
   'renderizarFichaBanner', 'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'abrirModalPago', 'abrirModalAplicarCreditoDesdeFicha',
-  // el saldo inicial de un proveedor (30/09/2026)
-  'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
-const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL']
+const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR', 'TANDA_GASTOS_PAGO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {

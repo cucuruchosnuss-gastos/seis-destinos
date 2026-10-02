@@ -24,9 +24,9 @@ correrMutaciones({
     { nombre: 'no lee las cuentas de las cajas que faltan',
       de: '        if (faltan.length) await cargarCuentas(faltan)\n', a: '' },
     { nombre: 'el renglón no dice de qué caja salió',
-      de: 'renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas, saldo: legible(m) ? sc : null })', a: 'renderizarFilaMovimiento(m, { conUnidad, saldo: legible(m) ? sc : null })' },
+      de: 'renderizarFilaMovimiento(m, { conUnidad, mostrarPersona: deTodasLasCajas })', a: 'renderizarFilaMovimiento(m, { conUnidad })' },
     { nombre: 'no queda marcado el modo "toda la unidad"',
-      de: '      estado.movimientosPorUnidad = porUnidad\n      // Con períodos tildados', a: '      estado.movimientosPorUnidad = null\n      // Con períodos tildados' },
+      de: '      estado.movimientosPorUnidad = porUnidad\n      renderizarMovimientos()', a: '      estado.movimientosPorUnidad = null\n      renderizarMovimientos()' },
     // Las entradas y salidas
     { nombre: 'sin la tarjeta de entradas y salidas en la ficha',
       de: '      cont.innerHTML = htmlEntradasYSalidas(movimientosVisibles(), nombre)', a: "      cont.innerHTML = ''" },

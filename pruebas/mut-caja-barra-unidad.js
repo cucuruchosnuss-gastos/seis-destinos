@@ -140,7 +140,6 @@ correrMutaciones({
     { nombre: 'el init no espera la unidad',
       de: 'cargarUnidadesNegocio(), promesaFabrica, promesaUnidad])', a: 'cargarUnidadesNegocio(), promesaFabrica])' },
     { nombre: 'cargarRetiros sin turno',
-      de: "      if (turno !== estado.turnoRetiros) return\n      document.getElementById('estado-cargando-retiros').hidden = true\n",
-      a: "      document.getElementById('estado-cargando-retiros').hidden = true\n" },
+      de: '      if (turno !== estado.turnoRetiros) return\n', a: '' },
   ],
 })

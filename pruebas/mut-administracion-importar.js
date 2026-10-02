@@ -44,7 +44,7 @@ correrMutaciones({
     // Nada se guarda hasta confirmar; solo las buenas
     { nombre: 'pedir guardar ya guarda', de: '      im.confirmar = true\n      pintarImportar()\n    }', a: '      im.confirmar = true\n      confirmarImportacion()\n    }' },
     { nombre: 'la vista previa guarda', de: "        im.archivo = nombreArchivo\n", a: "        im.archivo = nombreArchivo\n        im.confirmar = true\n        confirmarImportacion()\n" },
-    { nombre: 'se guardan también las filas con errores', de: "      const buenas = im.filas.filter(f => f.estado === 'ok')\n      if (!buenas.length) return", a: "      const buenas = im.filas.filter(f => f.estado !== 'ignorada')\n      if (!buenas.length) return" },
+    { nombre: 'se guardan también las filas con errores', de: "      const buenas = im.filas.filter(f => f.estado === 'ok')", a: "      const buenas = im.filas.filter(f => f.estado !== 'ignorada')" },
     { nombre: 'confirmar sin haberlo pedido guarda', de: '      if (!im?.confirmar || im.guardando || im.terminado) return', a: '      if (!im || im.guardando || im.terminado) return' },
     { nombre: 'una importación terminada se vuelve a guardar', de: '      if (!im?.confirmar || im.guardando || im.terminado) return', a: '      if (!im?.confirmar || im.guardando) return' },
     { nombre: 'se puede guardar dos veces', de: '      if (!im?.filas || im.guardando || im.terminado) return', a: '      if (!im?.filas || im.guardando) return' },
@@ -57,7 +57,7 @@ correrMutaciones({
     { nombre: 'un código desconocido pasa', de: "        else if (!g) f.errores.push('El código no es de un producto", a: "        else if (false) f.errores.push('El código no es de un producto" },
     { nombre: 'los precios sin la lista elegida', de: "      if (im.tipo === 'precios' && !im.listaId) { im.error = 'Elegí primero la lista de precios.'; pintarImportar(); return }\n      im.error = null", a: '      im.error = null' },
     { nombre: 'guardar_precios con otra fecha', de: "{ p_lista_id: im.listaId, p_vigente_desde: im.desde, p_items: buenas.map(f => f.datos) }", a: "{ p_lista_id: im.listaId, p_vigente_desde: hoyArgentina(), p_items: buenas.map(f => f.datos) }" },
-    { nombre: 'la plantilla de precios sin el precio actual', de: "vig ? Number(vig.precio_caja) : '', conCaja ?? '', '']", a: "'', conCaja ?? '', '']" },
+    { nombre: 'la plantilla de precios sin el precio actual', de: "vig ? Number(vig.precio_caja) : '', '']", a: "'', '']" },
     // Saldos
     { nombre: 'el saldo ya cargado no se marca', de: "        if (c && !f.ignorada && ctx?.conSaldo instanceof Set && ctx.conSaldo.has(c.id)) {", a: '        if (false) {' },
     { nombre: 'quién ya tiene saldo se busca sin el tipo', de: ".select('cliente_id').eq('tipo', 'saldo_inicial').in('cliente_id', ids)", a: ".select('cliente_id').in('cliente_id', ids)" },

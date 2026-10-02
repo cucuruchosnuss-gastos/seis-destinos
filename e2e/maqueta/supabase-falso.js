@@ -30,10 +30,7 @@ try {
 function consulta(tabla) {
   const filtros = []
   const q = {
-    // Un select con { count: 'exact' } (sin head) responde también el conteo
-    // de las filas (30/09/2026: el saldo corriente de Caja lo exige para saber
-    // que leyó toda la historia). Los que piden head siguen como antes.
-    select(_c, o) { if (o?.count && !o?.head) q._contar = true; return q }, order() { return q }, limit() { return q }, range() { return q },
+    select() { return q }, order() { return q }, limit() { return q }, range() { return q },
     eq(a, b) { filtros.push(r => r[a] === b); return q }, neq(a, b) { filtros.push(r => r[a] !== b); return q },
     in(a, b) { filtros.push(r => b.includes(r[a])); return q }, is(a, b) { filtros.push(r => (r[a] ?? null) === b); return q },
     gte(a, b) { filtros.push(r => r[a] >= b); return q }, lte(a, b) { filtros.push(r => r[a] <= b); return q },
@@ -46,9 +43,7 @@ function consulta(tabla) {
       if (cruda === 'ESPERAR') return new Promise(() => {})
       if (typeof cruda === 'string' && cruda.startsWith('ERROR:')) return Promise.resolve({ data: null, error: { message: cruda.slice(6), code: 'P0001' } }).then(res, rej)
       const filas = (cruda || []).filter(r => filtros.every(f => f(r)))
-      const r = { data: q._uno ? (filas[0] ?? null) : filas, error: null }
-      if (q._contar) r.count = filas.length
-      return Promise.resolve(r).then(res, rej)
+      return Promise.resolve({ data: q._uno ? (filas[0] ?? null) : filas, error: null }).then(res, rej)
     },
   }
   return q

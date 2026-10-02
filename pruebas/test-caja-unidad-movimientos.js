@@ -171,13 +171,6 @@ const CUENTA_EMA = { id: 'c-ema', empleado_id: 'ema', nombre: 'Efectivo Ema', me
 
 const tick = () => new Promise(r => setTimeout(r, 0))
 
-// Las consultas de la LISTA de movimientos (traen el gasto embebido). La del
-// saldo corriente (leerHistoriaCaja: toda la historia de cada cuenta, sin
-// filtro de unidad) es otra y va aparte.
-function consultasLista(S) {
-  return S.__consultas.filter(c => c.tabla === 'caja_movimientos' && /gastos/.test(c.select || ''))
-}
-
 async function casos() {
   // ── La unidad de un movimiento la dice la base ─────────────────────────
   {
@@ -210,7 +203,7 @@ async function casos() {
     S.__setDatos('caja_movimientos', [GASTO_NUSS, INGRESO_NUSS, TRASPASO_NUSS_SALE, TRASPASO_NUSS_ENTRA])
     S.__setDatos('cuentas_caja', [CUENTA_EMA])
     await S.cargarMovimientosFichaEmpresa()
-    const q = consultasLista(S).pop()
+    const q = S.__consultas.filter(c => c.tabla === 'caja_movimientos').pop()
     chk('pide por la unidad del movimiento', q && q.filtros.some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === NUSS), JSON.stringify(q && q.filtros))
     chk('y NO por las cuentas de la Empresa', q && !q.filtros.some(f => f[0] === 'in' && f[1] === 'cuenta_id'))
     chk('trae la unidad y el dueño de cada movimiento', /unidad_negocio_id, empleado_id/.test(q && q.select))
@@ -236,7 +229,7 @@ async function casos() {
     S.__setDatos('caja_movimientos', [GASTO_NUSS, GASTO_DOLCE])
     S.__setDatos('cuentas_caja', [CUENTA_EMA])
     await S.cargarMovimientosFichaEmpresa()
-    const q = consultasLista(S).pop()
+    const q = S.__consultas.filter(c => c.tabla === 'caja_movimientos').pop()
     chk('con Dolce pide Dolce', q && q.filtros.some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === DOLCE))
     const lista = S.__el('detalle-persona-movimientos').innerHTML
     chk('filtrando Dolce, el gasto de Nuss NO aparece', !lista.includes('Repuesto ') && lista.includes('Efectivo Dolce'))
@@ -247,7 +240,7 @@ async function casos() {
     const S = sandbox()
     S.__setDatos('caja_movimientos', [INGRESO_NUSS, GASTO_DOLCE])
     await S.cargarMovimientosFichaEmpresa()
-    const q = consultasLista(S).pop()
+    const q = S.__consultas.filter(c => c.tabla === 'caja_movimientos').pop()
     chk('Todas: pide por las cuentas de la Empresa', q && q.filtros.some(f => f[0] === 'in' && f[1] === 'cuenta_id') &&
       !q.filtros.some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id'))
     chk('Todas: sin tarjeta de entradas y salidas y sin la persona en el renglón',
@@ -259,7 +252,7 @@ async function casos() {
     const S = sandbox({ elegida: NUSS, rol: 'usuario', tareas: ['ver_empresa'] })
     S.__setDatos('caja_movimientos', [INGRESO_NUSS])
     await S.cargarMovimientosFichaEmpresa()
-    const q = consultasLista(S).pop()
+    const q = S.__consultas.filter(c => c.tabla === 'caja_movimientos').pop()
     chk('sin ver_listado / movimientos_todos: solo las cuentas de la Empresa', q && q.filtros.some(f => f[0] === 'in' && f[1] === 'cuenta_id'))
     const nota = S.__el('detalle-persona-totales').innerHTML
     chk('…y lo dice, a la vista', /se ven solo los movimientos de las cuentas de la Empresa de Cucuruchos Nuss/.test(nota) && !/\shidden/.test(nota), nota)
@@ -275,14 +268,14 @@ async function casos() {
     const S = sandbox({ elegida: NUSS })
     S.__setDatos('caja_movimientos', [INGRESO_NUSS])
     await S.cargarMovimientosFichaEmpresa()
-    const antes = consultasLista(S).length
+    const antes = S.__consultas.filter(c => c.tabla === 'caja_movimientos').length
     S.alCambiarUnidadCaja({ elegida: DOLCE, mostrar: true })
     await tick(); await tick()
-    const qs = consultasLista(S)
+    const qs = S.__consultas.filter(c => c.tabla === 'caja_movimientos')
     chk('cambiar a Dolce vuelve a pedir, por Dolce', qs.length === antes + 1 && qs.at(-1).filtros.some(f => f[0] === 'eq' && f[2] === DOLCE))
     S.alCambiarUnidadCaja({ elegida: null, mostrar: true })
     await tick(); await tick()
-    chk('volver a Todas vuelve a pedir por las cuentas', consultasLista(S).at(-1).filtros.some(f => f[0] === 'in' && f[1] === 'cuenta_id'))
+    chk('volver a Todas vuelve a pedir por las cuentas', S.__consultas.filter(c => c.tabla === 'caja_movimientos').at(-1).filtros.some(f => f[0] === 'in' && f[1] === 'cuenta_id'))
   }
   // ── Las entradas y salidas ─────────────────────────────────────────────
   {

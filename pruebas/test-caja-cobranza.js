@@ -24,7 +24,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/caja.html')
 const src = leer(ARCHIVO)
 const { chk, fin } = arnes()
 
-const FUNCIONES = ['esc', 'importeHtml', 'formatearImporte', 'clienteDeCobranza', 'etiquetaMovimiento', 'renderizarFilaMovimiento', 'htmlCentavos', 'htmlSaldoDeFila']
+const FUNCIONES = ['esc', 'importeHtml', 'formatearImporte', 'clienteDeCobranza', 'etiquetaMovimiento', 'renderizarFilaMovimiento']
 const CONSTANTES = ['TIPO_LABEL', 'MEDIO_PAGO_LABEL_CAJA']
 
 const PRELUDIO = `
