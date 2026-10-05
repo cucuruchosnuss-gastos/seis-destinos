@@ -60,7 +60,8 @@ correrMutaciones({
     { nombre: 'busca en cada tecla',
       de: '      a.temporizador = setTimeout(() => buscarClientesAsentar(), MS_BUSCAR_CLIENTE)', a: '      buscarClientesAsentar()' },
     { nombre: 'el nombre del cliente sin escapar',
-      de: '<span class="cob-cliente-op__nombre">${escCob(c.nombre)}</span>', a: '<span class="cob-cliente-op__nombre">${c.nombre}</span>' },
+      // Desde el 02/10/2026 detrás del nombre puede ir el apodo que coincidió.
+      de: '<span class="cob-cliente-op__nombre">${escCob(c.nombre)}` +', a: '<span class="cob-cliente-op__nombre">${c.nombre}` +' },
     { nombre: 'la razón social sin escapar',
       de: "<br><span class=\"cob-cliente-op__meta\">${escCob(meta)}</span>` : ''}</span>` +\n        `${saldo", a: "<br><span class=\"cob-cliente-op__meta\">${meta}</span>` : ''}</span>` +\n        `${saldo" },
     { nombre: 'el saldo que no vino dice $ 0,00',

@@ -186,7 +186,7 @@ module.exports = {
       "__segun": [
         { "si": { "p_busqueda": "JyM", "p_unidad_negocio_id": "u-n" }, "r": [
           { "cliente_id": "c-jm-n", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "razon_social": "J&M DISTRIBUCIONES Y SERVICI", "cuit": "30711111112",
-            "localidad": "Córdoba", "empresa": "Cucuruchos Nuss", "unidad_negocio_id": "u-n", "activo": true, "saldo": 185000, "parecido": 0.9 }
+            "localidad": "Córdoba", "empresa": "Cucuruchos Nuss", "unidad_negocio_id": "u-n", "activo": true, "saldo": 185000, "parecido": 0.9, "apodos": [], "apodo_coincide": null }
         ] }
       ],
       "__defecto": null

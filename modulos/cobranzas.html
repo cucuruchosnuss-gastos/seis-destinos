@@ -593,6 +593,8 @@
     }
     .cob-cliente-op__texto { min-width: 0; }
     .cob-cliente-op__nombre { font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); overflow-wrap: anywhere; min-width: 0; }
+    /* El apodo que coincidió, al lado del nombre: "SALVADOR LOFORTE · Turi". */
+    .cob-cliente-op__apodo { font-weight: 600; color: var(--color-texto-2); }
     .cob-cliente-op__meta { font-size: 0.75rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
     .cob-cliente-op__saldo { flex: 0 0 auto; font-size: 0.8125rem; font-weight: 600; color: var(--color-texto-2); white-space: nowrap; }
     .cob-cliente-elegido {
@@ -3060,11 +3062,35 @@
       return 'Cuenta en cero'
     }
 
-    function htmlOpcionClienteAsentar(c) {
+    // ── El apodo que coincidió (02/10/2026) ───────────────────────────────
+    // buscar_clientes encuentra por apodo ("Turi" da SALVADOR LOFORTE) y, desde
+    // el 02/10/2026, devuelve en cada cliente `apodos` y `apodo_coincide` (el
+    // apodo que coincidió con lo escrito, o null). Antes los apodos se leían
+    // aparte de `clientes`, y quien solo tiene tareas de Cobranzas (Yanina) no
+    // tenía permiso: esa lectura se fue.
+    function normalizarApodo(t) {
+      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+    }
+
+    // El apodo que coincidió (el `apodo_coincide` de la base), si el NOMBRE no
+    // coincide por sí solo: la base lo manda igual buscando "forte", y ahí
+    // "SALVADOR LOFORTE · Los Forte" no agrega nada. null si no hay.
+    function apodoQueCoincide(c, busqueda) {
+      const apodo = String(c?.apodo_coincide ?? '').trim()
+      if (!apodo) return null
+      const q = normalizarApodo(busqueda)
+      if (q.length < MIN_LETRAS_CLIENTE) return null
+      if (normalizarApodo(c?.nombre).includes(q)) return null
+      return apodo
+    }
+
+    function htmlOpcionClienteAsentar(c, busqueda = '') {
       const meta = [c.razon_social && c.razon_social !== c.nombre ? c.razon_social : '', c.localidad ?? ''].filter(Boolean).join(' · ')
       const saldo = textoSaldoCliente(c.saldo)
+      const apodo = apodoQueCoincide(c, busqueda)
       return `<button type="button" class="cob-cliente-op" data-cliente-id="${escCob(c.cliente_id)}">` +
-        `<span class="cob-cliente-op__texto"><span class="cob-cliente-op__nombre">${escCob(c.nombre)}</span>` +
+        `<span class="cob-cliente-op__texto"><span class="cob-cliente-op__nombre">${escCob(c.nombre)}` +
+        `${apodo ? `<span class="cob-cliente-op__apodo"> · ${escCob(apodo)}</span>` : ''}</span>` +
         `${meta ? `<br><span class="cob-cliente-op__meta">${escCob(meta)}</span>` : ''}</span>` +
         `${saldo ? `<span class="cob-cliente-op__saldo">${escCob(saldo)}</span>` : ''}</button>`
     }
@@ -3090,7 +3116,7 @@
       const tope = a.clientes.length >= TOPE_CLIENTES_BUSCADOS
         ? '<div class="cob-asentar-nota">Se ven los primeros: escribí para buscar el que falta.</div>'
         : ''
-      return `<div class="cob-clientes">${a.clientes.map(htmlOpcionClienteAsentar).join('')}</div>${tope}`
+      return `<div class="cob-clientes">${a.clientes.map(c => htmlOpcionClienteAsentar(c, texto)).join('')}</div>${tope}`
     }
 
     // Lo que devuelve buscar_clientes, de ESA empresa y activo (la función ya

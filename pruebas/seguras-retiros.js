@@ -31,6 +31,7 @@ const SEGURAS_RETIROS = [
   ['htmlMarcaEmpresa(e)', 'HTML armado por htmlMarcaEmpresa(): htmlLogo() (logoSeguro + encodeURIComponent) o la letra con esc()'],
   ['htmlMarcaEmpresa(empresaActual())', 'HTML armado por htmlMarcaEmpresa(): htmlLogo() (logoSeguro + encodeURIComponent) o la letra con esc()'],
   ['resaltar(c.nombre, busqueda)', 'HTML armado por resaltar(), que escapa lo de afuera y lo resaltado'],
+  ['resaltar(apodo, busqueda)', 'HTML armado por resaltar(), que escapa lo de afuera y lo resaltado (el apodo que coincidió, 02/10/2026; ejecutado con marcas en test-clientes-apodos.js)'],
   ["partes.join(' · ')", 'HTML ya escapado: htmlResultadoCliente() arma cada parte con esc() o resaltar() (que escapa)'],
   ['veces', 'número: cuántas órdenes de ese cliente (un conteo del código)'],
   ['col.c', 'texto de CSS armado por el código (colorProductoRetiro: oklch o hex fijos), nunca de la base'],
