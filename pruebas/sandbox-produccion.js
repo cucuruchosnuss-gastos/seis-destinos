@@ -241,6 +241,15 @@ const NUEVAS_GESTION = [
   'tocarActivaPresentacion', 'borradorTocado', 'abrirEmpaque', 'descartarBorrador', 'diaRelativo', 'htmlResaltado',
   // El color elegido de cada producto y la caja predeterminada (29/09/2026)
   'htmlColoresProducto', 'parametrosColorProducto', 'cambiarColorProducto', 'parametrosCajaPredeterminada', 'cambiarCajaPredeterminada',
+  // Los indicadores de las máquinas (04/10/2026) y los gráficos que importa de
+  // js/graficos.js (extraerFn los encuentra por el import).
+  'uhPonderada', 'sumarTurnos', 'maquinasDe', 'coloresDeMaquinas', 'variacionPct', 'textoVariacion', 'diasEntreInd', 'periodoAnterior',
+  'lunesDe', 'rangoTendencia', 'serieTendencia', 'msDe', 'minutosEnMarcha', 'minutosParadaEntera', 'categoriaDe', 'partesDelTurno',
+  'paradasPorCategoria', 'motivosTop', 'horasMin', 'uhTexto', 'htmlTarjetaMaquina', 'htmlFigura', 'htmlMotivo', 'htmlMaquinas',
+  'pintarGraficosMaquinas', 'pintarMaquinas', 'leerMetricas', 'leerParadasDeTurnos', 'periodoMaquinas', 'cargarMaquinas',
+  'cambiarGranularidad', 'alCambiarAnchoMaquinas', 'barrasRendimiento', 'pintarGraficosRendimiento',
+  'escGraf', 'numeroGraf', 'formatoEntero', 'cortarGraf', 'topeRedondo', 'r1', 'dato', 'svg',
+  'barrasAgrupadas', 'lineas', 'barrasApiladas', 'dona', 'barrasConReferencia', 'leyendaGraf', 'activarDetalles',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
@@ -249,7 +258,9 @@ const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJET
   'ICONO_EXCLAMACION', 'ICONO_CRUZ', 'ICONO_TILDE', 'ICONO_ESTRELLA', 'ICONO_HISTORIAL', 'ICONO_FLECHA',
   'COLORES_ELEGIBLES', 'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO',
   // Reventa y traspasos en el stock terminado (30/09/2026)
-  'NOMBRE_TIPO_STOCK_TERMINADO']
+  'NOMBRE_TIPO_STOCK_TERMINADO',
+  // Los indicadores de las máquinas (04/10/2026)
+  'COLORES_MAQUINA', 'COLOR_UH_TURNO', 'CATEGORIAS_PARADA', 'PARTES_TURNO', 'GRANULARIDADES', 'MESES_CORTOS', 'TOPE_PAGINAS_METRICAS']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = [
@@ -455,6 +466,8 @@ const PRELUDIO = `
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
   var turnoIndicadores = 0
+  var turnoMaquinas = 0
+  var esperaAnchoMaquinas = null
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }

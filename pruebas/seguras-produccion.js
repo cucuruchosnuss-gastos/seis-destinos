@@ -233,6 +233,17 @@ const SEGURAS_PRODUCCION = [
   ['izqRecHtml', 'HTML ya escapado: htmlDetalleReceta() lo arma con htmlEditorReceta() / htmlTablaRecetaVista() (que escapan adentro) y esc() de la nota y las versiones'],
   ['datosIngHtml', 'HTML ya escapado: htmlDetalleIngrediente() lo arma con esc() del id y del nombre del ingrediente, y htmlErrorPegado()'],
   ['altaCajaHtml', 'HTML ya escapado: htmlCajasEditor() lo arma con esc() de la presentación y de cada caja, o vacío'],
+  // Los indicadores de las máquinas (04/10/2026)
+  ['extra', 'HTML armado por htmlMaquinas(): el segmentado Día / Semana / Mes (gran), con esc() de cada clave y texto, o vacío'],
+  ['leyenda', 'HTML armado por leyendaGraf() de js/graficos.js, que escapa nombre y color, o vacío'],
+  ['parcial', 'HTML constante del código en htmlMaquinas(): el aviso de "puede estar incompleto", o vacío'],
+  ['tarjetas', 'HTML armado por htmlTarjetaMaquina(), que escapa adentro'],
+  ['gran', 'HTML armado en htmlMaquinas() con esc() de la clave y el texto de GRANULARIDADES (constantes)'],
+  ['tendencia', 'HTML armado por htmlFigura(), que escapa el id y el título'],
+  ['dona', 'HTML armado en htmlMaquinas(): htmlFigura() y la lista de motivos, con esc() de cada motivo, o el texto fijo "Sin paradas"'],
+  ['lista', 'HTML armado en htmlMaquinas() con esc() de cada motivo, su tipo y sus minutos, o el aviso con esc() del error'],
+  ['leyendaA', 'HTML armado por leyendaGraf() (escapa adentro) con nombres y colores constantes'],
+  ['leyendaC', 'HTML armado por leyendaGraf() (escapa adentro) con los nombres de PARTES_TURNO (constantes)'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [
