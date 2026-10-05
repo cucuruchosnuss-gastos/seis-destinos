@@ -2482,11 +2482,11 @@
           <details class="mq-como">
             <summary>¿Cómo se calcula?</summary>
             <ul>
-              <li><strong>u/h productiva:</strong> las unidades que salieron, divididas por las horas productivas. Las horas productivas van desde que se abrió el turno hasta que se apagó la máquina, menos las paradas. <strong>Hoy el calentamiento del principio cuenta como productivo</strong>: todavía no se anota cuándo empieza a salir producto.</li>
+              <li><strong>u/h productiva:</strong> las unidades que salieron, divididas por las horas productivas. Las horas productivas van desde que <strong>empezó a producir</strong> (la hora que se carga en la tablet) hasta que <strong>terminó de producir</strong>, menos las paradas. En las planillas sin la hora de "empezó a producir", cuentan desde que se abrió el turno, <strong>con el calentamiento incluido</strong>.</li>
               <li><strong>u/h del turno:</strong> las unidades divididas por las horas del horario del turno (por ejemplo de 6 a 15), pase lo que pase.</li>
               <li><strong>Varios turnos juntos:</strong> se suman las unidades y se suman las horas, y recién ahí se divide. No es el promedio de cada turno: un turno corto no pesa lo mismo que uno largo.</li>
               <li><strong>La flecha y el %</strong> comparan con el período anterior del mismo largo (por ejemplo, esta semana contra la anterior). "—" es que en el anterior no hay planillas.</li>
-              <li><strong>¿A dónde se va el turno?</strong> Cada barra es el horario del turno entero: lo que estuvo produciendo, las paradas mientras la máquina andaba (por tipo) y el arranque y cierre, que es el tiempo del horario en que la máquina no estaba prendida.</li>
+              <li><strong>¿A dónde se va el turno?</strong> Cada barra es el horario del turno entero: lo que estuvo produciendo, las paradas mientras la máquina andaba (por tipo: programada, falla, organizativa y otra), el <strong>arranque</strong> (de la hora del turno a "empezó a producir", solo en las planillas que la tienen) y el <strong>cierre y resto del horario</strong> (el tiempo del horario en que no estuvo produciendo, sin el arranque).</li>
               <li><strong>La dona</strong> cuenta cada parada entera; si la máquina no volvió, hasta el fin del horario.</li>
               <li>Solo cuentan las <strong>planillas cerradas</strong>. Tocá una barra o un punto para ver la cifra exacta.</li>
             </ul>
@@ -4422,13 +4422,15 @@
     const CATEGORIAS_PARADA = [
       { clave: 'programada', nombre: 'Parada programada', corto: 'Programada', color: '#C99A2E' },
       { clave: 'falla', nombre: 'Parada por falla', corto: 'Falla', color: '#7A2E42', oscuro: true },
+      { clave: 'organizativa', nombre: 'Parada organizativa', corto: 'Organización', color: '#3F4655', oscuro: true },
       { clave: 'otro', nombre: 'Otra parada', corto: 'Otra', color: '#A8601F', oscuro: true },
     ]
     const PARTES_TURNO = [
       { clave: 'productiva', nombre: 'Produciendo', color: '#2F7D4F', oscuro: true },
       ...CATEGORIAS_PARADA,
       { clave: 'sin_detalle', nombre: 'Paradas (sin detalle)', color: '#8F2F08', oscuro: true },
-      { clave: 'arranque', nombre: 'Arranque y cierre', color: '#D6CFC4' },
+      { clave: 'arranque', nombre: 'Arranque (hasta que empezó a producir)', color: '#E8B04A' },
+      { clave: 'cierre', nombre: 'Cierre y resto del horario', color: '#D6CFC4' },
     ]
     const GRANULARIDADES = [{ clave: 'dia', texto: 'Día' }, { clave: 'semana', texto: 'Semana' }, { clave: 'mes', texto: 'Mes' }]
     const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -4581,19 +4583,27 @@
     }
 
     function categoriaDe(p) {
-      return ['programada', 'falla', 'otro'].includes(p?.categoria) ? p.categoria : 'otro'
+      return ['programada', 'falla', 'organizativa', 'otro'].includes(p?.categoria) ? p.categoria : 'otro'
     }
 
     // "¿A dónde se va el turno?" de una máquina, en minutos. Las paradas por
     // categoría, recortadas a cuando la máquina andaba; si no se pudieron
-    // leer, todas juntas como "sin detalle". Arranque y cierre: el horario
-    // en que la máquina no estuvo prendida (minutos_turno − minutos_real).
+    // leer, todas juntas como "sin detalle". El horario en que la máquina no
+    // estuvo produciendo (minutos_turno − minutos_real) se parte en dos
+    // (05/10/2026): el ARRANQUE, de la hora del turno a "empezó a producir"
+    // (minutos_arranque, solo en las planillas que lo tienen cargado), y el
+    // CIERRE Y RESTO del horario. Sin la hora de largada no se sabe cuánto
+    // fue el arranque: todo va a "cierre y resto" (y el calentamiento queda
+    // adentro de lo productivo, como antes).
     function partesDelTurno(filasMaquina, paradas) {
-      const p = { productiva: 0, programada: 0, falla: 0, otro: 0, sin_detalle: 0, arranque: 0 }
+      const p = { productiva: 0, programada: 0, falla: 0, organizativa: 0, otro: 0, sin_detalle: 0, arranque: 0, cierre: 0 }
       const porTurno = new Map((filasMaquina ?? []).map(f => [f.turno_id, f]))
       for (const f of filasMaquina ?? []) {
         p.productiva += numeroInd(f.minutos_productivos) ?? 0
-        p.arranque += Math.max(0, (numeroInd(f.minutos_turno) ?? 0) - (numeroInd(f.minutos_real) ?? 0))
+        const fuera = Math.max(0, (numeroInd(f.minutos_turno) ?? 0) - (numeroInd(f.minutos_real) ?? 0))
+        const arranque = f.tiene_largada === true ? Math.min(fuera, Math.max(0, numeroInd(f.minutos_arranque) ?? 0)) : 0
+        p.arranque += arranque
+        p.cierre += fuera - arranque
       }
       if (Array.isArray(paradas)) {
         for (const x of paradas) { const f = porTurno.get(x?.turno_id); if (f) p[categoriaDe(x)] += minutosEnMarcha(x, f) }
@@ -4605,13 +4615,13 @@
 
     // Los minutos de parada por categoría del período (de la vista).
     function paradasPorCategoria(filas) {
-      const t = { programada: 0, falla: 0, otro: 0 }
+      const t = { programada: 0, falla: 0, organizativa: 0, otro: 0 }
       for (const f of filas ?? []) {
         const pc = f?.parada_por_categoria
         if (!pc || typeof pc !== 'object') continue
         for (const [k, v] of Object.entries(pc)) {
           const n = numeroInd(v)
-          if (n !== null && n > 0) t[['programada', 'falla'].includes(k) ? k : 'otro'] += n
+          if (n !== null && n > 0) t[['programada', 'falla', 'organizativa'].includes(k) ? k : 'otro'] += n
         }
       }
       return t
@@ -4702,7 +4712,7 @@
       const partesUsadas = PARTES_TURNO.filter(p => partesMaq.some(x => x[p.clave] > 0))
       const leyendaC = leyendaGraf(partesUsadas.map(p => ({ nombre: p.nombre, color: p.color })))
       const cats = paradasPorCategoria(e.filas)
-      const totalParadas = cats.programada + cats.falla + cats.otro
+      const totalParadas = cats.programada + cats.falla + cats.organizativa + cats.otro
       let dona = ''
       if (totalParadas <= 0) dona = '<div class="mq-graf mq-graf--sin"><p class="mq-graf__titulo">Minutos de parada por tipo</p><p class="pg-ind-sin__que">Sin paradas en el período.</p></div>'
       else {
@@ -4757,7 +4767,7 @@
           })
         } else if (id === 'dona') {
           const cats = paradasPorCategoria(e.filas)
-          const total = cats.programada + cats.falla + cats.otro
+          const total = cats.programada + cats.falla + cats.organizativa + cats.otro
           html = dona({
             tamano: Math.min(200, ancho), titulo: 'Minutos de parada por tipo', centro: horasMin(total), subcentro: 'de paradas',
             partes: CATEGORIAS_PARADA.map(c => ({ nombre: c.nombre, color: c.color, valor: cats[c.clave], detalle: `${c.nombre}: ${horasMin(cats[c.clave])} (${total > 0 ? Math.round((cats[c.clave] / total) * 100) : 0} %)` })),
@@ -4789,7 +4799,7 @@
       const filas = []
       for (let i = 0; i < TOPE_PAGINAS_METRICAS; i++) {
         const { data, error } = await supabase.from('v_turno_metricas')
-          .select('turno_id, unidad_negocio_id, maquina_id, maquina, maquina_orden, fecha, turno, lote, unidades, cajas, inicio_turno, fin_turno, inicio_real, fin_real, minutos_turno, minutos_real, minutos_parada_en_marcha, minutos_parada_total, minutos_productivos, parada_por_categoria')
+          .select('turno_id, unidad_negocio_id, maquina_id, maquina, maquina_orden, fecha, turno, lote, unidades, cajas, inicio_turno, fin_turno, inicio_real, fin_real, minutos_turno, minutos_real, minutos_parada_en_marcha, minutos_parada_total, minutos_productivos, parada_por_categoria, minutos_arranque, tiene_largada')
           .eq('unidad_negocio_id', unidadId).gte('fecha', desde).lte('fecha', hasta)
           .order('fecha').order('turno_id').range(i * 1000, i * 1000 + 999)
         if (error) throw error

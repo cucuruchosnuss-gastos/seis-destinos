@@ -42,6 +42,11 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
     await expect(seccion.locator('.mq-tarjeta').first()).toContainText('u/h productiva');
     await expect(seccion.locator('.mq-tarjeta .mq-var').first()).toHaveText(/[▲▼=]/);
     for (const g of ['barras', 'turno', 'dona', 'tendencia']) await expect(seccion.locator(`[data-mq-graf="${g}"] svg.graf`)).toHaveCount(1);
+    // El arranque (hasta que empezó a producir) va aparte del cierre, y la
+    // parada organizativa tiene su lugar en la dona (05/10/2026).
+    await expect(seccion.locator('[data-mq-graf="turno"]')).toContainText('Arranque (hasta que empezó a producir)');
+    await expect(seccion.locator('[data-mq-graf="turno"]')).toContainText('Cierre y resto del horario');
+    await expect(seccion.locator('[data-mq-graf="dona"]')).toContainText('Parada organizativa');
     await captura(page, `maquinas-${nombre}`, info);
 
     // Todo adentro de la pantalla, y los números se leen.
@@ -68,7 +73,7 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
 
     // ¿Cómo se calcula?
     await seccion.locator('.mq-como summary').click();
-    await expect(seccion.locator('.mq-como')).toContainText('calentamiento del principio cuenta como productivo');
+    await expect(seccion.locator('.mq-como')).toContainText('con el calentamiento incluido');
 
     // El rendimiento por kilo: barras contra el promedio.
     const rend = page.locator('[data-rend-grupo] svg.graf');
