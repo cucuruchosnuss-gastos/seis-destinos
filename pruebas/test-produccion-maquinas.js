@@ -78,6 +78,7 @@ function fila(o = {}) {
     minutos_turno: o.minutos_turno ?? 540, minutos_real: o.minutos_real ?? 480, minutos_parada_en_marcha: o.en_marcha ?? 0, minutos_parada_total: o.en_marcha ?? 0,
     minutos_productivos: o.minutos_productivos ?? 480, parada_por_categoria: o.cats ?? {},
     u_h_productiva: o.u_h_productiva ?? null, u_h_turno: o.u_h_turno ?? null,
+    minutos_arranque: o.minutos_arranque ?? null, tiene_largada: o.tiene_largada ?? false,
   }
 }
 
@@ -167,17 +168,33 @@ function fila(o = {}) {
   chk('una parada con fechas rotas cuenta 0', S.minutosEnMarcha({ inicio: 'x' }, f) === 0 && S.minutosParadaEntera({ inicio: null }, f) === 0)
   const p = S.partesDelTurno([f], paradas)
   chk('produciendo = los minutos productivos', p.productiva === 430)
-  chk('las paradas por tipo, mientras andaba', p.falla === 30 && p.programada === 20 && p.otro === 0)
-  chk('arranque y cierre = turno − real', p.arranque === 60)
-  chk('las partes suman el horario del turno', p.productiva + p.falla + p.programada + p.otro + p.sin_detalle + p.arranque === 540)
+  chk('las paradas por tipo, mientras andaba', p.falla === 30 && p.programada === 20 && p.otro === 0 && p.organizativa === 0)
+  chk('sin la hora de largada: todo el horario fuera va a "cierre y resto"', p.arranque === 0 && p.cierre === 60)
+  chk('las partes suman el horario del turno', p.productiva + p.falla + p.programada + p.organizativa + p.otro + p.sin_detalle + p.arranque + p.cierre === 540)
   chk('las paradas de otro turno no se suman', p.falla === 30)
   const sin = S.partesDelTurno([f], null)
-  chk('sin las paradas leídas: todo junto "sin detalle"', sin.sin_detalle === 50 && sin.falla === 0 && sin.productiva + sin.sin_detalle + sin.arranque === 540)
-  const largo = S.partesDelTurno([fila({ minutos_turno: 500, minutos_real: 520 })], [])
-  chk('si se trabajó más que el horario, el arranque no es negativo', largo.arranque === 0)
+  chk('sin las paradas leídas: todo junto "sin detalle"', sin.sin_detalle === 50 && sin.falla === 0 && sin.productiva + sin.sin_detalle + sin.arranque + sin.cierre === 540)
+  const largo = S.partesDelTurno([fila({ minutos_turno: 500, minutos_real: 520, tiene_largada: true, minutos_arranque: 15 })], [])
+  chk('si se trabajó más que el horario, ni el arranque ni el cierre son negativos', largo.arranque === 0 && largo.cierre === 0, JSON.stringify(largo))
+  // Con la hora de "empezó a producir" (05/10/2026): el arranque sale de
+  // minutos_arranque y el resto del horario fuera es el cierre.
+  const conL = S.partesDelTurno([fila({ turno_id: 'tl', minutos_turno: 540, minutos_real: 480, en_marcha: 0, minutos_productivos: 480, tiene_largada: true, minutos_arranque: 40 })], [])
+  chk('con largada: el arranque son los minutos_arranque', conL.arranque === 40 && conL.cierre === 20, JSON.stringify(conL))
+  chk('con largada: las partes siguen sumando el horario', conL.productiva + conL.arranque + conL.cierre === 540)
+  const sinFlag = S.partesDelTurno([fila({ minutos_turno: 540, minutos_real: 480, minutos_arranque: 40 })], [])
+  chk('minutos_arranque sin tiene_largada no cuenta como arranque', sinFlag.arranque === 0 && sinFlag.cierre === 60)
+  const tope = S.partesDelTurno([fila({ minutos_turno: 540, minutos_real: 500, tiene_largada: true, minutos_arranque: 90 })], [])
+  chk('el arranque no pasa del horario fuera', tope.arranque === 40 && tope.cierre === 0, JSON.stringify(tope))
+  const neg = S.partesDelTurno([fila({ minutos_turno: 540, minutos_real: 500, tiene_largada: true, minutos_arranque: -10 })], [])
+  chk('un arranque negativo cuenta 0', neg.arranque === 0 && neg.cierre === 40)
+  const org = S.partesDelTurno([f], [{ turno_id: 'tx', inicio: '2026-10-01T12:00:00+00:00', fin: '2026-10-01T12:15:00+00:00', motivo: 'Se retiró personal', categoria: 'organizativa' }])
+  chk('una parada organizativa va en su parte', org.organizativa === 15 && org.otro === 0)
+  chk('la categoría organizativa se reconoce', S.categoriaDe({ categoria: 'organizativa' }) === 'organizativa')
   chk('una categoría desconocida es "otro"', S.categoriaDe({ categoria: 'rara' }) === 'otro' && S.categoriaDe({}) === 'otro')
   const cats = S.paradasPorCategoria([f, fila({ cats: { otro: 10, nueva: 5, falla: null } })])
-  chk('la dona suma las paradas enteras por tipo', cats.falla === 30 && cats.programada === 80 && cats.otro === 15, JSON.stringify(cats))
+  chk('la dona suma las paradas enteras por tipo', cats.falla === 30 && cats.programada === 80 && cats.otro === 15 && cats.organizativa === 0, JSON.stringify(cats))
+  const cats2 = S.paradasPorCategoria([fila({ cats: { organizativa: 25, otro: 5 } })])
+  chk('la dona tiene la categoría organizativa aparte', cats2.organizativa === 25 && cats2.otro === 5, JSON.stringify(cats2))
   const top = S.motivosTop([...paradas, { turno_id: 'tx', inicio: '2026-10-01T12:00:00+00:00', fin: '2026-10-01T12:10:00+00:00', motivo: '  se cortó la MASA ', categoria: 'falla' }], [f])
   chk('los motivos, de más a menos tiempo', top.map(x => x.motivo).join('|') === 'Limpieza|Se cortó la masa', top.map(x => x.motivo).join('|'))
   chk('el mismo motivo escrito distinto se junta', top[1].veces === 2 && top[1].minutos === 40)
@@ -323,7 +340,8 @@ esperas.push((async () => {
 // ── El HTML de la pantalla ───────────────────────────────────────────────
 chk('la sección Máquinas está arriba de los indicadores del día', src.indexOf('id="pr-maquinas"') > 0 && src.indexOf('id="pr-maquinas"') < src.indexOf('id="pr-ind-dia"'))
 chk('"¿Cómo se calcula?" plegable', /<details class="mq-como">\s*<summary>¿Cómo se calcula\?<\/summary>/.test(src))
-chk('… dice que el calentamiento cuenta como productivo', /calentamiento del principio cuenta como productivo/.test(src))
+chk('… dice que sin la hora de largada el calentamiento cuenta como productivo', /con el calentamiento incluido/.test(src) && /empezó a producir/.test(src))
+chk('la vista se lee con minutos_arranque y tiene_largada', /from\('v_turno_metricas'\)\s*\.select\('[^']*minutos_arranque, tiene_largada'/.test(src))
 chk('… dice que se pondera', /se suman las unidades y se suman las horas, y recién ahí se divide/.test(src))
 chk('el período de las máquinas con el control (dos fechas obligatorias)', /crearPeriodo\(\{ desde: d, hasta: h, obligatorias: true \}\)/.test(src))
 chk('arranca en "Este mes"', /const r = rangoDePeriodo\('mes', hoyArgentina\(\)\)/.test(src))

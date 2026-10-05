@@ -26,7 +26,12 @@ function metricasYParadas() {
         const arranque = 15 + (n * 7) % 30
         const minReal = minTurno - arranque
         const parada = n % 3 === 0 ? 25 + (n * 11) % 50 : 0
-        const cat = n % 2 === 0 ? 'falla' : 'programada'
+        // Desde el 05/10/2026 hay paradas organizativas (se retiró personal,
+        // falta masa) y, desde el 28/09, la hora de "empezó a producir":
+        // minutos_arranque (de la hora del turno a la largada) es una parte del
+        // horario fuera, y lo que sobra es el cierre.
+        const cat = n % 4 === 0 ? 'organizativa' : n % 2 === 0 ? 'falla' : 'programada'
+        const conLargada = fecha >= '2026-09-28'
         const minProd = minReal - parada
         const ritmo = (maq === 'maq-1' ? 1300 : 980) + ((n * 37) % 160) - 80
         const unidades = Math.round(ritmo * minProd / 60 / 100) * 100
@@ -38,9 +43,10 @@ function metricasYParadas() {
           minutos_turno: minTurno, minutos_real: minReal, minutos_parada_en_marcha: parada, minutos_parada_total: parada,
           minutos_productivos: minProd, parada_por_categoria: parada ? { [cat]: parada } : {},
           u_h_productiva: Math.round(unidades / (minProd / 60)), u_h_turno: Math.round(unidades / (minTurno / 60)),
+          minutos_arranque: conLargada ? Math.max(0, arranque - 5) : null, tiene_largada: conLargada,
         })
         if (parada) {
-          const motivo = cat === 'falla' ? ['Se cortó la masa', 'Falla del molde', 'Se trabó la cinta'][n % 3] : 'Limpieza'
+          const motivo = cat === 'falla' ? ['Se cortó la masa', 'Falla del molde', 'Se trabó la cinta'][n % 3] : cat === 'organizativa' ? 'Se retiró personal' : 'Limpieza'
           paradas.push({ turno_id: id, inicio: ts(fecha, ini, 120), fin: ts(fecha, ini, 120 + parada), motivo, categoria: cat })
         }
       }
