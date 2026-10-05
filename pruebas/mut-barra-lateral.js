@@ -85,7 +85,7 @@ correrMutacionesEnVarios([
     manuales: [
       { nombre: 'la barra aparece en el celular', de: '.barra-lateral { display: none; }\n', a: '.barra-lateral { display: flex; }\n' },
       { nombre: 'se muestra desde 768', de: '@media (min-width: 1024px) {\n  body.con-barra-lateral', a: '@media (min-width: 768px) {\n  body.con-barra-lateral' },
-      { nombre: 'se imprime', de: '  .barra-lateral, .barra-abajo, .hoja-mas { display: none !important; }', a: '  .hoja-mas { display: none !important; }' },
+      { nombre: 'se imprime', de: '  .barra-lateral, .barra-abajo, .hoja-mas, .hoja-abajo { display: none !important; }', a: '  .hoja-mas, .hoja-abajo { display: none !important; }' },
       { nombre: 'achicada no esconde los nombres', de: '  .barra-lateral-colapsada .barra-lateral__nombre, .barra-lateral-colapsada .barra-lateral__marca { display: none; }\n', a: '' },
       { nombre: 'la barra tapa los modales', de: '    width: var(--ancho-barra-lateral); z-index: 30;', a: '    width: var(--ancho-barra-lateral); z-index: 200;' },
       { nombre: 'la urgente sin bordó', de: '  .barra-lateral__burbuja--urgente { background: var(--bordo); color: #fff; }\n', a: '' },

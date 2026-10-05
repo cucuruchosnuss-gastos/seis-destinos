@@ -1009,7 +1009,7 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
    La planta no la carga. */
 .barra-lateral { display: none; }
 .barra-abajo { display: none; }
-.hoja-mas[hidden] { display: none; }
+.hoja-mas[hidden], .hoja-abajo[hidden] { display: none; }
 
 @media (min-width: 1024px) {
   body.con-barra-lateral { --ancho-barra-lateral: 232px; margin-left: var(--ancho-barra-lateral); }
@@ -1085,12 +1085,14 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   .barra-lateral__tip-extra:empty { display: none; }
 }
 
-/* CELULAR: la barra de abajo (84 px con el área segura) y la hoja "Más". */
+/* CELULAR: la barra de abajo y la hoja "Más". Desde el 05/10/2026 un poco
+   más grande (68 px; íconos de 23 px en una caja de 48 × 33 y el nombre en
+   12.5 px), con 4 a 6 módulos que elige cada persona (js/barra-lateral.js). */
 @media (max-width: 1023.98px) {
-  body.con-barra-lateral { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  body.con-barra-lateral { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   .barra-abajo {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-    height: calc(64px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box;
+    height: calc(68px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box;
     background: #FFFFFF; border-top: 1px solid var(--color-borde); font-family: var(--fuente);
   }
   .barra-abajo__tab {
@@ -1098,8 +1100,8 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
     position: relative; color: var(--tab-color); text-decoration: none; border: 0; background: none; padding: 0; font: inherit; cursor: pointer;
   }
   .barra-abajo__tab:hover { text-decoration: none; }
-  .barra-abajo__icono { width: 44px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-  .barra-abajo__nombre { font-size: 11.5px; font-weight: 500; color: var(--color-texto-menu); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .barra-abajo__icono { width: 48px; height: 33px; border-radius: 11px; display: flex; align-items: center; justify-content: center; }
+  .barra-abajo__nombre { font-size: 12.5px; font-weight: 500; color: var(--color-texto-menu); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
   .barra-abajo__tab--actual .barra-abajo__icono { background: var(--color-acento-suave); }
   .barra-abajo__tab--actual .barra-abajo__nombre { font-weight: 700; color: var(--color-acento-hover); }
   .barra-abajo__burbuja {
@@ -1108,7 +1110,7 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
     display: flex; align-items: center; justify-content: center; border: 2px solid #fff;
   }
   .barra-abajo__burbuja--urgente { background: var(--bordo); color: #fff; }
-  .hoja-mas { position: fixed; inset: 0; z-index: 45; background: rgba(28, 26, 23, 0.42); display: flex; flex-direction: column; justify-content: flex-end; }
+  .hoja-mas, .hoja-abajo { position: fixed; inset: 0; z-index: 45; background: rgba(28, 26, 23, 0.42); display: flex; flex-direction: column; justify-content: flex-end; }
   .hoja-mas__caja { background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 8px 16px calc(28px + env(safe-area-inset-bottom, 0px)); max-height: 90dvh; overflow-y: auto; font-family: var(--fuente); }
   .hoja-mas__manija { width: 40px; height: 5px; border-radius: 999px; background: #D6CFC4; margin: 0 auto 12px; }
   .hoja-mas__cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -1122,10 +1124,31 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   .hoja-mas__acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
   .hoja-mas__accion { height: 46px; border-radius: 12px; border: 1px solid var(--color-borde); background: #FFFFFF; display: flex; align-items: center; justify-content: center; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--color-texto); text-decoration: none; }
   .hoja-mas__accion:hover { text-decoration: none; }
+  .hoja-mas__editar {
+    width: 100%; min-height: 46px; margin-top: 12px; border-radius: 12px; border: 1px solid var(--color-borde); background: #FFFFFF;
+    font: inherit; font-size: 14.5px; font-weight: 600; color: var(--color-acento-hover); cursor: pointer;
+  }
+  /* El editor de la barra de abajo (05/10/2026), en la misma hoja. */
+  .editar-abajo__nota { margin: 0 0 10px; font-size: 14px; color: var(--color-texto-2); }
+  .editar-abajo__sub { margin: 14px 0 6px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-texto-2); }
+  .editar-abajo__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .editar-abajo__fila { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 6px 4px 8px; border-radius: 12px; background: #F9F7F4; }
+  .editar-abajo__icono { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .editar-abajo__nombre { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .editar-abajo__boton {
+    min-width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--color-borde-boton); background: #FFFFFF;
+    font: inherit; font-size: 17px; font-weight: 700; color: var(--color-texto); cursor: pointer;
+  }
+  .editar-abajo__boton--texto { padding: 0 10px; font-size: 14px; }
+  .editar-abajo__boton:disabled { opacity: 0.4; cursor: default; }
+  .editar-abajo__vacia { margin: 0; font-size: 14px; color: var(--color-texto-2); }
+  .editar-abajo__error { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bordo-suave); color: var(--bordo-oscuro); font-size: 14px; font-weight: 600; }
+  .hoja-mas__accion--principal { background: var(--color-acento); border-color: var(--color-acento); color: #fff; }
+  .hoja-mas__accion:disabled { opacity: 0.6; }
 }
 
 @media print {
-  .barra-lateral, .barra-abajo, .hoja-mas { display: none !important; }
+  .barra-lateral, .barra-abajo, .hoja-mas, .hoja-abajo { display: none !important; }
   body.con-barra-lateral { margin-left: 0 !important; padding-bottom: 0 !important; }
 }
 

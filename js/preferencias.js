@@ -45,10 +45,21 @@ export function prefsVacias() {
 
 // Una preferencia leída de afuera se limpia: solo se quedan las formas
 // conocidas (un valor raro vuelve al de fábrica, nunca rompe).
+//  - barra_inferior (05/10/2026): los módulos de la barra de abajo del
+//    celular, en orden, si la persona los eligió. Sin elegir (o una lista
+//    vacía) no está: la barra se arma sola (modulosDeAbajo).
 export function normalizarPrefs(p) {
   const v = prefsVacias()
-  if (!p || typeof p !== 'object') return v
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return v
+  // Cualquier OTRA clave que venga de la cuenta se conserva tal cual
+  // (05/10/2026): guardar_mis_preferencias reemplaza el objeto entero, así
+  // que tirarla al limpiar la borraría de la cuenta en el próximo guardado
+  // (la marca 'v' no: se vuelve a poner al subir).
+  const conocidas = ['barra', 'tablero', 'uso', 'barra_inferior', 'v']
+  for (const [k, x] of Object.entries(p)) if (!conocidas.includes(k) && x !== undefined) v[k] = x
   const lista = x => Array.isArray(x) ? x.filter(c => typeof c === 'string' && c) : []
+  const abajo = [...new Set(lista(p.barra_inferior))]
+  if (abajo.length) v.barra_inferior = abajo
   const b = p.barra ?? {}
   v.barra.orden = ORDENES_BARRA.includes(b.orden) ? b.orden : 'mano'
   v.barra.manual = [...new Set(lista(b.manual))]
@@ -88,8 +99,17 @@ export function leerPrefs(empleadoId, ls = globalThis.localStorage) {
 
 // Guarda en memoria y en la copia del dispositivo, y las sube a la cuenta
 // (en orden, de a una). Devuelve si la copia se pudo escribir.
+// La barra de abajo del celular (barra_inferior) NO se toca acá: la escribe
+// solo guardarBarraInferior, y se conserva la que hay ahora. Así una pantalla
+// que tiene una copia vieja de las preferencias (el tablero, Personalizar)
+// no la borra al guardar lo suyo. Lo mismo con una clave que este módulo no
+// conoce: si la copia que llega no la trae, se conserva la de ahora.
 export function guardarPrefs(empleadoId, prefs, ls = globalThis.localStorage) {
   const p = normalizarPrefs(prefs)
+  const ahora = leerPrefs(empleadoId, ls)
+  if (ahora.barra_inferior) p.barra_inferior = ahora.barra_inferior
+  else delete p.barra_inferior
+  for (const [k, x] of Object.entries(ahora)) if (!(k in p)) p[k] = x
   ESTADO_PREFS.memoria.set(empleadoId, p)
   const ok = escribirCopia(empleadoId, p, ls)
   if (ESTADO_PREFS.donde.get(empleadoId) === 'cargando') ESTADO_PREFS.pendiente.add(empleadoId)
@@ -165,6 +185,59 @@ export function cargarPrefs({ sb, empleadoId, ls = globalThis.localStorage }) {
   return carga
 }
 
+// LA BARRA DE ABAJO DEL CELULAR (05/10/2026): guarda SOLO la clave
+// barra_inferior (la lista en orden; null o [] = volver a la automática).
+// guardar_mis_preferencias REEMPLAZA el objeto entero, así que antes de
+// guardar se LEE lo que hay en la cuenta en ese momento (mis_preferencias:
+// puede haber cambiado en otro dispositivo), se cambia solo esa clave y se
+// sube el objeto entero: el tablero, la barra de la compu y el uso quedan
+// como están en la cuenta. Va en la misma cola que las demás subidas, así no
+// se cruza con una que esté en camino. Nunca tira: devuelve { ok, donde }
+// ('cuenta' si quedó en la cuenta, 'dispositivo' si quedó solo acá).
+export function guardarBarraInferior({ empleadoId, lista, ls = globalThis.localStorage }) {
+  const nueva = Array.isArray(lista) ? [...new Set(lista.filter(c => typeof c === 'string' && c))] : []
+  const conClave = (p) => {
+    const x = { ...p }
+    delete x.v
+    if (nueva.length) x.barra_inferior = nueva
+    else delete x.barra_inferior
+    return x
+  }
+  const enEsteDispositivo = () => {
+    const p = normalizarPrefs(conClave(leerPrefs(empleadoId, ls)))
+    ESTADO_PREFS.memoria.set(empleadoId, p)
+    escribirCopia(empleadoId, p, ls)
+  }
+  const lectura = ESTADO_PREFS.cargas.get(empleadoId) ?? Promise.resolve()
+  const enCamino = ESTADO_PREFS.cola.get(empleadoId) ?? Promise.resolve()
+  const esta = Promise.all([lectura, enCamino]).catch(() => {}).then(async () => {
+    const sb = ESTADO_PREFS.base.get(empleadoId)
+    if (!sb) { enEsteDispositivo(); return { ok: false, donde: 'dispositivo' } }
+    try {
+      const { data, error } = await sb.rpc('mis_preferencias')
+      if (error) throw error
+      if (!data || Array.isArray(data) || typeof data !== 'object') throw new Error('mis_preferencias no devolvió un objeto')
+      // La cuenta nunca guardó nada ({}): la base es lo de este dispositivo.
+      const actual = Object.keys(data).length ? data : leerPrefs(empleadoId, ls)
+      const datos = conClave(actual)
+      const { error: e2 } = await sb.rpc('guardar_mis_preferencias', { p_datos: { ...datos, v: VERSION_PREFS } })
+      if (e2) throw e2
+      const p = normalizarPrefs(datos)
+      ESTADO_PREFS.memoria.set(empleadoId, p)
+      escribirCopia(empleadoId, p, ls)
+      ESTADO_PREFS.donde.set(empleadoId, 'cuenta')
+      return { ok: true, donde: 'cuenta' }
+    } catch (e) {
+      console.warn('preferencias: no se pudo guardar la barra de abajo en la cuenta', e)
+      enEsteDispositivo()
+      ESTADO_PREFS.donde.set(empleadoId, 'dispositivo')
+      return { ok: false, donde: 'dispositivo' }
+    }
+  })
+  ESTADO_PREFS.cola.set(empleadoId, esta)
+  return esta
+}
+
 // Dónde quedaron: 'cargando' (todavía no contestó la cuenta), 'cuenta' o
 // 'dispositivo' (la cuenta no contestó o no se pudo guardar).
 export function dondeSeGuardanPrefs(empleadoId) {
@@ -208,16 +281,24 @@ export function ordenarBarra(modulos, prefs, ahora = Date.now()) {
   return { fijados, resto }
 }
 
-// Los 3 módulos de la barra de abajo del celular: los fijados; si no hay 3,
-// se completa con los que más se usan; si no, con el orden de la barra.
-export function modulosDeAbajo(modulos, prefs, ahora = Date.now()) {
-  const { fijados, resto } = ordenarBarra(modulos, prefs, ahora)
-  const elegidos = [...fijados]
-  const porUso = [...resto].filter(m => vecesUsado(prefs, m.clave, ahora) > 0)
-    .sort((a, b) => vecesUsado(prefs, b.clave, ahora) - vecesUsado(prefs, a.clave, ahora))
-  for (const m of [...porUso, ...resto]) {
-    if (elegidos.length >= 3) break
-    if (!elegidos.some(x => x.clave === m.clave)) elegidos.push(m)
+// Los módulos de la barra de abajo del celular (entran `cantidad`; 05/10/2026):
+//  - si la persona ELIGIÓ (barra_inferior), esos, en su orden, solo los que
+//    todavía puede abrir y hasta `cantidad` (el resto queda en "Más");
+//  - si nunca eligió (o ninguno de los elegidos sigue a su alcance), los que
+//    MÁS USA (30 días) y, para completar, los fijados y el orden de la barra.
+export function modulosDeAbajo(modulos, prefs, ahora = Date.now(), cantidad = 4) {
+  const p = normalizarPrefs(prefs)
+  const porClave = new Map(modulos.map(m => [m.clave, m]))
+  const elegidos = (p.barra_inferior ?? []).filter(c => porClave.has(c)).map(c => porClave.get(c))
+  if (elegidos.length) return elegidos.slice(0, cantidad)
+  const { fijados, resto } = ordenarBarra(modulos, p, ahora)
+  const pos = new Map(modulos.map((m, i) => [m.clave, i]))
+  const porUso = modulos.filter(m => vecesUsado(p, m.clave, ahora) > 0)
+    .sort((a, b) => vecesUsado(p, b.clave, ahora) - vecesUsado(p, a.clave, ahora) || pos.get(a.clave) - pos.get(b.clave))
+  const salen = []
+  for (const m of [...porUso, ...fijados, ...resto]) {
+    if (salen.length >= cantidad) break
+    if (!salen.some(x => x.clave === m.clave)) salen.push(m)
   }
-  return elegidos.slice(0, 3)
+  return salen
 }
