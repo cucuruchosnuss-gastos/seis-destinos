@@ -141,7 +141,7 @@ correrMutacionesProduccion({
     // ── Parte 4: avisos de stock ────────────────────────────────────────
     { nombre: 'sin stock:ver se consulta la vista igual', de: "      if (permiso === false) return { estado: 'sin_permiso', saldos: new Map() }", a: '' },
     { nombre: 'sin saber el permiso se consulta la vista igual', de: "      if (permiso === null) return { estado: 'desconocido', saldos: new Map() }", a: '' },
-    { nombre: 'el stock de otra unidad', de: ".select('insumo_id, cantidad_total').eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)", a: ".select('insumo_id, cantidad_total').in('insumo_id', insumoIds)" },
+    { nombre: 'el stock de otra unidad', de: ".eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)", a: ".in('insumo_id', insumoIds)" },
     { nombre: 'un error de la vista se lee como cero', de: "        console.error('stock del empaque:', err)\n        return { estado: 'error', saldos: new Map() }", a: "        return { estado: 'ok', saldos: new Map() }" },
     { nombre: 'abrir agregar no lee el stock', de: '      return cargarStockAgregar(a)\n', a: '' },
     { nombre: 'el faltante no cuenta las cajas cargadas', de: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 1', a: '      const n = 1' },
