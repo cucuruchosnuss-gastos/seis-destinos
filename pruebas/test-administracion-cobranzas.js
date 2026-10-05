@@ -85,7 +85,8 @@ function nuevo({ tareas = ['cobranzas:procesar', 'cobranzas:ver_todo'], rol = 'u
     if (n === 'cobranzas_por_asentar') return { data: POR_ASENTAR, error: null }
     if (n === 'buscar_clientes') return { data: buscarRpc ? buscarRpc(p) : null, error: null }
     if (n === 'asentar_cobranza') return { data: DATOS.rpc.asentar_cobranza, error: null }
-    if (n === 'cuenta_cliente') return { data: DATOS.rpc.cuenta_cliente, error: null }
+    // La maqueta contesta según el cliente (05/10/2026: Kiosco Pepe sin movimientos).
+    if (n === 'cuenta_cliente') return { data: DATOS.rpc.cuenta_cliente.__defecto ?? DATOS.rpc.cuenta_cliente, error: null }
     if (n === 'reabrir_cobranza') return { data: null, error: null }
     return { data: null, error: null }
   }))

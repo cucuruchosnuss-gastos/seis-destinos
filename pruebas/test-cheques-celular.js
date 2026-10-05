@@ -123,7 +123,10 @@ const partes = (html) => ({
   chk('css: la tarjeta mide al menos 56px (no se aplasta)', /min-height: 56px/.test(regla('.chq-tarjeta')))
   chk('css: el botón del costado tiene 44px de alto', /min-height: 44px/.test(regla('.chq-tarjeta__lado .chq-btn')))
   chk('css: el costado tiene ancho fijo (el estado nunca queda tapado)', /flex: 0 0 5\.75rem/.test(regla('.chq-tarjeta__lado')))
-  chk('css: el renglón de abajo es de UNA línea y no se desborda', /overflow: hidden/.test(regla('.chq-tarjeta__l2')) && /white-space: nowrap/.test(regla('.chq-tarjeta__l2')))
+  // 05/10/2026: lo que no entra BAJA de renglón en vez de cortarse (a 360 px,
+  // con la etiqueta de la forma de pago, el banco y el cliente quedaban en 2 px).
+  chk('css: el renglón de abajo no se desborda: cada dato en una línea, lo que no entra baja', /overflow: hidden/.test(regla('.chq-tarjeta__l2')) && /white-space: nowrap/.test(regla('.chq-tarjeta__l2')) && /flex-wrap: wrap/.test(regla('.chq-tarjeta__l2')))
+  chk('css: el renglón de arriba también baja en vez de cortarse', /flex-wrap: wrap/.test(regla('.chq-tarjeta__l1')))
   chk('css: cada dato se corta con puntos suspensivos', /text-overflow: ellipsis/.test(regla('.chq-tarjeta__dato')))
   chk('css: el estado nunca se achica', /flex: 0 0 auto/.test(regla('.chq-tarjeta__estado')))
   chk('css: el importe en tinta neutra, nunca naranja', /color: var\(--color-texto\)/.test(regla('.chq-tarjeta__importe')) && !/naranja/.test(regla('.chq-tarjeta__importe')))
