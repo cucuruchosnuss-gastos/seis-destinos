@@ -447,6 +447,7 @@ const HTML_PROPIO = 'HTML armado más arriba en la misma función, con esc() de 
 const DENTRO_DE_ESC = 'plantilla anidada ADENTRO de un esc([...].join(...)): lo que imprime sale escapado por el esc() de afuera'
 const H_ACL = 'HTML de htmlAclaracion(), que escapa adentro (ejecutado arriba con la marca «…_aclaracion»)'
 const H_MARCA = 'HTML de htmlMarca(), que escapa adentro (ejecutado arriba con la marca «…_marca2»)'
+const H_COB = 'HTML de htmlCobertura(), que escapa adentro (solo números y texto fijo; ejecutado en test-stock-dias-habiles.js)'
 const NUM = 'número: largo de un array o conteo calculado en el código'
 const SEGURAS = {
   htmlAgrupado: {
@@ -474,10 +475,12 @@ const SEGURAS = {
   },
   renderizarStock: {
     'htmlMarca(f.marca, marcaArriba)': H_MARCA, 'htmlAclaracion(f.aclaracion)': H_ACL,
+    'htmlCobertura(coberturaDe(filasCoberturaDe(f)))': H_COB,
   },
   // La tarjeta sumada de "Todas" (barra de unidad, 28/09/2026).
   htmlGrupoStock: {
     'htmlMarca(g.marca, marcaArriba)': H_MARCA, 'htmlAclaracion(g.aclaracion)': H_ACL,
+    'htmlCobertura(coberturaDe(filasCoberturaDe(g)))': H_COB,
     'g.porUnidad.length': DENTRO_DE_ESC,
     renglones: HTML_PROPIO,
   },

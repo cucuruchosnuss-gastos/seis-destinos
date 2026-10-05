@@ -411,6 +411,58 @@
       color: var(--color-texto-suave);
       min-width: 0;
     }
+    /* ── Para cuántos días hábiles alcanza (02/10/2026) ─────────────────────
+       Un cartelito debajo de cada insumo. Tres niveles por COLOR y por
+       TEXTO (el número está escrito): el "rojo" es el bordó del sistema (el
+       rojo puro es el acento de Accesos), el amarillo el de Caja, y el gris
+       lo que no apura. */
+    .cobertura {
+      display: inline-block;
+      margin-top: 0.375rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.71875rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .cobertura--rojo     { background: var(--bordo-suave);    color: var(--bordo-oscuro); }
+    .cobertura--amarillo { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    .cobertura--gris     { background: var(--color-divisor);  color: var(--color-texto-2); font-weight: 600; }
+    .cobertura__estimado { font-weight: 500; }
+    /* "Harina 000, todas las marcas: ~13 días hábiles": una línea propia
+       arriba de la primera tarjeta de ese nombre. */
+    .cobertura-marcas {
+      margin: 0.25rem 0 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-texto-2);
+    }
+    .cobertura-marcas .cobertura { margin-top: 0; margin-left: 0.25rem; }
+
+    /* "N insumos alcanzan para 7 días hábiles o menos": arriba de la lista,
+       tocable (filtra). */
+    .stock-cobertura-aviso {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      width: 100%;
+      min-height: 44px;
+      margin: 0 0 0.75rem;
+      padding: 0.5rem 0.875rem;
+      border: 1px solid var(--amarillo);
+      border-radius: var(--radio-tarjeta);
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+    .stock-cobertura-aviso[hidden] { display: none; }
+    .stock-cobertura-aviso__accion { flex-shrink: 0; font-weight: 600; text-decoration: underline; }
+
     /* Alguien consumió mercadería que nunca se cargó. Tiene que saltar en una
        lista larga, en bordó (el rojo es el acento de Accesos). */
     .chip-saldo-negativo {
@@ -2344,6 +2396,11 @@
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-traspaso" hidden>Traspaso a otra fábrica</button>
       </div>
 
+      <!-- Para cuántos días hábiles alcanza (02/10/2026): cuántos insumos
+           alcanzan para 7 días hábiles o menos. Al tocarlo filtra la lista a
+           esos (y otra vez, la vuelve a mostrar entera). -->
+      <button type="button" class="stock-cobertura-aviso" id="stock-cobertura-aviso" hidden></button>
+
       <div class="lista-contenido" id="lista-stock"></div>
 
       <div class="estado-vacio-stock" id="stock-cargando">Cargando stock…</div>
@@ -3535,6 +3592,12 @@
       // (alguien deja de ver algo que sí puede ver, que es un bug de verdad).
       unidadesStock: [],
       busquedaStock: '',
+      // Para cuántos días hábiles alcanza: 'unidad|insumo' -> fila de
+      // v_stock_cobertura. Vacío si no se pudo leer (y ahí no se dibuja
+      // ningún cartelito: nunca uno inventado).
+      cobertura: new Map(),
+      // true = la lista muestra solo los que alcanzan para pocos días.
+      filtroCobertura: false,
       stock: [],               // filas de v_stock_insumos
 
       // ── Vista de RECUENTO ───────────────────────────────────────────
@@ -4245,10 +4308,14 @@
       const cargandoEl = document.getElementById('stock-cargando')
       if (!silencioso) cargandoEl.hidden = false
 
-      const [unidades, filas] = await Promise.all([
+      const [unidades, filas, cobertura] = await Promise.all([
         supabase.from('v_mis_unidades_stock').select('id, nombre').order('nombre'),
         supabase.from('v_stock_insumos')
           .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, categoria, aclaracion, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos, vista_preferida'),
+        // Para cuántos días hábiles alcanza (02/10/2026). Si falla, el stock
+        // se ve igual, sin cartelitos: es un dato de más, no el dato.
+        supabase.from('v_stock_cobertura')
+          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, stock, dias_base, consumo_diario, dias_cobertura, estimado_con_pocos_dias'),
       ])
 
       cargandoEl.hidden = true
@@ -4261,6 +4328,7 @@
 
       estado.unidadesStock = sinUnidadesDePrueba(unidades.data ?? [], estado.fabrica)
       estado.stock = sinUnidadesDePrueba(filas.data ?? [], estado.fabrica, f => f?.unidad_negocio_id)
+      estado.cobertura = mapaCobertura(cobertura)
 
       // La unidad la elige la barra de arriba (antes había chips acá). Se
       // espera a que la barra sepa las unidades recién ANTES de dibujar: las
@@ -4301,6 +4369,152 @@
     // catálogo es único para las cuatro unidades), así que kilos con kilos. Los
     // BULTOS no se suman: cada unidad puede tener otra presentación, y "un"
     // bulto que represente a las dos no existe.
+    // ═══════════════════════════════════════════════════════════════════════
+    // PARA CUÁNTOS DÍAS HÁBILES ALCANZA (02/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Sale de v_stock_cobertura (la arma la base): por unidad e insumo, el
+    // stock, el consumo diario de los últimos días hábiles y para cuántos días
+    // hábiles alcanza (null si no hubo consumo: ahí NO se dibuja nada, porque
+    // "alcanza para siempre" no es un dato). Con pocos días de historia
+    // (estimado_con_pocos_dias) se aclara "(estimado con N días)".
+    //
+    // LOS UMBRALES VAN ACÁ Y EN NINGÚN OTRO LADO: rojo hasta `rojo` días,
+    // amarillo hasta `amarillo`, gris arriba de eso. Se comparan contra el
+    // número QUE SE MUESTRA (redondeado), así el color y el texto no se
+    // contradicen ("~7" nunca sale gris).
+    const UMBRALES_COBERTURA = { rojo: 3, amarillo: 7 }
+
+    // Un número de la base o null: null, '' o un texto no son un número
+    // (Number(null) es 0, que diría "no alcanza ni para un día").
+    function numeroCobertura(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    function mapaCobertura(res) {
+      const m = new Map()
+      if (!res || res.error) {
+        if (res?.error) console.error('v_stock_cobertura:', res.error)
+        return m
+      }
+      for (const f of sinUnidadesDePrueba(res.data ?? [], estado.fabrica, x => x?.unidad_negocio_id)) {
+        m.set(`${f.unidad_negocio_id}|${f.insumo_id}`, f)
+      }
+      return m
+    }
+
+    // Las filas de cobertura de una tarjeta del listado: la suya, o las de
+    // cada unidad si es la tarjeta sumada de "Todas".
+    function filasCoberturaDe(tarjeta) {
+      const filas = tarjeta?.porUnidad ?? [tarjeta]
+      return filas.map(f => estado.cobertura.get(`${f?.unidad_negocio_id}|${f?.insumo_id}`)).filter(Boolean)
+    }
+
+    // { dias, estimado, diasBase } o null (sin consumo: no se dice nada).
+    // Con UNA fila manda lo que calculó la base. Con varias (varias unidades,
+    // o varias marcas del mismo insumo) es la suma del stock dividida la suma
+    // del consumo diario: lo que tarda en terminarse todo junto.
+    function coberturaDe(filas) {
+      const conConsumo = (filas ?? []).filter(f => (numeroCobertura(f?.consumo_diario) ?? 0) > 0)
+      if (!conConsumo.length) return null
+      const estimado = conConsumo.some(f => f.estimado_con_pocos_dias === true)
+      const bases = conConsumo.map(f => numeroCobertura(f.dias_base)).filter(n => n !== null)
+      const diasBase = bases.length ? Math.min(...bases) : null
+      let dias
+      if (filas.length === 1) {
+        dias = numeroCobertura(filas[0].dias_cobertura)
+        if (dias === null) return null
+      } else {
+        const stock = filas.reduce((s, f) => s + (numeroCobertura(f.stock) ?? 0), 0)
+        const consumo = conConsumo.reduce((s, f) => s + numeroCobertura(f.consumo_diario), 0)
+        dias = stock / consumo
+      }
+      return { dias, estimado, diasBase }
+    }
+
+    // Lo que se muestra: los días redondeados (nunca negativos).
+    function diasMostrados(c) {
+      return Math.max(0, Math.round(c.dias))
+    }
+
+    function nivelCobertura(c) {
+      if (!c) return null
+      const n = diasMostrados(c)
+      if (n <= UMBRALES_COBERTURA.rojo) return 'rojo'
+      if (n <= UMBRALES_COBERTURA.amarillo) return 'amarillo'
+      return 'gris'
+    }
+
+    function textoCobertura(c) {
+      if (!c) return ''
+      const n = diasMostrados(c)
+      if (n === 0) return 'No alcanza ni para un día hábil'
+      return `Alcanza para ~${formatearNumeroAr(n, { decimales: 0 })} ${n === 1 ? 'día hábil' : 'días hábiles'}`
+    }
+
+    function textoEstimado(c) {
+      if (!c?.estimado || c.diasBase === null || c.diasBase === undefined) return ''
+      return `(estimado con ${c.diasBase} ${c.diasBase === 1 ? 'día' : 'días'})`
+    }
+
+    function htmlCobertura(c) {
+      if (!c) return ''
+      const est = textoEstimado(c)
+      return `<span class="cobertura cobertura--${esc(nivelCobertura(c))}">${esc(textoCobertura(c))}` +
+        `${est ? ` <span class="cobertura__estimado">${esc(est)}</span>` : ''}</span>`
+    }
+
+    // ¿Alcanza para pocos días (amarillo o rojo)? Lo que cuenta el aviso.
+    function alcanzaPocosDias(tarjeta) {
+      const nivel = nivelCobertura(coberturaDe(filasCoberturaDe(tarjeta)))
+      return nivel === 'rojo' || nivel === 'amarillo'
+    }
+
+    // EL MISMO INSUMO, DISTINTAS MARCAS: la Harina 000 Wali y la Júpiter se
+    // usan indistintamente, así que además de la de cada una se dice la de
+    // todas juntas. Solo con DOS o más insumos distintos con ese nombre entre
+    // las tarjetas a la vista. Devuelve 'nombre normalizado' -> la cobertura.
+    function coberturaPorNombre(tarjetas) {
+      const porNombre = new Map()
+      for (const t of tarjetas ?? []) {
+        const clave = normalizar(t.insumo_nombre)
+        if (!porNombre.has(clave)) porNombre.set(clave, { ids: new Set(), filas: [] })
+        const g = porNombre.get(clave)
+        g.ids.add(t.insumo_id)
+        g.filas.push(...filasCoberturaDe(t))
+      }
+      const res = new Map()
+      for (const [clave, g] of porNombre) {
+        if (g.ids.size < 2) continue
+        const c = coberturaDe(g.filas)
+        if (c) res.set(clave, c)
+      }
+      return res
+    }
+
+    function htmlCoberturaMarcas(nombre, c) {
+      const est = textoEstimado(c)
+      return `<div class="cobertura-marcas">${esc(nombre)}, todas las marcas:` +
+        `<span class="cobertura cobertura--${esc(nivelCobertura(c))}">${esc(textoCobertura(c).replace(/^Alcanza para /, ''))}` +
+        `${est ? ` <span class="cobertura__estimado">${esc(est)}</span>` : ''}</span></div>`
+    }
+
+    function pintarAvisoCobertura(tarjetas) {
+      const btn = document.getElementById('stock-cobertura-aviso')
+      const n = (tarjetas ?? []).filter(alcanzaPocosDias).length
+      if (!estado.filtroCobertura && n === 0) { btn.hidden = true; btn.innerHTML = ''; return }
+      btn.hidden = false
+      const dias = UMBRALES_COBERTURA.amarillo
+      const texto = n === 1
+        ? `1 insumo alcanza para ${dias} días hábiles o menos`
+        : `${n} insumos alcanzan para ${dias} días hábiles o menos`
+      btn.setAttribute('aria-pressed', estado.filtroCobertura ? 'true' : 'false')
+      btn.innerHTML = `<span>${esc(texto)}</span>` +
+        `<span class="stock-cobertura-aviso__accion">${estado.filtroCobertura ? 'Ver todos' : 'Ver cuáles'}</span>`
+    }
+
     function agruparStockPorInsumo(filas) {
       const porInsumo = new Map()
       for (const f of filas) {
@@ -4343,6 +4557,7 @@
                 <span class="chip-tipo chip-tipo--${esc(g.tipo)}">${esc(TIPOS[g.tipo] ?? g.tipo)}</span>
                 ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
               </div>
+              ${htmlCobertura(coberturaDe(filasCoberturaDe(g)))}
             </div>
             <div class="fila-stock__total ${negativo ? 'fila-stock__total--negativa' : ''}">${esc(formatearCantidadStock(g.cantidad_total, g.unidad_medida))}</div>
           </div>
@@ -4366,6 +4581,7 @@
       if (sinPermisoEnBarra(estado.unidadesStock)) {
         listaEl.innerHTML = ''
         vacioEl.hidden = true
+        pintarAvisoCobertura([])
         pintarAvisoUnidad('stock-aviso-unidad', textoSinPermiso('ver el stock'))
         return
       }
@@ -4373,7 +4589,18 @@
 
       const visibles = filasStockVisibles()
       const conUnidades = stockConUnidades()
-      const filas = conUnidades ? agruparStockPorInsumo(visibles) : visibles
+      const todas = conUnidades ? agruparStockPorInsumo(visibles) : visibles
+      // El aviso cuenta sobre lo que se ve (barra de arriba y buscador), y el
+      // filtro deja solo los que alcanzan para pocos días.
+      pintarAvisoCobertura(todas)
+      const filas = estado.filtroCobertura ? todas.filter(alcanzaPocosDias) : todas
+
+      if (estado.filtroCobertura && todas.length && !filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.textContent = `Ningún insumo alcanza para ${UMBRALES_COBERTURA.amarillo} días hábiles o menos.`
+        return
+      }
 
       if (!filas.length) {
         listaEl.innerHTML = ''
@@ -4398,7 +4625,7 @@
       // no esta repetido ACA y la marca no necesita saltar.
       const repes = nombresRepetidos(filas, f => f.insumo_nombre)
 
-      listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, f => f.insumo_nombre), f => {
+      const htmlTarjeta = f => {
         // Con "Todas": un insumo en varias unidades es una tarjeta con la suma
         // y un renglón por unidad.
         if (f.porUnidad) return htmlGrupoStock(f, repes.has(normalizar(f.insumo_nombre)) && !!f.marca)
@@ -4460,9 +4687,26 @@
                 <span class="chip-tipo chip-tipo--${esc(f.tipo)}">${esc(TIPOS[f.tipo] ?? f.tipo)}</span>
                 ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
               </div>
+              ${htmlCobertura(coberturaDe(filasCoberturaDe(f)))}
             </div>
             <div class="fila-stock__total ${negativo ? 'fila-stock__total--negativa' : ''}">${esc(destacado)}</div>
           </div>`
+      }
+
+      // "Harina 000, todas las marcas: ~N días": una vez por nombre, arriba de
+      // la PRIMERA tarjeta de ese nombre (htmlAgrupado las dibuja en orden).
+      // Se calcula sobre la lista sin el filtro de pocos días, así el total
+      // no cambia al filtrar.
+      const porNombre = coberturaPorNombre(todas)
+      const yaDicho = new Set()
+      listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, f => f.insumo_nombre), f => {
+        const clave = normalizar(f.insumo_nombre)
+        let antes = ''
+        if (porNombre.has(clave) && !yaDicho.has(clave)) {
+          yaDicho.add(clave)
+          antes = htmlCoberturaMarcas(f.insumo_nombre, porNombre.get(clave))
+        }
+        return antes + htmlTarjeta(f)
       })
 
       listaEl.querySelectorAll('[data-stock]').forEach(card => {
@@ -9919,6 +10163,12 @@
       el.addEventListener('click', cerrarLotes))
     document.getElementById('buscador-stock-actual').addEventListener('input', (e) => {
       estado.busquedaStock = e.target.value
+      renderizarStock()
+    })
+    // "N insumos alcanzan para 7 días hábiles o menos": filtra, y otra vez
+    // vuelve a mostrar todos.
+    document.getElementById('stock-cobertura-aviso').addEventListener('click', () => {
+      estado.filtroCobertura = !estado.filtroCobertura
       renderizarStock()
     })
     document.querySelectorAll('.pestana-stock').forEach(btn =>
