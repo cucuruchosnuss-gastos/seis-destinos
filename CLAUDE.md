@@ -1946,7 +1946,7 @@ Lo que antes dependía de que alguien se acordara de correrlo, ahora corre solo.
 - **GitHub Actions** (badges en `README.md`):
   - **`.github/workflows/pruebas.yml`** — en cada push a `main`, en cada pull request y en las ramas `ci-prueba/**` (existen para probar el propio workflow sin abrir un PR): `check-bytes` + `correr-todo`, Node 24, `fetch-depth: 0` (los `controles-*.js` hacen `git show` de commits fijos). El resumen del job es una tabla con cada archivo. **Verificado que da rojo**: una rama con una suite rota a propósito falló ([corrida](https://github.com/cucuruchosnuss-gastos/seis-destinos/actions/runs/36211674858)) y se borró.
   - **`.github/workflows/mutaciones.yml`** — a mano (`workflow_dispatch`): una máquina por módulo y, adentro, las `mut-*.js` de a una.
-  - **`.github/workflows/navegador.yml`** — Playwright en cada push a `main` y todas las noches a las **5 de Argentina** (`cron: '0 8 * * *'`), con capturas e informe como artefacto (`capturas`, 14 días). Las fallas quedan además como **anotaciones** de la corrida, que se leen sin credenciales por la API (`/check-runs/<job>/annotations`); el log del job y los artefactos, no.
+  - **`.github/workflows/navegador.yml`** — Playwright en cada push a `main`, **en cada push a una rama `ci-prueba/**`** (desde el 02/10/2026; la concurrency `navegador` las pone en fila) y todas las noches a las **5 de Argentina** (`cron: '0 8 * * *'`), con capturas e informe como artefacto (`capturas`, 14 días). Las fallas quedan además como **anotaciones** de la corrida, que se leen sin credenciales por la API (`/check-runs/<job>/annotations`); el log del job y los artefactos, no.
   - **Leer el estado sin `gh`** (no está instalado): `curl -s "https://api.github.com/repos/cucuruchosnuss-gastos/seis-destinos/actions/runs?head_sha=<sha>"` — el repo es público.
 - **Navegador real — `e2e/`** (`npm ci && npx playwright install chromium && npm run e2e`): un servidor estático (`e2e/servidor.js`) sirve el repo tal cual y Playwright (Chromium) lo recorre contra la base real, así se prueba el código del commit sin esperar a GitHub Pages. `package.json` existe solo para las herramientas de prueba; `node_modules/`, `e2e/resultados/` y `e2e/informe/` están en `.gitignore`.
   - **`0-humo.spec.js` corre SIEMPRE, sin credenciales**: cada HTML del repo se abre y no puede tirar ningún error de JavaScript. Ataja en un segundo el módulo muerto por un `SyntaxError` (verificado: con un `const` duplicado inyectado da rojo). Se aceptan solo dos ruidos, con su motivo en el código: `[Cloudflare Turnstile] Error 110200` (localhost no está en los dominios del sitio de Turnstile) y el `throw new Error('Sin sesión')` deliberado de dashboard.html y mfa.html.
@@ -2202,6 +2202,18 @@ TERCER CASO (`7d145d7`), y el peor de los tres por dónde estaba: en `ocr-materi
 - Verificación de cada commit: bajar el `.patch` real de GitHub y leerlo, nunca confiar en el resumen que da Claude Code de lo que hizo.
 
 ## Cómo trabajar
+
+### Cómo trabajamos (reglas permanentes de Facu, 02/10/2026)
+
+Hay UNA sola sesión de Claude Code trabajando en seis-destinos. Estas reglas valen para todo pedido:
+1. **Antes de cada tarea: `git fetch`** y revisar que nadie haya movido `main` ni la rama propia. Si algo cambió sin que se sepa por qué, **frenar y avisar**.
+2. **Cada tarea en su rama `ci-prueba/<tema>`**, creada desde el `origin/main` más reciente. **Se pushea SOLO la rama.**
+3. **`main` se toca únicamente cuando Facu escribe "INTEGRÁ"** con instrucciones. Antes de integrar, el punto de vuelta va como rama **`respaldo/antes-de-integrar-AAAA-MM-DD`**, subida a GitHub.
+4. **La base de datos la maneja Claude (el chat): Claude Code solo la LEE.** Lo que haya que cambiar en la base viene descripto en cada pedido.
+5. **Al terminar:** el hash de cada rama, lo que se decidió sin consultar y lo que no se pudo probar. Después, frenar hasta el próximo pedido.
+6. **Facu no programa**: los resúmenes van en castellano simple.
+
+Las pruebas en navegador (`navegador.yml`) corren también en cada push a una rama `ci-prueba/**` (02/10/2026), en fila con las de `main` por la concurrency `navegador`.
 
 ### REGLA DE ORO — Territorio compartido
 
