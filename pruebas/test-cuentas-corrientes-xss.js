@@ -85,6 +85,9 @@ const RENDERS = [
   'pasaFiltroUnidad',
   // el saldo inicial de un proveedor (30/09/2026): los chips de la fábrica
   'htmlUnidadesSaldoInicial',
+  // los cheques en un pago (05/10/2026): la lista de la cartera y las cuentas
+  // de banco del cheque propio
+  'htmlFilaCartera', 'renderizarCarteraPago', 'pintarTotalCartera', 'sumaCheques', 'cuentasDeBancoDeLaEmpresa', 'cargarCuentasPropio',
 ]
 
 function clausura(src) {
@@ -168,6 +171,7 @@ const PRELUDIO = `
   // Los let top-level del módulo: acá var.
   var facturaPendienteAAsignar = null, proveedorAsignarSeleccionado = null, creditoAAplicar = null
   var facturasParaCredito = [], medioPagoSeleccionado = null, facturasParaPago = [], proveedorAEditar = null
+  var carteraPago = [], cuentasPropio = []
   var fichaOrigen = 'lista', importacionPendiente = null, debounceFifo = null
 `
 
@@ -434,6 +438,14 @@ async function correrRenders(S) {
   S.__setVar('facturasParaPago', [{ id: 'fp', numero: marca('fifo_num'), fecha: '2026-09-01', saldo: 10, checked: true, monto: 5 }])
   S.renderizarFilasFifo()
   chequearMarcas(chk, 'filas FIFO', html('lista-fifo'), ['fifo_num'])
+  // Los cheques de la cartera (05/10/2026): número, banco y librador vienen de
+  // la base (el librador lo leyó el OCR del papel).
+  S.__setVar('carteraPago', [{ id: 'chq', numero: marca('car_num'), banco: marca('car_banco'), librador: marca('car_lib'), cobra: '2026-10-01', comun: false, importe: 5, tildado: true }])
+  S.renderizarCarteraPago()
+  chequearMarcas(chk, 'cheques de la cartera para pagar', html('lista-cartera-pago'), ['car_num', 'car_banco', 'car_lib'])
+  S.__setDatos('cuentas_caja', [{ id: marca('cb_id'), nombre: marca('cb_nombre'), medio: 'banco', moneda: 'ARS', unidad_negocio_id: 'u-x', activa: true }])
+  await S.cargarCuentasPropio('u-x')
+  chequearMarcas(chk, 'cuentas de banco del cheque propio', html('campo-cuenta-propio'), ['cb_id', 'cb_nombre'])
   chk('resumen de aplicación: sin marcas (solo importes en ARS)', !/data-xss/.test(html('resumen-aplicacion')))
 
   // La moneda del pago (abrirModalPago está stubeada para que ningún render
@@ -552,6 +564,12 @@ const SEGURAS = {
   actualizarSelectorCuentaPago: {
     "propias.map(opciones).join('')": 'opciones() es la flecha de plantilla de la línea de arriba, con esc() en cada dato (sus interpolaciones las revisa el escáner; ejecutada con marcas)',
     "empresa.map(opciones).join('')": 'opciones() es la flecha de plantilla de la línea de arriba, con esc() en cada dato (sus interpolaciones las revisa el escáner; ejecutada con marcas)',
+  },
+  htmlFilaCartera: {
+    i: 'índice del map', 'importeHtml(c.importe)': IMPORTE,
+  },
+  renderizarCarteraPago: {
+    "carteraPago.map(htmlFilaCartera).join('')": 'htmlFilaCartera() escapa cada dato (ejecutada con marcas)',
   },
   renderizarFilasFifo: {
     i: 'índice del map', 'formatearFecha(f.fecha)': fecha('sugerir_facturas_fifo() devuelve fecha_factura date'), 'importeHtml(f.saldo)': IMPORTE,
@@ -797,7 +815,11 @@ if (SOLO !== 'render') {
   chk('estático: la única navegación es la literal al dashboard', navs.length === 1 && navs[0] === "'../dashboard.html'", navs.join(' | '))
   const historia = [...script.matchAll(/history\.(pushState|replaceState)\(([^)]*)\)/g)].map(m => norm(m[2]))
   chk('estático: history solo recibe la query de la ficha o location.pathname',
-    historia.length === 3 && historia.filter(h => h === "null, '', qs").length === 2 && historia.includes("null, '', location.pathname") &&
+    // + 05/10/2026: la pestaña de primer nivel (location.pathname + un
+    // literal) y el link ?pago= (location.pathname a secas).
+    historia.length === 5 && historia.filter(h => h === "null, '', qs").length === 2 &&
+    historia.filter(h => h === "null, '', location.pathname").length === 2 &&
+    historia.includes("null, '', location.pathname + (s === 'clientes' ? '?pestana=clientes' : ''") &&
     cuerpoDe('sincronizarUrlFicha').includes('const qs = `?proveedor=${proveedorId}`'), historia.join(' | '))
   chk('estático: ningún .src ni .href se asigna en runtime', !/\.(src|href)\s*=(?!=)/.test(script))
 

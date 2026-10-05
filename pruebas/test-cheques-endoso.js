@@ -93,7 +93,7 @@ const FACTURAS = [
   chk('super_admin: las dos por bypass (como tiene_tarea)', S.puedeRegistrarPago() === true && S.puedeVerFacturas() === true)
   chk('los permisos se leen también de cuentas_corrientes (no solo de cobranzas)',
     /\.in\('modulo', \['cobranzas', 'cuentas_corrientes'\]\)/.test(JS))
-  chk('la lista de cheques trae salida_proveedor_id', /salida_fecha, salida_destino, salida_proveedor_id'\)/.test(JS))
+  chk('la lista de cheques trae salida_proveedor_id', /salida_fecha, salida_destino, salida_proveedor_id[,']/.test(JS))
   chk('init carga la fábrica de pruebas', /cargarFabricaDePruebas\(supabase\)/.test(JS) && /estado\.fabrica = fabrica \?\? FABRICA_SIN_DATOS/.test(JS))
 }
 

@@ -281,6 +281,19 @@ export async function cargarUnidadesDeLaPersona(sb) {
   return { yo, unidades }
 }
 
+// Otra pestaña (o la pantalla de afuera, si esta va embebida) cambió la
+// elección: se sigue.
+function seguirOtraPestana(win) {
+  win.addEventListener('storage', ev => {
+    if (ev.key !== CLAVE_ELEGIDA || !estado) return
+    const nueva = resolverElegida(ev.newValue, estado.unidades)
+    if (nueva === estado.elegida) return
+    estado.elegida = nueva
+    pintar()
+    avisar()
+  })
+}
+
 export async function instalarBarraUnidad({ sb = supabase, doc = document, win = window } = {}) {
   if (!debeMostrarseUnidad({ pathname: win.location.pathname })) return null
   // Una página que no filtra por unidad lo dice en chico (meta sd-unidad).
@@ -295,6 +308,15 @@ export async function instalarBarraUnidad({ sb = supabase, doc = document, win =
     const elegida = resolverElegida(leerGuardada(), r.unidades)
     estado = { unidades: r.unidades, elegida, mostrar: r.unidades.length > 1, listo: true }
     persona = { id: r.yo.id, nombre: r.yo.nombreVisible ?? r.yo.nombre ?? '', email: r.yo.email ?? '' }
+    // EMBEBIDA en otra pantalla (05/10/2026: Cuentas corrientes → Clientes
+    // abre Administración adentro, con <html data-embebido>): la barra de
+    // arriba ya la dibuja la pantalla de afuera. Acá se sabe la elección (los
+    // módulos la leen) y se sigue a la de afuera por el evento storage, pero
+    // no se dibuja nada.
+    if (doc.documentElement?.dataset?.embebido) {
+      if (estado.mostrar) seguirOtraPestana(win)
+      return null
+    }
     // La barra de arriba va SIEMPRE (el usuario y su menú); las fábricas,
     // solo con más de una unidad.
     nav = doc.createElement('nav')
@@ -339,15 +361,7 @@ export async function instalarBarraUnidad({ sb = supabase, doc = document, win =
     doc.body.insertBefore(nav, doc.body.firstChild)
     doc.body.classList.add('con-barra-unidad')
     if (!estado.mostrar) return nav
-    // Otra pestaña cambió la elección: se sigue.
-    win.addEventListener('storage', ev => {
-      if (ev.key !== CLAVE_ELEGIDA || !estado) return
-      const nueva = resolverElegida(ev.newValue, estado.unidades)
-      if (nueva === estado.elegida) return
-      estado.elegida = nueva
-      pintar()
-      avisar()
-    })
+    seguirOtraPestana(win)
     return nav
   } catch (err) {
     // La barra es una comodidad: si algo falla, la pantalla sigue sin filtrar.

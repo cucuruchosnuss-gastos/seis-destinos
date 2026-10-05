@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cuentas corrientes · Proveedores — Seis Destinos</title>
+  <title>Cuentas corrientes — Seis Destinos</title>
   <link rel="stylesheet" href="../css/main.css">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#FFFFFF">
@@ -92,8 +92,6 @@
       text-decoration: none;
     }
     .cc-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
-    .cc-link-clientes { font-size: 0.8125rem; color: var(--color-texto-2); margin: -0.5rem 0 1rem; overflow-wrap: anywhere; }
-    .cc-link-clientes a { color: var(--color-acento); font-weight: 600; }
 
     .cc-header-ficha {
       display: flex;
@@ -1086,6 +1084,86 @@
       font-size: 0.8125rem;
       color: var(--color-texto-suave);
     }
+
+    /* ── Las dos pestañas de primer nivel (05/10/2026) ─────────────────── */
+    .cc-primer {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.25rem;
+      margin: 0.75rem 0 1rem;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      max-width: 420px;
+    }
+    .cc-primer[hidden] { display: none; }
+    .cc-primer__opcion {
+      flex: 1 1 0;
+      min-height: 44px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto-2);
+      cursor: pointer;
+    }
+    .cc-primer__opcion[aria-pressed="true"] { background: var(--color-acento); color: #fff; }
+    .cc-clientes-marco {
+      display: block;
+      width: 100%;
+      min-height: 480px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--color-superficie);
+    }
+
+    /* ── Registrar pago: los cuatro medios ─────────────────────────────── */
+    #grilla-medio-pago-cc { grid-template-columns: repeat(2, 1fr); }
+    #grilla-medio-pago-cc .btn-tipo-doc { min-height: 44px; font-size: 0.8125rem; }
+    .cartera-pago { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-borde); border-radius: 10px; }
+    .cartera-pago:empty { display: none; }
+    .cartera-pago__fila {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 52px;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--color-divisor);
+      cursor: pointer;
+    }
+    .cartera-pago__fila:last-child { border-bottom: none; }
+    .cartera-pago__fila--tildada { background: var(--color-acento-fila); }
+    .cartera-pago__fila input[type="checkbox"] { flex-shrink: 0; width: 20px; height: 20px; accent-color: var(--color-acento); }
+    .cartera-pago__info { flex: 1 1 auto; min-width: 0; }
+    .cartera-pago__linea1 { font-size: 0.875rem; font-weight: 600; color: var(--color-texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cartera-pago__linea2 { font-size: 0.75rem; color: var(--color-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cartera-pago__importe { flex-shrink: 0; font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); font-variant-numeric: tabular-nums; }
+    .cartera-pago__total { margin-top: 0.5rem; font-size: 0.875rem; font-weight: 700; color: var(--color-texto); }
+    .cartera-pago__total[hidden] { display: none; }
+    #grupo-propio-pago[hidden] { display: none; }
+    /* Los <select> del modal de pago (la cuenta de caja y la de banco del
+       cheque propio) con el mismo aspecto que los campos de texto: sin esto
+       quedaban con el control chico del sistema. */
+    #modal-pago .grupo-campo select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.5rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      color: var(--color-texto);
+    }
+    .cc-segmento-propio { display: flex; gap: 0.25rem; padding: 0.25rem; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 10px; }
+    .cc-segmento-propio__opcion { flex: 1 1 0; min-height: 40px; border: none; border-radius: 7px; background: transparent; font-family: var(--fuente); font-size: 0.875rem; font-weight: 600; color: var(--color-texto-2); cursor: pointer; }
+    .cc-segmento-propio__opcion[aria-pressed="true"] { background: var(--color-acento); color: #fff; }
+    .cc-fechas-propio { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .cc-fechas-propio > * { min-width: 0; }
+    .aviso-debito-propio { margin: 0.25rem 0 0.75rem; padding: 0.625rem 0.75rem; border-radius: 10px; background: var(--color-superficie); font-size: 0.875rem; font-weight: 600; color: var(--color-texto); }
+    .aviso-debito-propio[hidden] { display: none; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1108,16 +1186,26 @@
           <div class="cc-header__logo"></div>
           <div class="cc-header__marca-col">
             <span class="cc-header__marca-texto">Seis Destinos</span>
-            <span class="cc-header__titulo">Cuentas corrientes · Proveedores</span>
+            <span class="cc-header__titulo">Cuentas corrientes</span>
           </div>
         </div>
       </header>
-      <!-- Este módulo es SOLO de proveedores (29/09/2026). Las cuentas de los
-           clientes viven en Administración → Clientes; el link se ve con
-           retiros:ver (la tarea que abre esa sección). Administración todavía
-           no entiende ?seccion=clientes: el link lleva a su portada. -->
-      <p class="cc-link-clientes" id="cc-link-clientes" hidden>Las cuentas corrientes de los clientes están en <a href="administracion.html">Administración → Clientes</a>.</p>
+      <!-- DOS PESTAÑAS DE PRIMER NIVEL (05/10/2026): Proveedores (lo de
+           siempre) y Clientes. Clientes es la MISMA pantalla de Administración
+           → Clientes (la lista con saldo y la cuenta de cada uno), abierta
+           adentro con administracion.html?seccion=clientes&embebido=cc: un
+           solo código para las dos. Se ve con retiros:ver (la tarea que abre
+           esa sección); sin ella no hay pestañas y queda Proveedores. -->
+      <nav class="cc-primer" id="cc-primer" aria-label="Cuentas corrientes de" hidden>
+        <button type="button" class="cc-primer__opcion" data-cc-seccion="proveedores" aria-pressed="true">Proveedores</button>
+        <button type="button" class="cc-primer__opcion" data-cc-seccion="clientes" aria-pressed="false">Clientes</button>
+      </nav>
 
+      <div id="cc-seccion-clientes" hidden>
+        <iframe class="cc-clientes-marco" id="cc-clientes-marco" title="Cuentas corrientes de los clientes"></iframe>
+      </div>
+
+      <div id="cc-seccion-proveedores">
       <div class="grilla-resumen-cc">
         <div class="resumen-cc-card resumen-cc-card--navy">
           <div class="resumen-cc-card__etiqueta">Saldo total a pagar</div>
@@ -1219,6 +1307,7 @@
           <div class="estado-vacio__titulo">No hay proveedores pendientes de aceptación</div>
         </div>
       </div>
+      </div><!-- /cc-seccion-proveedores -->
 
     </div>
   </div><!-- /vista-lista -->
@@ -1342,17 +1431,65 @@
         </div>
 
         <div class="grupo-campo">
-          <label for="campo-monto-pago">Monto a pagar</label>
+          <label for="campo-monto-pago" id="etiqueta-monto-pago">Monto a pagar</label>
           <input type="text" id="campo-monto-pago" placeholder="0,00" inputmode="decimal">
+          <p class="etiqueta-opcional" id="nota-monto-pago" hidden></p>
         </div>
 
+        <!-- Cuatro medios (05/10/2026). "Cheque" ya no va por
+             registrar_pago_proveedor (no movía ni la caja ni la cartera): los
+             cheques de la cartera van por pagar_proveedor_con_cheques_cartera
+             y uno propio por pagar_proveedor_con_cheque_propio. -->
         <div class="grupo-campo">
           <label>Medio de pago</label>
           <div class="grilla-medio-pago" id="grilla-medio-pago-cc">
             <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
             <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia / QR</button>
-            <button type="button" class="btn-tipo-doc" data-valor="cheque">Cheque</button>
+            <button type="button" class="btn-tipo-doc" data-valor="cartera" id="btn-medio-cartera" hidden>Cheques de la cartera</button>
+            <button type="button" class="btn-tipo-doc" data-valor="propio">Cheque / e-cheque propio</button>
           </div>
+          <p class="etiqueta-opcional" id="aviso-medio-pesos" hidden></p>
+        </div>
+
+        <!-- Cheques de la cartera: los EN CARTERA de esta empresa, de
+             cobranzas asentadas. Se tildan; la suma es el monto. -->
+        <div class="grupo-campo" id="grupo-cartera-pago" hidden>
+          <label>Cheques de la cartera</label>
+          <p class="etiqueta-opcional" id="nota-cartera-pago" hidden></p>
+          <div class="cartera-pago" id="lista-cartera-pago"></div>
+          <div class="cartera-pago__total" id="total-cartera-pago" hidden></div>
+        </div>
+
+        <!-- Cheque / e-cheque propio: sale de una cuenta de banco de ESTA
+             empresa. El banco se debita recién el día de pago. -->
+        <div id="grupo-propio-pago" hidden>
+          <div class="grupo-campo">
+            <label for="campo-cuenta-propio">Cuenta de banco</label>
+            <select id="campo-cuenta-propio"><option value="">— Seleccioná —</option></select>
+            <p class="etiqueta-opcional" id="aviso-sin-cuentas-propio" hidden></p>
+          </div>
+          <div class="grupo-campo">
+            <label>Tipo</label>
+            <div class="cc-segmento-propio" id="tipo-propio">
+              <button type="button" class="cc-segmento-propio__opcion" data-tipo-propio="cheque" aria-pressed="true">Cheque</button>
+              <button type="button" class="cc-segmento-propio__opcion" data-tipo-propio="echeque" aria-pressed="false">E-cheque</button>
+            </div>
+          </div>
+          <div class="grupo-campo">
+            <label for="campo-numero-propio">Número del cheque</label>
+            <input type="text" id="campo-numero-propio" inputmode="numeric" autocomplete="off" maxlength="30">
+          </div>
+          <div class="cc-fechas-propio">
+            <div class="grupo-campo">
+              <label for="campo-emision-propio">Fecha de emisión</label>
+              <input type="date" id="campo-emision-propio">
+            </div>
+            <div class="grupo-campo">
+              <label for="campo-fechapago-propio">Fecha de pago</label>
+              <input type="date" id="campo-fechapago-propio">
+            </div>
+          </div>
+          <p class="aviso-debito-propio" id="aviso-debito-propio" hidden></p>
         </div>
 
         <div class="grupo-campo" id="grupo-cuenta-pago-cc" style="display:none;">
@@ -1363,7 +1500,7 @@
           <p class="etiqueta-opcional" id="aviso-sin-cuentas-pago" hidden></p>
         </div>
 
-        <div class="grupo-campo">
+        <div class="grupo-campo" id="grupo-fecha-pago-cc">
           <label for="campo-fecha-pago-cc">Fecha de pago</label>
           <input type="date" id="campo-fecha-pago-cc">
         </div>
@@ -1941,11 +2078,50 @@
       if (pend) pend.hidden = !estado.unidadElegida
     }
 
-    // El link a las cuentas de los CLIENTES (Administración → Clientes), para
-    // quien puede verlas: retiros:ver, con bypass de super_admin.
-    function renderizarLinkClientes() {
-      const el = document.getElementById('cc-link-clientes')
-      if (el) el.hidden = !tieneTarea('retiros', 'ver')
+    // ═══ LAS DOS PESTAÑAS DE PRIMER NIVEL (05/10/2026) ═══════════════════
+    // Proveedores (lo de siempre) y Clientes. Clientes es la pantalla de
+    // Administración → Clientes ABIERTA ADENTRO (un iframe del mismo sitio,
+    // administracion.html?seccion=clientes&embebido=cc): la lista con saldo y
+    // la cuenta de cada cliente con UN solo código, el de Administración.
+    // Sigue a la barra de fábricas de arriba sola: la elección vive en el
+    // dispositivo (localStorage) y las dos páginas la escuchan.
+    // Se ve con retiros:ver (con bypass de super_admin), la tarea que abre
+    // esa sección; sin ella no hay pestañas y queda Proveedores.
+    const URL_CLIENTES = 'administracion.html?seccion=clientes&embebido=cc'
+    function puedeVerClientes() {
+      return tieneTarea('retiros', 'ver')
+    }
+    function renderizarPrimerNivel() {
+      const nav = document.getElementById('cc-primer')
+      if (nav) nav.hidden = !puedeVerClientes()
+      document.querySelectorAll('[data-cc-seccion]').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.ccSeccion === (estado.seccion || 'proveedores'))))
+    }
+    function mostrarSeccionCC(seccion) {
+      const s = seccion === 'clientes' && puedeVerClientes() ? 'clientes' : 'proveedores'
+      estado.seccion = s
+      document.getElementById('cc-seccion-proveedores').hidden = s !== 'proveedores'
+      document.getElementById('cc-seccion-clientes').hidden = s !== 'clientes'
+      renderizarPrimerNivel()
+      // La dirección dice la pestaña: recargar vuelve al mismo lugar.
+      history.replaceState(null, '', location.pathname + (s === 'clientes' ? '?pestana=clientes' : ''))
+      if (s === 'clientes') abrirMarcoClientes()
+    }
+    // El marco se carga la PRIMERA vez que se abre la pestaña (no antes: es
+    // otra página entera) y toma el alto de la pantalla que queda debajo de
+    // él, con su propio scroll: así sus paneles fijos quedan a la vista.
+    function abrirMarcoClientes() {
+      const marco = document.getElementById('cc-clientes-marco')
+      if (!marco.getAttribute('src')) marco.setAttribute('src', URL_CLIENTES)
+      ajustarMarcoClientes()
+    }
+    function ajustarMarcoClientes() {
+      const marco = document.getElementById('cc-clientes-marco')
+      if (!marco || document.getElementById('cc-seccion-clientes').hidden) return
+      const arriba = marco.getBoundingClientRect().top + (window.scrollY || 0)
+      const abajo = document.querySelector('.barra-abajo')?.offsetHeight || 0
+      const alto = (window.visualViewport?.height || window.innerHeight) - arriba - abajo - 8
+      marco.style.height = Math.max(480, Math.round(alto)) + 'px'
     }
 
     // Las unidades del selector de la ficha, en el orden de los ids.
@@ -2030,12 +2206,14 @@
         // "Cuenta de Empresa" del selector de pago — un pago a proveedor crea
         // una fila en gastos, así que es literalmente cargar un gasto contra
         // las cuentas de la Empresa.
-        // 'retiros' entra por retiros:ver, que decide si se ofrece el link a
-        // las cuentas de los clientes (Administración → Clientes).
-        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros'])
+        // 'retiros' entra por retiros:ver, que decide si se ofrece la
+        // pestaña Clientes (la misma pantalla de Administración → Clientes).
+        // 'cobranzas' entra por cobranzas:procesar (pagar con cheques de la
+        // cartera) y cobranzas:ver_todo (ver la cartera entera).
+        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
-      renderizarLinkClientes()
+      renderizarPrimerNivel()
 
       // La barra de unidad de arriba: se escucha ANTES de esperarla, así un
       // cambio mientras carga no se pierde. Esperarla va en paralelo con lo
@@ -2102,6 +2280,26 @@
         const prov = estado.maestros.proveedores.find(p => p.id === proveedorURL)
         if (prov) await abrirFicha(proveedorURL, unidadURL, prov.razon_social)
       }
+      // ?pestana=clientes abre la pestaña Clientes (el link de Administración).
+      if (params.get('pestana') === 'clientes') mostrarSeccionCC('clientes')
+      // ?pago=<gasto> abre el detalle de ese pago en la ficha de su proveedor
+      // (el link "Ver el pago" de un cheque endosado en la cartera).
+      const pagoURL = params.get('pago')
+      if (pagoURL && /^[0-9a-f-]{36}$/i.test(pagoURL)) await abrirPagoDesdeLink(pagoURL)
+    }
+
+    async function abrirPagoDesdeLink(gastoId) {
+      history.replaceState(null, '', location.pathname)
+      const { data: g, error } = await supabase.from('gastos')
+        .select('id, proveedor_id, unidad_negocio_id').eq('id', gastoId).maybeSingle()
+      if (error || !g?.proveedor_id) {
+        if (error) console.error(error)
+        mostrarError('No se pudo abrir ese pago: no existe o no tenés permiso para verlo.')
+        return
+      }
+      const prov = estado.maestros.proveedores.find(p => p.id === g.proveedor_id)
+      await abrirFicha(g.proveedor_id, g.unidad_negocio_id, prov?.razon_social ?? 'Proveedor')
+      await abrirModalDetallePago(gastoId)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3394,10 +3592,23 @@
     // Solo se toman del texto el banco (3 dígitos) y el número (8), los mismos
     // largos que exigen los CHECK de cobranza_cheques; si la descripción no
     // tiene esa forma, el pago queda como "Pago a proveedor".
+    // Desde el 05/10/2026, también los dos pagos con cheque nuevos (las
+    // descripciones las escriben pagar_proveedor_con_cheques_cartera y
+    // pagar_proveedor_con_cheque_propio, verificado con pg_get_functiondef):
+    //   'Pago con cheques de terceros (N° 1, N° 2) — X'  → "Cheques de la cartera N° 1, N° 2"
+    //   'Pago con e-cheque propio N° 55 (Macro, …) — X'  → "E-cheque propio N° 55"
+    // El texto que se toma lo escapa quien lo dibuja (el número de un cheque
+    // propio lo tipea una persona).
     function etiquetaPagoDeGasto(gasto) {
       if (!gasto || gasto.medio_pago !== 'cheque') return null
-      const m = /^Cheque endosado (\d{3})-(\d{8})(?!\d)/.exec(String(gasto.descripcion ?? ''))
-      return m ? `Cheque endosado ${m[1]}-${m[2]}` : null
+      const d = String(gasto.descripcion ?? '')
+      const m = /^Cheque endosado (\d{3})-(\d{8})(?!\d)/.exec(d)
+      if (m) return `Cheque endosado ${m[1]}-${m[2]}`
+      const t = /^Pago con cheques de terceros \(([^)]*)\)/.exec(d)
+      if (t) return `Cheques de la cartera ${t[1]}`
+      const p = /^Pago con (e-cheque|cheque) propio N° (\S+)/.exec(d)
+      if (p) return `${p[1] === 'e-cheque' ? 'E-cheque' : 'Cheque'} propio N° ${p[2]}`
+      return null
     }
 
     // gasto_id → "Cheque endosado 072-43300023", para los pagos de las filas.
@@ -4457,6 +4668,282 @@
         btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
       })
       actualizarSelectorCuentaPago()
+      pintarMedioCheque()
+    }
+
+    // ═══ LOS CHEQUES EN UN PAGO A PROVEEDOR (05/10/2026) ═════════════════
+    // Dos medios con su propia función de la base (verificadas con
+    // pg_get_functiondef el 05/10/2026):
+    //  - 'cartera': cheques EN CARTERA de esta empresa, de cobranzas
+    //    asentadas y en pesos. pagar_proveedor_con_cheques_cartera los deja
+    //    endosados a este proveedor y el monto es la SUMA de los cheques. NO
+    //    mueve caja (la plata no sale de ninguna cuenta: sale el papel). Pide
+    //    cuentas_corrientes:registrar_pago y cobranzas:procesar.
+    //  - 'propio': un cheque o e-cheque NUESTRO, de una cuenta de banco de
+    //    esta empresa. pagar_proveedor_con_cheque_propio crea el gasto con la
+    //    fecha de emisión y lo anota en cheques_emitidos; el banco se debita
+    //    recién EL DÍA DE PAGO (debitar_cheques_emitidos, todos los días a las
+    //    06:00 y al cargar el pago).
+    // Los dos son SOLO en pesos. "Cheque" ya no va por registrar_pago_proveedor:
+    // ahí no movía ni la caja ni la cartera.
+    const MEDIOS_CHEQUE = ['cartera', 'propio']
+    let carteraPago = []     // [{id, numero, banco, librador, cobra, comun, importe, tildado}]
+    let cuentasPropio = []
+    let tipoPropio = 'cheque'
+    let turnoCartera = 0
+    let bancosBcra = null
+
+    function esMedioCheque(m) {
+      return MEDIOS_CHEQUE.includes(m)
+    }
+    function puedeUsarCartera() {
+      return tieneTarea('cobranzas', 'procesar')
+    }
+
+    // Cuándo se cobra: la fecha de pago si es diferido, la de emisión si es
+    // común ("a la vista").
+    function fechaCobroCheque(ch) {
+      return ch?.tipo === 'diferido' ? ch.fecha_pago : ch?.fecha_emision
+    }
+
+    // El librador: los titulares que leyó el OCR (jsonb [{nombre, cuit}]).
+    function libradorDe(titulares) {
+      const nombres = (Array.isArray(titulares) ? titulares : []).map(t => String(t?.nombre ?? '').trim()).filter(Boolean)
+      return nombres.length ? nombres.join(' y ') : null
+    }
+
+    // En centavos: la suma de varios cheques no arrastra decimales.
+    function sumaCheques(lista) {
+      const centavos = (lista ?? []).filter(c => c.tildado).reduce((acc, c) => acc + Math.round(Number(c.importe) * 100), 0)
+      return centavos / 100
+    }
+
+    function hoyCC() {
+      return fechaISO(new Date())
+    }
+    function sumarDiasIso(iso, n) {
+      const d = new Date(iso + 'T12:00:00Z')
+      d.setUTCDate(d.getUTCDate() + n)
+      return d.toISOString().slice(0, 10)
+    }
+    function esFechaIsoCC(v) {
+      return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
+    }
+
+    // Puro: los cheques que se pueden ofrecer para pagar, con las MISMAS
+    // reglas que la base (en cartera, cobranza asentada, de ESA empresa, en
+    // pesos), del que se cobra primero al último.
+    function chequesParaPagar(cheques, cobranzas, unidadId, bancos) {
+      return (cheques ?? [])
+        .filter(ch => {
+          if (ch.estado && ch.estado !== 'en_cartera') return false
+          const cob = cobranzas?.get?.(ch.cobranza_id)
+          return !!cob && cob.estado === 'procesada' && cob.unidad_negocio_id === unidadId && (cob.moneda ?? 'ARS') === 'ARS'
+        })
+        .map(ch => ({
+          id: ch.id,
+          numero: ch.numero,
+          banco: bancos?.get?.(ch.banco_codigo) ?? (ch.banco_codigo ? `Banco ${ch.banco_codigo}` : null),
+          librador: libradorDe(ch.titulares) ?? cobranzas.get(ch.cobranza_id)?.cliente ?? null,
+          cobra: fechaCobroCheque(ch),
+          comun: ch.tipo !== 'diferido',
+          importe: Number(ch.importe),
+          tildado: false,
+        }))
+        .sort((a, b) => String(a.cobra ?? '9999').localeCompare(String(b.cobra ?? '9999')) || String(a.numero ?? '').localeCompare(String(b.numero ?? '')))
+    }
+
+    async function asegurarBancos() {
+      if (bancosBcra) return bancosBcra
+      const { data, error } = await supabase.from('bancos_bcra').select('codigo, denominacion')
+      // Sin el catálogo, el banco se muestra por su código (no se guarda: la
+      // próxima vez se vuelve a pedir).
+      if (error) { console.error(error); return new Map() }
+      bancosBcra = new Map((data ?? []).map(b => [b.codigo, b.denominacion]))
+      return bancosBcra
+    }
+
+    // Los cheques en cartera: primero los cheques (la cartera es chica) y
+    // después sus cobranzas, de a 200 ids. Sin embeds.
+    async function cargarCarteraParaPago(unidadId) {
+      const turno = ++turnoCartera
+      const lista = document.getElementById('lista-cartera-pago')
+      const nota = document.getElementById('nota-cartera-pago')
+      carteraPago = []
+      lista.innerHTML = '<p class="etiqueta-opcional" style="padding:0.75rem; margin:0;">Cargando la cartera…</p>'
+      pintarTotalCartera()
+      try {
+        const { data: cheques, error } = await supabase.from('cobranza_cheques')
+          .select('id, cobranza_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, titulares, estado')
+          .eq('estado', 'en_cartera')
+        if (error) throw error
+        const ids = [...new Set((cheques ?? []).map(c => c.cobranza_id))]
+        const cobranzas = new Map()
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error: e2 } = await supabase.from('v_cobranzas')
+            .select('id, estado, unidad_negocio_id, moneda, cliente')
+            .in('id', ids.slice(i, i + 200))
+          if (e2) throw e2
+          for (const c of data ?? []) cobranzas.set(c.id, c)
+        }
+        const bancos = await asegurarBancos()
+        if (turno !== turnoCartera) return
+        carteraPago = chequesParaPagar(cheques, cobranzas, unidadId, bancos)
+        // Sin ver_todo, el RLS deja ver solo las cobranzas propias: se dice.
+        nota.hidden = tieneTarea('cobranzas', 'ver_todo')
+        nota.textContent = 'Ves solo los cheques de las cobranzas que cargaste vos: para ver toda la cartera hace falta el permiso de ver todas las cobranzas.'
+        renderizarCarteraPago()
+      } catch (err) {
+        if (turno !== turnoCartera) return
+        console.error(err)
+        carteraPago = []
+        lista.innerHTML = '<p class="etiqueta-opcional" style="padding:0.75rem; margin:0;">No se pudo leer la cartera de cheques. Cerrá y probá de nuevo.</p>'
+        pintarTotalCartera()
+      }
+    }
+
+    function htmlFilaCartera(c, i) {
+      const cobra = c.cobra ? `${c.comun ? 'a la vista · ' : 'paga '}${formatearFecha(c.cobra)}` : 'sin fecha'
+      const linea2 = [c.banco, c.librador].filter(Boolean).join(' · ')
+      return `<label class="cartera-pago__fila${c.tildado ? ' cartera-pago__fila--tildada' : ''}">
+          <input type="checkbox" data-cheque-cartera="${i}"${c.tildado ? ' checked' : ''}>
+          <span class="cartera-pago__info">
+            <span class="cartera-pago__linea1">N° ${esc(c.numero ?? '—')} · ${esc(cobra)}</span>
+            <span class="cartera-pago__linea2" title="${esc(linea2)}">${esc(linea2 || '—')}</span>
+          </span>
+          <span class="cartera-pago__importe">${importeHtml(c.importe)}</span>
+        </label>`
+    }
+
+    function renderizarCarteraPago() {
+      const lista = document.getElementById('lista-cartera-pago')
+      lista.innerHTML = carteraPago.length
+        ? carteraPago.map(htmlFilaCartera).join('')
+        : '<p class="etiqueta-opcional" style="padding:0.75rem; margin:0;">No hay cheques en cartera de esta empresa (de cobranzas asentadas).</p>'
+      pintarTotalCartera()
+    }
+
+    // El total de lo tildado, y el monto del pago = esa suma.
+    function pintarTotalCartera() {
+      const tildados = carteraPago.filter(c => c.tildado)
+      const total = document.getElementById('total-cartera-pago')
+      total.hidden = !tildados.length
+      total.textContent = tildados.length
+        ? `${tildados.length} ${tildados.length === 1 ? 'cheque tildado' : 'cheques tildados'} · total ${formatearImporte(sumaCheques(carteraPago))}`
+        : ''
+      if (medioPagoSeleccionado === 'cartera') {
+        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? sumaCheques(carteraPago) : null)
+        programarActualizarSugerenciasPago()
+      }
+    }
+
+    function tildarChequeCartera(i, tildado) {
+      if (!carteraPago[i]) return
+      carteraPago[i].tildado = !!tildado
+      pintarTotalCartera()
+    }
+
+    // Las cuentas de banco de ESTA empresa en pesos (la base exige las tres
+    // cosas). cuentas_caja se lee abierta (ver Seguridad en CLAUDE.md).
+    function cuentasDeBancoDeLaEmpresa(lista, unidadId) {
+      return (lista ?? [])
+        .filter(c => c.unidad_negocio_id === unidadId && c.medio === 'banco' && (c.moneda ?? 'ARS') === 'ARS' && c.activa !== false)
+        .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es'))
+    }
+
+    async function cargarCuentasPropio(unidadId) {
+      const sel = document.getElementById('campo-cuenta-propio')
+      const aviso = document.getElementById('aviso-sin-cuentas-propio')
+      const { data, error } = await supabase.from('cuentas_caja')
+        .select('id, nombre, medio, moneda, unidad_negocio_id, activa')
+        .eq('unidad_negocio_id', unidadId).eq('medio', 'banco').eq('activa', true)
+      if (error) console.error(error)
+      cuentasPropio = cuentasDeBancoDeLaEmpresa(data, unidadId)
+      sel.innerHTML = '<option value="">— Seleccioná —</option>' +
+        cuentasPropio.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')
+      if (cuentasPropio.length === 1) sel.value = cuentasPropio[0].id
+      aviso.hidden = !error && cuentasPropio.length > 0
+      aviso.textContent = error
+        ? 'No se pudieron leer las cuentas de banco. Cerrá y probá de nuevo.'
+        : 'Esta empresa no tiene ninguna cuenta de banco en pesos.'
+    }
+
+    function elegirTipoPropio(tipo) {
+      tipoPropio = tipo === 'echeque' ? 'echeque' : 'cheque'
+      document.querySelectorAll('[data-tipo-propio]').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.tipoPropio === tipoPropio)))
+    }
+
+    // "El banco se debita el DD/MM": el día de pago del cheque.
+    function textoDebitoPropio(fechaPago, hoy) {
+      if (!esFechaIsoCC(fechaPago)) return null
+      const [, m, d] = fechaPago.split('-')
+      return fechaPago <= hoy
+        ? `La fecha de pago ya llegó: el banco se debita el ${d}/${m}, al registrar el pago.`
+        : `El banco se debita el ${d}/${m}.`
+    }
+    function pintarAvisoDebito() {
+      const el = document.getElementById('aviso-debito-propio')
+      const texto = textoDebitoPropio(document.getElementById('campo-fechapago-propio').value, hoyCC())
+      el.hidden = !texto
+      el.textContent = texto ?? ''
+    }
+
+    // Lo que falta en el cheque propio, con las MISMAS reglas (y los mismos
+    // textos) que pagar_proveedor_con_cheque_propio. null = está todo.
+    function validarChequePropio({ cuentaId, numero, emision, pago, importe }, hoy) {
+      if (!cuentaId) return 'Elegí la cuenta de banco de donde sale el cheque.'
+      if (!String(numero ?? '').trim()) return 'Falta el número del cheque.'
+      if (!esFechaIsoCC(emision) || !esFechaIsoCC(pago)) return 'Faltan las fechas del cheque.'
+      if (emision > hoy) return 'La fecha de emisión no puede ser futura.'
+      if (pago < emision || pago > sumarDiasIso(emision, 360)) return 'La fecha de pago tiene que estar entre la emisión y 360 días después.'
+      if (!(Number.isFinite(importe) && importe > 0)) return 'El importe tiene que ser mayor a cero.'
+      return null
+    }
+
+    function parametrosPagoCartera({ proveedorId, unidadId, chequeIds, fecha, aplicaciones }) {
+      return { p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cheque_ids: chequeIds, p_fecha: fecha, p_aplicaciones: aplicaciones }
+    }
+    function parametrosPagoPropio({ proveedorId, unidadId, cuentaId, tipo, numero, emision, pago, importe, aplicaciones }) {
+      return {
+        p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cuenta_id: cuentaId,
+        p_tipo: tipo === 'echeque' ? 'echeque' : 'cheque', p_numero: String(numero ?? '').trim(),
+        p_fecha_emision: emision, p_fecha_pago: pago, p_importe: importe, p_aplicaciones: aplicaciones,
+      }
+    }
+
+    // Los cheques son solo en pesos: al elegirlos, la moneda pasa a ARS.
+    function asegurarMonedaPesos() {
+      const sel = document.getElementById('campo-moneda-pago')
+      if (![...sel.options].some(o => o.value === 'ARS')) {
+        const o = document.createElement('option')
+        o.value = 'ARS'; o.textContent = 'ARS'
+        sel.appendChild(o)
+      }
+      if (sel.value !== 'ARS') { sel.value = 'ARS'; actualizarSelectorCuentaPago(); programarActualizarSugerenciasPago() }
+    }
+    function pintarAvisoPesos() {
+      const el = document.getElementById('aviso-medio-pesos')
+      const mal = esMedioCheque(medioPagoSeleccionado) && document.getElementById('campo-moneda-pago').value !== 'ARS'
+      el.hidden = !mal
+      el.textContent = mal ? 'Los cheques son solo en pesos: elegí ARS.' : ''
+    }
+
+    // Qué se ve según el medio elegido.
+    function pintarMedioCheque() {
+      const m = medioPagoSeleccionado
+      document.getElementById('grupo-cartera-pago').hidden = m !== 'cartera'
+      document.getElementById('grupo-propio-pago').hidden = m !== 'propio'
+      document.getElementById('grupo-fecha-pago-cc').hidden = m === 'propio'
+      const monto = document.getElementById('campo-monto-pago')
+      monto.readOnly = m === 'cartera'
+      document.getElementById('etiqueta-monto-pago').textContent =
+        m === 'cartera' ? 'Monto (la suma de los cheques tildados)' : m === 'propio' ? 'Importe del cheque' : 'Monto a pagar'
+      if (esMedioCheque(m)) asegurarMonedaPesos()
+      pintarAvisoPesos()
+      if (!estado.ficha?.unidadId) return
+      if (m === 'cartera') { ponerNumero(monto, null); cargarCarteraParaPago(estado.ficha.unidadId) }
+      if (m === 'propio') { cargarCuentasPropio(estado.ficha.unidadId); pintarAvisoDebito() }
     }
 
     function actualizarSelectorCuentaPago() {
@@ -4519,6 +5006,13 @@
 
       ponerNumero(document.getElementById('campo-monto-pago'), null)
       document.getElementById('campo-fecha-pago-cc').value = fechaISO(new Date())
+      // Los cheques de la cartera, solo con cobranzas:procesar (la base lo exige).
+      document.getElementById('btn-medio-cartera').hidden = !puedeUsarCartera()
+      carteraPago = []
+      document.getElementById('campo-numero-propio').value = ''
+      document.getElementById('campo-emision-propio').value = hoyCC()
+      document.getElementById('campo-fechapago-propio').value = hoyCC()
+      elegirTipoPropio('cheque')
       seleccionarMedioPagoCC(null)
       facturasParaPago = []
       renderizarFilasFifo()
@@ -4664,9 +5158,30 @@
       if (!moneda) return mostrarError('Seleccioná la moneda.')
       if (monto == null || monto <= 0) return mostrarError('Ingresá un monto válido.')
       if (!medioPagoSeleccionado) return mostrarError('Seleccioná el medio de pago.')
+      const medio = medioPagoSeleccionado
+      if (esMedioCheque(medio) && moneda !== 'ARS') return mostrarError('Los cheques son solo en pesos: elegí ARS.')
 
-      const fecha = document.getElementById('campo-fecha-pago-cc').value
+      const hoy = hoyCC()
+      const propio = medio === 'propio' ? {
+        cuentaId: document.getElementById('campo-cuenta-propio').value || null,
+        tipo: tipoPropio,
+        numero: document.getElementById('campo-numero-propio').value,
+        emision: document.getElementById('campo-emision-propio').value,
+        pago: document.getElementById('campo-fechapago-propio').value,
+        importe: monto,
+      } : null
+      if (propio) {
+        const falta = validarChequePropio(propio, hoy)
+        if (falta) return mostrarError(falta)
+      }
+      // El pago con cheque propio lleva la fecha de EMISIÓN (la pone la base).
+      const fecha = propio ? propio.emision : document.getElementById('campo-fecha-pago-cc').value
       if (!fecha) return mostrarError('Completá la fecha de pago.')
+      const chequeIds = carteraPago.filter(c => c.tildado).map(c => c.id)
+      if (medio === 'cartera') {
+        if (!chequeIds.length) return mostrarError('Tildá al menos un cheque de la cartera.')
+        if (fecha > hoy) return mostrarError('La fecha del pago no puede ser futura.')
+      }
 
       const requiereCuenta = medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia'
       const cuentaId = requiereCuenta ? (document.getElementById('campo-cuenta-pago-cc').value || null) : null
@@ -4693,7 +5208,12 @@
       btn.disabled = true
 
       try {
-        const { error } = await supabase.rpc('registrar_pago_proveedor', {
+        const base = { proveedorId: estado.ficha.proveedorId, unidadId: estado.ficha.unidadId, aplicaciones }
+        const { error } = medio === 'cartera'
+          ? await supabase.rpc('pagar_proveedor_con_cheques_cartera', parametrosPagoCartera({ ...base, chequeIds, fecha }))
+          : medio === 'propio'
+          ? await supabase.rpc('pagar_proveedor_con_cheque_propio', parametrosPagoPropio({ ...base, ...propio }))
+          : await supabase.rpc('registrar_pago_proveedor', {
           p_proveedor_id: estado.ficha.proveedorId,
           p_unidad_negocio_id: estado.ficha.unidadId,
           p_moneda: moneda,
@@ -4712,7 +5232,9 @@
         })
         if (error) throw new Error(error.message)
 
-        mostrarExito('¡Pago registrado!')
+        mostrarExito(medio === 'cartera'
+          ? `¡Pago registrado! ${chequeIds.length === 1 ? 'El cheque quedó endosado' : 'Los cheques quedaron endosados'} a ${String(estado.ficha.nombre ?? 'este proveedor').replace(/\.$/, '')}.`
+          : medio === 'propio' ? `¡Pago registrado! ${textoDebitoPropio(propio.pago, hoy)}` : '¡Pago registrado!')
         cerrarModalPago()
         await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
         renderizarFichaBanner()
@@ -4983,6 +5505,25 @@
       if (!btn) return
       seleccionarMedioPagoCC(btn.dataset.valor === medioPagoSeleccionado ? null : btn.dataset.valor)
     })
+    document.getElementById('campo-moneda-pago').addEventListener('change', pintarAvisoPesos)
+    document.getElementById('lista-cartera-pago').addEventListener('change', (e) => {
+      const chk = e.target.closest?.('[data-cheque-cartera]')
+      if (!chk) return
+      chk.closest('.cartera-pago__fila')?.classList.toggle('cartera-pago__fila--tildada', chk.checked)
+      tildarChequeCartera(Number(chk.dataset.chequeCartera), chk.checked)
+    })
+    document.getElementById('tipo-propio').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tipo-propio]')
+      if (b) elegirTipoPropio(b.dataset.tipoPropio)
+    })
+    document.getElementById('campo-fechapago-propio').addEventListener('change', pintarAvisoDebito)
+    document.getElementById('campo-fechapago-propio').addEventListener('input', pintarAvisoDebito)
+    document.getElementById('cc-primer').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-cc-seccion]')
+      if (b) mostrarSeccionCC(b.dataset.ccSeccion)
+    })
+    window.addEventListener('resize', ajustarMarcoClientes)
+    window.visualViewport?.addEventListener('resize', ajustarMarcoClientes)
     document.getElementById('btn-cerrar-pago').addEventListener('click', cerrarModalPago)
     document.getElementById('btn-cancelar-pago').addEventListener('click', cerrarModalPago)
     document.querySelector('#modal-pago .modal-cc__backdrop').addEventListener('click', cerrarModalPago)

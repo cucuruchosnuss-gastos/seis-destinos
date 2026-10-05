@@ -27,6 +27,11 @@ const SEGURAS_CHEQUES = [
   ['htmlResultadosEndoso(estado.salida)', 'HTML armado por htmlResultadosEndoso(), que escapa adentro'],
   ['htmlPreviaEndoso(estado.salida)', 'HTML armado por htmlPreviaEndoso(), que escapa adentro'],
   ['htmlOpcionesUnidadEndoso(s)', 'HTML armado por htmlOpcionesUnidadEndoso(), que escapa adentro'],
+  // Un pago con cheques de la cartera y los cheques emitidos (05/10/2026)
+  ['linkPago', 'HTML armado arriba en htmlEmitido: el link "Ver el pago" con encodeURIComponent del id, o vacío'],
+  ['g.cantidad', 'número: conteo calculado en pendientePorCuenta()'],
+  ["grupos.map(htmlTotalEmitidos).join('')", 'HTML armado por htmlTotalEmitidos(), que escapa adentro'],
+  ["filas.map(c => htmlEmitido(c, hoy)).join('')", 'HTML armado por htmlEmitido(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [
@@ -37,6 +42,7 @@ const SEGURAS_REGEX_CHEQUES = [
   [/^codigos\.map\(c =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^unidades\.map\(u =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^ESTADOS_FILTRO_CHEQUES\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^opciones\.map\(o =>/s, 'HTML de una plantilla anidada (las cuentas de los emitidos), verificada aparte'],
 ]
 
 module.exports = { SEGURAS_CHEQUES, SEGURAS_REGEX_CHEQUES }

@@ -7,6 +7,9 @@ correrMutaciones({
   original: path.join(__dirname, '..', 'js', 'barra-unidad.js'),
   funciones: [],
   manuales: [
+    // Embebida (05/10/2026): Cuentas corrientes → Clientes abre Administración adentro.
+    { nombre: 'embebida, la barra se dibuja igual (dos barras)', de: '    if (doc.documentElement?.dataset?.embebido) {\n      if (estado.mostrar) seguirOtraPestana(win)\n      return null\n    }\n', a: '' },
+    { nombre: 'embebida, no sigue a la pantalla de afuera', de: '      if (estado.mostrar) seguirOtraPestana(win)\n      return null', a: '      return null' },
     { nombre: 'super_admin no ve todas', de: "if (yo.rol_app === 'super_admin') return new Set(todas)", a: "if (yo.rol_app === 'super_admin_x') return new Set(todas)" },
     { nombre: 'no suma la unidad propia', de: 'ids.add(yo.unidad_negocio_id)', a: 'void 0' },
     { nombre: 'el alcance {todas:true} no suma', de: 'if (a.todas === true) { for (const id of todas) ids.add(id); continue }', a: 'if (a.todas === true) continue' },

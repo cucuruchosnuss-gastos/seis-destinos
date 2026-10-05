@@ -19,13 +19,11 @@ correrMutacionesEnVarios([
     funciones: [],
     manuales: [
       // ── El nombre y el link a los clientes ──────────────────────────────────
-      { nombre: 'la pestaña vuelve al nombre viejo', de: '<title>Cuentas corrientes · Proveedores — Seis Destinos</title>', a: '<title>Cuentas corrientes — Seis Destinos</title>' },
-      { nombre: 'la cabecera vuelve al nombre viejo', de: '<span class="cc-header__titulo">Cuentas corrientes · Proveedores</span>', a: '<span class="cc-header__titulo">Cuentas corrientes</span>' },
-      { nombre: 'el link a los clientes nace visible', de: 'id="cc-link-clientes" hidden>', a: 'id="cc-link-clientes">' },
-      { nombre: 'el link a los clientes se ve sin permiso', de: "      if (el) el.hidden = !tieneTarea('retiros', 'ver')", a: '      if (el) el.hidden = false' },
-      { nombre: 'el link a los clientes no se ve nunca', de: "      if (el) el.hidden = !tieneTarea('retiros', 'ver')", a: '      if (el) el.hidden = true' },
-      { nombre: 'no se leen las tareas de retiros', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos']" },
-      { nombre: 'el link no se pinta al leer las tareas', de: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n      renderizarLinkClientes()\n', a: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n' },
+      { nombre: 'la pestaña vuelve al nombre de antes', de: '<title>Cuentas corrientes — Seis Destinos</title>', a: '<title>Cuentas corrientes · Proveedores — Seis Destinos</title>' },
+      { nombre: 'la cabecera vuelve al nombre de antes', de: '<span class="cc-header__titulo">Cuentas corrientes</span>', a: '<span class="cc-header__titulo">Cuentas corrientes · Proveedores</span>' },
+      { nombre: 'no se leen las tareas de retiros', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'cobranzas']" },
+      { nombre: 'no se leen las tareas de cobranzas', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros']" },
+      { nombre: 'las pestañas no se pintan al leer las tareas', de: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n      renderizarPrimerNivel()\n', a: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n' },
       // ── Colores: lo que se toca, naranja ─────────────────────────────────────
       { nombre: 'la pestaña elegida en verde', de: '    .tabs-cc__opcion--activa {\n      background: var(--color-acento);', a: '    .tabs-cc__opcion--activa {\n      background: var(--verde);' },
       { nombre: 'Hoy / En el mes en turquesa', de: '    .segmented-rango__opcion--activa {\n      background: var(--color-acento);', a: '    .segmented-rango__opcion--activa {\n      background: #3FBFAE;' },
@@ -65,7 +63,7 @@ correrMutacionesEnVarios([
       // ── El cheque endosado ───────────────────────────────────────────────────
       { nombre: 'cualquier medio de pago cuenta como cheque', de: "      if (!gasto || gasto.medio_pago !== 'cheque') return null", a: '      if (!gasto) return null' },
       { nombre: 'el número de cualquier largo', de: '/^Cheque endosado (\\d{3})-(\\d{8})(?!\\d)/', a: '/^Cheque endosado (\\d+)-(\\d+)/' },
-      { nombre: 'la etiqueta es la descripción entera', de: '      return m ? `Cheque endosado ${m[1]}-${m[2]}` : null', a: '      return m ? String(gasto.descripcion) : null' },
+      { nombre: 'la etiqueta es la descripción entera', de: '      if (m) return `Cheque endosado ${m[1]}-${m[2]}`', a: '      if (m) return String(gasto.descripcion)' },
       { nombre: 'sin tandas', de: '    const TANDA_GASTOS_PAGO = 200', a: '    const TANDA_GASTOS_PAGO = 1000' },
       { nombre: 'si falla la lectura, se cae', de: "        if (error) { console.error('No se pudieron leer los pagos (cheques endosados):', error); return mapa }", a: '        if (error) throw error' },
       { nombre: 'una factura toma la etiqueta del cheque', de: "      return (m?.tipo === 'pago' && etiquetas?.get(m.gasto_id)) || m?.referencia || ''", a: "      return etiquetas?.get(m?.gasto_id) || m?.referencia || ''" },
@@ -86,7 +84,7 @@ correrMutacionesEnVarios([
     variable: 'ARCHIVO_MODULOS_JS',
     funciones: [],
     manuales: [
-      { nombre: 'el catálogo vuelve al nombre viejo', de: "    nombre: 'Cuentas corrientes · Proveedores',", a: "    nombre: 'Cuentas corrientes'," },
+      { nombre: 'el catálogo vuelve al nombre de antes', de: "    nombre: 'Cuentas corrientes',", a: "    nombre: 'Cuentas corrientes · Proveedores'," },
     ],
   },
 ])
