@@ -71,6 +71,9 @@ const PRELUDIO = FUENTE_FABRICA + `
   var viaVehiculos = false, unidadSeleccionada = null
   var MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo' }
   function crearMultiselect(o) { __multiselects[o.idBase] = o }
+  // El control de período (js/periodo.js) se prueba aparte, en un navegador.
+  function crearPeriodo() { return null }
+  function ubicarPanel() {}
   function generarOpcionesPeriodo() { return [] }
   function etiquetaResponsive(a) { return a }
   function aplicarBusquedaLocal() {}

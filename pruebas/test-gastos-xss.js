@@ -148,6 +148,9 @@ const PRELUDIO = `
     location: { get href() { return location.href }, set href(v) { __navegacion.push(['href', v]) }, origin: 'https://x.test' },
   }
   var lucide = { createIcons(){} }
+  // El control de período (js/periodo.js) se prueba aparte, en un navegador.
+  function crearPeriodo() { return null }
+  function ubicarPanel() {}
   var URL = globalThis.URL
   URL.createObjectURL = () => 'blob:https://x.test/0000'
   var __llamadas = { errores: [], exitos: [] }

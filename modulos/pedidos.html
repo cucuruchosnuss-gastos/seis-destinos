@@ -501,6 +501,7 @@
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
+    import { crearPeriodo } from '../js/periodo.js'
     import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -2294,6 +2295,9 @@
       })
       document.getElementById('pe-filtro-desde').addEventListener('change', () => cambiarFechasFiltro())
       document.getElementById('pe-filtro-hasta').addEventListener('change', () => cambiarFechasFiltro())
+      // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+      // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+      crearPeriodo({ desde: document.getElementById('pe-filtro-desde'), hasta: document.getElementById('pe-filtro-hasta') })
       document.getElementById('pe-filtro-sin-id').addEventListener('change', (e) => cambiarSinIdentificar(e.target.checked))
       document.getElementById('pe-lista').addEventListener('click', (e) => {
         const b = e.target.closest('[data-pedido]')
