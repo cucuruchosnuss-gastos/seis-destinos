@@ -47,11 +47,12 @@ export const MODULOS = [
   },
   {
     clave: 'cuentas-corrientes',
-    // "· Proveedores" (29/09/2026): el módulo es SOLO de proveedores; las
-    // cuentas de los clientes están en Administración → Clientes.
-    nombre: 'Cuentas corrientes · Proveedores',
+    // Desde el 05/10/2026 el módulo tiene DOS pestañas: Proveedores y
+    // Clientes (la misma pantalla de Administración → Clientes, adentro).
+    // Entre el 29/09 y el 05/10 se llamó "Cuentas corrientes · Proveedores".
+    nombre: 'Cuentas corrientes',
     icono: 'landmark',
-    descripcion: 'Cuentas corrientes de proveedores',
+    descripcion: 'Cuentas corrientes de proveedores y clientes',
     url: 'modulos/cuentas-corrientes.html',
     proximamente: false,
     color: 'turquesa'

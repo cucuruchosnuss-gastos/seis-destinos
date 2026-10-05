@@ -516,7 +516,11 @@ if (SOLO !== 'render') {
     if (dentroDeAtributo) {
       const nombreAttr = (tramo.match(/([\w-]+)\s*=\s*"[^"]*$/) || [])[1] || ''
       if (/^on/i.test(nombreAttr)) enEvento.push(`${x.linea} (${nombreAttr})`)
-      if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr)) enUrl.push(`${x.linea} (${nombreAttr})`)
+      // La ÚNICA URL armada con un dato (05/10/2026): "Ver el pago", a una
+      // página fija de este sitio, con el id del gasto por
+      // encodeURIComponent y el atributo entre comillas DOBLES.
+      const linkPago = /^href$/i.test(nombreAttr) && /href="cuentas-corrientes\.html\?pago=$/.test(tramo) && /^encodeURIComponent\([\w.]+\)$/.test(String(x.expr).trim())
+      if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr) && !linkPago) enUrl.push(`${x.linea} (${nombreAttr})`)
     }
   }
   chk('estático: ninguna interpolación cae en un atributo SIN comillas', sinComillas.length === 0, sinComillas.join(', '))

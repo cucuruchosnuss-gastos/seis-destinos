@@ -101,7 +101,7 @@ const FUNCIONES = [
   'saldosFichaVisibles', 'creditosFichaDeUnidad', 'renderizarFichaBanner', 'cargarFichaMovimientos', 'renderizarFichaMovimientos',
   'cargarHistorial', 'armarHistorial', 'renderizarListaHistorial', 'exportarExcelHistorial', 'abrirModalDetallePago',
   // lo nuevo
-  'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento', 'renderizarLinkClientes',
+  'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
@@ -149,27 +149,18 @@ function abrirFicha(S) {
 
 async function main() {
   // ══ 1. EL NOMBRE ═══════════════════════════════════════════════════════════
-  chk('la pestaña se llama "Cuentas corrientes · Proveedores"', /<title>Cuentas corrientes · Proveedores — Seis Destinos<\/title>/.test(FUENTE))
-  chk('la cabecera dice "Cuentas corrientes · Proveedores"', /<span class="cc-header__titulo">Cuentas corrientes · Proveedores<\/span>/.test(FUENTE))
+  // Desde el 05/10/2026 el módulo tiene DOS pestañas de primer nivel
+  // (Proveedores y Clientes) y vuelve a llamarse "Cuentas corrientes". Lo de
+  // las pestañas lo fija test-cuentas-corrientes-cheques-pago.js.
+  chk('la pestaña se llama "Cuentas corrientes"', /<title>Cuentas corrientes — Seis Destinos<\/title>/.test(FUENTE))
+  chk('la cabecera dice "Cuentas corrientes"', /<span class="cc-header__titulo">Cuentas corrientes<\/span>/.test(FUENTE))
   chk('el catálogo (barra lateral, tablero, accesos directos) dice el nombre nuevo',
-    /clave: 'cuentas-corrientes',[\s\S]{0,300}?nombre: 'Cuentas corrientes · Proveedores'/.test(FUENTE_MODULOS))
-  chk('y su descripción sigue diciendo que es de proveedores', /descripcion: 'Cuentas corrientes de proveedores'/.test(FUENTE_MODULOS))
-  chk('el link a las cuentas de clientes lleva a Administración y nace escondido',
-    /<p class="cc-link-clientes" id="cc-link-clientes" hidden>[^<]*<a href="administracion\.html">Administración → Clientes<\/a>/.test(FUENTE))
-  {
-    const S = sandbox()
-    S.renderizarLinkClientes()
-    chk('sin retiros:ver, el link a las cuentas de clientes no se ve', S.__els.get('cc-link-clientes').hidden === true)
-    S.estado.misTareas.add('retiros:ver')
-    S.renderizarLinkClientes()
-    chk('con retiros:ver, se ve', S.__els.get('cc-link-clientes').hidden === false)
-    const T = sandbox()
-    T.estado.miRolApp = 'super_admin'
-    T.renderizarLinkClientes()
-    chk('un super_admin lo ve (bypass)', T.__els.get('cc-link-clientes').hidden === false)
-  }
-  chk('las tareas que se leen incluyen retiros (para el link)', /\.in\('modulo', \['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros'\]\)/.test(FUENTE))
-  chk('el link se pinta al leer las tareas', /estado\.misTareas = new Set\(\(tareas \?\? \[\]\)\.map\(t => `\$\{t\.modulo\}:\$\{t\.tarea\}`\)\)\n\s+renderizarLinkClientes\(\)/.test(FUENTE))
+    /clave: 'cuentas-corrientes',[\s\S]{0,400}?nombre: 'Cuentas corrientes',/.test(FUENTE_MODULOS))
+  chk('y su descripción dice proveedores y clientes', /descripcion: 'Cuentas corrientes de proveedores y clientes'/.test(FUENTE_MODULOS))
+  chk('el link viejo a Administración → Clientes ya no está (lo reemplaza la pestaña)', !/id="cc-link-clientes"/.test(FUENTE))
+  chk('las tareas que se leen incluyen retiros (la pestaña Clientes) y cobranzas (la cartera)',
+    /\.in\('modulo', \['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas'\]\)/.test(FUENTE))
+  chk('las pestañas se pintan al leer las tareas', /estado\.misTareas = new Set\(\(tareas \?\? \[\]\)\.map\(t => `\$\{t\.modulo\}:\$\{t\.tarea\}`\)\)\n\s+renderizarPrimerNivel\(\)/.test(FUENTE))
 
   // ══ 2. LOS COLORES ═════════════════════════════════════════════════════════
   chk('no queda ningún turquesa en el CSS ni en el HTML', !/var\(--turquesa|--turquesa\s*:/.test(FUENTE.replace(/\/\*[\s\S]*?\*\//g, '')))

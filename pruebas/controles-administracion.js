@@ -97,7 +97,12 @@ try {
 
   const refs = referenciasDelJs(A.referencias)
   chk('el JS apunta a algún id (si da cero, no se están leyendo las referencias)', refs.length > 0)
+  // Referencias cuyo destino NO está escrito en el HTML a propósito, con su motivo.
+  const SIN_DESTINO_EN_HTML = {
+    'data-embebido': 'lo pone en <html> el <script> del <head> al abrir la página embebida en Cuentas corrientes → Clientes (05/10/2026)',
+  }
   for (const r of refs) {
+    if (SIN_DESTINO_EN_HTML[r.valor]) { chk(`${r.valor}: lo escribe el <head>`, A.referencias !== undefined && /dataset\.embebido = 'cc'/.test(fs.readFileSync(ARCHIVO, 'utf8'))); continue }
     const existe = r.tipo === 'id' ? A.ids.has(r.valor) : A.datas.has(r.valor)
     chk(`el JS apunta a ${r.tipo === 'id' ? '#' : ''}${r.valor} y existe`, existe, `referencia sin destino: ${r.como}`)
   }
