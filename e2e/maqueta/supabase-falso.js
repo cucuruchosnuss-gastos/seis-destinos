@@ -14,6 +14,11 @@ const DATOS = nombre
   : { tablas: {}, rpc: {} }
 if (!nombre) console.warn('[maqueta] sin datos: abrí la primera página con ?maqueta=<nombre>')
 
+// LAS TABLAS A MANO (02/10/2026): una prueba puede cambiar una tabla con la
+// página ya abierta —globalThis.__maquetaTablas.<tabla> = [...]— para mirar
+// cómo una pantalla que se refresca sola ve un dato que cambió en la base.
+globalThis.__maquetaTablas = DATOS.tablas ??= {}
+
 // CAMBIOS PUNTUALES (28/09/2026, comparar con el diseño): para dibujar un estado
 // que los datos fijos no tienen (un PIN incorrecto, una fábrica sin máquinas
 // abiertas) una prueba deja en sessionStorage 'maqueta.cambios' un
