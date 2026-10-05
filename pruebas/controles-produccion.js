@@ -243,6 +243,36 @@ const RETIRADOS = [
     'deslizando la pantalla hacia abajo (el bloqueo del zoom sigue). Un producto o una parada a medio cargar se guardan al recargar.'],
   ['control:button#pr-recargar-si[type=button]', 'Sin "Recargar" (01/10/2026): era el "Sí, recargar" de su pregunta.'],
   ['control:button#pr-recargar-no[type=button]', 'Sin "Recargar" (01/10/2026): era el "No, seguir" de su pregunta.'],
+  // Paró y Terminó de producir (05/10/2026, pedido de Facu): las paradas eran
+  // confusas, con varios botones que hacían lo mismo. Quedan TRES acciones:
+  // "Empezó a producir", "Paró" (un solo formulario: motivo, DESDE y HASTA o
+  // "Todavía está parada") y "Terminó de producir" (la hora con el teclado,
+  // sin el ± 5). Las horas se escriben en la ventana de la hora (#pr-hora-ventana).
+  ['control:button#pr-btn-parada[type=button]',
+    'Paró (05/10/2026): "Paró ahora" se fue; una parada que sigue se anota en el mismo formulario con DESDE y ' +
+    '"Todavía está parada" (data-parada-sigue), y se termina con "Volvió a las…" (#pr-btn-reanudar).'],
+  ['control:button[data-rueda-set][type=button]',
+    'Paró (05/10/2026): el reloj de ruedas se fue; DESDE y HASTA son dos botones (data-parada-hora) que abren la ventana ' +
+    'de la hora con el teclado de la planta.'],
+  ['control:button[data-duracion][type=button]',
+    'Paró (05/10/2026): "¿Cuánto duró?" se fue; la parada se carga con DESDE y HASTA.'],
+  ['control:button[data-limpieza][data-motivo][type=button]',
+    'Paró (05/10/2026): la limpieza "Al arrancar / Al terminar" se fue (registrar_limpieza_planchas ya no se usa); ' +
+    'las tres limpiezas son motivos más del grupo Limpiezas (data-motivo).'],
+  ['control:button',
+    'Paró (05/10/2026): eran las dos menciones de "<button " en el reemplazo que deshabilitaba "Todavía no volvió" ' +
+    'de las duraciones; ahora "Todavía está parada" es su propio botón (data-parada-sigue).'],
+  ['control:button#pr-cierre-ahora[type=button]',
+    'Terminó de producir (05/10/2026): "Ahora" del cierre pasó a la ventana de la hora (data-hv-ahora).'],
+  ['control:button#pr-cierre-rota[type=button]',
+    'Terminó de producir (05/10/2026): "La máquina se rompió y no volvió" se fue; si terminó de producir más de 20 ' +
+    'minutos antes del fin del turno, se pregunta "¿Por qué paró antes?" con los motivos (data-cierre-motivo).'],
+  ['control:button[data-hora-paso][type=button]',
+    'Terminó de producir (05/10/2026): el ± 5 minutos de la hora del cierre se fue (pedido de Facu: "no sirve"); la hora ' +
+    'se escribe con el teclado de la ventana de la hora.'],
+  ['control:input#pr-cierre-hora[type=text]',
+    'Terminó de producir (05/10/2026): la hora del cierre ya no es un campo de texto sino un botón con el MISMO id ' +
+    '(#pr-cierre-hora) que abre la ventana de la hora: "¿A qué hora terminó de producir?".'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

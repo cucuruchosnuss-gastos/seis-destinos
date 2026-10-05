@@ -177,16 +177,16 @@ esperas.push((async () => {
   const PC = { ...DIA, estado: 'pendiente_completar', forzado_en: '2026-09-25T18:40:00Z' }   // forzada a las 15:40
   const Q = armar()
   const abiertaPc = { id: 'p-pc', inicio: '2026-09-25T16:00:00Z', fin: null, motivo: 'Se rompió el quemador' }
-  // SIN parada en curso: si no, "Paró ahora" se escondería por la en curso y
-  // no por el estado de la planilla.
-  Q.estado.planilla = { turno: PC, paradas: [] }
-  // Planta v2: el botón lo pinta pintarParadas (la sección Paradas).
+  // SIN parada en curso: si no, "Todavía está parada" se apagaría por la en
+  // curso y no por el estado de la planilla. (05/10/2026: "Paró ahora" se
+  // fue; una parada que sigue se anota con "Todavía está parada".)
+  const sigueApagada = (S) => /data-parada-sigue="1" aria-pressed="false" disabled>/.test(S.__doc.getElementById('pr-parada-hora').innerHTML)
   Q.estado.planilla = { turno: { ...PC, estado: 'abierto' }, paradas: [] }
   Q.pintarParadas()
-  chk('abierta y sin parada en curso: "Paró ahora" está', Q.__doc.getElementById('pr-btn-parada').hidden === false)
+  chk('abierta y sin parada en curso: "Todavía está parada" se puede marcar', !sigueApagada(Q), Q.__doc.getElementById('pr-parada-hora').innerHTML)
   Q.estado.planilla = { turno: PC, paradas: [] }
   Q.pintarParadas()
-  chk('pendiente de completar: "Paró ahora" no aparece (iniciar_parada solo vale abierta)', Q.__doc.getElementById('pr-btn-parada').hidden === true)
+  chk('pendiente de completar: "Todavía está parada" apagada (la máquina ya no está en marcha)', sigueApagada(Q))
   Q.estado.planilla = { turno: PC, paradas: [abiertaPc] }
   chk('… "Anotar una parada" sí', Q.__doc.getElementById('pr-btn-anotar-parada').hidden === false)
   Q.abrirEditorDesdePlanilla('anotar')
@@ -203,8 +203,8 @@ esperas.push((async () => {
   chk('… y manda p_motivo null', JSON.stringify(llamadas(Q, 'borrar_parada')[0]) === '{"p_parada_id":"p-pc","p_motivo":null}')
   const QA = armar()
   QA.estado.planilla = { turno: DIA, paradas: [] }
-  QA.pintarBotonesPlanilla()
-  chk('abierta y sin parada en curso: "Paró ahora" a la vista', QA.__doc.getElementById('pr-btn-parada').hidden === false)
+  QA.pintarParadas()
+  chk('abierta y sin parada en curso: "Todavía está parada" a mano', !sigueApagada(QA))
 
   // Sin motivo no se manda.
   const SM = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
@@ -299,7 +299,7 @@ esperas.push((async () => {
   chk('con las dos en la unidad: corregir y borrar', JSON.stringify(conDos.accionesParadaHistorial(CERRADO)) === '{"editar":true,"borrar":true}')
   chk('configurar en OTRA unidad no alcanza', JSON.stringify(armarG({ tareas: [['cargar', { todas: true }], ['configurar', { unidades: ['u-dp'] }]] }).accionesParadaHistorial(CERRADO)) === '{"editar":false,"borrar":false}')
   chk('en el historial, una planilla abierta no se toca (se maneja desde la planilla)', JSON.stringify(conDos.accionesParadaHistorial(DIA)) === '{"editar":false,"borrar":false}')
-  chk('el detalle usa esos permisos', /htmlParadas\(d\.paradas, accionesParadaHistorial\(t\)\)/.test(FUENTE_G) &&
+  chk('el detalle usa esos permisos', /htmlParadas\(d\.paradas, accionesParadaHistorial\(t\), finTurnoAbierto\(d\)\)/.test(FUENTE_G) &&
     /accionesParadaHistorial\(t\)\.editar \? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada<\/button>'/.test(FUENTE_G))
   chk('una cerrada no ofrece "Todavía no volvió"', !/data-hora-sigue/.test((() => { conDos.estado.detalleHistorial = { turno: CERRADO, paradas: [] }; conDos.abrirEditorDesdeHistorial('anotar'); return conDos.__doc.getElementById('pr-parada-editor-horas').innerHTML })()))
 
@@ -348,7 +348,9 @@ esperas.push((async () => {
 
 // ── Lo que queda escrito ──────────────────────────────────────────────────
 {
-  chk('"Paró ahora" sigue con iniciar_parada', /id="pr-btn-parada"[^>]*>Paró ahora</.test(FUENTE) && /supabase\.rpc\('iniciar_parada'/.test(FUENTE))
+  // 05/10/2026: "Paró ahora" (iniciar_parada) se fue: la que sigue se anota
+  // con "Todavía está parada" (registrar_parada con p_fin null).
+  chk('"Paró ahora" se fue y iniciar_parada ya no se usa', !/id="pr-btn-parada"/.test(FUENTE) && !/supabase\.rpc\('iniciar_parada'/.test(FUENTE))
   // Paradas (30/09/2026): anotar una que ya pasó es la pantalla de Paradas
   // misma (motivo, a qué hora paró, cuánto duró): "Guardar la parada".
   chk('"Anotar una parada" en la planilla', /id="pr-btn-guardar-parada">Guardar la parada</.test(FUENTE))

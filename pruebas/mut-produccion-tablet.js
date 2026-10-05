@@ -31,7 +31,7 @@ correrMutacionesProduccion({
     { nombre: 'sin máquina las secciones siguen prendidas', de: '        const off = (sec.deMaquina && !hay) ||', a: '        const off = (false) ||' },
     { nombre: 'con máquina las secciones se apagan', de: '        const off = (sec.deMaquina && !hay) ||', a: '        const off = (sec.deMaquina) ||' },
     { nombre: 'el nombre de la máquina no se lee', de: "        maquinaNombre = maq?.nombre ?? null\n", a: '' },
-    { nombre: 'sin nombre en la base no usa el del tablero', de: '{ const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre } }', a: "{ const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? 'Máquina' } }" },
+    { nombre: 'sin nombre en la base no usa el del tablero', de: '        estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre }', a: "        estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? 'Máquina' }" },
     // 3. tiempo real
     { nombre: 'turnos sin filtro de fábrica', de: "const f = [{ tabla: 'turnos_produccion', filtro: `unidad_negocio_id=eq.${unidadId}` }]", a: "const f = [{ tabla: 'turnos_produccion', filtro: undefined }]" },
     { nombre: 'masas sin filtro de turnos', de: "f.push({ tabla, filtro: `turno_id=in.(${lista.join(',')})` })", a: 'f.push({ tabla, filtro: undefined })' },

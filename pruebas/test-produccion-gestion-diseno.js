@@ -370,7 +370,7 @@ esperas.push((async () => {
   const S = await detalle([['ver', { todas: true }], ['configurar', { todas: true }]])
   let h = cuerpoHist(S)
   chk('la cabecera: el lote grande, la máquina y el turno', /<span class="pr-dato__rotulo">Lote<\/span><span class="pr-lote">7023<\/span>/.test(h) && /<strong>Máquina 1<\/strong> · turno Mañana/.test(h))
-  chk('… el horario con el día, de abrió a cerró, y cuándo se apagó el fuego', /Jueves 24\/09 · 06:02 a 14:10 · fuego apagado 13:55/.test(h), h.slice(0, 700))
+  chk('… el horario con el día, de abrió a cerró, y cuándo terminó de producir', /Jueves 24\/09 · 06:02 a 14:10 · terminó de producir 13:55/.test(h), h.slice(0, 700))
   chk('… el encargado y el estado', /Encargado<\/span> <strong>Agustín Barrera<\/strong>/.test(h) && /pr-of-chip--cerrado">Cerrado/.test(h))
   chk('en la grilla: Operarios, Masas (con su número) y Paradas y scrap', /<div class="pg-turno__grilla"><section class="pg-caja"><h2 class="pr-subtitulo">Operarios<\/h2>/.test(h) &&
     /<h2 class="pr-subtitulo">Masas <span class="pg-caja__ctx">0<\/span><\/h2>/.test(h) && /<h2 class="pr-subtitulo">Paradas y scrap<\/h2>/.test(h))

@@ -260,7 +260,8 @@ esperas.push((async () => {
   // Planta v2: las paradas en bordó con los tokens nuevos (--p-mal). Desde el
   // 30/09/2026 "Paró ahora" es el botón SECUNDARIO (borde bordó) y el
   // principal es "Guardar la parada" (anotar una que ya pasó).
-  chk('14. "Paró ahora" en bordó', /class="pr-pa-ahora" id="pr-btn-parada"/.test(FUENTE) && /\.pr-pa-ahora \{[^}]*border: 1\.5px solid var\(--p-mal\);[^}]*color: var\(--p-mal\);/.test(FUENTE))
+  // 05/10/2026: "Paró ahora" se fue; "Todavía está parada", marcada, va en bordó.
+  chk('14. "Todavía está parada" marcada en bordó', /class="pr-pa-casilla pr-pa-casilla--sigue" data-parada-sigue="1"/.test(FUENTE) && /\.pr-pa-casilla--sigue\[aria-pressed="true"\] \{[^}]*border-color: var\(--p-mal\);/.test(FUENTE))
   chk('14. la tarjeta de paradas en bordó', /\.pr-parada-activa \{ background: var\(--p-mal\); color: #fff;/.test(FUENTE) &&
     /\.pr-parada-item--curso \{ background: var\(--p-mal-suave\);/.test(FUENTE))
 

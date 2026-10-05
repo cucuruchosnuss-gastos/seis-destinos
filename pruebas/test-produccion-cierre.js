@@ -10,7 +10,9 @@
 //    anular_produccion_item(p_item_id, p_motivo): motivo de 3 caracteres o
 //    más. Anular NO borra la fila: le pone `anulado`.
 //  - cerrar_turno(p_turno_id, p_hora_apagado, p_scrap_kg, p_observaciones,
-//    p_productos) → { lote, sublotes }. PRIMERO cierra la parada que quedó
+//    p_productos, p_hora_fin, p_motivo_cierre) → { lote, sublotes,
+//    cierre_anticipado } (05/10/2026: p_hora_apagado es "terminó de
+//    producir"; el cierre anticipado lo prueba test-produccion-paradas-simple.js). PRIMERO cierra la parada que quedó
 //    abierta con hasta_fin_de_turno = true y recién después valida hora y
 //    scrap: cerrar con una parada en curso SE PUEDE. p_productos puede ir
 //    vacío, y los sublotes que agregue continúan la numeración.
@@ -126,12 +128,11 @@ esperas.push((async () => {
   chk('sin masas todavía, se dice', /todavía ninguna/.test(S.htmlMasasResumen([])) && /Las carga el masero/.test(S.htmlMasasResumen([])))
   chk('con una sola masa dice "común", no "todas comunes"', /pr-res__sub">común</.test(S.htmlMasasResumen([MASAS[0]])))
 
-  chk('paradas: la terminada con su rango y su duración',
-    /<span class="pr-parada-item__horas">08:00 – 08:35<\/span><span class="pr-parada-item__dur">35 min<\/span>/.test(html(S, 'pr-planilla-paradas')) &&
-    /pr-parada-item__motivo">Cambio de molde</.test(html(S, 'pr-planilla-paradas')), html(S, 'pr-planilla-paradas'))
-  chk('… y en el resumen de arriba, cuántas y la última', /PARADAS<\/span>[\s\S]*pr-res__num">1</.test(html(S, 'pr-planilla-paradas-resumen')) &&
-    /Última 08:00 · cambio de molde/.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
-  chk('sin parada en curso: "Paró ahora" a la vista', S.__doc.getElementById('pr-btn-parada').hidden === false)
+  // 05/10/2026: cada parada se ve "08:00 a 08:35 · 35 min · Cambio de molde".
+  chk('paradas: la terminada con su rango, su duración y el motivo',
+    /<span class="pr-parada-item__horas">08:00 a 08:35 · 35 min · <span class="pr-parada-item__que">Cambio de molde<\/span><\/span>/.test(html(S, 'pr-planilla-paradas')), html(S, 'pr-planilla-paradas'))
+  chk('… y en la acción "Paró" de arriba, cuántas y cuánto tiempo', /PARÓ<\/span><span class="pr-acc__dato">1 parada · 35 min</.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
+  chk('sin parada en curso: "Todavía está parada" se puede marcar', /data-parada-sigue="1" aria-pressed="false">/.test(html(S, 'pr-parada-hora')), html(S, 'pr-parada-hora'))
   chk('… y ninguna franja', S.__doc.getElementById('pr-parada-activa').hidden === true)
   // Planta v2: a "Cerrar planilla" se llega por la barra lateral.
   chk('… y "Cerrar planilla" se puede tocar', /data-seccion="cierre"(?![^>]*disabled)[^>]*>/.test(S.htmlLatSecciones()), S.htmlLatSecciones())
@@ -157,9 +158,9 @@ esperas.push((async () => {
     S.__doc.getElementById('pr-parada-activa-motivo').textContent === 'pulpo' &&
     /^ · hace \d/.test(S.__doc.getElementById('pr-parada-activa-hace').textContent), S.__doc.getElementById('pr-parada-activa-hace').textContent)
   chk('… y por qué paró', /<span class="pr-pa-paso__n">1<\/span>¿Por qué paró\?/.test(FUENTE) &&
-    /En curso desde 10:32 · pulpo/.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
-  chk('… con "Volvió a andar"', /id="pr-btn-reanudar"[^>]*>Volvió a andar</.test(FUENTE) && S.__doc.getElementById('pr-btn-reanudar').hidden === false)
-  chk('… "Paró ahora" desaparece (la base rechaza una segunda)', S.__doc.getElementById('pr-btn-parada').hidden === true)
+    /PARADA desde las 10:32<\/span><span class="pr-acc__sub">pulpo/.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
+  chk('… con "Volvió a las…"', /id="pr-btn-reanudar"[^>]*>Volvió a las…</.test(FUENTE) && S.__doc.getElementById('pr-btn-reanudar').hidden === false)
+  chk('… "Todavía está parada" se apaga (la base rechaza una segunda)', /data-parada-sigue="1" aria-pressed="false" disabled>/.test(html(S, 'pr-parada-hora')), html(S, 'pr-parada-hora'))
   // LO QUE CAMBIÓ: cerrar_turno cierra sola la parada abierta y la marca como
   // que la máquina no volvió. Antes la pantalla lo bloqueaba.
   chk('… pero "Cerrar planilla" SIGUE pudiendo tocarse', /data-seccion="cierre"(?![^>]*disabled)[^>]*>/.test(S.htmlLatSecciones()))
@@ -170,13 +171,13 @@ esperas.push((async () => {
       { id: 'a', inicio: '2026-09-22T14:00:00Z', fin: '2026-09-22T14:20:00Z', motivo: 'vieja' },
       { id: 'b', inicio: '2026-09-22T13:00:00Z', fin: null, motivo: 'ahora' },
     ])
-    return h.indexOf('ahora') < h.indexOf('vieja') && /pr-parada-item--curso" data-parada-editar="b"/.test(h) && /10:00 – ahora/.test(h) &&
+    return h.indexOf('ahora') < h.indexOf('vieja') && /pr-parada-item--curso" data-parada-editar="b"/.test(h) && /10:00 · sigue parada/.test(h) &&
       /\.pr-parada-item--curso \{ background: var\(--p-mal-suave\);/.test(FUENTE)
   })())
 
   await S.mostrarCierre()
   chk('el cierre SE ABRE con una parada en curso', S.__doc.getElementById('pr-cierre').hidden === false)
-  S.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  S.estado.cierre.hora = '14:05'
   S.ponerNumero(S.__doc.getElementById('pr-cierre-scrap'), 0)
   S.cambioEnCierre()
   S.intentarCerrar()
@@ -571,7 +572,10 @@ esperas.push((async () => {
   const S = armar()
   await S.abrirPlanilla('t1')
   await S.mostrarCierre()
-  chk('el cierre abre con la hora de ahora', /^\d{2}:\d{2}$/.test(S.estado.cierre.hora))
+  // 05/10/2026: la hora en que terminó de producir se PREGUNTA (sin ± 5 ni
+  // una hora puesta de antemano).
+  chk('el cierre abre SIN hora: se pregunta', S.estado.cierre.hora === '' &&
+    S.__doc.getElementById('pr-cierre-hora').textContent === 'Tocá para poner la hora', S.estado.cierre.hora)
   chk('sin borrador no dice que se recuperó', S.__doc.getElementById('pr-cierre-borrador').hidden === true)
   // Planta v2: el resumen son celdas (número grande, rótulo y detalle).
   const celda = (rot) => (html(S, 'pr-cierre-resumen').match(new RegExp(`<span class="pr-resumen__num">([^<]*)</span><span class="pr-resumen__textos"><span class="pr-resumen__rotulo">${rot}</span><span class="pr-resumen__sub">([^<]*)</span>`)) || []).slice(1).join('|')
@@ -581,7 +585,7 @@ esperas.push((async () => {
     celda('MASAS') === '2|0 de chocolate' && /^0\|(ninguna|0 min)$/.test(celda('PARADAS')) && celda('CAJAS') === '55|25.000 unidades' &&
     celda('SUBLOTES') === '2|7023-1 a 7023-2' && celda('OPERARIOS') === '2|Federico, Ramón', html(S, 'pr-cierre-resumen'))
   chk('… el scrap sin cargar dice "—", nunca un 0 inventado', celda('SCRAP') === '—|sin promedio', celda('SCRAP'))
-  chk('… y el título dice desde cuándo', /^RESUMEN DEL TURNO · 06:02 A \d{2}:\d{2}$/.test(S.__doc.getElementById('pr-cierre-resumen-titulo').textContent),
+  chk('… y el título dice desde cuándo', /^RESUMEN DEL TURNO · 06:02 A —$/.test(S.__doc.getElementById('pr-cierre-resumen-titulo').textContent),
     S.__doc.getElementById('pr-cierre-resumen-titulo').textContent)
 
   // Nada se marca hasta que se intenta: señalar en rojo un formulario que
@@ -591,6 +595,7 @@ esperas.push((async () => {
     S.__doc.getElementById('pr-cierre-error').hidden === true)
 
   // Lo que falta: el error PEGADO al botón, y el campo marcado.
+  S.estado.cierre.hora = '14:05'
   S.intentarCerrar()
   await tic()
   chk('sin scrap no se manda', rpcs(S, 'cerrar_turno').length === 0)
@@ -611,35 +616,15 @@ esperas.push((async () => {
   chk('… sin hora, falta', S.faltanParaCerrar({ hora: '', scrap: 0, obs: '', rota: false })[0].campo === 'hora')
   chk('… una hora imposible no es una hora', S.faltanParaCerrar({ hora: '25:00', scrap: 0, obs: '', rota: false }).length === 1)
 
-  // "Se rompió y no volvió".
-  S.alternarRota()
-  chk('la casilla cambia la etiqueta de la hora',
-    S.__doc.getElementById('pr-cierre-hora-rotulo').textContent === 'SE ROMPIÓ A LAS')
-  chk('… y hace obligatorio contar qué pasó',
-    /obligatorio/.test(html(S, 'pr-cierre-obs-rotulo')) &&
-    S.faltanParaCerrar({ hora: '14:05', scrap: 0, obs: '', rota: true })[0].campo === 'obs')
-  chk('… la casilla queda marcada', S.__doc.getElementById('pr-cierre-rota').getAttribute('aria-pressed') === 'true')
-  S.intentarCerrar()
-  await tic()
-  chk('… sin contar qué pasó no se manda, con el campo marcado',
-    rpcs(S, 'cerrar_turno').length === 0 && /pr-campo--mal/.test(S.__doc.getElementById('pr-cierre-campo-obs').className) &&
-    S.__doc.getElementById('pr-cierre-obs-nota').hidden === false)
-  S.alternarRota()
-  chk('sin marcar, las observaciones vuelven a ser opcionales',
-    S.faltanParaCerrar({ hora: '14:05', scrap: 0, obs: '', rota: false }).length === 0 &&
-    S.__doc.getElementById('pr-cierre-obs-rotulo').innerHTML === 'OBSERVACIONES' &&
-    S.__doc.getElementById('pr-cierre-hora-rotulo').textContent === 'SE APAGÓ EL FUEGO A LAS')
-
-  // La hora, de a 5 minutos.
+  // 05/10/2026: "La máquina se rompió y no volvió" y el ± 5 de la hora se
+  // fueron: si terminó antes, se pregunta "¿Por qué paró antes?".
+  chk('sin "La máquina se rompió" ni ± 5 en el cierre', !/pr-cierre-rota/.test(FUENTE) && !/data-hora-paso="5"/.test(FUENTE) && !/pr-cierre-ahora/.test(FUENTE))
   chk('la hora se normaliza', S.normalizarHora('9:05') === '09:05' && S.normalizarHora('  14:5 ') === '' && S.normalizarHora('24:00') === '')
-  chk('de a 5 minutos', S.horaConPaso('11:40', 5) === '11:45' && S.horaConPaso('11:40', -5) === '11:35')
+  chk('de a 5 minutos (el editor de paradas)', S.horaConPaso('11:40', 5) === '11:45' && S.horaConPaso('11:40', -5) === '11:35')
   chk('… dando la vuelta en medianoche', S.horaConPaso('23:58', 5) === '00:03' && S.horaConPaso('00:02', -5) === '23:57')
   chk('… y con una hora ilegible no inventa nada', S.horaConPaso('basura', 5) === '')
-  S.__doc.getElementById('pr-cierre-hora').value = '11:40'
-  S.cambiarHoraCierre(5)
-  chk('el botón + mueve la hora del campo', S.__doc.getElementById('pr-cierre-hora').value === '11:45')
-  chk('… y los botones de la pantalla mueven DE A 5 MINUTOS',
-    /data-hora-paso="5"/.test(FUENTE) && /data-hora-paso="-5"/.test(FUENTE))
+  S.ponerHoraCierre('11:40')
+  chk('la hora de la ventana queda en el cierre y en el botón', S.estado.cierre.hora === '11:40' && S.__doc.getElementById('pr-cierre-hora').textContent === '11:40')
   S.cambiarScrapCierre(1)
   chk('el botón + del scrap suma un kilo', S.leerCampoNumero(S.__doc.getElementById('pr-cierre-scrap')) === 1)
   S.cambiarScrapCierre(-5)
@@ -652,6 +637,8 @@ esperas.push((async () => {
   chk('… observaciones vacías viajan en null', S.parametrosCerrarTurno('t1', { hora: '09:05', scrap: 0, obs: '   ' }).p_observaciones === null)
   // Lo producido ya está cargado sublote por sublote: el cierre no manda nada.
   chk('… y p_productos va VACÍO', Array.isArray(p.p_productos) && p.p_productos.length === 0)
+  // TODOS los parámetros de cerrar_turno, siempre (05/10/2026).
+  chk('… con p_hora_fin en null y p_motivo_cierre en null si no paró antes', 'p_hora_fin' in p && p.p_hora_fin === null && 'p_motivo_cierre' in p && p.p_motivo_cierre === null, JSON.stringify(p))
 })())
 
 // ── El borrador del cierre sobrevive a recargar la tablet ────────────────
@@ -662,10 +649,10 @@ esperas.push((async () => {
   S.ponerNumero(S.__doc.getElementById('pr-cierre-scrap'), 2.5)
   S.__doc.getElementById('pr-cierre-obs').value = 'Se trabó la cinta'
   S.cambioEnCierre()
-  S.alternarRota()
+  S.ponerHoraCierre('13:40')
   chk('cada cambio ya queda guardado en la tablet, por turno', (() => {
     const b = JSON.parse(S.localStorage.getItem('produccion.cierre.t1') || '{}')
-    return b.scrap === 2.5 && b.obs === 'Se trabó la cinta' && b.rota === true
+    return b.scrap === 2.5 && b.obs === 'Se trabó la cinta' && b.hora === '13:40'
   })())
 
   // "Recargar": otra instancia de la página con el mismo localStorage.
@@ -673,18 +660,18 @@ esperas.push((async () => {
   for (const [k, v] of S.__ls) R.__ls.set(k, v)
   await R.abrirPlanilla('t1')
   await R.mostrarCierre()
-  chk('al volver se recupera todo', R.estado.cierre.scrap === 2.5 && R.estado.cierre.obs === 'Se trabó la cinta' && R.estado.cierre.rota === true)
+  chk('al volver se recupera todo', R.estado.cierre.scrap === 2.5 && R.estado.cierre.obs === 'Se trabó la cinta' && R.estado.cierre.hora === '13:40')
   chk('… lo dice', R.__doc.getElementById('pr-cierre-borrador').hidden === false)
   chk('… y el scrap vuelve al campo con coma y se lee igual',
     /^2,50*$/.test(R.__doc.getElementById('pr-cierre-scrap').value) &&
     R.leerCampoNumero(R.__doc.getElementById('pr-cierre-scrap')) === 2.5, R.__doc.getElementById('pr-cierre-scrap').value)
   chk('un borrador que no es JSON no rompe', (() => { R.__ls.set('produccion.cierre.x', '{roto'); return R.leerBorradorCierre('x') === null })())
-  R.__ls.set('produccion.cierre.y', JSON.stringify({ hora: 5, scrap: 'mucho', obs: null, rota: 'sí' }))
+  R.__ls.set('produccion.cierre.y', JSON.stringify({ hora: 5, scrap: 'mucho', obs: null, motivoId: 7, motivoDetalle: null }))
   const y = R.leerBorradorCierre('y')
-  chk('un borrador con datos raros se limpia', y.hora === '' && y.scrap === null && y.obs === '' && y.rota === false)
+  chk('un borrador con datos raros se limpia', y.hora === '' && y.scrap === null && y.obs === '' && y.motivoId === null && y.motivoDetalle === '')
 
   // Enviar, y el borrador se borra RECIÉN después.
-  R.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  R.estado.cierre.hora = '14:05'
   R.cambioEnCierre()
   R.__setRpc(async n => n === 'cerrar_turno' ? { data: { lote: 7023, sublotes: [] }, error: null } : { data: null, error: null })
   R.intentarCerrar()
@@ -705,7 +692,7 @@ esperas.push((async () => {
   const E = armar()
   await E.abrirPlanilla('t1')
   await E.mostrarCierre()
-  E.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  E.estado.cierre.hora = '14:05'
   E.ponerNumero(E.__doc.getElementById('pr-cierre-scrap'), 0)
   E.cambioEnCierre()
   E.__setRpc(async () => ({ data: null, error: { message: 'El turno ya está cerrado.' } }))
@@ -752,9 +739,9 @@ esperas.push((async () => {
 
   // El tablero avisa de las que quedaron pendientes: el tablero solo muestra
   // los turnos ABIERTOS, así que sin este aviso serían inalcanzables.
-  const T = armar({ pendientes: [{ id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-21', turno: 'Mañana' }] })
+  const T = armar({ pendientes: [{ id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-21', turno: 'Mañana', forzado_por: 'e-fede' }] })
   T.__tablas.turnos_produccion = filtros => filtros.some(f => f[1] === 'estado' && f[2] === 'pendiente_completar')
-    ? { data: [{ id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-21', turno: 'Mañana' }], error: null }
+    ? { data: [{ id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-21', turno: 'Mañana', forzado_por: 'e-fede' }], error: null }
     : { data: [], error: null }
   await T.mostrarTablero()
   await tic()
@@ -763,7 +750,9 @@ esperas.push((async () => {
   chk('… con la máquina, el lote y un botón para abrirla',
     /Máquina 1 · lote 7023/.test(html(T, 'pr-tablero-aviso')) && /data-planilla="t1"/.test(html(T, 'pr-tablero-aviso')))
   chk('… y sin ninguna pendiente no se dibuja nada', T.htmlPendientesCompletar([], []) === '')
-  chk('… una sola se dice en singular', /1 planilla quedó pendiente/.test(T.htmlPendientesCompletar([{ id: 'a', lote: 1, maquina_id: 'm1' }], [{ id: 'm1', nombre: 'M' }])))
+  chk('… una sola se dice en singular', /1 planilla quedó pendiente/.test(T.htmlPendientesCompletar([{ id: 'a', lote: 1, maquina_id: 'm1', forzado_por: 'e' }], [{ id: 'm1', nombre: 'M' }])))
+  chk('… la que dejó "Volvió con lote nuevo" (sin forzado_por) dice que falta completar',
+    /1 planilla falta completar \(productos y scrap\)/.test(T.htmlPendientesCompletar([{ id: 'a', lote: 1, maquina_id: 'm1', forzado_por: null }], [{ id: 'm1', nombre: 'M' }])))
 
   // Completarla después es el MISMO cierre.
   const P = armar({ turno: { ...AYER, estado: 'pendiente_completar', forzado_por: 'e-fede', forzado_motivo: 'Nadie anotó' }, items: [] })
@@ -779,7 +768,7 @@ esperas.push((async () => {
   // Planta v2: el título va en la cabecera y el botón dice qué hace.
   chk('… y el botón dice "Completar la planilla"', P.__doc.getElementById('pr-cierre-enviar').textContent === 'Completar la planilla')
   chk('… y el cierre lo dice también', P.cabeceraDeVista()?.titulo === 'Completar la planilla')
-  P.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  P.estado.cierre.hora = '14:05'
   P.ponerNumero(P.__doc.getElementById('pr-cierre-scrap'), 0)
   P.cambioEnCierre()
   P.estado.cierre.confirmado = true
@@ -790,59 +779,9 @@ esperas.push((async () => {
     rpcs(P, 'cerrar_turno')[0][1].p_turno_id === 't1')
 })())
 
-// ── Paradas: iniciar y reanudar ──────────────────────────────────────────
-esperas.push((async () => {
-  const S = armar()
-  S.__tablas.motivos_parada = [
-    { id: 'mo-limp', nombre: 'Limpieza de planchas', categoria: 'programada', pide_detalle: false, orden: 1 },
-    { id: 'mo-cad', nombre: 'Corte de cadena', categoria: 'falla', pide_detalle: false, orden: 10 },
-    { id: 'mo-luz', nombre: 'Corte de luz', categoria: 'falla', pide_detalle: false, orden: 13 },
-    { id: 'mo-otro', nombre: 'Otro motivo', categoria: 'otro', pide_detalle: true, orden: 99 },
-  ]
-  await S.abrirPlanilla('t1')
-  // Paradas (30/09/2026): los motivos salen de motivos_parada, en su orden
-  // (la limpieza primero, con sus dos botones). "Otro motivo" pide el
-  // detalle, que viaja como "Otro motivo: …" (la base lo engancha).
-  await S.asegurarMotivosParada()
-  S.pintarParadas()
-  const sug = html(S, 'pr-parada-sugerencias')
-  const motivos = [...sug.matchAll(/data-motivo="([^"]+)"/g)].map(m => m[1])
-  chk('los motivos de la base, la limpieza primero y "Otro motivo" al final', JSON.stringify(motivos) ===
-    JSON.stringify(['mo-limp', 'mo-limp', 'mo-cad', 'mo-luz', 'mo-otro']), motivos.join(','))
-  chk('… ninguno elegido de antemano', !/aria-pressed="true"/.test(sug))
-  await S.mostrarFormParada()
-  chk('sin elegir un motivo: no se manda y se dice', rpcs(S, 'iniciar_parada').length === 0 &&
-    S.__doc.getElementById('pr-parada-error').textContent === 'Elegí por qué paró.' && S.__doc.getElementById('pr-parada-error').hidden === false)
-  S.elegirMotivoParada('mo-cad')
-  chk('tocar un motivo solo lo elige (no manda nada)', rpcs(S, 'iniciar_parada').length === 0 &&
-    /data-motivo="mo-cad" aria-pressed="true"/.test(html(S, 'pr-parada-sugerencias')))
-  S.elegirMotivoParada('mo-otro')
-  chk('"Otro motivo" abre el detalle', S.__doc.getElementById('pr-parada-otro').hidden === false)
-  S.__doc.getElementById('pr-parada-motivo').value = '  Se cortó la luz  '
-  S.__tablas.paradas_produccion = [{ id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: null, motivo: 'Otro motivo: Se cortó la luz' }]
-  await S.confirmarParada()
-  chk('iniciar_parada con el turno y el motivo recortado ("Otro motivo: …")',
-    JSON.stringify(rpcs(S, 'iniciar_parada')[0]?.[1]) === '{"p_turno_id":"t1","p_motivo":"Otro motivo: Se cortó la luz"}', JSON.stringify(rpcs(S, 'iniciar_parada')))
-  chk('… y aparece la franja', S.__doc.getElementById('pr-parada-activa').hidden === false)
-  chk('el texto del motivo: el nombre de la lista, y el detalle después de ":"', S.textoParadaNueva({ motivoId: 'mo-cad', detalle: '   ' }) === 'Corte de cadena' &&
-    S.textoParadaNueva({ motivoId: 'mo-cad', detalle: ' la de abajo ' }) === 'Corte de cadena: la de abajo' && S.textoParadaNueva({ motivoId: null }) === '')
-  // Con la máquina parada, tocar un motivo NO cambia el de la que sigue: el
-  // trigger lo reescribe con el de la lista (motivo_id), así que se corrige
-  // desde la parada del turno ("Ver") y solo las horas.
-  S.elegirMotivoParada('mo-luz')
-  chk('con una parada en curso, tocar un motivo no manda editar_parada', rpcs(S, 'editar_parada').length === 0)
-  // Con una parada vieja ADELANTE en la lista: reanudar tiene que terminar la
-  // EN CURSO, no la primera que encuentre.
-  S.estado.planilla.paradas = [
-    { id: 'pa1', inicio: '2026-09-22T10:00:00Z', fin: '2026-09-22T10:20:00Z', motivo: 'vieja' },
-    { id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: null, motivo: 'Se cortó la luz' },
-  ]
-  S.__tablas.paradas_produccion = [{ id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: '2026-09-22T12:10:00Z', motivo: 'Se cortó la luz' }]
-  await S.reanudar()
-  chk('"Reanudar" termina ESA parada, no la primera de la lista',
-    JSON.stringify(rpcs(S, 'terminar_parada')[0]?.[1]) === '{"p_parada_id":"pa2"}', JSON.stringify(rpcs(S, 'terminar_parada')[0]))
-  chk('… y la franja se va', S.__doc.getElementById('pr-parada-activa').hidden === true)
-})())
+// ── Paradas: "Paró ahora" y "Volvió a andar" se fueron el 05/10/2026 ──────
+// El formulario de Paró (motivo, DESDE, HASTA o "Todavía está parada") y
+// "Volvió a las…" los prueba test-produccion-paradas-simple.js.
 
 // ── Sin catálogo: los renglones se siguen viendo, pero no se agrega ──────
 esperas.push((async () => {
@@ -888,10 +827,10 @@ esperas.push((async () => {
   const resMasas = X.htmlMasasResumen([{ nro: 1, hora: null, doble: false, origen: 'modificada', es_chocolate: true, masero_id: 'e-x' }])
   chequearMarcas(chk, 'resumen de masas', resMasas, [])
   chk('resumen de masas: el masero escapado', !resMasas.includes('"><b') && resMasas.includes('&quot;&gt;&lt;b'), resMasas)
-  chequearMarcas(chk, 'resumen de paradas',
-    X.htmlParadasResumen([{ motivo: marca('motivoparada'), inicio: '2026-09-22T09:00:00Z', fin: null }]), ['motivoparada'])
-  chequearMarcas(chk, 'resumen de paradas (la última)',
-    X.htmlParadasResumen([{ motivo: marca('motivovieja'), inicio: '2026-09-22T09:00:00Z', fin: '2026-09-22T10:00:00Z' }]), ['motivovieja'])
+  chequearMarcas(chk, 'acción Paró (la que sigue)',
+    X.htmlAccionParo([{ motivo: marca('motivoparada'), inicio: '2026-09-22T09:00:00Z', fin: null }]), ['motivoparada'])
+  chequearMarcas(chk, 'acción Paró (terminadas)',
+    X.htmlAccionParo([{ motivo: marca('motivovieja'), inicio: '2026-09-22T09:00:00Z', fin: '2026-09-22T10:00:00Z' }]), [])
   chequearMarcas(chk, 'paradas del turno',
     X.htmlParadasTurno([{ id: marca('paradaid'), motivo: marca('motivoParada'), inicio: null, fin: null }, { id: 'p2', motivo: marca('motivoVieja'), inicio: null, fin: '2026-09-22T10:00:00Z' }]),
     ['paradaid', 'motivoParada', 'motivoVieja'])
@@ -956,7 +895,7 @@ esperas.push((async () => {
   const S = armar({ paradas: [{ id: 'pa9', inicio: '2026-09-22T13:32:00Z', fin: null, motivo: 'pulpo' }], items: [] })
   await S.abrirPlanilla('t1')
   await S.mostrarCierre()
-  S.__doc.getElementById('pr-cierre-hora').value = ''
+  S.estado.cierre.hora = ''
   S.ponerNumero(S.__doc.getElementById('pr-cierre-scrap'), null)
   S.cambioEnCierre()
   // Planta v2: "LO QUE FALTA" a la derecha. Lo del formulario (hora, scrap)
@@ -975,7 +914,7 @@ esperas.push((async () => {
   const falta2 = html(S, 'pr-cierre-falta')
   chk('después de intentar, lo del formulario va en bordó (y lo de otra sección no)',
     (falta2.match(/pr-falta__item pr-falta__item--mal/g) || []).length === 2 &&
-    /Falta la hora en que se apagó el fuego\./.test(falta2) && /Falta el scrap\. Si no hubo, poné 0\./.test(falta2) &&
+    /Falta a qué hora terminó de producir\./.test(falta2) && /Falta el scrap\. Si no hubo, poné 0\./.test(falta2) &&
     /<div class="pr-falta__item"><span class="pr-falta__chip">AVISO<\/span><span class="pr-falta__texto">No cargaste nada producido\./.test(falta2), falta2)
   chk('el listener lleva a la sección', /const b = ev\.target\.closest\('\[data-cierre-ir\]'\); if \(b\) irDesdeCierre\(b\.dataset\.cierreIr\)/.test(FUENTE))
   // Lo que dice la base: un AVISO de parada, con "Ir a Paradas".
@@ -1008,7 +947,7 @@ esperas.push((async () => {
   chk('… "Cerrar planilla" se traba', B.__doc.getElementById('pr-cierre-enviar').disabled === true)
   chk('… y arriba del botón se dice cuántas cosas faltan', B.__doc.getElementById('pr-cierre-bloquea').hidden === false &&
     B.__doc.getElementById('pr-cierre-bloquea').textContent === 'Falta resolver 1 cosa para poder cerrar')
-  B.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  B.estado.cierre.hora = '14:05'
   B.ponerNumero(B.__doc.getElementById('pr-cierre-scrap'), 0)
   B.cambioEnCierre()
   B.estado.cierre.confirmado = true
@@ -1030,12 +969,12 @@ esperas.push((async () => {
   const C = armar()
   await C.abrirPlanilla('t1')
   await C.mostrarCierre()
-  C.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  C.estado.cierre.hora = '14:05'
   C.ponerNumero(C.__doc.getElementById('pr-cierre-scrap'), 0)
   C.cambioEnCierre()
   chk('con todo completo: "No falta nada"', /No falta nada: se puede cerrar\./.test(html(C, 'pr-cierre-falta')), html(C, 'pr-cierre-falta'))
-  const rota = C.htmlFaltaCierre({ hora: '10:00', scrap: 1, rota: true, obs: '', intentado: true }, C.estado.planilla)
-  chk('rota sin "qué pasó": lo pide', /Falta contar qué pasó con la máquina/.test(rota))
+  const sinHora = C.htmlFaltaCierre({ hora: '', scrap: 1, obs: '', intentado: true }, C.estado.planilla)
+  chk('sin la hora en que terminó de producir: lo pide', /Falta a qué hora terminó de producir/.test(sinHora), sinHora)
 })())
 
 fin()

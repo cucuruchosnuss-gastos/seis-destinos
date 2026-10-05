@@ -18,6 +18,7 @@ const MAQUINAS = [1, 2, 3, 4, 5].map(n => ({ id: `maq-${n}`, unidad_negocio_id: 
 const turno = (id, lote, maquina, encargado) => ({
   id, lote, maquina_id: maquina, unidad_negocio_id: 'u-n', fecha: DIA, turno: 'Mañana', encargado_id: encargado,
   estado: 'abierto', abierto_en: hora('09:02'), forzado_por: null, forzado_en: null, forzado_motivo: null,
+  hora_inicio: '06:00:00', hora_fin: null, hora_largada: null,
 });
 const masa = (id, turnoId, nro, hhmm, extra = {}) => ({
   id, turno_id: turnoId, nro, hora: hora(hhmm), tipo_masa: 'Común', doble: false, origen: 'original',
@@ -142,6 +143,12 @@ module.exports = {
     recetas: [{ id: 'rec-1', maquina_id: 'maq-1', tipo_masa: 'Común', version: 7 }, { id: 'rec-4', maquina_id: 'maq-4', tipo_masa: 'Común', version: 3 }],
     ingredientes: ORIGINAL.items.map(it => ({ id: it.ingrediente_id, nombre: it.ingrediente, define_chocolate: it.ingrediente_id === 'i-cacao' })),
     motivos_parada: MOTIVOS_PARADA,
+    // El horario de la Mañana en la unidad (05/10/2026): da el fin del turno
+    // para "¿Por qué paró antes?".
+    horarios_turno: [
+      { unidad_negocio_id: 'u-n', turno: 'Mañana', hora_inicio: '06:00:00', hora_fin: '15:00:00', activo: true },
+      { unidad_negocio_id: 'u-n', turno: 'Tarde', hora_inicio: '15:00:00', hora_fin: '23:36:00', activo: true },
+    ],
     paradas_produccion: [
       { id: 'pa-1', turno_id: 't2', inicio: hora('10:32'), fin: null, motivo: 'Corte de cadena: la de abajo', motivo_id: 'mp-cadena', categoria: 'falla', detalle: 'la de abajo' },
       { id: 'pa-2', turno_id: 't1', inicio: hora('10:05'), fin: hora('10:25'), motivo: 'Limpieza de planchas: al arrancar', motivo_id: 'mp-limp', categoria: 'programada', detalle: 'al arrancar' },
