@@ -12,6 +12,7 @@ correrMutacionesProduccion({
   escape: 'esc',
   funciones: ['htmlAccionesParada', 'htmlParadas', 'htmlCampoHora', 'htmlHorasParada', 'htmlParadasTurno'],
   equivalentes: [
+    { expr: 'esc(horas)', motivo: 'htmlParadasTurno(): las horas salen de horaArgentina() ("HH:MM") y de textos fijos (" a ", " · sigue parada")' },
     { expr: 'esc(clases)', motivo: 'las clases de una parada salen del código (pr-parada-item, --curso, --programada): nada escapable' },
     { expr: 'esc(cat)', motivo: 'cat es una clave de NOMBRE_CATEGORIA_PARADA (programada / falla / otro) o null: una categoría desconocida no se dibuja' },
     { expr: 'esc(NOMBRE_CATEGORIA_PARADA[cat])', motivo: "'Programada' / 'Falla' / 'Otro', escritos en el código" },
@@ -79,7 +80,7 @@ correrMutacionesProduccion({
     { nombre: 'borrar en una abierta pide motivo', de: "      document.getElementById('pr-parada-editor-campo-motivo').hidden = f.modo === 'borrar' && !cerrada", a: "      document.getElementById('pr-parada-editor-campo-motivo').hidden = false" },
     { nombre: 'corregir no trae el motivo', de: "        motivo: modo === 'borrar' ? '' : (parada?.motivo ?? ''),", a: "        motivo: '',"},
     { "nombre": "\"Paró ahora\" también en una pendiente de completar", "de": "return p?.turno?.estado === 'abierto' && !paradaEnCurso(p?.paradas)", "a": "return !paradaEnCurso(p?.paradas)" },
-    { "nombre": "\"Paró ahora\" nunca aparece", "de": "document.getElementById('pr-btn-parada').hidden = !puedeQuedarAbierta(p) || esLimpieza(m)", "a": "document.getElementById('pr-btn-parada').hidden = true" },
+    // 05/10/2026: "Paró ahora" (y su iniciar_parada) se fue; la suite exige que no vuelva.
     // Planta v2: "Anotar" está siempre (sin hidden desde JS).
     { "nombre": "\"Anotar una parada\" nunca aparece", "de": "id=\"pr-btn-guardar-parada\">Guardar la parada", "a": "id=\"pr-btn-guardar-parada\" hidden>Guardar la parada" },
     { nombre: 'una abierta en una pendiente arranca "todavía no volvió"', de: "sigue: !!parada && !parada.fin && turno?.estado === 'abierto',", a: 'sigue: !!parada && !parada.fin,' },
@@ -90,6 +91,5 @@ correrMutacionesProduccion({
     { nombre: 'pasar a borrar arrastra el motivo de la parada', de: "      Object.assign(f, { modo: 'borrar', motivo: '',", a: "      Object.assign(f, { modo: 'borrar',", archivo: 'gestion' },
     { nombre: 'la planilla pone dos botones por parada', de: "      if (acciones?.editar) return `<button", a: "      if (false) return `<button" },
     { nombre: 'solo borrar no dibuja el botón', de: "      if (acciones?.borrar) return `<button", a: "      if (false) return `<button" },
-    { nombre: '"Paró ahora" deja de usar iniciar_parada', de: "supabase.rpc('iniciar_parada',", a: "supabase.rpc('registrar_parada'," },
   ],
 })

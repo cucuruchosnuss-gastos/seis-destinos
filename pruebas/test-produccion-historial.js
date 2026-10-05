@@ -178,9 +178,10 @@ esperas.push((async () => {
 
   await D.abrirDetalleHistorial('t1')
   const hd = D.__doc.getElementById('pr-historial-detalle-cuerpo').innerHTML
-  chk('detalle: lote, encargado y horario', /class="pr-lote">7023</.test(hd) && /Federico Silva/.test(hd) && /06:02 a 16:00 · fuego apagado 16:10/.test(hd), hd.slice(0, 900))
+  chk('detalle: lote, encargado y horario', /class="pr-lote">7023</.test(hd) && /Federico Silva/.test(hd) && /06:02 a 16:00 · terminó de producir 16:10/.test(hd), hd.slice(0, 900))
   // Diseño 2a: arriba el lote grande, la máquina y el turno, el horario con el
-  // día (abrió → cerró) y a qué hora se apagó el fuego, y el estado.
+  // día (abrió → cerró) y a qué hora terminó de producir (hora_apagado, desde
+  // el 05/10/2026), y el estado.
   chk('… el día del turno en el horario', /Martes 22\/09 · 06:02 a 16:00/.test(hd))
   chk('… el estado del turno, con su chip', /pr-of-chip--cerrado">Cerrado/.test(hd))
   chk('… scrap y observaciones', /3,5 kg/.test(hd) && /Se cortó la luz/.test(hd))

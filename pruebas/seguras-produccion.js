@@ -244,6 +244,12 @@ const SEGURAS_PRODUCCION = [
   ['lista', 'HTML armado en htmlMaquinas() con esc() de cada motivo, su tipo y sus minutos, o el aviso con esc() del error'],
   ['leyendaA', 'HTML armado por leyendaGraf() (escapa adentro) con nombres y colores constantes'],
   ['leyendaC', 'HTML armado por leyendaGraf() (escapa adentro) con los nombres de PARTES_TURNO (constantes)'],
+  // Paró, la ventana de la hora y la gestión (05/10/2026).
+  ['pres', "constante del código: 'true' o 'false' (aria-pressed del motivo elegido)"],
+  ['caja', 'HTML constante del código: la casilla con el tilde (htmlHorasParadaNueva)'],
+  ['ahora', 'HTML constante del código: el botón "Ahora" de la ventana de la hora, o vacío'],
+  ['htmlEstadoTurno(t.estado, t)', 'HTML armado por htmlEstadoTurno(), que escapa el texto del estado; la clase sale de ESTADO_TURNO o es la literal "pendiente" (relanzada)'],
+  ['htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas, el id y la hora de fin adentro'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

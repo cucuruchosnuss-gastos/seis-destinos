@@ -600,7 +600,7 @@ const escrituras = S => S.__llamadas.rpc.filter(([n]) => !['personal_produccion'
 esperas.push((async () => {
   const S = armarConfig()
   chk('el Empaque ya no es una sección aparte: vive en Productos',
-    S.PESTANAS_CONFIG.map(([k]) => k).join(',') === 'productos,maquinas,recetas,ingredientes,marcas,personal' && S.ALIAS_CONFIG.empaque === 'productos')
+    S.PESTANAS_CONFIG.map(([k]) => k).join(',') === 'productos,maquinas,recetas,ingredientes,marcas,personal,horarios' && S.ALIAS_CONFIG.empaque === 'productos')
   await abrirEmpaque(S)
   chk('"empaque" abre Productos, con los borradores de cada presentación', S.estado.config.tab === 'productos' && S.estado.config.datos?.borradores instanceof Map)
   abrirTarjeta(S, 'pr-caja')

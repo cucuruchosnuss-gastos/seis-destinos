@@ -28,10 +28,13 @@ const UNIDADES_4 = [
   { id: 'u-p', nombre: 'Pruebas (robot)', prefijo: 'X', logo_url: null, activo: true, es_prueba: true },
 ];
 
-// Los motivos de parada, como en la base (motivos_parada, 30/09/2026): la
-// limpieza (programada) primero, las fallas y "Otro motivo" al final.
+// Los motivos de parada, como en la base (motivos_parada, 05/10/2026): las
+// limpiezas (programada) primero, las fallas, las organizativas y "Otro
+// motivo" al final.
 const MOTIVOS_PARADA = [
   ['mp-limp', 'Limpieza de planchas', 'programada', false, 1],
+  ['mp-tachos', 'Limpieza de tachos', 'programada', false, 2],
+  ['mp-general', 'Limpieza general', 'programada', false, 3],
   ['mp-cadena', 'Corte de cadena', 'falla', false, 10],
   ['mp-correa', 'Corte de correa', 'falla', false, 11],
   ['mp-peine', 'Levantó el peine', 'falla', false, 12],
@@ -40,6 +43,10 @@ const MOTIVOS_PARADA = [
   ['mp-fuego', 'Problema con el fuego', 'falla', false, 15],
   ['mp-electrico', 'Problema eléctrico', 'falla', false, 16],
   ['mp-motor', 'Se quemó el motor', 'falla', false, 17],
+  ['mp-pulidora', 'Se rompió la pulidora', 'falla', false, 18],
+  ['mp-personal', 'Se retiró personal', 'organizativa', false, 20],
+  ['mp-masa', 'Falta masa o insumos', 'organizativa', false, 21],
+  ['mp-pedido', 'No hay pedido', 'organizativa', false, 22],
   ['mp-otro', 'Otro motivo', 'otro', true, 99],
 ].map(([id, nombre, categoria, pide_detalle, orden]) => ({ id, nombre, categoria, pide_detalle, orden, activo: true }));
 
