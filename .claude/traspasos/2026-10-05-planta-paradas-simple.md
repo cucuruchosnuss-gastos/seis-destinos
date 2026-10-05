@@ -37,11 +37,10 @@ teclado de la planta y la hora actual sugerida.
 
 ## Huecos de base (para el chat)
 
-- `registrar_hora_largada` usa `_ts_turno`, que suma un día cuando la hora es
-  ≤ `hora_inicio`: una largada IGUAL a la hora del turno (06:00 en un turno
-  de 06:00) se toma como del día siguiente y se rechaza "a futuro". La
-  pantalla lo replica, así que ese caso no se puede cargar. Probablemente
-  debería ser `<` y no `<=` para la largada.
+- CERRADO el 05/10/2026: `registrar_hora_largada` ya no usa la regla de
+  `_ts_turno` para el día; pasa al día siguiente solo si la hora cae más de
+  2 h antes del inicio del turno. La pantalla usa la misma regla
+  (`instanteLargada`) y una largada a las 06:00 en un turno de 06:00 se carga.
 - `relanzar_con_lote_nuevo` solo acepta una parada ABIERTA: "desde / hasta +
   lote nuevo" se hace registrándola abierta y relanzando con la hora de
   hasta. Si el relanzar falla, la parada queda abierta (la pantalla lo dice).

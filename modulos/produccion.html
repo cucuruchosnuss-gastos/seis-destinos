@@ -7051,6 +7051,24 @@
       return instanteAr(fecha, h) + (hi && h <= hi ? MS_DIA : 0)
     }
 
+    // El instante de la hora en que EMPEZÓ A PRODUCIR, con la regla de
+    // registrar_hora_largada (05/10/2026): en la fecha del turno, y al día
+    // siguiente SOLO si cae más de 2 horas antes del inicio del turno (o de la
+    // hora en que se abrió, si el turno no tiene hora de inicio). Así una
+    // largada igual a la hora de inicio (06:00 en un turno de 06:00) es de ese
+    // mismo día, no del siguiente.
+    const MARGEN_LARGADA_MS = 2 * 3600000
+    function instanteLargada(turno, hora) {
+      const h = normalizarHora(hora)
+      const fecha = turno?.fecha
+      if (!h || !/^\d{4}-\d{2}-\d{2}$/.test(String(fecha ?? ''))) return null
+      // hora_inicio viene de la base con segundos ('06:00:00'): horaCorta.
+      const hi = horaCorta(turno?.hora_inicio) || normalizarHora(horaArgentina(turno?.abierto_en))
+      const ms = instanteAr(fecha, h)
+      if (!hi) return ms
+      return ms < instanteAr(fecha, hi) - MARGEN_LARGADA_MS ? ms + MS_DIA : ms
+    }
+
     // La vuelta de la parada que sigue: la PRIMERA vez que esa hora cae
     // después de la parada (si cruzó la medianoche, al otro día, pero nunca
     // más de un turno), y nunca en el futuro. { ms } o { error }.
@@ -7076,8 +7094,9 @@
       if (['desde', 'hasta', 'termino'].includes(f.tipo)) return { local: true, hora: h }
       if (f.tipo === 'largada') {
         // Mismo control que registrar_hora_largada: con la planilla sin
-        // cerrar, no puede ser futura (5 minutos de tolerancia).
-        const ms = instanteDelTurno(p?.turno?.fecha, h, p?.turno?.hora_inicio)
+        // cerrar, no puede ser futura (5 minutos de tolerancia). El día lo
+        // decide instanteLargada (la regla de las 2 horas de la base).
+        const ms = instanteLargada(p?.turno, h)
         if (p?.turno?.estado !== 'cerrado' && ms != null && ms > new Date(ahora).getTime() + TOLERANCIA_FUTURO_MS) {
           return { error: `Las ${h} todavía no pasaron: la hora en que empezó a producir no puede ser futura.` }
         }

@@ -176,6 +176,43 @@ esperas.push((async () => {
     chk('… y la hora sugerida es la de referencia (el cierre forzado), no la de ahora', P.estado.horaForm.hora === '15:00', P.estado.horaForm.hora)
   }
 
+  // ═══ La largada igual a la hora de inicio (05/10/2026) ═══════════════════
+  // registrar_hora_largada pasa la hora al día siguiente SOLO si cae más de
+  // 2 h antes del inicio del turno: una largada a las 06:00 en un turno de
+  // 06:00 es de ese mismo día (antes la pantalla la tomaba como de mañana y
+  // la rechazaba por "futura").
+  {
+    const X = armar()
+    const DIA_MS = 86400000
+    const dia = (h) => X.instanteAr('2026-10-05', h)
+    const T6 = { fecha: '2026-10-05', hora_inicio: '06:00:00' }
+    chk('instanteLargada: 06:00 en un turno de 06:00 es del mismo día', X.instanteLargada(T6, '06:00') === dia('06:00'))
+    chk('… 04:00 (2 h justas antes) también', X.instanteLargada(T6, '04:00') === dia('04:00'))
+    chk('… 03:59 (más de 2 h antes) pasa al día siguiente', X.instanteLargada(T6, '03:59') === dia('03:59') + DIA_MS)
+    chk('… 05:30 y 14:00, del mismo día', X.instanteLargada(T6, '05:30') === dia('05:30') && X.instanteLargada(T6, '14:00') === dia('14:00'))
+    const T22 = { fecha: '2026-10-05', hora_inicio: '22:00:00' }
+    chk('turno de noche de 22:00: 22:00 y 23:30 del mismo día, 01:00 del siguiente',
+      X.instanteLargada(T22, '22:00') === dia('22:00') && X.instanteLargada(T22, '23:30') === dia('23:30') && X.instanteLargada(T22, '01:00') === dia('01:00') + DIA_MS)
+    chk('sin hora de inicio: la regla mira la hora en que se abrió (06:02)',
+      X.instanteLargada({ fecha: '2026-10-05', hora_inicio: null, abierto_en: '2026-10-05T09:02:00Z' }, '06:00') === dia('06:00') &&
+      X.instanteLargada({ fecha: '2026-10-05', hora_inicio: null, abierto_en: '2026-10-05T09:02:00Z' }, '04:01') === dia('04:01') + DIA_MS)
+    chk('sin fecha o con una hora rara: null', X.instanteLargada({ hora_inicio: '06:00:00' }, '06:00') === null && X.instanteLargada(T6, '25:00') === null)
+    // En la ventana: a las 07:00 de Argentina se carga 06:00 y se manda.
+    const SIETE = new Date('2026-10-05T10:00:00Z')
+    const S = armar()
+    await S.abrirPlanilla('t1')
+    await escribirHora(S, 'largada', ['0', '6', '0', '0'], SIETE)
+    chk('a las 07:00, "Empezó a producir 06:00" en un turno de 06:00 se manda',
+      JSON.stringify(rpcs(S, 'registrar_hora_largada')[0]?.[1]) === '{"p_turno_id":"t1","p_hora":"06:00"}' && el(S, 'pr-hora-ventana').hidden === true,
+      el(S, 'pr-hora-ventana-error').textContent)
+    // Y una de más de 2 h antes, a las 07:00, es de mañana: futura, no se manda.
+    const M = armar()
+    await M.abrirPlanilla('t1')
+    await escribirHora(M, 'largada', ['0', '3', '3', '0'], SIETE)
+    chk('… 03:30 (más de 2 h antes) es de mañana: futura, no se manda', rpcs(M, 'registrar_hora_largada').length === 0 &&
+      /03:30 todavía no pasaron/.test(el(M, 'pr-hora-ventana-error').textContent))
+  }
+
   // ═══ La ventana de la hora: el teclado ═══════════════════════════════════
   {
     const S = armar()

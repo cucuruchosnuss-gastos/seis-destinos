@@ -383,7 +383,7 @@ const NUEVAS_PLANTA = [
   'grupoDeMotivo', 'motivosAgrupados', 'htmlMotivosAgrupados', 'puedeLoteNuevo', 'alternarSigueParadaNueva', 'alternarLoteNuevoParada',
   'textoRelanzado', 'htmlAvisoRelanzado', 'trasRelanzar',
   'horaSugerida', 'horaCorta', 'abrirHoraVentana', 'cerrarHoraVentana', 'muestraHoraVentana', 'conAhoraVentana', 'htmlHoraVentana',
-  'textosHoraVentana', 'pintarHoraVentana', 'teclaHoraVentana', 'ahoraHoraVentana', 'alternarLoteNuevoVentana', 'instanteDelTurno',
+  'textosHoraVentana', 'pintarHoraVentana', 'teclaHoraVentana', 'ahoraHoraVentana', 'alternarLoteNuevoVentana', 'instanteDelTurno', 'instanteLargada',
   'vueltaDeParada', 'pedidoHoraVentana', 'confirmarHoraVentana', 'teclaVentanaHora',
   'cierreAnticipado', 'textoMotivoCierre', 'ponerHoraCierre', 'pintarMotivoCierre', 'elegirMotivoCierre',
 ]
@@ -404,6 +404,8 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
   'NOMBRE_CATEGORIA_PARADA', 'GRUPOS_MOTIVO', 'MINUTOS_CIERRE_ANTICIPADO', 'MINUTOS_CUBRE_PARADA',
+  // La hora de largada con la regla de las 2 horas de la base (05/10/2026)
+  'MARGEN_LARGADA_MS',
   'VISTAS_CON_PESTANAS',
   // De js/cantidades.js (02/10/2026)
   'DECIMALES_CANTIDAD', 'FRACCIONES']

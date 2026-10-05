@@ -32,6 +32,13 @@ correrMutacionesProduccion({
     { nombre: 'la largada no se ve en la planilla', de: '      largada.innerHTML = htmlAccionLargada(p.turno)\n', a: '' },
     { nombre: 'el aviso de la largada no se esconde', de: "      document.getElementById('pr-aviso-largada').hidden = !faltaLargada(p.turno)\n", a: "      document.getElementById('pr-aviso-largada').hidden = false\n" },
     { nombre: 'la largada no se manda', de: "        return { rpc: 'registrar_hora_largada', params: { p_turno_id: f.turnoId, p_hora: h } }", a: "        return { local: true, hora: h }" },
+    // La largada con la regla de las 2 horas (05/10/2026).
+    { nombre: 'la largada vuelve a la regla vieja (igual al inicio = día siguiente)', de: '        const ms = instanteLargada(p?.turno, h)', a: '        const ms = instanteDelTurno(p?.turno?.fecha, h, horaCorta(p?.turno?.hora_inicio))' },
+    { nombre: 'la largada no pasa nunca al día siguiente', de: '      return ms < instanteAr(fecha, hi) - MARGEN_LARGADA_MS ? ms + MS_DIA : ms', a: '      return ms' },
+    { nombre: 'el margen de la largada va para el otro lado', de: '      return ms < instanteAr(fecha, hi) - MARGEN_LARGADA_MS ? ms + MS_DIA : ms', a: '      return ms < instanteAr(fecha, hi) + MARGEN_LARGADA_MS ? ms + MS_DIA : ms' },
+    { nombre: 'el margen de la largada es estricto al revés (<=)', de: '      return ms < instanteAr(fecha, hi) - MARGEN_LARGADA_MS ? ms + MS_DIA : ms', a: '      return ms <= instanteAr(fecha, hi) - MARGEN_LARGADA_MS ? ms + MS_DIA : ms' },
+    { nombre: 'la hora de inicio con segundos no se lee', de: "      const hi = horaCorta(turno?.hora_inicio) || normalizarHora(horaArgentina(turno?.abierto_en))", a: "      const hi = normalizarHora(turno?.hora_inicio) || normalizarHora(horaArgentina(turno?.abierto_en))" },
+    { nombre: 'sin hora de inicio no mira la apertura', de: "      const hi = horaCorta(turno?.hora_inicio) || normalizarHora(horaArgentina(turno?.abierto_en))", a: "      const hi = horaCorta(turno?.hora_inicio)" },
     { nombre: 'la largada futura se manda', de: "        if (p?.turno?.estado !== 'cerrado' && ms != null && ms > new Date(ahora).getTime() + TOLERANCIA_FUTURO_MS) {", a: '        if (false) {' },
     { nombre: 'la ventana no sugiere la hora de ahora', de: "      return turno?.estado === 'abierto' || !turno?.estado ? horaArgentina(ahora) : horaDeReferencia(turno, ahora)", a: "      return ''" },
     { nombre: '"Ahora" también en una pendiente', de: "      return p?.turno?.estado === 'abierto'\n    }\n\n    function htmlHoraVentana", a: "      return true\n    }\n\n    function htmlHoraVentana" },
