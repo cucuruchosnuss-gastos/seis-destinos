@@ -35,10 +35,11 @@ console.log(`ARCHIVO ${RUTA_PREFS} (${pref.length} bytes)`)
 const { chk, esperas, fin } = arnes()
 
 const FUNCIONES = ['htmlIcono', 'debeMostrarse', 'modulosDeBarra', 'claveActual', 'leerColapsada', 'htmlBurbujaBarra', 'htmlItem',
-  'htmlBarra', 'htmlBarraAbajo', 'htmlHojaMas', 'pintarBurbujasBarra', 'pintarBurbujasAbajo', 'leerGuardado', 'guardar', 'instalarBarraLateral']
+  'htmlBarra', 'capacidadBarraAbajo', 'htmlBarraAbajo', 'htmlHojaMas', 'htmlEditarAbajo', 'cambiarListaAbajo',
+  'pintarBurbujasBarra', 'pintarBurbujasAbajo', 'leerGuardado', 'guardar', 'instalarBarraLateral']
 const DE_MODULOS = ['moduloVisible', 'escDash', 'textoPendiente', 'agruparPendientes', 'colorDeModulo', 'enOrdenDeBarra']
 const DE_PREFS = ['clavePrefs', 'prefsVacias', 'normalizarPrefs', 'leerCopia', 'escribirCopia', 'sonDeFabrica', 'leerPrefs', 'guardarPrefs', 'subirPrefs',
-  'cargarPrefs', 'dondeSeGuardanPrefs', 'anotarUso', 'vecesUsado', 'ordenarBarra', 'modulosDeAbajo']
+  'cargarPrefs', 'dondeSeGuardanPrefs', 'anotarUso', 'vecesUsado', 'ordenarBarra', 'modulosDeAbajo', 'guardarBarraInferior']
 
 function construir() {
   let codigo = `
@@ -54,7 +55,7 @@ function construir() {
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
   for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA', 'TOPE_USO', 'VERSION_PREFS', 'ESTADO_PREFS']) codigo += extraerConst(pref, c)
   for (const f of DE_PREFS) codigo += extraerFn(pref, f) + '\n'
-  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
+  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += `return { ${FUNCIONES.join(', ')}, ${DE_PREFS.join(', ')}, MODULOS, __ls, __paneles }`
   return new Function(codigo)()
@@ -263,7 +264,7 @@ const claves = (html) => [...String(html).matchAll(/class="barra-lateral__item[^
   o = S.ordenarBarra(ocho, p, ahora)
   chk('los que más uso (30 días): Stock, Caja y después el resto', o.resto.map(m => m.clave).slice(0, 2).join() === 'stock,caja', o.resto.map(m => m.clave).join())
   chk('una apertura de hace 40 días no cuenta', S.vecesUsado(p, 'gastos', ahora) === 0)
-  chk('abajo del celular: los fijados, después los más usados', S.modulosDeAbajo(ocho, { ...p, barra: { orden: 'mano', manual: [], fijados: ['cobranzas'] } }, ahora).map(m => m.clave).join() === 'cobranzas,stock,caja')
+  chk('abajo del celular, sin elegir: los más usados primero, después los fijados (05/10/2026)', S.modulosDeAbajo(ocho, { ...p, barra: { orden: 'mano', manual: [], fijados: ['cobranzas'] } }, ahora, 3).map(m => m.clave).join() === 'stock,caja,cobranzas')
   chk('una preferencia rara vuelve a la de fábrica', JSON.stringify(S.normalizarPrefs({ barra: { orden: 'raro', fijados: 'x' } }).barra) === JSON.stringify({ orden: 'mano', manual: [], fijados: [] }))
   chk('se guarda por persona (sd.prefs.<id>)', S.guardarPrefs('e7', p) && S.__ls.has('sd.prefs.e7') && S.leerPrefs('e7').barra.orden === 'uso')
 }
@@ -302,7 +303,7 @@ esperas.push((async () => {
     const sb = sbFalso({ modulos: ['gastos', 'caja'], pendientes: [{ modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 3, texto: 'Movimientos <b>por aceptar</b>' }] })
     const nav = await S.instalarBarraLateral({ sb, doc, win })
     await new Promise(r => setImmediate(r))
-    chk('se instala al principio del body, con la barra de abajo y la hoja al final', !!nav && doc.body.prepended[0] === nav && doc.body.appended.length === 2 && doc.body.classList.contains('con-barra-lateral'))
+    chk('se instala al principio del body, con la barra de abajo, la hoja y el editor al final', !!nav && doc.body.prepended[0] === nav && doc.body.appended.length === 3 && doc.body.classList.contains('con-barra-lateral'))
     chk('lleva su rótulo', nav.atributos['aria-label'] === 'Módulos' && nav.className === 'barra-lateral')
     chk('Inicio, Caja, Gastos y Personalizar', claves(nav.innerHTML).join() === 'inicio,caja,gastos,personalizar', claves(nav.innerHTML).join())
     chk('Caja marcada como actual', /data-clave="caja" title="Caja" aria-current="page"/.test(nav.innerHTML))
@@ -420,8 +421,8 @@ esperas.push((async () => {
   chk('el actual en naranja suave con letra naranja oscura', !!media && /\.barra-lateral__item--actual[^{]*\{ background: var\(--color-acento-suave\); color: var\(--color-acento-hover\); font-weight: 700; \}/.test(media[1]))
   chk('la burbuja urgente en bordó', /\.barra-lateral__burbuja--urgente \{ background: var\(--bordo\); color: #fff; \}/.test(bloque))
   chk('en el celular, la barra de abajo', /@media \(max-width: 1023\.98px\) \{[^]*\.barra-abajo \{\s*display: flex; position: fixed;/.test(bloque))
-  chk('la barra de abajo por debajo de los modales (z-index 25) y la hoja por arriba de ella (45)', /\.barra-abajo \{[^}]*z-index: 25;/.test(bloque) && /\.hoja-mas \{[^}]*z-index: 45;/.test(bloque))
-  chk('al imprimir no está ninguna', /@media print \{\s*\.barra-lateral, \.barra-abajo, \.hoja-mas \{ display: none !important; \}\s*body\.con-barra-lateral \{ margin-left: 0 !important; padding-bottom: 0 !important; \}/.test(bloque))
+  chk('la barra de abajo por debajo de los modales (z-index 25) y la hoja por arriba de ella (45)', /\.barra-abajo \{[^}]*z-index: 25;/.test(bloque) && /\.hoja-mas, \.hoja-abajo \{[^}]*z-index: 45;/.test(bloque))
+  chk('al imprimir no está ninguna (tampoco el editor de la barra de abajo, 05/10/2026)', /@media print \{\s*\.barra-lateral, \.barra-abajo, \.hoja-mas, \.hoja-abajo \{ display: none !important; \}\s*body\.con-barra-lateral \{ margin-left: 0 !important; padding-bottom: 0 !important; \}/.test(bloque))
 }
 
 // ── Qué pantallas la cargan ─────────────────────────────────────────────────
