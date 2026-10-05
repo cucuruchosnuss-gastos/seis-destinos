@@ -86,6 +86,8 @@ const ENTRADAS = [
     pasos: ['#btn-ver-traspaso'] },
   { pantalla: 'Ingreso', nombre: 'detalle de un ingreso', url: '/modulos/materia-prima.html?maqueta=materia-prima',
     pasos: ['.tarjeta-lista[data-ingreso]'] },
+  { pantalla: 'Ingreso', nombre: 'cargar sin comprobante', url: '/modulos/materia-prima.html?maqueta=materia-prima',
+    pasos: ['#btn-abrir-wizard', '#btn-sin-comprobante'], boton: '#btn-datos-continuar' },
   { pantalla: 'Pedidos', nombre: 'anular un pedido', url: '/modulos/pedidos.html?maqueta=pedidos',
     pasos: ['[data-pedido="pe1"]', '#pe-btn-anular'], boton: '#pe-anular-si' },
   { pantalla: 'Proyectos Taller', nombre: 'facturar al cliente', url: '/modulos/taller.html?maqueta=taller-diseno',
