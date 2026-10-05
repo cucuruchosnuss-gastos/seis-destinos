@@ -393,6 +393,8 @@
       font-family: var(--fuente-titulo); font-size: 24px; font-weight: 800; text-align: center; padding: 0 4px; font-variant-numeric: tabular-nums;
     }
     .rt-lote-fila .rt-input:not(:placeholder-shown) { border-color: var(--naranja); }
+    /* La unidad al lado de cada lote (05/10/2026): nunca un número pelado. */
+    .rt-lote-fila__unidad { flex-shrink: 0; min-width: 1.5rem; font-size: 15px; font-weight: 700; color: var(--color-texto); }
     .rt-lote__limpiar { padding: 0 14px 6px; }
     .rt-lote__pie { border-top: 2px solid var(--color-borde); background: var(--rt-fondo-pie); padding: 8px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .rt-lote__asignado { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
@@ -755,6 +757,9 @@
       enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
       cantidadInsumoHoja, unidadHoja, decimalesDeUnidad,
     } from '../js/retiros-comun.js'
+    // La unidad al lado de un campo de cantidad ("kg", "L", "u"), la misma
+    // regla que Stock e Ingreso (05/10/2026).
+    import { unidadCorta } from '../js/cantidades.js'
     import { supabase } from '../js/supabase.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -2168,7 +2173,8 @@
           `<div class="rt-lote-fila${k === 0 ? ' rt-lote-fila--viejo' : ''}"><label class="rt-lote-fila__nombre" for="rt-r-${i}-lote-${k}">` +
           `<span class="rt-lote-fila__lote">${esc(nombreLote(l.lote))}${k === 0 && info.lista.length > 1 ? '<span class="rt-viejo">EL MÁS VIEJO</span>' : ''}</span>` +
           `<span class="rt-lote-fila__detalle">${l.desde ? `del ${esc(fechaCorta(l.desde).slice(0, 5))} · ` : ''}quedan <strong>${esc(cantidadRenglon(r, l.saldo))}</strong></span></label>` +
-          `<input type="text" class="rt-input" id="rt-r-${i}-lote-${k}" data-r-lote-cant="${i}" data-lote="${esc(l.lote)}" autocomplete="off" placeholder=" " inputmode="decimal"></div>`).join('') + `</div>` +
+          `<input type="text" class="rt-input" id="rt-r-${i}-lote-${k}" data-r-lote-cant="${i}" data-lote="${esc(l.lote)}" autocomplete="off" placeholder=" " inputmode="decimal">` +
+          `<span class="rt-lote-fila__unidad">${esc(r.insumoId ? unidadCorta(r.unidad) : 'cajas')}</span></div>`).join('') + `</div>` +
           `<div class="rt-lote__limpiar"><button type="button" class="rt-link" data-r-lotes-limpiar="${i}">Que salga sola de los más viejos</button></div>`
       }
       const lista = info && !info.cargando && !info.error ? info.lista : null

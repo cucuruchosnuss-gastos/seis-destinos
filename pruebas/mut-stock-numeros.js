@@ -21,8 +21,9 @@ const MOV_CONT = "        const n = parsearCantidad(document.getElementById('mov
 const ANOTAR = '      item.cantidad_contada = parsearCantidad(crudo, { unidad: item.unidad_medida })'
 const TOL = "        tolerancia = leerCampoNumero(document.getElementById('campo-tolerancia'))"
 const EXCEL = "      const n = leerNumeroAr(typeof crudo === 'number' ? crudo : texto, { decimales: 2, negativos: true })"
-const CANT_MOV = "      const crudo = document.getElementById('mov-cantidad').value\n      const n = parsearCantidad(crudo, {"
-const CANT_TI = "      const n = parsearCantidad(document.getElementById('ti-cantidad').value, {\n        unidad: ti.insumo.unidad_medida ?? '',\n      })"
+// Desde el 05/10/2026 la cantidad del movimiento y la del envío se leen por
+// UNA función (con los decimales del modo: bultos o su unidad).
+const LEER_ESCRITA = "      return leerNumeroAr(el?.value ?? '', { decimales: modo ? modo.decimales : DECIMALES_CANTIDAD, negativos })"
 
 correrMutaciones({
   suite: path.join(__dirname, 'test-stock-numeros.js'),
@@ -40,12 +41,8 @@ correrMutaciones({
     { nombre: 'el contenido del recuento se lee con Number', de: REC_CONT, a: `        const n = ${NUM("document.getElementById('rec-contenido').value")}` },
     { nombre: 'el contenido del movimiento se lee con parseFloat', de: MOV_CONT, a: `        const n = ${PF("document.getElementById('mov-contenido').value")}` },
     { nombre: 'el contenido del movimiento se lee con Number', de: MOV_CONT, a: `        const n = ${NUM("document.getElementById('mov-contenido').value")}` },
-    { nombre: 'la cantidad del movimiento se lee con parseFloat',
-      de: CANT_MOV, a: `      const crudo = document.getElementById('mov-cantidad').value\n      const n = ${PF('crudo')} ?? parsearCantidad(crudo, {` },
-    { nombre: 'la cantidad del movimiento se lee con Number',
-      de: CANT_MOV, a: `      const crudo = document.getElementById('mov-cantidad').value\n      const n = ${NUM('crudo')} ?? parsearCantidad(crudo, {` },
-    { nombre: 'la cantidad de la transferencia se lee con parseFloat', de: CANT_TI, a: `      const n = ${PF("document.getElementById('ti-cantidad').value")}` },
-    { nombre: 'la cantidad de la transferencia se lee con Number', de: CANT_TI, a: `      const n = ${NUM("document.getElementById('ti-cantidad').value")}` },
+    { nombre: 'la cantidad del movimiento y del envío se lee con parseFloat', de: LEER_ESCRITA, a: `      return ${PF('el?.value')}` },
+    { nombre: 'la cantidad del movimiento y del envío se lee con Number', de: LEER_ESCRITA, a: `      return ${NUM('el?.value')}` },
     { nombre: 'la tolerancia se lee con parseFloat', de: TOL, a: `        tolerancia = ${PF('crudo')}` },
     { nombre: 'la tolerancia se lee con Number', de: TOL, a: `        tolerancia = ${NUM('crudo')}` },
     { nombre: 'la tolerancia del Excel vuelve a Number(replace)', de: EXCEL, a: "      const n = Number.isFinite(Number(texto.replace(',', '.'))) ? Number(texto.replace(',', '.')) : null" },

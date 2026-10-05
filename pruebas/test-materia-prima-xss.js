@@ -28,6 +28,7 @@ const { interpolaciones, analizar } = require('./escaner-interpolaciones')
 const { clasificar, partirTopLevel } = require('./clasificar')
 const { extraerFn, cuerpoDesde } = require('./extraer')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_CARGA, CONSTANTES_CARGA } = require('./cantidades-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/materia-prima.html')
@@ -63,6 +64,8 @@ const RENDERS = [
   'htmlFilaInterno', 'renderizarResumenInterno', 'renderizarItemsInternos',
   'actualizarSumaMixtaEnVivo', 'htmlResultadoCircuito', 'rutaFotoMp', 'esc', 'itemVacio',
   'renderizarProgresoWz', 'renderizarTogglesTipoDoc', 'poblarSelectUnidades',
+  // Las de js/cantidades.js (05/10/2026): importadas, se suman a mano.
+  ...FUNCIONES_CARGA, 'formatearCantidadStock',
 ]
 
 function clausura(src) {
@@ -148,7 +151,7 @@ if (SOLO !== 'estatico') {
   let S
   try {
     const { funciones, constantes } = clausura(scriptModulo(ARCHIVO))
-    S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones, constantes, retorno: RETORNO })
+    S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones, constantes: ['DECIMALES_CANTIDAD', ...CONSTANTES_CARGA, ...constantes], retorno: RETORNO })
   } catch (e) {
     chk('el sandbox se arma con las funciones reales del archivo', false, String(e && e.stack || e))
   }

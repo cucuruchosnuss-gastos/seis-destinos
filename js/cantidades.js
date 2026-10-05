@@ -140,3 +140,127 @@ export function textoSegunVista(args, { conKilos = false } = {}) {
   const r = cantidadSegunVista(args)
   return conKilos && r.enBultos ? `${r.destacado} (${r.kilos})` : r.destacado
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// CÓMO SE PIDE UNA CANTIDAD (05/10/2026) — la otra mitad de la regla.
+//
+// Lo de arriba MUESTRA una cantidad según insumos.vista_preferida. Esto es
+// para los campos donde se ESCRIBE una: enviar y recibir entre fábricas,
+// corregir y dar de baja stock. El caso que lo motivó: Facu quiso mandar 1
+// bolsa de azúcar de Nuss a Mengui, el campo decía "Cantidad a enviar" sin
+// unidad, se tomó como 1 kg y hubo que anularlo.
+//
+// LA REGLA (pedido de Facu):
+//  1. 'bulto' y el lote tiene UN contenido por bulto → el campo pide bultos
+//     ("bultos de 50 kg") y debajo, en chico, "= 50 kg". Si no, pide en su
+//     unidad y la muestra siempre ("kg", "L", "u"). NUNCA un campo sin unidad.
+//  2. A la base va SIEMPRE la unidad base, convertida con el contenido del
+//     lote elegido. Las funciones de la base no cambian.
+//  3. Un lote con dos presentaciones distintas, o con una parte suelta, se
+//     pide en la unidad base, con un aviso de por qué.
+//
+// "Bultos" y no "bolsas": si era bolsa, tacho o bidón no está guardado en
+// ningún lado (lo mismo que dice la tarjeta de Stock).
+// ═══════════════════════════════════════════════════════════════════════
+
+// Cuántos decimales lleva un campo que pide BULTOS: medio bulto (0,5) es un
+// caso real, también en un insumo que se cuenta por unidades enteras.
+export const DECIMALES_BULTOS_CARGA = 3
+
+// La unidad del catálogo como se la ve al lado de un campo: "kg", "L", "u".
+// Una unidad que no se reconoce se muestra tal cual (nunca vacía si había
+// algo); sin unidad, "unidades".
+export function unidadCorta(unidad) {
+  const crudo = String(unidad ?? '').trim()
+  const u = crudo.toLowerCase().replace(/\.$/, '')
+  if (!u) return 'unidades'
+  if (['kg', 'kgs', 'kilo', 'kilos', 'kilogramo', 'kilogramos'].includes(u)) return 'kg'
+  if (['lt', 'l', 'lts', 'litro', 'litros'].includes(u)) return 'L'
+  if (['un', 'u', 'uni', 'unid', 'unidad', 'unidades'].includes(u)) return 'u'
+  return crudo
+}
+
+// Cómo se pide la cantidad de lo que se va a mover.
+//
+//   unidad          — la del catálogo (kg / lt / un)
+//   vista           — insumos.vista_preferida: 'bulto' o 'base'
+//   contenidos      — los contenidos por bulto CONOCIDOS del lote (y el de la
+//                     presentación elegida, si es otra)
+//   haySueltos      — si el lote (o lo que se mueve) tiene una parte que entró
+//                     sin presentación
+//   decimalesBase   — los decimales de la unidad en ESA pantalla (0 en las que
+//                     se cuentan de a enteros); cada pantalla ya los sabe
+//
+// Devuelve { enBultos, contenido, unidad, rotulo, aviso, decimales,
+// decimalesBase }: `rotulo` va AL LADO del campo ("bultos de 50 kg" o "kg"),
+// `aviso` explica por qué un insumo en bultos se pide en su unidad (o null).
+export function modoDeCarga({ unidad, vista, contenidos = [], haySueltos = false, decimalesBase = DECIMALES_CANTIDAD } = {}) {
+  const u = unidadCorta(unidad)
+  const conocidos = [...new Set((contenidos ?? [])
+    .filter(c => c !== null && c !== undefined && c !== '')
+    .map(Number)
+    .filter(c => Number.isFinite(c) && c > 0))].sort((a, b) => a - b)
+  const enBase = { enBultos: false, contenido: null, unidad: u, rotulo: u, aviso: null, decimales: decimalesBase, decimalesBase }
+  if (vista !== 'bulto') return enBase
+
+  if (conocidos.length === 1 && !haySueltos) {
+    return {
+      enBultos: true, contenido: conocidos[0], unidad: u,
+      rotulo: `bultos de ${formatearCantidadStock(conocidos[0], u)}`,
+      aviso: null, decimales: DECIMALES_BULTOS_CARGA, decimalesBase,
+    }
+  }
+  // Sin ningún contenido conocido no hay bulto que ofrecer: es el caso común
+  // (lo que entró por el recuento inicial) y no necesita explicación.
+  if (!conocidos.length) return enBase
+  if (conocidos.length > 1) {
+    const lista = conocidos.map(c => formatearCantidadStock(c, u))
+    const de = lista.length === 2 ? `${lista[0]} y de ${lista[1]}` : lista.join(', ')
+    return { ...enBase, aviso: `Este lote tiene bultos de ${de}: como no son todos iguales, la cantidad se pide en ${u}.` }
+  }
+  return { ...enBase, aviso: `Parte de este lote entró suelta, sin presentación: la cantidad se pide en ${u}.` }
+}
+
+// De lo ESCRITO en el campo a la unidad base, que es lo que va a la base.
+// `escrito` es el número ya leído del campo (leerCampoNumero / leerNumeroAr).
+// Devuelve { base, error }:
+//   base  — la cantidad en kg / L / u, o null si no hay o no sirve
+//   error — null, o el texto para la persona (p. ej. 2,5 bultos de 3 u dan
+//           7,5 u, que no se pueden contar)
+// Vacío NO es cero: { base: null, error: null }.
+export function aUnidadBase(escrito, modo) {
+  if (escrito === null || escrito === undefined || escrito === '') return { base: null, error: null }
+  const n = Number(escrito)
+  if (!Number.isFinite(n)) return { base: null, error: 'No se entiende ese número.' }
+  if (!modo?.enBultos) return { base: n, error: null }
+  const c = Number(modo.contenido)
+  if (!Number.isFinite(c) || c <= 0) return { base: null, error: 'No se sabe cuánto trae cada bulto.' }
+  const base = Math.round(n * c * 1e6) / 1e6
+  if (modo.decimalesBase === 0 && !Number.isInteger(base)) {
+    return {
+      base: null,
+      error: `${formatearNumeroAr(n, { decimales: DECIMALES_BULTOS_CARGA, minimos: 0 })} ${modo.rotulo} dan ${formatearCantidadStock(base, modo.unidad)}, y se cuenta por unidades enteras.`,
+    }
+  }
+  return { base, error: null }
+}
+
+// Lo que va debajo del campo, en chico: "= 50 kg". Solo cuando se pide en
+// bultos y lo escrito se puede convertir; si no, null (no se dibuja nada).
+export function equivalenteDeCarga(escrito, modo) {
+  if (!modo?.enBultos) return null
+  const { base } = aUnidadBase(escrito, modo)
+  return base === null ? null : `= ${formatearCantidadStock(base, modo.unidad)}`
+}
+
+// Lo que ya está en unidad base, expresado en el campo (para volver a
+// escribir un renglón que se edita). En bultos, null si no da un número que
+// el campo pueda mostrar sin redondear.
+export function desdeUnidadBase(base, modo) {
+  if (base === null || base === undefined || base === '') return null
+  const n = Number(base)
+  if (!Number.isFinite(n)) return null
+  if (!modo?.enBultos) return n
+  const b = Math.round((n / Number(modo.contenido)) * 1e6) / 1e6
+  return Math.abs(Math.round(b * 1000) / 1000 - b) < 1e-9 ? b : null
+}

@@ -23,6 +23,7 @@ const { construirCon, scriptModulo } = require('./sandbox')
 const { fuenteNumeros, inputFalso } = require('./numeros-comun')
 const { extraerFn } = require('./extraer')
 const { leer } = require('./circuito-comun')
+const { FUNCIONES_CARGA, CONSTANTES_CARGA } = require('./cantidades-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/stock.html')
@@ -170,12 +171,16 @@ const FUNCIONES = [
   // transferencia
   'prepararCantidadTi', 'abrirModalTransfItem', 'elegirInsumoTi', 'quitarInsumoTi', 'contenidoTi',
   'cantidadTi', 'confirmarTransfItem', 'confirmarTransferencia',
+  // la unidad del campo (05/10/2026)
+  'modoTi', 'presentacionesTi', 'modoMov', 'escritoMovBase', 'pintarModoCantidad', 'leerCantidadEscrita',
+  ...FUNCIONES_CARGA,
   // catálogo
   'abrirModalInsumo', 'leerFormularioInsumo', 'pideConfirmacionDeTipo', 'guardarInsumo',
   'parsearTolerancia',
 ]
 const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', '_reglaCampoCantidad', 'limpiarTexto',
-  'CATEGORIAS', 'SIN_CATEGORIA', 'ORDEN_TIPO', 'TIPOS', 'ordenDe', 'redondear6', 'parsearBultos', 'DECIMALES_BULTOS', 'FILTROS_REC']
+  'CATEGORIAS', 'SIN_CATEGORIA', 'ORDEN_TIPO', 'TIPOS', 'ordenDe', 'redondear6', 'parsearBultos', 'DECIMALES_BULTOS', 'FILTROS_REC',
+  '_claveModoCantidad', ...CONSTANTES_CARGA]
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
@@ -543,6 +548,102 @@ function prepararMov(modo, insumo) {
   chk('Excel: vacío = null válido', pt('').ok && pt('').valor === null && pt(null).valor === null)
   chk('Excel: 100 entra, 100,01 no', pt('100').ok && !pt('100,01').ok)
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 5b. LA CANTIDAD COMO FACU CONFIGURÓ EL INSUMO (05/10/2026)
+// El caso que lo motivó: 1 bolsa de azúcar de Nuss a Mengui se mandó como
+// 1 kg. Con la vista en 'bulto' y el lote en bolsas de 50 kg, "1" manda 50;
+// con la vista en kilos, "1" manda 1. Y el campo dice en qué se escribe.
+// ══════════════════════════════════════════════════════════════════════════
+const AZ_BULTO = { id: 'i-az', nombre: 'Azúcar', marca: '', tipo: 'insumo', unidad_medida: 'kg', vista_preferida: 'bulto' }
+const AZ_KILO = { id: 'i-az2', nombre: 'Azúcar', marca: 'Otra', tipo: 'insumo', unidad_medida: 'kg', vista_preferida: 'base' }
+const CAJ_BULTO = { id: 'i-cj', nombre: 'Caja', marca: '', tipo: 'insumo', unidad_medida: 'un', vista_preferida: 'bulto' }
+pendientes.push(async () => {
+  S.estado.insumos = [...(S.estado.insumos || []).filter(i => !String(i.id).startsWith('i-az') && i.id !== 'i-cj'), AZ_BULTO, AZ_KILO, CAJ_BULTO]
+  const lote50 = [{ lote: null, contenido_por_bulto: 50, saldo: 500 }]
+
+  // ── El envío ──────────────────────────────────────────────────────────
+  S.estado.transf = { origenId: 'u-1', destinoId: 'u-2', items: [] }
+  S.__setDatos({ v_stock_por_lote: lote50 })
+  S.abrirModalTransfItem()
+  await S.elegirInsumoTi(AZ_BULTO.id)
+  S.estado.lotesTi = lote50
+  S.estado.ti.lote = null; S.estado.ti.presentacion = 50
+  S.pintarModoCantidad('ti', S.modoTi(), () => {})
+  chk('envío azúcar en bultos: el campo dice "bultos de 50 kg"', el('ti-unidad-cantidad').textContent.replace(/\u00a0/g, ' ') === 'bultos de 50 kg', el('ti-unidad-cantidad').textContent)
+  el('ti-cantidad').escribirCrudo(''); el('ti-cantidad').teclear('1')
+  S.pintarModoCantidad('ti', S.modoTi(), () => {})
+  chk('envío azúcar en bultos: debajo "= 50 kg"', el('ti-equivale-cantidad').hidden === false && el('ti-equivale-cantidad').textContent.replace(/\u00a0/g, ' ') === '= 50 kg', [el('ti-equivale-cantidad').hidden, el('ti-equivale-cantidad').textContent])
+  S.confirmarTransfItem()
+  chk('envío: "1" bolsa de azúcar de 50 kg queda en 50 kg', S.estado.transf.items[0]?.cantidad === 50, S.estado.transf.items[0])
+
+  S.abrirModalTransfItem()
+  await S.elegirInsumoTi(AZ_KILO.id)
+  S.estado.lotesTi = lote50
+  S.estado.ti.lote = null; S.estado.ti.presentacion = 50
+  S.pintarModoCantidad('ti', S.modoTi(), () => {})
+  chk('envío azúcar en kilos: el campo dice "kg"', el('ti-unidad-cantidad').textContent === 'kg', el('ti-unidad-cantidad').textContent)
+  el('ti-cantidad').escribirCrudo(''); el('ti-cantidad').teclear('1')
+  S.confirmarTransfItem()
+  chk('envío: "1" kg manda 1', S.estado.transf.items[1]?.cantidad === 1, S.estado.transf.items[1])
+
+  // Lote con dos presentaciones: se pide en kg, con el aviso.
+  S.abrirModalTransfItem()
+  await S.elegirInsumoTi(AZ_BULTO.id)
+  S.estado.lotesTi = [{ lote: 'L-2', contenido_por_bulto: 25, saldo: 100 }, { lote: 'L-2', contenido_por_bulto: 50, saldo: 100 }]
+  S.estado.ti.lote = 'L-2'; S.estado.ti.presentacion = 50
+  S.pintarModoCantidad('ti', S.modoTi(), () => {})
+  chk('envío, lote con dos presentaciones: en kg', el('ti-unidad-cantidad').textContent === 'kg', el('ti-unidad-cantidad').textContent)
+  chk('envío, lote con dos presentaciones: el aviso dice por qué', el('ti-aviso-unidad').hidden === false && /25 kg/.test(el('ti-aviso-unidad').textContent.replace(/\u00a0/g, ' ')), el('ti-aviso-unidad').textContent)
+  el('ti-cantidad').escribirCrudo(''); el('ti-cantidad').teclear('1')
+  S.confirmarTransfItem()
+  chk('envío, lote con dos presentaciones: "1" manda 1', S.estado.transf.items[2]?.cantidad === 1, S.estado.transf.items[2])
+
+  S.__llamadas.rpc = []
+  S.confirmarTransferencia()
+  const items = ultimaRpc('crear_transferencia_stock')?.p_items ?? []
+  chk('crear_transferencia_stock recibe 50 (la bolsa) y 1 (el kilo)', items[0]?.cantidad === 50 && items[1]?.cantidad === 1, items)
+
+  // Cajas en bultos de 3 u: 2,5 bultos no se redondean, se dice por qué.
+  S.estado.transf = { origenId: 'u-1', destinoId: 'u-2', items: [] }
+  S.abrirModalTransfItem()
+  await S.elegirInsumoTi(CAJ_BULTO.id)
+  S.estado.lotesTi = [{ lote: null, contenido_por_bulto: 3, saldo: 30 }]
+  S.estado.ti.lote = null; S.estado.ti.presentacion = 3
+  S.pintarModoCantidad('ti', S.modoTi(), () => {})
+  el('ti-cantidad').escribirCrudo(''); el('ti-cantidad').teclear('2,5')
+  S.confirmarTransfItem()
+  chk('envío: 2,5 bultos de 3 u no se agregan', S.estado.transf.items.length === 0, S.estado.transf.items)
+  chk('envío: y se dice por qué', /unidades enteras/.test(el('ti-error-cantidad').textContent), el('ti-error-cantidad').textContent)
+
+  // ── Dar de baja una bolsa ─────────────────────────────────────────────
+  prepararMov('baja', null)
+  S.__setDatos({ v_stock_por_lote: lote50 })
+  await S.elegirInsumoMov(AZ_BULTO.id)
+  S.estado.lotesMov = lote50
+  S.estado.mov.presentacion = 50
+  S.pintarModoCantidad('mov', S.modoMov(), () => {})
+  chk('baja azúcar en bultos: el campo dice "bultos de 50 kg"', el('mov-unidad-cantidad').textContent.replace(/\u00a0/g, ' ') === 'bultos de 50 kg', el('mov-unidad-cantidad').textContent)
+  el('mov-cantidad').escribirCrudo(''); el('mov-cantidad').teclear('1')
+  el('mov-motivo').value = 'se rompió una bolsa'; el('mov-motivo-tipo').value = 'rotura'
+  S.__llamadas.rpc = []
+  await S.confirmarMovimiento()
+  chk('baja: "1" bolsa de 50 kg manda 50', ultimaRpc('registrar_baja_stock')?.p_cantidad === 50, ultimaRpc('registrar_baja_stock'))
+  chk('baja: con su presentación', ultimaRpc('registrar_baja_stock')?.p_contenido_por_bulto === 50, ultimaRpc('registrar_baja_stock'))
+
+  prepararMov('ajuste', null)
+  await S.elegirInsumoMov(AZ_KILO.id)
+  S.estado.lotesMov = lote50
+  S.estado.mov.presentacion = 50
+  S.pintarModoCantidad('mov', S.modoMov(), () => {})
+  chk('ajuste azúcar en kilos: el campo dice "kg"', el('mov-unidad-cantidad').textContent === 'kg', el('mov-unidad-cantidad').textContent)
+  el('mov-cantidad').escribirCrudo(''); el('mov-cantidad').teclear('1')
+  el('mov-motivo').value = 'se contó de nuevo'; el('mov-motivo-tipo').value = 'faltante_recuento'
+  S.estado.mov.signo = -1
+  S.__llamadas.rpc = []
+  await S.confirmarMovimiento()
+  chk('ajuste: "1" kg con "Falta" manda -1', ultimaRpc('registrar_ajuste_stock')?.p_cantidad === -1, ultimaRpc('registrar_ajuste_stock'))
+})
 
 // ══════════════════════════════════════════════════════════════════════════
 // 7. FUENTE: no quedan lecturas viejas

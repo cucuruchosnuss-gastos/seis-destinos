@@ -21,7 +21,7 @@
 
 const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
-const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES } = require('./cantidades-comun')
+const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_CARGA, CONSTANTES_CARGA } = require('./cantidades-comun')
 const { arnes, marca, chequearMarcas, leer } = require('./circuito-comun')
 const { interpolaciones, analizar } = require('./escaner-interpolaciones')
 const { clasificar, partirTopLevel } = require('./clasificar')
@@ -68,6 +68,7 @@ const RENDERS = [
   'renderizarTransito', 'renderizarTransfHistorial', 'renderizarCabeceraTransf', 'renderizarItemsTransfDetalle',
   // Las de js/cantidades.js (02/10/2026): importadas, se suman a mano.
   ...FUNCIONES_CANTIDADES,
+  ...FUNCIONES_CARGA,
 ]
 
 function clausura(src) {
@@ -160,7 +161,7 @@ if (SOLO !== 'estatico') {
   let S
   try {
     const { funciones, constantes } = clausura(scriptModulo(ARCHIVO))
-    S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones, constantes: [...CONSTANTES_CANTIDADES, ...constantes], retorno: RETORNO })
+    S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones, constantes: [...CONSTANTES_CANTIDADES, ...CONSTANTES_CARGA, ...constantes], retorno: RETORNO })
   } catch (e) {
     chk('el sandbox se arma con las funciones reales del archivo', false, String(e && e.stack || e))
   }
