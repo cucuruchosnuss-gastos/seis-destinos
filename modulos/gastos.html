@@ -817,6 +817,27 @@
 
     /* ── Tarjetas de destino (empresa / vehículo) ──────────────────────────── */
 
+    /* "¿Es de un proyecto del Taller? Elegí Taller." (02/10/2026): en chico,
+       debajo de la grilla de empresas y arriba de las categorías, cuando se
+       eligió una empresa que no es el Taller y hay algún proyecto abierto. */
+    .aviso-taller {
+      margin: 0.75rem 0 0;
+      font-size: 0.8125rem;
+      color: var(--color-texto-2);
+      line-height: 1.4;
+    }
+    .aviso-taller--arriba { margin: -0.25rem 0 0.75rem; }
+    .aviso-taller__link {
+      background: none;
+      border: 0;
+      padding: 0.625rem 0.125rem;
+      font: inherit;
+      font-weight: 600;
+      color: var(--color-acento);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
     .grilla-destino {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -1878,6 +1899,7 @@
 
         <!-- Tarjetas renderizadas por JS desde estado.maestros.unidades + tarjeta Vehículos -->
         <div class="grilla-destino" id="grilla-destino"></div>
+        <p class="aviso-taller" id="aviso-taller-destino" hidden></p>
       </div>
       <div class="wizard-nav">
         <button class="btn btn--secundario" id="btn-destino-atras">← Atrás</button>
@@ -1904,6 +1926,8 @@
     <div class="paso" id="sp-categoria">
       <div class="paso__contenido">
         <h2 class="paso__titulo">¿Qué categoría es?</h2>
+        <!-- Tocar una empresa avanza solo hasta acá: el aviso se repite arriba. -->
+        <p class="aviso-taller aviso-taller--arriba" id="aviso-taller-categoria" hidden></p>
 
         <!-- Grilla renderizada por JS. Tap en categoría auto-avanza a detalles -->
         <div class="grilla-categorias" id="grilla-categorias"></div>
@@ -3959,6 +3983,7 @@
 
       if (id === 'categoria') {
         renderizarGrillaCategorias()
+        pintarAvisoTaller()
       }
 
       if (id === 'detalles') {
@@ -4098,6 +4123,7 @@
         btn.addEventListener('click', () => seleccionarDestino(btn))
       })
       actualizarBotonDestinoSiguiente()
+      pintarAvisoTaller()
     }
 
     // "Siguiente" del paso Destino: solo cuando ya hay un destino elegido
@@ -4106,6 +4132,43 @@
     function actualizarBotonDestinoSiguiente() {
       const b = document.getElementById('btn-destino-siguiente')
       if (b) b.hidden = !(viaVehiculos || unidadSeleccionada)
+    }
+
+    // ── El aviso del Taller (02/10/2026) ─────────────────────────────────
+    // Quien carga un gasto de un proyecto del Taller a veces elige la fábrica
+    // donde se hizo el trabajo. Si eligió una empresa que NO es el Taller y
+    // hay algún proyecto abierto (y puede elegir el Taller), se le dice en
+    // chico. Por Vehículos no: ahí la empresa sale del vehículo.
+    const TEXTO_AVISO_TALLER = '¿Es de un proyecto del Taller? '
+    function unidadTallerElegible() {
+      return unidadesElegibles().find(u => esUnidadTaller(u.id)) ?? null
+    }
+    function debeAvisarTaller() {
+      if (viaVehiculos || !unidadSeleccionada) return false
+      if (esUnidadTaller(unidadSeleccionada)) return false
+      if (!(estado.maestros.proyectos ?? []).length) return false
+      return !!unidadTallerElegible()
+    }
+    function pintarAvisoTaller() {
+      const mostrar = debeAvisarTaller()
+      for (const id of ['aviso-taller-destino', 'aviso-taller-categoria']) {
+        const el = document.getElementById(id)
+        if (!el) continue
+        el.innerHTML = mostrar
+          ? esc(TEXTO_AVISO_TALLER) + '<button type="button" class="aviso-taller__link" data-elegir-taller>Elegí Taller.</button>'
+          : ''
+        el.hidden = !mostrar
+      }
+    }
+    // "Elegí Taller.": lo mismo que tocar la tarjeta del Taller.
+    function elegirTaller() {
+      const t = unidadTallerElegible()
+      if (!t) return
+      vehiculoSeleccionado = null
+      vehiculoFueElegido   = false
+      viaVehiculos         = false
+      unidadSeleccionada   = t.id
+      irASubpaso('categoria')
     }
 
     function avanzarDesdeDestino() {
@@ -6605,6 +6668,9 @@
     // ── Sub-paso DESTINO ───────────────────────────────────────────────────
     document.getElementById('btn-destino-atras').addEventListener('click', () => irASubpaso('datos'))
     document.getElementById('btn-destino-siguiente').addEventListener('click', avanzarDesdeDestino)
+    for (const id of ['aviso-taller-destino', 'aviso-taller-categoria']) {
+      document.getElementById(id)?.addEventListener('click', ev => { if (ev.target.closest('[data-elegir-taller]')) elegirTaller() })
+    }
 
     // ── Sub-paso VEHICULO-DESTINO ──────────────────────────────────────────
     document.getElementById('btn-vehiculo-atras').addEventListener('click',     () => irASubpaso('destino'))
