@@ -285,6 +285,67 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   text-align: left;
 }
 
+/* ─── El control de período (js/periodo.js, 04/10/2026) ─────────────────────
+   Un botón "Período: Este mes" en vez de los Desde/Hasta sueltos. En la compu
+   el panel flota al lado del botón (lo ubica ubicarPanel, dentro de la
+   pantalla); debajo de 640 px sale desde abajo, a todo el ancho, con fondo
+   oscurecido. Las fechas a mano son GRANDES (48 px) y usan el calendario del
+   sistema. */
+.periodo { position: relative; display: inline-flex; flex-shrink: 0; max-width: 100%; }
+.periodo__boton {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  min-height: 40px; max-width: 100%; padding: 0 0.875rem;
+  border: 1.5px solid var(--color-borde); border-radius: 999px;
+  background: var(--color-fondo); color: var(--color-texto);
+  font-family: var(--fuente); font-size: 0.875rem; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.periodo__boton:focus-visible { outline: 2px solid var(--color-acento); outline-offset: 2px; }
+.periodo__rotulo { color: var(--color-texto-2); }
+.periodo__valor { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.periodo__boton--activo { border-color: var(--color-acento); background: var(--color-acento-suave); }
+.periodo__boton--activo .periodo__valor { color: var(--color-acento-hover); }
+.periodo__panel {
+  position: fixed; z-index: 60; width: 300px; max-width: calc(100vw - 16px);
+  box-sizing: border-box; padding: 0.875rem;
+  background: var(--color-fondo); border: 1px solid var(--color-borde);
+  border-radius: var(--radio-tarjeta, 16px); box-shadow: 0 8px 24px rgba(28, 26, 23, 0.16);
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.periodo__panel[hidden] { display: none; }
+.periodo__titulo { font-family: var(--fuente-titulo, var(--fuente)); font-weight: 700; font-size: 1rem; }
+.periodo__atajos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.periodo__atajo {
+  min-height: 44px; padding: 0 0.75rem; border: 1.5px solid var(--color-borde);
+  border-radius: var(--radio-boton, 12px); background: var(--color-fondo); color: var(--color-texto);
+  font-family: var(--fuente); font-size: 0.9375rem; cursor: pointer; text-align: center;
+}
+.periodo__atajo[aria-pressed="true"], .periodo__atajo[aria-expanded="true"] {
+  border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento-hover); font-weight: 600;
+}
+.periodo__atajo:focus-visible, .periodo__aplicar:focus-visible { outline: 2px solid var(--color-acento); outline-offset: 2px; }
+.periodo__fechas { display: flex; flex-direction: column; gap: 0.625rem; }
+.periodo__fechas[hidden] { display: none; }
+.periodo__campo { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8125rem; color: var(--color-texto-2); }
+.periodo__campo input[type="date"] { min-height: 48px; font-size: 1rem; color: var(--color-texto); }
+.periodo__error { margin: 0; color: var(--bordo, #8C1D18); font-size: 0.875rem; }
+.periodo__error[hidden] { display: none; }
+.periodo__aplicar {
+  min-height: 48px; border: none; border-radius: var(--radio-boton, 12px);
+  background: var(--color-acento); color: #fff; font-family: var(--fuente); font-size: 1rem; font-weight: 600; cursor: pointer;
+}
+.periodo__fondo { position: fixed; inset: 0; z-index: 59; background: rgba(28, 26, 23, 0.35); }
+.periodo__fondo[hidden] { display: none; }
+@media (max-width: 639.98px) {
+  .periodo--hoja .periodo__panel {
+    left: 0; right: 0; bottom: 0; top: auto; width: auto; max-width: none;
+    max-height: 85vh; overflow-y: auto;
+    border-radius: var(--radio-tarjeta, 16px) var(--radio-tarjeta, 16px) 0 0;
+    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom));
+  }
+}
+@media print { .periodo__panel, .periodo__fondo { display: none !important; } }
+
 .formulario__acciones {
   margin-top: 0.5rem;
 }

@@ -231,7 +231,11 @@ module.exports = {
       ],
       "__defecto": null
     },
-    "pedidos_de": [
+    // Con un período sin pedidos (2099) la lista queda vacía: lo usa
+    // e2e/filtros-dispositivos.spec.js para ver que el filtro de fechas filtra.
+    "pedidos_de": {
+      "__segun": [{ "si": { "p_desde": "2099-01-01" }, "r": [] }],
+      "__defecto": [
       {
         "id": "pe1",
         "numero": 3,
@@ -271,6 +275,6 @@ module.exports = {
         "sin_interpretar": 0,
         "observaciones": null
       }
-    ]
+    ] }
   }
 };

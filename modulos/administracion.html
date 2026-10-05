@@ -903,6 +903,7 @@
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
+    import { crearPeriodo } from '../js/periodo.js'
     import { unidadesDeLaBarra, alCambiarUnidad, MARCA_FABRICA, nombreCorto } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
@@ -6134,6 +6135,9 @@
       for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar']) {
         document.getElementById(id).addEventListener('change', () => leerFiltros())
       }
+      // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+      // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+      crearPeriodo({ desde: document.getElementById('ad-filtro-desde'), hasta: document.getElementById('ad-filtro-hasta') })
       document.getElementById('ad-ordenes-lista').addEventListener('click', (e) => {
         const b = e.target.closest('[data-orden]')
         if (b) abrirOrden(b.dataset.orden)

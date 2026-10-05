@@ -1498,10 +1498,12 @@
         display: flex !important;
       }
 
+      /* Baja de renglón (04/10/2026). Era una tira que se deslizaba de costado
+         y se salía de la pantalla: las fechas quedaban cortadas en el borde y,
+         en el Android de Tomás, tocar "Desde" o "Hasta" no abría el calendario.
+         Medido con e2e/filtros-dispositivos.spec.js. */
       .lista-filtros {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        flex-wrap: wrap;
         min-width: 0;
         gap: 0.375rem;
         padding: 0.875rem 0.75rem;
@@ -1591,13 +1593,15 @@
         justify-content: center;
       }
 
+      /* El buscador, en su propio renglón y con letra de 16 px: con 12 px el
+         iPhone agranda la pantalla al tocarlo. */
       #filtro-busqueda {
-        height: 32px !important;
+        height: 40px !important;
         line-height: 1 !important;
-        min-width: 110px !important;
-        flex: 0 1 110px !important;
-        padding: 0 0.5rem !important;
-        font-size: 0.75rem !important;
+        min-width: 0 !important;
+        flex: 1 1 100% !important;
+        padding: 0 0.75rem !important;
+        font-size: 16px !important;
       }
 
       .lista-contenido {
@@ -2104,6 +2108,7 @@
     import { verificarSesion } from '../js/auth.js'
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
+    import { crearPeriodo, ubicarPanel } from '../js/periodo.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     // La barra de unidad de negocio, arriba (28/09/2026): es el mismo archivo
     // que carga el <head>, así que el navegador lo ejecuta UNA vez y acá se
@@ -2526,11 +2531,11 @@
           borrador = [...seleccionados]
           renderizarOpciones()
           document.body.appendChild(panel)
-          const rect = boton.getBoundingClientRect()
-          panel.style.top  = (rect.bottom + 4) + 'px'
-          panel.style.left = rect.left + 'px'
         }
         panel.hidden = estabaAbierto
+        // Dentro de la pantalla (ubicarPanel, js/periodo.js): antes se abría en
+        // rect.bottom / rect.left y en el celular quedaba debajo del borde.
+        if (!estabaAbierto) ubicarPanel(panel, boton)
       })
 
       actualizarTexto()
@@ -2569,12 +2574,10 @@
         e.stopPropagation()
         const estabaAbierto = !panel.hidden
         document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
-        if (!estabaAbierto) {
-          const rect = boton.getBoundingClientRect()
-          panel.style.top  = (rect.bottom + 4) + 'px'
-          panel.style.left = rect.left + 'px'
-        }
         panel.hidden = estabaAbierto
+        // Dentro de la pantalla (ubicarPanel, js/periodo.js): antes se abría en
+        // rect.bottom / rect.left y en el celular quedaba debajo del borde.
+        if (!estabaAbierto) ubicarPanel(panel, boton)
       })
 
       actualizarBoton()
@@ -2595,7 +2598,7 @@
         <input type="text" id="filtro-busqueda" placeholder="${placeholderBusqueda}" value="${esc(estado.filtros.busqueda)}" style="flex:1; min-width:180px; padding:0.4375rem 0.875rem; border:1.5px solid var(--color-borde); border-radius:999px; font-family:var(--fuente); font-size:0.8125rem; background:var(--color-fondo); outline:none;">
 
         <div class="multiselect" id="ms-periodo">
-          <button type="button" class="multiselect__boton" id="ms-periodo-boton">Todos los períodos</button>
+          <button type="button" class="multiselect__boton" id="ms-periodo-boton">Todos los meses</button>
           <div class="multiselect__panel" id="ms-periodo-panel" hidden></div>
         </div>
       `
@@ -2647,7 +2650,8 @@
         idBase: 'ms-periodo',
         opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
         seleccionados: estado.filtros.periodos,
-        etiquetaTodos: etiquetaResponsive('Todos los períodos', 'Período'),
+        // "Meses" y no "períodos": al lado está el botón "Período:" de las fechas.
+        etiquetaTodos: etiquetaResponsive('Todos los meses', 'Mes'),
         onChange: () => activarFiltroFecha('periodo')
       })
 
@@ -2706,6 +2710,9 @@
           activarFiltroFecha('hoy')
         })
         document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
+        // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+        // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+        crearPeriodo({ desde: document.getElementById('filtro-fecha-desde'), hasta: document.getElementById('filtro-fecha-hasta') })
       }
     }
 

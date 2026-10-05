@@ -2582,6 +2582,7 @@
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
+    import { crearPeriodo } from '../js/periodo.js'
 
     mostrarBannerVersion()
 
@@ -8024,6 +8025,10 @@
       document.getElementById('pr-historial-unidad').addEventListener('change', cambio('unidadId'))
       document.getElementById('pr-historial-desde').addEventListener('change', cambio('desde'))
       document.getElementById('pr-historial-hasta').addEventListener('change', cambio('hasta'))
+      // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+      // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+      // obligatorias: cargarHistorial() necesita las dos fechas (no busca "sin fechas").
+      crearPeriodo({ desde: document.getElementById('pr-historial-desde'), hasta: document.getElementById('pr-historial-hasta'), obligatorias: true })
       document.getElementById('pr-historial-maquina').addEventListener('change', cambio('maquina'))
       document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
       document.getElementById('pr-historial-lista').addEventListener('click', ev => {

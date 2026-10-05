@@ -1671,6 +1671,7 @@
     import { verificarSesion } from '../js/auth.js'
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
+    import { crearPeriodo, ubicarPanel } from '../js/periodo.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     // La barra de unidad de negocio de arriba (js/barra-unidad.js): la unidad
     // elegida filtra todo lo que se MIRA; los permisos siguen en la base.
@@ -4268,11 +4269,11 @@
         document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
         if (!estabaAbierto) {
           document.body.appendChild(panel)
-          const rect = boton.getBoundingClientRect()
-          panel.style.top  = (rect.bottom + 4) + 'px'
-          panel.style.left = rect.left + 'px'
         }
         panel.hidden = estabaAbierto
+        // Dentro de la pantalla (ubicarPanel, js/periodo.js): antes se abría en
+        // rect.bottom / rect.left y en el celular quedaba debajo del borde.
+        if (!estabaAbierto) ubicarPanel(panel, boton)
       })
 
       actualizarSelectorOrdenFicha()
@@ -4794,6 +4795,10 @@
       })
     })
     document.getElementById('btn-exportar-excel-historial').addEventListener('click', exportarExcelHistorial)
+    // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+    // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+    crearPeriodo({ desde: document.getElementById('filtro-fecha-desde-historial'), hasta: document.getElementById('filtro-fecha-hasta-historial') })
+    crearPeriodo({ desde: document.getElementById('filtro-fecha-desde-ficha'), hasta: document.getElementById('filtro-fecha-hasta-ficha') })
 
     // ── Filtros: Movimientos (ficha) ────────────────────────────────────────
     document.getElementById('filtro-fecha-desde-ficha').addEventListener('change', (e) => {
