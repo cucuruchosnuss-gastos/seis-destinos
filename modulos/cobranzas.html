@@ -1642,6 +1642,7 @@
     // carga el <script> del <head>: el navegador lo ejecuta una sola vez.
     import { unidadesDeLaBarra, alCambiarUnidad, pasarBarraAUnidad, pasaFiltroUnidad, ordenarUnidades, logoUnidad, nombreCorto, MARCA_FABRICA, inicialesDe } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
+    import { crearPeriodo } from '../js/periodo.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
     mostrarBannerVersion()
@@ -6509,6 +6510,9 @@
       document.getElementById('cob-filtro-hasta').addEventListener('change', (ev) => {
         estado.filtros.hasta = ev.target.value; cargarCobranzas({ reiniciar: true })
       })
+      // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+      // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+      crearPeriodo({ desde: document.getElementById('cob-filtro-desde'), hasta: document.getElementById('cob-filtro-hasta') })
       document.getElementById('cob-filtro-repartidor').addEventListener('change', (ev) => {
         estado.filtros.repartidor = ev.target.value; cargarCobranzas({ reiniciar: true })
       })

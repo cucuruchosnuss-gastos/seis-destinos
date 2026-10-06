@@ -165,6 +165,8 @@ const PRELUDIO = `
   var turnoErrores = 0
   var turnoSeguridad = 0
   var turnoRevisar = 0
+  // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
+  var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }
   var __urlsFirmadas = []
 

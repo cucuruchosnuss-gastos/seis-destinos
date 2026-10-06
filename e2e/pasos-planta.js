@@ -72,23 +72,37 @@ const PASOS_PLANTA = [
     await page.locator('#pr-barra [data-seccion="paradas"]').click()
     await expect(page.locator('#pr-paradas')).toBeVisible()
   }],
-  // Paradas (30/09/2026): anotar una que ya pasó con los DOS relojes (lo más
-  // alto que se pone la pantalla): un motivo, "Otro" en cuánto duró y el
-  // resumen. Todo tiene que entrar sin scroll a 1000 × 540.
+  // Paró (05/10/2026): un motivo, DESDE y HASTA con la ventana de la hora
+  // (lo más alto que se pone la pantalla: con HASTA aparece "Volvió con lote
+  // nuevo"). Todo tiene que entrar sin scroll a 1000 × 540.
   ['paradas-anotar', async (page) => {
     await page.locator('#pr-parada-sugerencias .pr-motivo').first().click()
-    await page.locator('#pr-parada-duracion [data-duracion="otro"]').click()
-    await expect(page.locator('#pr-parada-hora [data-rueda="fin"]')).toBeVisible()
-    await expect(page.locator('#pr-parada-resumen')).toBeVisible()
+    await page.locator('#pr-parada-hora [data-parada-hora="inicio"]').click()
+    await expect(page.locator('#pr-hora-ventana')).toBeVisible()
   }],
-  // La limpieza de planchas "al arrancar", con su nota y "Todavía no terminó".
-  ['paradas-limpieza', async (page) => {
-    await page.locator('#pr-parada-sugerencias [data-limpieza="arranque"]').click()
-    await expect(page.locator('#pr-parada-duracion [data-duracion="sigue"]')).toBeVisible()
+  // La ventana de la hora, con el teclado de la planta.
+  ['paradas-hora', async (page) => {
+    for (const d of '1500') await page.locator(`#pr-hora-ventana [data-hv-tecla="${d}"]`).click()
+    await expect(page.locator('#pr-hora-ventana-hora')).toContainText('15:00')
+  }],
+  ['paradas-hasta', async (page) => {
+    await page.locator('#pr-hora-ventana-guardar').click()
+    await page.locator('#pr-parada-hora [data-parada-hora="fin"]').click()
+    for (const d of '1600') await page.locator(`#pr-hora-ventana [data-hv-tecla="${d}"]`).click()
+    await page.locator('#pr-hora-ventana-guardar').click()
+    await expect(page.locator('#pr-parada-hora [data-parada-lote-nuevo]')).toBeVisible()
+    await expect(page.locator('#pr-parada-resumen')).toBeVisible()
   }],
   ['cerrar-planilla', async (page) => {
     await page.locator('#pr-barra [data-seccion="cierre"]').click()
     await expect(page.locator('#pr-cierre')).toBeVisible()
+  }],
+  // Terminó de producir antes: "¿Por qué paró antes?" con los motivos.
+  ['cerrar-antes', async (page) => {
+    await page.locator('#pr-cierre-hora').click()
+    for (const d of '1310') await page.locator(`#pr-hora-ventana [data-hv-tecla="${d}"]`).click()
+    await page.locator('#pr-hora-ventana-guardar').click()
+    await expect(page.locator('#pr-cierre-campo-motivo')).toBeVisible()
   }],
   // El botón de volver (30/09/2026): "‹ Inicio" lleva al Inicio del modo.
   ['volver-inicio', async (page) => {

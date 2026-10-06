@@ -233,6 +233,23 @@ const SEGURAS_PRODUCCION = [
   ['izqRecHtml', 'HTML ya escapado: htmlDetalleReceta() lo arma con htmlEditorReceta() / htmlTablaRecetaVista() (que escapan adentro) y esc() de la nota y las versiones'],
   ['datosIngHtml', 'HTML ya escapado: htmlDetalleIngrediente() lo arma con esc() del id y del nombre del ingrediente, y htmlErrorPegado()'],
   ['altaCajaHtml', 'HTML ya escapado: htmlCajasEditor() lo arma con esc() de la presentación y de cada caja, o vacío'],
+  // Los indicadores de las máquinas (04/10/2026)
+  ['extra', 'HTML armado por htmlMaquinas(): el segmentado Día / Semana / Mes (gran), con esc() de cada clave y texto, o vacío'],
+  ['leyenda', 'HTML armado por leyendaGraf() de js/graficos.js, que escapa nombre y color, o vacío'],
+  ['parcial', 'HTML constante del código en htmlMaquinas(): el aviso de "puede estar incompleto", o vacío'],
+  ['tarjetas', 'HTML armado por htmlTarjetaMaquina(), que escapa adentro'],
+  ['gran', 'HTML armado en htmlMaquinas() con esc() de la clave y el texto de GRANULARIDADES (constantes)'],
+  ['tendencia', 'HTML armado por htmlFigura(), que escapa el id y el título'],
+  ['dona', 'HTML armado en htmlMaquinas(): htmlFigura() y la lista de motivos, con esc() de cada motivo, o el texto fijo "Sin paradas"'],
+  ['lista', 'HTML armado en htmlMaquinas() con esc() de cada motivo, su tipo y sus minutos, o el aviso con esc() del error'],
+  ['leyendaA', 'HTML armado por leyendaGraf() (escapa adentro) con nombres y colores constantes'],
+  ['leyendaC', 'HTML armado por leyendaGraf() (escapa adentro) con los nombres de PARTES_TURNO (constantes)'],
+  // Paró, la ventana de la hora y la gestión (05/10/2026).
+  ['pres', "constante del código: 'true' o 'false' (aria-pressed del motivo elegido)"],
+  ['caja', 'HTML constante del código: la casilla con el tilde (htmlHorasParadaNueva)'],
+  ['ahora', 'HTML constante del código: el botón "Ahora" de la ventana de la hora, o vacío'],
+  ['htmlEstadoTurno(t.estado, t)', 'HTML armado por htmlEstadoTurno(), que escapa el texto del estado; la clase sale de ESTADO_TURNO o es la literal "pendiente" (relanzada)'],
+  ['htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas, el id y la hora de fin adentro'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

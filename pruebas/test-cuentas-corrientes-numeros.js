@@ -182,6 +182,7 @@ const PRELUDIO = `
   var facturasParaCredito = []
   var medioPagoSeleccionado = 'cheque'
   var facturasParaPago = []
+  var carteraPago = [], tipoPropio = 'cheque'
   var estado = {
     miRolApp: 'usuario', miEmpleadoId: 'yo',
     misTareas: new Set(['cuentas_corrientes:registrar_pago', 'cuentas_corrientes:ver_todo']),
@@ -201,13 +202,16 @@ const FUNCIONES = [
   // La barra de unidad (28/09/2026): el modal de pago usa los saldos DE la
   // unidad de la ficha y la lista de movimientos la filtra por unidad.
   'saldosFichaDeUnidad', 'pasaFiltroUnidad', 'etiquetaUnidad',
+  // los cheques en un pago (05/10/2026): confirmarPago y abrirModalPago
+  'esMedioCheque', 'puedeUsarCartera', 'hoyCC', 'elegirTipoPropio', 'sumarDiasIso', 'esFechaIsoCC',
+  'validarChequePropio', 'parametrosPagoCartera', 'parametrosPagoPropio', 'textoDebitoPropio',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
 
 function sandbox() {
   const S = construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'NUMERO_SALDO_INICIAL'],
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'NUMERO_SALDO_INICIAL', 'MEDIOS_CHEQUE'],
     retorno: `estado, __els, __errores, __doc: document, IDS_CAMPOS_MONTO,
       __llamadas(){ return __llamadas }, __limpiar(){ __llamadas = []; __errores.length = 0 },
       __setFrom(r){ __from = r }, __setRpc(n, d){ __rpcData[n] = d }, __opciones(){ return __opciones },

@@ -1986,6 +1986,21 @@
     .pc-vacio { padding: 18px; color: var(--color-texto-2); }
     .pc-titulo { font-family: var(--fuente-titulo); font-size: 23px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
     .pc-titulo--21 { font-size: 21px; letter-spacing: 0; }
+    /* Horarios de turno (01/10/2026): una fila por turno. */
+    .pc-hor { padding: 0 0 14px; }
+    .pc-hor__nota { margin: 0 16px 12px; }
+    .pc-hor__lista { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
+    .pc-hor__fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--color-borde); border-radius: 12px; background: var(--color-fondo); }
+    .pc-hor__fila--apagado { background: var(--color-superficie); }
+    .pc-hor__turno { font-family: var(--fuente-titulo); font-size: 18px; font-weight: 700; min-width: 7.5rem; }
+    .pc-hor__sin { font-family: var(--fuente); font-size: 13px; font-weight: 500; }
+    .pc-hor__campo { display: inline-flex; align-items: center; gap: 6px; }
+    .pc-hor__rot { font-size: 13px; color: var(--color-texto-2); }
+    .pc-hor__hora { width: 5.5rem; height: 44px; font-size: 16px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+    .pc-hor__dur { min-width: 4rem; }
+    .pc-hor__fila .pc-btn { height: 44px; margin-left: auto; }
+    .pc-hor__fila .pc-sw__rotulo { font-size: 13px; color: var(--color-texto-2); }
+    .pc-hor__fila .pr-cfg-error, .pc-hor__fila .pc-error-pegado { flex-basis: 100%; }
     .pc-pie { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .pc-pie--izq { justify-content: flex-start; }
 
@@ -2340,6 +2355,49 @@
       .pc-personal__pie { position: sticky; bottom: 0; background: var(--color-fondo); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-radius: 0 0 14px 14px; }
       .pc-personal__pie .pc-btn { flex: 1 1 100%; }
     }
+    /* LAS MÁQUINAS (04/10/2026): tarjetas grandes por máquina y gráficos. */
+    .mq { margin-bottom: 16px; }
+    .mq__cab { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 12px; }
+    .mq__titulo { margin: 0; }
+    .mq__periodo { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .mq-tarjetas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); }
+    .mq-tarjeta { border: 1px solid var(--color-borde); border-top: 4px solid var(--mq-color, var(--naranja)); border-radius: var(--radio-tarjeta);
+      padding: 12px 14px; background: var(--color-fondo); min-width: 0; }
+    .mq-tarjeta__nombre { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 8px; font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+    .mq-tarjeta__punto { width: 12px; height: 12px; border-radius: 50%; background: var(--mq-color, var(--naranja)); flex: 0 0 auto; }
+    .mq-tarjeta__datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 0; }
+    .mq-dato { margin: 0; min-width: 0; }
+    .mq-dato--grande { grid-column: 1 / -1; }
+    .mq-dato dt { font-size: 13px; color: var(--pg-texto-2); font-weight: 700; }
+    .mq-dato dd { margin: 0; }
+    .mq-dato__n { font-family: var(--fuente-titulo); font-size: 26px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+    .mq-dato--grande .mq-dato__n { font-size: 40px; line-height: 1.05; }
+    .mq-var { font-size: 14px; font-weight: 700; color: var(--pg-texto-2); }
+    .mq-nota { font-size: 13px; color: var(--pg-texto-2); }
+    .mq-tarjeta__pie { margin: 10px 0 0; font-size: 13px; color: var(--pg-texto-2); overflow-wrap: anywhere; }
+    .mq-graficos { display: grid; gap: 16px; margin-top: 16px; grid-template-columns: minmax(0, 1fr); }
+    @media (min-width: 1100px) { .mq-graficos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .mq-graf { margin: 0; min-width: 0; border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta); padding: 12px 14px; background: var(--color-fondo); }
+    .mq-graf--rend { border: none; padding: 0; margin: 4px 0 8px; }
+    .mq-graf__titulo { font-size: 15px; font-weight: 800; margin: 0 0 8px; }
+    .mq-graf__lienzo { width: 100%; min-width: 0; }
+    .mq-graf__detalle { margin: 8px 0 0; padding: 6px 10px; border-radius: var(--radio-input); background: var(--naranja-suave);
+      color: var(--naranja-oscuro); font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+    .mq-graf__sin { margin: 8px 0; }
+    .mq-gran { margin-bottom: 8px; }
+    .mq-dona .mq-graf .graf { margin: 0 auto; }
+    .mq-motivos-caja { margin-top: 12px; }
+    .mq-sub { margin: 0 0 6px; font-size: 14px; font-weight: 800; }
+    .mq-motivos { margin: 0; padding-left: 1.25rem; display: grid; gap: 6px; font-size: 14px; }
+    .mq-motivos li { overflow-wrap: anywhere; }
+    .mq-motivos__que { font-weight: 700; }
+    .mq-motivos__cat { margin-left: 0.375rem; font-size: 12px; font-weight: 700; color: var(--pg-texto-2); }
+    .mq-motivos__n { display: block; color: var(--pg-texto-2); font-variant-numeric: tabular-nums; }
+    .mq-aviso { margin: 0 0 10px; font-size: 14px; color: var(--bordo-oscuro); }
+    .mq-sin { margin-bottom: 12px; }
+    .mq-como { margin-top: 16px; font-size: 14px; }
+    .mq-como summary { cursor: pointer; font-weight: 800; min-height: 44px; display: flex; align-items: center; }
+    .mq-como ul { margin: 0; padding-left: 1.25rem; display: grid; gap: 6px; color: var(--color-texto-menu); }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2373,6 +2431,7 @@
       <div class="pg-menu__bloque" id="pr-menu-bloque-catalogo">
         <p class="pg-menu__grupo">Catálogo</p>
         <button type="button" class="pg-menu__item" data-ir-config="maquinas" hidden><span class="pg-menu__txt">Máquinas</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="horarios" hidden><span class="pg-menu__txt">Horarios de turno</span></button>
         <button type="button" class="pg-menu__item" data-ir-config="recetas" hidden><span class="pg-menu__txt">Recetas</span></button>
         <button type="button" class="pg-menu__item" data-ir-config="ingredientes" hidden><span class="pg-menu__txt">Ingredientes</span></button>
         <button type="button" class="pg-menu__item" data-ir-config="productos" hidden><span class="pg-menu__txt">Productos y empaque</span></button>
@@ -2423,6 +2482,32 @@
            bloque viene mal, esa tarjeta lo dice con "Reintentar" y las otras
            se ven. -->
       <section id="pr-inicio">
+        <!-- LAS MÁQUINAS (04/10/2026): u/h productiva y del turno por máquina,
+             del período elegido, con gráficos (js/graficos.js). Sale de
+             v_turno_metricas; los Desde/Hasta los envuelve el control de
+             período. Lo arma cargarMaquinas(). -->
+        <div class="pr-tarjeta mq" id="pr-maquinas" role="region" aria-labelledby="pr-mq-titulo" hidden>
+          <div class="mq__cab">
+            <h2 class="pr-ind__titulo mq__titulo" id="pr-mq-titulo">Máquinas</h2>
+            <div class="mq__periodo">
+              <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-mq-desde" class="pr-input"></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-mq-hasta" class="pr-input"></label>
+            </div>
+          </div>
+          <div id="pr-mq-cuerpo"></div>
+          <details class="mq-como">
+            <summary>¿Cómo se calcula?</summary>
+            <ul>
+              <li><strong>u/h productiva:</strong> las unidades que salieron, divididas por las horas productivas. Las horas productivas van desde que <strong>empezó a producir</strong> (la hora que se carga en la tablet) hasta que <strong>terminó de producir</strong>, menos las paradas. En las planillas sin la hora de "empezó a producir", cuentan desde que se abrió el turno, <strong>con el calentamiento incluido</strong>.</li>
+              <li><strong>u/h del turno:</strong> las unidades divididas por las horas del horario del turno (por ejemplo de 6 a 15), pase lo que pase.</li>
+              <li><strong>Varios turnos juntos:</strong> se suman las unidades y se suman las horas, y recién ahí se divide. No es el promedio de cada turno: un turno corto no pesa lo mismo que uno largo.</li>
+              <li><strong>La flecha y el %</strong> comparan con el período anterior del mismo largo (por ejemplo, esta semana contra la anterior). "—" es que en el anterior no hay planillas.</li>
+              <li><strong>¿A dónde se va el turno?</strong> Cada barra es el horario del turno entero: lo que estuvo produciendo, las paradas mientras la máquina andaba (por tipo: programada, falla, organizativa y otra), el <strong>arranque</strong> (de la hora del turno a "empezó a producir", solo en las planillas que la tienen) y el <strong>cierre y resto del horario</strong> (el tiempo del horario en que no estuvo produciendo, sin el arranque).</li>
+              <li><strong>La dona</strong> cuenta cada parada entera; si la máquina no volvió, hasta el fin del horario.</li>
+              <li>Solo cuentan las <strong>planillas cerradas</strong>. Tocá una barra o un punto para ver la cifra exacta.</li>
+            </ul>
+          </details>
+        </div>
         <div class="pg-dia" id="pr-ind-dia">
           <button type="button" class="pg-dia__paso" id="pr-ind-dia-antes" aria-label="Día anterior">&lsaquo;</button>
           <span class="pg-dia__texto" id="pr-ind-dia-texto"></span>
@@ -2582,6 +2667,8 @@
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
+    import { crearPeriodo, rangoDePeriodo } from '../js/periodo.js'
+    import { barrasAgrupadas, lineas, barrasApiladas, dona, barrasConReferencia, leyendaGraf, activarDetalles } from '../js/graficos.js'
 
     mostrarBannerVersion()
 
@@ -2918,6 +3005,22 @@
         if (ev.target.closest('[data-ind-reintentar]')) return cargarIndicadores()
       })
       document.getElementById('pr-ind-dia-antes').addEventListener('click', () => cambiarDiaIndicadores(-1))
+      // Las máquinas: el período arranca en "Este mes" y lo maneja el control
+      // de período (las dos fechas obligatorias: siempre hay contra qué comparar).
+      {
+        const d = document.getElementById('pr-mq-desde'), h = document.getElementById('pr-mq-hasta')
+        const r = rangoDePeriodo('mes', hoyArgentina())
+        d.value = r.desde
+        h.value = r.hasta
+        d.addEventListener('change', () => cargarMaquinas())
+        h.addEventListener('change', () => cargarMaquinas())
+        crearPeriodo({ desde: d, hasta: h, obligatorias: true })
+      }
+      document.getElementById('pr-mq-cuerpo').addEventListener('click', ev => {
+        const g = ev.target.closest('[data-mq-gran]'); if (g) return cambiarGranularidad(g.dataset.mqGran)
+        if (ev.target.closest('[data-mq-reintentar]')) return cargarMaquinas()
+      })
+      window.addEventListener('resize', () => { alCambiarAnchoMaquinas(); pintarGraficosRendimiento() })
       document.getElementById('pr-ind-dia-despues').addEventListener('click', () => cambiarDiaIndicadores(1))
       document.getElementById('pr-btn-menu').addEventListener('click', alternarMenu)
       document.getElementById('pr-menu-cerrar').addEventListener('click', cerrarMenu)
@@ -3030,7 +3133,9 @@
       return ''
     }
 
-    function htmlParadas(paradas, acciones = null) {
+    // `finTurno` (01/10/2026): la hora de fin del turno abierto. Sin ella, no
+    // se dice hasta cuándo se cuenta (nunca se inventa).
+    function htmlParadas(paradas, acciones = null, finTurno = null) {
       const lista = paradas ?? []
       if (!lista.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
       const orden = [...lista.filter(p => !p.fin), ...lista.filter(p => p.fin)]
@@ -3046,7 +3151,7 @@
         if (!p.fin) {
           return `<div class="pr-renglon pr-renglon--curso${conAcc}">${abre}` +
             `<span class="pr-renglon__num"><strong>${esc(desde)}</strong> · ${esc(p.motivo)}</span>` +
-            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}</span>${cierra}</div>`
+            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}${finTurno ? ` · se cuenta hasta las ${esc(finTurno)} si no vuelve` : ''}</span>${cierra}</div>`
         }
         // hasta_fin_de_turno lo pone cerrar_turno sobre la parada que quedó
         // abierta: la máquina NO volvió en todo el turno. En la planilla nunca
@@ -3190,12 +3295,27 @@
       return `${hoyArgentina(d)}T${horaArgentina(d)}:00-03:00`
     }
 
+    // El fin del turno de una planilla, como instante: su hora_fin en su fecha,
+    // o al día siguiente si no es posterior a la de inicio (la regla de
+    // _ts_turno). null si la planilla no tiene hora de fin.
+    function finDelTurnoMs(turno) {
+      const fin = normalizarHora(String(turno?.hora_fin ?? '').slice(0, 5))
+      if (!fin || !/^\d{4}-\d{2}-\d{2}$/.test(String(turno?.fecha ?? ''))) return null
+      const ini = normalizarHora(String(turno?.hora_inicio ?? '').slice(0, 5))
+      return instanteAr(turno.fecha, fin) + (ini && fin <= ini ? MS_DIA : 0)
+    }
+
     // Piso y tope del turno, en milisegundos.
     function limitesParada(turno, ahora = new Date()) {
       const piso = turno?.abierto_en ? new Date(turno.abierto_en).getTime() - PISO_APERTURA_MS
         : instanteAr(turno?.fecha ?? hoyArgentina(ahora), '00:00')
       const cerrado = turno?.estado === 'cerrado' && !!turno?.cerrado_en
-      const tope = Math.min(new Date(ahora).getTime(), cerrado ? new Date(turno.cerrado_en).getTime() : Infinity) + TOLERANCIA_FUTURO_MS
+      // Una planilla que ya no está abierta termina a su hora de fin del turno:
+      // cerrar_turno deja AHÍ la parada que no volvió, aunque se haya cerrado
+      // antes (13:54 con fin 15:00 → la parada vuelve a las 15:00). Esa hora
+      // vale como vuelta; si no, corregirla sin tocar nada daría error.
+      const finTurno = turno?.estado !== 'abierto' ? finDelTurnoMs(turno) : null
+      const tope = Math.max(Math.min(new Date(ahora).getTime(), cerrado ? new Date(turno.cerrado_en).getTime() : Infinity), finTurno ?? -Infinity) + TOLERANCIA_FUTURO_MS
       return { piso, tope, cerrado }
     }
 
@@ -3352,6 +3472,19 @@
     // EL ERROR VA AL ESTADO, NO AL DOM: el único que escribe el mensaje es este
     // render, que decide entre lo que falta y lo que contestó la base. Así un
     // repintado no tapa el error de la base (lo que pasó en el cierre).
+    // Corregir una parada que "no volvió en todo el turno": editar_parada
+    // conserva la marca SOLO si la vuelta queda en el fin del turno; con otra
+    // hora la apaga. Se dice antes de guardar.
+    function htmlNotaNoVolvio(f) {
+      if (f?.modo !== 'editar' || !f.parada?.hasta_fin_de_turno || !f.parada.fin) return ''
+      const finTurno = horaArgentina(f.parada.fin) || '—'
+      const h = resolverHorasParada(f, f.turno)
+      const igual = !h.error && !!h.fin && new Date(h.fin).getTime() === new Date(f.parada.fin).getTime()
+      return igual
+        ? `<p class="pr-hp__resumen">Sigue marcada «no volvió en todo el turno»: vuelve a las ${esc(finTurno)}, el fin del turno.</p>`
+        : `<p class="pr-hp__resumen">Con otra hora de vuelta deja de estar marcada «no volvió en todo el turno» (el fin del turno es a las ${esc(finTurno)}).</p>`
+    }
+
     function pintarEditorParada() {
       const f = estado.paradaForm
       if (!f) return
@@ -3362,7 +3495,7 @@
         const hasta = f.parada.fin ? (horaArgentina(f.parada.fin) || '—') : 'sigue'
         resumen.innerHTML = `<p class="pr-hp__resumen">${esc(desde)}–${esc(hasta)} · ${esc(f.parada.motivo)}</p>`
       } else {
-        resumen.innerHTML = ''
+        resumen.innerHTML = htmlNotaNoVolvio(f)
       }
       const cerrada = f.turno.estado === 'cerrado'
       document.getElementById('pr-parada-editor-campo-motivo').hidden = f.modo === 'borrar' && !cerrada
@@ -3639,6 +3772,7 @@
     const PESTANAS_CONFIG = [
       ['productos', 'Productos'], ['maquinas', 'Máquinas'], ['recetas', 'Recetas'],
       ['ingredientes', 'Ingredientes'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal y PINes'],
+      ['horarios', 'Horarios de turno'],
     ]
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
     const CLAVE_AVISO_PRODUCTOS = 'produccion.aviso-productos-revisado'
@@ -3982,8 +4116,9 @@
         if (!grupos.has(k)) grupos.set(k, [])
         grupos.get(k).push(f)
       }
-      return [...grupos.entries()].map(([producto, filas]) => ({
+      return [...grupos.entries()].map(([producto, filas], indice) => ({
         producto,
+        indice,
         promedio: numeroInd(filas.find(f => numeroInd(f?.promedio_del_producto) !== null)?.promedio_del_producto),
         filas: [...filas].sort((a, b) => {
           const x = numeroInd(a?.unidades_por_kg), y = numeroInd(b?.unidades_por_kg)
@@ -4007,7 +4142,9 @@
         const mejor = valores.length >= 2 ? max : null
         const promedio = g.promedio === null ? '—' : `${formatearNumeroAr(g.promedio, { decimales: 1, minimos: 0 })} u/kg`
         return `<div class="pg-rend__grupo"><div class="pg-rend__prod"><strong>${esc(g.producto)}</strong>` +
-          `<span class="pg-rend__prom">promedio ${esc(promedio)}</span></div><ul class="pg-rend__lista">` +
+          `<span class="pg-rend__prom">promedio ${esc(promedio)}</span></div>` +
+          `<figure class="mq-graf mq-graf--rend" data-rend-grupo="${esc(String(g.indice))}"><div class="mq-graf__lienzo"></div><p class="mq-graf__detalle" aria-live="polite" hidden></p></figure>` +
+          '<ul class="pg-rend__lista">' +
           g.filas.map(f => {
             const v = numeroInd(f?.unidades_por_kg)
             const bajo = rindePoco(f)
@@ -4021,6 +4158,39 @@
               `<span class="pg-rend__valor">${v === null ? '—' : `${esc(formatearNumeroAr(v, { decimales: 1, minimos: 0 }))} u/kg`}</span>${fraseRinde}</li>`
           }).join('') + '</ul></div>'
       }).join('')
+    }
+
+    // El gráfico de cada producto: una barra por lote (en bordó los que rinden
+    // poco, en verde el mejor) contra la línea punteada del promedio.
+    function barrasRendimiento(g) {
+      const valores = g.filas.map(f => numeroInd(f?.unidades_por_kg)).filter(v => v !== null)
+      const mejor = valores.length >= 2 ? Math.max(...valores) : null
+      return g.filas.map(f => {
+        const v = numeroInd(f?.unidades_por_kg)
+        const tono = rindePoco(f) ? 'bajo' : (v !== null && v === mejor ? 'mejor' : 'medio')
+        return { etiqueta: `Lote ${f?.lote ?? 'sin lote'}`, valor: v, tono,
+          detalle: `${g.producto} · lote ${f?.lote ?? 'sin lote'}: ${v === null ? '—' : formatearNumeroAr(v, { decimales: 1, minimos: 0 }) + ' u/kg'}` +
+            `${g.promedio === null ? '' : ` (promedio ${formatearNumeroAr(g.promedio, { decimales: 1, minimos: 0 })} u/kg)`}` }
+      })
+    }
+
+    function pintarGraficosRendimiento() {
+      const lista = estado.indicadores?.datos?.rendimiento_harina
+      if (!Array.isArray(lista)) return
+      const grupos = gruposRendimiento(lista)
+      for (const fig of document.querySelectorAll('#pr-indicadores [data-rend-grupo]')) {
+        const g = grupos[Number(fig.dataset.rendGrupo)]
+        const lienzo = fig.querySelector('.mq-graf__lienzo')
+        if (!g || !lienzo) continue
+        const ancho = Math.max(240, Math.floor(lienzo.clientWidth || 320))
+        lienzo.innerHTML = barrasConReferencia({
+          ancho, titulo: `Rendimiento por lote de ${g.producto}`, barras: barrasRendimiento(g),
+          formato: v => formatearNumeroAr(v, { decimales: 0 }),
+          referencia: g.promedio === null ? null : { valor: g.promedio, texto: `promedio ${formatearNumeroAr(g.promedio, { decimales: 1, minimos: 0 })}` },
+        })
+        lienzo._ancho = ancho
+        activarDetalles(fig, fig.querySelector('.mq-graf__detalle'))
+      }
     }
 
     // SCRAP POR LOTE DE HARINA: el % de la masa que terminó en scrap en los
@@ -4221,7 +4391,9 @@
       const turnoDe = new Map(turnos.map(t => [t.id, t]))
       const nombreMaq = new Map(maquinas.map(m => [m.id, m.nombre]))
       const nombreMotivo = new Map(motivos.map(m => [m.id, m.nombre]))
-      const totales = { programada: 0, falla: 0, otro: 0, sin: 0 }
+      // organizativa (05/10/2026): se retiró personal, falta masa, no hay
+      // pedido. No es una falla de la máquina: va aparte.
+      const totales = { programada: 0, falla: 0, organizativa: 0, otro: 0, sin: 0 }
       const porMaq = new Map(), porMot = new Map()
       let cantidad = 0
       for (const p of paradas) {
@@ -4229,11 +4401,12 @@
         if (!t) continue
         cantidad += 1
         const min = minutosDeParadaInd(p, ahora)
-        const cat = ['programada', 'falla', 'otro'].includes(p.categoria) ? p.categoria : 'sin'
+        const cat = ['programada', 'falla', 'organizativa', 'otro'].includes(p.categoria) ? p.categoria : 'sin'
         totales[cat] += min
         const km = t.maquina_id ?? ''
-        const m = porMaq.get(km) ?? { nombre: nombreMaq.get(t.maquina_id) ?? 'Máquina sin nombre', limpieza: 0, fallas: 0 }
+        const m = porMaq.get(km) ?? { nombre: nombreMaq.get(t.maquina_id) ?? 'Máquina sin nombre', limpieza: 0, fallas: 0, organizacion: 0 }
         if (cat === 'programada') m.limpieza += min
+        else if (cat === 'organizativa') m.organizacion += min
         else m.fallas += min
         porMaq.set(km, m)
         if (cat === 'programada') continue
@@ -4261,9 +4434,10 @@
       const cab = '<p class="pg-par__cab">' +
         `<span class="pg-par__limp">${esc(horasMinutosInd(t.programada))} de limpieza programada</span>` +
         `<span class="pg-par__falla">${esc(horasMinutosInd(t.falla))} de fallas</span>` +
+        ((t.organizativa ?? 0) > 0 ? `<span class="pg-par__otro">${esc(horasMinutosInd(t.organizativa))} de organización</span>` : '') +
         (otras > 0 ? `<span class="pg-par__otro">${esc(horasMinutosInd(otras))} de otros motivos</span>` : '') + '</p>'
       const maq = '<ul class="pg-tir__lista">' + (d.porMaquina ?? []).map(m =>
-        `<li class="pg-tir__fila"><span>${esc(m.nombre)}</span><span>${esc(horasMinutosInd(m.limpieza))} limpieza · ${esc(horasMinutosInd(m.fallas))} fallas</span></li>`).join('') + '</ul>'
+        `<li class="pg-tir__fila"><span>${esc(m.nombre)}</span><span>${esc(horasMinutosInd(m.limpieza))} limpieza · ${esc(horasMinutosInd(m.fallas))} fallas${(m.organizacion ?? 0) > 0 ? ` · ${esc(horasMinutosInd(m.organizacion))} organización` : ''}</span></li>`).join('') + '</ul>'
       const mot = (d.porMotivo ?? []).length
         ? '<ul class="pg-tir__lista">' + d.porMotivo.map(r =>
           `<li class="pg-tir__fila"><span>${esc(r.nombre)}</span><span>${esc(r.veces === 1 ? '1 vez' : enteroInd(r.veces) + ' veces')} · ${esc(horasMinutosInd(r.minutos))}</span></li>`).join('') + '</ul>'
@@ -4272,6 +4446,494 @@
         '<h3 class="pg-tir__sub">Por máquina</h3>' + maq +
         '<h3 class="pg-tir__sub">Fallas por motivo</h3>' + mot +
         (d.parcial ? '<p class="pg-par__parcial">Puede estar incompleto: hay demasiadas paradas para leerlas todas.</p>' : '') + '</div>'
+    }
+
+    // ── Las máquinas (v_turno_metricas, 04/10/2026) ───────────────────────
+    //
+    // Una fila de v_turno_metricas por planilla CERRADA, con sus unidades,
+    // sus minutos de turno (el horario planificado), los reales (de la
+    // apertura al apagado), los productivos (reales − paradas mientras andaba)
+    // y las paradas por categoría. La vista respeta los permisos de cada
+    // turno (security_invoker): esto la LEE, no calcula nada en la base.
+    //
+    // REGLA DE CÁLCULO, y es la que no se toca: VARIOS TURNOS JUNTOS SE
+    // PONDERAN. Suma de unidades dividido suma de horas. NUNCA el promedio de
+    // las u/h de cada turno: un turno de 1 hora con 1.000 unidades y uno de 9
+    // horas con 1.000 dan 200 u/h, no 555 (sumarTurnos y su suite).
+    //
+    // El período sale del control de período (js/periodo.js) con las dos
+    // fechas obligatorias; la variación compara con el período anterior del
+    // MISMO largo, pegado antes. "Día / Semana / Mes" agrupa la línea de
+    // tendencia (30 días, 12 semanas o 12 meses hasta el fin del período).
+
+    // Colores cálidos de la app, sin azules (naranja, verde, marrón, ámbar,
+    // bordó, grafito, tierra).
+    const COLORES_MAQUINA = ['#C2410C', '#2F7D4F', '#7A4315', '#C99A2E', '#7A2E42', '#3F4655', '#8F6F4E']
+    const COLOR_UH_TURNO = '#9A9287'
+    const CATEGORIAS_PARADA = [
+      { clave: 'programada', nombre: 'Parada programada', corto: 'Programada', color: '#C99A2E' },
+      { clave: 'falla', nombre: 'Parada por falla', corto: 'Falla', color: '#7A2E42', oscuro: true },
+      { clave: 'organizativa', nombre: 'Parada organizativa', corto: 'Organización', color: '#3F4655', oscuro: true },
+      { clave: 'otro', nombre: 'Otra parada', corto: 'Otra', color: '#A8601F', oscuro: true },
+    ]
+    const PARTES_TURNO = [
+      { clave: 'productiva', nombre: 'Produciendo', color: '#2F7D4F', oscuro: true },
+      ...CATEGORIAS_PARADA,
+      { clave: 'sin_detalle', nombre: 'Paradas (sin detalle)', color: '#8F2F08', oscuro: true },
+      { clave: 'arranque', nombre: 'Arranque (hasta que empezó a producir)', color: '#E8B04A' },
+      { clave: 'cierre', nombre: 'Cierre y resto del horario', color: '#D6CFC4' },
+    ]
+    const GRANULARIDADES = [{ clave: 'dia', texto: 'Día' }, { clave: 'semana', texto: 'Semana' }, { clave: 'mes', texto: 'Mes' }]
+    const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    const TOPE_PAGINAS_METRICAS = 10
+
+    // u/h de unidades en minutos; sin minutos (o con 0) no hay u/h: null.
+    function uhPonderada(unidades, minutos) {
+      const u = numeroInd(unidades), m = numeroInd(minutos)
+      if (u === null || m === null || m <= 0) return null
+      return u / (m / 60)
+    }
+
+    // LA SUMA PONDERADA de un grupo de planillas. Las u/h salen de sumar
+    // unidades y minutos; una planilla sin minutos productivos no suma sus
+    // unidades a la u/h productiva (no tiene horas contra qué dividirlas).
+    function sumarTurnos(filas) {
+      const s = { turnos: 0, unidades: 0, uProd: 0, minProd: 0, uTurno: 0, minTurno: 0, minProdTodos: 0, minReal: 0, enMarcha: 0 }
+      for (const f of filas ?? []) {
+        const u = numeroInd(f?.unidades) ?? 0
+        const mp = numeroInd(f?.minutos_productivos) ?? 0
+        const mt = numeroInd(f?.minutos_turno) ?? 0
+        s.turnos++
+        s.unidades += u
+        s.minProdTodos += mp
+        if (mp > 0) { s.uProd += u; s.minProd += mp }
+        if (mt > 0) { s.uTurno += u; s.minTurno += mt }
+        s.minReal += numeroInd(f?.minutos_real) ?? 0
+        s.enMarcha += numeroInd(f?.minutos_parada_en_marcha) ?? 0
+      }
+      s.uhProd = uhPonderada(s.uProd, s.minProd)
+      s.uhTurno = uhPonderada(s.uTurno, s.minTurno)
+      s.pctProductivo = s.minTurno > 0 ? (s.minProdTodos / s.minTurno) * 100 : null
+      return s
+    }
+
+    // Las planillas agrupadas por máquina, en el orden de la fábrica.
+    function maquinasDe(filas) {
+      const m = new Map()
+      for (const f of filas ?? []) {
+        if (!f?.maquina_id) continue
+        if (!m.has(f.maquina_id)) m.set(f.maquina_id, { id: f.maquina_id, nombre: f.maquina ?? 'Máquina', orden: numeroInd(f.maquina_orden), filas: [] })
+        m.get(f.maquina_id).filas.push(f)
+      }
+      return [...m.values()].sort((a, b) => (a.orden ?? 9999) - (b.orden ?? 9999) || String(a.nombre).localeCompare(String(b.nombre), 'es'))
+    }
+
+    // El color de cada máquina, por su lugar en la lista de TODAS las que
+    // aparecen (período, anterior y tendencia): el mismo en cada gráfico.
+    function coloresDeMaquinas(maquinas) {
+      const c = new Map()
+      maquinas.forEach((m, i) => c.set(m.id, COLORES_MAQUINA[i % COLORES_MAQUINA.length]))
+      return c
+    }
+
+    // (actual − antes) / antes, en %. Sin alguno de los dos, o con antes 0: null.
+    function variacionPct(actual, antes) {
+      const a = numeroInd(actual), b = numeroInd(antes)
+      if (a === null || b === null || b === 0) return null
+      return ((a - b) / b) * 100
+    }
+
+    // La flecha y el %, así la dirección no depende del color.
+    function textoVariacion(p) {
+      if (p === null || p === undefined) return { texto: '—', clase: '' }
+      const r = Math.round(p)
+      if (r === 0) return { texto: '= 0 %', clase: 'pr-ind-igual' }
+      return { texto: `${r > 0 ? '▲ +' : '▼ −'}${formatearNumeroAr(Math.abs(r), { decimales: 0 })} %`, clase: r > 0 ? 'pr-ind-mas' : 'pr-ind-menos' }
+    }
+
+    function diasEntreInd(desde, hasta) {
+      return Math.round((new Date(`${hasta}T12:00:00Z`) - new Date(`${desde}T12:00:00Z`)) / 86400000)
+    }
+
+    // El período anterior, del mismo largo y pegado antes.
+    function periodoAnterior(desde, hasta) {
+      const n = diasEntreInd(desde, hasta) + 1
+      return { desde: sumarDias(desde, -n), hasta: sumarDias(desde, -1) }
+    }
+
+    function lunesDe(iso) {
+      const d = new Date(`${iso}T12:00:00Z`)
+      return sumarDias(iso, -((d.getUTCDay() + 6) % 7))
+    }
+
+    // Los casilleros de la tendencia hasta `hasta`: 30 días, 12 semanas (del
+    // lunes) o 12 meses. { desde, ejeX: [{ clave, etiqueta }], claveDe(fecha) }.
+    function rangoTendencia(gran, hasta) {
+      if (gran === 'semana') {
+        const ultimo = lunesDe(hasta)
+        const ejeX = []
+        for (let i = 11; i >= 0; i--) { const l = sumarDias(ultimo, -7 * i); ejeX.push({ clave: l, etiqueta: `${l.slice(8, 10)}/${l.slice(5, 7)}` }) }
+        return { desde: ejeX[0].clave, ejeX, claveDe: lunesDe }
+      }
+      if (gran === 'mes') {
+        const a = Number(hasta.slice(0, 4)), m = Number(hasta.slice(5, 7))
+        const ejeX = []
+        for (let i = 11; i >= 0; i--) {
+          const t = a * 12 + (m - 1) - i
+          const clave = `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`
+          ejeX.push({ clave, etiqueta: MESES_CORTOS[t % 12] })
+        }
+        return { desde: `${ejeX[0].clave}-01`, ejeX, claveDe: f => f.slice(0, 7) }
+      }
+      const ejeX = []
+      for (let i = 29; i >= 0; i--) { const d = sumarDias(hasta, -i); ejeX.push({ clave: d, etiqueta: `${d.slice(8, 10)}/${d.slice(5, 7)}` }) }
+      return { desde: ejeX[0].clave, ejeX, claveDe: f => f }
+    }
+
+    // La tendencia: por máquina y casillero, la u/h productiva PONDERADA.
+    function serieTendencia(filas, gran, hasta, colores) {
+      const r = rangoTendencia(gran, hasta)
+      const enRango = (filas ?? []).filter(f => f?.fecha >= r.desde && f?.fecha <= hasta)
+      const series = maquinasDe(enRango).map(m => {
+        const grupos = new Map()
+        for (const f of m.filas) { const k = r.claveDe(f.fecha); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(f) }
+        const valores = {}
+        for (const x of r.ejeX) {
+          const g = grupos.get(x.clave)
+          if (!g) continue
+          const s = sumarTurnos(g)
+          if (s.uhProd === null) continue
+          valores[x.clave] = { valor: s.uhProd, detalle: `${m.nombre} · ${x.etiqueta}: ${formatearNumeroAr(s.uhProd, { decimales: 1, minimos: 0 })} u/h productiva (${s.turnos === 1 ? '1 planilla' : `${s.turnos} planillas`})` }
+        }
+        return { id: m.id, nombre: m.nombre, color: colores.get(m.id) ?? COLORES_MAQUINA[0], valores }
+      })
+      return { ejeX: r.ejeX, series }
+    }
+
+    function msDe(t) {
+      const n = Date.parse(t ?? '')
+      return Number.isFinite(n) ? n : null
+    }
+
+    // Los minutos de una parada MIENTRAS LA MÁQUINA ANDABA: recortada a la
+    // ventana real del turno (la misma cuenta que minutos_parada_en_marcha).
+    function minutosEnMarcha(p, fila) {
+      const ini = msDe(p?.inicio), rIni = msDe(fila?.inicio_real), rFin = msDe(fila?.fin_real)
+      if (ini === null || rIni === null || rFin === null) return 0
+      const fin = Math.min(msDe(p?.fin) ?? rFin, rFin)
+      return Math.max(0, (fin - Math.max(ini, rIni)) / 60000)
+    }
+
+    // Los minutos de la parada ENTERA (si no volvió, hasta el fin del
+    // horario): la misma cuenta que parada_por_categoria.
+    function minutosParadaEntera(p, fila) {
+      const ini = msDe(p?.inicio)
+      const fin = msDe(p?.fin) ?? msDe(fila?.fin_turno)
+      if (ini === null || fin === null) return 0
+      return Math.max(0, (fin - ini) / 60000)
+    }
+
+    function categoriaDe(p) {
+      return ['programada', 'falla', 'organizativa', 'otro'].includes(p?.categoria) ? p.categoria : 'otro'
+    }
+
+    // "¿A dónde se va el turno?" de una máquina, en minutos. Las paradas por
+    // categoría, recortadas a cuando la máquina andaba; si no se pudieron
+    // leer, todas juntas como "sin detalle". El horario en que la máquina no
+    // estuvo produciendo (minutos_turno − minutos_real) se parte en dos
+    // (05/10/2026): el ARRANQUE, de la hora del turno a "empezó a producir"
+    // (minutos_arranque, solo en las planillas que lo tienen cargado), y el
+    // CIERRE Y RESTO del horario. Sin la hora de largada no se sabe cuánto
+    // fue el arranque: todo va a "cierre y resto" (y el calentamiento queda
+    // adentro de lo productivo, como antes).
+    function partesDelTurno(filasMaquina, paradas) {
+      const p = { productiva: 0, programada: 0, falla: 0, organizativa: 0, otro: 0, sin_detalle: 0, arranque: 0, cierre: 0 }
+      const porTurno = new Map((filasMaquina ?? []).map(f => [f.turno_id, f]))
+      for (const f of filasMaquina ?? []) {
+        p.productiva += numeroInd(f.minutos_productivos) ?? 0
+        const fuera = Math.max(0, (numeroInd(f.minutos_turno) ?? 0) - (numeroInd(f.minutos_real) ?? 0))
+        const arranque = f.tiene_largada === true ? Math.min(fuera, Math.max(0, numeroInd(f.minutos_arranque) ?? 0)) : 0
+        p.arranque += arranque
+        p.cierre += fuera - arranque
+      }
+      if (Array.isArray(paradas)) {
+        for (const x of paradas) { const f = porTurno.get(x?.turno_id); if (f) p[categoriaDe(x)] += minutosEnMarcha(x, f) }
+      } else {
+        for (const f of filasMaquina ?? []) p.sin_detalle += numeroInd(f.minutos_parada_en_marcha) ?? 0
+      }
+      return p
+    }
+
+    // Los minutos de parada por categoría del período (de la vista).
+    function paradasPorCategoria(filas) {
+      const t = { programada: 0, falla: 0, organizativa: 0, otro: 0 }
+      for (const f of filas ?? []) {
+        const pc = f?.parada_por_categoria
+        if (!pc || typeof pc !== 'object') continue
+        for (const [k, v] of Object.entries(pc)) {
+          const n = numeroInd(v)
+          if (n !== null && n > 0) t[['programada', 'falla', 'organizativa'].includes(k) ? k : 'otro'] += n
+        }
+      }
+      return t
+    }
+
+    // Los motivos que más tiempo se llevaron (parada entera), de más a menos.
+    function motivosTop(paradas, filas, n = 5) {
+      const porTurno = new Map((filas ?? []).map(f => [f.turno_id, f]))
+      const m = new Map()
+      for (const p of paradas ?? []) {
+        const f = porTurno.get(p?.turno_id)
+        if (!f) continue
+        const texto = String(p.motivo ?? '').trim() || 'Sin motivo'
+        const k = `${categoriaDe(p)}|${texto.toLowerCase()}`
+        if (!m.has(k)) m.set(k, { motivo: texto, categoria: categoriaDe(p), minutos: 0, veces: 0 })
+        const r = m.get(k)
+        r.minutos += minutosParadaEntera(p, f)
+        r.veces++
+      }
+      return [...m.values()].sort((a, b) => b.minutos - a.minutos || a.motivo.localeCompare(b.motivo, 'es')).slice(0, n)
+    }
+
+    function horasMin(minutos) {
+      const m = numeroInd(minutos)
+      if (m === null) return '—'
+      return horasMinutosInd(Math.round(m))
+    }
+
+    function uhTexto(v) {
+      return v === null || v === undefined ? '—' : formatearNumeroAr(v, { decimales: 0 })
+    }
+
+    // ── La pantalla de las máquinas ──
+
+    function htmlTarjetaMaquina(m, antes, color) {
+      const s = sumarTurnos(m.filas)
+      const a = antes ? sumarTurnos(antes.filas) : null
+      const vp = textoVariacion(a ? variacionPct(s.uhProd, a.uhProd) : null)
+      const vt = textoVariacion(a ? variacionPct(s.uhTurno, a.uhTurno) : null)
+      const pct = s.pctProductivo === null ? '—' : `${formatearNumeroAr(s.pctProductivo, { decimales: 0 })} %`
+      const planillas = s.turnos === 1 ? '1 planilla' : formatearNumeroAr(s.turnos, { decimales: 0 }) + ' planillas'
+      return `<article class="mq-tarjeta" style="--mq-color: ${esc(color)}">` +
+        `<h3 class="mq-tarjeta__nombre"><span class="mq-tarjeta__punto" aria-hidden="true"></span>${esc(m.nombre)}</h3>` +
+        '<dl class="mq-tarjeta__datos">' +
+          `<div class="mq-dato mq-dato--grande"><dt>u/h productiva</dt><dd class="mq-dato__n">${esc(uhTexto(s.uhProd))}</dd><dd class="mq-var ${esc(vp.clase)}">${esc(vp.texto)}</dd></div>` +
+          `<div class="mq-dato"><dt>u/h del turno</dt><dd class="mq-dato__n">${esc(uhTexto(s.uhTurno))}</dd><dd class="mq-var ${esc(vt.clase)}">${esc(vt.texto)}</dd></div>` +
+          `<div class="mq-dato"><dt>Horas productivas sobre las del turno</dt><dd class="mq-dato__n">${esc(pct)}</dd><dd class="mq-nota">${esc(horasMin(s.minProdTodos))} de ${esc(horasMin(s.minTurno))}</dd></div>` +
+        '</dl>' +
+        `<p class="mq-tarjeta__pie">${esc(planillas)} · ${esc(formatearNumeroAr(s.unidades, { decimales: 0 }))} unidades` +
+        `${a ? '' : ' · sin planillas en el período anterior'}</p></article>`
+    }
+
+    // Un gráfico: título, el lienzo (lo llena pintarGraficosMaquinas con el
+    // ancho real), la leyenda y la línea donde aparece la cifra exacta.
+    function htmlFigura(id, titulo, leyenda = '', extra = '') {
+      return `<figure class="mq-graf" data-mq-graf="${esc(id)}"><figcaption class="mq-graf__titulo">${esc(titulo)}</figcaption>` +
+        `${extra}<div class="mq-graf__lienzo"></div>${leyenda}<p class="mq-graf__detalle" aria-live="polite" hidden></p></figure>`
+    }
+
+    // Un motivo de la lista: qué, de qué tipo, cuánto tiempo y cuántas veces.
+    function htmlMotivo(x) {
+      const tipo = CATEGORIAS_PARADA.find(c => c.clave === x.categoria)?.corto ?? 'Otra'
+      const veces = x.veces === 1 ? '1 vez' : formatearNumeroAr(x.veces, { decimales: 0 }) + ' veces'
+      return `<li><span class="mq-motivos__que">${esc(x.motivo)}</span><span class="mq-motivos__cat">${esc(tipo)}</span>` +
+        `<span class="mq-motivos__n">${esc(horasMin(x.minutos))} · ${esc(veces)}</span></li>`
+    }
+
+    function htmlMaquinas(e) {
+      if (!e || e.cargando) return '<p class="pr-ind__vacio">Cargando…</p>'
+      if (e.error) return `<div class="pg-ind-falla"><p class="pg-ind-falla__que">No se pudieron leer las planillas de las máquinas.</p><div class="pg-ind-falla__pie">` +
+        `<div class="pr-ind__error" role="alert">${esc(e.error)}</div><button type="button" class="pr-btn pr-btn--secundario" data-mq-reintentar="1">Reintentar</button></div></div>`
+      const maquinas = maquinasDe(e.filas)
+      const antes = new Map(maquinasDe(e.filasAntes).map(m => [m.id, m]))
+      const parcial = e.parcial ? '<p class="mq-aviso">Puede estar incompleto: hay demasiadas planillas para leerlas todas. Acortá el período.</p>' : ''
+      const gran = GRANULARIDADES.map(g => `<button type="button" class="pg-seg__op${e.gran === g.clave ? ' pg-seg__op--activo' : ''}" data-mq-gran="${esc(g.clave)}" aria-pressed="${e.gran === g.clave ? 'true' : 'false'}">${esc(g.texto)}</button>`).join('')
+      const tendencia = htmlFigura('tendencia', `u/h productiva · ${e.gran === 'mes' ? 'últimos 12 meses' : e.gran === 'semana' ? 'últimas 12 semanas' : 'últimos 30 días'}`,
+        '', `<div class="pg-seg mq-gran" role="group" aria-label="Agrupar por">${gran}</div>`)
+      if (!maquinas.length) {
+        return parcial + `<div class="pg-ind-sin mq-sin"><p class="pg-ind-sin__que">No hay planillas cerradas entre el ${esc(fechaDelDia(e.desde))} y el ${esc(fechaDelDia(e.hasta))}.</p>` +
+          '<p class="pg-ind-sin__ctx">Elegí otro período. Solo cuentan las planillas cerradas.</p></div>' + tendencia
+      }
+      const colores = e.colores
+      const tarjetas = '<div class="mq-tarjetas">' + maquinas.map(m => htmlTarjetaMaquina(m, antes.get(m.id), colores.get(m.id))).join('') + '</div>'
+      const leyendaA = leyendaGraf([{ nombre: 'u/h productiva', color: COLORES_MAQUINA[0] }, { nombre: 'u/h del turno', color: COLOR_UH_TURNO }])
+      const conParadas = Array.isArray(e.paradas)
+      // La leyenda nombra solo lo que aparece en alguna barra.
+      const partesMaq = maquinas.map(m => partesDelTurno(m.filas, e.paradas))
+      const partesUsadas = PARTES_TURNO.filter(p => partesMaq.some(x => x[p.clave] > 0))
+      const leyendaC = leyendaGraf(partesUsadas.map(p => ({ nombre: p.nombre, color: p.color })))
+      const cats = paradasPorCategoria(e.filas)
+      const totalParadas = cats.programada + cats.falla + cats.organizativa + cats.otro
+      let dona = ''
+      if (totalParadas <= 0) dona = '<div class="mq-graf mq-graf--sin"><p class="mq-graf__titulo">Minutos de parada por tipo</p><p class="pg-ind-sin__que">Sin paradas en el período.</p></div>'
+      else {
+        const motivos = conParadas ? motivosTop(e.paradas, e.filas) : null
+        const lista = motivos === null
+          ? `<p class="mq-aviso">No se pudieron leer los motivos de las paradas${e.paradasError ? `: ${esc(e.paradasError)}` : ''}.</p>`
+          : motivos.length ? '<ol class="mq-motivos">' + motivos.map(htmlMotivo).join('') + '</ol>' : ''
+        dona = htmlFigura('dona', 'Minutos de parada por tipo', leyendaGraf(CATEGORIAS_PARADA.filter(c => cats[c.clave] > 0).map(c => ({ nombre: c.nombre, color: c.color })))) +
+          `<div class="mq-motivos-caja"><h4 class="mq-sub">Los motivos que más tiempo se llevaron</h4>${lista}</div>`
+      }
+      return parcial + tarjetas + '<div class="mq-graficos">' +
+        htmlFigura('barras', 'u/h por máquina', leyendaA) +
+        htmlFigura('turno', '¿A dónde se va el turno?', leyendaC) +
+        `<div class="mq-dona">${dona}</div>` + tendencia + '</div>'
+    }
+
+    // Llena cada lienzo con su SVG, con el ancho que tiene en pantalla.
+    function pintarGraficosMaquinas() {
+      const e = estado.maquinas
+      const raiz = document.getElementById('pr-mq-cuerpo')
+      if (!e || e.cargando || e.error || !raiz) return
+      const maquinas = maquinasDe(e.filas)
+      for (const fig of raiz.querySelectorAll('[data-mq-graf]')) {
+        const lienzo = fig.querySelector('.mq-graf__lienzo')
+        const ancho = Math.max(240, Math.floor(lienzo.clientWidth || 320))
+        const id = fig.dataset.mqGraf
+        let html = ''
+        if (id === 'barras') {
+          html = barrasAgrupadas({
+            ancho, titulo: 'u/h productiva y del turno por máquina', formato: uhTexto,
+            series: [{ clave: 'prod', nombre: 'u/h productiva', color: COLORES_MAQUINA[0] }, { clave: 'turno', nombre: 'u/h del turno', color: COLOR_UH_TURNO }],
+            grupos: maquinas.map(m => {
+              const s = sumarTurnos(m.filas)
+              return { etiqueta: m.nombre, valores: {
+                prod: { valor: s.uhProd, detalle: `${m.nombre} · u/h productiva: ${s.uhProd === null ? '—' : formatearNumeroAr(s.uhProd, { decimales: 1, minimos: 0 })} (${formatearNumeroAr(s.uProd, { decimales: 0 })} unidades en ${horasMin(s.minProd)} productivas)` },
+                turno: { valor: s.uhTurno, detalle: `${m.nombre} · u/h del turno: ${s.uhTurno === null ? '—' : formatearNumeroAr(s.uhTurno, { decimales: 1, minimos: 0 })} (${formatearNumeroAr(s.uTurno, { decimales: 0 })} unidades en ${horasMin(s.minTurno)} de turno)` },
+              } }
+            }),
+          })
+        } else if (id === 'turno') {
+          const conParadas = Array.isArray(e.paradas)
+          html = barrasApiladas({
+            ancho, titulo: '¿A dónde se va el turno?',
+            partes: PARTES_TURNO.filter(p => p.clave !== 'sin_detalle' || !conParadas),
+            filas: maquinas.map(m => {
+              const p = partesDelTurno(m.filas, e.paradas)
+              const total = Object.values(p).reduce((a, b) => a + b, 0)
+              const partes = {}
+              for (const x of PARTES_TURNO) partes[x.clave] = { valor: p[x.clave], detalle: `${m.nombre} · ${x.nombre}: ${horasMin(p[x.clave])}${total > 0 ? ` (${Math.round((p[x.clave] / total) * 100)} %)` : ''}` }
+              return { etiqueta: m.nombre, partes }
+            }),
+          })
+        } else if (id === 'dona') {
+          const cats = paradasPorCategoria(e.filas)
+          const total = cats.programada + cats.falla + cats.organizativa + cats.otro
+          html = dona({
+            tamano: Math.min(200, ancho), titulo: 'Minutos de parada por tipo', centro: horasMin(total), subcentro: 'de paradas',
+            partes: CATEGORIAS_PARADA.map(c => ({ nombre: c.nombre, color: c.color, valor: cats[c.clave], detalle: `${c.nombre}: ${horasMin(cats[c.clave])} (${total > 0 ? Math.round((cats[c.clave] / total) * 100) : 0} %)` })),
+          })
+        } else if (id === 'tendencia') {
+          const t = serieTendencia(e.filasTendencia, e.gran, e.hasta, e.colores)
+          html = lineas({ ancho, titulo: 'u/h productiva por máquina', formato: uhTexto, ejeX: t.ejeX, series: t.series })
+          const ley = fig.querySelector('.graf-leyenda')
+          if (ley) ley.remove()
+          if (html) lienzo.insertAdjacentHTML('afterend', leyendaGraf(t.series.map(s => ({ nombre: s.nombre, color: s.color }))))
+          else html = '<p class="pg-ind-sin__que mq-graf__sin">Sin planillas cerradas en ese tiempo.</p>'
+        }
+        lienzo.innerHTML = html
+        lienzo._ancho = ancho
+        activarDetalles(fig, fig.querySelector('.mq-graf__detalle'))
+      }
+    }
+
+    function pintarMaquinas() {
+      const cuerpo = document.getElementById('pr-mq-cuerpo')
+      if (!cuerpo) return
+      cuerpo.innerHTML = htmlMaquinas(estado.maquinas)
+      pintarGraficosMaquinas()
+    }
+
+    // Lee v_turno_metricas de a 1000 (lo que devuelve PostgREST), hasta 10
+    // páginas; si quedan más, avisa que puede estar incompleto.
+    async function leerMetricas(unidadId, desde, hasta) {
+      const filas = []
+      for (let i = 0; i < TOPE_PAGINAS_METRICAS; i++) {
+        const { data, error } = await supabase.from('v_turno_metricas')
+          .select('turno_id, unidad_negocio_id, maquina_id, maquina, maquina_orden, fecha, turno, lote, unidades, cajas, inicio_turno, fin_turno, inicio_real, fin_real, minutos_turno, minutos_real, minutos_parada_en_marcha, minutos_parada_total, minutos_productivos, parada_por_categoria, minutos_arranque, tiene_largada')
+          .eq('unidad_negocio_id', unidadId).gte('fecha', desde).lte('fecha', hasta)
+          .order('fecha').order('turno_id').range(i * 1000, i * 1000 + 999)
+        if (error) throw error
+        filas.push(...(data ?? []))
+        if (!data || data.length < 1000) return { filas, parcial: false }
+      }
+      return { filas, parcial: true }
+    }
+
+    // Las paradas de las planillas del período, de a 200 ids. Nunca tira:
+    // si falla, la pantalla dice que no tiene los motivos.
+    async function leerParadasDeTurnos(ids) {
+      try {
+        const todas = []
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error } = await supabase.from('paradas_produccion').select('turno_id, inicio, fin, motivo, categoria').in('turno_id', ids.slice(i, i + 200))
+          if (error) throw error
+          todas.push(...(data ?? []))
+        }
+        return { paradas: todas, error: null }
+      } catch (err) {
+        console.error('paradas de las máquinas:', err)
+        return { paradas: null, error: err?.message || 'sin respuesta del servidor' }
+      }
+    }
+
+    function periodoMaquinas() {
+      return { desde: document.getElementById('pr-mq-desde').value, hasta: document.getElementById('pr-mq-hasta').value }
+    }
+
+    // Con un turno: la respuesta de un período (o una unidad) que ya no está
+    // elegido no pisa la del nuevo.
+    let turnoMaquinas = 0
+    async function cargarMaquinas() {
+      const turno = ++turnoMaquinas
+      const cuerpo = document.getElementById('pr-mq-cuerpo')
+      const seccion = document.getElementById('pr-maquinas')
+      if (!cuerpo) return
+      seccion.hidden = !estado.unidadId
+      if (!estado.unidadId) { cuerpo.innerHTML = ''; return }
+      const { desde, hasta } = periodoMaquinas()
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || desde > hasta) return
+      const gran = estado.mqGran ?? 'dia'
+      const ant = periodoAnterior(desde, hasta)
+      const tend = rangoTendencia(gran, hasta)
+      const leerDesde = ant.desde < tend.desde ? ant.desde : tend.desde
+      estado.maquinas = { cargando: true }
+      pintarMaquinas()
+      let leido = null, error = null
+      try { leido = await leerMetricas(estado.unidadId, leerDesde, hasta) } catch (err) {
+        console.error('v_turno_metricas:', err)
+        error = err?.message || 'No hubo respuesta del servidor. Revisá la conexión.'
+      }
+      if (turno !== turnoMaquinas) return
+      if (error) { estado.maquinas = { error }; return pintarMaquinas() }
+      const filas = leido.filas.filter(f => f.fecha >= desde && f.fecha <= hasta)
+      const filasAntes = leido.filas.filter(f => f.fecha >= ant.desde && f.fecha <= ant.hasta)
+      const filasTendencia = leido.filas.filter(f => f.fecha >= tend.desde && f.fecha <= hasta)
+      const par = filas.length ? await leerParadasDeTurnos(filas.map(f => f.turno_id).filter(Boolean)) : { paradas: [], error: null }
+      if (turno !== turnoMaquinas) return
+      estado.maquinas = {
+        desde, hasta, gran, filas, filasAntes, filasTendencia, parcial: leido.parcial,
+        paradas: par.paradas, paradasError: par.error,
+        colores: coloresDeMaquinas(maquinasDe([...filas, ...filasTendencia, ...filasAntes])),
+      }
+      pintarMaquinas()
+    }
+
+    function cambiarGranularidad(gran) {
+      if (!GRANULARIDADES.some(g => g.clave === gran) || estado.mqGran === gran) return
+      estado.mqGran = gran
+      cargarMaquinas()
+    }
+
+    // Al achicar o agrandar la ventana, los gráficos se vuelven a dibujar con
+    // el ancho nuevo (solo si cambió).
+    let esperaAnchoMaquinas = null
+    function alCambiarAnchoMaquinas() {
+      clearTimeout(esperaAnchoMaquinas)
+      esperaAnchoMaquinas = setTimeout(() => {
+        const l = document.querySelector('#pr-mq-cuerpo .mq-graf__lienzo')
+        if (l && Math.max(240, Math.floor(l.clientWidth || 320)) !== l._ancho) pintarGraficosMaquinas()
+      }, 150)
     }
 
     const TARJETAS_INDICADORES = [
@@ -4349,6 +5011,8 @@
       const turno = ++turnoIndicadores
       const cont = document.getElementById('pr-indicadores')
       pintarDiaIndicadores()
+      // Las máquinas no dependen del día: se leen al cambiar la unidad.
+      if (estado.maquinasUnidad !== estado.unidadId) { estado.maquinasUnidad = estado.unidadId; cargarMaquinas() }
       if (!estado.unidadId) { cont.innerHTML = sinUnidadPorBarra() ? `<div class="pr-aviso">${esc(textoSinProduccionEnBarra())}</div>` : ''; return }
       estado.paradasSemana = { cargando: true }
       estado.tiradas = { cargando: true }
@@ -4374,6 +5038,7 @@
       estado.paradasSemana = par
       estado.indicadores = { unidadId: params.p_unidad_negocio_id, datos, error }
       cont.innerHTML = htmlIndicadores(datos, error)
+      pintarGraficosRendimiento()
       pintarNumerosMenu()
     }
 
@@ -4508,6 +5173,7 @@
     const SECCIONES_CONFIG = [
       ['productos', 'Productos'], ['maquinas', 'Máquinas'], ['recetas', 'Recetas'],
       ['ingredientes', 'Ingredientes'], ['marcas', 'Conos'], ['personal', 'Personal y PINes'],
+      ['horarios', 'Horarios'],
     ]
     // Las secciones que ya no existen solas y a dónde fueron.
     const ALIAS_CONFIG = { empaque: 'productos' }
@@ -7113,13 +7779,119 @@
       if (r.ok) await cargarPestanaConfig()
     }
 
+    // ── Horarios de turno (01/10/2026) ───────────────────────────────────
+    //
+    // horarios_turno: por unidad y turno (Mañana, Tarde, Noche), la hora de
+    // inicio, la de fin y si está activo. Lo guarda guardar_horario_turno
+    // (produccion:configurar en la unidad; el error de la base TAL CUAL, pegado
+    // al botón de esa fila). Lo usa la tablet: abrir_turno pone la hora de
+    // inicio de la planilla, el cierre propone la de fin y una parada que no
+    // vuelve se cuenta hasta ahí. Un turno sin fila no tiene horario: los
+    // campos arrancan vacíos y no se inventa ninguna hora.
+    const TURNOS_HORARIO = [['Mañana', 'manana'], ['Tarde', 'tarde'], ['Noche', 'noche']]
+
+    async function leerHorariosConfig(c) {
+      const { data, error } = await supabase.from('horarios_turno')
+        .select('turno, hora_inicio, hora_fin, activo').eq('unidad_negocio_id', c.unidadId)
+      if (error) throw error
+      c.horBorrador = {}
+      return { horarios: data ?? [] }
+    }
+
+    // La fila de un turno: lo guardado en la base (horas "06:00") o vacío.
+    function horarioGuardado(d, turno) {
+      const h = (d?.horarios ?? []).find(x => x?.turno === turno)
+      if (!h) return { inicio: '', fin: '', activo: true, existe: false }
+      return { inicio: normalizarHora(String(h.hora_inicio ?? '').slice(0, 5)), fin: normalizarHora(String(h.hora_fin ?? '').slice(0, 5)),
+        activo: h.activo !== false, existe: true }
+    }
+
+    // Lo que se ve en la fila: lo que se está escribiendo, o lo guardado.
+    function horarioEnPantalla(c, turno) {
+      return { ...horarioGuardado(c?.datos, turno), ...(c?.horBorrador?.[turno] ?? {}) }
+    }
+
+    // Cuántas horas dura (un turno que cruza la medianoche termina al otro
+    // día): "9 h", "8 h 36". Sin las dos horas, nada.
+    function duracionHorario(inicio, fin) {
+      const a = normalizarHora(inicio), b = normalizarHora(fin)
+      if (!a || !b || a === b) return ''
+      const m = (x) => Number(x.slice(0, 2)) * 60 + Number(x.slice(3))
+      let min = m(b) - m(a)
+      if (min <= 0) min += 24 * 60
+      const h = Math.floor(min / 60), r = min % 60
+      return r ? `${h} h ${r}` : `${h} h`
+    }
+
+    function htmlConfigHorarios(c) {
+      const unidad = estado.unidades.get(c.unidadId) ?? ''
+      const filas = TURNOS_HORARIO.map(([turno, k]) => {
+        const h = horarioEnPantalla(c, turno)
+        const dur = duracionHorario(h.inicio, h.fin)
+        const DONDE = `pr-cfg-hor-guardar-${k}`
+        return `<div class="pc-hor__fila${h.activo ? '' : ' pc-hor__fila--apagado'}">` +
+          `<div class="pc-hor__turno">${esc(turno)}${h.existe ? '' : '<span class="pc-texto2 pc-hor__sin"> · sin horario</span>'}</div>` +
+          `<label class="pc-hor__campo"><span class="pc-hor__rot">Empieza</span><input type="text" class="pc-input pc-hor__hora" id="pr-cfg-hor-${k}-inicio" data-hor-turno="${esc(turno)}" data-hor-campo="inicio" inputmode="numeric" autocomplete="off" placeholder="06:00" value="${esc(h.inicio)}" aria-label="${esc(turno)}: hora de inicio"></label>` +
+          `<label class="pc-hor__campo"><span class="pc-hor__rot">Termina</span><input type="text" class="pc-input pc-hor__hora" id="pr-cfg-hor-${k}-fin" data-hor-turno="${esc(turno)}" data-hor-campo="fin" inputmode="numeric" autocomplete="off" placeholder="15:00" value="${esc(h.fin)}" aria-label="${esc(turno)}: hora de fin"></label>` +
+          `<span class="pc-texto2 pc-hor__dur">${dur ? esc(dur) : ''}</span>` +
+          `<span class="pc-sw__rotulo">Activo</span>` + swAbre() + `<input type="checkbox" role="switch" class="pc-sw__input" data-hor-activo="${esc(turno)}"${h.activo ? ' checked' : ''} aria-label="${esc(turno)}: activo">` + SW_CIERRA +
+          `<button type="button" class="pc-btn pc-btn--32" id="${esc(DONDE)}" data-hor-guardar="${esc(turno)}"${c.horGuardando === turno ? ' disabled' : ''}>${c.horGuardando === turno ? 'Guardando…' : 'Guardar'}</button>` +
+          htmlErrorPegado(c, DONDE) + `</div>`
+      }).join('')
+      return `<div class="pc-panel pc-hor"><div class="pc-personal__cab"><h2 class="pc-titulo pc-titulo--21">Horarios de turno</h2>` +
+        `<span class="pc-texto2 pc-14">· ${esc(unidad)}</span></div>` +
+        `<p class="pc-nota pc-hor__nota">La tablet los usa para la hora de inicio de cada planilla y para proponer la de fin al cerrar. Una parada que no vuelve se cuenta hasta la hora de fin. Un turno que termina antes de empezar (Noche) termina al otro día.</p>` +
+        `<div class="pc-hor__lista">${filas}</div></div>`
+    }
+
+    // Lo que se escribe queda en el borrador de la fila: un repintado (por un
+    // error de otra fila) no lo pierde.
+    function tocarHorario(turno, campo, valor) {
+      const c = estado.config
+      if (!c || !TURNOS_HORARIO.some(([t]) => t === turno)) return
+      c.horBorrador = c.horBorrador ?? {}
+      c.horBorrador[turno] = { ...(c.horBorrador[turno] ?? {}), [campo]: valor }
+    }
+
+    // { params } para guardar_horario_turno, o { error } en palabras. Todos
+    // los parámetros explícitos (p_activo también).
+    function parametrosHorario(c, turno) {
+      const h = horarioEnPantalla(c, turno)
+      const inicio = normalizarHora(h.inicio), fin = normalizarHora(h.fin)
+      if (!inicio) return { error: `Escribí a qué hora empieza el turno ${turno}, por ejemplo 06:00.` }
+      if (!fin) return { error: `Escribí a qué hora termina el turno ${turno}, por ejemplo 15:00.` }
+      return { params: { p_unidad_negocio_id: c.unidadId, p_turno: turno, p_hora_inicio: inicio, p_hora_fin: fin, p_activo: h.activo !== false } }
+    }
+
+    async function guardarHorario(turno) {
+      const c = estado.config
+      if (!c || c.horGuardando) return
+      const k = TURNOS_HORARIO.find(([t]) => t === turno)?.[1]
+      if (!k) return
+      const DONDE = `pr-cfg-hor-guardar-${k}`
+      const r0 = parametrosHorario(c, turno)
+      if (r0.error) { errorConfig(r0.error, DONDE); return }
+      c.horGuardando = turno
+      pintarPestanaConfig()
+      let r
+      try {
+        r = await guardarEnConfig('guardar_horario_turno', r0.params, `Horario del turno ${turno} guardado.`, DONDE)
+      } finally {
+        c.horGuardando = null
+      }
+      if (r?.ok) { delete c.horBorrador?.[turno]; await cargarPestanaConfig() }
+      else pintarPestanaConfig()
+    }
+
     const LECTORES_CONFIG = {
       maquinas: leerMaquinasConfig, recetas: leerRecetasConfig, ingredientes: leerIngredientesConfig,
       productos: leerProductosConfig, marcas: leerMarcasConfig, personal: leerPersonalConfig,
+      horarios: leerHorariosConfig,
     }
     const RENDERS_CONFIG = {
       maquinas: htmlConfigMaquinas, recetas: htmlConfigRecetas, ingredientes: htmlConfigIngredientes,
       productos: htmlConfigProductos, marcas: htmlConfigMarcas, personal: htmlConfigPersonal,
+      horarios: htmlConfigHorarios,
     }
     // Los renglones de la lista de cada sección, para redibujarlos solos
     // mientras se escribe en el buscador.
@@ -7193,6 +7965,7 @@
           else accionProducto(ds)
         }
         else if (tab === 'marcas') accionMarca(ds)
+        else if (tab === 'horarios' && ds.horGuardar !== undefined) guardarHorario(ds.horGuardar)
       })
       cuerpo.addEventListener('change', ev => {
         const t = ev.target, c = estado.config
@@ -7203,6 +7976,8 @@
         if (t.dataset?.recetaCmp !== undefined) { c.comparar = { ...(c.comparar ?? {}), [t.dataset.recetaCmp]: t.value }; c.volverA = null; return pintarPestanaConfig() }
         if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
         if (t.dataset?.marcaActivo !== undefined) return tocarCono(t.dataset.marcaActivo, 'activa', t.checked)
+        // Horarios: el interruptor Activo NO guarda solo; va con "Guardar" de su fila.
+        if (t.dataset?.horActivo !== undefined) { tocarHorario(t.dataset.horActivo, 'activo', t.checked); return pintarPestanaConfig() }
         if (t.dataset?.recetaTipo !== undefined) { c.recetaTipo = t.value; c.recetaVer = null; c.comparar = null; c.volverA = null; c.recetaEditando = t.value === NUEVO_TIPO; pintarPestanaConfig() }
         else if (t.dataset?.recetaPartida !== undefined) { c.recetaPartida = t.value; pintarPestanaConfig() }
         else if (t.dataset?.ingInsumo !== undefined) { t.checked ? c.insumosElegidos.add(t.dataset.ingInsumo) : c.insumosElegidos.delete(t.dataset.ingInsumo) }
@@ -7215,6 +7990,7 @@
       cuerpo.addEventListener('input', ev => {
         const t = ev.target, c = estado.config
         if (t.dataset?.recetaKg !== undefined) return marcarCambioReceta(t)
+        if (t.dataset?.horCampo !== undefined) return tocarHorario(t.dataset.horTurno, t.dataset.horCampo, t.value)
         if (t.id === 'pr-cfg-lista-buscar') { c.busquedaLista = t.value; return pintarFilasLista() }
         if (['pr-config-marca-buscar', 'pr-config-personal-buscar', 'pr-config-insumo-buscar'].includes(t.id)) {
           c.busqueda = t.value
@@ -7298,8 +8074,15 @@
       cerrado: ['cerrado', 'Cerrado'],
     }
 
-    function htmlEstadoTurno(estadoTurno) {
-      const [clase, texto] = ESTADO_TURNO[estadoTurno] ?? ['', estadoTurno ?? '—']
+    // `t` (01/10/2026): con la fila del turno, una pendiente_completar que NO
+    // tiene forzado_por (y la consulta lo trajo) es una que dejó "Volvió con
+    // lote nuevo": le faltan los productos y el scrap, no se cerró a la fuerza.
+    function esRelanzado(t) {
+      return t?.estado === 'pendiente_completar' && !!t && Object.prototype.hasOwnProperty.call(t, 'forzado_por') && t.forzado_por == null && !t.forzado_motivo
+    }
+
+    function htmlEstadoTurno(estadoTurno, t = null) {
+      const [clase, texto] = esRelanzado(t) ? ['pendiente', 'Falta completar (productos y scrap)'] : (ESTADO_TURNO[estadoTurno] ?? ['', estadoTurno ?? '—'])
       return `<span class="pr-of-chip pr-of-chip--${clase}">${esc(texto)}</span>`
     }
 
@@ -7350,7 +8133,7 @@
         if (!h.maquinas.some(m => m.id === h.maquina)) h.maquina = ''
         sel.value = h.maquina
         let q = supabase.from('turnos_produccion')
-          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en')
+          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, forzado_por, forzado_motivo')
           .eq('unidad_negocio_id', h.unidadId).gte('fecha', h.desde).lte('fecha', h.hasta)
         if (h.maquina) q = q.eq('maquina_id', h.maquina)
         if (h.estado) q = q.eq('estado', h.estado)
@@ -7386,14 +8169,23 @@
         `<span>${esc(t.turno)}</span>` +
         `<span>${esc(maquina)}</span>` +
         `<span>${esc(encargado)}</span>` +
-        `<span>${htmlEstadoTurno(t.estado)}</span></button>`
+        `<span>${htmlEstadoTurno(t.estado, t)}</span></button>`
     }
 
     async function leerDetalleTurno(turnoId) {
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       const [turno] = await leer(supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
+        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, hora_apagado, hora_largada, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
       if (!turno) throw new Error('El turno no existe.')
+      // Con el turno abierto y sin hora de fin en la planilla, la del horario
+      // de la unidad (si no se puede leer, ninguna: nunca se inventa).
+      let finHorario = null
+      if (turno.estado === 'abierto' && !String(turno.hora_fin ?? '').slice(0, 5)) {
+        try {
+          const hs = await leer(supabase.from('horarios_turno').select('turno, hora_fin, activo').eq('unidad_negocio_id', turno.unidad_negocio_id).eq('turno', turno.turno).eq('activo', true))
+          finHorario = normalizarHora(String(hs.find(x => x?.turno === turno.turno && x?.activo !== false)?.hora_fin ?? '').slice(0, 5)) || null
+        } catch (err) { console.error('horario del turno:', err) }
+      }
       const maquina = (await leer(supabase.from('maquinas').select('id, nombre').eq('id', turno.maquina_id))).find(m => m.id === turno.maquina_id) ?? null
       // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
       // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
@@ -7431,7 +8223,14 @@
       // dejaría todos los nombres en blanco menos el tuyo.
       const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
         ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
-      return { turno, maquina, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque }
+      return { turno, maquina, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque, finHorario }
+    }
+
+    // La hora de fin del turno ABIERTO: la de la planilla o la del horario.
+    // Hasta ahí se cuenta una parada que no vuelve. null = no se sabe.
+    function finTurnoAbierto(d) {
+      if (d?.turno?.estado !== 'abierto') return null
+      return normalizarHora(String(d.turno.hora_fin ?? '').slice(0, 5)) || d.finHorario || null
     }
 
     // El empaque que descontó el turno: los movimientos de stock_movimientos
@@ -7639,12 +8438,16 @@
       return { cajas, unidades }
     }
 
-    // "Miércoles 24/09 · 06:02 a 14:10 · fuego apagado 13:55"
+    // "Miércoles 24/09 · 06:00 a 15:00 · empezó a producir 06:40 · terminó de
+    // producir 13:55". Desde el 05/10/2026 hora_apagado es "terminó de
+    // producir" y hora_largada "empezó a producir" (la tablet las pregunta).
     function horarioTurno(t) {
       const desde = String(t.hora_inicio ?? '').slice(0, 5) || horaArgentina(t.abierto_en) || '—'
-      const hasta = t.estado === 'abierto' ? 'sigue abierto' : (horaArgentina(t.cerrado_en) || '—')
-      const fuego = String(t.hora_apagado ?? '').slice(0, 5)
-      return [textoDiaInd(t.fecha), `${desde} a ${hasta}`, fuego ? `fuego apagado ${fuego}` : ''].filter(Boolean).join(' · ')
+      const hasta = t.estado === 'abierto' ? 'sigue abierto' : (String(t.hora_fin ?? '').slice(0, 5) || horaArgentina(t.cerrado_en) || '—')
+      const largada = String(t.hora_largada ?? '').slice(0, 5)
+      const termino = String(t.hora_apagado ?? '').slice(0, 5)
+      return [textoDiaInd(t.fecha), `${desde} a ${hasta}`, largada ? `empezó a producir ${largada}` : '',
+        termino ? `terminó de producir ${termino}` : ''].filter(Boolean).join(' · ')
     }
 
     // El minutero de las paradas: el total de lo que se sabe (las cerradas).
@@ -7663,13 +8466,15 @@
       const forzado = t.forzado_motivo
         ? `<div class="pr-aviso pr-aviso--grave">Esta planilla se cerró a la fuerza${t.forzado_por ? ` · ${esc(nom(t.forzado_por))}` : ''}${t.forzado_en ? ` · ${esc(fechaCorta(t.forzado_en))}` : ''}: ${esc(t.forzado_motivo)}` +
           `${t.estado === 'pendiente_completar' ? ' Lo que produjo todavía no está en el stock.' : ''}</div>`
-        : ''
+        : (esRelanzado(t)
+          ? `<div class="pr-aviso pr-aviso--grave">Falta completar (productos y scrap): la máquina volvió con un lote nuevo${String(t.hora_fin ?? '').slice(0, 5) ? ` a las ${esc(String(t.hora_fin).slice(0, 5))}` : ''}. Se completa en la tablet, con la hora de fin ya puesta. Lo que produjo todavía no está en el stock.</div>`
+          : '')
       const cab = `<div class="pg-turno__cab">` +
         `<div class="pg-turno__lote"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
         `<div class="pg-turno__datos"><div class="pg-turno__maq"><strong>${esc(d.maquina?.nombre ?? 'Máquina')}</strong> · turno ${esc(t.turno)}</div>` +
         `<div class="pr-texto-suave">${esc(horarioTurno(t))}</div>` +
         `<div class="pg-turno__enc"><span class="pr-dato__rotulo">Encargado</span> <strong>${esc(nom(t.encargado_id))}</strong></div></div>` +
-        `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado)}</div></div>`
+        `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado, t)}</div></div>`
       const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
       // Las tiradas no cuentan como masas del turno (sí su consumo, que quedó descontado).
       const vivas = d.masas.filter(m => !m.anulada && m.descartada !== true).length
@@ -7695,7 +8500,7 @@
         `<div class="pg-turno__grilla">` +
         `<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}</section>` +
         `<section class="pg-caja"><h2 class="pr-subtitulo">Masas <span class="pg-caja__ctx">${esc(vivas)}</span></h2><ul class="pr-lista">${masas}</ul></section>` +
-        `<section class="pg-caja"><h2 class="pr-subtitulo">Paradas y scrap</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t))}` +
+        `<section class="pg-caja"><h2 class="pr-subtitulo">Paradas y scrap</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))}` +
         (accionesParadaHistorial(t).editar ? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada</button>' : '') +
         scrapPie + `</section></div>` +
         `<section class="pg-caja pg-caja--ancha"><h2 class="pr-subtitulo">Lo producido <span class="pg-caja__ctx">${esc(cantidad)}</span></h2><ul class="pr-lista pg-producido">${producido}</ul>${pieProducido}</section>` +
@@ -8024,6 +8829,10 @@
       document.getElementById('pr-historial-unidad').addEventListener('change', cambio('unidadId'))
       document.getElementById('pr-historial-desde').addEventListener('change', cambio('desde'))
       document.getElementById('pr-historial-hasta').addEventListener('change', cambio('hasta'))
+      // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+      // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+      // obligatorias: cargarHistorial() necesita las dos fechas (no busca "sin fechas").
+      crearPeriodo({ desde: document.getElementById('pr-historial-desde'), hasta: document.getElementById('pr-historial-hasta'), obligatorias: true })
       document.getElementById('pr-historial-maquina').addEventListener('change', cambio('maquina'))
       document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
       document.getElementById('pr-historial-lista').addEventListener('click', ev => {

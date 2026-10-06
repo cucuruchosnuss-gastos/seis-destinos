@@ -15,7 +15,7 @@ correrMutacionesProduccion({
     // planta (el lote va en la cabecera, las masas y paradas en sus resúmenes,
     // el cono en su columna): sus mutaciones no medirían nada. Entran los
     // renders nuevos.
-    'htmlEstadoPlanilla', 'htmlOpsResumen', 'htmlMasasResumen', 'htmlParadasResumen', 'htmlParadasTurno',
+    'htmlEstadoPlanilla', 'htmlOpsResumen', 'htmlMasasResumen', 'htmlAccionParo', 'htmlParadasTurno',
     'htmlProducido', 'htmlTotalTurno', 'htmlPasosAgregar', 'htmlPasoProducto',
     'htmlPasoPresentacion', 'htmlMarcas', 'htmlAvisosCierre', 'htmlResumenCierre', 'htmlSublotesDefinitivos',
     'htmlPendientesCompletar', 'htmlFaltaCierre',
@@ -33,7 +33,10 @@ correrMutacionesProduccion({
     { expr: 'esc(c.num)', motivo: 'htmlResumenCierre(): conteos, formatearNumeroAr() o "—"' },
     { expr: 'esc(c.rot)', motivo: 'htmlResumenCierre(): el rótulo de cada celda, constante del código' },
     { expr: 'esc(hasta)', motivo: 'htmlParadasTurno(): horaArgentina() ("HH:MM"), "—" o "ahora"' },
-    { expr: 'esc(sub)', motivo: 'htmlMasasResumen()/htmlParadasResumen(): conteos y textoMinutos(), textos del código' },
+    { expr: 'esc(sub)', motivo: 'htmlMasasResumen(): conteos y textos del código (en htmlAccionParo el sub lleva el motivo y se prueba en test-produccion-paradas-simple.js)' },
+    { expr: 'esc(sufijo(t))', motivo: 'htmlPendientesCompletar(): " · cerrada a la fuerza" o " · falta completar", constantes del código' },
+    { expr: 'esc(horas)', motivo: 'htmlParadasTurno(): las horas salen de horaArgentina() ("HH:MM") y de textos fijos' },
+    { expr: 'esc(dato)', motivo: 'htmlAccionParo(): horas, conteos y textoMinutos(); el motivo va en el sub' },
     { expr: 'esc(gente.length - vistos.length)', motivo: 'htmlOpsResumen(): un conteo' },
     { expr: 'esc(gente.length)', motivo: 'htmlOpsResumen(): un conteo' },
     { expr: 'esc(textoSinCaja(it))', motivo: 'textoSinCaja() devuelve texto constante del código (solo mira si el embolsado es ninguno): ningún dato de la base llega a la salida' },
@@ -152,9 +155,6 @@ correrMutacionesProduccion({
     { "nombre": "la parada en curso no se marca", "de": "${p.fin ? '' : ' pr-parada-item--curso'}", "a": "" },
     { nombre: 'la franja de parada no aparece', de: "      document.getElementById('pr-parada-activa').hidden = !enCurso", a: "      document.getElementById('pr-parada-activa').hidden = true" },
     { nombre: 'la franja no dice hace cuánto', de: "      document.getElementById('pr-parada-activa-hace').textContent = enCurso", a: "      document.getElementById('pr-parada-activa-hace').textContent = false" },
-    { "nombre": "sin motivo de parada se manda igual", "de": "f.errorBase = !motivo ? 'Elegí por qué paró.'", "a": "f.errorBase = !motivo ? ''" },
-    { "nombre": "el motivo elegido no se encuentra en la lista", "de": "      return motivos.find(m => m.id === f.motivoId) ?? null\n", "a": "      return null\n" },
-    { nombre: 'terminar_parada con otra parada', de: "supabase.rpc('terminar_parada', { p_parada_id: enCurso.id })", a: "supabase.rpc('terminar_parada', { p_parada_id: estado.planilla.paradas[0].id })" },
 
     // ── Masas ───────────────────────────────────────────────────────────
     { nombre: "el resumen de masas toma la primera como última", de: "      const ultima = lista[lista.length - 1]\n      const quien = ultima ? apellidoDe(ultima.masero_id)", a: "      const ultima = lista[0]\n      const quien = ultima ? apellidoDe(ultima.masero_id)" },
@@ -179,11 +179,8 @@ correrMutacionesProduccion({
     { nombre: 'el error de la base se pierde', de: "        estado.cierre.errorBase = e?.message || 'No se pudo cerrar la planilla. Lo que cargaste quedó guardado en esta tablet.'", a: "        estado.cierre.errorBase = 'No se pudo cerrar la planilla.'" },
     { nombre: "el campo que falta no se marca", de: "document.getElementById(id).className = 'pr-cierre-caja' + extra + (marcados.has(campo) ? ' pr-campo--mal' : '')", a: "document.getElementById(id).className = 'pr-cierre-caja' + extra" },
     { nombre: 'el campo se marca antes de intentar', de: '      const marcados = new Set(b.intentado ? faltan.map(f => f.campo) : [])', a: '      const marcados = new Set(faltan.map(f => f.campo))' },
-    { nombre: "\"se rompió\" no cambia la etiqueta de la hora", de: "textContent = rota ? 'SE ROMPIÓ A LAS' : 'SE APAGÓ EL FUEGO A LAS'", a: "textContent = 'SE APAGÓ EL FUEGO A LAS'" },
-    { nombre: '"se rompió" no hace obligatorio contar qué pasó', de: "      if (b.rota && String(b.obs ?? '').trim() === '') {", a: '      if (false) {' },
-    { nombre: 'la casilla no queda marcada', de: "      document.getElementById('pr-cierre-rota').setAttribute('aria-pressed', rota ? 'true' : 'false')", a: "      document.getElementById('pr-cierre-rota').setAttribute('aria-pressed', 'false')" },
-    { nombre: "las observaciones siguen diciendo Observaciones", de: "? 'QUÉ PASÓ <span class=\"pr-obligatorio\">· obligatorio</span>' : 'OBSERVACIONES'", a: "? 'OBSERVACIONES' : 'OBSERVACIONES'" },
-    { nombre: 'la hora se mueve de a un minuto', de: 'data-hora-paso="5"', a: 'data-hora-paso="1"' },
+    { nombre: 'la hora del cierre no queda en el botón', de: "      botonHora.textContent = hora || 'Tocá para poner la hora'", a: "      botonHora.textContent = 'Tocá para poner la hora'" },
+    { nombre: 'sin hora se manda', de: "        faltan.push({ campo: 'hora', error: 'Falta a qué hora terminó de producir.', nota: 'Tocá para poner la hora.' })", a: '' },
     { nombre: 'la hora no da la vuelta en medianoche', de: '      const total = ((Number(base.slice(0, 2)) * 60 + Number(base.slice(3)) + minutos) % 1440 + 1440) % 1440', a: '      const total = Number(base.slice(0, 2)) * 60 + Number(base.slice(3)) + minutos' },
     { nombre: 'el scrap puede bajar de cero', de: '      ponerNumero(campo, Math.max(0, redondearKg((leerCampoNumero(campo) ?? 0) + kg)))', a: '      ponerNumero(campo, redondearKg((leerCampoNumero(campo) ?? 0) + kg))' },
     { nombre: 'la hora viaja sin normalizar', de: '        p_hora_apagado: normalizarHora(b.hora),', a: '        p_hora_apagado: b.hora,' },
@@ -201,10 +198,10 @@ correrMutacionesProduccion({
     { nombre: 'se pregunta siempre, aunque ya se confirmó', de: '      if (avisos.length && !b.confirmado) {', a: '      if (avisos.length) {' },
 
     // ── El borrador ─────────────────────────────────────────────────────
-    { nombre: 'no guarda el borrador', de: "      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota })\n", a: '' },
-    { nombre: 'el borrador pierde "se rompió"', de: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota }', a: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, rota: false }' },
+    { nombre: 'no guarda el borrador', de: "      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, motivoId: b.motivoId ?? null, motivoDetalle: b.motivoDetalle ?? '' })\n", a: '' },
+    { nombre: 'el borrador pierde la hora', de: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, motivoId:', a: "{ hora: '', scrap: b.scrap, obs: b.obs, motivoId:" },
     { nombre: 'no recupera el borrador', de: '      const guardado = leerBorradorCierre(p.turno.id)', a: '      const guardado = null' },
-    { nombre: 'el borrador se borra aunque falle', de: "        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre))\n        if (error) throw error", a: "        guardarPreferencia(claveBorradorCierre(turnoId), null)\n        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre))\n        if (error) throw error" },
+    { nombre: 'el borrador se borra aunque falle', de: "        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre, estado.planilla))\n        if (error) throw error", a: "        guardarPreferencia(claveBorradorCierre(turnoId), null)\n        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre, estado.planilla))\n        if (error) throw error" },
     { nombre: 'el borrador no se borra al cerrar', de: '        // Recién ahora se borra el borrador: la base ya tiene todo.\n        guardarPreferencia(claveBorradorCierre(turnoId), null)\n', a: '' },
     { nombre: 'un JSON roto rompe', de: '      } catch { return null }\n    }\n\n    function guardarBorradorCierre', a: '      } finally {}\n    }\n\n    function guardarBorradorCierre' },
     { nombre: 'un scrap que no es número se acepta', de: "          scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,", a: '          scrap: b.scrap ?? null,' },

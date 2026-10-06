@@ -8,9 +8,12 @@
 // (bordó si algo es urgente, gris si no). Achicada, el nombre y lo pendiente
 // salen en un cartel negro al pasar el mouse.
 //
-// CELULAR (debajo de 1024 px): una barra ABAJO con Inicio + los 3 módulos más
-// usados (o los fijados) + "Más", que abre una hoja con todos los módulos y
-// Personalizar, Mi cuenta, Mis sesiones y Salir.
+// CELULAR (debajo de 1024 px): una barra ABAJO con Inicio + los módulos que
+// la persona ELIGIÓ (05/10/2026: "Editar la barra de abajo" en la hoja "Más",
+// o un toque largo sobre la barra; se guarda en la cuenta, clave
+// barra_inferior) o, si nunca eligió, los que más usa + "Más", que abre una
+// hoja con todos los módulos y Personalizar, Mi cuenta, Mis sesiones y Salir.
+// Entran de 4 a 6 módulos según el ancho (capacidadBarraAbajo).
 //
 // UN SOLO COMPONENTE para todas las pantallas: cada página lo carga con
 //   <script type="module" src="../js/barra-lateral.js"></script>
@@ -27,7 +30,7 @@
 
 import { supabase } from './supabase.js'
 import { MODULOS, moduloVisible, agruparPendientes, escDash, colorDeModulo, enOrdenDeBarra } from './modulos.js'
-import { cargarPrefs, leerPrefs, guardarPrefs, ordenarBarra, anotarUso, modulosDeAbajo } from './preferencias.js'
+import { cargarPrefs, leerPrefs, guardarPrefs, ordenarBarra, anotarUso, modulosDeAbajo, guardarBarraInferior } from './preferencias.js'
 import { abrirPanelSesiones } from './sesiones.js'
 
 // La raíz del repo: este archivo vive en js/.
@@ -35,6 +38,14 @@ const RAIZ = new URL('../', import.meta.url)
 const CLAVE_COLAPSADA = 'barraLateral.colapsada'
 // Por debajo de este ancho, sin preferencia guardada, arranca achicada.
 const ANCHO_ABIERTA = 1280
+// La barra de abajo del celular (05/10/2026): cada tab necesita unos 60 px
+// para tocarse cómoda con el texto un poco más grande, e Inicio y "Más" van
+// siempre. 360 y 390 px → 4 módulos, 420 → 5, 480 o más → 6; nunca menos de 4.
+const ANCHO_TAB_ABAJO = 60
+const MIN_ABAJO = 4
+const MAX_ABAJO = 6
+// Un toque largo sobre la barra abre el editor.
+const MS_TOQUE_LARGO = 600
 
 // Los trazos de cada ícono, copiados del diseño (viewBox 24 × 24).
 export const ICONOS = {
@@ -155,7 +166,13 @@ export function htmlBarra({ fijados = [], resto = [], modulos, actual, colapsada
     '</div>'
 }
 
-// La barra de abajo del celular: Inicio + 3 módulos + Más. "Más" suma las
+// Cuántos módulos entran en la barra de abajo con este ancho de pantalla.
+export function capacidadBarraAbajo(ancho) {
+  const n = Math.floor((Number(ancho) || 0) / ANCHO_TAB_ABAJO) - 2
+  return Math.max(MIN_ABAJO, Math.min(MAX_ABAJO, n))
+}
+
+// La barra de abajo del celular: Inicio + los módulos + Más. "Más" suma las
 // burbujas de lo que no está en la barra.
 export function htmlBarraAbajo({ abajo, actual, raiz }) {
   const tab = (m) => {
@@ -163,11 +180,11 @@ export function htmlBarraAbajo({ abajo, actual, raiz }) {
     const col = colorDeModulo(m.clave)
     return `<a class="barra-abajo__tab${esActual ? ' barra-abajo__tab--actual' : ''}" href="${escDash(new URL(m.url, raiz).href)}" data-clave="${escDash(m.clave)}"${esActual ? ' aria-current="page"' : ''}` +
       ` style="--tab-color: ${esActual ? 'var(--color-acento)' : col.c}">` +
-      `<span class="barra-abajo__icono">${htmlIcono(m.clave, 21)}</span><span class="barra-abajo__nombre">${escDash(m.nombre)}</span></a>`
+      `<span class="barra-abajo__icono">${htmlIcono(m.clave, 23)}</span><span class="barra-abajo__nombre">${escDash(m.nombre)}</span></a>`
   }
   return tab(INICIO) + abajo.map(tab).join('') +
     '<button type="button" class="barra-abajo__tab barra-abajo__mas" id="barra-abajo-mas" aria-haspopup="dialog" data-clave="mas" style="--tab-color: var(--color-texto-2)">' +
-      `<span class="barra-abajo__icono">${htmlIcono('mas', 21)}</span><span class="barra-abajo__nombre">Más</span></button>`
+      `<span class="barra-abajo__icono">${htmlIcono('mas', 23)}</span><span class="barra-abajo__nombre">Más</span></button>`
 }
 
 // La hoja "Todos los módulos" del celular.
@@ -183,12 +200,70 @@ export function htmlHojaMas({ modulos, raiz }) {
       '<div class="hoja-mas__cab"><h2 class="hoja-mas__titulo" id="hoja-mas-titulo">Todos los módulos</h2>' +
       '<button type="button" class="hoja-mas__cerrar" id="hoja-mas-cerrar" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
       `<div class="hoja-mas__grilla">${modulos.map(celda).join('')}</div>` +
+      '<button type="button" class="hoja-mas__editar" id="hoja-mas-editar" aria-haspopup="dialog">Editar la barra de abajo</button>' +
       '<div class="hoja-mas__acciones">' +
         `<a class="hoja-mas__accion" href="${escDash(new URL(URL_PERSONALIZAR, raiz).href)}">Personalizar</a>` +
         `<a class="hoja-mas__accion" href="${escDash(new URL('dashboard.html?cuenta=mi-cuenta', raiz).href)}">Mi cuenta</a>` +
         '<button type="button" class="hoja-mas__accion" id="hoja-mas-sesiones">Mis sesiones</button>' +
         '<button type="button" class="hoja-mas__accion" id="hoja-mas-salir">Salir</button>' +
       '</div></div>'
+}
+
+// EL EDITOR DE LA BARRA DE ABAJO (05/10/2026). `lista` son las claves
+// elegidas, en orden; `modulos` los que la persona puede abrir; entran
+// `cantidad`. Arriba los de la barra (subir, bajar, sacar), abajo los demás
+// (agregar, apagado con la barra llena). Inicio y "Más" van siempre.
+export function htmlEditarAbajo({ lista, modulos, cantidad, guardando = false, error = '' }) {
+  const porClave = new Map(modulos.map(m => [m.clave, m]))
+  const en = lista.filter(c => porClave.has(c)).map(c => porClave.get(c))
+  const fuera = modulos.filter(m => !en.some(x => x.clave === m.clave))
+  const lleno = en.length >= cantidad
+  const icono = (m) => {
+    const col = colorDeModulo(m.clave)
+    return `<span class="editar-abajo__icono" style="background: ${col.t}; color: ${col.c}">${htmlIcono(m.clave, 19)}</span>`
+  }
+  const filaEn = (m, i) => {
+    const n = escDash(m.nombre), c = escDash(m.clave)
+    return `<li class="editar-abajo__fila">${icono(m)}<span class="editar-abajo__nombre">${n}</span>` +
+      `<button type="button" class="editar-abajo__boton" data-abajo-subir="${c}" aria-label="Subir ${n}"${i === 0 ? ' disabled' : ''}>↑</button>` +
+      `<button type="button" class="editar-abajo__boton" data-abajo-bajar="${c}" aria-label="Bajar ${n}"${i === en.length - 1 ? ' disabled' : ''}>↓</button>` +
+      `<button type="button" class="editar-abajo__boton editar-abajo__boton--texto" data-abajo-sacar="${c}" aria-label="Sacar ${n} de la barra">Sacar</button></li>`
+  }
+  const filaFuera = (m) => {
+    const n = escDash(m.nombre), c = escDash(m.clave)
+    return `<li class="editar-abajo__fila">${icono(m)}<span class="editar-abajo__nombre">${n}</span>` +
+      `<button type="button" class="editar-abajo__boton editar-abajo__boton--texto" data-abajo-agregar="${c}" aria-label="Agregar ${n} a la barra"${lleno ? ' disabled' : ''}>Agregar</button></li>`
+  }
+  const dis = guardando ? ' disabled' : ''
+  return '<div class="hoja-mas__caja editar-abajo" role="dialog" aria-modal="true" aria-labelledby="editar-abajo-titulo">' +
+      '<div class="hoja-mas__manija" aria-hidden="true"></div>' +
+      '<div class="hoja-mas__cab"><h2 class="hoja-mas__titulo" id="editar-abajo-titulo">La barra de abajo</h2>' +
+      '<button type="button" class="hoja-mas__cerrar" id="editar-abajo-cerrar" aria-label="Cerrar sin guardar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      `<p class="editar-abajo__nota">Elegí hasta ${cantidad} módulos y ordenalos. Inicio y «Más» van siempre.</p>` +
+      `<h3 class="editar-abajo__sub">En la barra · ${en.length} de ${cantidad}</h3>` +
+      (en.length ? `<ol class="editar-abajo__lista" id="editar-abajo-en">${en.map(filaEn).join('')}</ol>`
+        : '<p class="editar-abajo__vacia" id="editar-abajo-en">Todavía no elegiste ninguno.</p>') +
+      '<h3 class="editar-abajo__sub">Los demás</h3>' +
+      (lleno && fuera.length ? '<p class="editar-abajo__nota">La barra está llena: sacá uno para agregar otro.</p>' : '') +
+      `<ul class="editar-abajo__lista" id="editar-abajo-fuera">${fuera.map(filaFuera).join('')}</ul>` +
+      (error ? `<p class="editar-abajo__error" id="editar-abajo-error" role="alert">${escDash(error)}</p>` : '') +
+      '<div class="hoja-mas__acciones">' +
+        `<button type="button" class="hoja-mas__accion hoja-mas__accion--principal" id="editar-abajo-guardar"${dis}>${guardando ? 'Guardando…' : 'Guardar'}</button>` +
+        `<button type="button" class="hoja-mas__accion" id="editar-abajo-auto"${dis}>Volver a la automática</button>` +
+      '</div></div>'
+}
+
+// Lo que hace cada botón del editor con la lista (pura). Agregar no pasa de
+// `cantidad`; subir y bajar en los bordes no hacen nada.
+export function cambiarListaAbajo(lista, accion, clave, cantidad) {
+  const l = [...lista]
+  const i = l.indexOf(clave)
+  if (accion === 'agregar') { if (i < 0 && l.length < cantidad) l.push(clave); return l }
+  if (i < 0) return l
+  if (accion === 'sacar') l.splice(i, 1)
+  else if (accion === 'subir' && i > 0) [l[i - 1], l[i]] = [l[i], l[i - 1]]
+  else if (accion === 'bajar' && i < l.length - 1) [l[i + 1], l[i]] = [l[i], l[i + 1]]
+  return l
 }
 
 // Pone las burbujas nuevas (y saca las viejas). Con null (la llamada falló)
@@ -275,13 +350,20 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     const hoja = doc.createElement('div')
     hoja.className = 'hoja-mas'
     hoja.hidden = true
+    // El editor de la barra de abajo (05/10/2026), con la misma hoja.
+    const editor = doc.createElement('div')
+    // Su propia clase (no .hoja-mas): la comparación con el diseño busca la hoja "Más" sola.
+    editor.className = 'hoja-abajo'
+    editor.hidden = true
+    let ed = null
+    let cantidad = capacidadBarraAbajo(win.innerWidth)
     const salir = async () => { try { await sb.auth.signOut() } finally { win.location.replace(new URL('login.html', RAIZ).href) } }
     const sesiones = () => abrirPanelSesiones({ sb, empleadoId: yo.id, propia: true, doc })
     const cerrarHoja = () => { hoja.hidden = true; doc.getElementById('barra-abajo-mas')?.focus() }
     const dibujar = () => {
       const orden = ordenarBarra(modulos, prefs)
       nav.innerHTML = htmlBarra({ ...orden, actual, colapsada, raiz: RAIZ })
-      abajo.innerHTML = htmlBarraAbajo({ abajo: modulosDeAbajo(modulos, prefs), actual, raiz: RAIZ })
+      abajo.innerHTML = htmlBarraAbajo({ abajo: modulosDeAbajo(modulos, prefs, Date.now(), cantidad), actual, raiz: RAIZ })
       hoja.innerHTML = htmlHojaMas({ modulos: [...orden.fijados, ...orden.resto], raiz: RAIZ })
       doc.body.classList.toggle('barra-lateral-colapsada', colapsada)
       nav.querySelector('#barra-lateral-plegar').addEventListener('click', () => {
@@ -295,12 +377,95 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
       hoja.querySelector('#hoja-mas-cerrar').addEventListener('click', cerrarHoja)
       hoja.querySelector('#hoja-mas-sesiones').addEventListener('click', () => { hoja.hidden = true; sesiones() })
       hoja.querySelector('#hoja-mas-salir').addEventListener('click', salir)
+      hoja.querySelector('#hoja-mas-editar')?.addEventListener('click', abrirEditor)
     }
+
+    // EL EDITOR: arranca con lo que se ve hoy en la barra; Guardar sube SOLO
+    // la clave barra_inferior (guardarBarraInferior lee la cuenta y no pisa
+    // el tablero); "Volver a la automática" la saca. Cerrar no guarda nada.
+    const pintarEditor = () => {
+      if (!ed) return
+      editor.innerHTML = htmlEditarAbajo({ lista: ed.lista, modulos, cantidad, guardando: ed.guardando, error: ed.error })
+    }
+    function abrirEditor() {
+      cantidad = capacidadBarraAbajo(win.innerWidth)
+      ed = { lista: modulosDeAbajo(modulos, prefs, Date.now(), cantidad).map(m => m.clave), guardando: false, error: '' }
+      hoja.hidden = true
+      editor.hidden = false
+      pintarEditor()
+      editor.querySelector('#editar-abajo-cerrar')?.focus()
+    }
+    const cerrarEditor = () => {
+      if (ed?.guardando) return
+      ed = null
+      editor.hidden = true
+      doc.getElementById('barra-abajo-mas')?.focus()
+    }
+    const guardarEditor = async (automatica) => {
+      if (!ed || ed.guardando) return
+      if (!automatica && !ed.lista.length) { ed.error = 'Elegí al menos un módulo, o tocá «Volver a la automática».'; return pintarEditor() }
+      ed.guardando = true
+      ed.error = ''
+      pintarEditor()
+      const r = await guardarBarraInferior({ empleadoId: yo.id, lista: automatica ? [] : ed.lista })
+      prefs = leerPrefs(yo.id)
+      dibujar()
+      pintarBurbujasBarra(nav, ultimos)
+      pintarBurbujasAbajo(abajo, ultimos)
+      if (r?.ok) { ed = null; editor.hidden = true; return }
+      ed.guardando = false
+      ed.error = 'No se pudo guardar en tu cuenta: por ahora queda en este celular.'
+      pintarEditor()
+    }
+    editor.addEventListener('click', ev => {
+      if (ev.target === editor) return cerrarEditor()
+      const b = ev.target?.closest?.('button')
+      if (!b || b.disabled || !ed) return
+      if (b.id === 'editar-abajo-cerrar') return cerrarEditor()
+      if (b.id === 'editar-abajo-guardar') return guardarEditor(false)
+      if (b.id === 'editar-abajo-auto') return guardarEditor(true)
+      if (ed.guardando) return
+      const d = b.dataset ?? {}
+      const accion = d.abajoAgregar ? 'agregar' : d.abajoSacar ? 'sacar' : d.abajoSubir ? 'subir' : d.abajoBajar ? 'bajar' : null
+      if (!accion) return
+      ed.lista = cambiarListaAbajo(ed.lista, accion, d.abajoAgregar || d.abajoSacar || d.abajoSubir || d.abajoBajar, cantidad)
+      ed.error = ''
+      pintarEditor()
+    })
+
+    // Un toque largo sobre la barra de abajo abre el editor (y ese toque no
+    // navega). Moverse o soltar antes lo cancela.
+    let largo = null, abrioPorLargo = false
+    const cortarLargo = () => { if (largo) { win.clearTimeout?.(largo); largo = null } }
+    abajo.addEventListener('pointerdown', () => {
+      cortarLargo()
+      abrioPorLargo = false
+      largo = win.setTimeout?.(() => { largo = null; abrioPorLargo = true; abrirEditor() }, MS_TOQUE_LARGO) ?? null
+    })
+    for (const t of ['pointerup', 'pointercancel', 'pointerleave', 'pointermove']) abajo.addEventListener(t, cortarLargo)
+    abajo.addEventListener('contextmenu', ev => ev.preventDefault())
+    abajo.addEventListener('click', ev => { if (abrioPorLargo) { abrioPorLargo = false; ev.preventDefault(); ev.stopPropagation() } }, true)
+
+    // Con otro ancho entran otros módulos (girar el celular).
+    win.addEventListener('resize', () => {
+      const n = capacidadBarraAbajo(win.innerWidth)
+      if (n === cantidad) return
+      cantidad = n
+      dibujar()
+      pintarBurbujasBarra(nav, ultimos)
+      pintarBurbujasAbajo(abajo, ultimos)
+      if (ed) { ed.lista = ed.lista.slice(0, cantidad); pintarEditor() }
+    })
+
     hoja.addEventListener('click', ev => { if (ev.target === hoja) cerrarHoja() })
-    doc.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !hoja.hidden) cerrarHoja() })
+    doc.addEventListener('keydown', ev => {
+      if (ev.key !== 'Escape') return
+      if (!editor.hidden) cerrarEditor()
+      else if (!hoja.hidden) cerrarHoja()
+    })
     dibujar()
     doc.body.prepend(nav)
-    doc.body.append(abajo, hoja)
+    doc.body.append(abajo, hoja, editor)
     doc.body.classList.add('con-barra-lateral')
     // Personalizar avisa cuando cambia el orden o los fijados.
     win.addEventListener('preferencias:cambio', () => {

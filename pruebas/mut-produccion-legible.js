@@ -55,7 +55,7 @@ correrMutacionesProduccion({
     { nombre: 'el historial no sabe qué productos van con cono', de: "(d.productosConCono ?? []).includes(pr?.producto_id)", a: 'false' },
     { nombre: 'el historial repite las unidades por caja', de: '`<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades`', a: '`<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades`' },
     // Planta v2 (28/09/2026): la fila de tabla de la planilla.
-    { nombre: 'la columna del cono no nombra la marca', de: "(d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común') :", a: "(d.pr?.con_cono ? htmlChipCono('Común') :" },
+    { nombre: 'la columna del cono no nombra la marca', de: "(d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común', it.marca_id) :", a: "(d.pr?.con_cono ? htmlChipCono('Común', it.marca_id) :" },
     { nombre: 'la columna del cono no dice "sin cono"', de: "(d.conConoEnProducto ? '<span class=\"pr-fp__sin\">sin cono</span>' : ''))", a: "'')" },
     { nombre: 'la columna del cono dice "sin cono" también en un Vaso', de: "(d.conConoEnProducto ? '<span class=\"pr-fp__sin\">sin cono</span>' : ''))", a: "'<span class=\"pr-fp__sin\">sin cono</span>')" },
     { nombre: 'la columna de caja sin la bolsa', de: ": '', bolsa].filter(Boolean).join(' · ')", a: ": ''].filter(Boolean).join(' · ')" },

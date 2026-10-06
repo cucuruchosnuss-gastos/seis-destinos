@@ -2,6 +2,60 @@
 // Se generan a e2e/maqueta/datos/produccion-gestion.json con `npm run maqueta:datos`.
 'use strict';
 
+// LAS PLANILLAS CERRADAS DE v_turno_metricas (04/10/2026), para los
+// indicadores de las máquinas: del 07/09 al 02/10/2026, lunes a viernes, dos
+// máquinas y dos turnos (Mañana 6–15, Tarde 15–23:36). Los números salen de
+// una cuenta fija (no al azar), así la maqueta es siempre igual. Con sus
+// paradas en paradas_produccion, coherentes con los minutos de la vista.
+function metricasYParadas() {
+  const filas = [], paradas = []
+  const HORARIO = { 'Mañana': ['06:00', '15:00', 540], 'Tarde': ['15:00', '23:36', 516] }
+  const ts = (fecha, hhmm, mas = 0) => {
+    const d = new Date(`${fecha}T${hhmm}:00-03:00`)
+    d.setUTCMinutes(d.getUTCMinutes() + mas)
+    return d.toISOString().replace('.000Z', '+00:00')
+  }
+  let n = 0
+  for (let d = new Date('2026-09-07T12:00:00Z'); d <= new Date('2026-10-02T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1)) {
+    if ([0, 6].includes(d.getUTCDay())) continue
+    const fecha = d.toISOString().slice(0, 10)
+    for (const [maq, nombre, orden] of [['maq-1', 'Máquina 1', 1], ['maq-2', 'Máquina 2', 2]]) {
+      for (const turno of ['Mañana', 'Tarde']) {
+        n++
+        const [ini, fin, minTurno] = HORARIO[turno]
+        const arranque = 15 + (n * 7) % 30
+        const minReal = minTurno - arranque
+        const parada = n % 3 === 0 ? 25 + (n * 11) % 50 : 0
+        // Desde el 05/10/2026 hay paradas organizativas (se retiró personal,
+        // falta masa) y, desde el 28/09, la hora de "empezó a producir":
+        // minutos_arranque (de la hora del turno a la largada) es una parte del
+        // horario fuera, y lo que sobra es el cierre.
+        const cat = n % 4 === 0 ? 'organizativa' : n % 2 === 0 ? 'falla' : 'programada'
+        const conLargada = fecha >= '2026-09-28'
+        const minProd = minReal - parada
+        const ritmo = (maq === 'maq-1' ? 1300 : 980) + ((n * 37) % 160) - 80
+        const unidades = Math.round(ritmo * minProd / 60 / 100) * 100
+        const id = `tm-${n}`
+        filas.push({
+          turno_id: id, unidad_negocio_id: 'u-n', maquina_id: maq, maquina: nombre, maquina_orden: orden,
+          fecha, turno, lote: 6900 + n, unidades, cajas: Math.round(unidades / 320), scrap_kg: 2 + (n % 5),
+          inicio_turno: ts(fecha, ini), fin_turno: ts(fecha, ini, minTurno), inicio_real: ts(fecha, ini), fin_real: ts(fecha, ini, minReal),
+          minutos_turno: minTurno, minutos_real: minReal, minutos_parada_en_marcha: parada, minutos_parada_total: parada,
+          minutos_productivos: minProd, parada_por_categoria: parada ? { [cat]: parada } : {},
+          u_h_productiva: Math.round(unidades / (minProd / 60)), u_h_turno: Math.round(unidades / (minTurno / 60)),
+          minutos_arranque: conLargada ? Math.max(0, arranque - 5) : null, tiene_largada: conLargada,
+        })
+        if (parada) {
+          const motivo = cat === 'falla' ? ['Se cortó la masa', 'Falla del molde', 'Se trabó la cinta'][n % 3] : cat === 'organizativa' ? 'Se retiró personal' : 'Limpieza'
+          paradas.push({ turno_id: id, inicio: ts(fecha, ini, 120), fin: ts(fecha, ini, 120 + parada), motivo, categoria: cat })
+        }
+      }
+    }
+  }
+  return { filas, paradas }
+}
+const METRICAS = metricasYParadas()
+
 module.exports = {
   "uid": "uid-maqueta",
   "tablas": {
@@ -88,6 +142,8 @@ module.exports = {
         "orden": 2
       }
     ],
+    "v_turno_metricas": METRICAS.filas,
+    "paradas_produccion": METRICAS.paradas,
     "turnos_produccion": [
       {
         "id": "t1",

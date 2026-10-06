@@ -78,8 +78,9 @@ correrMutacionesProduccion({
     { nombre: 'los comos se parten en varias filas', de: '    .pr-seg-rec { display: flex; gap: 3px;', a: '    .pr-seg-rec { display: flex; flex-wrap: wrap; gap: 3px;' },
     { nombre: 'la receta se apila en angosto', de: '    .pr-receta__tabla--modificar .pr-rec { min-height: 30px; }', a: '    .pr-receta__tabla--modificar .pr-rec { min-height: 30px; }\n    @media (max-width: 1100px) { .pr-rec { display: flex; } }' },
     { nombre: 'vuelve la pastilla del origen', de: "      const chips = ['<span class=\"pr-chip-modificada\">Modificada</span>']", a: "      const chips = ['<span class=\"pr-chip-origen\">x</span>', '<span class=\"pr-chip-modificada\">Modificada</span>']" },
-    { nombre: 'Paró ahora sin bordó', de: '.pr-pa-ahora { flex: 1; min-height: 50px; border-radius: 12px; border: 1.5px solid var(--p-mal); background: #fff; color: var(--p-mal);', a: '.pr-pa-ahora { flex: 1; min-height: 50px; border-radius: 12px; border: 1.5px solid var(--p-borde); background: #fff; color: var(--p-tinta);' },
-    { "nombre": "Paró ahora sin su clase bordó", "de": "class=\"pr-pa-ahora\" id=\"pr-btn-parada\"", "a": "class=\"pr-btn\" id=\"pr-btn-parada\"" },
+    // 05/10/2026: "Paró ahora" se fue; lo que va en bordó es "Todavía está parada".
+    { nombre: '"Todavía está parada" sin bordó', de: '.pr-pa-casilla--sigue[aria-pressed="true"] { border-color: var(--p-mal);', a: '.pr-pa-casilla--sigue[aria-pressed="true"] { border-color: var(--p-borde);' },
+    { nombre: '"Todavía está parada" sin su clase bordó', de: 'class="pr-pa-casilla pr-pa-casilla--sigue" data-parada-sigue="1"', a: 'class="pr-pa-casilla" data-parada-sigue="1"' },
     { nombre: 'la parada en curso sin bordó', de: '.pr-parada-activa { background: var(--p-mal); color: #fff;', a: '.pr-parada-activa { background: var(--p-tarjeta); color: #fff;' },
     { nombre: 'el reloj en UTC', de: "      const p = new Intl.DateTimeFormat('en-GB', { timeZone: ZONA_AR,", a: "      const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC'," },
     // (Sin mutación para el "24 → 00" de medianoche: Intl de Node ya devuelve

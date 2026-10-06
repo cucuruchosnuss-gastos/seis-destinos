@@ -1927,6 +1927,7 @@
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito, formatearFecha, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
+    import { crearPeriodo, ubicarPanel } from '../js/periodo.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     // La barra de unidad de negocio de arriba (28/09/2026): la elige la
     // persona UNA vez y toda la app muestra solo lo de esa unidad.
@@ -2024,7 +2025,10 @@
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
     // nombre de la contraparte ("Entregado a X"), ver etiquetaMovimiento().
-    const TIPO_LABEL = { ingreso: 'Ingreso', ingreso_externo: 'Ingreso externo', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro', ingreso_reversion_gasto: 'Devolución por anulación', ingreso_ajuste: 'Ajuste', egreso_ajuste: 'Ajuste' }
+    const TIPO_LABEL = { ingreso: 'Ingreso', ingreso_externo: 'Ingreso externo', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro', ingreso_reversion_gasto: 'Devolución por anulación', ingreso_ajuste: 'Ajuste', egreso_ajuste: 'Ajuste', egreso_cheque_propio: 'Cheque propio' }
+    // egreso_cheque_propio (05/10/2026): el DÉBITO de un cheque o e-cheque propio
+    // con el que se le pagó a un proveedor. Lo inserta debitar_cheques_emitidos()
+    // el día de pago del cheque (no el día que se cargó el pago).
 
     // Los AJUSTES de saldo (01/10/2026): ingreso_ajuste y egreso_ajuste se
     // cargan desde la base, nunca desde una pantalla. En la lista se ven como
@@ -2370,11 +2374,11 @@
           borrador = [...seleccionados]
           renderizarOpciones()
           document.body.appendChild(panel)
-          const rect = boton.getBoundingClientRect()
-          panel.style.top  = (rect.bottom + 4) + 'px'
-          panel.style.left = rect.left + 'px'
         }
         panel.hidden = estabaAbierto
+        // Dentro de la pantalla (ubicarPanel, js/periodo.js): antes se abría en
+        // rect.bottom / rect.left y en el celular quedaba debajo del borde.
+        if (!estabaAbierto) ubicarPanel(panel, boton)
       })
 
       actualizarTexto()
@@ -2423,6 +2427,7 @@
       { value: 'ingreso_traspaso',     label: 'Traspaso entrante' },
       { value: 'ingreso_ajuste',       label: 'Ajuste que suma' },
       { value: 'egreso_ajuste',        label: 'Ajuste que resta' },
+      { value: 'egreso_cheque_propio', label: 'Cheque propio debitado' },
     ]
 
     // Aplica período (rango de fechas por mes tildado, vía OR de rangos),
@@ -4956,6 +4961,9 @@
       estado.filtrosRetiros.fecha_hasta = e.target.value
       cargarRetiros()
     })
+    // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
+    // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
+    crearPeriodo({ desde: document.getElementById('filtro-retiros-desde'), hasta: document.getElementById('filtro-retiros-hasta') })
     document.getElementById('btn-exportar-retiros').addEventListener('click', () => {
       exportarMovimientosExcel(retirosVisibles(), 'retiros_socios', { incluirPersona: true })
     })

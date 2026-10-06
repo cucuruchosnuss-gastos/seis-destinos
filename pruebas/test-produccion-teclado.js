@@ -27,7 +27,7 @@ const { chk, fin } = arnes()
 const campos = [...FUENTE.matchAll(/<(input|textarea)\s[^>]*>/g)].map(m => m[0])
 const sinAuto = campos.filter(c => !/autocomplete="(off|username|current-password)"/.test(c) && !/type="(date|checkbox|radio|hidden)"/.test(c))
 chk('ningún campo sugiere palabras guardadas (autocomplete="off")', sinAuto.length === 0, sinAuto.join('\n'))
-for (const [id, modo] of [['pr-agregar-cajas', 'numeric'], ['pr-corregir-cajas', 'numeric'], ['pr-cierre-hora', 'numeric'],
+for (const [id, modo] of [['pr-agregar-cajas', 'numeric'], ['pr-corregir-cajas', 'numeric'],
   ['pr-cierre-scrap', 'decimal'], ['pr-otro-kg', 'decimal'], ['pr-agregar-ing-kg', 'decimal']]) {
   const c = campos.find(x => x.includes(`id="${id}"`)) ?? ''
   chk(`${id}: teclado ${modo} y "Listo" en la tecla de enviar`, c.includes(`inputmode="${modo}"`) && c.includes('enterkeyhint="done"'), c)

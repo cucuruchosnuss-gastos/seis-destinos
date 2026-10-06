@@ -27,7 +27,7 @@ const { chk, esperas, fin } = arnes()
 const FUNCIONES = ['escUni', 'logoUnidad', 'nombreCorto', 'inicialesDe', 'colorPersona', 'nombreDePila', 'htmlUsuario', 'htmlMenuUsuario',
   'htmlMarcaCelular', 'debeMostrarseUnidad', 'idsDeLaPersona', 'ordenarUnidades',
   'resolverElegida', 'pasaFiltroUnidad', 'filtrarPorUnidad', 'htmlBarraUnidad', 'leerGuardada', 'guardarElegida', 'avisar',
-  'estadoUnidad', 'unidadesDeLaBarra', 'alCambiarUnidad', 'pasarBarraAUnidad', 'elegirUnidad', 'pintar', 'cargarUnidadesDeLaPersona', 'instalarBarraUnidad']
+  'estadoUnidad', 'unidadesDeLaBarra', 'alCambiarUnidad', 'pasarBarraAUnidad', 'elegirUnidad', 'pintar', 'cargarUnidadesDeLaPersona', 'seguirOtraPestana', 'instalarBarraUnidad']
 
 function construir() {
   let codigo = `
@@ -133,12 +133,13 @@ function docFalso(meta = null) {
 }
 
 async function instalarCon(opciones) { return instalar(opciones) }
-async function instalar(opciones = {}, { guardado = null, pathname = '/seis-destinos/modulos/gastos.html', meta = null, fabrica = null } = {}) {
+async function instalar(opciones = {}, { guardado = null, pathname = '/seis-destinos/modulos/gastos.html', meta = null, fabrica = null, embebido = null } = {}) {
   const s = construir()
   if (guardado != null) s.__ls.set('barraUnidad.elegida', guardado)
   if (fabrica) s.__setFabrica(fabrica)
   s.__win.location.pathname = pathname
   const doc = docFalso(meta)
+  if (embebido) doc.documentElement = { dataset: { embebido } }
   const sb = sbFalso(opciones)
   const nav = await s.instalarBarraUnidad({ sb, doc, win: s.__win })
   return { s, doc, sb, nav }
@@ -220,6 +221,21 @@ const chips = html => [...String(html).matchAll(/data-unidad="([^"]+)"/g)].map(m
 }
 
 // ── 2. Instalar ─────────────────────────────────────────────────────────────
+// ── 2b. Embebida (05/10/2026): Cuentas corrientes → Clientes abre
+// Administración adentro con <html data-embebido>. La barra NO se dibuja (la
+// dibuja la pantalla de afuera) pero sabe la elección y sigue a la de afuera.
+esperas.push((async () => {
+  const e = await instalar({ yo: { id: 'e1', rol_app: 'super_admin', unidad_negocio_id: 'u-nuss' } }, { guardado: 'u-dolce', embebido: 'cc' })
+  chk('embebida: no se dibuja nada', e.nav === null && e.doc.__hijos.length === 0 && !e.doc.__clases.has('con-barra-unidad'))
+  chk('embebida: sabe la elección guardada', e.s.estadoUnidad().elegida === 'u-dolce' && e.s.estadoUnidad().listo === true)
+  const oyentes = e.s.__oyentes?.storage ?? []
+  chk('embebida: escucha el cambio de la pantalla de afuera (storage)', oyentes.length === 1, oyentes.length)
+  oyentes[0]?.({ key: 'barraUnidad.elegida', newValue: 'u-mengui' })
+  chk('embebida: el cambio de afuera llega', e.s.estadoUnidad().elegida === 'u-mengui')
+  const n = await instalar({ yo: { id: 'e1', rol_app: 'super_admin', unidad_negocio_id: 'u-nuss' } }, { guardado: 'u-dolce' })
+  chk('sin embebido, se dibuja como siempre', !!n.nav && n.doc.__hijos[0] === n.nav)
+})())
+
 esperas.push((async () => {
   // Super admin: las cuatro reales (la de prueba no, sin ser cuenta de prueba).
   const fab = { ok: true, unidades: new Set(['u-robot']), personas: new Set(), soyDePrueba: false }

@@ -69,8 +69,7 @@ const FUNCIONES_BASE = [
   'nombrePersona', 'textoMinutos', 'duracionTexto', 'leerPlanilla', 'paradaEnCurso', 'minutosParadas',
   'htmlLotePlanilla', 'htmlQuePlanilla', 'htmlEstadoPlanilla', 'htmlMasasPlanilla', 'htmlParadas',
   'htmlOperariosPlanilla', 'pintarOperariosPlanilla', 'pintarResultadosPlanillaOp', 'recargarPlanilla',
-  'cambiarOperarioTurno', 'abrirPlanilla', 'pintarPlanilla', 'pintarBotonesPlanilla', 'mostrarFormParada',
-  'confirmarParada', 'reanudar', 'abrirForzar', 'confirmarForzar',
+  'cambiarOperarioTurno', 'abrirPlanilla', 'pintarPlanilla', 'pintarBotonesPlanilla', 'abrirForzar', 'confirmarForzar',
   'leerPendientesCompletar', 'htmlPendientesCompletar',
   'detallePresentacion', 'describirProducido', 'itemsVivos', 'totalesProducido', 'htmlProducido',
   'htmlLoProducido', 'htmlTotalTurno', 'pintarProducido',
@@ -96,8 +95,8 @@ const FUNCIONES_BASE = [
   'cargarBurbujaConos', 'textoConosPendientes', 'htmlBotonConfig', 'pintarBurbujaConos', 'abrirConfigDesdeAcceso',
   'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
-  'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',
-  'cambiarHoraCierre', 'cambiarScrapCierre', 'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
+  'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre',
+  'cambiarScrapCierre', 'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
   // B5 + rediseño parte 4: la sala de masa, la receta y las masas del turno
   'mostrarSala', 'maquinasAbiertas', 'soltarMaquinaSala', 'htmlFilaSala', 'detalleAnterior', 'htmlComo',
   'htmlPanelSala', 'partidaDeModificar', 'dePartida', 'pintarSala',
@@ -241,6 +240,19 @@ const NUEVAS_GESTION = [
   'tocarActivaPresentacion', 'borradorTocado', 'abrirEmpaque', 'descartarBorrador', 'diaRelativo', 'htmlResaltado',
   // El color elegido de cada producto y la caja predeterminada (29/09/2026)
   'htmlColoresProducto', 'parametrosColorProducto', 'cambiarColorProducto', 'parametrosCajaPredeterminada', 'cambiarCajaPredeterminada',
+  // Los indicadores de las máquinas (04/10/2026) y los gráficos que importa de
+  // js/graficos.js (extraerFn los encuentra por el import).
+  'uhPonderada', 'sumarTurnos', 'maquinasDe', 'coloresDeMaquinas', 'variacionPct', 'textoVariacion', 'diasEntreInd', 'periodoAnterior',
+  'lunesDe', 'rangoTendencia', 'serieTendencia', 'msDe', 'minutosEnMarcha', 'minutosParadaEntera', 'categoriaDe', 'partesDelTurno',
+  'paradasPorCategoria', 'motivosTop', 'horasMin', 'uhTexto', 'htmlTarjetaMaquina', 'htmlFigura', 'htmlMotivo', 'htmlMaquinas',
+  'pintarGraficosMaquinas', 'pintarMaquinas', 'leerMetricas', 'leerParadasDeTurnos', 'periodoMaquinas', 'cargarMaquinas',
+  'cambiarGranularidad', 'alCambiarAnchoMaquinas', 'barrasRendimiento', 'pintarGraficosRendimiento',
+  'escGraf', 'numeroGraf', 'formatoEntero', 'cortarGraf', 'topeRedondo', 'r1', 'dato', 'svg',
+  'barrasAgrupadas', 'lineas', 'barrasApiladas', 'dona', 'barrasConReferencia', 'leyendaGraf', 'activarDetalles',
+  // Horarios de turno, y la planilla que volvió con lote nuevo (01/10/2026,
+  // traídos de ci-prueba/planta-horarios el 05/10/2026)
+  'leerHorariosConfig', 'horarioGuardado', 'horarioEnPantalla', 'duracionHorario', 'htmlConfigHorarios', 'tocarHorario',
+  'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto', 'finDelTurnoMs', 'htmlNotaNoVolvio',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
@@ -249,7 +261,11 @@ const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJET
   'ICONO_EXCLAMACION', 'ICONO_CRUZ', 'ICONO_TILDE', 'ICONO_ESTRELLA', 'ICONO_HISTORIAL', 'ICONO_FLECHA',
   'COLORES_ELEGIBLES', 'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO',
   // Reventa y traspasos en el stock terminado (30/09/2026)
-  'NOMBRE_TIPO_STOCK_TERMINADO']
+  'NOMBRE_TIPO_STOCK_TERMINADO',
+  // Los indicadores de las máquinas (04/10/2026)
+  'COLORES_MAQUINA', 'COLOR_UH_TURNO', 'CATEGORIAS_PARADA', 'PARTES_TURNO', 'GRANULARIDADES', 'MESES_CORTOS', 'TOPE_PAGINAS_METRICAS',
+  // Horarios de turno (01/10/2026)
+  'TURNOS_HORARIO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = [
@@ -278,7 +294,14 @@ const RETIRADAS = [
   // de motivos_parada) y el motivo de una parada en curso no se cambia desde
   // la pantalla de Paradas (el trigger lo reescribe con el de la lista).
   'motivosSugeridos', 'motivoDeParada', 'textoMotivoParada', 'seleccionParada', 'tocarMotivoParada', 'guardarMotivoParada',
-  'MOTIVOS_PARADA', 'OTRO_MOTIVO']
+  'MOTIVOS_PARADA', 'OTRO_MOTIVO',
+  // Paró y Terminó de producir (05/10/2026): un solo formulario de parada con
+  // DESDE / HASTA y la ventana de la hora; el cierre pregunta la hora en que
+  // terminó de producir, sin el ± 5 ni "La máquina se rompió".
+  'esLimpieza', 'minutosLimpieza', 'limpiezaQuedaAbierta', 'htmlDuracionesParada', 'elegirDuracionParada',
+  'minutosDeRueda', 'htmlColumnaRueda', 'htmlRueda', 'alinearRuedas', 'fijarRuedaPorScroll', 'ponerValorRueda', 'tocarRueda',
+  'mostrarFormParada', 'confirmarParada', 'reanudar', 'htmlParadasResumen', 'alternarRota', 'cambiarHoraCierre',
+  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
@@ -355,6 +378,14 @@ const NUEVAS_PLANTA = [
   'elegirDuracionParada', 'escribirDetalleParada', 'guardarParadaNueva', 'abrirVentanaParadas', 'cerrarVentanaParadas',
   // Las pestañas de las máquinas (01/10/2026).
   'nombreCortoMaquina', 'turnoDePantalla', 'pestanasMaquinas', 'htmlPestanasMaquinas', 'pintarPestanasMaquinas', 'cambiarDeMaquina',
+  // Las tres acciones, Paró, la ventana de la hora y Terminó de producir (05/10/2026).
+  'htmlAccionLargada', 'htmlAccionParo', 'htmlAccionTermino', 'faltaLargada', 'horarioDePlanilla',
+  'grupoDeMotivo', 'motivosAgrupados', 'htmlMotivosAgrupados', 'puedeLoteNuevo', 'alternarSigueParadaNueva', 'alternarLoteNuevoParada',
+  'textoRelanzado', 'htmlAvisoRelanzado', 'trasRelanzar',
+  'horaSugerida', 'horaCorta', 'abrirHoraVentana', 'cerrarHoraVentana', 'muestraHoraVentana', 'conAhoraVentana', 'htmlHoraVentana',
+  'textosHoraVentana', 'pintarHoraVentana', 'teclaHoraVentana', 'ahoraHoraVentana', 'alternarLoteNuevoVentana', 'instanteDelTurno', 'instanteLargada',
+  'vueltaDeParada', 'pedidoHoraVentana', 'confirmarHoraVentana', 'teclaVentanaHora',
+  'cierreAnticipado', 'textoMotivoCierre', 'ponerHoraCierre', 'pintarMotivoCierre', 'elegirMotivoCierre',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -372,7 +403,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // El botón de volver (30/09/2026)
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
-  'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA', 'NOMBRE_CATEGORIA_PARADA',
+  'NOMBRE_CATEGORIA_PARADA', 'GRUPOS_MOTIVO', 'MINUTOS_CIERRE_ANTICIPADO', 'MINUTOS_CUBRE_PARADA',
+  // La hora de largada con la regla de las 2 horas de la base (05/10/2026)
+  'MARGEN_LARGADA_MS',
   'VISTAS_CON_PESTANAS',
   // De js/cantidades.js (02/10/2026)
   'DECIMALES_CANTIDAD', 'FRACCIONES']
@@ -455,6 +488,8 @@ const PRELUDIO = `
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
   var turnoIndicadores = 0
+  var turnoMaquinas = 0
+  var esperaAnchoMaquinas = null
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }

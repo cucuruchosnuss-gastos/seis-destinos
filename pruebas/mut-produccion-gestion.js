@@ -27,6 +27,7 @@ correrMutacionesProduccion({
     { expr: 'esc(contexto)', motivo: 'texto constante del código' },
     { expr: 'esc(dif.texto)', motivo: 'un número formateado con su flecha, o una raya' },
     { expr: 'esc(enteroInd(totalHoy))', motivo: 'un número formateado' },
+    { expr: 'esc(String(g.indice))', motivo: 'el índice del grupo de rendimiento: un número de gruposRendimiento()' },
     { expr: 'esc(enteroInd(f.hoy))', motivo: 'un número formateado' },
     { expr: 'esc(enteroInd(s.cajas))', motivo: 'un número formateado' },
     { expr: 'esc(enteroInd(s.unidades))', motivo: 'un número formateado' },
