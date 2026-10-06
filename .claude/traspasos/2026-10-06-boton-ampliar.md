@@ -44,10 +44,15 @@ Rama `ci-prueba/boton-ampliar` (desde `d16e3c7`). Sin push: lo integra Facu con 
 
 ## Números
 
-- `npm run pruebas`: todo en verde (ver el commit). `check-scripts` y `check-bytes` en verde.
+- `npm run pruebas`: 217/217 en verde, con `check-scripts` y `check-bytes`.
 - `test-ampliar.js` 90/90, `mut-ampliar.js` 50/50; `test-ampliar-pantallas.js` 136/136, `mut-ampliar-pantallas.js` 44/44.
 - `e2e/27-ampliar.spec.js` 12/12; `e2e/5-maqueta.spec.js` y `e2e/detalles-dispositivos.spec.js` en verde (170 pruebas junto con la nueva).
-- **Encontrado y NO arreglado (ya estaba roto en `d16e3c7`):** `pruebas/mut-administracion-clientes.js` aborta con dos anclas que no existen ("ver alcanza para la ficha" y "la ficha se abre sin precios"): `abrirFicha` ahora dice `if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return` y el renglón de `const precios = puedeEn('retiros', 'precios')` ya no va seguido de `document.getElementById('ad-btn-ficha')`. Hay que reescribir esas dos mutaciones.
+- **Las mutaciones de todas las suites que leen los archivos tocados** (72 runners: Cobranzas, Gastos, Administración, Cheques, Cuentas corrientes, clientes, barras, `main.css`): ninguna escapó; las que corrieron detectaron todas sus mutaciones.
+- **Encontrado y NO arreglado — ya estaba roto en `d16e3c7`** (verificado: esas anclas tampoco existen en ese commit; no lo causó esta rama). Cuatro runners abortan por anclas viejas y hay que reescribir esas mutaciones:
+  - `mut-administracion-clientes.js`: "ver alcanza para la ficha" y "la ficha se abre sin precios" (`abrirFicha` ahora dice `|| clientesEnTodas()`).
+  - `mut-clientes-apagados.js`: "el interruptor con otro permiso" y "la cuenta no dice apagado" (no existen) y "un apagado que viene igual se mezcla con los prendidos" (aparece 2 veces).
+  - `mut-cheques-barra-unidad.js`: las cuatro "cambiar la barra …" (no existen).
+  - `mut-buscar-clientes.js`: "retiros: muestra el saldo" (no existe en `retiros.html`).
 
 ## Qué automatizaría ahora
 
