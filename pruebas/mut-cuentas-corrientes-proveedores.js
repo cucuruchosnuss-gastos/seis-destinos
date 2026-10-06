@@ -21,8 +21,9 @@ correrMutacionesEnVarios([
       // ── El nombre y el link a los clientes ──────────────────────────────────
       { nombre: 'la pestaña vuelve al nombre de antes', de: '<title>Cuentas corrientes — Seis Destinos</title>', a: '<title>Cuentas corrientes · Proveedores — Seis Destinos</title>' },
       { nombre: 'la cabecera vuelve al nombre de antes', de: '<span class="cc-header__titulo">Cuentas corrientes</span>', a: '<span class="cc-header__titulo">Cuentas corrientes · Proveedores</span>' },
-      { nombre: 'no se leen las tareas de retiros', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'cobranzas']" },
-      { nombre: 'no se leen las tareas de cobranzas', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros']" },
+      { nombre: 'no se leen las tareas de retiros', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'cobranzas', 'pedidos']" },
+      { nombre: 'no se leen las tareas de cobranzas', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'pedidos']" },
+      { nombre: 'no se leen las tareas de pedidos (cliente y proveedor, 06/10/2026)', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas']" },
       { nombre: 'las pestañas no se pintan al leer las tareas', de: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n      renderizarPrimerNivel()\n', a: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n' },
       // ── Colores: lo que se toca, naranja ─────────────────────────────────────
       { nombre: 'la pestaña elegida en verde', de: '    .tabs-cc__opcion--activa {\n      background: var(--color-acento);', a: '    .tabs-cc__opcion--activa {\n      background: var(--verde);' },

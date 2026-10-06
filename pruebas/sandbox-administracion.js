@@ -8,6 +8,7 @@
 
 const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
@@ -98,6 +99,11 @@ const FUNCIONES_BASE = [
   // Retiros por revisar (28/09/2026)
   'leerPorRevisar', 'cantidadRevisar', 'htmlFilaRevisar', 'pintarRevisar', 'mostrarRevisar',
   'abrirAceptarRevisar', 'cancelarAceptarRevisar', 'confirmarAceptarRevisar',
+  // Cliente y proveedor (06/10/2026): la cuenta juntas y la clasificación
+  'puedeCompensarCuentas', 'ctxCuentaUnica', 'pintarCuentaUnicaCliente',
+  'nombreProveedorFicha', 'pintarClasificacionFicha', 'elegirClasificacionFicha', 'cerrarPanelVinculo',
+  'confirmarVincular', 'confirmarDesvincular',
+  ...FUNCIONES_CU,
 ]
 
 const CONSTANTES_BASE = [
@@ -119,6 +125,8 @@ const CONSTANTES_BASE = [
   'PUEDE_MARCAR_INTERNA',
   // La grilla completa (30/09/2026)
   'CONITOS',
+  // Cliente y proveedor (06/10/2026)
+  ...CONSTANTES_CU,
 ]
 
 const PRELUDIO = `

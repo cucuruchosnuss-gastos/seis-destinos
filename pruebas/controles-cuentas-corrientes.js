@@ -74,7 +74,16 @@ try {
   }
 
   // 2. Las referencias literales del JS apuntan a algo que existe.
+  // Lo que escribe un archivo de js/ que la pantalla importa (06/10/2026).
+  const EN_JS = {
+    'data-clasificacion': ['js/cuenta-unica.js', /data-clasificacion="\$\{escCu\(clave\)\}"/, 'htmlClasificacion(): los botones Cliente / Proveedor / Cliente y proveedor'],
+  }
   for (const r of referenciasDelJs(A.referencias)) {
+    if (EN_JS[r.valor]) {
+      const [archivo, re, motivo] = EN_JS[r.valor]
+      chk(`${r.valor}: lo escribe ${archivo} (${motivo})`, re.test(fs.readFileSync(path.join(RAIZ, archivo), 'utf8')))
+      continue
+    }
     const existe = r.tipo === 'id' ? A.ids.has(r.valor) : A.datas.has(r.valor)
     chk(`el JS apunta a ${r.tipo === 'id' ? '#' : ''}${r.valor} y existe`, existe, `referencia sin destino: ${r.como}`)
   }

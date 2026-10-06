@@ -23,6 +23,8 @@
 
 const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
+// Cliente y proveedor (06/10/2026): la ficha y las listas lo llaman.
+const { FUNCIONES_CP_CC, CONSTANTES_CP_CC } = require('./cuenta-unica-comun')
 const { arnes, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
 const { fuenteNumeros } = require('./numeros-comun')
@@ -127,7 +129,7 @@ const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVA
 
 function sandbox() {
   return construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
+    preludio: PRELUDIO, funciones: [...FUNCIONES, ...FUNCIONES_CP_CC], constantes: [...CONSTANTES, ...CONSTANTES_CP_CC],
     retorno: `estado, __els, __historial, __errores, __consultas, __setDatos(t, d){ __datos[t] = d }, __setRpc(n, d){ __rpc[n] = d },
       __credito(){ return __creditoElegido }, __demorar(p){ __demora = p }, __limpiar(){ __consultas.length = 0; __errores.length = 0 }`,
   })

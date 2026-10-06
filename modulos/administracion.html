@@ -644,6 +644,11 @@
           <button type="button" class="ad-btn ad-btn--suave" id="ad-ajuste-cancelar">Cancelar</button>
         </div>
       </div>
+      <!-- La cuenta de cliente y proveedor (06/10/2026, js/cuenta-unica.js):
+           solo para un cliente vinculado con su proveedor. Va en su propio
+           contenedor (no adentro de #ad-cliente-cuerpo) para que el panel de
+           Compensar no se redibuje con cada repintado de la cuenta. -->
+      <div id="ad-cuenta-unica" hidden></div>
       <div id="ad-cliente-cuerpo"></div>
     </section>
 
@@ -711,12 +716,33 @@
           <div class="ad-campo"><label for="ad-f-limite_credito">Límite de crédito</label><input type="text" class="ad-input" id="ad-f-limite_credito" data-ficha="limite_credito" autocomplete="off"></div>
           <div class="ad-campo"><label for="ad-f-plazo_pago_dias">Plazo de pago (días)</label><input type="text" class="ad-input" id="ad-f-plazo_pago_dias" data-ficha="plazo_pago_dias" autocomplete="off"></div>
         </div>
-        <div class="ad-campo">
-          <span class="ad-campo__rotulo">También es proveedor</span>
-          <span class="ad-campo__ayuda">Si el mismo tercero también nos vende, elegilo en el padrón de proveedores.</span>
+        <!-- LA CLASIFICACIÓN (06/10/2026): Cliente / Cliente y proveedor.
+             Vincular y separar se guardan AL MOMENTO con sus funciones
+             (vincular_cliente_proveedor / desvincular_cliente_proveedor), no
+             con "Guardar la ficha". -->
+        <div class="ad-campo" id="ad-f-clasificacion-campo">
+          <span class="ad-campo__rotulo">Clasificación</span>
+          <span class="ad-campo__ayuda">Si el mismo tercero también nos vende, es «Cliente y proveedor»: sus dos cuentas se ven juntas y se pueden compensar.</span>
+          <div id="ad-f-clasificacion"></div>
           <div id="ad-f-proveedor-elegido"></div>
-          <input type="search" class="ad-input" id="ad-f-proveedor-buscar" autocomplete="off" maxlength="120" placeholder="Buscar el proveedor por razón social o CUIT…" aria-label="Buscar el proveedor">
-          <div class="ad-lista" id="ad-f-proveedores"></div>
+          <div class="ad-panel" id="ad-f-vincular" hidden>
+            <p class="ad-texto-suave" id="ad-f-vincular-texto"></p>
+            <input type="search" class="ad-input" id="ad-f-proveedor-buscar" autocomplete="off" maxlength="120" placeholder="Buscar el proveedor por razón social o CUIT (opcional)…" aria-label="Buscar el proveedor">
+            <div class="ad-lista" id="ad-f-proveedores"></div>
+            <p class="ad-error-pegado" id="ad-f-vincular-error" hidden></p>
+            <div class="ad-panel__acciones">
+              <button type="button" class="ad-btn" id="ad-f-vincular-confirmar">Vincular</button>
+              <button type="button" class="ad-btn ad-btn--suave" id="ad-f-vincular-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <div class="ad-panel" id="ad-f-desvincular" hidden>
+            <p id="ad-f-desvincular-texto"></p>
+            <p class="ad-error-pegado" id="ad-f-desvincular-error" hidden></p>
+            <div class="ad-panel__acciones">
+              <button type="button" class="ad-btn ad-btn--peligro" id="ad-f-desvincular-confirmar">Sí, separar las cuentas</button>
+              <button type="button" class="ad-btn ad-btn--suave" id="ad-f-desvincular-cancelar">No, dejarlo como está</button>
+            </div>
+          </div>
         </div>
         <h2 class="ad-subtitulo">Observaciones</h2>
         <div class="ad-campo"><label for="ad-f-observaciones">Observaciones</label><textarea class="ad-textarea" id="ad-f-observaciones" data-ficha="observaciones" maxlength="1000"></textarea></div>
@@ -952,6 +978,10 @@
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
     import { crearPeriodo } from '../js/periodo.js'
     import { unidadesDeLaBarra, alCambiarUnidad, MARCA_FABRICA, nombreCorto } from '../js/barra-unidad.js'
+    import {
+      estadoCuentaUnica, cargarCuentaUnica, pintarCuentaUnica, alTocarCuentaUnica, alCambiarCuentaUnica,
+      htmlClasificacion, textoVinculado,
+    } from '../js/cuenta-unica.js'
 
     mostrarBannerVersion()
 
@@ -1345,7 +1375,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -2537,7 +2567,7 @@
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
         `${c.empresa ? htmlSelloEmpresa(c.unidad_negocio_id, c.empresa) : ''}` +
         `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
-        `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">También proveedor</span>' : ''}` +
+        `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">Cliente y proveedor</span>' : ''}` +
         `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
         `${it?.error ? `<span class="ad-error-pegado">${esc(it.error)}</span>` : ''}</button>`
       return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`
@@ -3098,18 +3128,58 @@
       }
       document.getElementById('ad-saldo-guardar').disabled = estado.trabajando
       document.getElementById('ad-ajuste-guardar').disabled = estado.trabajando
+      pintarCuentaUnicaCliente()
+    }
+
+    // ── LA CUENTA DE CLIENTE Y PROVEEDOR (06/10/2026) ──────────────────────
+    // Un cliente vinculado con su proveedor (clientes.proveedor_id) muestra,
+    // arriba de su cuenta, la cuenta_unificada: el neto, la lista con las dos
+    // columnas y "Compensar" (js/cuenta-unica.js, la misma de Cuentas
+    // corrientes). Su cuenta de cliente sigue abajo, con sus cobranzas.
+    // Compensar pide cobranzas:procesar Y cuentas_corrientes:registrar_pago
+    // (lo exige compensar_cuentas, con bypass de super_admin).
+    function puedeCompensarCuentas() {
+      return tieneTarea('cobranzas', 'procesar') && tieneTarea('cuentas_corrientes', 'registrar_pago')
+    }
+
+    function ctxCuentaUnica() {
+      const c = estado.cliente
+      if (!c?.unica) return null
+      return {
+        sb: supabase, cu: c.unica, contenedor: document.getElementById('ad-cuenta-unica'), hoy: hoyArgentina(),
+        puedeCompensar: puedeCompensarCuentas(),
+        alCompensado: async () => {
+          mostrarExito('Compensación registrada: las dos cuentas quedaron al día.')
+          estado.saldos = null
+          await abrirCliente(c.id)
+        },
+      }
+    }
+
+    function pintarCuentaUnicaCliente() {
+      const el = document.getElementById('ad-cuenta-unica')
+      const ctx = ctxCuentaUnica()
+      if (!ctx) { el.innerHTML = ''; el.hidden = true; return }
+      el.hidden = false
+      pintarCuentaUnica(ctx)
     }
 
     let turnoCliente = 0
 
     async function abrirCliente(id) {
       const turno = ++turnoCliente
-      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null, otras: null }
+      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null, otras: null, unica: null }
       mostrarVista('ad-vista-cliente')
       pintarCliente()
       try {
         await asegurarDatosEmpresa()
-        const r = await leerCuenta(id)
+        if (turno !== turnoCliente) return
+        // ¿Está vinculado con su proveedor? Entonces se lee también la cuenta
+        // de cliente y proveedor (cargarCuentaUnica no tira: si falla, lo dice).
+        const proveedorId = clienteDe(id)?.proveedor_id ?? null
+        if (proveedorId) estado.cliente.unica = estadoCuentaUnica({ clienteId: id, proveedorId, unidadId: estado.empresaId })
+        const cu = estado.cliente.unica
+        const [r] = await Promise.all([leerCuenta(id), cu ? cargarCuentaUnica(supabase, cu) : null])
         if (turno !== turnoCliente) return
         Object.assign(estado.cliente, r)
       } catch (err) {
@@ -3230,6 +3300,9 @@
       if (estado.proveedores) return
       const { data, error } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit, estado_alta, activo').order('razon_social')
       if (error) throw error
+      // TODOS los ids que se leyeron, también los inactivos: con eso se sabe
+      // después de vincular si el proveedor ya existía o se creó.
+      estado.idsProveedores = new Set((data ?? []).map(p => p.id))
       estado.proveedores = (data ?? []).filter(p => p.activo !== false && p.estado_alta !== 'rechazado')
     }
 
@@ -3249,7 +3322,10 @@
         const a = valorComparable(tipo, actual[clave])
         if (a !== valorComparable(tipo, original[clave])) datos[clave] = a
       }
-      if ((actual.proveedor_id ?? '') !== (original.proveedor_id ?? '')) datos.proveedor_id = actual.proveedor_id ?? ''
+      // El proveedor NO viaja con la ficha (06/10/2026): vincular y separar
+      // van por vincular_cliente_proveedor / desvincular_cliente_proveedor,
+      // que además marcan la cuenta corriente del proveedor y no dejan separar
+      // dos cuentas con compensaciones. Mandarlo acá se saltearía las dos cosas.
       return datos
     }
 
@@ -3260,7 +3336,6 @@
         const el = document.getElementById(`ad-f-${clave}`)
         actual[clave] = tipo === 'importe' || tipo === 'dias' ? leerCampoNumero(el) : el.value
       }
-      actual.proveedor_id = f?.proveedorId ?? null
       return actual
     }
 
@@ -3277,12 +3352,122 @@
         (digitos.length >= 3 && String(p.cuit ?? '').includes(digitos))).slice(0, 8)
     }
 
-    function htmlProveedorElegido(id) {
+    // El proveedor con el que está vinculado, con "No es proveedor" (abre la
+    // confirmación de separar). `quitar` en false: sin el botón (el elegido
+    // del panel de vincular).
+    function htmlProveedorElegido(id, quitar = true) {
       if (!id) return '<p class="ad-texto-suave">No es proveedor.</p>'
       const p = (estado.proveedores ?? []).find(x => x.id === id)
       const texto = p ? p.razon_social + (p.cuit ? ' · CUIT ' + p.cuit : '') : 'Proveedor (no se pudo leer)'
       return `<div class="ad-fila__linea"><span class="ad-renglon__desc">${esc(texto)}</span>` +
-        `<button type="button" class="ad-btn ad-btn--suave" id="ad-f-proveedor-quitar">No es proveedor</button></div>`
+        (quitar ? `<button type="button" class="ad-btn ad-btn--suave" id="ad-f-proveedor-quitar">No es proveedor</button>` : '') + '</div>'
+    }
+
+    function nombreProveedorFicha(id) {
+      return (estado.proveedores ?? []).find(x => x.id === id)?.razon_social ?? ''
+    }
+
+    // La clasificación de la ficha: Cliente / Cliente y proveedor (la de un
+    // cliente nunca es "Proveedor" solo: esa opción va apagada).
+    function pintarClasificacionFicha() {
+      const f = estado.ficha
+      if (!f) return
+      const v = f.vinculo
+      document.getElementById('ad-f-clasificacion').innerHTML =
+        htmlClasificacion({ valor: f.proveedorActual ? 'ambos' : 'cliente', propio: 'cliente', ocupado: !!v.enviando })
+      document.getElementById('ad-f-proveedor-elegido').innerHTML = f.proveedorActual ? htmlProveedorElegido(f.proveedorActual) : ''
+      document.getElementById('ad-f-vincular').hidden = v.panel !== 'vincular'
+      document.getElementById('ad-f-desvincular').hidden = v.panel !== 'desvincular'
+      document.getElementById('ad-f-vincular-texto').textContent = f.proveedorId
+        ? `Se va a vincular con el proveedor ${nombreProveedorFicha(f.proveedorId) || 'elegido'}. Para que lo busque solo, borrá la búsqueda y tocá Vincular.`
+        : 'Si no elegís ninguno, se busca el proveedor con su mismo CUIT o nombre; si no hay, se crea en Cuentas corrientes.'
+      document.getElementById('ad-f-desvincular-texto').textContent =
+        `¿Separar las dos cuentas? ${nombreProveedorFicha(f.proveedorActual) || 'El proveedor'} deja de figurar como proveedor de este cliente; sus facturas y pagos siguen en Cuentas corrientes.`
+      for (const [id, panel] of [['ad-f-vincular-error', 'vincular'], ['ad-f-desvincular-error', 'desvincular']]) {
+        const e = document.getElementById(id)
+        e.textContent = v.panel === panel ? (v.error ?? '') : ''
+        e.hidden = !(v.panel === panel && v.error)
+      }
+      for (const id of ['ad-f-vincular-confirmar', 'ad-f-vincular-cancelar', 'ad-f-desvincular-confirmar', 'ad-f-desvincular-cancelar']) {
+        document.getElementById(id).disabled = !!v.enviando
+      }
+    }
+
+    function elegirClasificacionFicha(valor) {
+      const f = estado.ficha
+      if (!f?.original || f.vinculo.enviando) return
+      if (valor === 'ambos' && !f.proveedorActual) {
+        f.vinculo = { panel: 'vincular', error: null, enviando: false }
+        f.proveedorId = null
+        f.busquedaProveedor = ''
+        document.getElementById('ad-f-proveedor-buscar').value = ''
+      } else if (valor === 'cliente' && f.proveedorActual) {
+        f.vinculo = { panel: 'desvincular', error: null, enviando: false }
+      } else return
+      pintarProveedorFicha()
+    }
+
+    function cerrarPanelVinculo() {
+      const f = estado.ficha
+      if (!f || f.vinculo.enviando) return
+      f.vinculo = { panel: null, error: null, enviando: false }
+      pintarProveedorFicha()
+    }
+
+    // vincular_cliente_proveedor(p_cliente_id, p_proveedor_id): sin proveedor
+    // elegido lo busca la base por CUIT o nombre y, si no hay, lo crea.
+    async function confirmarVincular() {
+      const f = estado.ficha
+      if (!f?.original || f.vinculo.enviando || f.proveedorActual) return
+      const conocidos = estado.idsProveedores ? new Set(estado.idsProveedores) : null
+      f.vinculo.enviando = true
+      f.vinculo.error = null
+      pintarProveedorFicha()
+      try {
+        const { data: id, error } = await supabase.rpc('vincular_cliente_proveedor', { p_cliente_id: f.id, p_proveedor_id: f.proveedorId ?? null })
+        if (error) throw error
+        if (estado.ficha !== f) return
+        // Se vuelve a leer el padrón: el proveedor puede ser nuevo.
+        estado.proveedores = null
+        try { await asegurarProveedores() } catch (err) { console.error('No se pudo releer el padrón:', err) }
+        mostrarExito(textoVinculado({ id, conocidos, nombre: nombreProveedorFicha(id), lado: 'proveedor' }))
+        f.proveedorActual = id
+        f.original.proveedor_id = id
+        f.proveedorId = null
+        f.vinculo = { panel: null, error: null, enviando: false }
+        estado.clientes = null
+        estado.saldos = null
+      } catch (err) {
+        console.error('No se pudo vincular:', err)
+        // Los mensajes de la base vienen escritos para una persona: tal cual.
+        if (estado.ficha === f) f.vinculo = { panel: 'vincular', error: err?.message || 'No se pudo vincular. Probá de nuevo.', enviando: false }
+      }
+      if (estado.ficha === f) pintarProveedorFicha()
+    }
+
+    async function confirmarDesvincular() {
+      const f = estado.ficha
+      if (!f?.original || f.vinculo.enviando || !f.proveedorActual) return
+      const nombre = nombreProveedorFicha(f.proveedorActual)
+      f.vinculo.enviando = true
+      f.vinculo.error = null
+      pintarProveedorFicha()
+      try {
+        const { error } = await supabase.rpc('desvincular_cliente_proveedor', { p_cliente_id: f.id })
+        if (error) throw error
+        if (estado.ficha !== f) return
+        mostrarExito(`Las dos cuentas quedaron separadas${nombre ? ': ' + nombre + ' ya no figura como proveedor de este cliente' : ''}.`)
+        f.proveedorActual = null
+        f.original.proveedor_id = null
+        f.vinculo = { panel: null, error: null, enviando: false }
+        estado.clientes = null
+        estado.saldos = null
+      } catch (err) {
+        console.error('No se pudo separar:', err)
+        // "Tiene compensaciones entre sus dos cuentas: no se puede desvincular." tal cual.
+        if (estado.ficha === f) f.vinculo = { panel: 'desvincular', error: err?.message || 'No se pudieron separar las cuentas. Probá de nuevo.', enviando: false }
+      }
+      if (estado.ficha === f) pintarProveedorFicha()
     }
 
     function htmlResultadosProveedores(busqueda) {
@@ -3293,11 +3478,15 @@
         `<span class="ad-fila__meta">${esc([p.nombre_fantasia, p.cuit ? 'CUIT ' + p.cuit : null].filter(Boolean).join(' · '))}</span></button>`).join('')
     }
 
+    // La clasificación y, en el panel de vincular, el buscador del padrón
+    // (opcional: elegir a qué proveedor se vincula).
     function pintarProveedorFicha() {
       const f = estado.ficha
       if (!f) return
-      document.getElementById('ad-f-proveedor-elegido').innerHTML = htmlProveedorElegido(f.proveedorId)
-      document.getElementById('ad-f-proveedores').innerHTML = htmlResultadosProveedores(f.busquedaProveedor)
+      pintarClasificacionFicha()
+      document.getElementById('ad-f-proveedores').innerHTML = f.proveedorId && !f.busquedaProveedor
+        ? htmlProveedorElegido(f.proveedorId, false)
+        : htmlResultadosProveedores(f.busquedaProveedor)
     }
 
     function textoCambiosFicha(n) {
@@ -3338,7 +3527,10 @@
 
     async function abrirFicha(clienteId) {
       if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return
-      estado.ficha = { id: clienteId, original: null, proveedorId: null, busquedaProveedor: '', error: null }
+      // proveedorActual: con quién está vinculado hoy; proveedorId: el que se
+      // elige en el panel de vincular (null = que lo busque la base).
+      estado.ficha = { id: clienteId, original: null, proveedorActual: null, proveedorId: null, busquedaProveedor: '', error: null,
+        vinculo: { panel: null, error: null, enviando: false } }
       mostrarVista('ad-vista-ficha')
       document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-vacio">Cargando la ficha…</div>'
       try {
@@ -3346,7 +3538,7 @@
         if (estado.ficha?.id !== clienteId) return
         if (!c) { document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-aviso ad-aviso--grave">No se encontró el cliente.</div>'; return }
         estado.ficha.original = c
-        estado.ficha.proveedorId = c.proveedor_id ?? null
+        estado.ficha.proveedorActual = c.proveedor_id ?? null
         document.getElementById('ad-ficha-titulo').textContent = 'Ficha de ' + (c.nombre ?? 'cliente')
         document.getElementById('ad-ficha-aviso').innerHTML = ''
         llenarFicha(c)
@@ -3457,9 +3649,10 @@
       await guardarApodos(f.apodos.filter((_, k) => k !== i))
     }
 
+    // Elegir, en el panel de vincular, con qué proveedor del padrón.
     function elegirProveedorFicha(id) {
       const f = estado.ficha
-      if (!f || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return
+      if (!f || f.vinculo?.enviando || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return
       f.proveedorId = id || null
       f.busquedaProveedor = ''
       document.getElementById('ad-f-proveedor-buscar').value = ''
@@ -6297,6 +6490,11 @@
         const o = e.target.closest('[data-otra-cuenta]')
         if (o) abrirOtraCuenta(o.dataset.otraCuenta, o.dataset.otraUnidad)
       })
+      // La cuenta de cliente y proveedor (js/cuenta-unica.js): Compensar, el
+      // filtro y los campos del panel.
+      const unica = document.getElementById('ad-cuenta-unica')
+      unica.addEventListener('click', (e) => { const ctx = ctxCuentaUnica(); if (ctx) alTocarCuentaUnica(e, ctx) })
+      for (const tipo of ['input', 'change']) unica.addEventListener(tipo, (e) => { const ctx = ctxCuentaUnica(); if (ctx) alCambiarCuentaUnica(e, ctx) })
       document.getElementById('ad-btn-ficha').addEventListener('click', () => { if (estado.cliente) abrirFicha(estado.cliente.id) })
       document.getElementById('ad-btn-saldo-inicial').addEventListener('click', () => abrirPanelCliente('saldo'))
       document.getElementById('ad-btn-ajuste').addEventListener('click', () => abrirPanelCliente('ajuste'))
@@ -6317,7 +6515,11 @@
       ficha.addEventListener('click', (e) => {
         let b
         if ((b = e.target.closest('[data-proveedor]'))) elegirProveedorFicha(b.dataset.proveedor)
-        else if (e.target.closest('#ad-f-proveedor-quitar')) elegirProveedorFicha(null)
+        else if (e.target.closest('#ad-f-proveedor-quitar')) elegirClasificacionFicha('cliente')
+        else if ((b = e.target.closest('[data-clasificacion]'))) elegirClasificacionFicha(b.dataset.clasificacion)
+        else if (e.target.closest('#ad-f-vincular-confirmar')) confirmarVincular()
+        else if (e.target.closest('#ad-f-desvincular-confirmar')) confirmarDesvincular()
+        else if (e.target.closest('#ad-f-vincular-cancelar, #ad-f-desvincular-cancelar')) cerrarPanelVinculo()
         else if ((b = e.target.closest('[data-quitar-apodo]'))) quitarApodoFicha(Number(b.dataset.quitarApodo))
         else if (e.target.closest('#ad-f-apodo-agregar')) agregarApodoFicha()
       })
@@ -6458,7 +6660,9 @@
       estado.miRolApp = emp.rol_app
       const [t, m, u] = await Promise.all([
         supabase.from('empleado_tareas').select('modulo, tarea, alcance')
-          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas']).eq('habilitado', true),
+          // 'cuentas_corrientes' entra por registrar_pago: compensar la cuenta
+          // de un cliente que también es proveedor (06/10/2026).
+          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes']).eq('habilitado', true),
         supabase.from('empleado_modulos').select('modulo').eq('empleado_id', emp.id).eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre, prefijo, razon_social, cuit, domicilio, telefono, logo_url').eq('activo', true).order('nombre'),
       ])
