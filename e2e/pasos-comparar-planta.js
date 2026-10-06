@@ -125,7 +125,7 @@ const PASOS_COMPARAR_PLANTA = [
   ['5e', async (page) => {
     await page.locator('[data-ag-presentacion]').first().click();
     await expect(page.locator('#pr-agregar-cajas-panel')).toBeVisible();
-    await page.locator('[data-cajas-poner="3"]').click();
+    await page.locator('[data-cajas-sumar="3"]').click();
     await page.locator('[data-cajas-paso="1"]').click();
   }],
   ['6', async (page) => {

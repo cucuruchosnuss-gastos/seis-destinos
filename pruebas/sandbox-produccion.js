@@ -386,6 +386,18 @@ const NUEVAS_PLANTA = [
   'textosHoraVentana', 'pintarHoraVentana', 'teclaHoraVentana', 'ahoraHoraVentana', 'alternarLoteNuevoVentana', 'instanteDelTurno', 'instanteLargada',
   'vueltaDeParada', 'pedidoHoraVentana', 'confirmarHoraVentana', 'teclaVentanaHora',
   'cierreAnticipado', 'textoMotivoCierre', 'ponerHoraCierre', 'pintarMotivoCierre', 'elegirMotivoCierre',
+  // Sin internet (06/10/2026): la cola y la copia (de js/sin-internet.js) y
+  // lo propio de la planta. La cola corre de verdad, con el almacén en
+  // memoria (no hay IndexedDB en el sandbox).
+  'esErrorDeRedCarga', 'almacenMemoria', 'structuredCloneSeguro', 'promesaDe', 'abrirAlmacenIdb', 'almacenPlanta',
+  'resolverReferencias', 'crearCola', 'resumenDeCola', 'textoCartelCola', 'horaDeCopia', 'sesionGuardada',
+  'colaPlanta', 'sinInternet', 'enviarCargaCola', 'mandarCarga', 'textoGuardadaEnTablet', 'paradaRef', 'alCambiarCola',
+  'refrescarListaCola', 'procesarColaPlanta', 'textoColaFila', 'htmlEstadoColaFila', 'planillaConCola', 'repintarConCola',
+  'recargarOConCola', 'turnosConCierreEnCola', 'htmlErroresCola', 'pintarCartelCola', 'reintentarCarga', 'descartarCarga',
+  'precargarCopias', 'registrarServiceWorker', 'pedirRevisionVersion', 'alMensajeSW', 'mostrarAvisoVersion', 'actualizarVersion',
+  'etiquetaMasa',
+  // La calculadora de cajas (06/10/2026)
+  'sumarCajas', 'recordarCajas', 'sumarCajasAgregar', 'deshacerCajasAgregar', 'borrarCajasAgregar',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -408,7 +420,11 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'MARGEN_LARGADA_MS',
   'VISTAS_CON_PESTANAS',
   // De js/cantidades.js (02/10/2026)
-  'DECIMALES_CANTIDAD', 'FRACCIONES']
+  'DECIMALES_CANTIDAD', 'FRACCIONES',
+  // Sin internet (06/10/2026): de js/sin-internet.js y de la planta
+  'NOMBRE_BASE', 'VERSION_BASE', 'CADA_REINTENTO_MS', 'GUARDAR_ENVIADOS_MS', 'VIDA_COPIA_MS', 'ORDEN',
+  'CLAVE_SESION_SB', 'CADA_PRECARGA_MS', 'CADA_REVISAR_VERSION_MS', 'MS_TODO_ENVIADO',
+  'MENSAJE_ABRIR_SIN_RED', 'MENSAJE_PIN_SIN_RED', 'MENSAJE_LOTE_NUEVO_SIN_RED', 'MENSAJE_SIN_RED']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
@@ -484,6 +500,8 @@ const PRELUDIO = `
   function tiempoRealConectado() { __tiempoReal.push(['conectado']) }
   var __canales = []
   var reintentando = false
+  // Sin internet (06/10/2026): los let del módulo y de js/sin-internet.js.
+  var colaInstancia = null, almacenUnico = null, precargando = null, sinInternetInstalado = false
   var relojBotonRegistrada = null
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
@@ -500,7 +518,7 @@ const PRELUDIO = `
   var __timeouts = []
   function setTimeout(f, ms) { __timeouts.push([f, ms]); return 0 } function clearTimeout(){} function setInterval(){ return 0 } function clearInterval(){}
 
-  var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [] }
+  var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], tablet: [] }
   var __tablas = {}
   var __rpc = async () => ({ data: null, error: null })
   var supabase = {
@@ -522,7 +540,14 @@ const PRELUDIO = `
       }
       return q
     },
-    rpc(nombre, params) { __llamadas.rpc.push([nombre, params]); return Promise.resolve(__rpc(nombre, params)) },
+    rpc(nombre, params) {
+      if (nombre === 'ejecutar_tablet') {
+        __llamadas.tablet.push([params.p_client_uuid, params.p_operacion, params.p_params])
+        __llamadas.rpc.push([params.p_operacion, params.p_params])
+        return Promise.resolve(__rpc(params.p_operacion, params.p_params, params.p_client_uuid))
+      }
+      __llamadas.rpc.push([nombre, params]); return Promise.resolve(__rpc(nombre, params))
+    },
     // Un canal de tiempo real simulado: guarda cada .on() y el callback de
     // .subscribe(), así la suite dispara cambios y estados a mano.
     // Como realtime-js 2.117: un canal con el MISMO nombre que todavía no
