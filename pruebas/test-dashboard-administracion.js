@@ -50,6 +50,20 @@ chk('las cobranzas por controlar suman en Administración (3 + 4 = 7)', g2.get('
 chk('y siguen en la tarjeta de Cobranzas', g2.get('cobranzas')?.total === 4)
 chk('los cheques por vencer NO suman en Administración', !g2.get('administracion')?.detalle.some(t => /Cheques/.test(t)))
 chk('el detalle de Administración nombra las cobranzas', g2.get('administracion')?.detalle.some(t => /4 cobranzas por controlar/i.test(t)), JSON.stringify(g2.get('administracion')?.detalle))
+// Los clientes provisorios (06/10/2026): mis_pendientes() devuelve
+// ('administracion', 'clientes_provisorios', N); suman en la tarjeta (y en la
+// barra lateral, que usa la misma agrupación) como las demás.
+const g3 = P.agruparPendientes([
+  { modulo: 'administracion', clave: 'ordenes_sin_valorizar', cantidad: 3, texto: 'Órdenes de retiro sin valorizar' },
+  { modulo: 'administracion', clave: 'clientes_provisorios', cantidad: 2, texto: 'Clientes provisorios por completar' },
+])
+chk('los clientes provisorios suman en Administración (3 + 2 = 5)', g3.get('administracion')?.total === 5, g3.get('administracion')?.total)
+chk('… y el detalle los nombra', g3.get('administracion')?.detalle.some(t => /2 clientes provisorios por completar/i.test(t)), JSON.stringify(g3.get('administracion')?.detalle))
+const srcTablero = fs.readFileSync(process.env.ARCHIVO_JS_TABLERO || path.join(__dirname, '..', 'js', 'tablero.js'), 'utf8')
+const RES = new Function(extraerConst(srcTablero, 'RESOLVER_PENDIENTES') + '\nreturn RESOLVER_PENDIENTES')()
+const rp = RES['administracion:clientes_provisorios']
+chk('el tablero los muestra en la tarjeta de Administración', rp && rp.tarjetas[0] === 'administracion' && rp.uno === 'cliente provisorio por completar' && rp.varios === 'clientes provisorios por completar', JSON.stringify(rp))
+chk('… y lleva a Clientes', rp?.url === 'modulos/administracion.html?seccion=clientes')
 chk('el archivo existe', fs.existsSync(path.join(__dirname, '..', 'modulos', 'administracion.html')))
 
 fin()

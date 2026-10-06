@@ -29,10 +29,10 @@ Rama `ci-prueba/cliente-provisorio` (desde `7ecf298` = main + la integración + 
 
 ## Huecos de base
 
-- **`mis_pendientes()` no devuelve los provisorios**: la burbuja sale de contar `clientes`; **la barra lateral y el tablero no tienen burbuja de provisorios**. Si se quiere, la base podría sumar `('administracion', 'clientes_provisorios', N, 'Clientes provisorios por confirmar')` con `_puede_gestionar_cliente` y sin la fábrica de pruebas; la pantalla tendría que sumarla a `MODULO_DE_PENDIENTE` / `RESOLVER_PENDIENTES`.
+- **CERRADO el 06/10/2026: `mis_pendientes()` ya devuelve `('administracion', 'clientes_provisorios', N)`**, y el menú y el tablero los muestran. Lo que decía antes: **`mis_pendientes()` no devuelve los provisorios**: la burbuja sale de contar `clientes`; **la barra lateral y el tablero no tienen burbuja de provisorios**. Si se quiere, la base podría sumar `('administracion', 'clientes_provisorios', N, 'Clientes provisorios por confirmar')` con `_puede_gestionar_cliente` y sin la fábrica de pruebas; la pantalla tendría que sumarla a `MODULO_DE_PENDIENTE` / `RESOLVER_PENDIENTES`.
 - **`clientes_con_saldo()` no devuelve `provisorio`** (sale de la fila de `clientes`, que Administración ya lee).
 - **`unir_clientes` no tiene vista previa en la base**: la pantalla cuenta lo que puede leer con los permisos de la persona (sin `cobranzas:ver_todo` o `pedidos:ver` lo dice).
-- **`mis_pendientes()` devuelve `stock/lotes_sin_ingreso` DOS veces** (el bloque está repetido en su cuerpo): la tarjeta de Stock lo suma dos veces.
+- **CERRADO el 06/10/2026 (la base ya no lo repite; ninguna pantalla ni prueba contaba con el duplicado).** Lo que decía antes: **`mis_pendientes()` devuelve `stock/lotes_sin_ingreso` DOS veces** (el bloque está repetido en su cuerpo): la tarjeta de Stock lo suma dos veces.
 - `valorizar_orden_retiro` con un cliente sin lista y sin precios falla "Faltan precios en N renglón(es)…" (la pantalla avisa antes, solo para provisorios).
 
 ## Lo que NO se probó
