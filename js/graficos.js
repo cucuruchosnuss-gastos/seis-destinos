@@ -1,4 +1,4 @@
-// LOS GRÁFICOS DE LA APP (04/10/2026) — novena excepción consciente a la
+// LOS GRÁFICOS DE LA APP (04/10/2026) — décima excepción consciente a la
 // regla de duplicar: dibujar barras, líneas y donas en SVG es lo mismo en
 // cualquier pantalla, y copiado en cada una serían escalas y redondeos que
 // divergen en silencio. SVG PROPIO, sin librerías de afuera ni CDN.

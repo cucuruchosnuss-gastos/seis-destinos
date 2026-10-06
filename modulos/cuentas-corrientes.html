@@ -604,6 +604,25 @@
     .ficha-unidad-cc__chip:hover { background: var(--color-acento-suave); }
     .ficha-unidad-cc__chip:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
 
+    /* La clasificación del proveedor (06/10/2026): Proveedor / Cliente y
+       proveedor, con su panel de vincular o separar. */
+    .clasif-cc {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .clasif-cc__rotulo { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-texto-2); }
+    .clasif-cc__ayuda { margin: 0; font-size: 0.8125rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .clasif-cc__panel { border: 1px solid var(--color-borde-fuerte); border-radius: 10px; padding: 0.75rem; background: var(--color-superficie); display: flex; flex-direction: column; gap: 0.5rem; }
+    .clasif-cc__error { margin: 0; color: var(--bordo); font-weight: 600; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .clasif-cc__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
     /* Una línea chica que dice qué muestra la pantalla con la barra de
        unidad elegida, o que algo no se puede filtrar por unidad. */
     .nota-unidad-cc { font-size: 0.78125rem; color: var(--color-texto-suave); margin: 0.25rem 0 0.75rem; }
@@ -1330,6 +1349,12 @@
            la barra (regla f). La arma renderizarFichaUnidad(). -->
       <div id="ficha-unidad-operar"></div>
 
+      <!-- Cliente y proveedor (06/10/2026): la clasificación del proveedor y,
+           si también es cliente en la unidad de la ficha, la cuenta de las dos
+           cosas juntas (js/cuenta-unica.js). -->
+      <div id="ficha-clasificacion"></div>
+      <div id="ficha-cuenta-unica" hidden></div>
+
       <h3 class="titulo-seccion-cc" style="display:flex; align-items:baseline; justify-content:space-between;">
         <span>Movimientos</span>
         <span style="font-size:0.8125rem; font-weight:600; color:var(--color-texto-suave);" id="contador-movimientos-ficha"></span>
@@ -1813,6 +1838,11 @@
     // La barra de unidad de negocio de arriba (js/barra-unidad.js): la unidad
     // elegida filtra todo lo que se MIRA; los permisos siguen en la base.
     import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad, estadoUnidad } from '../js/barra-unidad.js'
+    // La cuenta de cliente y proveedor (06/10/2026): la misma que Administración.
+    import {
+      estadoCuentaUnica, cargarCuentaUnica, pintarCuentaUnica, alTocarCuentaUnica, alCambiarCuentaUnica,
+      htmlClasificacion, textoVinculado,
+    } from '../js/cuenta-unica.js'
 
     mostrarBannerVersion()
 
@@ -1848,6 +1878,8 @@
       // La fábrica de pruebas (unidad "Pruebas (robot)"): ver
       // unidadesParaElegir(). Arranca sin datos, que no saca nada.
       fabrica: FABRICA_SIN_DATOS,
+      // proveedor → unidades donde también es cliente (06/10/2026).
+      clientesProveedor: new Map(),
       // Cuentas del selector del modal "Registrar pago". Se cargan una sola
       // vez, bajo demanda. Van separadas por grupo y no en una sola lista
       // porque el <optgroup> del selector necesita distinguirlas: tiene que
@@ -2211,7 +2243,9 @@
         // pestaña Clientes (la misma pantalla de Administración → Clientes).
         // 'cobranzas' entra por cobranzas:procesar (pagar con cheques de la
         // cartera) y cobranzas:ver_todo (ver la cartera entera).
-        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas'])
+        // 'pedidos' (06/10/2026): pedidos:configurar también deja vincular un
+        // proveedor con su cliente, y pedidos:ver / cargar leer los clientes.
+        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
       renderizarPrimerNivel()
@@ -2227,6 +2261,8 @@
         recargarProveedoresMaestros(),
         cargarFabricaDePruebas(supabase),
         unidadesDeLaBarra().catch(() => null),
+        // Quiénes son también clientes (el chip "Cliente y proveedor").
+        cargarClientesProveedores(),
       ])
       // maestros.unidades queda COMPLETA a propósito: también resuelve el
       // nombre de una unidad por id (nombreUnidad), y eso no se filtra.
@@ -2421,7 +2457,7 @@
             <div class="tarjeta-lista__avatar" style="background:${colorAvatar(g.proveedor.razon_social)};">${esc(inicialesEmpresa(g.proveedor.razon_social))}</div>
             <div class="tarjeta-lista__info">
               <div class="tarjeta-lista__titulo">${esc(g.proveedor.razon_social)}</div>
-              <div class="tarjeta-lista__subtitulo">${esc(unidadNombre)}</div>
+              <div class="tarjeta-lista__subtitulo">${esc(unidadNombre)}${esClienteYProveedor(g.proveedor_id, g.unidad_negocio_id) ? ' ' + CHIP_CLIENTE_PROVEEDOR : ''}</div>
             </div>
             <div class="proveedor-cc__derecha">
               ${saldosHtml}
@@ -3005,7 +3041,7 @@
             <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${esc(inicialesEmpresa(p.razon_social))}</div>
             <div class="tarjeta-lista__info">
               <div class="tarjeta-lista__titulo">${esc(p.razon_social)}</div>
-              <div class="tarjeta-lista__subtitulo">${esc(subtitulo)}</div>
+              <div class="tarjeta-lista__subtitulo">${esc(subtitulo)}${esClienteYProveedor(p.id, estado.unidadElegida) ? ' ' + CHIP_CLIENTE_PROVEEDOR : ''}</div>
             </div>
             <div class="proveedor-cc__derecha">
               ${saldoHtml}
@@ -3601,6 +3637,9 @@
     // El texto que se toma lo escapa quien lo dibuja (el número de un cheque
     // propio lo tipea una persona).
     function etiquetaPagoDeGasto(gasto) {
+      // Una compensación con su cuenta de cliente (compensar_cuentas, 06/10/2026):
+      // no salió plata, se cancelaron las dos deudas.
+      if (gasto?.medio_pago === 'compensacion') return 'Compensación con su cuenta de cliente'
       if (!gasto || gasto.medio_pago !== 'cheque') return null
       const d = String(gasto.descripcion ?? '')
       const m = /^Cheque endosado (\d{3})-(\d{8})(?!\d)/.exec(d)
@@ -3778,8 +3817,11 @@
         filtros: { rangoRapido: null, fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'fecha_desc' },
         movimientosRaw: [],
         estadoPorFactura: {},
+        vinculos: null, panelVinculo: null, unica: null,
       }
       resetearFiltrosFicha()
+      renderizarClasificacionProveedor()
+      pintarCuentaUnicaFicha()
       document.getElementById('ficha-titulo').textContent = nombre
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-padron').hidden = true
@@ -3792,9 +3834,11 @@
       estado.ficha.unidades = unidadesDeFicha(ids)
       renderizarFichaUnidad()
 
-      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos()])
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos(), cargarVinculosFicha()])
       if (estado.ficha !== ficha) return
       renderizarFichaBanner()
+      renderizarClasificacionProveedor()
+      prepararCuentaUnicaFicha()
     }
 
     // Todo lo de la ficha con la unidad que tiene ahora, sobre lo ya cargado
@@ -3805,6 +3849,8 @@
       renderizarFichaBanner()
       renderizarFichaMovimientos()
       renderizarFichaRemitos()
+      renderizarClasificacionProveedor()
+      prepararCuentaUnicaFicha()
     }
 
     // La ficha pasa a otra unidad (o a todas, con null) SIN cambiar la barra.
@@ -3813,6 +3859,8 @@
       estado.ficha.unidadId = unidadId || null
       estado.ficha.formImporte = null
       sincronizarUrlFicha()
+      // El panel de vincular o separar era de la unidad de antes.
+      if (!estado.ficha.panelVinculo?.enviando) estado.ficha.panelVinculo = null
       renderizarFicha()
     }
 
@@ -3896,7 +3944,283 @@
       document.getElementById(destino).removeAttribute('hidden')
       estado.ficha = null
       renderizarFichaUnidad()
+      renderizarClasificacionProveedor()
+      pintarCuentaUnicaFicha()
       history.replaceState(null, '', location.pathname)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CLIENTE Y PROVEEDOR (06/10/2026)
+    //
+    // Un proveedor puede ser también cliente de una empresa (clientes.
+    // proveedor_id = el proveedor; la cuenta del cliente es por empresa). La
+    // ficha dice la clasificación (Proveedor / Cliente y proveedor), deja
+    // vincularlo o separarlo, y con una unidad elegida muestra la cuenta de
+    // las dos cosas juntas (js/cuenta-unica.js, la misma de Administración).
+    //
+    // SABERLO DEPENDE DE PODER LEER LOS CLIENTES: la policy de `clientes` pide
+    // pedidos:ver/cargar o retiros:ver/cargar en esa empresa, y no hay ninguna
+    // función que lo diga sin eso. Sin ese permiso la ficha lo dice ("no se
+    // puede ver si también es cliente") y las listas no llevan el chip.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function puedeLeerClientesCC() {
+      return tieneTarea('retiros', 'ver') || tieneTarea('retiros', 'cargar') || tieneTarea('pedidos', 'ver') || tieneTarea('pedidos', 'cargar')
+    }
+    // La regla de _puede_gestionar_cliente() de la base (sin alcance: acá no
+    // se lee; si no alcanza en esa empresa, la base lo dice y se muestra).
+    function puedeClasificarCC() {
+      return tieneTarea('cuentas_corrientes', 'alta_proveedor') || tieneTarea('retiros', 'precios') || tieneTarea('pedidos', 'configurar')
+    }
+    function puedeCompensarCC() {
+      return tieneTarea('cuentas_corrientes', 'registrar_pago') && tieneTarea('cobranzas', 'procesar')
+    }
+
+    // proveedor → las unidades donde también es cliente (de lo que se pudo leer).
+    function mapaClienteProveedor(filas) {
+      const m = new Map()
+      for (const c of filas ?? []) {
+        if (!c?.proveedor_id) continue
+        if (!m.has(c.proveedor_id)) m.set(c.proveedor_id, new Set())
+        m.get(c.proveedor_id).add(c.unidad_negocio_id)
+      }
+      return m
+    }
+
+    async function cargarClientesProveedores() {
+      estado.clientesProveedor = new Map()
+      if (!puedeLeerClientesCC()) return
+      const { data, error } = await supabase.from('clientes').select('proveedor_id, unidad_negocio_id').not('proveedor_id', 'is', null)
+      if (error) { console.error('No se pudo saber qué proveedores son también clientes:', error); return }
+      estado.clientesProveedor = mapaClienteProveedor(data)
+    }
+
+    // Con una unidad: si es cliente EN ESA; sin unidad, en alguna.
+    function esClienteYProveedor(proveedorId, unidadId = null) {
+      const s = estado.clientesProveedor?.get(proveedorId)
+      return !!s && (unidadId ? s.has(unidadId) : s.size > 0)
+    }
+    const CHIP_CLIENTE_PROVEEDOR = '<span class="chip-cliente-proveedor">Cliente y proveedor</span>'
+
+    // ficha.vinculos: null = leyendo; false = no se puede saber (sin permiso o
+    // falló); [] o la lista de clientes vinculados (uno por empresa).
+    async function cargarVinculosFicha() {
+      const ficha = estado.ficha
+      if (!ficha) return
+      ficha.vinculos = null
+      if (!puedeLeerClientesCC()) { ficha.vinculos = false; return }
+      const { data, error } = await supabase.from('clientes').select('id, nombre, unidad_negocio_id, proveedor_id').eq('proveedor_id', ficha.proveedorId)
+      if (estado.ficha !== ficha) return
+      if (error) { console.error('No se pudo leer si también es cliente:', error); ficha.vinculos = false; return }
+      ficha.vinculos = (data ?? []).filter(c => c.proveedor_id === ficha.proveedorId)
+    }
+
+    function vinculoDeUnidad(ficha) {
+      if (!ficha?.unidadId || !Array.isArray(ficha.vinculos)) return null
+      return ficha.vinculos.find(c => c.unidad_negocio_id === ficha.unidadId) ?? null
+    }
+
+    function textoDondeEsCliente(vinculos) {
+      return 'También es cliente en ' + vinculos.map(c => nombreUnidad(c.unidad_negocio_id) + (c.nombre ? ' (' + c.nombre + ')' : '')).join(', ') + '.'
+    }
+
+    function htmlClasificacionCC(ficha) {
+      const vs = ficha?.vinculos
+      if (vs === null || vs === undefined) return ''
+      if (vs === false) {
+        return '<div class="clasif-cc"><span class="clasif-cc__rotulo">Clasificación</span>' +
+          '<p class="clasif-cc__ayuda">Con tu usuario no se puede ver si también es cliente: hace falta poder ver los clientes de Administración.</p></div>'
+      }
+      const v = vinculoDeUnidad(ficha)
+      const valor = (ficha.unidadId ? !!v : vs.length > 0) ? 'ambos' : 'proveedor'
+      const puede = puedeClasificarCC()
+      const p = ficha.panelVinculo
+      let html = '<div class="clasif-cc"><span class="clasif-cc__rotulo">Clasificación</span>' +
+        htmlClasificacion({ valor, propio: 'proveedor', puede, ocupado: !!p?.enviando })
+      if (vs.length) html += `<p class="clasif-cc__ayuda">${esc(textoDondeEsCliente(vs))}</p>`
+      if (!puede) html += '<p class="clasif-cc__ayuda">Para cambiarla hace falta permiso para dar de alta proveedores o para gestionar clientes.</p>'
+      if (p?.tipo === 'vincular') {
+        html += '<div class="clasif-cc__panel">'
+        if (!p.unidadId) {
+          const ya = new Set(vs.map(c => c.unidad_negocio_id))
+          const opciones = unidadesParaElegir(estado.maestros.unidades).filter(u => !ya.has(u.id))
+          html += '<p class="clasif-cc__ayuda">¿De qué empresa es cliente? (la cuenta del cliente es por empresa)</p>' +
+            `<div class="ficha-unidad-cc__chips">${opciones.map(u => `<button type="button" class="ficha-unidad-cc__chip" data-vincular-unidad="${esc(u.id)}">${esc(u.nombre)}</button>`).join('')}</div>`
+        } else {
+          html += `<p class="clasif-cc__ayuda">${esc('Se busca en ' + nombreUnidad(p.unidadId) + ' el cliente con su mismo CUIT o nombre; si no hay, se crea en Administración → Clientes.')}</p>`
+        }
+        if (p.error) html += `<p class="clasif-cc__error">${esc(p.error)}</p>`
+        html += '<div class="clasif-cc__acciones">' +
+          (p.unidadId ? `<button type="button" class="btn btn--primario" id="btn-vincular-cliente"${p.enviando ? ' disabled' : ''}>Vincular</button>` : '') +
+          `<button type="button" class="btn btn--secundario" id="btn-cancelar-vinculo"${p.enviando ? ' disabled' : ''}>Cancelar</button></div></div>`
+      } else if (p?.tipo === 'desvincular') {
+        const elegido = vs.find(c => c.id === p.clienteId)
+        html += '<div class="clasif-cc__panel">'
+        if (!elegido) {
+          html += '<p class="clasif-cc__ayuda">¿En qué empresa deja de ser cliente vinculado?</p>' +
+            `<div class="ficha-unidad-cc__chips">${vs.map(c => `<button type="button" class="ficha-unidad-cc__chip" data-desvincular-cliente="${esc(c.id)}">${esc(nombreUnidad(c.unidad_negocio_id))}</button>`).join('')}</div>`
+        } else {
+          html += `<p class="clasif-cc__ayuda">${esc('¿Separar las dos cuentas en ' + nombreUnidad(elegido.unidad_negocio_id) + '? ' + (elegido.nombre || 'El cliente') + ' deja de figurar como cliente de este proveedor; su cuenta de cliente sigue en Administración.')}</p>`
+        }
+        if (p.error) html += `<p class="clasif-cc__error">${esc(p.error)}</p>`
+        html += '<div class="clasif-cc__acciones">' +
+          (elegido ? `<button type="button" class="btn btn--peligro" id="btn-desvincular-cliente"${p.enviando ? ' disabled' : ''}>Sí, separar las cuentas</button>` : '') +
+          `<button type="button" class="btn btn--secundario" id="btn-cancelar-vinculo"${p.enviando ? ' disabled' : ''}>No, dejarlo como está</button></div></div>`
+      }
+      return html + '</div>'
+    }
+
+    function renderizarClasificacionProveedor() {
+      const cont = document.getElementById('ficha-clasificacion')
+      if (!cont) return
+      cont.innerHTML = estado.ficha ? htmlClasificacionCC(estado.ficha) : ''
+    }
+
+    function elegirClasificacionCC(valor) {
+      const f = estado.ficha
+      if (!f || !Array.isArray(f.vinculos) || !puedeClasificarCC() || f.panelVinculo?.enviando) return
+      const v = vinculoDeUnidad(f)
+      const esAmbos = f.unidadId ? !!v : f.vinculos.length > 0
+      if (valor === 'ambos' && !esAmbos) {
+        f.panelVinculo = { tipo: 'vincular', unidadId: f.unidadId ?? null, error: null, enviando: false }
+      } else if (valor === 'proveedor' && esAmbos) {
+        const unico = v ?? (f.vinculos.length === 1 ? f.vinculos[0] : null)
+        f.panelVinculo = { tipo: 'desvincular', clienteId: unico?.id ?? null, error: null, enviando: false }
+      } else return
+      renderizarClasificacionProveedor()
+    }
+
+    function alTocarClasificacionCC(ev) {
+      const t = ev.target
+      if (!t?.closest) return
+      const f = estado.ficha
+      let b
+      if ((b = t.closest('[data-clasificacion]'))) elegirClasificacionCC(b.dataset.clasificacion)
+      else if ((b = t.closest('[data-vincular-unidad]')) && f?.panelVinculo?.tipo === 'vincular') { f.panelVinculo.unidadId = b.dataset.vincularUnidad; renderizarClasificacionProveedor() }
+      else if ((b = t.closest('[data-desvincular-cliente]')) && f?.panelVinculo?.tipo === 'desvincular') { f.panelVinculo.clienteId = b.dataset.desvincularCliente; renderizarClasificacionProveedor() }
+      else if (t.closest('#btn-vincular-cliente')) confirmarVincularCC()
+      else if (t.closest('#btn-desvincular-cliente')) confirmarDesvincularCC()
+      else if (t.closest('#btn-cancelar-vinculo') && f && !f.panelVinculo?.enviando) { f.panelVinculo = null; renderizarClasificacionProveedor() }
+    }
+
+    // Los clientes que había en esa empresa ANTES de vincular (con los mismos
+    // permisos con que después se lee el vinculado): así se sabe si se creó.
+    async function idsClientesDe(unidadId) {
+      if (!puedeLeerClientesCC()) return null
+      const { data, error } = await supabase.from('clientes').select('id').eq('unidad_negocio_id', unidadId)
+      if (error) return null
+      return new Set((data ?? []).map(c => c.id))
+    }
+
+    // vincular_proveedor_cliente(p_proveedor_id, p_unidad_negocio_id): busca
+    // el cliente de esa empresa por CUIT o nombre y, si no hay, lo crea.
+    async function confirmarVincularCC() {
+      const f = estado.ficha
+      const p = f?.panelVinculo
+      if (!p || p.tipo !== 'vincular' || !p.unidadId || p.enviando) return
+      p.enviando = true
+      p.error = null
+      renderizarClasificacionProveedor()
+      try {
+        const conocidos = await idsClientesDe(p.unidadId)
+        const { data: clienteId, error } = await supabase.rpc('vincular_proveedor_cliente', { p_proveedor_id: f.proveedorId, p_unidad_negocio_id: p.unidadId })
+        if (error) throw error
+        let fila = null
+        if (puedeLeerClientesCC()) {
+          const r = await supabase.from('clientes').select('id, nombre').eq('id', clienteId).maybeSingle()
+          if (!r.error) fila = r.data
+        }
+        mostrarExito(textoVinculado({ id: clienteId, conocidos: fila ? conocidos : null, nombre: fila?.nombre, lado: 'cliente', donde: nombreUnidad(p.unidadId) }))
+        if (estado.ficha !== f) return
+        f.panelVinculo = null
+        await Promise.all([cargarVinculosFicha(), cargarClientesProveedores()])
+        if (estado.ficha !== f) return
+        renderizarClasificacionProveedor()
+        prepararCuentaUnicaFicha()
+      } catch (err) {
+        console.error('No se pudo vincular:', err)
+        // Los mensajes de la base vienen escritos para una persona: tal cual.
+        p.enviando = false
+        p.error = err?.message || 'No se pudo vincular. Probá de nuevo.'
+        if (estado.ficha === f) renderizarClasificacionProveedor()
+      }
+    }
+
+    async function confirmarDesvincularCC() {
+      const f = estado.ficha
+      const p = f?.panelVinculo
+      if (!p || p.tipo !== 'desvincular' || !p.clienteId || p.enviando) return
+      const v = (f.vinculos || []).find(c => c.id === p.clienteId)
+      p.enviando = true
+      p.error = null
+      renderizarClasificacionProveedor()
+      try {
+        const { error } = await supabase.rpc('desvincular_cliente_proveedor', { p_cliente_id: p.clienteId })
+        if (error) throw error
+        mostrarExito(`Las dos cuentas quedaron separadas${v ? ' en ' + nombreUnidad(v.unidad_negocio_id) : ''}.`)
+        if (estado.ficha !== f) return
+        f.panelVinculo = null
+        f.unica = null
+        await Promise.all([cargarVinculosFicha(), cargarClientesProveedores()])
+        if (estado.ficha !== f) return
+        renderizarClasificacionProveedor()
+        prepararCuentaUnicaFicha()
+      } catch (err) {
+        console.error('No se pudo separar:', err)
+        // "Tiene compensaciones entre sus dos cuentas: no se puede desvincular." tal cual.
+        p.enviando = false
+        p.error = err?.message || 'No se pudieron separar las cuentas. Probá de nuevo.'
+        if (estado.ficha === f) renderizarClasificacionProveedor()
+      }
+    }
+
+    // ── La cuenta de las dos cosas juntas, con una unidad elegida ─────────
+    function ctxCuentaUnicaCC() {
+      const f = estado.ficha
+      if (!f?.unica) return null
+      return {
+        sb: supabase, cu: f.unica, contenedor: document.getElementById('ficha-cuenta-unica'), hoy: hoyCC(),
+        puedeCompensar: puedeCompensarCC(),
+        alCompensado: async () => {
+          mostrarExito('Compensación registrada: las dos cuentas quedaron al día.')
+          if (estado.ficha !== f) return
+          f.unica = null
+          await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+          if (estado.ficha !== f) return
+          renderizarFichaBanner()
+          prepararCuentaUnicaFicha()
+          cargarSaldos()
+        },
+      }
+    }
+
+    function pintarCuentaUnicaFicha() {
+      const el = document.getElementById('ficha-cuenta-unica')
+      if (!el) return
+      const f = estado.ficha
+      const ctx = ctxCuentaUnicaCC()
+      if (ctx) { el.hidden = false; pintarCuentaUnica(ctx); return }
+      if (f && !f.unidadId && Array.isArray(f.vinculos) && f.vinculos.length) {
+        el.hidden = false
+        el.innerHTML = `<div class="cu-caja"><p class="cu-suave">${esc(textoDondeEsCliente(f.vinculos) + ' Elegí esa unidad para ver las dos cuentas juntas.')}</p></div>`
+        return
+      }
+      el.innerHTML = ''
+      el.hidden = true
+    }
+
+    async function prepararCuentaUnicaFicha() {
+      const f = estado.ficha
+      if (!f) { pintarCuentaUnicaFicha(); return }
+      const v = vinculoDeUnidad(f)
+      if (!v) { f.unica = null; pintarCuentaUnicaFicha(); return }
+      if (f.unica?.clienteId === v.id) { pintarCuentaUnicaFicha(); return }
+      const cu = estadoCuentaUnica({ clienteId: v.id, proveedorId: f.proveedorId, unidadId: f.unidadId })
+      f.unica = cu
+      pintarCuentaUnicaFicha()
+      await cargarCuentaUnica(supabase, cu)
+      if (estado.ficha !== f || f.unica !== cu) return
+      pintarCuentaUnicaFicha()
     }
 
     // Trae TODAS las unidades del proveedor: la vista devuelve una fila por
@@ -5496,6 +5820,11 @@
     // viven dentro del banner (#ficha-banner) y se generan en cada
     // renderizarFichaBanner(), que ya les adjunta su propio listener.
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
+    // Cliente y proveedor (06/10/2026): la clasificación y la cuenta juntas.
+    document.getElementById('ficha-clasificacion').addEventListener('click', (ev) => alTocarClasificacionCC(ev))
+    const unicaCC = document.getElementById('ficha-cuenta-unica')
+    unicaCC.addEventListener('click', (ev) => { const ctx = ctxCuentaUnicaCC(); if (ctx) alTocarCuentaUnica(ev, ctx) })
+    for (const tipo of ['input', 'change']) unicaCC.addEventListener(tipo, (ev) => { const ctx = ctxCuentaUnicaCC(); if (ctx) alCambiarCuentaUnica(ev, ctx) })
 
     // ── Modal: Registrar pago ─────────────────────────────────────────────
     document.getElementById('campo-moneda-pago').addEventListener('change', () => {

@@ -158,8 +158,10 @@ async function main() {
     /clave: 'cuentas-corrientes',[\s\S]{0,400}?nombre: 'Cuentas corrientes',/.test(FUENTE_MODULOS))
   chk('y su descripción dice proveedores y clientes', /descripcion: 'Cuentas corrientes de proveedores y clientes'/.test(FUENTE_MODULOS))
   chk('el link viejo a Administración → Clientes ya no está (lo reemplaza la pestaña)', !/id="cc-link-clientes"/.test(FUENTE))
-  chk('las tareas que se leen incluyen retiros (la pestaña Clientes) y cobranzas (la cartera)',
-    /\.in\('modulo', \['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas'\]\)/.test(FUENTE))
+  // 'pedidos' desde el 06/10/2026: pedidos:configurar vincula un proveedor
+  // con su cliente y pedidos:ver/cargar leen los clientes.
+  chk('las tareas que se leen incluyen retiros (la pestaña Clientes), cobranzas (la cartera) y pedidos (cliente y proveedor)',
+    /\.in\('modulo', \['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos'\]\)/.test(FUENTE))
   chk('las pestañas se pintan al leer las tareas', /estado\.misTareas = new Set\(\(tareas \?\? \[\]\)\.map\(t => `\$\{t\.modulo\}:\$\{t\.tarea\}`\)\)\n\s+renderizarPrimerNivel\(\)/.test(FUENTE))
 
   // ══ 2. LOS COLORES ═════════════════════════════════════════════════════════

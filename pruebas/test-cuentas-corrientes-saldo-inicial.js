@@ -32,6 +32,8 @@
 
 const path = require('path')
 const { construirCon } = require('./sandbox')
+// Cliente y proveedor (06/10/2026): el padrón lo llama.
+const { FUNCIONES_CP_CC, CONSTANTES_CP_CC } = require('./cuenta-unica-comun')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
 
@@ -138,7 +140,7 @@ const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAG
 
 function sandbox() {
   return construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
+    preludio: PRELUDIO, funciones: [...FUNCIONES, ...FUNCIONES_CP_CC], constantes: [...CONSTANTES, ...CONSTANTES_CP_CC],
     retorno: `estado, __els, __errores, __exitos, __consultas, __hojas, __rpcs, __refrescos,
       __si(){ return saldoInicial }, __el(id){ return document.getElementById(id) }, __setDatos(t, d){ __datos[t] = d }, __fallar(t){ __falla[t] = true },
       __rpcResponde(r){ __rpcRes = r }, __rpcEspera(v){ __rpcEsperar = v }, __soltar(){ const r = __resolver.splice(0); r.forEach(f => f()) }`,
