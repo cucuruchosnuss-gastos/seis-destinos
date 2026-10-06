@@ -262,7 +262,9 @@ esperas.push((async () => {
   chk('… ni se saca al masero', /e-masero/.test(guardada(T, 'masa') ?? ''))
 
   // Los dos caminos de cierre lo llaman.
-  chk('cerrar_turno llama a maquinaCerrada', /mostrarExito\('Planilla cerrada\.'\)\n\s*await maquinaCerrada\(turnoId\)/.test(FUENTE))
+  // Desde el 06/10/2026 el cierre va por la cola (sin internet queda en la
+  // tablet): con o sin red, la máquina se suelta al mostrar el cierre.
+  chk('cerrar_turno llama a maquinaCerrada', /mostrarVista\('pr-cerrado'\)\n\s*await maquinaCerrada\(turnoId\)/.test(FUENTE) && /mostrarExito\('Planilla cerrada\.'\)/.test(FUENTE))
   chk('forzar_cierre_turno también', /await maquinaCerrada\(p\.turno\.id\)\n\s*await mostrarTablero\(\)/.test(FUENTE))
 
   // Si la tablet está EN Sala de masa cuando se apaga, el masero sale de la
