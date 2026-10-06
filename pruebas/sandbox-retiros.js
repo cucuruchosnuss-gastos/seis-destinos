@@ -28,6 +28,8 @@ const FUNCIONES_BASE = [
   'totalCajasForm', 'textoCuentaForm', 'clienteDe', 'detalleCliente', 'htmlClienteElegido', 'htmlResultadosClientes',
   'pintarCliente', 'elegirCliente', 'cambiarCliente',
   'textoStockOpcion', 'htmlProductosRenglon', 'htmlEleccionRenglon', 'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'cantidadRenglon', 'htmlAvisoFaltante', 'htmlResumenLotes', 'htmlLoteRenglon',
+  // de js/cantidades.js (05/10/2026): la unidad al lado de cada lote
+  'unidadCorta',
   'htmlRenglon', 'htmlAvisoCatalogo', 'pintarRenglones', 'pintarPie', 'renglon', 'tocarRenglon', 'pintarResumenLotes', 'ponerCantidadLote', 'completarLotes', 'limpiarLotes',
   'elegirProductoRenglon', 'cambiarProductoRenglon', 'elegirInsumoRenglon', 'buscarCatalogoRenglon', 'elegirConoRenglon', 'elegirMarcaRenglon', 'buscarConoRenglon',
   'elegirPresentacionRenglon', 'agregarRenglon', 'quitarRenglon',

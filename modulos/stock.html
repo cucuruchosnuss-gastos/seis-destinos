@@ -2115,6 +2115,23 @@
     /* Dentro de la cifra de 1.25rem el equivalente en bultos no puede pesar
        lo mismo: es la lectura de apoyo, no el numero. */
     .mov-saldo__bultos { color: var(--color-texto-suave); font-size: 0.8125rem; font-weight: 600; }
+
+    /* EL CAMPO DE CANTIDAD LLEVA SU UNIDAD AL LADO (05/10/2026): "bultos de
+       50 kg" o "kg". Nunca un número pelado: 1 bolsa de azúcar se mandó como
+       1 kg porque el campo no decía en qué se escribía. La unidad puede ser
+       larga ("bultos de 1.250 kg"): baja de renglón adentro de su lugar y el
+       campo no se achica de más. */
+    .campo-cantidad { display: flex; align-items: center; gap: 0.625rem; }
+    .campo-cantidad input { flex: 1 1 6rem; min-width: 0; }
+    .campo-cantidad__unidad {
+      flex: 0 1 auto; max-width: 60%;
+      font-size: 0.9375rem; font-weight: 700; color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .campo-cantidad__equivale {
+      margin-top: 0.3125rem;
+      font-size: 0.8125rem; font-weight: 600; color: var(--color-texto-2);
+    }
     /* ═══════════════════════════════════════════════════════════════════════
        LA PLANILLA PARA IMPRIMIR
        En pantalla no existe; al imprimir es lo ÚNICO que existe.
@@ -3345,7 +3362,12 @@
 
       <div class="campo-stock">
         <label for="mov-cantidad" id="mov-label-cantidad">Cantidad</label>
-        <input type="text" inputmode="decimal" id="mov-cantidad" placeholder="0" autocomplete="off">
+        <div class="campo-cantidad">
+          <input type="text" inputmode="decimal" id="mov-cantidad" placeholder="0" autocomplete="off">
+          <span class="campo-cantidad__unidad" id="mov-unidad-cantidad"></span>
+        </div>
+        <div class="campo-cantidad__equivale" id="mov-equivale-cantidad" hidden></div>
+        <div class="campo-stock__ayuda" id="mov-aviso-unidad" hidden></div>
         <div class="campo-stock__error" id="mov-error-cantidad" hidden></div>
       </div>
 
@@ -3462,7 +3484,12 @@
 
       <div class="campo-stock" id="ti-campo-cantidad" hidden>
         <label for="ti-cantidad">Cantidad a enviar</label>
-        <input type="text" inputmode="decimal" id="ti-cantidad" autocomplete="off">
+        <div class="campo-cantidad">
+          <input type="text" inputmode="decimal" id="ti-cantidad" autocomplete="off">
+          <span class="campo-cantidad__unidad" id="ti-unidad-cantidad"></span>
+        </div>
+        <div class="campo-cantidad__equivale" id="ti-equivale-cantidad" hidden></div>
+        <div class="campo-stock__ayuda" id="ti-aviso-unidad" hidden></div>
         <div class="campo-stock__error" id="ti-error-cantidad" hidden></div>
       </div>
 
@@ -3487,7 +3514,7 @@
     // UNA vez y que la pantalla muestre solo lo de ella. Es el mismo archivo que
     // el <head> carga para dibujarla, así que el navegador lo ejecuta una vez.
     import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
-    import { DECIMALES_CANTIDAD, formatearCantidadStock, equivalenteEnBultos, cabezaBultos, textoBultos, cantidadSegunVista } from '../js/cantidades.js'
+    import { DECIMALES_CANTIDAD, formatearCantidadStock, equivalenteEnBultos, cabezaBultos, textoBultos, cantidadSegunVista, modoDeCarga, aUnidadBase, equivalenteDeCarga, unidadCorta } from '../js/cantidades.js'
 
     mostrarBannerVersion()
 
@@ -3877,6 +3904,44 @@
       el.addEventListener('input', alEscribir)
       _reglaCampoCantidad.set(id, clave)
       return el
+    }
+
+    // LA UNIDAD DEL CAMPO DE CANTIDAD (05/10/2026). Los dos modales que mueven
+    // stock (enviar a otra fábrica, corregir / dar de baja) piden la cantidad
+    // COMO FACU CONFIGURÓ EL INSUMO: en bultos si su vista es 'bulto' y el lote
+    // tiene UN contenido por bulto, y si no en su unidad. La regla vive en
+    // js/cantidades.js (modoDeCarga); acá solo se pinta. Cuando el modo cambia
+    // (otro lote, otra presentación) el campo SE VACÍA: un 1 escrito pensando
+    // en bultos no puede pasar a significar 1 kg sin que nadie lo toque.
+    function pintarModoCantidad(prefijo, modo, alEscribir) {
+      const ui = (s) => document.getElementById(`${prefijo}-${s}`)
+      const clave = modo ? `${modo.enBultos}|${modo.contenido}|${modo.decimales}` : ''
+      const previa = _claveModoCantidad.get(prefijo)
+      let el = ui('cantidad')
+      if (previa !== clave) {
+        _claveModoCantidad.set(prefijo, clave)
+        el = prepararCampoCantidad(`${prefijo}-cantidad`, {
+          decimales: modo ? modo.decimales : DECIMALES_CANTIDAD,
+          negativos: prefijo === 'mov' && estado.mov?.modo === 'ajuste',
+        }, alEscribir) || el
+        if (previa !== undefined) ponerNumero(el, null)
+      }
+      ui('unidad-cantidad').textContent = modo ? modo.rotulo : ''
+      const aviso = ui('aviso-unidad')
+      aviso.hidden = !modo?.aviso
+      aviso.textContent = modo?.aviso || ''
+      const eq = ui('equivale-cantidad')
+      const txt = modo ? equivalenteDeCarga(leerCantidadEscrita(el, modo), modo) : null
+      eq.hidden = !txt
+      eq.textContent = txt || ''
+    }
+    const _claveModoCantidad = new Map()
+
+    // Lo escrito en un campo de cantidad, con los decimales de su modo (los
+    // bultos admiten medio bulto aunque la unidad se cuente de a enteros).
+    // `negativos` solo para el ajuste, que admite un "-" tipeado.
+    function leerCantidadEscrita(el, modo, negativos = false) {
+      return leerNumeroAr(el?.value ?? '', { decimales: modo ? modo.decimales : DECIMALES_CANTIDAD, negativos })
     }
 
     function mensajeCantidadInvalida(unidad) {
@@ -7339,7 +7404,7 @@
     function prepararCantidadMov() {
       const m = estado.mov
       return prepararCampoCantidad('mov-cantidad', {
-        decimales: decimalesCantidad(m?.insumo?.unidad_medida ?? ''),
+        decimales: modoMov()?.decimales ?? decimalesCantidad(m?.insumo?.unidad_medida ?? ''),
         negativos: m?.modo === 'ajuste',
       }, actualizarSaldoMov)
     }
@@ -7348,14 +7413,42 @@
     // En el ajuste, la magnitud sale del campo y el SIGNO de los dos botones.
     // Si alguien igual tipeó un "-12" —posible desde el escritorio— manda el
     // signo tipeado y no se aplica dos veces.
+    // Cómo se pide la cantidad a corregir o dar de baja: según la vista
+    // preferida del insumo y lo que tiene el lote en ESA unidad. Mientras
+    // falte elegir la unidad o la presentación, en su unidad (el campo nunca
+    // queda sin unidad al lado); null sin insumo.
+    function modoMov() {
+      const m = estado.mov
+      if (!m || !m.insumo) return null
+      const cont = contenidoMov()
+      if (!m.unidadId || cont === undefined) {
+        return modoDeCarga({ unidad: m.insumo.unidad_medida, vista: 'base', decimalesBase: decimalesCantidad(m.insumo.unidad_medida ?? '') })
+      }
+      const { conocidas, haySueltos } = presentacionesDelLote()
+      return modoDeCarga({
+        unidad: m.insumo.unidad_medida,
+        vista: m.insumo.vista_preferida,
+        contenidos: [...conocidas, cont],
+        haySueltos: haySueltos || cont === null,
+        decimalesBase: decimalesCantidad(m.insumo.unidad_medida ?? ''),
+      })
+    }
+
+    // Lo escrito, YA en la unidad base y con su signo. Una conversión que no
+    // sirve (2,5 bultos de 3 u) es null; el porqué lo da aUnidadBase.
+    function escritoMovBase() {
+      const m = estado.mov
+      const modo = modoMov()
+      const n = leerCantidadEscrita(document.getElementById('mov-cantidad'), modo, m?.modo === 'ajuste')
+      if (n === null) return { base: null, error: null }
+      const r = aUnidadBase(Math.abs(n), modo)
+      return r.base === null ? r : { base: n < 0 ? -r.base : r.base, error: null }
+    }
+
     function cantidadMov() {
       const m = estado.mov
       if (!m) return null
-      const crudo = document.getElementById('mov-cantidad').value
-      const n = parsearCantidad(crudo, {
-        permitirNegativos: m.modo === 'ajuste',
-        unidad: m.insumo?.unidad_medida ?? '',
-      })
+      const n = escritoMovBase().base
       if (n === null || n === 0) return null
       if (m.modo === 'baja') return n > 0 ? n : null
       if (n < 0) return n
@@ -7366,7 +7459,8 @@
       const m = estado.mov
       const cajaSaldo = document.getElementById('mov-saldo')
       const avisoNeg = document.getElementById('mov-aviso-negativo')
-      if (!m || !m.insumo) { cajaSaldo.hidden = true; avisoNeg.hidden = true; return }
+      if (!m || !m.insumo) { cajaSaldo.hidden = true; avisoNeg.hidden = true; pintarModoCantidad('mov', null, actualizarSaldoMov); return }
+      pintarModoCantidad('mov', modoMov(), actualizarSaldoMov)
 
       const saldo = saldoActualMov()
       // Sin saldo conocido NO se dibuja nada: ni el número, ni el "quedaría
@@ -7421,9 +7515,12 @@
 
       const crudo = document.getElementById('mov-cantidad').value.trim()
       const cantidad = cantidadMov()
+      const convMov = escritoMovBase()
       if (crudo === '') {
         marcarError('mov-error-cantidad', 'Poné la cantidad.'); ok = false
-      } else if (parsearCantidad(crudo, { permitirNegativos: m.modo === 'ajuste', unidad: m.insumo?.unidad_medida ?? '' }) === null) {
+      } else if (convMov.error) {
+        marcarError('mov-error-cantidad', convMov.error); ok = false
+      } else if (leerCantidadEscrita(document.getElementById('mov-cantidad'), modoMov(), m.modo === 'ajuste') === null) {
         // Un "-" que quedó de cuando el modal estaba en ajuste: en la baja la
         // cantidad va siempre positiva, y decirlo es más útil que "no es un
         // número".
@@ -9800,17 +9897,34 @@
     // unidad del insumo elegido. Siempre positiva.
     function prepararCantidadTi() {
       return prepararCampoCantidad('ti-cantidad', {
-        decimales: decimalesCantidad(estado.ti?.insumo?.unidad_medida ?? ''),
+        decimales: modoTi()?.decimales ?? decimalesCantidad(estado.ti?.insumo?.unidad_medida ?? ''),
       }, actualizarSaldoTi)
     }
 
+    // Cómo se pide la cantidad de lo que se manda: según la vista preferida
+    // del insumo y lo que tiene el LOTE elegido (sus presentaciones y si
+    // tiene una parte suelta). null mientras falte elegir la presentación.
+    function modoTi() {
+      const ti = estado.ti
+      if (!ti || !ti.insumo || ti.lote === undefined || ti.presentacion === undefined) return null
+      const { conocidas, haySueltos } = presentacionesTi()
+      const cont = contenidoTi()
+      return modoDeCarga({
+        unidad: ti.insumo.unidad_medida,
+        vista: ti.insumo.vista_preferida,
+        contenidos: [...conocidas, cont],
+        haySueltos: haySueltos || cont === null,
+        decimalesBase: decimalesCantidad(ti.insumo.unidad_medida ?? ''),
+      })
+    }
+
+    // Lo que se manda, SIEMPRE en la unidad base: "1" bolsa de 50 kg son 50.
     function cantidadTi() {
       const ti = estado.ti
       if (!ti || !ti.insumo) return null
-      const n = parsearCantidad(document.getElementById('ti-cantidad').value, {
-        unidad: ti.insumo.unidad_medida ?? '',
-      })
-      return (n === null || n <= 0) ? null : n
+      const modo = modoTi()
+      const { base } = aUnidadBase(leerCantidadEscrita(document.getElementById('ti-cantidad'), modo), modo)
+      return (base === null || base <= 0) ? null : base
     }
 
     function actualizarSaldoTi() {
@@ -9837,6 +9951,15 @@
       // Elegida la terna, ya se puede decir cuánto. La cantidad no bloquea si
       // excede —la RPC valida saldo del lado del servidor— pero se avisa antes.
       campoCant.hidden = false
+      const modo = modoTi()
+      pintarModoCantidad('ti', modo, actualizarSaldoTi)
+      const conv = aUnidadBase(leerCantidadEscrita(document.getElementById('ti-cantidad'), modo), modo)
+      const errCant = document.getElementById('ti-error-cantidad')
+      // El error de la conversión (2,5 bultos de 3 u) se dice mientras se
+      // escribe, y se borra solo si lo había puesto él.
+      if (conv.error) { errCant.hidden = false; errCant.textContent = conv.error }
+      else if (ti.errorDeModo) { errCant.hidden = true; errCant.textContent = '' }
+      ti.errorDeModo = !!conv.error
       const cant = cantidadTi()
       const excede = cant !== null && cant > saldo
       avisoExcede.hidden = !excede
@@ -9857,7 +9980,8 @@
       if (ti.insumo && ti.lote === undefined) err('ti-error-lote', 'Elegí el lote.')
       if (ti.insumo && ti.presentacion === undefined) err('ti-error-presentacion', 'Elegí la presentación.')
       const cant = cantidadTi()
-      if (ti.insumo && cant === null) err('ti-error-cantidad', 'Escribí cuánto mandás.')
+      const convTi = aUnidadBase(leerCantidadEscrita(document.getElementById('ti-cantidad'), modoTi()), modoTi())
+      if (ti.insumo && cant === null) err('ti-error-cantidad', convTi.error || 'Escribí cuánto mandás.')
       if (!ok) return
 
       const cont = contenidoTi()

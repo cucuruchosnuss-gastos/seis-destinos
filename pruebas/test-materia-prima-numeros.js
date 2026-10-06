@@ -21,6 +21,7 @@ const path = require('path')
 const { execFileSync } = require('child_process')
 const { construirCon, scriptModulo } = require('./sandbox')
 const { fuenteNumeros, inputFalso } = require('./numeros-comun')
+const { FUNCIONES_CANTIDADES, FUNCIONES_CARGA, CONSTANTES_CARGA } = require('./cantidades-comun')
 const { extraerFn } = require('./extraer')
 const { leer } = require('./circuito-comun')
 
@@ -120,7 +121,7 @@ const PRELUDIO = `
   function renderizarItemsInternos() {
     __internos.campos = []
     estado.recepcion.items.forEach((it, idx) => {
-      if (it.contenido != null) __internos.campos.push(campo({ rec: 'bultos', idx: String(idx) }))
+      if (modoRecepcion(it).enBultos) __internos.campos.push(campo({ rec: 'bultos', idx: String(idx) }))
       else __internos.campos.push(campo({ rec: 'base', idx: String(idx) }))
     })
     cablearItemsInternos()
@@ -151,8 +152,10 @@ const FUNCIONES = [
   'cablearItemsInternos', 'repintarItemInterno', 'redondearRecepcion', 'baseDesdeBultos', 'recibidaDe',
   'recibidaParaRpc', 'difiereDeLoEnviado', 'faltanConfirmarInternos', 'problemasInternos',
   'mostrarErrorInterno', 'confirmarRecepcion',
+  // cómo se pide lo que llegó (05/10/2026)
+  'modoRecepcion', ...FUNCIONES_CANTIDADES, ...FUNCIONES_CARGA,
 ]
-const CONSTANTES = ['UNIDADES_ENTERAS', 'DECIMALES_CANTIDAD', 'CAMPOS_CANTIDAD_ITEM', 'TOLERANCIA_CANTIDAD', 'TIPOS_CON_CIRCUITO']
+const CONSTANTES = ['UNIDADES_ENTERAS', 'DECIMALES_CANTIDAD', 'CAMPOS_CANTIDAD_ITEM', 'TOLERANCIA_CANTIDAD', 'TIPOS_CON_CIRCUITO', ...CONSTANTES_CARGA]
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
@@ -418,14 +421,18 @@ ramas.push(async () => {
   S.estado.recepcion = {
     cabecera: { id: 'tr-1', destino_nombre: 'Mengui' },
     items: [
-      { id: 'a', nombre: 'Harina', unidad: 'kg', contenido: 25, enviada: 40000, bultos: null, fraccion: 0, cantidadBase: null, motivo: 'se mojaron', error: null },
+      { id: 'a', nombre: 'Harina', unidad: 'kg', vista: 'bulto', contenido: 25, enviada: 40000, bultos: null, fraccion: 0, cantidadBase: null, motivo: 'se mojaron', error: null },
       { id: 'b', nombre: 'Lecitina', unidad: 'kg', contenido: null, enviada: 10, bultos: null, fraccion: 0, cantidadBase: null, motivo: 'derrame', error: null },
       { id: 'c', nombre: 'Bolsas', unidad: 'un', contenido: null, enviada: 2000, bultos: null, fraccion: 0, cantidadBase: null, motivo: 'faltaron', error: null },
+      // EL CASO OBLIGATORIO (05/10/2026): azúcar en bultos de 50 kg — "1" manda 50 —
+      // y la misma azúcar con la vista en kilos — "1" manda 1.
+      { id: 'd', nombre: 'Azúcar', unidad: 'kg', vista: 'bulto', contenido: 50, enviada: 50, bultos: null, fraccion: 0, cantidadBase: null, motivo: '', error: null },
+      { id: 'e', nombre: 'Azúcar', unidad: 'kg', vista: 'base', contenido: 50, enviada: 50, bultos: null, fraccion: 0, cantidadBase: null, motivo: 'faltó', error: null },
     ],
   }
   // renderizarItemsInternos real no se usa: el stub recrea los inputs y llama
   // a la cablearItemsInternos REAL.
-  const dibujar = () => { S.__internos.campos = []; S.estado.recepcion.items.forEach((it, idx) => S.__internos.campos.push(S.campo({ rec: it.contenido != null ? 'bultos' : 'base', idx: String(idx) }))); S.cablearItemsInternos() }
+  const dibujar = () => { S.__internos.campos = []; S.estado.recepcion.items.forEach((it, idx) => S.__internos.campos.push(S.campo({ rec: S.modoRecepcion(it).enBultos ? 'bultos' : 'base', idx: String(idx) }))); S.cablearItemsInternos() }
   dibujar()
   const campoDe = (idx) => S.__internos.campos.find(e => e.dataset.idx === String(idx))
   chk('recepción: bultos de enteros, kg decimal, un de enteros',
@@ -441,6 +448,10 @@ ramas.push(async () => {
   tipear(1, '8,05')
   chk('recepción kg: "8,05" sobrevive al re-render por tecla (no termina en 85)', S.estado.recepcion.items[1].cantidadBase === 8.05 && campoDe(1).value === '8,05', [S.estado.recepcion.items[1].cantidadBase, campoDe(1).value])
   tipear(2, '1500')
+  tipear(3, '1')
+  tipear(4, '1')
+  chk('recepción azúcar en bultos: el campo es de bultos', campoDe(3).dataset.rec === 'bultos')
+  chk('recepción azúcar en kilos: el campo es de kg aunque el renglón traiga bultos de 50', campoDe(4).dataset.rec === 'base')
   chk('recepción un: "1500" = 1500 y se muestra "1.500"', S.estado.recepcion.items[2].cantidadBase === 1500 && campoDe(2).value === '1.500', campoDe(2).value)
   dibujar()
   chk('recepción: al volver a dibujar, los números se escriben con ponerNumero', campoDe(0).value === '1.500' && campoDe(1).value === '8,05' && campoDe(2).value === '1.500', [campoDe(0).value, campoDe(1).value, campoDe(2).value])
@@ -453,6 +464,15 @@ ramas.push(async () => {
   chk('recepción: cantidad_recibida 1500 bultos × 25 = 37500', items[0]?.cantidad_recibida === 37500, items[0])
   chk('recepción: cantidad_recibida 8.05 kg', items[1]?.cantidad_recibida === 8.05, items[1])
   chk('recepción: cantidad_recibida 1500 un', items[2]?.cantidad_recibida === 1500, items[2])
+  // El doble de la base no mira las columnas pedidas: que el renglón traiga
+  // la preferencia del insumo se verifica sobre el texto de la consulta y del
+  // armado del renglón (sin ella, todo se pediría en kilos).
+  chk('recepción: la consulta trae insumos.vista_preferida',
+    /insumos\(nombre, marca, unidad_medida, aclaracion, vista_preferida\)/.test(SCRIPT))
+  chk('recepción: el renglón guarda la vista del insumo',
+    /vista: it\.insumos\?\.vista_preferida \?\? 'base',/.test(SCRIPT))
+  chk('recepción: "1" bolsa de azúcar de 50 kg manda 50', items[3]?.cantidad_recibida === 50, items[3])
+  chk('recepción: "1" kg de azúcar manda 1', items[4]?.cantidad_recibida === 1, items[4])
 })
 // De a una: comparten el supabase mockeado.
 esperas.push(ramas.reduce((p, f) => p.then(f), Promise.resolve()))

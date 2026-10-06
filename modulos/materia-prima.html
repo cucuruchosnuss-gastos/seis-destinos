@@ -2235,6 +2235,12 @@
       min-width: 0;
     }
     .int-resultado__dif { color: var(--bordo-oscuro); font-weight: 700; }
+    /* "= 50 kg" debajo del campo de bultos (05/10/2026): lo que va al stock,
+       en chico, para controlar que el número es el que se quiso poner. */
+    .int-equivale {
+      font-size: 0.8125rem; font-weight: 600; color: var(--color-texto-2);
+      margin-top: 0.3125rem;
+    }
     /* El guion: todavía sin confirmar. Nunca un default con lo enviado. */
     .int-resultado--pendiente { color: var(--color-texto-suave); font-weight: 500; }
 
@@ -2991,6 +2997,9 @@
     import { supabase } from '../js/supabase.js'
     import { unidadesDeLaBarra, alCambiarUnidad, filtrarPorUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    // Cómo se pide una cantidad según la vista preferida del insumo
+    // (05/10/2026): la misma regla que Stock usa al enviar.
+    import { modoDeCarga, aUnidadBase, equivalenteDeCarga, unidadCorta } from '../js/cantidades.js'
 
     mostrarBannerVersion()
 
@@ -9697,8 +9706,23 @@
     // —que hoy es el caso de TODO el stock, cero movimientos tienen
     // contenido_por_bulto— se carga la cantidad directo.
     function recibidaDe(it) {
-      if (it.contenido != null) return baseDesdeBultos(it.bultos, it.fraccion, it.contenido)
+      if (modoRecepcion(it).enBultos) return baseDesdeBultos(it.bultos, it.fraccion, it.contenido)
       return it.cantidadBase
+    }
+
+    // CÓMO SE PIDE LO QUE LLEGÓ (05/10/2026): como Facu configuró el insumo.
+    // En bultos solo si su vista es 'bulto' Y el renglón trae su contenido por
+    // bulto; si no, en su unidad, siempre con la unidad al lado ("kg", "L",
+    // "u"). Antes un renglón con presentación se pedía SIEMPRE en "bultos", sin
+    // decir de cuánto, aunque el insumo se maneje en kilos. Cada renglón del
+    // envío tiene UNA sola presentación (o ninguna): no hay lote partido.
+    function modoRecepcion(it) {
+      return modoDeCarga({
+        unidad: it.unidad,
+        vista: it.vista,
+        contenidos: it.contenido != null ? [it.contenido] : [],
+        decimalesBase: decimalesCantidad({ unidad: it.unidad }),
+      })
     }
 
     // Cuando lo recibido y lo enviado son "lo mismo" salvo ruido de punto
@@ -9837,7 +9861,7 @@
       // sola FK a esa tabla.
       const { data, error } = await supabase
         .from('stock_transferencia_items')
-        .select('id, lote, contenido_por_bulto, cantidad_enviada, insumos(nombre, marca, unidad_medida, aclaracion)')
+        .select('id, lote, contenido_por_bulto, cantidad_enviada, insumos(nombre, marca, unidad_medida, aclaracion, vista_preferida)')
         .eq('transferencia_id', id)
 
       if (error) {
@@ -9858,6 +9882,7 @@
           marca: it.insumos?.marca ?? '',
           aclaracion: it.insumos?.aclaracion ?? null,
           unidad: it.insumos?.unidad_medida ?? '',
+          vista: it.insumos?.vista_preferida ?? 'base',
           lote: it.lote,
           contenido: it.contenido_por_bulto === null ? null : Number(it.contenido_por_bulto),
           enviada: Number(it.cantidad_enviada) || 0,
@@ -9896,16 +9921,23 @@
         // Lo enviado se muestra en el MISMO vocabulario en que se pide lo
         // recibido: si no son comparables de un vistazo, la comparación queda
         // en la cabeza de la persona.
-        const enviadoTxt = it.contenido != null
+        const modo = modoRecepcion(it)
+        const enviadoTxt = modo.enBultos
           ? `${textoBultosRecepcion(it.enviada, it.contenido)} — ${formatearCantidad(it.enviada, u)}`
           : formatearCantidad(it.enviada, u)
 
-        const entrada = it.contenido != null
+        // Debajo del campo de bultos, en chico, lo que va al stock: "= 50 kg".
+        const equivale = modo.enBultos && it.bultos !== null
+          ? equivalenteDeCarga(Number(it.bultos) + Number(it.fraccion || 0), modo)
+          : null
+
+        const entrada = modo.enBultos
           ? `<div class="cantidad-fila">
                <input type="text" inputmode="numeric" autocomplete="off" data-rec="bultos" data-idx="${idx}"
                       placeholder="—" style="max-width:5.5rem;">
-               <span class="cantidad-fila__unidad">bultos</span>
+               <span class="cantidad-fila__unidad">${esc(modo.rotulo)}</span>
              </div>
+             <div class="int-equivale" ${equivale ? '' : 'hidden'}>${esc(equivale || '')}</div>
              <div class="int-fracciones">
                ${FRACCIONES_RECEPCION.map(f => `
                  <button type="button" class="int-frac ${it.fraccion === f.valor ? 'int-frac--activa' : ''}"
@@ -9914,7 +9946,7 @@
           : `<div class="cantidad-fila">
                <input type="text" inputmode="decimal" autocomplete="off" data-rec="base" data-idx="${idx}"
                       placeholder="—" style="max-width:7rem;">
-               <span class="cantidad-fila__unidad">${esc(u)}</span>
+               <span class="cantidad-fila__unidad">${esc(unidadCorta(u))}</span>
              </div>`
 
         const recibida = recibidaParaRpc(it)
