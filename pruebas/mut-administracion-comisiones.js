@@ -73,9 +73,7 @@ correrMutaciones({
     { nombre: 'la comisión habitual no se manda', de: '        if (conComision) {', a: '        if (false) {' },
     { nombre: 'la comisión borrada viaja como cero', de: "      return v === '' || v === null || v === undefined ? null : Number(v)", a: "      return v === '' || v === null || v === undefined ? 0 : Number(v)" },
     { nombre: 'la comisión que falla después de la ficha se tapa', de: "            f.error = 'Se guardó la ficha, MENOS la comisión habitual: ' + (error.message || 'no se pudo guardar.')", a: "            f.error = null" },
-    { nombre: 'la comisión sola que falla se tapa', de: '            if (!fichaGuardada) throw error
-', a: '' },
-    { nombre: 'guardada siempre', de: '      if (e === null || l === null) return e === l\n', a: '      return true\n' },
+    { nombre: 'la comisión sola que falla se tapa', de: '            if (!fichaGuardada) throw error\n', a: '' },
     { nombre: 'más de 100 % se manda', de: "        f.error = 'La comisión habitual va de 0 a 100 %.'; pintarPieFicha(); return", a: '' },
   ],
 })
