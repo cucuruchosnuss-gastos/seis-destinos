@@ -62,7 +62,7 @@ correrMutaciones({
     { nombre: 'no busca por razón social', de: ' || normalizar(c.razon_social).includes(q) ||', a: ' ||' },
     { nombre: 'el transporte habitual pisa lo escrito', de: '      if (!limpio(f.transporte) || f.transporte === f.transporteAuto) {', a: '      if (true) {' },
     { nombre: 'no trae el transporte habitual', de: '        f.transporte = limpio(c.transporte_habitual)\n', a: '' },
-    { nombre: 'los clientes se leen con el límite de crédito', de: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo')", a: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, limite_credito')" },
+    { nombre: 'los clientes se leen con el límite de crédito', de: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio')", a: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio, limite_credito')" },
     // Los renglones
     { nombre: 'las cajas con decimales', de: '    const DECIMALES_CAJAS = 0', a: '    const DECIMALES_CAJAS = 2' },
     { nombre: 'media caja pasa', de: " || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'", a: ") return 'poné las cajas'" },

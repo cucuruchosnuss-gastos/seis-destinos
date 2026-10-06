@@ -15,6 +15,7 @@ correrMutaciones({
   region: limitesAdministracion,
   funciones: ['htmlInterruptor', 'htmlFilaCliente', 'htmlListaClientes'],
   equivalentes: [
+    { expr: 'esc(TEXTO_ELEGI_FABRICA)', motivo: 'texto constante del código ("Elegí una fábrica arriba para cambiarlo")' },
     { expr: 'esc(estado.errorSaldos)', motivo: 'texto constante del código: lo pone mostrarClientes()' },
     { expr: 'esc(TEXTO_ELEGI_FABRICA)', motivo: 'constante del código ("Elegí una fábrica arriba para cambiarlo"), 30/09/2026' },
     { expr: 'esc(estado.apagados.error)', motivo: 'texto constante del código: lo pone cargarApagados()' },
@@ -25,7 +26,7 @@ correrMutaciones({
   ],
   manuales: [
     // El interruptor
-    { nombre: 'no hay interruptor', de: '      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`', a: '      return `<div class="ad-fila-cliente">${fila}</div>`' },
+    { nombre: 'no hay interruptor', de: '      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>${htmlAccionesProvisorio(c)}`', a: '      return `<div class="ad-fila-cliente">${fila}</div>${htmlAccionesProvisorio(c)}`' },
     { nombre: 'el interruptor sin permiso', de: '      if (!puedePrenderApagar(c.unidad_negocio_id ?? estado.empresaId)) return \'\'\n', a: '' },
     { nombre: 'el interruptor con otro permiso', de: '    function puedePrenderApagar(unidadId = estado.empresaId) {\n      return puedeDarAlta(unidadId)', a: "    function puedePrenderApagar(unidadId = estado.empresaId) {\n      return puedeEn('retiros', 'ver', unidadId)" },
     { nombre: 'el apagado se ve prendido', de: '      const prendido = !c.apagado\n', a: '      const prendido = true\n' },

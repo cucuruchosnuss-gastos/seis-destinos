@@ -295,6 +295,15 @@
       background: var(--bordo); color: #fff; text-transform: uppercase; letter-spacing: 0.03em;
     }
     .rt-sello--insumo { background: #F1EEE9; color: var(--color-texto-menu); text-transform: none; }
+    /* Un cliente nuevo que cargó el depósito: lo completa administración. */
+    .rt-sello--provisorio { background: #F1EEE9; color: var(--color-texto-menu); }
+
+    /* ── El cliente nuevo (provisorio, 06/10/2026) ────────────────────── */
+    .rt-cliente-nuevo:empty { display: none; }
+    .rt-cliente-nuevo { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; min-width: 0; }
+    .rt-cliente-nuevo__panel { display: flex; flex-direction: column; gap: 10px; }
+    .rt-cliente-nuevo__acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .rt-cliente-nuevo__acciones .rt-btn { flex: 1 1 12rem; }
 
     /* ── 1c · El catálogo en tres grupos ──────────────────────────────── */
     .rt-catalogo { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -651,6 +660,9 @@
             <p class="rt-pista">Busca por nombre, razón social o apodo.</p>
             <div class="rt-resultados" id="rt-clientes-resultados"></div>
             <div id="rt-clientes-frecuentes"></div>
+            <!-- El cliente nuevo (06/10/2026): si no está, se carga provisorio
+                 (primero se muestran los parecidos). Lo arma pintarClienteNuevo(). -->
+            <div class="rt-cliente-nuevo" id="rt-cliente-nuevo"></div>
           </div>
           <div class="rt-bloque-cliente rt-bloque-cliente--elegido" id="rt-cliente-elegido-bloque" hidden>
             <div class="rt-tarjeta" id="rt-cliente-elegido"></div>
@@ -796,6 +808,10 @@
       buscarClientesSinPermiso: false,
       turnoBuscarClientes: 0,
       esperaBuscarClientes: null,
+      // El cliente nuevo que se está cargando (06/10/2026): null, o
+      // { form, paso: 'datos' | 'parecidos', nombre, telefono, localidad,
+      //   parecidos, buscando, error, enviando }.
+      nuevoCliente: null,
       catalogo: null,
       catalogoEmpresa: null,
       errorCatalogo: null,
@@ -1072,6 +1088,7 @@
       if (cambio) {
         estado.clientes = null
         estado.buscarClientes = null
+        estado.nuevoCliente = null
         estado.catalogo = null
         estado.lotes = new Map()
         estado.mis = null
@@ -1116,7 +1133,7 @@
     // Sin nada de plata: ni el límite de crédito, ni la lista de precios.
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo')
+        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio')
         .eq('unidad_negocio_id', unidadId).eq('activo', true).order('nombre')
       if (error) throw error
       return data ?? []
@@ -1173,6 +1190,9 @@
       const f = estado.form
       if (!f) return
       f.clienteBusqueda = texto
+      // Escribir en el buscador cierra el cliente nuevo a medio cargar.
+      if (estado.nuevoCliente) estado.nuevoCliente = null
+      pintarClienteNuevo()
       clearTimeout(estado.esperaBuscarClientes)
       const q = limpio(texto)
       if (q.length >= MIN_LETRAS_BUSCAR && buscarClientesEnLaBase() && !busquedaVigente(q)) {
@@ -1749,7 +1769,8 @@
       const d = [apodo ? `“${apodo}”` : '', c ? detalleCliente(c) : ''].filter(Boolean).join(' · ')
       return `<div class="rt-cliente-elegido"><span class="rt-cliente-elegido__texto"><span class="rt-rotulo">Retira</span>` +
         `<span class="rt-cliente-elegido__nombre">${esc(c ? c.nombre : 'Cliente (no se pudo leer)')}</span>` +
-        `${d ? `<span class="rt-cliente-elegido__detalle">${esc(d)}</span>` : ''}</span>` +
+        `${d ? `<span class="rt-cliente-elegido__detalle">${esc(d)}</span>` : ''}` +
+        `${c?.provisorio === true ? '<span class="rt-sello rt-sello--provisorio" title="Cliente nuevo: lo completa administración">Provisorio</span>' : ''}</span>` +
         `<span class="rt-numerar">Se numera al confirmar</span>` +
         `<button type="button" class="rt-link" id="rt-cliente-cambiar">Cambiar</button></div>`
     }
@@ -1896,8 +1917,11 @@
       document.getElementById('rt-cliente-elegido').innerHTML = htmlClienteElegido(f)
       document.getElementById('rt-cliente-elegido-bloque').hidden = !f.clienteId
       document.getElementById('rt-cliente-buscador').hidden = !!f.clienteId
-      document.getElementById('rt-clientes-resultados').innerHTML = f.clienteId ? '' : htmlResultadosClientes(f.clienteBusqueda)
-      document.getElementById('rt-clientes-frecuentes').innerHTML = f.clienteId ? '' : htmlFrecuentes(f)
+      // Con el cliente nuevo abierto, la lista no se ve: el panel muestra los parecidos.
+      const conNuevo = !!estado.nuevoCliente
+      document.getElementById('rt-clientes-resultados').innerHTML = f.clienteId || conNuevo ? '' : htmlResultadosClientes(f.clienteBusqueda)
+      document.getElementById('rt-clientes-frecuentes').innerHTML = f.clienteId || conNuevo ? '' : htmlFrecuentes(f)
+      pintarClienteNuevo()
     }
 
     // Elegir el cliente trae su transporte habitual, salvo que ya se haya
@@ -1929,6 +1953,227 @@
       pintarPie()
       pintarPaso()
       guardarBorrador()
+    }
+
+    // ── EL CLIENTE NUEVO (06/10/2026, pedido de Facu) ───────────────────────
+    // Si el buscador no lo encuentra, el depósito lo carga en el momento:
+    // nombre (obligatorio), teléfono y localidad. Queda PROVISORIO
+    // (clientes.provisorio) hasta que administración lo complete y lo
+    // confirme, o lo una con el cliente que ya existía.
+    //
+    // ANTES DE CREARLO SE MUESTRAN LOS PARECIDOS ("¿Es alguno de estos?"):
+    // buscar_clientes con lo escrito (también busca por apodo) o, si la base
+    // dice que no hay permiso (el depósito suele tener solo retiros:cargar:
+    // devuelve null), la búsqueda local, que también mira los apodos. Recién
+    // cuando la búsqueda terminó se puede crear.
+    //
+    // Crear es crear_cliente_provisorio(p_unidad_negocio_id, p_nombre,
+    // p_telefono, p_localidad) → uuid: la base guarda el nombre en mayúsculas,
+    // exige 3 letras y rechaza un nombre que ya está en la empresa. La orden
+    // sigue con ese cliente SIN perder nada (es la misma, con el mismo uuid).
+    // El teléfono es un IDENTIFICADOR: va como texto, nunca como número.
+    const LARGO_MINIMO_NOMBRE_CLIENTE = 3
+    const TEXTO_NOMBRE_CORTO = 'Escribí el nombre del cliente (al menos 3 letras).'
+    const MAX_PARECIDOS = 8
+
+    // Los parecidos en la lista local: lo que encuentra el buscador con el
+    // nombre entero, y los que comparten una palabra de 4 letras o más (en el
+    // nombre, la razón social o un apodo). Sin repetir, hasta 8.
+    function parecidosLocales(lista, nombre) {
+      const todos = Array.isArray(lista) ? lista.filter(c => c && c.activo !== false) : []
+      const enteros = limpio(nombre) ? clientesFiltrados(todos, nombre) : []
+      const palabras = normalizar(nombre).split(' ').filter(p => p.length >= 4)
+      const porPalabra = palabras.length
+        ? todos.filter(c => [c.nombre, c.razon_social, ...(Array.isArray(c.apodos) ? c.apodos : [])].some(t => palabras.some(p => normalizar(t).includes(p))))
+        : []
+      const vistos = new Set()
+      const salida = []
+      for (const c of [...enteros, ...porPalabra]) {
+        if (vistos.has(c.id)) continue
+        vistos.add(c.id)
+        salida.push({ c, coincide: undefined })
+      }
+      return salida.slice(0, MAX_PARECIDOS)
+    }
+
+    // Lo que viaja a crear_cliente_provisorio: el texto limpio; teléfono y
+    // localidad vacíos van null (la base también los pasa a null).
+    function parametrosClienteNuevo(n, unidadId) {
+      return {
+        p_unidad_negocio_id: unidadId,
+        p_nombre: limpio(n?.nombre),
+        p_telefono: limpio(n?.telefono) || null,
+        p_localidad: limpio(n?.localidad) || null,
+      }
+    }
+
+    function abrirClienteNuevo() {
+      const f = estado.form
+      if (!f || f.clienteId || !estado.empresaId) return
+      estado.nuevoCliente = { form: f, paso: 'datos', nombre: limpio(f.clienteBusqueda), telefono: '', localidad: '',
+        parecidos: null, buscando: false, error: null, enviando: false }
+      pintarCliente()
+      document.getElementById('rt-nuevo-nombre')?.focus?.()
+    }
+
+    function cerrarClienteNuevo() {
+      if (estado.nuevoCliente?.enviando) return
+      estado.nuevoCliente = null
+      pintarCliente()
+    }
+
+    // Lo que está escrito en el panel pasa al estado (si el panel se ve).
+    function leerDatosClienteNuevo() {
+      const n = estado.nuevoCliente
+      if (!n || n.paso !== 'datos') return
+      for (const k of ['nombre', 'telefono', 'localidad']) {
+        const el = document.getElementById(`rt-nuevo-${k}`)
+        if (el) n[k] = el.value
+      }
+    }
+
+    function volverDatosClienteNuevo() {
+      const n = estado.nuevoCliente
+      if (!n || n.enviando) return
+      n.paso = 'datos'
+      n.error = null
+      pintarClienteNuevo()
+    }
+
+    async function seguirClienteNuevo() {
+      const n = estado.nuevoCliente
+      if (!n || n.paso !== 'datos' || n.enviando) return
+      leerDatosClienteNuevo()
+      if (limpio(n.nombre).length < LARGO_MINIMO_NOMBRE_CLIENTE) { n.error = TEXTO_NOMBRE_CORTO; pintarClienteNuevo(); return }
+      const nombre = limpio(n.nombre)
+      const empresaId = estado.empresaId
+      n.error = null
+      n.paso = 'parecidos'
+      n.parecidos = parecidosLocales(estado.clientes, nombre)
+      n.buscando = buscarClientesEnLaBase()
+      pintarClienteNuevo()
+      if (!n.buscando) return
+      let parecidos = null
+      try {
+        const { data, error } = await supabase.rpc('buscar_clientes', { p_busqueda: nombre, p_unidad_negocio_id: empresaId })
+        if (error) throw error
+        if (data === null) estado.buscarClientesSinPermiso = true
+        else {
+          parecidos = (Array.isArray(data) ? data : [])
+            .filter(x => x && x.activo !== false && (x.unidad_negocio_id == null || x.unidad_negocio_id === empresaId))
+            .slice(0, MAX_PARECIDOS)
+            .map(x => ({
+              c: { ...(clienteDe(x.cliente_id) ?? {}), id: x.cliente_id, nombre: x.nombre, razon_social: x.razon_social ?? null,
+                localidad: x.localidad ?? null, apodos: Array.isArray(x.apodos) ? x.apodos : [], provisorio: x.provisorio === true },
+              coincide: x.apodo_coincide ?? null, empresa: x.empresa,
+            }))
+        }
+      } catch (err) {
+        console.error('No se pudieron buscar los parecidos en la base (quedan los de la lista local):', err)
+      }
+      if (estado.nuevoCliente !== n || n.paso !== 'parecidos' || empresaId !== estado.empresaId || limpio(n.nombre) !== nombre) return
+      if (parecidos) n.parecidos = parecidos
+      n.buscando = false
+      pintarClienteNuevo()
+    }
+
+    // Es uno de los parecidos: se elige ESE (si vino de la base y no estaba
+    // en la lista local, se suma) y no se crea nada.
+    function elegirParecido(id) {
+      const n = estado.nuevoCliente
+      if (!n || n.enviando) return
+      const p = (n.parecidos ?? []).find(x => x.c.id === id)
+      if (!p) return
+      if (!clienteDe(id)) {
+        const c = { razon_social: null, apodos: [], cuit: null, localidad: null, activo: true, transporte_habitual: null, ...p.c }
+        if (Array.isArray(estado.clientes)) estado.clientes.push(c)
+        else estado.clientes = [c]
+      }
+      estado.nuevoCliente = null
+      elegirCliente(id)
+    }
+
+    async function crearClienteNuevo() {
+      const n = estado.nuevoCliente
+      const f = estado.form
+      if (!n || !f || n.form !== f || n.paso !== 'parecidos' || n.buscando || n.enviando || !estado.empresaId) return
+      const p = parametrosClienteNuevo(n, estado.empresaId)
+      if (p.p_nombre.length < LARGO_MINIMO_NOMBRE_CLIENTE) { n.paso = 'datos'; n.error = TEXTO_NOMBRE_CORTO; pintarClienteNuevo(); return }
+      n.enviando = true
+      n.error = null
+      pintarClienteNuevo()
+      try {
+        const { data, error } = await supabase.rpc('crear_cliente_provisorio', p)
+        if (error) throw error
+        if (!data) throw new Error('La base no devolvió el cliente nuevo. Buscalo en la lista antes de cargarlo de nuevo.')
+        const c = { id: data, nombre: p.p_nombre.toUpperCase(), razon_social: null, apodos: [], cuit: null, domicilio: null,
+          localidad: p.p_localidad, telefono: p.p_telefono, email: null, transporte_habitual: null, activo: true, provisorio: true }
+        if (Array.isArray(estado.clientes)) estado.clientes.push(c)
+        else estado.clientes = [c]
+        if (estado.nuevoCliente === n) estado.nuevoCliente = null
+        // La orden es la misma (mismo uuid, mismos renglones): solo gana el cliente.
+        if (estado.form === f) elegirCliente(data)
+        mostrarExito(`Cliente nuevo: ${c.nombre}. Queda provisorio hasta que administración lo complete.`)
+      } catch (err) {
+        console.error('No se pudo cargar el cliente nuevo:', err)
+        n.enviando = false
+        // Los mensajes de crear_cliente_provisorio ya vienen escritos para
+        // una persona ("Ya hay un cliente con ese nombre en esta empresa:
+        // buscalo en la lista."): van TAL CUAL, pegados al botón.
+        n.error = err?.message || 'No se pudo cargar el cliente nuevo. Probá de nuevo.'
+        pintarClienteNuevo()
+      }
+    }
+
+    function htmlBotonClienteNuevo(f) {
+      if (!f || f.clienteId || !limpio(f.clienteBusqueda)) return ''
+      return `<button type="button" class="rt-btn rt-btn--secundario rt-btn--ancho" id="rt-cliente-nuevo-abrir">` +
+        `${esc('+ Cliente nuevo: «' + limpio(f.clienteBusqueda) + '»')}</button>` +
+        `<p class="rt-pista">¿No está en la lista? Cargalo: queda provisorio hasta que administración lo complete.</p>`
+    }
+
+    function htmlClienteNuevo(n) {
+      const error = `<p class="rt-error-pegado" id="rt-nuevo-error"${n.error ? '' : ' hidden'}>${esc(n.error ?? '')}</p>`
+      if (n.paso === 'datos') {
+        return `<div class="rt-tarjeta rt-cliente-nuevo__panel"><p class="rt-subtitulo">Cliente nuevo</p>` +
+          `<div class="rt-campo"><label for="rt-nuevo-nombre">Nombre (obligatorio)</label><input type="text" class="rt-input" id="rt-nuevo-nombre" maxlength="120" autocomplete="off"></div>` +
+          `<div class="rt-campo"><label for="rt-nuevo-telefono">Teléfono</label><input type="tel" class="rt-input" id="rt-nuevo-telefono" inputmode="tel" maxlength="40" autocomplete="off"></div>` +
+          `<div class="rt-campo"><label for="rt-nuevo-localidad">Localidad</label><input type="text" class="rt-input" id="rt-nuevo-localidad" maxlength="120" autocomplete="off"></div>` +
+          error +
+          `<div class="rt-cliente-nuevo__acciones"><button type="button" class="rt-btn" id="rt-nuevo-seguir">Seguir</button>` +
+          `<button type="button" class="rt-btn rt-btn--suave" id="rt-nuevo-cancelar">Cancelar</button></div></div>`
+      }
+      const empresa = empresaActual()?.nombre ?? 'esta empresa'
+      const nombre = limpio(n.nombre)
+      let listaParecidos
+      if (n.buscando && !(n.parecidos ?? []).length) listaParecidos = '<div class="rt-texto-suave">Buscando clientes parecidos…</div>'
+      else if (!(n.parecidos ?? []).length) listaParecidos = `<div class="rt-texto-suave">${esc('No hay ningún cliente parecido en ' + empresa + '.')}</div>`
+      else listaParecidos = n.parecidos.map(p => htmlResultadoCliente(p.c, p.empresa || empresa, nombre, p.coincide)).join('') +
+        (n.buscando ? '<div class="rt-texto-suave">Buscando más parecidos…</div>' : '')
+      return `<div class="rt-tarjeta rt-cliente-nuevo__panel"><h2 class="rt-titulo">¿Es alguno de estos?</h2>` +
+        `<p class="rt-texto-suave">${esc('Antes de cargar «' + nombre + '» como cliente nuevo de ' + empresa + ', fijate que no esté. Si es uno de estos, tocalo.')}</p>` +
+        `<div class="rt-resultados rt-parecidos" id="rt-nuevo-parecidos">${listaParecidos}</div>` +
+        error +
+        `<div class="rt-cliente-nuevo__acciones"><button type="button" class="rt-btn" id="rt-nuevo-crear"${n.buscando || n.enviando ? ' disabled' : ''}>` +
+        `${esc(n.enviando ? 'Cargando…' : 'No es ninguno: cargar «' + nombre + '»')}</button>` +
+        `<button type="button" class="rt-btn rt-btn--suave" id="rt-nuevo-volver"${n.enviando ? ' disabled' : ''}>‹ Corregir los datos</button></div></div>`
+    }
+
+    // El panel se repinta en cada paso (no en cada tecla: le sacaría el foco).
+    // Un cliente nuevo de otra orden (se empezó otra) se olvida.
+    function pintarClienteNuevo() {
+      const el = document.getElementById('rt-cliente-nuevo')
+      if (!el) return
+      const f = estado.form
+      if (estado.nuevoCliente && (estado.nuevoCliente.form !== f || f?.clienteId)) estado.nuevoCliente = null
+      const n = estado.nuevoCliente
+      el.innerHTML = n ? htmlClienteNuevo(n) : htmlBotonClienteNuevo(f)
+      if (n?.paso === 'datos') {
+        for (const k of ['nombre', 'telefono', 'localidad']) {
+          const i = document.getElementById(`rt-nuevo-${k}`)
+          if (i) i.value = n[k] ?? ''
+        }
+      }
     }
 
     // ── los renglones ──────────────────────────────────────────────────────
@@ -3146,6 +3391,22 @@
       document.getElementById('rt-clientes-resultados').addEventListener('click', (e) => {
         const b = e.target.closest('[data-cliente]')
         if (b) elegirCliente(b.dataset.cliente)
+      })
+      // El cliente nuevo (06/10/2026)
+      document.getElementById('rt-cliente-nuevo').addEventListener('click', (e) => {
+        if (e.target.closest('#rt-cliente-nuevo-abrir')) abrirClienteNuevo()
+        else if (e.target.closest('#rt-nuevo-seguir')) seguirClienteNuevo()
+        else if (e.target.closest('#rt-nuevo-cancelar')) cerrarClienteNuevo()
+        else if (e.target.closest('#rt-nuevo-volver')) volverDatosClienteNuevo()
+        else if (e.target.closest('#rt-nuevo-crear')) crearClienteNuevo()
+        else {
+          const b = e.target.closest('[data-cliente]')
+          if (b) elegirParecido(b.dataset.cliente)
+        }
+      })
+      document.getElementById('rt-cliente-nuevo').addEventListener('input', () => leerDatosClienteNuevo())
+      document.getElementById('rt-cliente-nuevo').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.closest?.('#rt-cliente-nuevo input')) { e.preventDefault(); seguirClienteNuevo() }
       })
       document.getElementById('rt-cliente-elegido').addEventListener('click', (e) => {
         if (e.target.closest('#rt-cliente-cambiar')) cambiarCliente()
