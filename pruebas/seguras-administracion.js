@@ -68,6 +68,11 @@ const SEGURAS_ADMINISTRACION = [
   ['cabeza', 'HTML ya escapado: htmlSeccion() arma la cabeza con esc() del título y del chip'],
   ['cuerpo', 'HTML ya escapado: htmlSeccion() arma el cuerpo con esc() del número y la unidad, o textos constantes'],
   ['acciones', 'HTML ya escapado: htmlFilaRevisar() arma el panel del motivo con esc() del motivo y del error, o el botón "Aceptar" con esc() del id'],
+  // La comisión de una orden (06/10/2026)
+  ["opcion('porcentaje', 'Porcentaje')", 'HTML armado por opcion() de htmlPanelComision(), que escapa el modo y el texto (constantes del código)'],
+  ["opcion('monto', 'Monto fijo')", 'HTML armado por opcion() de htmlPanelComision(), que escapa el modo y el texto (constantes del código)'],
+  ["opcion('ninguna', 'Sin comisión')", 'HTML armado por opcion() de htmlPanelComision(), que escapa el modo y el texto (constantes del código)'],
+  ['selloComision', 'HTML constante del código: el sello "Comisión sin cargar" o vacío'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [
