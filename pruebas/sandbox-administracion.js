@@ -33,7 +33,7 @@ const FUNCIONES_BASE = [
   'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
   'textoPorcentaje', 'textoCalculoComision', 'parametrosComision', 'puedeCargarComision', 'comisionDesactualizada', 'rotuloComision',
   'htmlPanelComision', 'htmlComisionOrden', 'abrirComision', 'elegirModoComision', 'cambiarValorComision', 'cancelarComision',
-  'guardarComision', 'comisionHabitualGuardada',
+  'guardarComision', 'porcentajeComision',
   'guardarValorizacion', 'cancelarValorizar', 'pedirAnular', 'cancelarAnular', 'confirmarAnular',
   'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
   // Clientes

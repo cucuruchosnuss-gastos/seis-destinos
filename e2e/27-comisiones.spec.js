@@ -4,8 +4,8 @@
 //    renglón "Comisión: sin cargar" debajo del total, "Cargar comisión" con el
 //    porcentaje habitual del cliente y el cálculo ANTES de guardar; se llama a
 //    cargar_comision_orden; el error de la base va TAL CUAL pegado al botón.
-//  - La ficha del cliente: "Comisión habitual (%)"; como guardar_ficha_cliente
-//    todavía no la guarda, la pantalla lo DICE.
+//  - La ficha del cliente: "Comisión habitual (%)", que se guarda con
+//    guardar_comision_habitual (no viaja en guardar_ficha_cliente).
 //  - Cuentas corrientes → la ficha del proveedor COMISIONES: "Pagar" abre el
 //    Registrar pago con esa factura sola; "Se la queda la empresa" con su panel.
 // Los datos se suman con 'maqueta.cambios' (no se tocan los de otras pruebas).
@@ -115,13 +115,13 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     await expect(campo).toHaveValue('5');
     await campo.fill('7,5');
     await expect(campo).toHaveValue('7,5');
-    await page.locator('#ad-ficha-guardar').click();
-    await expect.poll(() => rpc.find(r => r.nombre === 'guardar_ficha_cliente')).toBeTruthy();
-    expect(rpc.find(r => r.nombre === 'guardar_ficha_cliente').params.p_datos).toEqual({ comision_habitual: '7.5' });
-    // La maqueta (como la base hoy) no la guarda: se dice, no "Ficha guardada".
-    await expect(page.locator('#ad-ficha-error')).toHaveText('La comisión habitual NO se guardó: la base todavía no la guarda. Avisale a administración.');
-    await expect(campo).toHaveValue('5');
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal en la ficha').toBe(true);
+    await page.locator('#ad-ficha-guardar').click();
+    // Desde el 06/10/2026: por guardar_comision_habitual, y NO por la ficha.
+    await expect.poll(() => rpc.find(r => r.nombre === 'guardar_comision_habitual')).toBeTruthy();
+    expect(rpc.find(r => r.nombre === 'guardar_comision_habitual').params).toEqual({ p_cliente_id: 'c1', p_porcentaje: 7.5 });
+    expect(rpc.some(r => r.nombre === 'guardar_ficha_cliente')).toBe(false);
+    await expect(page.locator('#toast-global')).toContainText('Ficha guardada.');
     await captura(page, `comision-ficha-${ancho}`, info);
     await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
     expect(errores, errores.join('\n')).toEqual([]);

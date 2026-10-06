@@ -69,7 +69,12 @@ correrMutaciones({
     { nombre: 'el código sale dos veces', de: "base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-\\d+)/, '')", a: "base.replace(/^Orden de retiro N°\\s*\\d+/, '')" },
     // La ficha
     { nombre: 'la habitual no está en la ficha', de: "['plazo_pago_dias', 'dias'], ['comision_habitual', 'porcentaje'],", a: "['plazo_pago_dias', 'dias']," },
-    { nombre: 'no se verifica que la base la guardó', de: "        if ('comision_habitual' in datos) {\n          const fresca", a: "        if (false) {\n          const fresca" },
+    { nombre: 'la comisión habitual viaja en la ficha', de: "          const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: resto })", a: "          const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: datos })" },
+    { nombre: 'la comisión habitual no se manda', de: '        if (conComision) {', a: '        if (false) {' },
+    { nombre: 'la comisión borrada viaja como cero', de: "      return v === '' || v === null || v === undefined ? null : Number(v)", a: "      return v === '' || v === null || v === undefined ? 0 : Number(v)" },
+    { nombre: 'la comisión que falla después de la ficha se tapa', de: "            f.error = 'Se guardó la ficha, MENOS la comisión habitual: ' + (error.message || 'no se pudo guardar.')", a: "            f.error = null" },
+    { nombre: 'la comisión sola que falla se tapa', de: '            if (!fichaGuardada) throw error
+', a: '' },
     { nombre: 'guardada siempre', de: '      if (e === null || l === null) return e === l\n', a: '      return true\n' },
     { nombre: 'más de 100 % se manda', de: "        f.error = 'La comisión habitual va de 0 a 100 %.'; pintarPieFicha(); return", a: '' },
   ],
