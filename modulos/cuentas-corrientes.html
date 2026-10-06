@@ -1826,7 +1826,12 @@
   <div class="modal-cc" id="modal-detalle-pago" hidden>
     <div class="modal-cc__backdrop"></div>
     <div class="modal-cc__panel">
-      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-detalle-pago" title="Cerrar">✕</button>
+      <!-- "Ampliar" (06/10/2026, js/ampliar.js): en la compu, el pago en una
+           ventana grande, a la derecha de la X. Nace hidden: lo muestra la pieza. -->
+      <div class="amp-barra--cabeza" style="justify-content:space-between">
+        <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-detalle-pago" title="Cerrar">✕</button>
+        <button type="button" class="amp-boton" id="btn-ampliar-pago" hidden>Ampliar</button>
+      </div>
       <h2>Detalle del pago</h2>
       <div id="detalle-pago-contenido"></div>
     </div>
@@ -1838,6 +1843,7 @@
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { crearPeriodo, ubicarPanel } from '../js/periodo.js'
+    import { crearAmpliar } from '../js/ampliar.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     // La barra de unidad de negocio de arriba (js/barra-unidad.js): la unidad
     // elegida filtra todo lo que se MIRA; los permisos siguen en la base.
@@ -6000,6 +6006,27 @@
 
     document.getElementById('btn-cerrar-detalle-pago').addEventListener('click', cerrarModalDetallePago)
     document.querySelector('#modal-detalle-pago .modal-cc__backdrop').addEventListener('click', cerrarModalDetallePago)
+
+    // AMPLIAR (06/10/2026, js/ampliar.js). En la compu, el detalle de un pago
+    // se puede ver en una ventana grande: el importe y lo que pasó con el
+    // sobrante a la izquierda, las facturas que cubrió en grilla a la
+    // derecha. La ventana COPIA el modal (tocar algo ahí toca el original).
+    // El pago no tiene acciones propias: la ventana va sin pie.
+    crearAmpliar({
+      boton: document.getElementById('btn-ampliar-pago'),
+      observar: document.getElementById('modal-detalle-pago'),
+      disponible: () => !document.getElementById('modal-detalle-pago').hidden &&
+        !!document.querySelector('#detalle-pago-contenido .detalle-pago-hero'),
+      titulo: () => {
+        const monto = (document.querySelector('#detalle-pago-contenido .detalle-pago-hero__monto')?.textContent ?? '').trim()
+        return 'Detalle del pago' + (monto ? ' · ' + monto : '')
+      },
+      tituloResumen: 'El pago',
+      tituloGrilla: 'Facturas cubiertas',
+      resumen: () => document.querySelectorAll('#detalle-pago-contenido .detalle-pago-hero, #detalle-pago-contenido .detalle-pago-credito'),
+      grilla: () => document.querySelectorAll('#detalle-pago-contenido .fila-pago-aplicacion'),
+      acciones: () => [],
+    })
 
     // ── Ficha ──────────────────────────────────────────────────────────────
     // btn-registrar-pago / btn-aplicar-credito-ficha ya no son estáticos —

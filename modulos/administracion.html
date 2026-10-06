@@ -567,6 +567,9 @@
       <div class="ad-cabecera-vista">
         <button type="button" class="ad-link" id="ad-orden-volver">&lsaquo; Órdenes</button>
         <h1 class="ad-titulo" id="ad-orden-titulo">Orden</h1>
+        <!-- "Ampliar" (06/10/2026, js/ampliar.js): en la compu, la orden en
+             una ventana grande. Nace hidden: lo muestra la pieza. -->
+        <button type="button" class="amp-boton" id="ad-orden-ampliar" hidden>Ampliar</button>
       </div>
       <div class="ad-barra-acciones" id="ad-orden-acciones">
         <button type="button" class="ad-btn" id="ad-btn-valorizar" hidden>Valorizar</button>
@@ -974,6 +977,7 @@
       <div class="ad-cabecera-vista">
         <button type="button" class="ad-link" id="ad-cobranza-volver">&lsaquo; Cobranzas por asentar</button>
         <h1 class="ad-titulo" id="ad-cobranza-titulo">Cobranza</h1>
+        <button type="button" class="amp-boton" id="ad-cobranza-ampliar" hidden>Ampliar</button>
       </div>
       <div id="ad-cobranza-cuerpo"></div>
     </section>
@@ -1008,6 +1012,7 @@
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
     import { crearPeriodo } from '../js/periodo.js'
+    import { crearAmpliar } from '../js/ampliar.js'
     import { unidadesDeLaBarra, alCambiarUnidad, MARCA_FABRICA, nombreCorto } from '../js/barra-unidad.js'
     import {
       estadoCuentaUnica, cargarCuentaUnica, pintarCuentaUnica, alTocarCuentaUnica, alCambiarCuentaUnica,
@@ -2358,6 +2363,60 @@
     }
 
     let turnoOrden = 0
+
+    // AMPLIAR (06/10/2026, js/ampliar.js). En la compu (el corte del lista |
+    // detalle, MQ_LISTA_DETALLE) una orden abierta y la cobranza de un cheque
+    // se pueden ver en una ventana grande: los datos a la izquierda, los
+    // renglones (o los cheques y transferencias) en grilla a la derecha, y
+    // abajo las mismas acciones. La ventana COPIA el detalle y tocar algo
+    // ahí toca el original: los mismos handlers, nada duplicado. Mientras se
+    // valoriza, se anula o se asienta no se ofrece: es un formulario, va en
+    // el panel de siempre.
+    function conectarAmpliarAd() {
+      const hijos = (id) => [...(document.getElementById(id)?.children ?? [])]
+      crearAmpliar({
+        boton: document.getElementById('ad-orden-ampliar'),
+        observar: document.getElementById('ad-vista-orden'),
+        corte: MQ_LISTA_DETALLE,
+        disponible: () => estado.vista === 'ad-vista-orden' && !!estado.orden?.orden && !estado.orden.error &&
+          !estado.orden.valorizar && !estado.orden.anular && !!document.querySelector('#ad-orden-cuerpo .ad-tarjeta'),
+        titulo: () => {
+          const o = estado.orden?.orden
+          const cli = o ? clienteDe(o.cliente_id) : null
+          return [document.getElementById('ad-orden-titulo').textContent.trim(), cli?.nombre].filter(Boolean).join(' · ')
+        },
+        tituloResumen: 'La orden',
+        tituloGrilla: 'Renglones',
+        resumen: () => {
+          const h = hijos('ad-orden-cuerpo')
+          const conRenglones = h.find(x => x.querySelector('.ad-renglon, .ad-vacio'))
+          return [...h.filter(x => x !== conRenglones), ...(conRenglones?.querySelectorAll('.ad-total') ?? [])]
+        },
+        grilla: () => document.querySelectorAll('#ad-orden-cuerpo .ad-renglon'),
+        acciones: () => document.querySelectorAll('#ad-orden-acciones > button'),
+      })
+      // La cobranza de un cheque (la que abre la cuenta de un cliente o el
+      // link de Cobranzas): lo que escribió el chofer y sus datos a la
+      // izquierda, los cheques y las transferencias a la derecha.
+      const tarjetaCob = () => document.querySelector('#ad-cobranza-cuerpo .ad-cob')
+      crearAmpliar({
+        boton: document.getElementById('ad-cobranza-ampliar'),
+        observar: document.getElementById('ad-vista-cobranza'),
+        corte: MQ_LISTA_DETALLE,
+        disponible: () => estado.vista === 'ad-vista-cobranza' && !!estado.cobranza?.fila && !estado.cobranza.error &&
+          !estado.cobranza.reabriendo && !estado.cobranzas.asentando && !!tarjetaCob(),
+        titulo: () => document.getElementById('ad-cobranza-titulo').textContent.trim(),
+        tituloResumen: 'La cobranza',
+        tituloGrilla: 'Cheques y transferencias',
+        resumen: () => {
+          const t = tarjetaCob()
+          const fuera = (x) => x.classList.contains('ad-cob__cheques') || x.classList.contains('ad-panel__acciones') || x.classList.contains('ad-panel')
+          return [...hijos('ad-cobranza-cuerpo').filter(x => x !== t && x.classList.contains('ad-aviso')), ...[...(t?.children ?? [])].filter(x => !fuera(x))]
+        },
+        grilla: () => document.querySelectorAll('#ad-cobranza-cuerpo .ad-cob__cheques > *'),
+        acciones: () => document.querySelectorAll('#ad-cobranza-reabrir, #ad-cobranza-cuerpo [data-asentar], #ad-cobranza-cuerpo [data-cobranza-editar], #ad-cobranza-cuerpo [data-cobranza-listo]'),
+      })
+    }
 
     async function abrirOrden(id) {
       const turno = ++turnoOrden
@@ -7452,6 +7511,7 @@
       estado.empresaId = segun === undefined ? empresaInicial(lista, leerPreferencia(CLAVE_EMPRESA)) : segun
       document.getElementById('ad-cargando').hidden = true
       conectarTodo()
+      conectarAmpliarAd()
       alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
       pintarEmpresas()
       // ?seccion=cheques (el link que deja cheques.html, con ?cheque= si se
