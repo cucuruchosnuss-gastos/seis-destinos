@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-copia-lista="">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <!-- SIN ZOOM (30/09/2026): en la tablet, deslizar para recargar a veces
@@ -25,10 +25,6 @@
        ninguna navegación de la planta sale del alcance de su app. js/salud.js
        y verificarSesion() mandan acá cuando la sesión se corta. -->
   <meta name="sd-login" content="produccion.html">
-  <!-- SIN INTERNET (06/10/2026): con este meta, js/supabase.js lee con una
-       copia en IndexedDB (js/sin-internet.js) y la planta abre y carga sin
-       red. El service worker de la planta es ../sw-planta.js. -->
-  <meta name="sd-sin-internet" content="planta">
   <meta name="theme-color" content="#2B2723">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1505,81 +1501,10 @@
     .pr-entrar__campo input:focus { outline: none; border-color: var(--p-acento); }
     .pr-entrar__error { margin: 0; color: var(--p-mal); font-size: 15px; font-weight: 800; }
     .pr-entrar .pr-btn--accion { min-height: 54px; border-radius: 14px; font-size: 18px; }
-
-    /* ════════════════════════════════════════════════════════════════════
-       SIN INTERNET (06/10/2026): el cartel fijo de la cola, lo pendiente de
-       enviar y el aviso de versión nueva. Flota arriba al centro (no corre
-       la pantalla: la planta entra justa en la tablet).
-       ════════════════════════════════════════════════════════════════════ */
-    .pr-cola {
-      position: fixed; top: max(6px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-      z-index: 950; max-width: min(680px, calc(100vw - 24px)); padding: 8px 16px; border-radius: 12px;
-      background: var(--p-prod); color: #FFFFFF; font: 700 15px/1.3 var(--p-texto); text-align: center;
-      box-shadow: 0 4px 16px rgba(28, 26, 23, 0.18);
-    }
-    /* No se come los toques de lo que tapa: solo sus botones se tocan. */
-    .pr-cola { pointer-events: none; }
-    .pr-cola button { pointer-events: auto; }
-    /* Angosta (la tablet parada, un celular): arriba está la barra con las
-       secciones, así que el cartel va abajo. */
-    @media (max-width: 700px) {
-      .pr-cola { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); }
-      .pr-version { bottom: auto; top: max(6px, env(safe-area-inset-top)); }
-    }
-    .pr-cola[data-tono="enviando"] { background: var(--p-tinta-2); }
-    .pr-cola[data-tono="ok"] { background: var(--p-bien); }
-    .pr-cola[data-tono="error"] { background: var(--p-mal); }
-    .pr-cola__errores:empty { display: none; }
-    .pr-cola__errores ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; text-align: left; }
-    .pr-cola__errores li { background: #FFFFFF; color: var(--p-tinta); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px; }
-    .pr-cola__que { font-weight: 800; }
-    .pr-cola__porque { color: var(--p-mal-txt); font-weight: 600; font-size: 14px; }
-    .pr-cola__botones { display: flex; gap: 8px; flex-wrap: wrap; }
-    .pr-cola__botones button {
-      min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--p-borde-boton);
-      background: #FFFFFF; color: var(--p-tinta); font: 700 15px var(--p-texto); cursor: pointer;
-    }
-    .pr-cola__botones button[data-cola-reintentar] { background: var(--p-acento); border-color: var(--p-acento); color: #FFFFFF; }
-    /* Con el cartel a la vista, el aviso viejo de "Sin conexión" de js/salud.js sobra. */
-    body.pr-con-cartel #sd-aviso-conexion { display: none !important; }
-    .pr-fila-prod--cola { background: var(--p-alt); }
-    .pr-cola-fila { font-size: 13px; font-weight: 800; color: var(--p-gris); white-space: nowrap; }
-    .pr-cola-fila--error { color: var(--p-mal); }
-    .pr-parada-item__cola { display: block; font-size: 13px; font-weight: 800; color: var(--p-gris); }
-    .pr-parada-item__cola--error { color: var(--p-mal); }
-    .pr-maquina__cola { color: var(--p-acento-osc); font-weight: 800; }
-    .pr-version {
-      position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-      z-index: 940; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 12px;
-      background: var(--p-tinta); color: #FFFFFF; font: 700 15px var(--p-texto); box-shadow: 0 4px 16px rgba(28, 26, 23, 0.25);
-    }
-    .pr-version__boton {
-      min-height: 44px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--p-acento); color: #FFFFFF;
-      font: 800 15px var(--p-texto); cursor: pointer;
-    }
-    /* La calculadora de cajas: los rápidos SUMAN, "Deshacer último" y "Borrar". */
-    .pr-ag__calc { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    .pr-ag__calc button {
-      min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton);
-      background: var(--p-tarjeta); color: var(--p-tinta-2); font: 700 15px var(--p-texto); cursor: pointer;
-    }
-    .pr-ag__calc button:disabled { opacity: 0.45; cursor: default; }
   </style>
 </head>
 
 <body class="pagina-modulo">
-  <!-- SIN INTERNET (06/10/2026): el cartel fijo de arriba ("Sin internet ·
-       N cargas esperando · se mandan solas", "Enviando…", "Todo enviado ✓",
-       las cargas con error para revisar) y el aviso de versión nueva. Los
-       pinta pintarCartelCola() y alMensajeSW(). -->
-  <div class="pr-cola" id="pr-cola-cartel" role="status" data-tono="sin-red" hidden>
-    <span class="pr-cola__texto" id="pr-cola-texto"></span>
-    <div class="pr-cola__errores" id="pr-cola-errores"></div>
-  </div>
-  <div class="pr-version" id="pr-version" role="status" hidden>
-    <span>Hay una versión nueva</span>
-    <button type="button" class="pr-version__boton" id="pr-version-actualizar">Actualizar</button>
-  </div>
   <div class="pr-app">
 
     <!-- LA BARRA LATERAL DE LA PLANTA (28/09/2026, "la planta con dos
@@ -2029,16 +1954,8 @@
                   <span class="pr-calculo__cuenta" id="pr-agregar-cuenta"></span>
                   <span class="pr-calculo__total" id="pr-agregar-unidades"></span>
                 </div>
-                <!-- LA CALCULADORA DE CAJAS (06/10/2026): los rápidos SUMAN al
-                     número (tres veces +20 = 60). "Deshacer último" vuelve
-                     al número de antes del último toque; "Borrar" lo deja
-                     vacío. El teclado numérico sigue andando. -->
                 <div class="pr-ag__rapidos" id="pr-agregar-rapidos">
-                  <button type="button" data-cajas-sumar="1">+1</button><button type="button" data-cajas-sumar="2">+2</button><button type="button" data-cajas-sumar="3">+3</button><button type="button" data-cajas-sumar="5">+5</button><button type="button" data-cajas-sumar="10">+10</button><button type="button" data-cajas-sumar="20">+20</button>
-                </div>
-                <div class="pr-ag__calc">
-                  <button type="button" id="pr-agregar-deshacer">Deshacer último</button>
-                  <button type="button" id="pr-agregar-borrar">Borrar</button>
+                  <button type="button" data-cajas-poner="1">1</button><button type="button" data-cajas-poner="2">2</button><button type="button" data-cajas-poner="3">3</button><button type="button" data-cajas-poner="5">5</button><button type="button" data-cajas-poner="10">10</button><button type="button" data-cajas-poner="20">20</button>
                 </div>
               </div>
               <!-- La caja elegida (un toque la cambia), el embolsado y lo que
@@ -2425,7 +2342,6 @@
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { cantidadSegunVista, textoSegunVista } from '../js/cantidades.js'
-    import { crearCola, almacenPlanta, esErrorDeRedCarga, resumenDeCola, textoCartelCola, sesionGuardada, CADA_REINTENTO_MS } from '../js/sin-internet.js'
 
     mostrarBannerVersion()
 
@@ -3741,9 +3657,6 @@
     }
 
     function revisarInactividad(ahora = Date.now()) {
-      // SIN INTERNET (06/10/2026): el PIN no se puede verificar sin red, así
-      // que nadie sale por inactividad mientras no hay internet.
-      if (sinInternet()) return false
       if (!vencioPorInactividad(estado.ultimoToque, ahora)) return false
       if (estado.modo === 'masa') {
         if (!estado.maestro) return false
@@ -4229,7 +4142,7 @@
       } catch (err) {
         console.error('verificar_pin_produccion:', err)
         p.enviando = false
-        p.mensaje = { texto: esErrorDeRedCarga(err) ? MENSAJE_PIN_SIN_RED : 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }
+        p.mensaje = { texto: 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }
         p.digitos = ''
         return pintarPin()
       }
@@ -5186,7 +5099,6 @@
         `<span class="pr-maquina__chip"><span class="pr-maquina__punto"></span>${parado ? 'PARADA' : 'Andando'}</span></div>` +
         `<div class="pr-maquina__lote"><span class="pr-maquina__rotulo">Lote</span><span class="pr-maquina__numero">${esc(e.turno.lote)}</span></div>` +
         (linea ? `<span class="pr-maquina__linea">${esc(linea)}</span>` : '') +
-        (e.cierreCola ? '<span class="pr-maquina__linea pr-maquina__cola">Cierre guardado en la tablet · se manda solo</span>' : '') +
         `<span class="pr-maquina__stats"><span class="pr-maquina__stat pr-maquina__stat--masas">${esc(textoMasas(e.masas))}</span>` +
         `<span class="pr-maquina__stat">${esc(textoCajasTablero(e.cajas ?? 0))}</span></span>` +
         '</button>'
@@ -5210,8 +5122,6 @@
       aviso.innerHTML = ''
       try {
         estado.tablero = estadoMaquinas(await leerTablero(estado.unidadId))
-        const cierres = turnosConCierreEnCola(await refrescarListaCola())
-        for (const x of estado.tablero) if (x.turno && cierres.has(String(x.turno.id))) x.cierreCola = true
       } catch (err) {
         console.error('tablero:', err)
         estado.tablero = null
@@ -5508,7 +5418,6 @@
     }
 
     async function mostrarAbrir(maquinaId) {
-      if (sinInternet()) { mostrarError(MENSAJE_ABRIR_SIN_RED); return }
       await asegurarPersonal()
       const hoy = hoyArgentina()
       // Las libres, para abrir; y las abiertas de OTRO día, que aparecen al
@@ -5680,19 +5589,12 @@
       const err = document.getElementById('pr-abrir-error')
       if (faltan.length) { err.textContent = `Falta ${faltan.join(', ')}.`; err.hidden = false; return }
       if (estado.abriendo) return
-      if (sinInternet()) { err.textContent = MENSAJE_ABRIR_SIN_RED; err.hidden = false; return }
       estado.abriendo = true
       pintarBotonAbrir()
       err.hidden = true
       try {
-        // Por ejecutar_tablet, con la clave de ESTE pedido: un reintento del
-        // mismo formulario (se cortó la red a la mitad) no abre dos veces.
-        const params = parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null)
-        const clave = JSON.stringify(params)
-        if (form.envio?.clave !== clave) form.envio = { clave, id: crypto.randomUUID() }
-        const { data: resp, error } = await supabase.rpc('ejecutar_tablet', { p_client_uuid: form.envio.id, p_operacion: 'abrir_turnos', p_params: params })
+        const { data, error } = await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null))
         if (error) throw error
-        const data = Array.isArray(resp?.turnos) ? resp.turnos : resp
         // SALA DE MASA se habilita ACÁ y no al volver al tablero: las máquinas
         // se acaban de abrir, así que ya se sabe que hay alguna. Esperar a la
         // próxima lectura dejaría el botón apagado un toque de más, justo
@@ -5707,7 +5609,7 @@
         // El mensaje de la base TAL CUAL: ya viene redactado para una persona
         // ("Esa persona no figura como encargado de esta unidad.", "La Máquina
         // 1 ya tiene un turno abierto…").
-        err.textContent = esErrorDeRedCarga(e) ? MENSAJE_ABRIR_SIN_RED : (e?.message || 'No se pudo abrir el turno.')
+        err.textContent = e?.message || 'No se pudo abrir el turno.'
         err.hidden = false
       } finally {
         estado.abriendo = false
@@ -5920,10 +5822,7 @@
       } catch (err) {
         console.error('horario del turno:', err)
       }
-      // Lo que esta tablet tiene en la cola para esta planilla (sin internet,
-      // o recién mandado), "pendiente de enviar".
-      await refrescarListaCola()
-      return planillaConCola({ turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems, maquinaNombre, horario })
+      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems, maquinaNombre, horario }
     }
 
     function paradaEnCurso(paradas) {
@@ -5961,11 +5860,6 @@
     // bien claro, con lo que hay que hacer. Lo demás no lleva ningún cartel.
     function htmlEstadoPlanilla(p, hoy) {
       const t = p.turno
-      if (t.cierreCola) {
-        return t.cierreCola.estado === 'error'
-          ? '<div class="pr-aviso pr-aviso--grave"><strong>El cierre de esta planilla tuvo un error.</strong> Revisalo arriba, en el cartel.</div>'
-          : '<div class="pr-aviso"><strong>El cierre de esta planilla está guardado en la tablet</strong> y se manda solo cuando vuelva la señal.</div>'
-      }
       // La que dejó "Volvió con lote nuevo" (relanzar_con_lote_nuevo) queda
       // pendiente de completar SIN forzado_por: no se cerró a la fuerza, le
       // faltan los productos y el scrap.
@@ -6363,7 +6257,7 @@
     function htmlProducido(it, cat, insumosCaja = estado.planilla?.insumosCaja) {
       const d = describirProducido(it, cat)
       const sinCaja = sinCajaDescontada(it)
-      const clases = 'pr-fila-prod' + (it.cola ? ' pr-fila-prod--cola' : '') + (it.anulado ? ' pr-fila-prod--anulado' : '') + (d ? '' : ' pr-fila-prod--invalido') + (sinCaja ? ' pr-fila-prod--sin-caja' : '')
+      const clases = 'pr-fila-prod' + (it.anulado ? ' pr-fila-prod--anulado' : '') + (d ? '' : ' pr-fila-prod--invalido') + (sinCaja ? ' pr-fila-prod--sin-caja' : '')
       const caja = nombreCajaItem(it, [...(insumosCaja ?? []), ...(cat?.insumos ?? [])])
       const partes = d ? partesProducido({ ...d, caja, embolsado: it.embolsado }) : []
       const prod = d ? (cat?.productos ?? []).find(x => x.id === d.pr.producto_id) ?? { nombre: d.producto } : null
@@ -6377,16 +6271,14 @@
       const envase = caja || (d ? envasePresentacion(d.pr, d.producto) : '')
       const bolsa = it.embolsado && it.embolsado !== 'ninguno' ? (TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado) : ''
       const cajaTexto = [envase ? envase.charAt(0).toLocaleUpperCase('es') + envase.slice(1) : '', bolsa].filter(Boolean).join(' · ')
-      // Lo que está en la cola de la tablet: "pendiente de enviar" (o con
-      // error), sin Corregir ni Anular hasta que llegue a la base.
-      const botones = it.cola ? htmlEstadoColaFila(it.cola) : it.anulado
+      const botones = it.anulado
         ? '<span class="pr-fp__anulado">Anulado</span>'
         : `<button type="button" class="pr-fp__boton pr-fp__boton--corregir" data-corregir="${esc(it.id)}" title="Corregir" aria-label="Corregir el sublote ${esc(it.sublote)}">${icono('lapiz', 16)}</button>` +
           // "Anular" y no "Borrar": el renglón no se borra, queda tachado y
           // su stock vuelve (anular_produccion_item).
           `<button type="button" class="pr-fp__boton" data-borrar="${esc(it.id)}" title="Anular" aria-label="Anular el sublote ${esc(it.sublote)}">${icono('anular', 16)}</button>`
       return `<div class="${clases}" title="${esc(d ? [d.producto, ...partes].join(' · ') : '')}">` +
-        `<span class="pr-fp__l1"><span class="pr-fp__sub">${esc(it.sublote ?? (it.cola ? '—' : ''))}</span><span class="pr-fp__prod">${nombre}</span></span>` +
+        `<span class="pr-fp__l1"><span class="pr-fp__sub">${esc(it.sublote)}</span><span class="pr-fp__prod">${nombre}</span></span>` +
         `<span class="pr-fp__l2"><span class="pr-fp__cono">${cono}</span>` +
         `<span class="pr-fp__caja">${sinCaja ? `<span class="pr-sin-caja pr-sin-caja--chip" title="${esc(textoSinCaja(it))}">sin empaque</span> ` : ''}${esc(cajaTexto)}</span></span>` +
         `<span class="pr-fp__num"><span class="pr-fp__cajas">${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))}</span>` +
@@ -6902,49 +6794,44 @@
       const [rpc, params] = parametrosParadaNueva(f, p, ahora)
       const loteNuevo = !!f.loteNuevo && params.p_fin === null && !f.sigue
       const fin = loteNuevo ? horasParadaNueva(f, p.turno, ahora).fin : null
-      // Sin internet no hay lote nuevo: el número lo da la base.
-      if (loteNuevo && sinInternet()) {
-        f.errorBase = MENSAJE_LOTE_NUEVO_SIN_RED
-        return pintarResumenParada(ahora)
-      }
       f.enviando = true
       pintarResumenParada(ahora)
-      // A la cola, con la hora que se eligió AL TOCAR (va adentro de params).
-      const r = await mandarCarga({ operacion: rpc, params, grupo: p.turno.id, etiqueta: `Parada: ${params.p_motivo} (lote ${p.turno.lote})` })
-      if (r.resultado === 'rechazo') {
-        console.error(rpc + ':', r.error)
+      let res
+      try {
+        const { data, error } = await supabase.rpc(rpc, params)
+        if (error) throw error
+        res = data
+      } catch (e) {
+        console.error(rpc + ':', e)
         f.enviando = false
         // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
-        f.errorBase = r.error?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'
+        f.errorBase = e?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'
         return pintarResumenParada(ahora)
       }
       estado.paradaNueva = paradaNuevaVacia(p.turno)
-      if (r.resultado !== 'ok') {
-        mostrarExito(textoGuardadaEnTablet(r, 'La parada quedó guardada'))
-        return recargarOConCola()
-      }
-      const res = r.data
       if (!loteNuevo) {
         mostrarExito('Parada guardada.')
         return recargarPlanilla()
       }
       // Volvió con lote nuevo: la parada ya está guardada (abierta), ahora la
       // termina relanzar_con_lote_nuevo a la hora de HASTA.
-      const r2 = res?.parada_id
-        ? await mandarCarga({ operacion: 'relanzar_con_lote_nuevo', params: { p_parada_id: res.parada_id, p_hora: fin }, grupo: p.turno.id, etiqueta: `Lote nuevo (después del lote ${p.turno.lote})` })
-        : { resultado: 'rechazo', error: new Error('La base no devolvió la parada.') }
-      if (r2.resultado === 'ok') return trasRelanzar(r2.data, p)
-      if (r2.resultado !== 'rechazo') {
-        mostrarExito('El paso al lote nuevo quedó guardado en la tablet y se manda solo. Cuando llegue, la planilla nueva aparece en el tablero.')
-        return recargarOConCola()
+      let rel
+      try {
+        if (!res?.parada_id) throw new Error('La base no devolvió la parada.')
+        const { data, error } = await supabase.rpc('relanzar_con_lote_nuevo', { p_parada_id: res.parada_id, p_hora: fin })
+        if (error) throw error
+        rel = data
+      } catch (e) {
+        console.error('relanzar_con_lote_nuevo:', e)
+        await recargarPlanilla()
+        const g = prepararParadaNueva()
+        if (g) {
+          g.errorBase = `La parada quedó guardada, pero no se pudo pasar al lote nuevo: ${e?.message || 'revisá la conexión'}. Tocá «Volvió a las…» para terminarla.`
+          pintarResumenParada()
+        }
+        return
       }
-      console.error('relanzar_con_lote_nuevo:', r2.error)
-      await recargarOConCola()
-      const g = prepararParadaNueva()
-      if (g) {
-        g.errorBase = `La parada quedó guardada, pero no se pudo pasar al lote nuevo: ${r2.error?.message || 'revisá la conexión'}. Tocá «Volvió a las…» para terminarla.`
-        pintarResumenParada()
-      }
+      return trasRelanzar(rel, p)
     }
 
     // Después de "Volvió con lote nuevo": el aviso arriba de la planilla nueva
@@ -6987,8 +6874,7 @@
         return `<button type="button" class="${esc(clases)}" data-parada-editar="${esc(p.id)}">` +
           `<span class="pr-parada-item__cab"><span class="pr-parada-item__horas">${esc(horas)}${dur ? ` · ${esc(dur)}` : ''} · <span class="pr-parada-item__que">${esc(p.motivo)}</span></span>` +
           (cat ? `<span class="pr-parada-item__cat pr-parada-item__cat--${esc(cat)}">${esc(NOMBRE_CATEGORIA_PARADA[cat])}</span>` : '') + '</span>' +
-          (p.hasta_fin_de_turno ? '<span class="pr-parada-item__motivo">no volvió en todo el turno</span>' : '') +
-          (p.cola ? `<span class="pr-parada-item__cola${p.cola.estado === 'error' ? ' pr-parada-item__cola--error' : ''}">${esc(textoColaFila(p.cola))}</span>` : '') + '</button>'
+          (p.hasta_fin_de_turno ? '<span class="pr-parada-item__motivo">no volvió en todo el turno</span>' : '') + '</button>'
       }).join('')
     }
 
@@ -7251,34 +7137,23 @@
         g.errorBase = ''
         return pintarParadaNueva()
       }
-      if (pedido.rpc === 'relanzar_con_lote_nuevo' && sinInternet()) {
-        f.errorBase = MENSAJE_LOTE_NUEVO_SIN_RED
-        return pintarHoraVentana()
-      }
       f.enviando = true
       f.errorBase = ''
       pintarHoraVentana()
-      // A la cola, con la hora de AHORA adentro (la que se tocó). Una parada
-      // que todavía está en la cola va como referencia a esa carga.
-      const params = { ...pedido.params }
-      if (params.p_parada_id != null) params.p_parada_id = paradaRef(params.p_parada_id)
-      const etiqueta = pedido.rpc === 'registrar_hora_largada' ? `Empezó a producir: ${params.p_hora} (lote ${p.turno.lote})`
-        : pedido.rpc === 'relanzar_con_lote_nuevo' ? `Lote nuevo (después del lote ${p.turno.lote})`
-          : `Volvió a las ${horaArgentina(params.p_fin)} (lote ${p.turno.lote})`
-      const r = await mandarCarga({ operacion: pedido.rpc, params, grupo: p.turno.id, etiqueta })
-      if (r.resultado === 'rechazo') {
-        console.error(pedido.rpc + ':', r.error)
+      let res
+      try {
+        const { data, error } = await supabase.rpc(pedido.rpc, pedido.params)
+        if (error) throw error
+        res = data
+      } catch (e) {
+        console.error(pedido.rpc + ':', e)
         f.enviando = false
         // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
-        f.errorBase = r.error?.message || 'No se pudo guardar. Revisá la conexión y probá de nuevo.'
+        f.errorBase = e?.message || 'No se pudo guardar. Revisá la conexión y probá de nuevo.'
         return pintarHoraVentana()
       }
       cerrarHoraVentana()
-      if (r.resultado !== 'ok') {
-        mostrarExito(textoGuardadaEnTablet(r))
-        return recargarOConCola()
-      }
-      if (pedido.rpc === 'relanzar_con_lote_nuevo') return trasRelanzar(r.data, p)
+      if (pedido.rpc === 'relanzar_con_lote_nuevo') return trasRelanzar(res, p)
       mostrarExito(pedido.rpc === 'registrar_hora_largada' ? `Empezó a producir: ${pedido.params.p_hora}.` : `Volvió a las ${horaArgentina(pedido.params.p_fin)}.`)
       return recargarPlanilla()
     }
@@ -7598,32 +7473,15 @@
       const [rpc, params] = parametrosParada(f, horas)
       f.enviando = true
       pintarEditorParada()
-      let r
-      if (rpc === 'borrar_parada') {
-        // Borrar no está en ejecutar_tablet: solo con red.
-        try {
-          const { error } = await supabase.rpc(rpc, params)
-          if (error) throw error
-          r = { resultado: 'ok' }
-        } catch (e) {
-          r = { resultado: 'rechazo', error: esErrorDeRedCarga(e) ? { message: MENSAJE_SIN_RED } : e }
-        }
-      } else {
-        r = await mandarCarga({ operacion: rpc, params, grupo: f.turno.id, etiqueta: `Parada: ${params.p_motivo} (lote ${f.turno.lote ?? ''})` })
-      }
-      if (r.resultado === 'rechazo') {
-        console.error(rpc + ':', r.error)
+      try {
+        const { error } = await supabase.rpc(rpc, params)
+        if (error) throw error
+      } catch (e) {
+        console.error(rpc + ':', e)
         f.enviando = false
         // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
-        f.errorBase = r.error?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'
+        f.errorBase = e?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'
         return pintarEditorParada()
-      }
-      if (r.resultado !== 'ok') {
-        const { contexto: c2, turno: t2 } = f
-        cerrarEditorParada()
-        mostrarExito(textoGuardadaEnTablet(r, 'La parada quedó guardada'))
-        if (c2 !== 'planilla') return
-        return estado.vista === 'pr-paradas' ? recargarOConCola() : abrirPlanilla(t2.id)
       }
       const { contexto, turno, modo } = f
       cerrarEditorParada()
@@ -7637,10 +7495,6 @@
     function abrirEditorDesdePlanilla(modo, paradaId = null) {
       const p = estado.planilla
       if (!p) return
-      if (String(paradaId ?? '').startsWith('cola:')) {
-        mostrarError('Esta parada todavía no llegó a la base: se puede corregir cuando se envíe.')
-        return
-      }
       const parada = paradaId ? (p.paradas ?? []).find(x => x.id === paradaId) ?? null : null
       if (paradaId && !parada) return
       // En la planilla (abierta o pendiente) borrar pide lo mismo que corregir: cargar.
@@ -8649,51 +8503,7 @@
       const a = estado.agregar
       if (!a) return
       const campo = document.getElementById('pr-agregar-cajas')
-      recordarCajas(a, leerCampoNumero(campo))
       ponerNumero(campo, Math.max(0, (leerCampoNumero(campo) ?? 0) + delta))
-      a.cajas = leerCampoNumero(campo)
-      pintarAgregar()
-    }
-
-    // LA CALCULADORA DE CAJAS (06/10/2026). sumarCajas: lo que queda después
-    // de sumar n (un vacío cuenta como 0, nunca negativo). Cada toque guarda
-    // el número de antes para "Deshacer último".
-    function sumarCajas(total, n) {
-      const t = Number.isInteger(total) ? total : 0
-      return Math.max(0, t + (Number(n) || 0))
-    }
-    function recordarCajas(a, valor) {
-      a.historialCajas = [...(a.historialCajas ?? []), Number.isInteger(valor) ? valor : null]
-    }
-    function sumarCajasAgregar(n) {
-      const a = estado.agregar
-      if (!a) return
-      const campo = document.getElementById('pr-agregar-cajas')
-      const antes = leerCampoNumero(campo)
-      recordarCajas(a, antes)
-      ponerNumero(campo, sumarCajas(antes, n))
-      a.cajas = leerCampoNumero(campo)
-      pintarAgregar()
-    }
-    function deshacerCajasAgregar() {
-      const a = estado.agregar
-      if (!a || !(a.historialCajas ?? []).length) return
-      const h = [...a.historialCajas]
-      const valor = h.pop()
-      a.historialCajas = h
-      const campo = document.getElementById('pr-agregar-cajas')
-      ponerNumero(campo, valor)
-      a.cajas = leerCampoNumero(campo)
-      pintarAgregar()
-    }
-    function borrarCajasAgregar() {
-      const a = estado.agregar
-      if (!a) return
-      const campo = document.getElementById('pr-agregar-cajas')
-      const antes = leerCampoNumero(campo)
-      if (antes == null) return
-      recordarCajas(a, antes)
-      ponerNumero(campo, null)
       a.cajas = leerCampoNumero(campo)
       pintarAgregar()
     }
@@ -8701,10 +8511,6 @@
     function pintarCajasAgregar() {
       const a = estado.agregar, cat = estado.catalogo
       if (!a || !cat) return
-      const deshacer = document.getElementById('pr-agregar-deshacer')
-      if (deshacer) deshacer.disabled = !(a.historialCajas ?? []).length
-      const borrar = document.getElementById('pr-agregar-borrar')
-      if (borrar) borrar.disabled = !Number.isInteger(a.cajas)
       const pr = cat.presentaciones.find(x => x.id === a.presentacionId)
       document.getElementById('pr-agregar-cuenta').textContent = pr ? (a.cajas === 1 ? 'caja =' : 'cajas =') : ''
       document.getElementById('pr-agregar-unidades').textContent = pr && a.cajas
@@ -8815,43 +8621,27 @@
       if (a.corrige) return confirmarCorregirCompleto(a, err)
       a.guardando = true
       pintarAgregar()
-      // SIN INTERNET (06/10/2026): la carga va a la cola de la tablet con su
-      // client_uuid, que nace ACÁ, al tocar el botón. Con red sale en el acto
-      // (por ejecutar_tablet); sin red queda "pendiente de enviar" y se manda
-      // sola. Si la base la rechaza en el momento, el mensaje va tal cual.
-      const turnoId = estado.planilla.turno.id
-      const pr = (estado.catalogo?.presentaciones ?? []).find(x => x.id === a.presentacionId)
-      const r = await mandarCarga({
-        operacion: 'registrar_produccion_item', params: parametrosRegistrarProducido(turnoId, a), grupo: turnoId,
-        etiqueta: `${a.cajas} ${a.cajas === 1 ? 'caja' : 'cajas'}${pr?.nombre ? ' · ' + pr.nombre : ''} (lote ${estado.planilla.turno.lote})`,
-        datos: { unidades_por_caja: pr?.unidades_por_caja ?? null },
-      })
-      if (r.resultado === 'rechazo') {
-        console.error('registrar_produccion_item:', r.error)
-        err.textContent = r.error?.message || 'No se pudo cargar el producto.'
-        err.hidden = false
-        a.guardando = false
-        return pintarAgregar()
-      }
       // Igual que al sumar un operario: si lo que falló fue la RELECTURA, el
       // sublote YA está cargado y su stock ya entró. Decir "no se pudo" ahí
       // llevaría a cargarlo dos veces.
+      let guardado = false
       try {
+        const { data, error } = await supabase.rpc('registrar_produccion_item', parametrosRegistrarProducido(estado.planilla.turno.id, a))
+        if (error) throw error
+        guardado = true
         await recargarPlanilla()
+        mostrarVista('pr-planilla')
+        mostrarExito(`Sublote ${data?.sublote ?? ''} cargado.`)
       } catch (e) {
-        console.error('registrar_produccion_item (releer):', e)
-        if (r.resultado === 'ok') {
-          err.textContent = 'El sublote quedó cargado, pero no se pudo actualizar la planilla. Salí de la planilla y volvé a entrar.'
-          err.hidden = false
-          a.guardando = false
-          return pintarAgregar()
-        }
-        await repintarConCola()
+        console.error('registrar_produccion_item:', e)
+        err.textContent = guardado
+          ? 'El sublote quedó cargado, pero no se pudo actualizar la planilla. Salí de la planilla y volvé a entrar.'
+          : (e?.message || 'No se pudo cargar el producto.')
+        err.hidden = false
+      } finally {
+        a.guardando = false
+        pintarAgregar()
       }
-      mostrarVista('pr-planilla')
-      mostrarExito(r.resultado === 'ok' ? `Sublote ${r.data?.sublote ?? ''} cargado.` : textoGuardadaEnTablet(r, 'Quedó guardado'))
-      a.guardando = false
-      pintarAgregar()
     }
 
     // proponer_marca guarda el nombre en MAYÚSCULAS y, con solo `cargar`, lo
@@ -9295,24 +9085,13 @@
       pintarCierre()
       const turnoId = estado.planilla.turno.id
       try {
-        // A la cola, con la hora que se eligió adentro de los parámetros.
-        const r = await mandarCarga({
-          operacion: 'cerrar_turno', params: parametrosCerrarTurno(turnoId, estado.cierre, estado.planilla), grupo: turnoId,
-          etiqueta: `Cierre del lote ${estado.planilla.turno.lote}`,
-        })
-        if (r.resultado === 'rechazo') throw r.error ?? new Error('No se pudo cerrar la planilla.')
-        // Recién ahora se borra el borrador: la base (o la cola) ya tiene todo.
+        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre, estado.planilla))
+        if (error) throw error
+        // Recién ahora se borra el borrador: la base ya tiene todo.
         guardarPreferencia(claveBorradorCierre(turnoId), null)
-        if (r.resultado === 'ok') {
-          document.getElementById('pr-cerrado-lista').innerHTML = htmlSublotesDefinitivos(r.data, estado.planilla.items)
-          mostrarExito('Planilla cerrada.')
-        } else {
-          document.getElementById('pr-cerrado-lista').innerHTML =
-            `<div class="pr-aviso"><strong>${esc(textoGuardadaEnTablet(r, 'El cierre quedó guardado'))}</strong> Los sublotes definitivos aparecen cuando llegue a la base.</div>` +
-            htmlSublotesDefinitivos({ lote: estado.planilla.turno.lote, sublotes: [] }, estado.planilla.items)
-          mostrarExito(textoGuardadaEnTablet(r, 'El cierre quedó guardado'))
-        }
+        document.getElementById('pr-cerrado-lista').innerHTML = htmlSublotesDefinitivos(data, estado.planilla.items)
         mostrarVista('pr-cerrado')
+        mostrarExito('Planilla cerrada.')
         await maquinaCerrada(turnoId)
       } catch (e) {
         // El borrador queda en la tablet: no se pierde nada.
@@ -9453,10 +9232,8 @@
         if (!ev.currentTarget.disabled) elegirConoSiNo(false)
       })
       document.getElementById('pr-agregar-rapidos').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-cajas-sumar]'); if (b) sumarCajasAgregar(Number(b.dataset.cajasSumar))
+        const b = ev.target.closest('[data-cajas-poner]'); if (b) ponerCajasAgregar(Number(b.dataset.cajasPoner))
       })
-      document.getElementById('pr-agregar-deshacer').addEventListener('click', deshacerCajasAgregar)
-      document.getElementById('pr-agregar-borrar').addEventListener('click', borrarCajasAgregar)
       document.getElementById('pr-agregar-panel').addEventListener('click', ev => {
         if (ev.target.closest('[data-ag-ir-sala]')) return tocarModo('masa')
         const prod = ev.target.closest('[data-ag-producto]')
@@ -10296,28 +10073,26 @@
 
     // Manda (o vuelve a mandar) el payload guardado en el borrador. Devuelve
     // 'ok' | 'red' | 'rechazo'. El uuid es el del borrador: nunca otro.
-    // SIN INTERNET (06/10/2026): la masa va a la MISMA cola que las demás
-    // cargas (IndexedDB, en fila por planilla), con su client_uuid de
-    // siempre. El borrador sigue en la tablet hasta que la base contesta.
     async function enviarMasa(b) {
       b.pendiente = true
       guardarBorradorMasa(b)
-      const r = await colaPlanta().enviarYEsperar({ id: b.client_uuid, operacion: 'registrar_masa', params: b.payload, grupo: String(b.turnoId), etiqueta: etiquetaMasa(b) })
-      if (r.resultado === 'rechazo') {
+      let data = null, error = null
+      try {
+        ;({ data, error } = await supabase.rpc('registrar_masa', b.payload))
+      } catch (e) {
+        error = e
+      }
+      if (error) {
+        if (esErrorDeRed(error)) return { resultado: 'red', error }
         // La base dijo que no: no se guardó nada con ese uuid, así que se
         // puede corregir y volver a mandar (con el mismo uuid igual).
         b.pendiente = false
         b.payload = null
         guardarBorradorMasa(b)
-        return { resultado: 'rechazo', error: r.error }
+        return { resultado: 'rechazo', error }
       }
-      if (r.resultado !== 'ok') return { resultado: 'red', bloqueada: r.resultado === 'bloqueada' }
       borrarBorradorMasa(b)
-      return { resultado: 'ok', data: r.data }
-    }
-
-    function etiquetaMasa(b) {
-      return `Masa ${b?.nro ?? ''} · ${b?.maquinaNombre ?? 'máquina'} (lote ${b?.lote ?? '—'})`.replace('Masa  ·', 'Masa ·')
+      return { resultado: 'ok', data }
     }
 
     let reintentando = false
@@ -10326,12 +10101,7 @@
       if (reintentando) return
       reintentando = true
       try {
-        // Las masas que esperan en la tablet entran a la cola (si ya estaban,
-        // no se duplican: la clave es su client_uuid) y salen en una vuelta.
-        // Sin masas esperando, la vuelta es la de la cola entera.
-        const pendientes = borradoresPendientes()
-        if (!pendientes.length) await procesarColaPlanta()
-        for (const b of pendientes) {
+        for (const b of borradoresPendientes()) {
           const r = await enviarMasa(b)
           if (r.resultado === 'ok') {
             mostrarExito(`Se envió la masa pendiente de la ${b.maquinaNombre ?? 'máquina'}.`)
@@ -10340,7 +10110,6 @@
             mostrarError(r.error?.message || 'La base rechazó la masa pendiente.')
           }
         }
-        await refrescarListaCola()
       } finally {
         reintentando = false
         pintarPendientes()
@@ -11397,10 +11166,7 @@
       t.nro = (Number(res?.nro ?? prev.nro) || 0) + 1
       estado.masa = null
       let leida = false
-      // Sin internet, datos_para_masa sale de la copia (la anterior de antes
-      // del corte): la anterior es la que se acaba de cargar en la tablet.
-      const sinRed = sinInternet()
-      try { await cargarDatosMasa(); leida = !sinRed } catch (err) { console.error('masa siguiente:', err) }
+      try { await cargarDatosMasa(); leida = true } catch (err) { console.error('masa siguiente:', err) }
       if (!estado.datosMasa) { soltarMaquinaSala(); return mostrarSala() }
       if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)
       estado.salaDoble = !!prev.doble
@@ -12268,7 +12034,6 @@
       if (!estado.sesionPlanta) return
       await refrescarAbiertas()
       reintentarPendientes()
-      procesarColaPlanta()
       try {
         if (estado.vista === 'pr-produccion') await mostrarTablero()
         else if (estado.vista === 'pr-planilla') await recargarPlanilla()
@@ -12280,394 +12045,6 @@
       // se vuelve a armar (la clave vacía obliga).
       claveCanalVivo = ''
       conectarTiempoReal()
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // SIN INTERNET (06/10/2026)
-    // ═══════════════════════════════════════════════════════════════════════
-    //
-    // Una mañana se cortó internet y la planta no se pudo usar en toda la
-    // mañana. Desde este día:
-    //  · LOS DATOS: js/supabase.js lee con una copia en IndexedDB (ver
-    //    js/sin-internet.js). precargarCopias() lee, con red, todo lo que la
-    //    planta y la sala de masa necesitan sin red (las planillas abiertas,
-    //    el personal, las máquinas, los productos, los motivos de parada, la
-    //    receta y el stock para masa), así la copia está aunque nadie haya
-    //    abierto esa pantalla antes del corte.
-    //  · LAS CARGAS: cada carga nace con su client_uuid AL TOCAR EL BOTÓN, con
-    //    la hora de ese momento adentro, y va a la cola (colaPlanta()), que la
-    //    manda por ejecutar_tablet() (las masas por registrar_masa). Si la
-    //    clave ya llegó, la base no carga dos veces. En fila por planilla.
-    //  · Lo que espera se ve "pendiente de enviar" (planillaConCola) y arriba
-    //    el cartel fijo (pintarCartelCola).
-    //  · Lo que NO anda sin red, con un mensaje claro: abrir una planilla nueva
-    //    (el número de lote lo da la base), pasar a un lote nuevo, y cambiar
-    //    de usuario con el PIN. La persona que estaba adentro NO sale por estar
-    //    sin red (revisarInactividad no corre sin internet).
-    const CLAVE_SESION_SB = 'sb-xtorxouhzuizdvawqakb-auth-token'
-    const CADA_PRECARGA_MS = 5 * 60 * 1000
-    const CADA_REVISAR_VERSION_MS = 15 * 60 * 1000
-    const MS_TODO_ENVIADO = 4000
-    const MENSAJE_ABRIR_SIN_RED = 'Sin internet no se puede abrir una planilla nueva: seguí cargando en la que está abierta.'
-    const MENSAJE_PIN_SIN_RED = 'Sin internet no se puede cambiar de usuario con el PIN. Sigue adentro quien estaba: cuando vuelva la señal, probá de nuevo.'
-    const MENSAJE_LOTE_NUEVO_SIN_RED = 'Sin internet no se puede pasar a un lote nuevo: el número del lote lo da la base. Anotá la vuelta sin lote nuevo, o esperá la señal.'
-    const MENSAJE_SIN_RED = 'Sin internet esto no se puede hacer: probá cuando vuelva la señal.'
-    let colaInstancia = null
-    let precargando = null
-
-    function colaPlanta() {
-      if (!colaInstancia) colaInstancia = crearCola({ almacen: almacenPlanta, enviar: enviarCargaCola, alCambiar: alCambiarCola })
-      return colaInstancia
-    }
-
-    // ¿Se está trabajando sin internet? El navegador lo dice, o la última
-    // vuelta de la cola no pudo llegar a la base.
-    function sinInternet() {
-      return (typeof navigator !== 'undefined' && navigator?.onLine === false) || !!colaInstancia?.sinRed
-    }
-
-    // Manda UNA carga de la cola. Las masas por registrar_masa (ya era a
-    // prueba de duplicados con su p_client_uuid); todo lo demás por
-    // ejecutar_tablet, con la clave de la carga.
-    async function enviarCargaCola(item, params) {
-      if (item.operacion === 'registrar_masa') {
-        const r = await supabase.rpc('registrar_masa', params)
-        if (!r?.error) {
-          const b = leerBorradorMasa(item.id)
-          if (b) borrarBorradorMasa(b)
-        }
-        return r
-      }
-      return supabase.rpc('ejecutar_tablet', { p_client_uuid: item.id, p_operacion: item.operacion, p_params: params })
-    }
-
-    // Una carga nueva: su client_uuid nace ACÁ, al tocar el botón. Devuelve
-    // { resultado: 'ok' | 'red' | 'bloqueada' | 'rechazo', data, error }.
-    function mandarCarga({ id = crypto.randomUUID(), operacion, params, grupo, etiqueta = '', datos = null }) {
-      return colaPlanta().enviarYEsperar({ id, operacion, params, grupo: String(grupo ?? 'general'), etiqueta, datos })
-    }
-
-    // Lo que se le dice a la persona cuando la carga quedó en la tablet.
-    function textoGuardadaEnTablet(r, que = 'Quedó guardada') {
-      return r?.resultado === 'bloqueada'
-        ? `${que} en la tablet, esperando: antes hay una carga de esta planilla con error para revisar (arriba).`
-        : `Sin internet: ${que.charAt(0).toLocaleLowerCase('es') + que.slice(1)} en la tablet. Se manda cuando vuelva la señal.`
-    }
-
-    // El id de una parada para mandar: una que todavía está en la cola
-    // ('cola:<uuid>') se manda como referencia al resultado de esa carga.
-    function paradaRef(id) {
-      const s = String(id ?? '')
-      return s.startsWith('cola:') ? { $ref: s.slice(5), campo: 'parada_id' } : id
-    }
-
-    function alCambiarCola() {
-      refrescarListaCola().then(() => pintarCartelCola()).catch(() => { /* nada */ })
-    }
-
-    async function refrescarListaCola() {
-      try { estado.colaLista = await colaPlanta().todos() } catch { estado.colaLista = [] }
-      return estado.colaLista
-    }
-
-    // Una vuelta de la cola (al volver la red, cada 30 s, al abrir). Si se
-    // mandó algo, la pantalla se lee de nuevo (el sublote aparece).
-    async function procesarColaPlanta() {
-      let r
-      try { r = await colaPlanta().procesar() } catch (err) { console.error('cola:', err); return null }
-      await refrescarListaCola()
-      const res = resumenDeCola(estado.colaLista ?? [])
-      if (r?.enviados > 0) {
-        if (!res.esperando && !res.errores) {
-          estado.recienEnviado = Date.now()
-          setTimeout(() => { if (Date.now() - (estado.recienEnviado ?? 0) >= MS_TODO_ENVIADO) { estado.recienEnviado = null; pintarCartelCola() } }, MS_TODO_ENVIADO)
-        }
-        if (estado.vista === 'pr-sala' || estado.vista === 'pr-receta' || estado.vista === 'pr-masas') pintarPendientes()
-        refrescarVivo({ forzar: true }).catch(err => console.error('cola (redibujar):', err))
-        precargarCopias()
-      }
-      pintarCartelCola()
-      return r
-    }
-
-    // ── Lo pendiente, adentro de la planilla ──────────────────────────────
-    function textoColaFila(cola) {
-      if (cola?.estado === 'error') return 'con error para revisar'
-      if (cola?.estado === 'enviado') return 'enviado ✓'
-      if (cola?.estado === 'enviando') return 'enviando…'
-      return 'pendiente de enviar'
-    }
-    function htmlEstadoColaFila(cola) {
-      return `<span class="pr-cola-fila${cola?.estado === 'error' ? ' pr-cola-fila--error' : ''}">${esc(textoColaFila(cola))}</span>`
-    }
-
-    // La planilla leída (de la base o de la copia) MÁS lo que esta tablet
-    // tiene en la cola para ESA planilla: lo producido "pendiente de enviar"
-    // (y lo ya enviado que la lectura todavía no trae, con su sublote), las
-    // paradas, la vuelta de una parada, la hora en que empezó y el cierre.
-    // Se arma siempre desde la lectura sin la cola (_base): volver a
-    // aplicarla no duplica nada.
-    function planillaConCola(l, lista = estado.colaLista ?? [], cat = estado.catalogo) {
-      const base = l?._base ?? l
-      const turnoId = base?.turno?.id
-      if (!turnoId) return l
-      const mias = (lista ?? []).filter(x => String(x.grupo) === String(turnoId)).sort((a, b) => Number(a.orden) - Number(b.orden))
-      if (!mias.length) return { ...base, _base: base }
-      const items = [...(base.items ?? [])]
-      const idsItems = new Set(items.map(it => String(it.id)))
-      const paradas = (base.paradas ?? []).map(p => ({ ...p }))
-      const idsParadas = new Set(paradas.map(p => String(p.id)))
-      const turno = { ...base.turno }
-      const enCola = x => x.estado !== 'enviado'
-      const estadoCola = x => ({ estado: x.estado, error: x.error?.message ?? null })
-      for (const x of mias) {
-        const p = x.params ?? {}
-        if (x.operacion === 'registrar_produccion_item') {
-          const real = x.resultado?.produccion_item_id
-          if (!enCola(x) && real != null && idsItems.has(String(real))) continue
-          const pr = (cat?.presentaciones ?? []).find(y => y.id === p.p_presentacion_id)
-          const upc = pr ? Number(pr.unidades_por_caja) : (x.datos?.unidades_por_caja ?? null)
-          const cajas = Number(p.p_cajas)
-          items.push({
-            id: 'cola:' + x.id, orden: null, sublote: x.resultado?.sublote ?? null,
-            presentacion_id: p.p_presentacion_id ?? null, marca_id: p.p_marca_id ?? null, cajas,
-            unidades_por_caja: upc, unidades: x.resultado?.unidades ?? (upc != null && Number.isFinite(upc) ? upc * cajas : null),
-            anulado: false, caja_insumo_id: p.p_caja_insumo_id ?? null, embolsado: x.resultado?.embolsado ?? p.p_embolsado ?? null,
-            cola: estadoCola(x), deCola: true,
-          })
-        } else if (x.operacion === 'registrar_parada') {
-          const real = x.resultado?.parada_id
-          if (!enCola(x) && real != null && idsParadas.has(String(real))) continue
-          paradas.push({
-            id: !enCola(x) && real != null ? String(real) : 'cola:' + x.id,
-            inicio: p.p_inicio, fin: p.p_fin ?? null, motivo: p.p_motivo, categoria: null, detalle: null,
-            hasta_fin_de_turno: false, cola: enCola(x) ? estadoCola(x) : null, deCola: true,
-          })
-        } else if (x.operacion === 'editar_parada' && enCola(x)) {
-          const ref = p.p_parada_id
-          let ids = [String(ref)]
-          if (ref && typeof ref === 'object' && ref.$ref) {
-            const dep = mias.find(y => y.id === ref.$ref)
-            ids = ['cola:' + ref.$ref, dep?.resultado?.parada_id != null ? String(dep.resultado.parada_id) : null].filter(Boolean)
-          }
-          const par = paradas.find(y => ids.includes(String(y.id)))
-          if (par) Object.assign(par, { inicio: p.p_inicio ?? par.inicio, fin: p.p_fin ?? null, motivo: p.p_motivo ?? par.motivo, cola: estadoCola(x) })
-        } else if (x.operacion === 'registrar_hora_largada' && enCola(x)) {
-          turno.hora_largada = p.p_hora
-          turno.largadaCola = estadoCola(x)
-        } else if ((x.operacion === 'cerrar_turno' || x.operacion === 'relanzar_con_lote_nuevo') && enCola(x)) {
-          turno.cierreCola = estadoCola(x)
-        }
-      }
-      return { ...base, turno, items, paradas, _base: base }
-    }
-
-    // Vuelve a aplicar la cola sobre la planilla que ya está en pantalla (sin
-    // leer: sirve también sin copia de la planilla).
-    async function repintarConCola() {
-      const p = estado.planilla
-      if (!p) return
-      await refrescarListaCola()
-      estado.planilla = { ...planillaConCola(p), maquinaNombre: p.maquinaNombre }
-      if (['pr-planilla', 'pr-paradas'].includes(estado.vista)) pintarPlanilla()
-    }
-
-    // Con red se relee; sin red (y sin copia de la planilla), se vuelve a
-    // aplicar la cola sobre lo que hay.
-    async function recargarOConCola() {
-      try { await recargarPlanilla() } catch (err) {
-        console.error('planilla (sin red):', err)
-        await repintarConCola()
-      }
-    }
-
-    // Los turnos con el cierre esperando en la cola.
-    function turnosConCierreEnCola(lista = estado.colaLista ?? []) {
-      return new Set(lista.filter(x => (x.operacion === 'cerrar_turno' || x.operacion === 'relanzar_con_lote_nuevo') && x.estado !== 'enviado').map(x => String(x.grupo)))
-    }
-
-    // ── El cartel fijo de arriba ──────────────────────────────────────────
-    function htmlErroresCola(lista) {
-      const errs = (lista ?? []).filter(x => x.estado === 'error')
-      if (!errs.length) return ''
-      return '<ul>' + errs.map(x => '<li>' +
-        `<span class="pr-cola__que">${esc(x.etiqueta || 'Una carga')}</span>` +
-        `<span class="pr-cola__porque">${esc(x.error?.message ?? 'La base no la aceptó.')}</span>` +
-        '<span class="pr-cola__botones">' +
-        `<button type="button" data-cola-reintentar="${esc(x.id)}">Reintentar</button>` +
-        `<button type="button" data-cola-descartar="${esc(x.id)}">Descartar</button></span></li>`).join('') + '</ul>'
-    }
-
-    function pintarCartelCola() {
-      const el = document.getElementById('pr-cola-cartel')
-      if (!el) return null
-      const lista = estado.colaLista ?? []
-      const r = resumenDeCola(lista)
-      const c = textoCartelCola({
-        enLinea: !sinInternet(), esperando: r.esperando, enviando: r.enviando, errores: r.errores,
-        recienEnviado: !!estado.recienEnviado, copiaDesde: estado.copiaDesde ?? null,
-      })
-      el.hidden = !c
-      document.body?.classList?.toggle('pr-con-cartel', !!c)
-      if (!c) return null
-      el.dataset.tono = c.tono
-      document.getElementById('pr-cola-texto').textContent = c.texto
-      document.getElementById('pr-cola-errores').innerHTML = htmlErroresCola(lista)
-      return c
-    }
-
-    async function reintentarCarga(id) {
-      tocar()
-      await colaPlanta().reintentar(id)
-      await procesarColaPlanta()
-    }
-
-    function descartarCarga(id) {
-      tocar()
-      const it = (estado.colaLista ?? []).find(x => x.id === id)
-      if (!it) return
-      pedirConfirmacion({ titulo: '¿Descartar esta carga?', texto: `«${it.etiqueta || 'Esta carga'}» no se va a mandar nunca. Si hacía falta, cargala de nuevo.`, si: 'Sí, descartar' },
-        async () => {
-          await colaPlanta().descartar(id)
-          // Una masa descartada no vuelve a la cola desde su borrador.
-          if (it.operacion === 'registrar_masa') { const b = leerBorradorMasa(id); if (b) borrarBorradorMasa(b) }
-          await procesarColaPlanta()
-          if (estado.planilla) await repintarConCola()
-        })
-    }
-
-    // ── La copia de los datos ─────────────────────────────────────────────
-    // Lee, CON red, lo que hace falta para trabajar sin red: así la copia de
-    // IndexedDB está aunque nadie haya abierto esa pantalla antes del corte.
-    // Usa las mismas funciones de lectura de la planta (la copia se guarda
-    // por pedido: tiene que ser el MISMO pedido). Nunca escribe nada.
-    function precargarCopias() {
-      if (precargando || sinInternet() || !estado.unidadId || !estado.sesionPlanta) return precargando
-      const u = estado.unidadId
-      const seguro = (p) => Promise.resolve().then(p).catch(err => { console.warn('precarga:', err?.message ?? err); return null })
-      precargando = (async () => {
-        const tablero = await seguro(() => leerTablero(u))
-        await Promise.all([
-          seguro(() => leerHayAbiertas(u)),
-          seguro(() => leerPendientesCompletar(u)),
-          seguro(() => supabase.rpc('personal_produccion', { p_unidad_negocio_id: u })),
-          seguro(() => leerCatalogoProductos(u)),
-          seguro(() => leerMotivosParada()),
-          seguro(() => leerDefineChocolate()),
-          seguro(() => leerUsoConos(u)),
-          seguro(async () => {
-            const { data: prefs } = await supabase.from('insumos').select('id, vista_preferida').eq('vista_preferida', 'bulto')
-            const ids = (prefs ?? []).map(p => p.id)
-            if (ids.length && puedeVerStockEn(u) === true) {
-              await supabase.from('v_stock_por_lote').select('insumo_id, lote, contenido_por_bulto').eq('unidad_negocio_id', u).in('insumo_id', ids)
-            }
-          }),
-        ])
-        const turnos = tablero?.turnos ?? []
-        if (turnos.length) await seguro(() => leerMasasSala(turnos.map(t => t.id)))
-        for (const t of turnos) {
-          await seguro(() => leerPlanilla(t.id))
-          await seguro(() => supabase.rpc('que_falta_para_cerrar', { p_turno_id: t.id }))
-          await seguro(() => supabase.rpc('scrap_de_referencia', { p_turno_id: t.id }))
-          await seguro(() => supabase.rpc('stock_para_masa', { p_turno_id: t.id }))
-          await seguro(() => leerMasasSala([t.id]))
-          const tipos = (await seguro(() => cargarTiposMasa(t.maquina_id))) ?? []
-          for (const tipo of tipos) {
-            const r = await seguro(() => supabase.rpc('datos_para_masa', { p_turno_id: t.id, p_tipo_masa: tipo }))
-            const d = r?.data
-            if (d?.anterior) {
-              await seguro(() => leerRecetaDeLaAnterior({ original: d.original, anterior: d.anterior, insumos: d.insumos ?? [] }))
-              await seguro(() => leerTurnoDeLaAnterior(d.anterior))
-            }
-          }
-        }
-        // La hora de la última copia completa (la mira la prueba de navegador).
-        try { document.documentElement.dataset.copiaLista = String(Date.now()) } catch { /* nada */ }
-      })().finally(() => { precargando = null })
-      return precargando
-    }
-
-    // ── El service worker y la versión nueva ──────────────────────────────
-    function registrarServiceWorker(nav = navigator) {
-      const sw = nav?.serviceWorker
-      if (!sw?.register) return false
-      sw.addEventListener('message', ev => alMensajeSW(ev.data))
-      sw.register('../sw-planta.js', { scope: './produccion.html', updateViaCache: 'none' })
-        .then(() => {
-          // Primero de dónde vino ESTA página (la red o la copia), después la
-          // revisión: el service worker contesta en ese orden.
-          try { sw.controller?.postMessage({ tipo: 'origen' }) } catch { /* nada */ }
-          pedirRevisionVersion()
-        })
-        .catch(err => console.error('service worker:', err))
-      return true
-    }
-
-    function pedirRevisionVersion(nav = navigator) {
-      if (sinInternet()) return
-      nav?.serviceWorker?.ready?.then(reg => reg.active?.postMessage({ tipo: 'revisar' })).catch(() => { /* nada */ })
-    }
-
-    // La huella de la app (sw-planta.js). La primera es la de lo que está
-    // corriendo, salvo que la página haya salido de la copia: ahí una huella
-    // nueva ya es una versión nueva.
-    function alMensajeSW(d) {
-      if (!d || typeof d !== 'object') return null
-      if (d.tipo === 'origen') { estado.cargadaDeCopia = d.origen === 'copia'; return null }
-      if (d.tipo !== 'huella' || !d.huella) return null
-      if (estado.huellaApp == null) {
-        estado.huellaApp = d.huella
-        if (d.cambio && estado.cargadaDeCopia) mostrarAvisoVersion()
-        return estado.huellaApp
-      }
-      if (d.huella !== estado.huellaApp) mostrarAvisoVersion()
-      return d.huella
-    }
-
-    function mostrarAvisoVersion() {
-      const el = document.getElementById('pr-version')
-      if (el) el.hidden = false
-    }
-
-    // "Actualizar": nunca sola. Si hay algo a medio cargar, pregunta antes.
-    function actualizarVersion() {
-      tocar()
-      if (aMedioCargar()) {
-        pedirConfirmacion({ titulo: '¿Actualizar ahora?', texto: 'Lo que estás cargando todavía no se guardó y se va a perder. Lo que está en la cola no se pierde.', si: 'Sí, actualizar' },
-          () => window.location.reload())
-        return 'pregunta'
-      }
-      window.location.reload()
-      return 'recarga'
-    }
-
-    // Lo que arranca una sola vez, con la planta ya abierta.
-    let sinInternetInstalado = false
-    function instalarSinInternet() {
-      if (sinInternetInstalado) return
-      sinInternetInstalado = true
-      window.addEventListener('sd:copia', ev => {
-        const g = Number(ev?.detail?.guardado)
-        if (Number.isFinite(g)) estado.copiaDesde = estado.copiaDesde == null ? g : Math.min(estado.copiaDesde, g)
-        pintarCartelCola()
-      })
-      window.addEventListener('sd:red', () => {
-        if (estado.copiaDesde != null && navigator.onLine !== false) { estado.copiaDesde = null; pintarCartelCola() }
-      })
-      window.addEventListener('online', () => { procesarColaPlanta().then(() => { precargarCopias(); pedirRevisionVersion() }) })
-      window.addEventListener('offline', () => pintarCartelCola())
-      document.getElementById('pr-cola-cartel').addEventListener('click', ev => {
-        const r = ev.target.closest('[data-cola-reintentar]'); if (r) return reintentarCarga(r.dataset.colaReintentar)
-        const d = ev.target.closest('[data-cola-descartar]'); if (d) return descartarCarga(d.dataset.colaDescartar)
-      })
-      document.getElementById('pr-version-actualizar').addEventListener('click', actualizarVersion)
-      setInterval(() => { if (navigator.onLine !== false) procesarColaPlanta() }, CADA_REINTENTO_MS)
-      setInterval(() => precargarCopias(), CADA_PRECARGA_MS)
-      setInterval(() => pedirRevisionVersion(), CADA_REVISAR_VERSION_MS)
-      registrarServiceWorker()
-      // Las masas que quedaron en la tablet (de antes de la cola) entran a la
-      // cola; después, una vuelta, y la copia.
-      reintentarPendientes().finally(() => { setTimeout(() => precargarCopias(), 3000) })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -12976,14 +12353,6 @@
       window.addEventListener('app:reanudada', () => { alReanudar() })
       // Sin sesión: el login de la tablet, acá mismo (no login.html).
       estado.sesion = await verificarSesion({ redirigirSiNoHay: false })
-      // SIN INTERNET (06/10/2026): con el token vencido y sin red, supabase-js
-      // no devuelve la sesión, pero tampoco la borra (un corte de red no es un
-      // cierre de sesión: si Auth dijera que no existe más, la habría
-      // borrado). La planta abre con la guardada y trabaja con la copia.
-      if (!estado.sesion) {
-        const guardada = sesionGuardada(CLAVE_SESION_SB)
-        if (guardada) { estado.sesion = guardada; estado.abrioSinRed = true }
-      }
       if (!estado.sesion) {
         // verificarSesion() pudo haber mandado al segundo factor: no se tapa.
         if (/produccion\.html$/.test(window.location.pathname)) mostrarEntrar()
@@ -13038,7 +12407,6 @@
       iniciarReloj()
       registrarPantalla()
       conectarTiempoReal()
-      instalarSinInternet()
     }
 
     init()

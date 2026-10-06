@@ -273,10 +273,6 @@ const RETIRADOS = [
   ['control:input#pr-cierre-hora[type=text]',
     'Terminó de producir (05/10/2026): la hora del cierre ya no es un campo de texto sino un botón con el MISMO id ' +
     '(#pr-cierre-hora) que abre la ventana de la hora: "¿A qué hora terminó de producir?".'],
-  ['control:button[data-cajas-poner][type=button]',
-    'La calculadora de cajas (06/10/2026, pedido de Facu): los números rápidos ya no PONEN el número, lo SUMAN ' +
-    '(+1, +2, +3, +5, +10, +20: tres veces +20 = 60), con data-cajas-sumar; al lado, "Deshacer último" ' +
-    '(#pr-agregar-deshacer) y "Borrar" (#pr-agregar-borrar).'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

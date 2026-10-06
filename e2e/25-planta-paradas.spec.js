@@ -30,11 +30,7 @@ function anotarRpc(page) {
     if (!msg.text().startsWith('[maqueta] rpc')) return;
     try {
       const a = msg.args();
-      const nombre = await a[1].jsonValue(), params = await a[2].jsonValue();
-      // Desde el 06/10/2026 las cargas de la planta van por la cola, por
-      // ejecutar_tablet: se anota la operación de adentro.
-      if (nombre === 'ejecutar_tablet') lista.push([params?.p_operacion, params?.p_params]);
-      else lista.push([nombre, params]);
+      lista.push([await a[1].jsonValue(), await a[2].jsonValue()]);
     } catch { /* la página se fue */ }
   });
   return lista;
