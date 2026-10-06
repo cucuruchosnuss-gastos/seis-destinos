@@ -12504,7 +12504,7 @@
       const lista = estado.colaLista ?? []
       const r = resumenDeCola(lista)
       const c = textoCartelCola({
-        enLinea: !sinInternet(), esperando: r.esperando, enviando: r.enviando, errores: r.errores,
+        enLinea: !sinInternet() && !estado.redCaida, esperando: r.esperando, enviando: r.enviando, errores: r.errores,
         recienEnviado: !!estado.recienEnviado, copiaDesde: estado.copiaDesde ?? null,
       })
       el.hidden = !c
@@ -12649,10 +12649,14 @@
       window.addEventListener('sd:copia', ev => {
         const g = Number(ev?.detail?.guardado)
         if (Number.isFinite(g)) estado.copiaDesde = estado.copiaDesde == null ? g : Math.min(estado.copiaDesde, g)
+        // Se usó la copia porque la red no contestó: no hay internet, aunque
+        // el navegador todavía diga que está en línea.
+        estado.redCaida = true
         pintarCartelCola()
       })
       window.addEventListener('sd:red', () => {
-        if (estado.copiaDesde != null && navigator.onLine !== false) { estado.copiaDesde = null; pintarCartelCola() }
+        if (navigator.onLine === false) return
+        if (estado.copiaDesde != null || estado.redCaida) { estado.copiaDesde = null; estado.redCaida = false; pintarCartelCola() }
       })
       window.addEventListener('online', () => { procesarColaPlanta().then(() => { precargarCopias(); pedirRevisionVersion() }) })
       window.addEventListener('offline', () => pintarCartelCola())
@@ -13040,6 +13044,18 @@
       conectarTiempoReal()
       instalarSinInternet()
     }
+
+    // EL AVISO DE js/salud.js EN LA PLANTA: no se muestra (lo tapa la regla de
+    // body.pr-con-cartel); la planta lo toma como "no hay internet" y lo dice
+    // en SU cartel ("Sin internet · …"). Se escucha antes de arrancar, para
+    // que valga también si la red no está al abrir.
+    window.addEventListener('sd:conexion', ev => {
+      if (ev?.detail?.conexion === false) estado.redCaida = true
+      // Con la copia en uso la red sigue sin contestar: eso lo destraba recién
+      // una lectura que llega de la red ('sd:red').
+      else if (estado.copiaDesde == null) estado.redCaida = false
+      pintarCartelCola()
+    })
 
     init()
   </script>

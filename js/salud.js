@@ -184,6 +184,7 @@ export function esUsuarioNoIdentificado(err) {
 export function mostrarSinConexion(texto = 'Sin conexión, reintentando…', doc = globalThis.document) {
   if (!doc?.body) return
   let el = doc.getElementById('sd-aviso-conexion')
+  const yaSeVeia = !!el && el.hidden === false
   if (!el) {
     el = doc.createElement('div')
     el.id = 'sd-aviso-conexion'
@@ -193,11 +194,22 @@ export function mostrarSinConexion(texto = 'Sin conexión, reintentando…', doc
   }
   el.textContent = texto
   el.hidden = false
+  if (!yaSeVeia) avisarConexion(false)
 }
 
 export function ocultarSinConexion(doc = globalThis.document) {
   const el = doc?.getElementById?.('sd-aviso-conexion')
-  if (el) el.hidden = true
+  if (!el || el.hidden) return
+  el.hidden = true
+  avisarConexion(true)
+}
+
+// La planta tiene su propio cartel de "Sin internet" y no muestra este: se
+// entera por 'sd:conexion' ({ conexion: false } al mostrarlo, true al
+// esconderlo), solo cuando cambia. El resto de la app no lo escucha y ve
+// este aviso como siempre.
+function avisarConexion(conexion) {
+  try { globalThis.dispatchEvent?.(new CustomEvent('sd:conexion', { detail: { conexion } })) } catch { /* nada */ }
 }
 
 // ── La sesión cortada ────────────────────────────────────────────────────────
