@@ -57,6 +57,11 @@ const FUNCIONES_BASE = [
   // Los apodos de la ficha (02/10/2026)
   'agregarApodoALista', 'htmlApodosFicha', 'pintarApodosFicha', 'parametrosApodos', 'guardarApodos',
   'agregarApodoFicha', 'quitarApodoFicha',
+  // Los clientes provisorios (06/10/2026)
+  'esProvisorio', 'contarProvisorios', 'provisoriosPrimero', 'actualizarProvisoriosPortada', 'puedeConfirmar', 'htmlAccionesProvisorio',
+  'abrirCompletar', 'pintarConfirmarFicha', 'guardarYConfirmarFicha', 'destinosUnir', 'abrirUnir', 'cerrarUnir', 'leerPreviaUnir',
+  'textoCantidad', 'textosPreviaUnir', 'elegirDestinoUnir', 'cambiarDestinoUnir', 'pedirConfirmarUnir', 'noConfirmarUnir', 'unirClientes',
+  'htmlDestinoUnir', 'htmlUnir', 'pintarUnir', 'avisarFaltaLista', 'htmlFaltaLista', 'cerrarFaltaLista', 'irAFichaDesdeOrden',
   // Listas de precios
   'htmlFilaLista', 'pintarListas', 'mostrarListas', 'abrirListaNueva', 'guardarListaNueva', 'listaDe', 'leerPreciosLista',
   'versionesDe', 'vigenteYProximo', 'filasGrilla', 'preciosAGuardar', 'calcularAumento', 'htmlFilaPrecio', 'htmlGrilla',
@@ -132,6 +137,8 @@ const CONSTANTES_BASE = [
   'CONITOS',
   // Cliente y proveedor (06/10/2026)
   ...CONSTANTES_CU,
+  // Los clientes provisorios (06/10/2026)
+  'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR',
 ]
 
 const PRELUDIO = `
@@ -229,7 +236,7 @@ const PRELUDIO = `
     portada: null, ordenes: null, errorOrdenes: null,
     filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
     orden: null, trabajando: false,
-    saldos: null, errorSaldos: null, busquedaClientes: '', mostrarApagados: false, apagados: null, interruptor: null, alta: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
+    saldos: null, errorSaldos: null, busquedaClientes: '', mostrarApagados: false, apagados: null, interruptor: null, alta: null, unir: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
     cobranzas: { lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null, clientes: null, errorClientes: null, asentando: null, hechos: new Map() },
     cobranza: null, bancos: null,
     errores: { grupos: null, error: null, info: false, arreglando: null },

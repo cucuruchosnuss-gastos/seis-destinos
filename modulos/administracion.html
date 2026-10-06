@@ -322,6 +322,14 @@
     .ad-interruptor-todas { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; max-width: 7.5rem; }
     .ad-bloqueado-todas { font-size: 0.75rem; color: var(--ad-texto-secundario); line-height: 1.25; text-align: center; }
     .ad-barra-acciones .ad-bloqueado-todas { align-self: center; text-align: left; }
+    /* LOS CLIENTES PROVISORIOS (06/10/2026): los que cargó el depósito desde
+       Órdenes de retiro. Van arriba, con su chip y dos acciones debajo. */
+    .ad-sello--provisorio { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); }
+    .ad-provisorio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: -0.25rem 0 0.25rem; padding: 0 0.25rem; }
+    .ad-provisorio .ad-btn { flex: 1 1 12rem; }
+    .ad-provisorio .ad-bloqueado-todas { text-align: left; }
+    .ad-unir__previa { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
+    .ad-unir__elegido { font-weight: 700; overflow-wrap: anywhere; }
     /* Los clientes de una lista de precios (30/09/2026). */
     .ad-lista-clientes .ad-subtitulo { margin-top: 0; }
     .ad-lista-clientes__cuenta { font-weight: 700; margin: 0 0 0.5rem; }
@@ -605,6 +613,17 @@
           <button type="button" class="ad-btn ad-btn--suave" id="ad-alta-cancelar">Cancelar</button>
         </div>
       </div>
+      <!-- UNIR un cliente provisorio con uno que ya existía (06/10/2026):
+           buscador de la misma empresa, vista previa de lo que pasa y una
+           confirmación propia. Lo arma pintarUnir(). -->
+      <div class="ad-panel" id="ad-panel-unir" hidden>
+        <h2 class="ad-subtitulo" id="ad-unir-titulo">Unir con un cliente existente</h2>
+        <div class="ad-campo" id="ad-unir-campo">
+          <label for="ad-unir-buscar">Buscá el cliente que ya existía (nombre, razón social, CUIT o apodo)</label>
+          <input type="search" class="ad-input" id="ad-unir-buscar" autocomplete="off" maxlength="120">
+        </div>
+        <div id="ad-unir-cuerpo"></div>
+      </div>
       <div class="ad-campo">
         <label for="ad-clientes-buscar">Buscar por nombre, razón social o CUIT</label>
         <input type="search" class="ad-input" id="ad-clientes-buscar" autocomplete="off" maxlength="120">
@@ -671,6 +690,8 @@
            solo para mostrar, no se edita. -->
       <p class="ad-texto-suave" id="ad-ficha-codigo-anterior" hidden></p>
       <div id="ad-ficha-aviso"></div>
+      <!-- Completar y confirmar un cliente provisorio (06/10/2026). -->
+      <p class="ad-aviso" id="ad-ficha-provisorio" hidden></p>
       <div class="ad-tarjeta">
         <h2 class="ad-subtitulo">Datos</h2>
         <div class="ad-fila-campos">
@@ -1385,7 +1406,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, comision_habitual')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, comision_habitual, apodos, provisorio')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -1607,7 +1628,8 @@
         return { numero: p?.activos ?? null, unidad: 'activos' + (emp ? ' en ' + emp.nombre : ''),
           carga: p?.activos == null && !p?.errorClientes, error: p?.errorClientes,
           lineas: [p?.sobreLimite != null ? (Number(p.sobreLimite) > 0 ? { t: n(p.sobreLimite, '1 pasado de su límite de crédito', p.sobreLimite + ' pasados de su límite de crédito'), tono: 'mal' } : 'Ninguno pasado de su límite') : null,
-            p?.deuda != null ? 'Nos deben ' + plataPortada(p.deuda) + ' en total' : null] }
+            p?.deuda != null ? 'Nos deben ' + plataPortada(p.deuda) + ' en total' : null,
+            Number(p?.provisorios) > 0 ? { t: n(p.provisorios, '1 cliente provisorio por confirmar', p.provisorios + ' clientes provisorios por confirmar'), tono: 'mal' } : null] }
       }
       if (s.id === 'listas') {
         const nombres = p?.listasNombres ?? []
@@ -1676,7 +1698,7 @@
     // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
     function burbujaPestana(id, p) {
       const v = id === 'cobranzas' ? p?.porAsentar : id === 'ordenes' ? p?.sinValorizar : id === 'revisar' ? p?.porRevisar
-        : id === 'cheques' ? p?.cheques?.cantidad : id === 'errores' ? p?.errores7 : null
+        : id === 'cheques' ? p?.cheques?.cantidad : id === 'errores' ? p?.errores7 : id === 'clientes' ? p?.provisorios : null
       if (v === null || v === undefined || !(Number(v) > 0)) return null
       return { n: Number(v) > 99 ? '99+' : String(v), urgente: id === 'cobranzas' || id === 'ordenes' }
     }
@@ -1796,7 +1818,7 @@
       if (!puedeEn('retiros', 'ver', unidad)) return
       await Promise.all([
         contarSinValorizar(unidad).then(n => { p.sinValorizar = n }).catch(err => { console.error('No se pudo contar la portada:', err); p.error = 'No se pudo contar.' }),
-        leerResumenClientes(unidad).then(r => { p.sobreLimite = r.sobreLimite; p.activos = r.activos; p.deuda = r.deuda }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
+        leerResumenClientes(unidad).then(r => { p.sobreLimite = r.sobreLimite; p.activos = r.activos; p.deuda = r.deuda; p.provisorios = r.provisorios }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
       ])
       if (turno !== turnoPortada) return
       pintarPortada()
@@ -2281,7 +2303,7 @@
         total = o.estado === 'anulada' ? `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>` : htmlComisionOrden(d)
       }
       return `<div class="ad-tarjeta"><div class="ad-fila__linea">${htmlSelloOrden(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
-        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}</div>`
+        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>`
     }
 
     function pintarOrden() {
@@ -2316,7 +2338,7 @@
       const u = o?.unidad_negocio_id
       const activa = !!o && o.estado !== 'anulada'
       const precios = activa && puedeEn('retiros', 'precios', u)
-      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar)
+      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar && !d.faltaLista)
       document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar)
       document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))
       document.getElementById('ad-btn-imprimir').hidden = !o
@@ -2447,6 +2469,7 @@
       const turno = ++turnoValorizar
       const cli = clienteDe(o.cliente_id)
       const listaId = cli?.lista_precio_id ?? null
+      if (avisarFaltaLista(d, cli, listaId)) return
       const v = { precios: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
       d.comision = null
       d.valorizar = v
@@ -2761,7 +2784,8 @@
     async function leerResumenClientes(unidadId) {
       const [saldos] = await Promise.all([leerSaldos(unidadId), estado.clientes === null ? leerClientes(unidadId).then(c => { if (unidadId === estado.empresaId) estado.clientes = c }) : null])
       const deuda = saldos.reduce((a, x) => a + (Number(x?.saldo) > 0 ? Number(x.saldo) : 0), 0)
-      return { sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length, activos: saldos.length, deuda }
+      return { sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length, activos: saldos.length, deuda,
+        provisorios: unidadId === estado.empresaId ? contarProvisorios(estado.clientes) : null }
     }
 
     function clientesFiltrados(lista, busqueda) {
@@ -2836,10 +2860,11 @@
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
         `${c.empresa ? htmlSelloEmpresa(c.unidad_negocio_id, c.empresa) : ''}` +
         `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
+        `${esProvisorio(c) ? '<span class="ad-sello ad-sello--provisorio">Provisorio</span>' : ''}` +
         `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">Cliente y proveedor</span>' : ''}` +
         `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
         `${it?.error ? `<span class="ad-error-pegado">${esc(it.error)}</span>` : ''}</button>`
-      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`
+      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>${htmlAccionesProvisorio(c)}`
     }
 
     // Los apagados de la empresa (29/09/2026): clientes_con_saldo con
@@ -3008,7 +3033,7 @@
 
     // Lo que se ve: los prendidos y, con "Mostrar apagados", los apagados al final.
     function clientesDeLaLista() {
-      const prendidos = estado.saldos ?? []
+      const prendidos = provisoriosPrimero(estado.saldos ?? [])
       const apagados = estado.mostrarApagados ? (estado.apagados?.filas ?? []) : []
       return [...prendidos, ...apagados]
     }
@@ -3139,6 +3164,7 @@
       // de que el alta pedía el permiso de Pedidos ya no tiene a quién decírselo.
       document.getElementById('ad-clientes-alta-aviso').hidden = true
       document.getElementById('ad-panel-alta').hidden = !estado.alta
+      pintarUnir()
       const e = document.getElementById('ad-alta-error')
       e.textContent = estado.alta?.error ?? ''
       e.hidden = !estado.alta?.error
@@ -3175,6 +3201,7 @@
         const [saldos] = await Promise.all([leerSaldos(unidad), asegurarDatosEmpresa()])
         if (turno !== turnoClientes) return
         estado.saldos = saldos
+        actualizarProvisoriosPortada()
         if (estado.mostrarApagados) cargarApagados(turno)
       } catch (err) {
         if (turno !== turnoClientes) return
@@ -3291,6 +3318,380 @@
         estado.trabajando = false
         pintarClientes()
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOS CLIENTES PROVISORIOS (06/10/2026, pedido de Facu)
+    //
+    // Los carga el depósito desde Órdenes de retiro cuando el cliente no está
+    // (crear_cliente_provisorio): nombre, teléfono y localidad, con
+    // clientes.provisorio = true. Acá van ARRIBA de la lista con el chip
+    // "Provisorio", y cada uno tiene dos salidas:
+    //  - "Completar y confirmar": la ficha de siempre; al guardar, además,
+    //    confirmar_cliente(p_cliente_id), que lo deja como un cliente más.
+    //  - "Unir con un cliente existente": era uno que ya estaba. Se elige cuál
+    //    (de la MISMA empresa), se ve qué pasa y unir_clientes(p_origen_id,
+    //    p_destino_id) le pasa todo (órdenes, cobranzas, pedidos, la cuenta)
+    //    al que ya estaba, guarda el nombre del provisorio como apodo y lo apaga.
+    // Las dos las pide la base con _puede_gestionar_cliente: pedidos:configurar
+    // o retiros:precios en la empresa (o cuentas_corrientes:alta_proveedor).
+    //
+    // La burbuja: mis_pendientes() NO devuelve los provisorios (hueco de base,
+    // 06/10/2026), así que se cuentan de la tabla clientes de la empresa.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // provisorio = true, prendido y no apagado. La marca sale de la fila de
+    // clientes (clientes_con_saldo no la trae: hueco de base).
+    function esProvisorio(c) {
+      if (!c || c.apagado || c.activo === false) return false
+      return fichaCliente(c.cliente_id ?? c.id)?.provisorio === true
+    }
+
+    function contarProvisorios(clientes) {
+      if (!Array.isArray(clientes)) return null
+      return clientes.filter(c => c?.provisorio === true && c.activo !== false).length
+    }
+
+    // Los provisorios primero, y adentro el orden que ya traían.
+    function provisoriosPrimero(filas) {
+      const lista = Array.isArray(filas) ? filas : []
+      return [...lista.filter(esProvisorio), ...lista.filter(c => !esProvisorio(c))]
+    }
+
+    // La burbuja de la pestaña Clientes y la línea de la tarjeta, al día con
+    // la lista que se acaba de leer.
+    function actualizarProvisoriosPortada() {
+      if (!estado.portada || clientesEnTodas()) return
+      const n = contarProvisorios(estado.clientes)
+      if (n === null) return
+      estado.portada.provisorios = n
+      pintarPestanas()
+    }
+
+    // La ficha la abre quien pone precios (abrirFicha); confirmar lo acepta
+    // la base con esa misma tarea.
+    function puedeConfirmar(unidadId) {
+      return puedeEn('retiros', 'precios', unidadId)
+    }
+
+    function htmlAccionesProvisorio(c) {
+      if (!esProvisorio(c)) return ''
+      const unidad = c.unidad_negocio_id ?? estado.empresaId
+      if (clientesEnTodas()) return `<div class="ad-provisorio"><span class="ad-bloqueado-todas">${esc('Cliente provisorio · ' + TEXTO_ELEGI_FABRICA + ' para completarlo o unirlo')}</span></div>`
+      const botones = []
+      if (puedeConfirmar(unidad)) botones.push(`<button type="button" class="ad-btn" data-provisorio-completar="${esc(c.cliente_id)}">Completar y confirmar</button>`)
+      if (puedeDarAlta(unidad)) botones.push(`<button type="button" class="ad-btn ad-btn--secundario" data-provisorio-unir="${esc(c.cliente_id)}">Unir con un cliente existente</button>`)
+      if (!botones.length) return ''
+      return `<div class="ad-provisorio">${botones.join('')}</div>`
+    }
+
+    // ── Completar y confirmar: la ficha de siempre, y al guardar, confirmar ──
+
+    async function abrirCompletar(id) {
+      if (!puedeConfirmar(estado.empresaId) || clientesEnTodas()) return
+      const abriendo = abrirFicha(id)
+      if (estado.ficha?.id === id) estado.ficha.confirmar = true
+      pintarConfirmarFicha()
+      await abriendo
+      pintarConfirmarFicha()
+    }
+
+    const TEXTO_FICHA_PROVISORIO = 'Cliente provisorio: lo cargó el depósito desde Órdenes de retiro. Completá lo que falte (sobre todo la lista de precios) y tocá «Guardar y confirmar»: desde ahí es un cliente más.'
+
+    function pintarConfirmarFicha() {
+      const confirmar = !!estado.ficha?.confirmar
+      const aviso = document.getElementById('ad-ficha-provisorio')
+      if (aviso) { aviso.textContent = confirmar ? TEXTO_FICHA_PROVISORIO : ''; aviso.hidden = !confirmar }
+      const b = document.getElementById('ad-ficha-guardar')
+      if (b) b.textContent = confirmar ? 'Guardar y confirmar' : 'Guardar la ficha'
+    }
+
+    // Guarda lo que cambió (si cambió algo) y después confirma. Sin cambios
+    // también confirma: puede que ya esté completo.
+    async function guardarYConfirmarFicha() {
+      const f = estado.ficha
+      if (!f?.original || estado.trabajando) return
+      const actual = leerFormFicha()
+      const datos = cambiosFicha(f.original, actual)
+      // La misma regla que guardarFicha(): el nombre no queda vacío.
+      if (datos.nombre !== undefined && datos.nombre.length < 2) { f.error = 'El nombre no puede quedar vacío.'; pintarPieFicha(); return }
+      estado.trabajando = true
+      f.error = null
+      pintarPieFicha()
+      let guardada = false
+      try {
+        if (Object.keys(datos).length) {
+          const r = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: datos })
+          if (r.error) throw r.error
+          guardada = true
+        }
+        const { error } = await supabase.rpc('confirmar_cliente', { p_cliente_id: f.id })
+        if (error) throw error
+        mostrarExito('Cliente confirmado: ya no es provisorio.')
+        estado.trabajando = false
+        estado.clientes = null
+        estado.saldos = null
+        await asegurarDatosEmpresa()
+        actualizarProvisoriosPortada()
+        await abrirCliente(f.id)
+      } catch (err) {
+        console.error('No se pudo confirmar el cliente:', err)
+        // Lo guardado ya está guardado: no se vuelve a mandar.
+        if (guardada) f.original = { ...f.original, ...actual }
+        // Los mensajes de la base van TAL CUAL ("No tenés permiso sobre ese cliente.").
+        const msg = err?.message || 'No se pudo confirmar el cliente. Probá de nuevo.'
+        f.error = guardada ? 'La ficha se guardó, pero no se pudo confirmar el cliente: ' + msg : msg
+        estado.trabajando = false
+        pintarPieFicha()
+      }
+    }
+
+    // ── Unir con un cliente existente ─────────────────────────────────────
+
+    const MAX_DESTINOS_UNIR = 8
+
+    // Los clientes a los que se puede unir: de la MISMA empresa (la base lo
+    // exige), prendidos, y que no sean él mismo. Por nombre, razón social,
+    // apodo o CUIT (los dígitos).
+    function destinosUnir(lista, origenId, busqueda) {
+      const q = normalizar(busqueda)
+      if (!q) return []
+      const digitos = String(busqueda ?? '').replace(/\D/g, '')
+      return (Array.isArray(lista) ? lista : [])
+        .filter(c => c && c.id !== origenId && c.activo !== false)
+        .filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
+          (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)) ||
+          (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)))
+        .slice(0, MAX_DESTINOS_UNIR)
+    }
+
+    function abrirUnir(origenId) {
+      if (clientesEnTodas() || !puedeDarAlta(estado.empresaId)) return
+      const o = clienteDe(origenId)
+      if (!o) return
+      estado.unir = { origenId, origenNombre: o.nombre, unidadId: estado.empresaId, busqueda: '', destinoId: null,
+        previa: null, confirmando: false, enviando: false, error: null, turno: 0 }
+      document.getElementById('ad-unir-buscar').value = ''
+      pintarClientes()
+      pintarUnir()
+      document.getElementById('ad-panel-unir')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+      document.getElementById('ad-unir-buscar')?.focus?.()
+    }
+
+    function cerrarUnir() {
+      if (estado.unir?.enviando) return
+      estado.unir = null
+      pintarClientes()
+    }
+
+    // Cuántas cosas pasan al otro cliente. Cada una se lee por su lado: la
+    // que no se puede leer (permiso o conexión) se DICE, nunca un 0.
+    async function leerPreviaUnir(origenId, unidadId) {
+      const contar = async (tabla) => {
+        const { data, error } = await supabase.from(tabla).select('id').eq('cliente_id', origenId)
+        if (error) throw error
+        return (data ?? []).length
+      }
+      const intento = async (fn) => {
+        try { return { n: await fn() } } catch (err) { console.error('No se pudo leer para la vista previa de unir:', err); return { error: true } }
+      }
+      const [ordenes, cobranzas, pedidos, cuenta] = await Promise.all([
+        intento(() => contar('ordenes_retiro')),
+        tieneTarea('cobranzas', 'ver_todo') ? intento(() => contar('cobranzas')) : { sinPermiso: true },
+        puedeEn('pedidos', 'ver', unidadId) ? intento(() => contar('pedidos')) : { sinPermiso: true },
+        intento(async () => {
+          const { data, error } = await supabase.from('cliente_movimientos').select('importe').eq('cliente_id', origenId)
+          if (error) throw error
+          return { movimientos: (data ?? []).length, saldo: (data ?? []).reduce((s, m) => s + (Number(m.importe) || 0), 0) }
+        }),
+      ])
+      const empresa = (estado.empresas ?? []).find(e => e.id === unidadId)
+      return { ordenes, cobranzas, pedidos, cuenta, taller: limpio(empresa?.nombre) === 'Taller' }
+    }
+
+    function textoCantidad(r, uno, varios) {
+      return Number(r.n) === 1 ? '1 ' + uno : r.n + ' ' + varios
+    }
+
+    // "3 órdenes de retiro, 1 cobranza, 0 pedidos y $ 12.000 de saldo pasan
+    // a ANATOLIA." / "KIOSCO PEPE queda apagado y su nombre queda como apodo
+    // de ANATOLIA." Lo que no se pudo leer va aparte, con el porqué.
+    function textosPreviaUnir(pv, origen, destino) {
+      const pasan = []
+      const noSe = []
+      if (pv.ordenes?.error) noSe.push('las órdenes de retiro (no se pudieron leer)')
+      else if (pv.ordenes) pasan.push(textoCantidad(pv.ordenes, 'orden de retiro', 'órdenes de retiro'))
+      if (pv.cobranzas?.sinPermiso) noSe.push('las cobranzas (con tu usuario no se pueden contar)')
+      else if (pv.cobranzas?.error) noSe.push('las cobranzas (no se pudieron leer)')
+      else if (pv.cobranzas) pasan.push(textoCantidad(pv.cobranzas, 'cobranza', 'cobranzas'))
+      if (pv.pedidos?.sinPermiso) noSe.push('los pedidos (con tu usuario no se pueden contar)')
+      else if (pv.pedidos?.error) noSe.push('los pedidos (no se pudieron leer)')
+      else if (pv.pedidos) pasan.push(textoCantidad(pv.pedidos, 'pedido', 'pedidos'))
+      if (pv.cuenta?.error) noSe.push('el saldo de su cuenta (no se pudo leer)')
+      else if (pv.cuenta?.n) {
+        const c = pv.cuenta.n
+        pasan.push(c.movimientos
+          ? importeHoja(c.saldo) + ' de saldo (' + c.movimientos + ' ' + (c.movimientos === 1 ? 'movimiento' : 'movimientos') + ' de su cuenta)'
+          : 'su cuenta, que está en cero')
+      }
+      const lineas = []
+      if (pasan.length) {
+        const lista = pasan.length > 1 ? pasan.slice(0, -1).join(', ') + ' y ' + pasan[pasan.length - 1] : pasan[0]
+        lineas.push('Pasan a ' + destino + ': ' + lista + '.')
+      }
+      if (noSe.length) lineas.push('No se puede saber cuántos hay de ' + noSe.join(', ') + ': pasan igual.')
+      if (pv.taller) lineas.push('Si tiene proyectos del Taller, también pasan (no se pueden contar desde acá).')
+      lineas.push(origen + ' queda apagado y su nombre queda como apodo de ' + destino + '.')
+      return lineas
+    }
+
+    async function elegirDestinoUnir(destinoId) {
+      const u = estado.unir
+      if (!u || u.enviando) return
+      const d = clienteDe(destinoId)
+      if (!d || destinoId === u.origenId) return
+      u.destinoId = destinoId
+      u.confirmando = false
+      u.error = null
+      u.previa = { cargando: true }
+      const turno = ++u.turno
+      pintarUnir()
+      const pv = await leerPreviaUnir(u.origenId, u.unidadId)
+      if (estado.unir !== u || u.turno !== turno || u.destinoId !== destinoId) return
+      u.previa = pv
+      pintarUnir()
+    }
+
+    function cambiarDestinoUnir() {
+      const u = estado.unir
+      if (!u || u.enviando) return
+      u.turno++
+      u.destinoId = null
+      u.previa = null
+      u.confirmando = false
+      u.error = null
+      pintarUnir()
+    }
+
+    // La confirmación es propia (nunca confirm()): un segundo paso en el panel.
+    function pedirConfirmarUnir() {
+      const u = estado.unir
+      if (!u?.destinoId || !u.previa || u.previa.cargando || u.enviando) return
+      u.confirmando = true
+      pintarUnir()
+    }
+
+    function noConfirmarUnir() {
+      const u = estado.unir
+      if (!u || u.enviando) return
+      u.confirmando = false
+      pintarUnir()
+    }
+
+    async function unirClientes() {
+      const u = estado.unir
+      if (!u?.destinoId || !u.confirmando || u.enviando) return
+      u.enviando = true
+      u.error = null
+      pintarUnir()
+      try {
+        const { error } = await supabase.rpc('unir_clientes', { p_origen_id: u.origenId, p_destino_id: u.destinoId })
+        if (error) throw error
+        const destino = clienteDe(u.destinoId)?.nombre ?? 'el otro cliente'
+        mostrarExito(`${u.origenNombre} quedó unido a ${destino}.`)
+        estado.unir = null
+        estado.clientes = null
+        await mostrarClientes()
+      } catch (err) {
+        console.error('No se pudieron unir los clientes:', err)
+        // Los mensajes de unir_clientes ya vienen escritos para una persona
+        // ("Los dos están vinculados a proveedores distintos…"): TAL CUAL.
+        u.enviando = false
+        u.error = err?.message || 'No se pudieron unir los clientes. Probá de nuevo.'
+        pintarUnir()
+      }
+    }
+
+    function htmlDestinoUnir(c) {
+      const meta = [limpio(c.razon_social) && limpio(c.razon_social) !== limpio(c.nombre) ? c.razon_social : null, c.localidad, c.cuit ? 'CUIT ' + c.cuit : null]
+        .map(limpio).filter(Boolean).join(' · ')
+      return `<button type="button" class="ad-fila" data-unir-destino="${esc(c.id)}"><span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
+        `${c.provisorio === true ? '<span class="ad-sello ad-sello--provisorio">Provisorio</span>' : ''}</span>` +
+        `${meta ? `<span class="ad-fila__meta">${esc(meta)}</span>` : ''}</button>`
+    }
+
+    function htmlUnir(u) {
+      const error = `<p class="ad-error-pegado" id="ad-unir-error"${u.error ? '' : ' hidden'}>${esc(u.error ?? '')}</p>`
+      const cancelar = `<button type="button" class="ad-btn ad-btn--suave" id="ad-unir-cancelar"${u.enviando ? ' disabled' : ''}>Cancelar</button>`
+      if (!u.destinoId) {
+        const q = limpio(u.busqueda)
+        let resultados
+        if (estado.clientes === null) resultados = '<div class="ad-vacio">Cargando los clientes…</div>'
+        else if (!q) resultados = '<p class="ad-texto-suave">Escribí para buscar el cliente que ya existía.</p>'
+        else {
+          const destinos = destinosUnir(estado.clientes, u.origenId, q)
+          resultados = destinos.length ? `<div class="ad-lista">${destinos.map(htmlDestinoUnir).join('')}</div>`
+            : `<div class="ad-vacio">${esc('Ningún cliente de esta empresa coincide con «' + q + '».')}</div>`
+        }
+        return resultados + error + `<div class="ad-panel__acciones">${cancelar}</div>`
+      }
+      const destino = clienteDe(u.destinoId)?.nombre ?? 'el cliente elegido'
+      const elegido = `<p class="ad-unir__elegido">${esc(u.origenNombre + ' → ' + destino)}</p>`
+      const previa = !u.previa || u.previa.cargando
+        ? '<p class="ad-texto-suave">Contando lo que pasa…</p>'
+        : textosPreviaUnir(u.previa, u.origenNombre, destino).map(t => `<p class="ad-texto-suave">${esc(t)}</p>`).join('')
+      const listo = !!u.previa && !u.previa.cargando
+      let acciones
+      if (u.confirmando) {
+        acciones = `<div class="ad-aviso ad-aviso--grave">${esc('¿Unir a ' + u.origenNombre + ' con ' + destino + '? No se puede deshacer desde acá.')}</div>` +
+          `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-unir-si"${u.enviando ? ' disabled' : ''}>${u.enviando ? 'Uniendo…' : 'Sí, unir'}</button>` +
+          `<button type="button" class="ad-btn ad-btn--suave" id="ad-unir-no"${u.enviando ? ' disabled' : ''}>No</button></div>`
+      } else {
+        acciones = `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-unir-pedir"${listo ? '' : ' disabled'}>Unir</button>` +
+          `<button type="button" class="ad-btn ad-btn--suave" id="ad-unir-cambiar">Elegir otro</button>${cancelar}</div>`
+      }
+      return elegido + `<div class="ad-unir__previa" id="ad-unir-previa">${previa}</div>` + error + acciones
+    }
+
+    function pintarUnir() {
+      const panel = document.getElementById('ad-panel-unir')
+      if (!panel) return
+      // Un panel de otra empresa (se cambió arriba) se cierra.
+      if (estado.unir && estado.unir.unidadId !== estado.empresaId) estado.unir = null
+      const u = estado.unir
+      panel.hidden = !u
+      if (!u) return
+      document.getElementById('ad-unir-titulo').textContent = 'Unir «' + u.origenNombre + '» con un cliente existente'
+      document.getElementById('ad-unir-campo').hidden = !!u.destinoId
+      document.getElementById('ad-unir-cuerpo').innerHTML = htmlUnir(u)
+    }
+
+    // ── Valorizar a un provisorio sin lista ──────────────────────────────
+    // Sin lista, la base no tiene de dónde sacar los precios y quedarían
+    // todos vacíos: primero se le asigna la lista en su ficha.
+    function avisarFaltaLista(d, cli, listaId) {
+      if (!d || cli?.provisorio !== true || listaId) return false
+      d.faltaLista = { clienteId: cli.id, nombre: cli.nombre }
+      pintarOrden()
+      return true
+    }
+
+    function htmlFaltaLista(d) {
+      if (!d?.faltaLista) return ''
+      return `<div class="ad-aviso ad-aviso--grave" id="ad-falta-lista">${esc('Primero asigná la lista de precios a ' + (d.faltaLista.nombre ?? 'este cliente') + ': es un cliente provisorio sin lista, y sin ella los precios quedan todos vacíos.')}</div>` +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-falta-lista-ficha">Ir a su ficha</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="ad-falta-lista-cerrar">Cerrar</button></div>`
+    }
+
+    function cerrarFaltaLista() {
+      if (estado.orden) estado.orden.faltaLista = null
+      pintarOrden()
+    }
+
+    // Su ficha, en modo "completar y confirmar" (es provisorio).
+    function irAFichaDesdeOrden() {
+      const id = estado.orden?.faltaLista?.clienteId
+      if (id) abrirCompletar(id)
     }
 
     // ── La cuenta corriente ────────────────────────────────────────────────
@@ -3766,6 +4167,7 @@
     }
 
     function pintarPieFicha() {
+      pintarConfirmarFicha()
       const f = estado.ficha
       if (!f?.original) return
       document.getElementById('ad-ficha-cambios').textContent = textoCambiosFicha(Object.keys(cambiosFicha(f.original, leerFormFicha())).length)
@@ -3944,6 +4346,7 @@
 
     async function guardarFicha() {
       const f = estado.ficha
+      if (f?.confirmar) return guardarYConfirmarFicha()
       if (!f?.original || estado.trabajando) return
       const datos = cambiosFicha(f.original, leerFormFicha())
       if (!Object.keys(datos).length) { f.error = 'No cambiaste nada.'; pintarPieFicha(); return }
@@ -6780,11 +7183,18 @@
         else if ((b = e.target.closest('[data-comision-modo]'))) elegirModoComision(b.dataset.comisionModo)
         else if (e.target.closest('#ad-comision-guardar')) guardarComision()
         else if (e.target.closest('#ad-comision-cancelar')) cancelarComision()
+        else if (e.target.closest('#ad-falta-lista-cerrar')) cerrarFaltaLista()
+        else if (e.target.closest('#ad-falta-lista-ficha')) irAFichaDesdeOrden()
       })
       // Clientes
       document.getElementById('ad-clientes-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-clientes-buscar').addEventListener('input', (e) => { estado.busquedaClientes = e.target.value; pintarClientes() })
       document.getElementById('ad-clientes-lista').addEventListener('click', (e) => {
+        // Las acciones de un provisorio (06/10/2026) van debajo de la fila.
+        const pc = e.target.closest('[data-provisorio-completar]')
+        if (pc) { abrirCompletar(pc.dataset.provisorioCompletar); return }
+        const pu = e.target.closest('[data-provisorio-unir]')
+        if (pu) { abrirUnir(pu.dataset.provisorioUnir); return }
         const s = e.target.closest('[data-cliente-activo]')
         if (s) { cambiarActivoCliente(s.dataset.clienteActivo); return }
         const b = e.target.closest('[data-cliente]')
@@ -6795,6 +7205,17 @@
       document.getElementById('ad-btn-cliente-nuevo').addEventListener('click', () => abrirAlta())
       document.getElementById('ad-alta-guardar').addEventListener('click', () => guardarAlta())
       document.getElementById('ad-alta-cancelar').addEventListener('click', () => { estado.alta = null; pintarClientes() })
+      // Unir un provisorio con un cliente existente (06/10/2026)
+      document.getElementById('ad-unir-buscar').addEventListener('input', (e) => { if (estado.unir) { estado.unir.busqueda = e.target.value; pintarUnir() } })
+      document.getElementById('ad-unir-cuerpo').addEventListener('click', (e) => {
+        const d = e.target.closest('[data-unir-destino]')
+        if (d) { elegirDestinoUnir(d.dataset.unirDestino); return }
+        if (e.target.closest('#ad-unir-cambiar')) cambiarDestinoUnir()
+        else if (e.target.closest('#ad-unir-pedir')) pedirConfirmarUnir()
+        else if (e.target.closest('#ad-unir-si')) unirClientes()
+        else if (e.target.closest('#ad-unir-no')) noConfirmarUnir()
+        else if (e.target.closest('#ad-unir-cancelar')) cerrarUnir()
+      })
       document.getElementById('ad-cliente-volver').addEventListener('click', () => mostrarClientes())
       document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
         const b = e.target.closest('[data-cuenta-cobranza]')

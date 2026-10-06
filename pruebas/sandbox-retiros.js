@@ -27,6 +27,9 @@ const FUNCIONES_BASE = [
   'renglonNuevo', 'formVacio', 'autoPresentacion', 'faltanRenglon', 'faltaEnLotes', 'faltanOrden', 'itemParaBase', 'parametrosRegistrar',
   'totalCajasForm', 'textoCuentaForm', 'clienteDe', 'detalleCliente', 'htmlClienteElegido', 'htmlResultadosClientes',
   'pintarCliente', 'elegirCliente', 'cambiarCliente',
+  // El cliente nuevo (provisorio, 06/10/2026)
+  'parecidosLocales', 'parametrosClienteNuevo', 'abrirClienteNuevo', 'cerrarClienteNuevo', 'leerDatosClienteNuevo', 'volverDatosClienteNuevo',
+  'seguirClienteNuevo', 'elegirParecido', 'crearClienteNuevo', 'htmlBotonClienteNuevo', 'htmlClienteNuevo', 'pintarClienteNuevo',
   'textoStockOpcion', 'htmlProductosRenglon', 'htmlEleccionRenglon', 'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'cantidadRenglon', 'htmlAvisoFaltante', 'htmlResumenLotes', 'htmlLoteRenglon',
   // de js/cantidades.js (05/10/2026): la unidad al lado de cada lote
   'unidadCorta',
@@ -55,7 +58,7 @@ const FUNCIONES_BASE = [
 ]
 
 const CONSTANTES_BASE = [
-  'ZONA_AR', 'DECIMALES_CAJAS', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes', 'claveLotesInsumo',
+  'ZONA_AR', 'DECIMALES_CAJAS', 'LARGO_MINIMO_NOMBRE_CLIENTE', 'TEXTO_NOMBRE_CORTO', 'MAX_PARECIDOS', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes', 'claveLotesInsumo',
   'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'GRUPOS_RETIRO', 'hayStock', 'CLASE_GRUPO',
   'MARCA_A_ELEGIR', 'PASOS_RETIRO', 'COLOR_TAMANO_RETIRO', 'COLOR_INSUMO_RETIRO', 'TONOS_RETIRO', 'PALETA_CONO_RETIRO', 'TEXTO_SIN_SENAL', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'RENGLONES_POR_HOJA',
@@ -146,6 +149,7 @@ const PRELUDIO = `
     empresaId: null, empresaPendiente: null, vista: null, unidadBarra: null,
     clientes: null, errorClientes: null, catalogo: null, catalogoEmpresa: null, errorCatalogo: null,
     buscarClientes: null, buscarClientesSinPermiso: false, turnoBuscarClientes: 0, esperaBuscarClientes: null,
+    nuevoCliente: null,
     lotes: new Map(), form: null, confirmando: false, hecho: null, mis: null, errorMis: null, mio: null, enviando: false,
   }
 `
