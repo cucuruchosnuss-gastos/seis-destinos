@@ -553,6 +553,13 @@ const SEGURAS = {
     'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, lineaSaldo: HTML_PROPIO, iconos: HTML_PROPIO,
   },
   htmlSinImporte: { n: 'número: la función devuelve "" si n no es > 0; los call sites pasan contarSinImporte() (.length)' },
+  // Las comisiones (06/10/2026): las ejecuta con marcas test-cuentas-corrientes-comisiones.js.
+  htmlFilaComision: {
+    'importeHtml(saldo, m.moneda)': IMPORTE, 'importeHtml(Math.abs(saldoAcum), m.moneda)': IMPORTE,
+    'importeHtml(monto, m.moneda)': IMPORTE, 'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, 'badgeEstadoFactura(estadoF)': BADGE,
+    'formatearFecha(m.fecha)': fecha('v_cuenta_corriente_movimientos.fecha'),
+    faltaPagar: HTML_PROPIO, panel: HTML_PROPIO, lineaSaldo: HTML_PROPIO, acciones: HTML_PROPIO,
+  },
   htmlFilaSinImporte: {
     "cantidades.map(c => esc(textoCantidadInsumo(c))).join('<br>')": 'cada elemento pasa por esc(); el separador es un literal',
     'importeHtml(total, m.moneda)': IMPORTE, "badgeEstadoFactura('sin_importe')": 'badgeEstadoFactura() con un literal del código',

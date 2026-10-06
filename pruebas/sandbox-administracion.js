@@ -29,6 +29,11 @@ const FUNCIONES_BASE = [
   // Valorizar con precio_venta() (30/09/2026)
   'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
+  // La comisión de una orden (06/10/2026)
+  'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
+  'textoPorcentaje', 'textoCalculoComision', 'parametrosComision', 'puedeCargarComision', 'comisionDesactualizada', 'rotuloComision',
+  'htmlPanelComision', 'htmlComisionOrden', 'abrirComision', 'elegirModoComision', 'cambiarValorComision', 'cancelarComision',
+  'guardarComision', 'comisionHabitualGuardada',
   'guardarValorizacion', 'cancelarValorizar', 'pedirAnular', 'cancelarAnular', 'confirmarAnular',
   'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
   // Clientes
@@ -109,7 +114,7 @@ const FUNCIONES_BASE = [
 const CONSTANTES_BASE = [
   // MODULOS (js/modulos.js) antes de LINKS, que se arma con él.
   'MODULOS', 'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'CLAVES_ACCESOS', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
-  'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE',
+  'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE', 'MODOS_COMISION',
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',

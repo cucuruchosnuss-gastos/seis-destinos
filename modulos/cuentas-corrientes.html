@@ -760,6 +760,10 @@
     .cargar-importe-cc__error { font-size: 0.8125rem; color: var(--bordo); margin-top: 0.375rem; overflow-wrap: anywhere; }
     .cargar-importe-cc__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; }
     .cargar-importe-cc__acciones .btn { width: auto; flex: 1 1 8rem; margin: 0; }
+    /* LAS COMISIONES (06/10/2026): la factura de una comisión (proveedor
+       COMISIONES) tiene "Pagar" y "Se la queda la empresa". */
+    .acciones-comision { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; }
+    .acciones-comision .btn { width: auto; flex: 0 1 auto; min-height: 44px; margin: 0; }
     .remitos-cc { margin-top: 1.5rem; }
     .remitos-cc__desc { font-size: 0.78125rem; color: var(--color-texto-suave); margin: 0.25rem 0 0.5rem; }
     .remito-cc { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0; border-top: 1px solid var(--color-borde); font-size: 0.8125rem; min-width: 0; }
@@ -4342,18 +4346,25 @@
       // tipo "factura".
       const idsFactura = [...new Set((data ?? []).filter(m => m.tipo === 'factura' && m.factura_pendiente_id).map(m => m.factura_pendiente_id))]
       let estadoPorFactura = {}
+      let infoFactura = {}
       if (idsFactura.length) {
-        const { data: facturas } = await supabase.from('facturas_pendientes').select('id, estado').in('id', idsFactura)
+        // modulo_origen 'comision' = la comisión de una orden de retiro
+        // (cargar_comision_orden): lleva "Pagar" y "Se la queda la empresa".
+        const { data: facturas } = await supabase.from('facturas_pendientes')
+          .select('id, estado, saldo_pendiente, modulo_origen, observaciones').in('id', idsFactura)
         estadoPorFactura = Object.fromEntries((facturas ?? []).map(f => [f.id, f.estado]))
+        infoFactura = Object.fromEntries((facturas ?? []).map(f => [f.id, f]))
       }
+      const idsComision = Object.values(infoFactura).filter(f => f.modulo_origen === 'comision').map(f => f.id)
 
       // Las cantidades del ingreso vinculado a cada descarga sin importe: es lo
       // único que hay para ponerle precio.
       const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
-      const [cantidades, etiquetasPago, obsSaldoInicial] = await Promise.all([
+      const [cantidades, etiquetasPago, obsSaldoInicial, codigosComision] = await Promise.all([
         idsSinImporte.length ? cargarCantidadesSinImporte(idsSinImporte) : new Map(),
         cargarEtiquetasDePagos(data ?? []),
         cargarObservacionesSaldoInicial(data ?? []),
+        idsComision.length ? cargarCodigosComision(idsComision) : new Map(),
       ])
       if (estado.ficha !== ficha) return
 
@@ -4363,6 +4374,8 @@
       estado.ficha.obsSaldoInicial  = obsSaldoInicial
       estado.ficha.movimientosRaw   = data ?? []
       estado.ficha.estadoPorFactura = estadoPorFactura
+      estado.ficha.infoFactura = infoFactura
+      estado.ficha.codigosComision = codigosComision
       estado.ficha.cantidadesSinImporte = cantidades
       renderizarFichaMovimientos()
     }
@@ -4404,6 +4417,19 @@
             puedeCargar: tieneTarea('cuentas_corrientes', 'registrar_pago'),
             puedeVerCantidades: tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago'),
             form: estado.ficha.formImporte?.facturaId === m.factura_pendiente_id ? estado.ficha.formImporte : null,
+            todas,
+          })
+        }
+        // La factura de una COMISIÓN (06/10/2026) va por su propia fila: sin
+        // editar ni eliminar (la maneja la orden de retiro), con "Pagar" y
+        // "Se la queda la empresa".
+        const infoComision = m.tipo === 'factura' && m.factura_pendiente_id ? estado.ficha.infoFactura?.[m.factura_pendiente_id] : null
+        if (infoComision?.modulo_origen === 'comision') {
+          return htmlFilaComision(m, {
+            info: infoComision,
+            codigo: estado.ficha.codigosComision?.get(m.factura_pendiente_id) ?? null,
+            puedePagar: tieneTarea('cuentas_corrientes', 'registrar_pago'),
+            quedarse: estado.ficha.quedarse?.facturaId === m.factura_pendiente_id ? estado.ficha.quedarse : null,
             todas,
           })
         }
@@ -4491,6 +4517,156 @@
     // El total que se guarda se redondea igual a 2: totalImporteFormulario.
     function decimalesImporteSin(form) {
       return form?.modo === 'unidad' ? 4 : 2
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LAS COMISIONES (06/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // cargar_comision_orden (Administración, la orden de retiro) deja en la
+    // cuenta del proveedor COMISIONES una factura con modulo_origen
+    // 'comision', numero_comprobante 'Orden <número>' y observaciones
+    // 'Comisión de la orden N° <número> · <cliente>'. Cada una se PAGA con el
+    // "Registrar pago" de siempre (con esa factura sola tildada) o se cierra
+    // con quedarse_comision ("Se la queda la empresa"); las dos piden
+    // cuentas_corrientes:registrar_pago. Una cerrada queda 'anulada' y deja de
+    // verse (la vista no trae las anuladas).
+
+    // El código de la orden de cada comisión (factura → 'N-0042'). Se lee
+    // ordenes_retiro, que pide retiros:ver: sin ese permiso vuelve vacío (sin
+    // error) y la fila dice lo que escribió la base.
+    async function cargarCodigosComision(ids) {
+      const mapa = new Map()
+      try {
+        const { data, error } = await supabase.from('ordenes_retiro').select('codigo, comision_factura_id').in('comision_factura_id', ids)
+        if (error) { console.error('No se pudieron leer las órdenes de las comisiones:', error); return mapa }
+        for (const o of data ?? []) if (o.comision_factura_id && o.codigo) mapa.set(o.comision_factura_id, o.codigo)
+      } catch (e) {
+        console.error('No se pudieron leer las órdenes de las comisiones:', e)
+      }
+      return mapa
+    }
+
+    // "Orden N-0042 · Distribuidora Anatolia". Sin el código (sin permiso de
+    // ver las órdenes), lo que escribió la base. TEXTO PLANO.
+    function referenciaComision(observaciones, codigo, numero) {
+      const texto = String(observaciones ?? '').trim()
+      const m = /^Comisión de la orden N°\s*\d+(?: · (.*))?$/.exec(texto)
+      const cliente = m ? String(m[1] ?? '').split(' · ')[0].trim() : ''
+      if (codigo) return 'Orden ' + codigo + (cliente ? ' · ' + cliente : '')
+      return texto || numero || 'Comisión'
+    }
+
+    function htmlFilaComision(m, { info = null, codigo = null, puedePagar = false, quedarse = null, todas = false } = {}) {
+      const id = m.factura_pendiente_id
+      const estadoF = info?.estado
+      const abierta = estadoF === 'pendiente' || estadoF === 'parcial'
+      const monto = Number(m.monto) || 0
+      const saldo = Number(info?.saldo_pendiente)
+      const faltaPagar = estadoF === 'parcial' && info?.saldo_pendiente !== null && info?.saldo_pendiente !== undefined && Number.isFinite(saldo)
+        ? `<div class="fila-movimiento__aviso">Falta pagar ${importeHtml(saldo, m.moneda)}</div>` : ''
+      const saldoAcum = Number(m.saldo_acumulado) || 0
+      const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)
+        ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
+        : ''
+      const acciones = puedePagar && abierta && !quedarse
+        ? `<div class="acciones-comision"><button type="button" class="btn btn--primario btn-pagar-comision" data-id="${esc(id)}">Pagar</button>` +
+          (estadoF === 'pendiente' ? `<button type="button" class="btn btn--secundario btn-quedarse-comision" data-id="${esc(id)}">Se la queda la empresa</button>` : '') + '</div>'
+        : ''
+      const panel = quedarse ? `
+          <div class="cargar-importe-cc quedarse-comision" data-id="${esc(id)}">
+            <div>Esta comisión de ${importeHtml(monto, m.moneda)} se cierra: nadie la cobra y deja de figurar en esta cuenta. El cliente la sigue debiendo.</div>
+            ${quedarse.error ? `<div class="cargar-importe-cc__error">${esc(quedarse.error)}</div>` : ''}
+            <div class="cargar-importe-cc__acciones">
+              <button type="button" class="btn btn--primario btn-confirmar-quedarse" data-id="${esc(id)}"${quedarse.enCurso ? ' disabled' : ''}>${quedarse.enCurso ? 'Guardando…' : 'Sí, se la queda la empresa'}</button>
+              <button type="button" class="btn btn--secundario btn-cancelar-quedarse">Cancelar</button>
+            </div>
+          </div>` : ''
+      return `
+        <div class="tarjeta-lista fila-movimiento fila-movimiento--comision">
+          <span class="punto-tipo-mov punto-tipo-mov--factura"></span>
+          <div style="flex:1; min-width:0;">
+            <div class="fila-movimiento__tipo">Comisión</div>
+            <div class="fila-movimiento__referencia">${esc(referenciaComision(info?.observaciones, codigo, m.referencia))}${badgeEstadoFactura(estadoF)}</div>
+            <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
+            ${faltaPagar}
+            ${acciones}
+            ${panel}
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end;">
+            <div class="fila-movimiento__monto fila-movimiento__monto--deuda">+${importeHtml(Math.abs(monto), m.moneda)}</div>
+            ${lineaSaldo}
+          </div>
+        </div>`
+    }
+
+    // Solo ESA factura tildada, con lo que se paga (hasta su saldo). Si no
+    // está en la lista, la lista queda como vino.
+    function elegirSoloFactura(lista, facturaId, monto) {
+      if (!(lista ?? []).some(f => f.id === facturaId)) return lista
+      const m = Number(monto)
+      return lista.map(f => f.id === facturaId
+        ? { ...f, checked: true, monto: Number.isFinite(m) && m > 0 ? Math.min(f.saldo, m) : f.saldo }
+        : { ...f, checked: false, monto: 0 })
+    }
+
+    // "Pagar": el "Registrar pago" de siempre, en la unidad de la comisión, con
+    // el monto de su saldo y esa factura sola tildada. El modal es la
+    // confirmación: nada se paga hasta tocar su botón.
+    async function pagarComision(facturaId) {
+      const f = estado.ficha
+      if (!f || !tieneTarea('cuentas_corrientes', 'registrar_pago')) return
+      const m = (f.movimientosRaw ?? []).find(x => x.tipo === 'factura' && x.factura_pendiente_id === facturaId)
+      const info = f.infoFactura?.[facturaId]
+      if (!m || info?.modulo_origen !== 'comision') return
+      const saldo = Number(info.saldo_pendiente)
+      if (info.saldo_pendiente === null || info.saldo_pendiente === undefined || !(saldo > 0)) { mostrarError('Esta comisión no tiene saldo para pagar.'); return }
+      if (m.unidad_negocio_id && f.unidadId !== m.unidad_negocio_id) cambiarUnidadFicha(m.unidad_negocio_id)
+      await abrirModalPago()
+      if (estado.ficha !== f || document.getElementById('modal-pago').hidden) return
+      estado.pagoFacturaElegida = facturaId
+      const sel = document.getElementById('campo-moneda-pago')
+      if ([...(sel.options ?? [])].some(o => o.value === m.moneda)) sel.value = m.moneda
+      ponerNumero(document.getElementById('campo-monto-pago'), saldo)
+      await actualizarSugerenciasPago()
+    }
+
+    function pedirQuedarseComision(facturaId) {
+      if (!estado.ficha || !tieneTarea('cuentas_corrientes', 'registrar_pago') || estado.ficha.quedarse?.enCurso) return
+      estado.ficha.quedarse = { facturaId, error: null, enCurso: false }
+      renderizarFichaMovimientos()
+    }
+
+    function cancelarQuedarseComision() {
+      if (!estado.ficha?.quedarse || estado.ficha.quedarse.enCurso) return
+      estado.ficha.quedarse = null
+      renderizarFichaMovimientos()
+    }
+
+    async function confirmarQuedarseComision(facturaId) {
+      const q = estado.ficha?.quedarse
+      if (!q || q.facturaId !== facturaId || q.enCurso) return
+      q.enCurso = true
+      q.error = null
+      renderizarFichaMovimientos()
+      let error = null
+      try {
+        const r = await supabase.rpc('quedarse_comision', { p_factura_pendiente_id: facturaId })
+        error = r.error
+      } catch (e) {
+        error = e
+      }
+      q.enCurso = false
+      if (error) {
+        console.error(error)
+        // TAL CUAL: los mensajes de quedarse_comision están escritos para una persona.
+        q.error = error.message || 'No se pudo cerrar la comisión. Probá de nuevo.'
+        if (estado.ficha?.quedarse === q) renderizarFichaMovimientos()
+        return
+      }
+      if (estado.ficha?.quedarse === q) estado.ficha.quedarse = null
+      mostrarExito('Listo: la comisión se cerró y se la queda la empresa.')
+      await recargarTrasImporte()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -5315,6 +5491,7 @@
         mostrarError('Elegí una unidad de negocio para registrar un pago.')
         return
       }
+      estado.pagoFacturaElegida = null
       await cargarCuentasParaPago()
 
       // Solo los saldos de la unidad de la ficha: se paga en UNA unidad.
@@ -5347,6 +5524,7 @@
 
     function cerrarModalPago() {
       document.getElementById('modal-pago').hidden = true
+      estado.pagoFacturaElegida = null
       facturasParaPago = []
     }
 
@@ -5405,6 +5583,8 @@
         checked: sugeridasPorId.has(f.id),
         monto: sugeridasPorId.has(f.id) ? sugeridasPorId.get(f.id) : 0,
       }))
+      // Desde "Pagar" de una comisión: esa factura sola, no las más viejas.
+      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, monto)
 
       renderizarFilasFifo()
     }
@@ -5761,7 +5941,13 @@
         return
       }
       const confirmar = ev.target.closest('.btn-confirmar-importe')
-      if (confirmar) confirmarImporteSinImporte(confirmar.dataset.id)
+      if (confirmar) { confirmarImporteSinImporte(confirmar.dataset.id); return }
+      // Las comisiones (06/10/2026)
+      let b
+      if ((b = ev.target.closest('.btn-pagar-comision'))) pagarComision(b.dataset.id)
+      else if ((b = ev.target.closest('.btn-quedarse-comision'))) pedirQuedarseComision(b.dataset.id)
+      else if ((b = ev.target.closest('.btn-confirmar-quedarse'))) confirmarQuedarseComision(b.dataset.id)
+      else if (ev.target.closest('.btn-cancelar-quedarse')) cancelarQuedarseComision()
     })
     listaMovFicha.addEventListener('change', (ev) => {
       const radio = ev.target.closest('.modo-importe')
