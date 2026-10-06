@@ -60,6 +60,11 @@ async function avanzar(page, segundos) {
 }
 
 const aviso = (page) => page.locator('#sd-aviso-conexion');
+// En la planta, sin red, el cartel que se ve es el de la cola (la tablet sin
+// internet, 06/10/2026): UNO solo, que dice que no hay internet. El de
+// js/salud.js no se superpone (body.pr-con-cartel lo esconde).
+const cartelCola = (page) => page.locator('#pr-cola-cartel');
+const TEXTO_SIN_INTERNET = /^Sin internet( · |$)/;
 
 test('la planta sigue siendo instalable (sin errores de instalación) y su alcance es solo su página', async ({ page, context }) => {
   await abrirPlanta(page);
@@ -109,20 +114,26 @@ test('el token vence mientras está congelada: al volver se renueva solo, sin ir
   expect(new URL(page.url()).pathname).toBe(URL_PLANTA);
 });
 
-test('sin red al volver: "Sin conexión, reintentando…" y, cuando vuelve la red, sigue sola', async ({ page, context }) => {
+test('sin red al volver: UN cartel "Sin internet" (el de la cola) y, cuando vuelve la red, sigue sola', async ({ page, context }) => {
   const { b } = await abrirPlanta(page, { venceEn: 120 });
   const volver = await congelar(page, context, 90);
   b.sinRed(true);
   await volver();
   await avanzar(page, 1);
-  await expect(aviso(page)).toBeVisible();
+  await expect(cartelCola(page)).toBeVisible();
+  await expect(page.locator('#pr-cola-texto')).toHaveText(TEXTO_SIN_INTERNET);
+  await expect(cartelCola(page)).toHaveAttribute('data-tono', 'sin-red');
+  // salud.js sí detectó el corte (su aviso existe y dice lo de siempre), pero
+  // en la planta no se ve: no hay dos carteles.
   await expect(aviso(page)).toHaveText('Sin conexión, reintentando…');
+  await expect(aviso(page)).toBeHidden();
   // Nunca se va al login por un corte de red.
   await expect(page.locator('#pr-entrar')).toBeHidden();
   expect(new URL(page.url()).pathname).toBe(URL_PLANTA);
   b.sinRed(false);
   await avanzar(page, 35);
   await expect(aviso(page)).toBeHidden();
+  await expect(cartelCola(page)).toBeHidden();
   await expect(page.locator('#pr-quien-lista')).toContainText('Federico Silva');
   expect(await page.evaluate(() => window.__marca)).toBe('misma página');
   // Lo registró (la vuelta costó): un 'reanudar', sin datos sensibles.
@@ -137,13 +148,48 @@ test('la página descartada y recargada sin red (lo que se reprodujo): avisa y s
   await volver();
   await page.reload();
   await avanzar(page, 6);
-  // ANTES del arreglo: "Cargando…" mudo. Ahora dice qué pasa.
-  await expect(aviso(page)).toBeVisible();
+  // ANTES del arreglo: "Cargando…" mudo. Ahora dice qué pasa, con UN cartel.
+  await expect(cartelCola(page)).toBeVisible();
+  await expect(page.locator('#pr-cola-texto')).toHaveText(TEXTO_SIN_INTERNET);
+  await expect(aviso(page)).toBeHidden();
   b.sinRed(false);
   await avanzar(page, 35);
   await expect(page.locator('#pr-quien-lista')).toContainText('Federico Silva');
   await expect(aviso(page)).toBeHidden();
+  await expect(cartelCola(page)).toBeHidden();
   expect(new URL(page.url()).pathname).toBe(URL_PLANTA);
+});
+
+// El resto de la app no cambia: fuera de la planta, el aviso de js/salud.js
+// es el que dice que no hay internet, como siempre.
+test('en otra pantalla (Stock), sin red al volver: el aviso de salud.js se ve como siempre', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const datos = {
+    tablas: {
+      ...DATOS_PLANTA.tablas,
+      empleados: [{ ...DATOS_PLANTA.tablas.empleados[0], es_dispositivo: false }],
+      empleado_tareas: [{ empleado_id: 'e-tablet', modulo: 'stock', tarea: 'ver', alcance: { todas: true }, habilitado: true }],
+      empleado_modulos: [{ empleado_id: 'e-tablet', modulo: 'stock', habilitado: true }],
+    },
+    rpc: DATOS_PLANTA.rpc,
+  };
+  const b = await backendSimulado(page, datos);
+  await page.clock.install();
+  await sembrarSesion(page, { venceEn: 120 });
+  await page.goto('/modulos/stock.html');
+  await avanzar(page, 2);
+  expect(new URL(page.url()).pathname).toBe('/modulos/stock.html');
+  await expect(aviso(page)).toBeHidden();
+  const volver = await congelar(page, context, 90);
+  b.sinRed(true);
+  await volver();
+  await avanzar(page, 1);
+  await expect(aviso(page)).toBeVisible();
+  await expect(aviso(page)).toHaveText('Sin conexión, reintentando…');
+  await expect(cartelCola(page)).toHaveCount(0);
+  b.sinRed(false);
+  await avanzar(page, 35);
+  await expect(aviso(page)).toBeHidden();
 });
 
 test('girar la tablet mientras está bloqueada: vuelve en la otra orientación, sin scroll de costado', async ({ page, context }) => {
