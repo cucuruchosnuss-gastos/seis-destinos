@@ -29,7 +29,7 @@ Rama `ci-prueba/comisiones` (worktree `sd-comisiones`), sobre `7ecf298` (main + 
 
 ## Huecos de base (para el chat de arquitectura)
 
-1. **`guardar_ficha_cliente` NO acepta `comision_habitual`**: ignora la clave en silencio y no hay otra RPC ni policy de UPDATE para escribirla. La ficha ya la manda; mientras tanto, después de guardar relee la fila y **dice** "La comisión habitual NO se guardó: la base todavía no la guarda." Cuando la función acepte la clave (`if d ? 'comision_habitual' then … end if`, con el CHECK 0–100), anda sola sin tocar la pantalla.
+1. **CERRADO el 06/10/2026: la base sumó `guardar_comision_habitual(p_cliente_id, p_porcentaje)` y la ficha la usa** (la comisión ya no viaja en `guardar_ficha_cliente`; se fue la relectura `comisionHabitualGuardada`). Lo que decía antes: **`guardar_ficha_cliente` NO acepta `comision_habitual`**: ignora la clave en silencio y no hay otra RPC ni policy de UPDATE para escribirla. La ficha ya la manda; mientras tanto, después de guardar relee la fila y **dice** "La comisión habitual NO se guardó: la base todavía no la guarda." Cuando la función acepte la clave (`if d ? 'comision_habitual' then … end if`, con el CHECK 0–100), anda sola sin tocar la pantalla.
 2. **`valorizar_orden_retiro` no recalcula una comisión en porcentaje** si se corrige la valorización: queda el importe viejo. La pantalla avisa para volver a cargarla.
 3. **La factura y el movimiento usan el NÚMERO de la orden** ("Orden 13", "Comisión de la orden N° 13 · …", "Comisión orden N° 13 (5%)"), no el código (`N-0013`). Administración y CC lo reemplazan por el código cuando lo pueden leer; en CC sin `retiros:ver` se ve el número.
 4. `anular_orden_retiro` devuelve `-total` (sin la comisión): está bien porque el trigger `trg_orden_anulada_saca_comision` borra el movimiento de la comisión aparte, pero conviene saberlo al leer la cuenta.
@@ -42,7 +42,7 @@ Rama `ci-prueba/comisiones` (worktree `sd-comisiones`), sobre `7ecf298` (main + 
 
 ## Guion para Facu
 
-1. Administración → Órdenes → tildá **"Con comisión sin cargar"** (hace falta un cliente con comisión habitual: hoy no se puede cargar desde la ficha, ver el hueco 1).
+1. Administración → Órdenes → tildá **"Con comisión sin cargar"** (hace falta un cliente con comisión habitual: se carga en su ficha, "Comisión habitual (%)").
 2. Abrí una orden valorizada: debajo del total, "Comisión: sin cargar". Tocá **Cargar comisión**, mirá el cálculo, Guardar: tiene que pasar a Subtotal / Comisión / Total.
 3. Cuentas corrientes → proveedor **COMISIONES**: la comisión aparece con **Pagar** y **Se la queda la empresa**. Probá "Pagar": el monto y esa sola factura tildada.
 

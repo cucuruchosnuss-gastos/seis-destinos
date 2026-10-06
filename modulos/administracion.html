@@ -3933,15 +3933,13 @@
       pintarPieFicha()
     }
 
-    // ¿La base guardó la comisión habitual que se mandó? guardar_ficha_cliente
-    // IGNORA en silencio las claves que no conoce (al 06/10/2026 no conoce
-    // comision_habitual): se relee y se compara, así nunca se dice "guardada"
-    // de algo que no se guardó. '' = sin comisión habitual.
-    function comisionHabitualGuardada(enviado, leido) {
-      const e = enviado === '' || enviado === null || enviado === undefined ? null : Number(enviado)
-      const l = leido === '' || leido === null || leido === undefined ? null : Number(leido)
-      if (e === null || l === null) return e === l
-      return Math.round(e * 100) === Math.round(l * 100)
+    // LA COMISIÓN HABITUAL va por su propia función (06/10/2026):
+    // guardar_comision_habitual(p_cliente_id, p_porcentaje) — 0 o null la
+    // borra; fuera de 0 a 100 la base lo rechaza con su mensaje.
+    // guardar_ficha_cliente no la conoce (ignora las claves que no conoce),
+    // así que NUNCA viaja en p_datos. '' = sin comisión habitual.
+    function porcentajeComision(v) {
+      return v === '' || v === null || v === undefined ? null : Number(v)
     }
 
     async function guardarFicha() {
@@ -3956,20 +3954,26 @@
       estado.trabajando = true
       f.error = null
       pintarPieFicha()
+      const { comision_habitual: comision, ...resto } = datos
+      const conComision = 'comision_habitual' in datos
+      let fichaGuardada = false
       try {
-        const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: datos })
-        if (error) throw error
-        if ('comision_habitual' in datos) {
-          const fresca = await leerFicha(f.id)
-          if (fresca && estado.ficha === f && !comisionHabitualGuardada(datos.comision_habitual, fresca.comision_habitual)) {
+        if (Object.keys(resto).length) {
+          const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: resto })
+          if (error) throw error
+          fichaGuardada = true
+        }
+        if (conComision) {
+          const { error } = await supabase.rpc('guardar_comision_habitual', { p_cliente_id: f.id, p_porcentaje: porcentajeComision(comision) })
+          if (error) {
+            if (!fichaGuardada) throw error
+            // La ficha quedó; la comisión no: se dice con el mensaje de la base.
             estado.trabajando = false
             estado.clientes = null
             estado.saldos = null
-            f.original = fresca
-            llenarFicha(fresca)
-            f.error = Object.keys(datos).length > 1
-              ? 'Se guardó la ficha, MENOS la comisión habitual: la base todavía no la guarda. Avisale a administración.'
-              : 'La comisión habitual NO se guardó: la base todavía no la guarda. Avisale a administración.'
+            const fresca = await leerFicha(f.id)
+            if (fresca && estado.ficha === f) { f.original = fresca; llenarFicha(fresca) }
+            f.error = 'Se guardó la ficha, MENOS la comisión habitual: ' + (error.message || 'no se pudo guardar.')
             pintarPieFicha()
             return
           }

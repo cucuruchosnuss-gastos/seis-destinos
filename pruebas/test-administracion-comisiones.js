@@ -367,7 +367,7 @@ const ORDENES_FILTRO = [
   chk('cambiarla manda solo esa clave', JSON.stringify(S.cambiosFicha({ comision_habitual: 5 }, { comision_habitual: 7.5 })) === JSON.stringify({ comision_habitual: '7.5' }))
   chk('borrarla manda ""', JSON.stringify(S.cambiosFicha({ comision_habitual: 5 }, { comision_habitual: null })) === JSON.stringify({ comision_habitual: '' }))
   chk('5 y 5,00 son lo mismo', JSON.stringify(S.cambiosFicha({ comision_habitual: '5.00' }, { comision_habitual: 5 })) === '{}')
-  chk('guardada: igual al centavo', S.comisionHabitualGuardada('7.5', 7.5) && S.comisionHabitualGuardada('', null) && !S.comisionHabitualGuardada('7.5', null) && !S.comisionHabitualGuardada('', 5))
+  chk('el porcentaje que viaja: un vacío es null (la borra)', S.porcentajeComision('7.5') === 7.5 && S.porcentajeComision('') === null && S.porcentajeComision(null) === null)
 }
 function prepararFicha(S, guardada) {
   S.estado.empresaId = 'u-n'
@@ -382,16 +382,26 @@ function prepararFicha(S, guardada) {
   S.__tablas.clientes = [{ ...original, comision_habitual: guardada }]
 }
 {
-  // La base de hoy IGNORA la clave: se dice, no "Ficha guardada".
+  // Desde el 06/10/2026 va por guardar_comision_habitual (y NUNCA por
+  // guardar_ficha_cliente, que no la conoce).
   const S = nuevo()
   prepararFicha(S, null)
   S.__doc.getElementById('ad-f-comision_habitual').value = '5'
   esperas.push(S.guardarFicha().then(() => {
-    const r = S.__llamadas.rpc.find(x => x[0] === 'guardar_ficha_cliente')
-    chk('manda comision_habitual a guardar_ficha_cliente', r && r[1].p_datos.comision_habitual === '5', JSON.stringify(r?.[1]))
-    chk('si la base no la guardó, NO dice "Ficha guardada"', !S.__llamadas.exitos.includes('Ficha guardada.'))
-    chk('y lo dice pegado al botón', S.estado.ficha.error === 'La comisión habitual NO se guardó: la base todavía no la guarda. Avisale a administración.' && S.__els.get('ad-ficha-error').hidden === false)
-    chk('el campo vuelve a lo que tiene la base', S.__els.get('ad-f-comision_habitual').value === '' && S.estado.trabajando === false)
+    const r = S.__llamadas.rpc.find(x => x[0] === 'guardar_comision_habitual')
+    chk('la comisión habitual va por guardar_comision_habitual', r && r[1].p_cliente_id === 'c1' && r[1].p_porcentaje === 5, JSON.stringify(r?.[1]))
+    chk('… y sola no llama a guardar_ficha_cliente', !S.__llamadas.rpc.some(x => x[0] === 'guardar_ficha_cliente'))
+    chk('… y dice "Ficha guardada."', S.__llamadas.exitos.includes('Ficha guardada.'))
+  }))
+}
+{
+  const S = nuevo()
+  prepararFicha(S, null)
+  S.estado.ficha.original.comision_habitual = 5
+  S.__doc.getElementById('ad-f-comision_habitual').value = ''
+  esperas.push(S.guardarFicha().then(() => {
+    const r = S.__llamadas.rpc.find(x => x[0] === 'guardar_comision_habitual')
+    chk('borrarla manda null', r && r[1].p_porcentaje === null, JSON.stringify(r?.[1]))
   }))
 }
 {
@@ -399,14 +409,31 @@ function prepararFicha(S, guardada) {
   prepararFicha(S, null)
   S.__doc.getElementById('ad-f-comision_habitual').value = '5'
   S.__doc.getElementById('ad-f-localidad').value = 'Córdoba'
-  esperas.push(S.guardarFicha().then(() => chk('con otros datos: "Se guardó la ficha, MENOS la comisión habitual"', /^Se guardó la ficha, MENOS la comisión habitual/.test(S.estado.ficha.error ?? ''))))
+  esperas.push(S.guardarFicha().then(() => {
+    const f = S.__llamadas.rpc.find(x => x[0] === 'guardar_ficha_cliente')
+    chk('con otros datos: la ficha va SIN la comisión', f && f[1].p_datos.localidad === 'Córdoba' && !('comision_habitual' in f[1].p_datos), JSON.stringify(f?.[1]))
+    chk('… y la comisión por su función', S.__llamadas.rpc.some(x => x[0] === 'guardar_comision_habitual'))
+  }))
 }
 {
-  // Cuando la base la guarde, anda sola.
+  // La ficha quedó y la comisión no: se dice con el mensaje de la base.
   const S = nuevo()
-  prepararFicha(S, 5)
+  prepararFicha(S, null)
+  S.__setRpc((n) => n === 'guardar_comision_habitual' ? { data: null, error: { message: 'No tenés permiso sobre ese cliente.' } } : { data: null, error: null })
   S.__doc.getElementById('ad-f-comision_habitual').value = '5'
-  esperas.push(S.guardarFicha().then(() => chk('si la base la guardó: "Ficha guardada."', S.__llamadas.exitos.includes('Ficha guardada.'))))
+  S.__doc.getElementById('ad-f-localidad').value = 'Córdoba'
+  esperas.push(S.guardarFicha().then(() => {
+    chk('si la comisión no se guardó, NO dice "Ficha guardada"', !S.__llamadas.exitos.includes('Ficha guardada.'))
+    chk('… dice "Se guardó la ficha, MENOS la comisión habitual" con el mensaje de la base', S.estado.ficha.error === 'Se guardó la ficha, MENOS la comisión habitual: No tenés permiso sobre ese cliente.', S.estado.ficha.error)
+  }))
+}
+{
+  // Solo la comisión, y la base dice que no: el mensaje tal cual.
+  const S = nuevo()
+  prepararFicha(S, null)
+  S.__setRpc((n) => n === 'guardar_comision_habitual' ? { data: null, error: { message: 'La comisión va de 0 a 100%.' } } : { data: null, error: null })
+  S.__doc.getElementById('ad-f-comision_habitual').value = '5'
+  esperas.push(S.guardarFicha().then(() => chk('solo la comisión y la base dice que no: el mensaje tal cual', S.estado.ficha.error === 'La comisión va de 0 a 100%.', S.estado.ficha.error)))
 }
 {
   const S = nuevo()
