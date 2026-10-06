@@ -1180,6 +1180,12 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
    12.5 px), con 4 a 6 módulos que elige cada persona (js/barra-lateral.js). */
 @media (max-width: 1023.98px) {
   body.con-barra-lateral { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+  /* Que nada quede DEBAJO de la barra de abajo (05/10/2026): al tocar un campo
+     o al traer un botón a la vista, el navegador deja libre el alto de la
+     barra. Sin esto, "Guardar la ficha" o "Cargar el ajuste" de
+     Administración quedaban tapados por la barra (e2e/detalles-dispositivos).
+     Es el alto de la barra (68 px) + 8: si la barra cambia, cambia esto. */
+  html:has(> body.con-barra-lateral) { scroll-padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .barra-abajo {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
     height: calc(68px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box;

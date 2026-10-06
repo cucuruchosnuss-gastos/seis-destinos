@@ -1099,6 +1099,10 @@
     .lista-filtros select:focus { border-color: var(--color-acento); }
 
     .lista-filtros input[type="date"] {
+      /* width: auto (05/10/2026): con el width: 100% general de main.css la
+         fecha no le daba ancho a su cajita ("Desde"/"Hasta" + fecha) y "Hasta"
+         se pisaba con "Categoría" en la compu (e2e/detalles-dispositivos). */
+      width: auto;
       padding: 0.4375rem 0.75rem;
       border: 1.5px solid var(--color-borde);
       border-radius: 8px;
@@ -1807,7 +1811,10 @@
         <p class="paso__subtitulo">Revisá y completá los datos. Los campos con <span style="color:var(--color-exito)">· auto</span> fueron leídos automáticamente.</p>
 
         <div class="formulario">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+          <!-- minmax(0, 1fr) y no 1fr (05/10/2026): con 1fr cada columna no
+               baja del ancho mínimo de la fecha y "Fecha de pago" se salía por
+               la derecha en un Android de 360 px (e2e/detalles-dispositivos). -->
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.75rem;">
             <div class="grupo-campo" id="grupo-fecha">
               <label for="campo-fecha">Fecha de factura</label>
               <input type="date" id="campo-fecha" name="fecha" required>

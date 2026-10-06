@@ -1331,7 +1331,9 @@ module.exports = {
         "ultimo_movimiento": "2026-08-30", "retiros_mes": 1, "es_tambien_proveedor": false, "activo": false, "codigo_anterior": 55 }
     ] },
     "cambiar_activo_cliente": null,
-    "cuenta_cliente": [
+    // Kiosco Pepe (c2) todavía no tiene ningún movimiento: así se ve el botón
+    // "Saldo inicial" (e2e/detalles-dispositivos.spec.js, 05/10/2026).
+    "cuenta_cliente": { "__segun": [{ "si": { "p_cliente_id": "c2" }, "r": [] }], "__defecto": [
       {
         "fecha": "2026-09-01",
         "tipo": "saldo_inicial",
@@ -1356,7 +1358,7 @@ module.exports = {
         "saldo": 96000,
         "orden_retiro_id": null
       }
-    ],
+    ] },
     "cobranzas_por_asentar": [
       {
         "cobranza_id": "a1111111-1111-4111-8111-111111111111",

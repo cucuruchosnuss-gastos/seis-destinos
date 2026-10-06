@@ -54,6 +54,25 @@
        color del módulo (uva, oklch 0.45 0.14 305) va solo en el ícono. */
     .ad-app { max-width: 1400px; margin: 0 auto; padding: 0 1rem calc(2rem + env(safe-area-inset-bottom)); min-width: 0; }
     @media (min-width: 1024px) { .ad-app { padding: 0 24px 18px; } }
+    /* LISTA | DETALLE (05/10/2026, diseño 3a y 6a). Con .ad-md--lado (la pone
+       aplicarListaDetalle(), solo desde 1100 px) la lista va a la izquierda,
+       con su propio scroll, y el detalle a la derecha. La fila abierta lleva
+       el fondo naranja suave y el borde naranja de 3 px del diseño. En el
+       celular nada cambia: de a una, con "‹ Órdenes" / "‹ Listas". */
+    .ad-md { min-width: 0; }
+    @media (min-width: 1100px) {
+      .ad-md--lado { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+      .ad-md--listas.ad-md--lado { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
+      .ad-md--lado > section:first-of-type {
+        position: sticky; top: 60px; max-height: calc(100vh - 76px); max-height: calc(100dvh - 76px);
+        overflow-y: auto; overscroll-behavior: contain; min-width: 0; padding: 0 4px 8px 0;
+      }
+      .ad-md--lado > section { min-width: 0; }
+      /* "‹ Órdenes" / "‹ Listas" siguen: vuelven a la lista sola, a todo el ancho. */
+      /* Los filtros de las órdenes, de a dos en la columna angosta. */
+      .ad-md--lado .ad-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ad-md--lado .ad-fila[aria-current="true"] { background: var(--naranja-suave); box-shadow: inset 3px 0 0 var(--naranja); border-color: var(--naranja); }
+    }
 
     .ad-header {
       display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 0 0; margin: 0 0 12px;
@@ -497,6 +516,11 @@
       <div class="ad-secciones" id="ad-secciones"></div>
     </section>
 
+    <!-- LISTA | DETALLE (05/10/2026, diseño 3a): en la compu (desde 1100 px)
+         la lista de órdenes queda a la izquierda y la orden abierta a la
+         derecha; en el celular, de a una con "‹ Órdenes". Lo arma
+         aplicarListaDetalle() con la clase ad-md--lado. -->
+    <div class="ad-md" id="ad-md-ordenes">
     <!-- ══ ÓRDENES DE RETIRO ══════════════════════════════════════════════ -->
     <section id="ad-vista-ordenes" hidden>
       <div class="ad-cabecera-vista">
@@ -550,6 +574,7 @@
       </div>
       <div id="ad-orden-cuerpo"></div>
     </section>
+    </div>
 
     <!-- ══ CLIENTES ═══════════════════════════════════════════════════════ -->
     <section id="ad-vista-clientes" hidden>
@@ -701,6 +726,9 @@
       </div>
     </section>
 
+    <!-- LISTA | DETALLE (05/10/2026, diseño 6a): las listas de la fábrica a la
+         izquierda y la grilla de la elegida a la derecha, en la compu. -->
+    <div class="ad-md ad-md--listas" id="ad-md-listas">
     <!-- ══ LISTAS DE PRECIOS ══════════════════════════════════════════════ -->
     <section id="ad-vista-listas" hidden>
       <div class="ad-cabecera-vista">
@@ -775,6 +803,7 @@
         </div>
       </div>
     </section>
+    </div>
 
     <!-- ══ IMPORTAR (la carga inicial) ═════════════════════════════════════ -->
     <section id="ad-vista-importar" hidden>
@@ -1188,7 +1217,52 @@
       // Fuera de Cheques, la dirección deja de decir ?seccion=cheques (si no,
       // recargar la pantalla volvería a abrirla).
       if (id !== 'ad-vista-cheques' && /[?&]seccion=cheques/.test(window.location.search)) history.replaceState(null, '', window.location.pathname)
+      if (Object.values(LISTA_DE_DETALLE).includes(id)) (estado.listasAbiertas ??= new Set()).add(id)
+      aplicarListaDetalle()
       window.scrollTo(0, 0)
+    }
+
+    // LISTA | DETALLE (05/10/2026, diseño "Administración" 3a y 6a). En la
+    // compu (desde 1100 px), con una orden o una lista de precios abierta, su
+    // lista sigue a la vista a la izquierda (la clase ad-md--lado del
+    // contenedor arma las dos columnas) y la fila abierta queda marcada. En el
+    // celular, de a una, con "‹ Órdenes" / "‹ Listas" para volver. Solo si la
+    // persona ya pasó por la lista (si se llegó a la orden de otro lado, la
+    // lista no está leída: se ve el detalle solo). Clientes no: el diseño (5a,
+    // 5b) muestra la lista y la cuenta a todo el ancho.
+    const LISTA_DE_DETALLE = { 'ad-vista-orden': 'ad-vista-ordenes', 'ad-vista-lista': 'ad-vista-listas' }
+    const MQ_LISTA_DETALLE = '(min-width: 1100px)'
+
+    function ladoALado() {
+      try { return !!window.matchMedia?.(MQ_LISTA_DETALLE)?.matches } catch { return false }
+    }
+
+    function aplicarListaDetalle() {
+      const lista = LISTA_DE_DETALLE[estado.vista] ?? null
+      const lado = !!lista && ladoALado() && !!estado.listasAbiertas?.has(lista)
+      for (const l of Object.values(LISTA_DE_DETALLE)) {
+        const el = document.getElementById(l)
+        if (!el) continue
+        el.parentElement?.classList?.toggle('ad-md--lado', lado && l === lista)
+        if (lado && l === lista) el.hidden = false
+        else if (estado.vista !== l) el.hidden = true
+      }
+      marcarElegidosLista()
+    }
+
+    // La fila de la orden / lista abierta lleva aria-current (y el fondo
+    // naranja suave del diseño, en la compu).
+    function marcarElegidosLista() {
+      const pares = [
+        ['#ad-ordenes-lista [data-orden]', 'orden', estado.vista === 'ad-vista-orden' ? estado.orden?.id : null],
+        ['#ad-listas-lista [data-lista]', 'lista', estado.vista === 'ad-vista-lista' ? estado.lista?.id : null],
+      ]
+      for (const [sel, clave, id] of pares) {
+        for (const b of document.querySelectorAll?.(sel) ?? []) {
+          if (id != null && b.dataset?.[clave] === String(id)) b.setAttribute('aria-current', 'true')
+          else b.removeAttribute?.('aria-current')
+        }
+      }
     }
 
     // La sección Cheques: la muestra y le avisa al módulo de la cartera (el
@@ -1772,6 +1846,7 @@
       document.getElementById('ad-ordenes-lista').innerHTML = htmlListaOrdenes()
       const n = estado.ordenes?.length ?? 0
       document.getElementById('ad-ordenes-cuenta').textContent = estado.ordenes ? `${n} ${n === 1 ? 'orden' : 'órdenes'}` : ''
+      marcarElegidosLista()
     }
 
     let turnoOrdenes = 0
@@ -3447,6 +3522,7 @@
       e.textContent = estado.listaNueva?.error ?? ''
       e.hidden = !estado.listaNueva?.error
       document.getElementById('ad-lista-nueva-guardar').disabled = estado.trabajando
+      marcarElegidosLista()
     }
 
     async function mostrarListas() {
@@ -6171,6 +6247,8 @@
         if (e.target.closest('button[data-link="cheques"]')) mostrarCheques()
       })
       document.getElementById('ad-ordenes-volver').addEventListener('click', () => mostrarInicio())
+      // Lista | detalle: al girar la tablet o achicar la ventana, se rearma.
+      window.matchMedia?.(MQ_LISTA_DETALLE)?.addEventListener?.('change', () => aplicarListaDetalle())
       for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar']) {
         document.getElementById(id).addEventListener('change', () => leerFiltros())
       }
@@ -6864,7 +6942,10 @@
     }
     .chq-tarjeta:first-child { border-top: none; }
     .chq-tarjeta__cuerpo { flex: 1 1 auto; min-width: 0; }
-    .chq-tarjeta__l1 { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; overflow: hidden; }
+    /* flex-wrap (05/10/2026): lo que no entra baja de renglón en vez de
+       cortarse. A 360 px "paga 28/09/26" se salía 5 px, y abajo, con la
+       etiqueta de la forma de pago, el banco y el cliente quedaban en 2 px. */
+    .chq-tarjeta__l1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; min-width: 0; overflow: hidden; }
     /* Un importe: tinta neutra, nunca el color del módulo. */
     .chq-tarjeta__importe {
       font-size: 1.0625rem;
@@ -6879,6 +6960,8 @@
     .chq-tarjeta__estado { flex: 0 0 auto; margin-left: auto; font-size: 0.625rem; padding: 0.0625rem 0.4375rem; align-self: center; }
     .chq-tarjeta__l2 {
       display: flex;
+      flex-wrap: wrap;
+      row-gap: 0.125rem;
       align-items: center;
       min-width: 0;
       overflow: hidden;
@@ -6908,6 +6991,17 @@
     .chq-tarjeta__banco { flex: 1 1 auto; }
     .chq-tarjeta__cliente { flex: 0 1 auto; }
     .chq-tarjeta__salida { flex: 0 1 auto; }
+    /* En un celular angosto (05/10/2026): la forma de pago, el número y el
+       estado en un renglón, y el banco · cliente (o la salida) en el de abajo,
+       cada uno cortado con puntos suspensivos. Antes iban todos en uno y el
+       banco y el cliente quedaban en 2 px. */
+    @media (max-width: 520px) {
+      .chq-tarjeta__l2 > .chq-tarjeta__estado { order: 1; }
+      .chq-tarjeta__l2 > .chq-tarjeta__banco, .chq-tarjeta__l2 > .chq-tarjeta__cliente, .chq-tarjeta__l2 > .chq-tarjeta__salida { order: 2; }
+      .chq-tarjeta__l2 > .chq-tarjeta__banco { flex: 1 1 5rem; }
+      .chq-tarjeta__l2 > .chq-tarjeta__banco::before { content: none; }
+      .chq-tarjeta__l2 > .chq-tarjeta__cliente, .chq-tarjeta__l2 > .chq-tarjeta__salida { max-width: 50%; }
+    }
     /* El costado tiene un ancho FIJO: así el renglón de datos mide lo mismo en
        todas las tarjetas y el estado nunca queda tapado por el botón. */
     .chq-tarjeta__lado { flex: 0 0 5.75rem; display: flex; align-items: center; justify-content: flex-end; }
