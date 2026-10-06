@@ -114,7 +114,9 @@ async function pruebas() {
     chk('un provisorio APAGADO no cuenta como provisorio', S.esProvisorio({ cliente_id: 'cp', apagado: true }) === false)
     chk('contarProvisorios cuenta solo los prendidos', S.contarProvisorios([{ provisorio: true, activo: true }, { provisorio: true, activo: false }, { provisorio: false }]) === 1)
     chk('sin la lista de clientes no se inventa un número', S.contarProvisorios(null) === null)
-    chk('se lee la columna provisorio de clientes', /\.select\('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, apodos, provisorio'\)/.test(src))
+    // (06/10/2026: apilada sobre cuenta-unica y comisiones, el select suma
+    // proveedor_id y comision_habitual: se mira que estén apodos y provisorio.)
+    chk('se lee la columna provisorio de clientes', /\.select\('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior,[^']*\bapodos, provisorio\b[^']*'\)/.test(src))
   }
 
   // ── La burbuja y la tarjeta de la portada ─────────────────────────────────
