@@ -484,6 +484,7 @@ const SIN_IMPORTE = 'htmlSinImporte(n): n es un conteo (contarSinImporte() = .le
 const BADGE = "badgeEstadoFactura(): devuelve '' si el estado no está en ESTADO_FACTURA_LABEL (constante del código); si está, es uno de los 5 valores del CHECK facturas_pendientes_estado_check (verificado el 22/09/2026)"
 const CLASE = 'clase CSS: ternario de literales del código'
 const fecha = (col) => `formatearFecha() de una columna DATE (${col}, verificado contra information_schema el 22/09/2026): solo dígitos y /`
+const CHIP_CP = "CHIP_CLIENTE_PROVEEDOR: constante del código con HTML fijo ('Cliente y proveedor'), sin ningún dato"
 const SEGURAS = {
   formatearImporteCentavosSuaves: {
     simbolo: "'$' o esc(moneda), armado en la línea de arriba",
@@ -498,6 +499,7 @@ const SEGURAS = {
     sufijoMoneda: "' · ' + esc(s.moneda), armado arriba", 'importeHtml(s.deuda, s.moneda)': IMPORTE, 'importeHtml(s.credito, s.moneda)': IMPORTE,
     'colorAvatar(g.proveedor.razon_social)': 'colorAvatar(): un elemento de PALETA_AVATAR (hex literales del código), nunca el nombre',
     saldosHtml: HTML_PROPIO, sinImporteHtml: SIN_IMPORTE,
+    CHIP_CLIENTE_PROVEEDOR: CHIP_CP,
   },
   renderizarResumenCC: {
     'formatearImporteCentavosSuaves(0)': SUAVES, 'formatearImporteCentavosSuaves(porMoneda[m].deuda, m)': SUAVES,
@@ -522,6 +524,11 @@ const SEGURAS = {
     sufijo: "' · ' + esc(l.moneda), armado arriba", 'importeHtml(l.neto, l.moneda)': IMPORTE, 'importeHtml(-l.neto, l.moneda)': IMPORTE,
     'colorAvatar(p.razon_social)': 'colorAvatar(): un elemento de PALETA_AVATAR (hex literales del código), nunca el nombre',
     saldoHtml: HTML_PROPIO, 'htmlSinImporte(sinImporte)': SIN_IMPORTE,
+    CHIP_CLIENTE_PROVEEDOR: CHIP_CP,
+  },
+  // Cliente y proveedor (06/10/2026)
+  renderizarClasificacionProveedor: {
+    'htmlClasificacionCC(estado.ficha)': 'htmlClasificacionCC() escapa adentro con esc() y htmlClasificacion() (escCu); ejecutada con nombres marcados en test-cuentas-corrientes-cuenta-unica.js',
   },
   htmlDesgloseResumen: { 'importeHtml(f.monto, f.moneda)': IMPORTE },
   renderizarSaldoInicial: {
@@ -546,6 +553,13 @@ const SEGURAS = {
     'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, lineaSaldo: HTML_PROPIO, iconos: HTML_PROPIO,
   },
   htmlSinImporte: { n: 'número: la función devuelve "" si n no es > 0; los call sites pasan contarSinImporte() (.length)' },
+  // Las comisiones (06/10/2026): las ejecuta con marcas test-cuentas-corrientes-comisiones.js.
+  htmlFilaComision: {
+    'importeHtml(saldo, m.moneda)': IMPORTE, 'importeHtml(Math.abs(saldoAcum), m.moneda)': IMPORTE,
+    'importeHtml(monto, m.moneda)': IMPORTE, 'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, 'badgeEstadoFactura(estadoF)': BADGE,
+    'formatearFecha(m.fecha)': fecha('v_cuenta_corriente_movimientos.fecha'),
+    faltaPagar: HTML_PROPIO, panel: HTML_PROPIO, lineaSaldo: HTML_PROPIO, acciones: HTML_PROPIO,
+  },
   htmlFilaSinImporte: {
     "cantidades.map(c => esc(textoCantidadInsumo(c))).join('<br>')": 'cada elemento pasa por esc(); el separador es un literal',
     'importeHtml(total, m.moneda)': IMPORTE, "badgeEstadoFactura('sin_importe')": 'badgeEstadoFactura() con un literal del código',

@@ -55,6 +55,8 @@ const SEGURAS_RETIROS = [
   ['cabeza', 'HTML ya escapado: htmlRenglon() arma el producto elegido con esc() y htmlChipCono()'],
   ['opciones', 'HTML armado por htmlConoRenglon() y htmlPresentacionesRenglon(), que escapan, o vacío'],
   ['cuanto', 'HTML armado en htmlRenglon() con el índice numérico, texto constante y esc() de la unidad'],
+  // 06/10/2026: el cliente nuevo (provisorio).
+  ['listaParecidos', 'HTML ya escapado: htmlClienteNuevo() arma los parecidos con htmlResultadoCliente() (que escapa) o un texto con esc()'],
 ]
 
 const SEGURAS_REGEX_RETIROS = [

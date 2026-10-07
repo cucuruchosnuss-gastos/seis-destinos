@@ -41,7 +41,7 @@ correrMutaciones({
     { nombre: 'la cartera se consulta sin permiso', de: "      if (SECCIONES.some(s => s.id === 'cheques' && seccionVisible(s))) {\n        leerChequesPortada()", a: "      if (true) {\n        leerChequesPortada()" },
     { nombre: 'los cierres se cuentan de siempre', de: "const { data, error } = await supabase.from(tabla).select('id').gte(columna, desde)", a: "const { data, error } = await supabase.from(tabla).select('id')" },
     { nombre: 'la deuda cuenta los saldos a favor', de: "const deuda = saldos.reduce((a, x) => a + (Number(x?.saldo) > 0 ? Number(x.saldo) : 0), 0)", a: "const deuda = saldos.reduce((a, x) => a + (Number(x?.saldo) || 0), 0)" },
-    { nombre: 'los activos no se cuentan', de: 'activos: saldos.length, deuda }', a: 'activos: null, deuda }' },
+    { nombre: 'los activos no se cuentan', de: 'activos: saldos.length, deuda,', a: 'activos: null, deuda,' },
     { nombre: '?seccion= solo entiende cheques y cobranzas', de: "      } else if (pedida && seccionesVisibles().some(s => s.id === pedida)) {", a: '      } else if (false) {' },
     { nombre: 'abrir derecho una sección no cuenta las burbujas', de: "      if (estado.vista !== 'ad-vista-inicio') contarPortada()", a: '' },
     { nombre: 'Inicio abre una sección', de: "if (b.dataset.pestana === 'inicio') mostrarInicio()", a: "if (false) mostrarInicio()" },

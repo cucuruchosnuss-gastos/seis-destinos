@@ -83,7 +83,8 @@ function preparar(S) {
     chk('con la lista y los retiros del mes', /Lista Mayoristas · 3 retiros este mes/.test(h) && /Sin lista · 0 retiros este mes/.test(h))
     chk('el que pasa su límite, en bordó y dicho', /data-cliente="c1"[^>]*/.test(h) && /ad-fila ad-fila--atencion" data-cliente="c1"/.test(h) && /Pasa su límite/.test(h))
     chk('el que no lo pasa, sin marca', !/ad-fila--atencion" data-cliente="c3"/.test(h))
-    chk('el chip "también proveedor"', /ad-sello--proveedor">También proveedor</.test(h) && (h.match(/También proveedor/g) || []).length === 1)
+    // Desde el 06/10/2026 el chip dice "Cliente y proveedor" (el mismo de Cuentas corrientes).
+    chk('el chip "Cliente y proveedor"', /ad-sello--proveedor">Cliente y proveedor</.test(h) && (h.match(/Cliente y proveedor/g) || []).length === 1)
     chk('la cuenta', S.__els.get('ad-clientes-cuenta').textContent === '3 clientes')
   }))
   chk('busca por nombre', S.clientesFiltrados(SALDOS, 'pepe').map(c => c.cliente_id).join() === 'c2')
@@ -172,12 +173,14 @@ function preparar(S) {
   chk('sin cambios no hay nada que mandar', Object.keys(S.cambiosFicha(original, igual)).length === 0)
   chk('los espacios de más no son un cambio', Object.keys(S.cambiosFicha(original, { ...original, domicilio: '  Calle   1 ' })).length === 0)
   const d = S.cambiosFicha(original, { ...original, razon_social: 'PEPE SRL', transporte_habitual: '', limite_credito: 75000.5, plazo_pago_dias: 30, cuit: '20111222333', proveedor_id: 'pv1' })
-  chk('manda solo lo que cambió', JSON.stringify(Object.keys(d).sort()) === JSON.stringify(['limite_credito', 'proveedor_id', 'razon_social', 'transporte_habitual']))
+  // El proveedor ya no viaja con la ficha (06/10/2026): vincular y separar van
+  // por vincular_cliente_proveedor / desvincular_cliente_proveedor.
+  chk('manda solo lo que cambió (y nunca el proveedor)', JSON.stringify(Object.keys(d).sort()) === JSON.stringify(['limite_credito', 'razon_social', 'transporte_habitual']))
   chk('"" borra el dato', d.transporte_habitual === '')
   chk('los importes van como texto del número', d.limite_credito === '75000.5')
   chk('el CUIT va tal cual, sin puntos', S.cambiosFicha(original, { ...original, cuit: '30712345678' }).cuit === '30712345678')
   chk('borrar el límite manda ""', S.cambiosFicha(original, { ...original, limite_credito: null }).limite_credito === '')
-  chk('quitar el proveedor manda ""', S.cambiosFicha({ ...original, proveedor_id: 'pv1' }, { ...original, proveedor_id: null }).proveedor_id === '')
+  chk('quitar el proveedor NO viaja con la ficha (va por desvincular)', !('proveedor_id' in S.cambiosFicha({ ...original, proveedor_id: 'pv1' }, { ...original, proveedor_id: null })))
 }
 {
   const S = nuevo()
@@ -208,7 +211,7 @@ function preparar(S) {
     S.__setRpc(async (n, p) => { if (n === 'guardar_ficha_cliente') { params = p; return { data: null, error: null } } if (n === 'cuenta_cliente') return { data: [], error: null }; return { data: null, error: null } })
     await S.guardarFicha()
     chk('guardar_ficha_cliente con SOLO lo que cambió', params && params.p_cliente_id === 'c2' &&
-      JSON.stringify(Object.keys(params.p_datos).sort()) === JSON.stringify(['cuit', 'email', 'limite_credito', 'lista_precio_id', 'proveedor_id']))
+      JSON.stringify(Object.keys(params.p_datos).sort()) === JSON.stringify(['cuit', 'email', 'limite_credito', 'lista_precio_id']))
     chk('el CUIT viaja como se escribió (la base saca los guiones)', params.p_datos.cuit === '30-71234567-8')
     chk('después vuelve a la cuenta', S.estado.vista === 'ad-vista-cliente')
   }))

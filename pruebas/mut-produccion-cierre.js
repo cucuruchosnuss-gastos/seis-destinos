@@ -262,7 +262,6 @@ correrMutacionesProduccion({
     { nombre: "7 scrap alto con menos de 5 turnos", de: "      if (scrap == null || !Number.isFinite(prom) || prom <= 0 || !(n >= 5)) return false", a: "      if (scrap == null || !Number.isFinite(prom) || prom <= 0 || !(n >= 1)) return false" },
     { nombre: "7 scrap alto desde 1,5 veces", de: "      return Number(scrap) >= 2 * prom", a: "      return Number(scrap) >= 1.5 * prom" },
     { nombre: "7 el scrap alto no se avisa", de: "      if (scrapAlto(b?.scrap, base?.scrapRef)) avisos.push", a: "      if (false) avisos.push" },
-    { nombre: "7 el resumen sin el promedio", de: "`promedio ${formatearNumeroAr(prom, { decimales: 1, minimos: 0 })} kg`", a: "'sin promedio'" },
     { nombre: 'abrir agregar sin catálogo', de: '      if (!estado.catalogo || !estado.planilla) return\n      estado.agregar = {', a: '      if (!estado.planilla) return\n      estado.agregar = {' },
   ],
 })

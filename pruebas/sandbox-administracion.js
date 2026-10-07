@@ -8,6 +8,7 @@
 
 const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
@@ -28,6 +29,11 @@ const FUNCIONES_BASE = [
   // Valorizar con precio_venta() (30/09/2026)
   'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
+  // La comisión de una orden (06/10/2026)
+  'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
+  'textoPorcentaje', 'textoCalculoComision', 'parametrosComision', 'puedeCargarComision', 'comisionDesactualizada', 'rotuloComision',
+  'htmlPanelComision', 'htmlComisionOrden', 'abrirComision', 'elegirModoComision', 'cambiarValorComision', 'cancelarComision',
+  'guardarComision', 'porcentajeComision',
   'guardarValorizacion', 'cancelarValorizar', 'pedirAnular', 'cancelarAnular', 'confirmarAnular',
   'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
   // Clientes
@@ -51,6 +57,11 @@ const FUNCIONES_BASE = [
   // Los apodos de la ficha (02/10/2026)
   'agregarApodoALista', 'htmlApodosFicha', 'pintarApodosFicha', 'parametrosApodos', 'guardarApodos',
   'agregarApodoFicha', 'quitarApodoFicha',
+  // Los clientes provisorios (06/10/2026)
+  'esProvisorio', 'contarProvisorios', 'provisoriosPrimero', 'actualizarProvisoriosPortada', 'puedeConfirmar', 'htmlAccionesProvisorio',
+  'abrirCompletar', 'pintarConfirmarFicha', 'guardarYConfirmarFicha', 'destinosUnir', 'abrirUnir', 'cerrarUnir', 'leerPreviaUnir',
+  'textoCantidad', 'textosPreviaUnir', 'elegirDestinoUnir', 'cambiarDestinoUnir', 'pedirConfirmarUnir', 'noConfirmarUnir', 'unirClientes',
+  'htmlDestinoUnir', 'htmlUnir', 'pintarUnir', 'avisarFaltaLista', 'htmlFaltaLista', 'cerrarFaltaLista', 'irAFichaDesdeOrden',
   // Listas de precios
   'htmlFilaLista', 'pintarListas', 'mostrarListas', 'abrirListaNueva', 'guardarListaNueva', 'listaDe', 'leerPreciosLista',
   'versionesDe', 'vigenteYProximo', 'filasGrilla', 'preciosAGuardar', 'calcularAumento', 'htmlFilaPrecio', 'htmlGrilla',
@@ -98,12 +109,17 @@ const FUNCIONES_BASE = [
   // Retiros por revisar (28/09/2026)
   'leerPorRevisar', 'cantidadRevisar', 'htmlFilaRevisar', 'pintarRevisar', 'mostrarRevisar',
   'abrirAceptarRevisar', 'cancelarAceptarRevisar', 'confirmarAceptarRevisar',
+  // Cliente y proveedor (06/10/2026): la cuenta juntas y la clasificación
+  'puedeCompensarCuentas', 'ctxCuentaUnica', 'pintarCuentaUnicaCliente',
+  'nombreProveedorFicha', 'pintarClasificacionFicha', 'elegirClasificacionFicha', 'cerrarPanelVinculo',
+  'confirmarVincular', 'confirmarDesvincular',
+  ...FUNCIONES_CU,
 ]
 
 const CONSTANTES_BASE = [
   // MODULOS (js/modulos.js) antes de LINKS, que se arma con él.
   'MODULOS', 'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'CLAVES_ACCESOS', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
-  'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE',
+  'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE', 'MODOS_COMISION',
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
@@ -119,6 +135,10 @@ const CONSTANTES_BASE = [
   'PUEDE_MARCAR_INTERNA',
   // La grilla completa (30/09/2026)
   'CONITOS',
+  // Cliente y proveedor (06/10/2026)
+  ...CONSTANTES_CU,
+  // Los clientes provisorios (06/10/2026)
+  'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR',
 ]
 
 const PRELUDIO = `
@@ -216,7 +236,7 @@ const PRELUDIO = `
     portada: null, ordenes: null, errorOrdenes: null,
     filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
     orden: null, trabajando: false,
-    saldos: null, errorSaldos: null, busquedaClientes: '', mostrarApagados: false, apagados: null, interruptor: null, alta: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
+    saldos: null, errorSaldos: null, busquedaClientes: '', mostrarApagados: false, apagados: null, interruptor: null, alta: null, unir: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
     cobranzas: { lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null, clientes: null, errorClientes: null, asentando: null, hechos: new Map() },
     cobranza: null, bancos: null,
     errores: { grupos: null, error: null, info: false, arreglando: null },

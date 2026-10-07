@@ -1,4 +1,4 @@
-// El control de PERÍODO de toda la app (04/10/2026) — octava excepción
+// El control de PERÍODO de toda la app (04/10/2026) — novena excepción
 // consciente a la regla de duplicar: es el mismo control en todas las
 // pantallas con fechas, y copiado en cada una serían reglas ("esta semana",
 // "mes pasado") que divergen en silencio.

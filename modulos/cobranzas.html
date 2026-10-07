@@ -1369,6 +1369,9 @@
     <!-- ══ DETALLE ══════════════════════════════════════════════════════ -->
     <div id="cob-vista-detalle" hidden>
       <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-volver-listado">&lsaquo; Volver al listado</button>
+      <!-- "Ampliar" (06/10/2026, js/ampliar.js): en la compu, la cobranza
+           abierta en una ventana grande. Nace hidden: lo muestra la pieza. -->
+      <div class="amp-barra amp-barra--fija"><button type="button" class="amp-boton" id="cob-btn-ampliar" hidden>Ampliar</button></div>
       <div id="cob-detalle-cuerpo"></div>
     </div>
 
@@ -1643,6 +1646,7 @@
     import { unidadesDeLaBarra, alCambiarUnidad, pasarBarraAUnidad, pasaFiltroUnidad, ordenarUnidades, logoUnidad, nombreCorto, MARCA_FABRICA, inicialesDe } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
     import { crearPeriodo } from '../js/periodo.js'
+    import { crearAmpliar } from '../js/ampliar.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
     mostrarBannerVersion()
@@ -4898,6 +4902,42 @@
       }))
     }
 
+    // AMPLIAR (06/10/2026, js/ampliar.js). En la compu (el mismo corte del
+    // panel, MQ_ESCRITORIO), la cobranza abierta se puede ver en una ventana
+    // grande: la cabecera, los avisos y el historial a la izquierda; los
+    // cheques, las transferencias y las fotos en grilla a la derecha; abajo
+    // las mismas acciones. La ventana COPIA el panel y tocar algo ahí toca el
+    // original: los mismos handlers de conectarDetalle(), nada duplicado.
+    function conectarAmpliarCob() {
+      const cuerpo = () => document.getElementById('cob-detalle-cuerpo')
+      const secciones = () => [...(cuerpo()?.children ?? [])]
+      return crearAmpliar({
+        boton: document.getElementById('cob-btn-ampliar'),
+        observar: document.getElementById('cob-vista-detalle'),
+        corte: MQ_ESCRITORIO,
+        // Solo con la cobranza elegida ya dibujada (no "Cargando…").
+        disponible: () => !!estado.detalle && estado.detalle.cabecera?.id === estado.cobranzaSeleccionadaId &&
+          !document.getElementById('cob-vista-detalle').hidden && !!cuerpo()?.querySelector('.cob-hist'),
+        titulo: () => {
+          const c = estado.detalle?.cabecera
+          return c ? `Cobranza de ${c.cliente ?? '—'} · ${formatearFechaCob(c.fecha)}` : 'Cobranza'
+        },
+        tituloResumen: 'La cobranza',
+        tituloGrilla: 'Cheques, transferencias y fotos',
+        resumen: () => {
+          const s = secciones()
+          const avisos = s.slice(1).flatMap(x => [...x.children].filter(h => h.classList.contains('cob-aviso')))
+          return [s[0], ...avisos, ...s.filter(x => x.querySelector('.cob-hist'))]
+        },
+        grilla: () => cuerpo()?.querySelectorAll('.cob-cheque, .cob-foto') ?? [],
+        acciones: () => ['cob-btn-editar', 'cob-link-asentar', 'cob-link-reabrir', 'cob-btn-anular'].map(id => document.getElementById(id)),
+        quedarse: '[data-plegar-titulares]',
+        tocables: 'img[data-foto-detalle]',
+        // Un cheque ya es una tarjeta en el panel: va sin otro marco.
+        marcoCelda: false,
+      })
+    }
+
     // Las tres acciones de estado comparten forma: llamar, mostrar el mensaje
     // del servidor TAL CUAL si falla —ya vienen redactados en español— y
     // recargar lo que quedó desactualizado.
@@ -6678,6 +6718,7 @@
       }
 
       conectarTodo()
+      conectarAmpliarCob()
       renderizarChipsEstado()
       pintarAccesoCheques()
       mostrarVistaCob('listado')

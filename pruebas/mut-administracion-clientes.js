@@ -42,7 +42,8 @@ correrMutaciones({
     { nombre: 'sin límite cuenta como que lo pasa', de: "      if (saldo === null || saldo === undefined || limite === null || limite === undefined || limite === '') return false\n      return Number(saldo) > Number(limite)", a: '      return Number(saldo) > Number(limite)' },
     { nombre: 'la portada no cuenta los que pasan el límite', de: 'sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length', a: 'sobreLimite: 0' },
     { nombre: 'el que pasa no va en bordó', de: "${pasa ? ' ad-fila--atencion' : ''}${c.apagado ? ' ad-fila--apagada' : ''}\" data-cliente=", a: "${c.apagado ? ' ad-fila--apagada' : ''}\" data-cliente=" },
-    { nombre: 'sin el chip de proveedor', de: "${c.es_tambien_proveedor ? '<span class=\"ad-sello ad-sello--proveedor\">También proveedor</span>' : ''}", a: '' },
+    { nombre: 'sin el chip de proveedor', de: "${c.es_tambien_proveedor ? '<span class=\"ad-sello ad-sello--proveedor\">Cliente y proveedor</span>' : ''}", a: '' },
+    { nombre: 'el chip vuelve a decir "También proveedor"', de: 'ad-sello--proveedor">Cliente y proveedor</span>', a: 'ad-sello--proveedor">También proveedor</span>' },
     // Búsqueda
     { nombre: 'no busca por CUIT', de: "        (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)) ||", a: '        false ||' },
     { nombre: 'no busca por razón social', de: '      return todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||', a: '      return todos.filter(c => normalizar(c.nombre).includes(q) ||' },
@@ -53,7 +54,9 @@ correrMutaciones({
     { nombre: 'el más viejo arriba', de: '      const filas = [...c.cuenta].reverse().map(m =>', a: '      const filas = [...c.cuenta].map(m =>' },
     { nombre: 'saldo inicial dos veces', de: "      document.getElementById('ad-btn-saldo-inicial').hidden = !(precios && c.cuenta && !tieneSaldoInicial(c.cuenta))", a: "      document.getElementById('ad-btn-saldo-inicial').hidden = !(precios && c.cuenta)" },
     { nombre: 'el panel del saldo inicial se abre igual', de: "      if (panel === 'saldo' && tieneSaldoInicial(c.cuenta)) return\n", a: '' },
-    { nombre: 'ver alcanza para la ficha', de: "      const precios = puedeEn('retiros', 'precios')\n      document.getElementById('ad-btn-ficha')", a: "      const precios = puedeEn('retiros', 'ver')\n      document.getElementById('ad-btn-ficha')" },
+    // (06/10/2026: las anclas de esta y de "la ficha se abre sin precios" ya no
+    // existían desde "Todas las fábricas"; se reescribieron sobre el código de hoy.)
+    { nombre: 'ver alcanza para la ficha', de: "      const precios = puedeEn('retiros', 'precios')\n      // Abierto desde", a: "      const precios = puedeEn('retiros', 'ver')\n      // Abierto desde" },
     // Saldo inicial y ajuste
     { nombre: 'el saldo inicial sin negativos', de: "        enlazarCampoNumero(document.getElementById('ad-saldo-importe'), { decimales: DECIMALES_PRECIO, negativos: true })", a: "        enlazarCampoNumero(document.getElementById('ad-saldo-importe'), { decimales: DECIMALES_PRECIO })" },
     { nombre: 'un importe cero se manda', de: "        if (importe === null || importe === 0) { c.errorPanel = 'Escribí el importe (distinto de cero).'; pintarCliente(); return }\n        if (!esFechaIso(fecha))", a: '        if (!esFechaIso(fecha))' },
@@ -62,14 +65,16 @@ correrMutaciones({
     { nombre: 'la observación del saldo sin limpiar', de: "p_observacion: limpio(document.getElementById('ad-saldo-obs').value) || null }", a: "p_observacion: document.getElementById('ad-saldo-obs').value }" },
     // La ficha
     { nombre: 'la ficha manda todo', de: '        if (a !== valorComparable(tipo, original[clave])) datos[clave] = a', a: '        datos[clave] = a' },
-    { nombre: 'la ficha no manda el proveedor', de: "      if ((actual.proveedor_id ?? '') !== (original.proveedor_id ?? '')) datos.proveedor_id = actual.proveedor_id ?? ''\n", a: '' },
+    // Desde el 06/10/2026 el proveedor NO viaja con la ficha (va por
+    // vincular / desvincular): la mutación es que vuelva a viajar.
+    { nombre: 'la ficha vuelve a mandar el proveedor (saltearía desvincular)', de: '      // dos cuentas con compensaciones. Mandarlo acá se saltearía las dos cosas.\n      return datos', a: "      if ((actual.proveedor_id ?? '') !== (original.proveedor_id ?? '')) datos.proveedor_id = actual.proveedor_id ?? ''\n      return datos" },
     { nombre: 'borrar un dato manda null', de: '        if (a !== valorComparable(tipo, original[clave])) datos[clave] = a', a: '        if (a !== valorComparable(tipo, original[clave])) datos[clave] = a || null' },
     { nombre: 'los espacios cuentan como cambio', de: '      return limpio(v)\n    }\n\n    // LO QUE SE MANDA', a: "      return String(v ?? '')\n    }\n\n    // LO QUE SE MANDA" },
     { nombre: 'sin cambios se llama igual', de: "      if (!Object.keys(datos).length) { f.error = 'No cambiaste nada.'; pintarPieFicha(); return }\n", a: '' },
     { nombre: 'el nombre vacío se manda', de: "      if ('nombre' in datos && datos.nombre.length < 2) { f.error = 'El nombre no puede quedar vacío.'; pintarPieFicha(); return }\n", a: '' },
     { nombre: 'el error de la ficha se tapa', de: "        f.error = err?.message || 'No se pudo guardar la ficha. Probá de nuevo.'", a: "        f.error = 'No se pudo guardar la ficha. Probá de nuevo.'" },
-    { nombre: 'se elige un proveedor que no está', de: "      if (!f || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return", a: '      if (!f) return' },
-    { nombre: 'la ficha se abre sin precios', de: "    async function abrirFicha(clienteId) {\n      if (!puedeEn('retiros', 'precios')) return", a: '    async function abrirFicha(clienteId) {' },
+    { nombre: 'se elige un proveedor que no está', de: "      if (!f || f.vinculo?.enviando || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return", a: '      if (!f) return' },
+    { nombre: 'la ficha se abre sin precios', de: "    async function abrirFicha(clienteId) {\n      if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return", a: "    async function abrirFicha(clienteId) {\n      if (clientesEnTodas()) return" },
     { nombre: 'el proveedor no busca por CUIT', de: "        (digitos.length >= 3 && String(p.cuit ?? '').includes(digitos))).slice(0, 8)", a: '        false).slice(0, 8)' },
     // El alta
     { nombre: 'el alta sin permiso', de: "      if (!puedeDarAlta()) return\n      estado.alta = { error: null }", a: '      estado.alta = { error: null }' },

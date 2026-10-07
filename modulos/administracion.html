@@ -322,6 +322,14 @@
     .ad-interruptor-todas { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; max-width: 7.5rem; }
     .ad-bloqueado-todas { font-size: 0.75rem; color: var(--ad-texto-secundario); line-height: 1.25; text-align: center; }
     .ad-barra-acciones .ad-bloqueado-todas { align-self: center; text-align: left; }
+    /* LOS CLIENTES PROVISORIOS (06/10/2026): los que cargó el depósito desde
+       Órdenes de retiro. Van arriba, con su chip y dos acciones debajo. */
+    .ad-sello--provisorio { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); }
+    .ad-provisorio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: -0.25rem 0 0.25rem; padding: 0 0.25rem; }
+    .ad-provisorio .ad-btn { flex: 1 1 12rem; }
+    .ad-provisorio .ad-bloqueado-todas { text-align: left; }
+    .ad-unir__previa { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
+    .ad-unir__elegido { font-weight: 700; overflow-wrap: anywhere; }
     /* Los clientes de una lista de precios (30/09/2026). */
     .ad-lista-clientes .ad-subtitulo { margin-top: 0; }
     .ad-lista-clientes__cuenta { font-weight: 700; margin: 0 0 0.5rem; }
@@ -385,6 +393,14 @@
       .ad-renglon__origen { flex-basis: 100%; max-width: none; margin-left: 0; }
     }
     .ad-total { font-weight: 900; font-size: 1.25rem; text-align: right; margin: 0.5rem 0 0; font-variant-numeric: tabular-nums; }
+    /* La comisión de una orden (06/10/2026): Subtotal, Comisión y Total, o
+       "Comisión: sin cargar" debajo del total. */
+    .ad-comision { margin: 0.5rem 0 0; }
+    .ad-comision__linea { display: flex; justify-content: space-between; gap: 0.75rem; margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; min-width: 0; }
+    .ad-comision__linea > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+    .ad-comision__linea--falta { color: var(--ad-texto-secundario); justify-content: flex-end; }
+    .ad-comision__acciones { display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 0; }
+    .ad-comision__panel { margin: 0.75rem 0 0; }
     .ad-panel { border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 1rem; margin: 0 0 0.75rem; background: var(--color-fondo); }
     .ad-panel--peligro { border-color: var(--bordo); }
     .ad-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
@@ -540,6 +556,7 @@
             </select></div>
         </div>
         <label class="ad-check"><input type="checkbox" id="ad-filtro-sin-valorizar"> Solo las que falta valorizar</label>
+        <label class="ad-check"><input type="checkbox" id="ad-filtro-comision"> Con comisión sin cargar</label>
       </div>
       <p class="ad-cuenta" id="ad-ordenes-cuenta"></p>
       <div class="ad-lista" id="ad-ordenes-lista"></div>
@@ -550,6 +567,9 @@
       <div class="ad-cabecera-vista">
         <button type="button" class="ad-link" id="ad-orden-volver">&lsaquo; Órdenes</button>
         <h1 class="ad-titulo" id="ad-orden-titulo">Orden</h1>
+        <!-- "Ampliar" (06/10/2026, js/ampliar.js): en la compu, la orden en
+             una ventana grande. Nace hidden: lo muestra la pieza. -->
+        <button type="button" class="amp-boton" id="ad-orden-ampliar" hidden>Ampliar</button>
       </div>
       <div class="ad-barra-acciones" id="ad-orden-acciones">
         <button type="button" class="ad-btn" id="ad-btn-valorizar" hidden>Valorizar</button>
@@ -595,6 +615,17 @@
           <button type="button" class="ad-btn" id="ad-alta-guardar">Dar de alta y completar la ficha</button>
           <button type="button" class="ad-btn ad-btn--suave" id="ad-alta-cancelar">Cancelar</button>
         </div>
+      </div>
+      <!-- UNIR un cliente provisorio con uno que ya existía (06/10/2026):
+           buscador de la misma empresa, vista previa de lo que pasa y una
+           confirmación propia. Lo arma pintarUnir(). -->
+      <div class="ad-panel" id="ad-panel-unir" hidden>
+        <h2 class="ad-subtitulo" id="ad-unir-titulo">Unir con un cliente existente</h2>
+        <div class="ad-campo" id="ad-unir-campo">
+          <label for="ad-unir-buscar">Buscá el cliente que ya existía (nombre, razón social, CUIT o apodo)</label>
+          <input type="search" class="ad-input" id="ad-unir-buscar" autocomplete="off" maxlength="120">
+        </div>
+        <div id="ad-unir-cuerpo"></div>
       </div>
       <div class="ad-campo">
         <label for="ad-clientes-buscar">Buscar por nombre, razón social o CUIT</label>
@@ -644,6 +675,11 @@
           <button type="button" class="ad-btn ad-btn--suave" id="ad-ajuste-cancelar">Cancelar</button>
         </div>
       </div>
+      <!-- La cuenta de cliente y proveedor (06/10/2026, js/cuenta-unica.js):
+           solo para un cliente vinculado con su proveedor. Va en su propio
+           contenedor (no adentro de #ad-cliente-cuerpo) para que el panel de
+           Compensar no se redibuje con cada repintado de la cuenta. -->
+      <div id="ad-cuenta-unica" hidden></div>
       <div id="ad-cliente-cuerpo"></div>
     </section>
 
@@ -657,6 +693,8 @@
            solo para mostrar, no se edita. -->
       <p class="ad-texto-suave" id="ad-ficha-codigo-anterior" hidden></p>
       <div id="ad-ficha-aviso"></div>
+      <!-- Completar y confirmar un cliente provisorio (06/10/2026). -->
+      <p class="ad-aviso" id="ad-ficha-provisorio" hidden></p>
       <div class="ad-tarjeta">
         <h2 class="ad-subtitulo">Datos</h2>
         <div class="ad-fila-campos">
@@ -710,13 +748,35 @@
           <div class="ad-campo"><label for="ad-f-lista_precio_id">Lista de precios</label><select class="ad-select" id="ad-f-lista_precio_id" data-ficha="lista_precio_id"></select></div>
           <div class="ad-campo"><label for="ad-f-limite_credito">Límite de crédito</label><input type="text" class="ad-input" id="ad-f-limite_credito" data-ficha="limite_credito" autocomplete="off"></div>
           <div class="ad-campo"><label for="ad-f-plazo_pago_dias">Plazo de pago (días)</label><input type="text" class="ad-input" id="ad-f-plazo_pago_dias" data-ficha="plazo_pago_dias" autocomplete="off"></div>
+          <div class="ad-campo"><label for="ad-f-comision_habitual">Comisión habitual (%)</label><input type="text" class="ad-input" id="ad-f-comision_habitual" data-ficha="comision_habitual" autocomplete="off"><span class="ad-campo__ayuda">Se propone al cargar la comisión de sus órdenes.</span></div>
         </div>
-        <div class="ad-campo">
-          <span class="ad-campo__rotulo">También es proveedor</span>
-          <span class="ad-campo__ayuda">Si el mismo tercero también nos vende, elegilo en el padrón de proveedores.</span>
+        <!-- LA CLASIFICACIÓN (06/10/2026): Cliente / Cliente y proveedor.
+             Vincular y separar se guardan AL MOMENTO con sus funciones
+             (vincular_cliente_proveedor / desvincular_cliente_proveedor), no
+             con "Guardar la ficha". -->
+        <div class="ad-campo" id="ad-f-clasificacion-campo">
+          <span class="ad-campo__rotulo">Clasificación</span>
+          <span class="ad-campo__ayuda">Si el mismo tercero también nos vende, es «Cliente y proveedor»: sus dos cuentas se ven juntas y se pueden compensar.</span>
+          <div id="ad-f-clasificacion"></div>
           <div id="ad-f-proveedor-elegido"></div>
-          <input type="search" class="ad-input" id="ad-f-proveedor-buscar" autocomplete="off" maxlength="120" placeholder="Buscar el proveedor por razón social o CUIT…" aria-label="Buscar el proveedor">
-          <div class="ad-lista" id="ad-f-proveedores"></div>
+          <div class="ad-panel" id="ad-f-vincular" hidden>
+            <p class="ad-texto-suave" id="ad-f-vincular-texto"></p>
+            <input type="search" class="ad-input" id="ad-f-proveedor-buscar" autocomplete="off" maxlength="120" placeholder="Buscar el proveedor por razón social o CUIT (opcional)…" aria-label="Buscar el proveedor">
+            <div class="ad-lista" id="ad-f-proveedores"></div>
+            <p class="ad-error-pegado" id="ad-f-vincular-error" hidden></p>
+            <div class="ad-panel__acciones">
+              <button type="button" class="ad-btn" id="ad-f-vincular-confirmar">Vincular</button>
+              <button type="button" class="ad-btn ad-btn--suave" id="ad-f-vincular-cancelar">Cancelar</button>
+            </div>
+          </div>
+          <div class="ad-panel" id="ad-f-desvincular" hidden>
+            <p id="ad-f-desvincular-texto"></p>
+            <p class="ad-error-pegado" id="ad-f-desvincular-error" hidden></p>
+            <div class="ad-panel__acciones">
+              <button type="button" class="ad-btn ad-btn--peligro" id="ad-f-desvincular-confirmar">Sí, separar las cuentas</button>
+              <button type="button" class="ad-btn ad-btn--suave" id="ad-f-desvincular-cancelar">No, dejarlo como está</button>
+            </div>
+          </div>
         </div>
         <h2 class="ad-subtitulo">Observaciones</h2>
         <div class="ad-campo"><label for="ad-f-observaciones">Observaciones</label><textarea class="ad-textarea" id="ad-f-observaciones" data-ficha="observaciones" maxlength="1000"></textarea></div>
@@ -917,6 +977,7 @@
       <div class="ad-cabecera-vista">
         <button type="button" class="ad-link" id="ad-cobranza-volver">&lsaquo; Cobranzas por asentar</button>
         <h1 class="ad-titulo" id="ad-cobranza-titulo">Cobranza</h1>
+        <button type="button" class="amp-boton" id="ad-cobranza-ampliar" hidden>Ampliar</button>
       </div>
       <div id="ad-cobranza-cuerpo"></div>
     </section>
@@ -951,7 +1012,12 @@
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
     import { crearPeriodo } from '../js/periodo.js'
+    import { crearAmpliar } from '../js/ampliar.js'
     import { unidadesDeLaBarra, alCambiarUnidad, MARCA_FABRICA, nombreCorto } from '../js/barra-unidad.js'
+    import {
+      estadoCuentaUnica, cargarCuentaUnica, pintarCuentaUnica, alTocarCuentaUnica, alCambiarCuentaUnica,
+      htmlClasificacion, textoVinculado,
+    } from '../js/cuenta-unica.js'
 
     mostrarBannerVersion()
 
@@ -983,7 +1049,7 @@
       portada: null,         // { sinValorizar, sobreLimite, error }
       ordenes: null,
       errorOrdenes: null,
-      filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
+      filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false, sinComision: false },
       orden: null,           // { id, orden, items, lotes, error, valorizar, anular, aviso, errorHoja }
       trabajando: false,
       // Clientes
@@ -1345,7 +1411,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, comision_habitual, apodos, provisorio')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -1567,7 +1633,8 @@
         return { numero: p?.activos ?? null, unidad: 'activos' + (emp ? ' en ' + emp.nombre : ''),
           carga: p?.activos == null && !p?.errorClientes, error: p?.errorClientes,
           lineas: [p?.sobreLimite != null ? (Number(p.sobreLimite) > 0 ? { t: n(p.sobreLimite, '1 pasado de su límite de crédito', p.sobreLimite + ' pasados de su límite de crédito'), tono: 'mal' } : 'Ninguno pasado de su límite') : null,
-            p?.deuda != null ? 'Nos deben ' + plataPortada(p.deuda) + ' en total' : null] }
+            p?.deuda != null ? 'Nos deben ' + plataPortada(p.deuda) + ' en total' : null,
+            Number(p?.provisorios) > 0 ? { t: n(p.provisorios, '1 cliente provisorio por confirmar', p.provisorios + ' clientes provisorios por confirmar'), tono: 'mal' } : null] }
       }
       if (s.id === 'listas') {
         const nombres = p?.listasNombres ?? []
@@ -1636,7 +1703,7 @@
     // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
     function burbujaPestana(id, p) {
       const v = id === 'cobranzas' ? p?.porAsentar : id === 'ordenes' ? p?.sinValorizar : id === 'revisar' ? p?.porRevisar
-        : id === 'cheques' ? p?.cheques?.cantidad : id === 'errores' ? p?.errores7 : null
+        : id === 'cheques' ? p?.cheques?.cantidad : id === 'errores' ? p?.errores7 : id === 'clientes' ? p?.provisorios : null
       if (v === null || v === undefined || !(Number(v) > 0)) return null
       return { n: Number(v) > 99 ? '99+' : String(v), urgente: id === 'cobranzas' || id === 'ordenes' }
     }
@@ -1756,7 +1823,7 @@
       if (!puedeEn('retiros', 'ver', unidad)) return
       await Promise.all([
         contarSinValorizar(unidad).then(n => { p.sinValorizar = n }).catch(err => { console.error('No se pudo contar la portada:', err); p.error = 'No se pudo contar.' }),
-        leerResumenClientes(unidad).then(r => { p.sobreLimite = r.sobreLimite; p.activos = r.activos; p.deuda = r.deuda }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
+        leerResumenClientes(unidad).then(r => { p.sobreLimite = r.sobreLimite; p.activos = r.activos; p.deuda = r.deuda; p.provisorios = r.provisorios }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
       ])
       if (turno !== turnoPortada) return
       pintarPortada()
@@ -1789,20 +1856,256 @@
         : '<span class="ad-sello ad-sello--pendiente">Sin valorizar</span>'
     }
 
+    // ── LA COMISIÓN DE UNA ORDEN (06/10/2026) ─────────────────────────────
+    //
+    // Una orden valorizada puede llevar una COMISIÓN: un porcentaje del total
+    // (sugiere la comisión habitual del cliente, clientes.comision_habitual),
+    // un monto fijo, o "sin comisión". La carga cargar_comision_orden(
+    // p_orden_id, p_modo, p_valor) — la base calcula el importe, lo suma a la
+    // cuenta del cliente (cliente_movimientos tipo 'comision') y deja una
+    // factura del proveedor COMISIONES en Cuentas corrientes. Pide
+    // retiros:precios en la empresa de la orden o cobranzas:procesar. Si la
+    // comisión ya tiene pagos, la base frena con su mensaje (va TAL CUAL).
+    // La hoja impresa y el PDF NO la muestran: es un dato interno (decisión).
+    const MODOS_COMISION = ['porcentaje', 'monto', 'ninguna']
+
+    // La comisión habitual de un cliente (un porcentaje > 0), o null.
+    function comisionHabitualDe(cli) {
+      const n = cli?.comision_habitual
+      if (n === null || n === undefined || n === '') return null
+      const v = Number(n)
+      return Number.isFinite(v) && v > 0 ? v : null
+    }
+
+    // Una orden confirmada y valorizada, de un cliente con comisión habitual,
+    // que todavía no tiene la comisión cargada (ni "sin comisión").
+    function faltaComision(o, cli) {
+      return !!o && o.estado === 'confirmada' && o.estado_valorizacion === 'valorizada' &&
+        (o.comision_modo ?? null) === null && comisionHabitualDe(cli) !== null
+    }
+
+    function ordenesComisionSinCargar(ordenes, clientes) {
+      const porId = new Map((clientes ?? []).map(c => [c.id, c]))
+      return (ordenes ?? []).filter(o => faltaComision(o, porId.get(o.cliente_id)))
+    }
+
+    // Lo mismo que calcula la base: round(total * p / 100, 2), round(monto, 2)
+    // o 0 sin comisión. null = el valor no sirve para ese modo.
+    function importeComision(total, modo, valor) {
+      if (modo === 'ninguna') return 0
+      if (valor === null || valor === undefined || valor === '') return null
+      const v = Number(valor)
+      if (!Number.isFinite(v) || v <= 0) return null
+      if (modo === 'monto') return Math.round(Number((v * 100).toFixed(6))) / 100
+      if (modo !== 'porcentaje' || v > 100) return null
+      if (total === null || total === undefined || total === '') return null
+      const t = Number(total)
+      if (!Number.isFinite(t)) return null
+      return Math.round(Number((t * v).toFixed(6))) / 100
+    }
+
+    // El total con la comisión: subtotal + comisión, en centavos. null si falta uno.
+    function totalConComision(total, importe) {
+      if (total === null || total === undefined || total === '' || importe === null || importe === undefined || importe === '') return null
+      const t = Number(total), i = Number(importe)
+      if (!Number.isFinite(t) || !Number.isFinite(i)) return null
+      return Math.round(Number(((t + i) * 100).toFixed(6))) / 100
+    }
+
+    // Las mismas reglas (y los mismos textos) que cargar_comision_orden.
+    function validarComision(modo, valor) {
+      if (!MODOS_COMISION.includes(modo)) return 'Elegí porcentaje, monto o sin comisión.'
+      if (modo === 'porcentaje' && importeComision(1, 'porcentaje', valor) === null) return 'El porcentaje va de 0 a 100.'
+      if (modo === 'monto' && importeComision(null, 'monto', valor) === null) return 'El monto tiene que ser mayor a cero.'
+      return null
+    }
+
+    function textoPorcentaje(v) {
+      return formatearNumeroAr(Number(v), { decimales: 2, minimos: 0 }) + ' %'
+    }
+
+    // El cálculo, ANTES de guardar. Texto plano: se escapa donde entra a HTML.
+    function textoCalculoComision(total, modo, valor, moneda = 'ARS') {
+      if (!MODOS_COMISION.includes(modo)) return 'Elegí cómo se calcula la comisión.'
+      if (modo === 'ninguna') return 'Sin comisión: el total queda en ' + importeHoja(total, moneda) + '.'
+      const imp = importeComision(total, modo, valor)
+      if (imp === null) return modo === 'porcentaje' ? 'Escribí un porcentaje mayor a 0 y hasta 100.' : 'Escribí un monto mayor a cero.'
+      const tot = 'Total con comisión ' + importeHoja(totalConComision(total, imp), moneda)
+      if (modo === 'porcentaje') return textoPorcentaje(valor) + ' de ' + importeHoja(total, moneda) + ' = ' + importeHoja(imp, moneda) + ' · ' + tot
+      return 'Comisión ' + importeHoja(imp, moneda) + ' · ' + tot
+    }
+
+    // Lo que va a la base: sin comisión, el valor va en null.
+    function parametrosComision(d) {
+      const c = d.comision
+      return { p_orden_id: d.orden.id, p_modo: c.modo, p_valor: c.modo === 'ninguna' ? null : c.valor }
+    }
+
+    // La regla de la base: retiros:precios en la empresa de la orden, o
+    // cobranzas:procesar. Y la orden valorizada y no anulada.
+    function puedeCargarComision(o) {
+      return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' &&
+        (puedeEn('retiros', 'precios', o.unidad_negocio_id) || tieneTarea('cobranzas', 'procesar'))
+    }
+
+    // La comisión en porcentaje no se recalcula sola si después se corrige la
+    // valorización: se avisa para volver a cargarla.
+    function comisionDesactualizada(o) {
+      if (o?.comision_modo !== 'porcentaje') return false
+      const calculada = importeComision(o.total, 'porcentaje', o.comision_valor)
+      const guardada = Number(o.comision_importe)
+      return calculada !== null && Number.isFinite(guardada) && Math.round(calculada * 100) !== Math.round(guardada * 100)
+    }
+
+    function rotuloComision(o) {
+      return o.comision_modo === 'porcentaje' && o.comision_valor !== null && o.comision_valor !== undefined
+        ? 'Comisión ' + textoPorcentaje(o.comision_valor) : 'Comisión (monto fijo)'
+    }
+
+    function htmlPanelComision(d) {
+      const c = d.comision
+      if (!c) return ''
+      const o = d.orden
+      const opcion = (m, t) => `<button type="button" class="ad-segmento__opcion" data-comision-modo="${esc(m)}" aria-pressed="${c.modo === m ? 'true' : 'false'}">${esc(t)}</button>`
+      const partes = [`<div class="ad-segmento" role="group" aria-label="Cómo se calcula la comisión">${opcion('porcentaje', 'Porcentaje')}${opcion('monto', 'Monto fijo')}${opcion('ninguna', 'Sin comisión')}</div>`]
+      if (c.modo === 'porcentaje' || c.modo === 'monto') {
+        partes.push(`<div class="ad-campo"><label for="ad-comision-valor">${c.modo === 'porcentaje' ? 'Porcentaje (%)' : 'Monto fijo'}</label>` +
+          '<input type="text" class="ad-input" id="ad-comision-valor" autocomplete="off">' +
+          (c.modo === 'porcentaje' && c.habitual !== null ? `<span class="ad-campo__ayuda">${esc('La comisión habitual de este cliente es ' + textoPorcentaje(c.habitual) + '.')}</span>` : '') + '</div>')
+      }
+      partes.push(`<p class="ad-texto-suave" id="ad-comision-calculo">${esc(textoCalculoComision(o.total, c.modo, c.valor, o.moneda))}</p>`)
+      partes.push(`<p class="ad-error-pegado" id="ad-comision-error"${c.error ? '' : ' hidden'}>${esc(c.error ?? '')}</p>`)
+      partes.push(`<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-comision-guardar"${c.enviando ? ' disabled' : ''}>${c.enviando ? 'Guardando…' : 'Guardar la comisión'}</button>` +
+        '<button type="button" class="ad-btn ad-btn--suave" id="ad-comision-cancelar">Cancelar</button></div>')
+      return `<div class="ad-panel ad-comision__panel" id="ad-comision-panel">${partes.join('')}</div>`
+    }
+
+    // Debajo del total de una orden valorizada: Subtotal, Comisión y Total, o
+    // "Comisión: sin cargar". Con el botón y el panel para cargarla.
+    function htmlComisionOrden(d) {
+      const o = d.orden
+      const moneda = o.moneda || 'ARS'
+      const imp = Number(o.comision_importe)
+      const modo = o.comision_modo ?? null
+      const conImporte = (modo === 'porcentaje' || modo === 'monto') && o.comision_importe !== null && o.comision_importe !== undefined && Number.isFinite(imp) && imp > 0
+      const partes = []
+      if (conImporte) {
+        partes.push(`<p class="ad-comision__linea"><span>Subtotal</span><span>${esc(importeHoja(o.total, moneda))}</span></p>`)
+        partes.push(`<p class="ad-comision__linea"><span>${esc(rotuloComision(o))}</span><span>${esc(importeHoja(imp, moneda))}</span></p>`)
+        partes.push(`<p class="ad-total">Total ${esc(importeHoja(totalConComision(o.total, imp), moneda))}</p>`)
+        if (comisionDesactualizada(o)) partes.push('<div class="ad-aviso">La valorización cambió después de cargar la comisión: volvé a cargarla para que el porcentaje se calcule sobre el total nuevo.</div>')
+      } else {
+        partes.push(`<p class="ad-total">Total ${esc(importeHoja(o.total, moneda))}</p>`)
+        const habitual = comisionHabitualDe(clienteDe(o.cliente_id))
+        const texto = modo === 'ninguna' ? 'Comisión: sin comisión'
+          : 'Comisión: sin cargar' + (habitual !== null ? ' (la habitual de este cliente es ' + textoPorcentaje(habitual) + ')' : '')
+        partes.push(`<p class="ad-comision__linea ad-comision__linea--falta"><span>${esc(texto)}</span></p>`)
+      }
+      if (puedeCargarComision(o) && !d.comision) {
+        partes.push(`<div class="ad-comision__acciones"><button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-comision">${modo === null ? 'Cargar comisión' : 'Cambiar comisión'}</button></div>`)
+      }
+      partes.push(htmlPanelComision(d))
+      return `<div class="ad-comision" id="ad-comision">${partes.join('')}</div>`
+    }
+
+    // Abre el panel: lo que ya tenía la orden, o el porcentaje habitual del
+    // cliente. Sin habitual, NO se elige nada solo.
+    function abrirComision() {
+      const d = estado.orden
+      const o = d?.orden
+      if (!puedeCargarComision(o) || d.valorizar || estado.trabajando) return
+      const habitual = comisionHabitualDe(clienteDe(o.cliente_id))
+      let modo = null, valor = null
+      if (MODOS_COMISION.includes(o.comision_modo)) {
+        modo = o.comision_modo
+        valor = modo === 'ninguna' || o.comision_valor === null || o.comision_valor === undefined ? null : Number(o.comision_valor)
+      } else if (habitual !== null) {
+        modo = 'porcentaje'
+        valor = habitual
+      }
+      d.comision = { modo, valor, habitual, error: null, enviando: false }
+      pintarOrden()
+    }
+
+    // Cambiar de modo VACÍA el valor: un 5 escrito como porcentaje no puede
+    // pasar a ser $ 5. El porcentaje vuelve a proponer el habitual.
+    function elegirModoComision(modo) {
+      const c = estado.orden?.comision
+      if (!c || c.enviando || !MODOS_COMISION.includes(modo) || c.modo === modo) return
+      c.modo = modo
+      c.valor = modo === 'porcentaje' ? c.habitual : null
+      c.error = null
+      pintarOrden()
+    }
+
+    // Tipear recalcula SOLO la línea del cálculo (redibujar le sacaría el foco).
+    function cambiarValorComision(valor) {
+      const d = estado.orden
+      const c = d?.comision
+      if (!c) return
+      c.valor = valor
+      const linea = document.getElementById('ad-comision-calculo')
+      if (linea) linea.textContent = textoCalculoComision(d.orden.total, c.modo, c.valor, d.orden.moneda)
+    }
+
+    function cancelarComision() {
+      const d = estado.orden
+      if (!d?.comision || d.comision.enviando) return
+      d.comision = null
+      pintarOrden()
+    }
+
+    async function guardarComision() {
+      const d = estado.orden
+      const c = d?.comision
+      if (!c || c.enviando || estado.trabajando) return
+      const err = validarComision(c.modo, c.valor)
+      if (err) { c.error = err; pintarOrden(); return }
+      estado.trabajando = true
+      c.enviando = true
+      c.error = null
+      pintarOrden()
+      try {
+        const { data, error } = await supabase.rpc('cargar_comision_orden', parametrosComision(d))
+        if (error) throw error
+        const imp = Number(data?.comision_importe)
+        const moneda = d.orden.moneda || 'ARS'
+        mostrarExito(c.modo === 'ninguna' || !(imp > 0)
+          ? `Orden ${d.orden.codigo}: sin comisión.`
+          : `Comisión de la orden ${d.orden.codigo}: ${importeHoja(imp, moneda)}. Total ${importeHoja(data?.total_con_comision, moneda)}.`)
+        estado.trabajando = false
+        estado.ordenes = null
+        await abrirOrden(d.orden.id)
+      } catch (e) {
+        console.error('No se pudo cargar la comisión:', e)
+        // Los mensajes de cargar_comision_orden ya vienen escritos para una
+        // persona ("La comisión de esta orden ya tiene pagos: no se puede
+        // cambiar."): van TAL CUAL, pegados al botón.
+        c.error = e?.message || 'No se pudo cargar la comisión. Probá de nuevo.'
+        c.enviando = false
+        estado.trabajando = false
+        pintarOrden()
+      }
+    }
+
     // Los filtros de fecha, cliente y estado van a la consulta; "solo sin
-    // valorizar" también (confirmadas y pendientes).
-    async function leerOrdenes(unidadId, filtros) {
+    // valorizar" también (confirmadas y pendientes). "Con comisión sin
+    // cargar": las valorizadas sin comisión en la consulta, y de esas las de
+    // clientes con comisión habitual (se sabe con la lista de clientes).
+    async function leerOrdenes(unidadId, filtros, clientes = estado.clientes) {
+      if (filtros.sinComision && !Array.isArray(clientes)) throw new Error('Sin la lista de clientes no se sabe quién tiene comisión.')
       let q = supabase.from('ordenes_retiro')
-        .select('id, numero, codigo, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en')
+        .select('id, numero, codigo, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en, comision_modo, comision_importe')
         .eq('unidad_negocio_id', unidadId)
       if (esFechaIso(filtros.desde)) q = q.gte('fecha', filtros.desde)
       if (esFechaIso(filtros.hasta)) q = q.lte('fecha', filtros.hasta)
       if (filtros.clienteId) q = q.eq('cliente_id', filtros.clienteId)
       if (filtros.estado) q = q.eq('estado', filtros.estado)
       if (filtros.sinValorizar) q = q.eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')
+      if (filtros.sinComision) q = q.eq('estado', 'confirmada').eq('estado_valorizacion', 'valorizada').is('comision_modo', null)
       const { data, error } = await q.order('fecha', { ascending: false }).order('numero', { ascending: false })
       if (error) throw error
-      const ordenes = data ?? []
+      const ordenes = filtros.sinComision ? ordenesComisionSinCargar(data ?? [], clientes) : (data ?? [])
       // Las cajas de cada orden (y cuántos renglones de insumos lleva), en
       // una sola consulta.
       const cajas = new Map()
@@ -1822,10 +2125,14 @@
       const cli = clienteDe(o.cliente_id)
       const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + enteroHoja(o.cajas) + ' cajas' +
         (o.insumos ? ` · ${o.insumos} de materia prima e insumos` : '')
-      const valor = o.estado_valorizacion === 'valorizada' ? importeHoja(o.total, o.moneda) : 'sin valorizar'
+      // Con la comisión cargada, el importe es el total con la comisión.
+      const conComision = o.estado !== 'anulada' && Number(o.comision_importe) > 0
+      const valor = o.estado_valorizacion === 'valorizada'
+        ? importeHoja(conComision ? totalConComision(o.total, o.comision_importe) : o.total, o.moneda) : 'sin valorizar'
       const pendiente = o.estado === 'confirmada' && o.estado_valorizacion !== 'valorizada'
+      const selloComision = faltaComision(o, cli) ? '<span class="ad-sello">Comisión sin cargar</span>' : ''
       return `<button type="button" class="ad-fila${o.estado === 'anulada' ? ' ad-fila--anulada' : ''}${pendiente ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
-        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}</span>` +
+        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}${selloComision}</span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta)}</span>` +
         `<span class="ad-fila__importe${pendiente ? ' ad-fila__importe--pendiente' : ''}">${esc(valor)}</span></span></button>`
     }
@@ -1877,15 +2184,23 @@
       document.getElementById('ad-filtro-hasta').value = estado.filtros.hasta
       document.getElementById('ad-filtro-estado').value = estado.filtros.estado
       document.getElementById('ad-filtro-sin-valorizar').checked = estado.filtros.sinValorizar
+      document.getElementById('ad-filtro-comision').checked = estado.filtros.sinComision
       await cargarOrdenes()
     }
 
-    function leerFiltros() {
+    function leerFiltros(origen = null) {
       estado.filtros.desde = document.getElementById('ad-filtro-desde').value
       estado.filtros.hasta = document.getElementById('ad-filtro-hasta').value
       estado.filtros.clienteId = document.getElementById('ad-filtro-cliente').value
       estado.filtros.estado = document.getElementById('ad-filtro-estado').value
-      estado.filtros.sinValorizar = !!document.getElementById('ad-filtro-sin-valorizar').checked
+      // "Sin valorizar" y "Con comisión sin cargar" se excluyen: una pide las
+      // que faltan valorizar y la otra las ya valorizadas. Tildar una saca la otra.
+      const sinValorizar = document.getElementById('ad-filtro-sin-valorizar')
+      const sinComision = document.getElementById('ad-filtro-comision')
+      if (origen === 'ad-filtro-comision' && sinComision.checked) sinValorizar.checked = false
+      if (origen === 'ad-filtro-sin-valorizar' && sinValorizar.checked) sinComision.checked = false
+      estado.filtros.sinValorizar = !!sinValorizar.checked
+      estado.filtros.sinComision = !!sinComision.checked
       cargarOrdenes()
     }
 
@@ -1893,7 +2208,7 @@
 
     async function leerOrden(id) {
       const { data: o, error } = await supabase.from('ordenes_retiro')
-        .select('id, numero, codigo, unidad_negocio_id, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en')
+        .select('id, numero, codigo, unidad_negocio_id, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en, comision_modo, comision_valor, comision_importe, comision_factura_id, comision_cargada_por, comision_cargada_en')
         .eq('id', id).maybeSingle()
       if (error) throw error
       if (!o) return null
@@ -1989,9 +2304,11 @@
       const renglones = d.items.map(it => htmlRenglonOrden(it, d, cat)).join('')
       let total = ''
       if (d.valorizar) total = `<p class="ad-total" id="ad-valorizar-total">${esc(textoTotalValorizar(d))}</p>`
-      else if (o.estado_valorizacion === 'valorizada') total = `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>`
+      else if (o.estado_valorizacion === 'valorizada') {
+        total = o.estado === 'anulada' ? `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>` : htmlComisionOrden(d)
+      }
       return `<div class="ad-tarjeta"><div class="ad-fila__linea">${htmlSelloOrden(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
-        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}</div>`
+        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>`
     }
 
     function pintarOrden() {
@@ -2009,6 +2326,13 @@
             ponerNumero(input, d.valorizar.precios[input.dataset.precio] ?? null)
           }
         }
+        // El campo de la comisión se dibuja SIN value: se enlaza y se escribe
+        // con ponerNumero (porcentaje hasta 100, los dos con 2 decimales).
+        const valorComision = d.comision ? cuerpo.querySelector('#ad-comision-valor') : null
+        if (valorComision) {
+          enlazarCampoNumero(valorComision, { decimales: 2, max: d.comision.modo === 'porcentaje' ? 100 : null })
+          ponerNumero(valorComision, d.comision.valor ?? null)
+        }
       }
       pintarAccionesOrden()
     }
@@ -2019,7 +2343,7 @@
       const u = o?.unidad_negocio_id
       const activa = !!o && o.estado !== 'anulada'
       const precios = activa && puedeEn('retiros', 'precios', u)
-      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar)
+      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar && !d.faltaLista)
       document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar)
       document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))
       document.getElementById('ad-btn-imprimir').hidden = !o
@@ -2040,9 +2364,63 @@
 
     let turnoOrden = 0
 
+    // AMPLIAR (06/10/2026, js/ampliar.js). En la compu (el corte del lista |
+    // detalle, MQ_LISTA_DETALLE) una orden abierta y la cobranza de un cheque
+    // se pueden ver en una ventana grande: los datos a la izquierda, los
+    // renglones (o los cheques y transferencias) en grilla a la derecha, y
+    // abajo las mismas acciones. La ventana COPIA el detalle y tocar algo
+    // ahí toca el original: los mismos handlers, nada duplicado. Mientras se
+    // valoriza, se anula o se asienta no se ofrece: es un formulario, va en
+    // el panel de siempre.
+    function conectarAmpliarAd() {
+      const hijos = (id) => [...(document.getElementById(id)?.children ?? [])]
+      crearAmpliar({
+        boton: document.getElementById('ad-orden-ampliar'),
+        observar: document.getElementById('ad-vista-orden'),
+        corte: MQ_LISTA_DETALLE,
+        disponible: () => estado.vista === 'ad-vista-orden' && !!estado.orden?.orden && !estado.orden.error &&
+          !estado.orden.valorizar && !estado.orden.anular && !!document.querySelector('#ad-orden-cuerpo .ad-tarjeta'),
+        titulo: () => {
+          const o = estado.orden?.orden
+          const cli = o ? clienteDe(o.cliente_id) : null
+          return [document.getElementById('ad-orden-titulo').textContent.trim(), cli?.nombre].filter(Boolean).join(' · ')
+        },
+        tituloResumen: 'La orden',
+        tituloGrilla: 'Renglones',
+        resumen: () => {
+          const h = hijos('ad-orden-cuerpo')
+          const conRenglones = h.find(x => x.querySelector('.ad-renglon, .ad-vacio'))
+          return [...h.filter(x => x !== conRenglones), ...(conRenglones?.querySelectorAll('.ad-total') ?? [])]
+        },
+        grilla: () => document.querySelectorAll('#ad-orden-cuerpo .ad-renglon'),
+        acciones: () => document.querySelectorAll('#ad-orden-acciones > button'),
+      })
+      // La cobranza de un cheque (la que abre la cuenta de un cliente o el
+      // link de Cobranzas): lo que escribió el chofer y sus datos a la
+      // izquierda, los cheques y las transferencias a la derecha.
+      const tarjetaCob = () => document.querySelector('#ad-cobranza-cuerpo .ad-cob')
+      crearAmpliar({
+        boton: document.getElementById('ad-cobranza-ampliar'),
+        observar: document.getElementById('ad-vista-cobranza'),
+        corte: MQ_LISTA_DETALLE,
+        disponible: () => estado.vista === 'ad-vista-cobranza' && !!estado.cobranza?.fila && !estado.cobranza.error &&
+          !estado.cobranza.reabriendo && !estado.cobranzas.asentando && !!tarjetaCob(),
+        titulo: () => document.getElementById('ad-cobranza-titulo').textContent.trim(),
+        tituloResumen: 'La cobranza',
+        tituloGrilla: 'Cheques y transferencias',
+        resumen: () => {
+          const t = tarjetaCob()
+          const fuera = (x) => x.classList.contains('ad-cob__cheques') || x.classList.contains('ad-panel__acciones') || x.classList.contains('ad-panel')
+          return [...hijos('ad-cobranza-cuerpo').filter(x => x !== t && x.classList.contains('ad-aviso')), ...[...(t?.children ?? [])].filter(x => !fuera(x))]
+        },
+        grilla: () => document.querySelectorAll('#ad-cobranza-cuerpo .ad-cob__cheques > *'),
+        acciones: () => document.querySelectorAll('#ad-cobranza-reabrir, #ad-cobranza-cuerpo [data-asentar], #ad-cobranza-cuerpo [data-cobranza-editar], #ad-cobranza-cuerpo [data-cobranza-listo]'),
+      })
+    }
+
     async function abrirOrden(id) {
       const turno = ++turnoOrden
-      estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, anular: null, aviso: null, errorHoja: null }
+      estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, comision: null, anular: null, aviso: null, errorHoja: null }
       mostrarVista('ad-vista-orden')
       pintarOrden()
       try {
@@ -2150,7 +2528,9 @@
       const turno = ++turnoValorizar
       const cli = clienteDe(o.cliente_id)
       const listaId = cli?.lista_precio_id ?? null
+      if (avisarFaltaLista(d, cli, listaId)) return
       const v = { precios: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
+      d.comision = null
       d.valorizar = v
       pintarOrden()
       const vigente = (it) => o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined
@@ -2429,6 +2809,7 @@
 
     const ETIQUETA_MOVIMIENTO = {
       saldo_inicial: 'Saldo inicial', retiro: 'Retiro', cobranza: 'Cobranza', ajuste: 'Ajuste', anulacion_retiro: 'Anulación de retiro',
+      comision: 'Comisión',
     }
 
     // clientes_con_saldo() trae el saldo, la lista, los retiros del mes, si
@@ -2462,7 +2843,8 @@
     async function leerResumenClientes(unidadId) {
       const [saldos] = await Promise.all([leerSaldos(unidadId), estado.clientes === null ? leerClientes(unidadId).then(c => { if (unidadId === estado.empresaId) estado.clientes = c }) : null])
       const deuda = saldos.reduce((a, x) => a + (Number(x?.saldo) > 0 ? Number(x.saldo) : 0), 0)
-      return { sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length, activos: saldos.length, deuda }
+      return { sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length, activos: saldos.length, deuda,
+        provisorios: unidadId === estado.empresaId ? contarProvisorios(estado.clientes) : null }
     }
 
     function clientesFiltrados(lista, busqueda) {
@@ -2537,10 +2919,11 @@
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
         `${c.empresa ? htmlSelloEmpresa(c.unidad_negocio_id, c.empresa) : ''}` +
         `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
-        `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">También proveedor</span>' : ''}` +
+        `${esProvisorio(c) ? '<span class="ad-sello ad-sello--provisorio">Provisorio</span>' : ''}` +
+        `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">Cliente y proveedor</span>' : ''}` +
         `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
         `${it?.error ? `<span class="ad-error-pegado">${esc(it.error)}</span>` : ''}</button>`
-      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`
+      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>${htmlAccionesProvisorio(c)}`
     }
 
     // Los apagados de la empresa (29/09/2026): clientes_con_saldo con
@@ -2709,7 +3092,7 @@
 
     // Lo que se ve: los prendidos y, con "Mostrar apagados", los apagados al final.
     function clientesDeLaLista() {
-      const prendidos = estado.saldos ?? []
+      const prendidos = provisoriosPrimero(estado.saldos ?? [])
       const apagados = estado.mostrarApagados ? (estado.apagados?.filas ?? []) : []
       return [...prendidos, ...apagados]
     }
@@ -2840,6 +3223,7 @@
       // de que el alta pedía el permiso de Pedidos ya no tiene a quién decírselo.
       document.getElementById('ad-clientes-alta-aviso').hidden = true
       document.getElementById('ad-panel-alta').hidden = !estado.alta
+      pintarUnir()
       const e = document.getElementById('ad-alta-error')
       e.textContent = estado.alta?.error ?? ''
       e.hidden = !estado.alta?.error
@@ -2876,6 +3260,7 @@
         const [saldos] = await Promise.all([leerSaldos(unidad), asegurarDatosEmpresa()])
         if (turno !== turnoClientes) return
         estado.saldos = saldos
+        actualizarProvisoriosPortada()
         if (estado.mostrarApagados) cargarApagados(turno)
       } catch (err) {
         if (turno !== turnoClientes) return
@@ -2994,6 +3379,383 @@
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOS CLIENTES PROVISORIOS (06/10/2026, pedido de Facu)
+    //
+    // Los carga el depósito desde Órdenes de retiro cuando el cliente no está
+    // (crear_cliente_provisorio): nombre, teléfono y localidad, con
+    // clientes.provisorio = true. Acá van ARRIBA de la lista con el chip
+    // "Provisorio", y cada uno tiene dos salidas:
+    //  - "Completar y confirmar": la ficha de siempre; al guardar, además,
+    //    confirmar_cliente(p_cliente_id), que lo deja como un cliente más.
+    //  - "Unir con un cliente existente": era uno que ya estaba. Se elige cuál
+    //    (de la MISMA empresa), se ve qué pasa y unir_clientes(p_origen_id,
+    //    p_destino_id) le pasa todo (órdenes, cobranzas, pedidos, la cuenta)
+    //    al que ya estaba, guarda el nombre del provisorio como apodo y lo apaga.
+    // Las dos las pide la base con _puede_gestionar_cliente: pedidos:configurar
+    // o retiros:precios en la empresa (o cuentas_corrientes:alta_proveedor).
+    //
+    // La burbuja: en el menú (barra lateral) y en el tablero sale de
+    // mis_pendientes(), que desde el 06/10/2026 devuelve
+    // ('administracion', 'clientes_provisorios', N) de TODAS las empresas que
+    // la persona gestiona. Acá adentro, la pestaña Clientes cuenta los de la
+    // empresa elegida, de la tabla clientes (como las demás de esta pantalla).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // provisorio = true, prendido y no apagado. La marca sale de la fila de
+    // clientes (clientes_con_saldo no la trae: hueco de base).
+    function esProvisorio(c) {
+      if (!c || c.apagado || c.activo === false) return false
+      return fichaCliente(c.cliente_id ?? c.id)?.provisorio === true
+    }
+
+    function contarProvisorios(clientes) {
+      if (!Array.isArray(clientes)) return null
+      return clientes.filter(c => c?.provisorio === true && c.activo !== false).length
+    }
+
+    // Los provisorios primero, y adentro el orden que ya traían.
+    function provisoriosPrimero(filas) {
+      const lista = Array.isArray(filas) ? filas : []
+      return [...lista.filter(esProvisorio), ...lista.filter(c => !esProvisorio(c))]
+    }
+
+    // La burbuja de la pestaña Clientes y la línea de la tarjeta, al día con
+    // la lista que se acaba de leer.
+    function actualizarProvisoriosPortada() {
+      if (!estado.portada || clientesEnTodas()) return
+      const n = contarProvisorios(estado.clientes)
+      if (n === null) return
+      estado.portada.provisorios = n
+      pintarPestanas()
+    }
+
+    // La ficha la abre quien pone precios (abrirFicha); confirmar lo acepta
+    // la base con esa misma tarea.
+    function puedeConfirmar(unidadId) {
+      return puedeEn('retiros', 'precios', unidadId)
+    }
+
+    function htmlAccionesProvisorio(c) {
+      if (!esProvisorio(c)) return ''
+      const unidad = c.unidad_negocio_id ?? estado.empresaId
+      if (clientesEnTodas()) return `<div class="ad-provisorio"><span class="ad-bloqueado-todas">${esc('Cliente provisorio · ' + TEXTO_ELEGI_FABRICA + ' para completarlo o unirlo')}</span></div>`
+      const botones = []
+      if (puedeConfirmar(unidad)) botones.push(`<button type="button" class="ad-btn" data-provisorio-completar="${esc(c.cliente_id)}">Completar y confirmar</button>`)
+      if (puedeDarAlta(unidad)) botones.push(`<button type="button" class="ad-btn ad-btn--secundario" data-provisorio-unir="${esc(c.cliente_id)}">Unir con un cliente existente</button>`)
+      if (!botones.length) return ''
+      return `<div class="ad-provisorio">${botones.join('')}</div>`
+    }
+
+    // ── Completar y confirmar: la ficha de siempre, y al guardar, confirmar ──
+
+    async function abrirCompletar(id) {
+      if (!puedeConfirmar(estado.empresaId) || clientesEnTodas()) return
+      const abriendo = abrirFicha(id)
+      if (estado.ficha?.id === id) estado.ficha.confirmar = true
+      pintarConfirmarFicha()
+      await abriendo
+      pintarConfirmarFicha()
+    }
+
+    const TEXTO_FICHA_PROVISORIO = 'Cliente provisorio: lo cargó el depósito desde Órdenes de retiro. Completá lo que falte (sobre todo la lista de precios) y tocá «Guardar y confirmar»: desde ahí es un cliente más.'
+
+    function pintarConfirmarFicha() {
+      const confirmar = !!estado.ficha?.confirmar
+      const aviso = document.getElementById('ad-ficha-provisorio')
+      if (aviso) { aviso.textContent = confirmar ? TEXTO_FICHA_PROVISORIO : ''; aviso.hidden = !confirmar }
+      const b = document.getElementById('ad-ficha-guardar')
+      if (b) b.textContent = confirmar ? 'Guardar y confirmar' : 'Guardar la ficha'
+    }
+
+    // Guarda lo que cambió (si cambió algo) y después confirma. Sin cambios
+    // también confirma: puede que ya esté completo.
+    async function guardarYConfirmarFicha() {
+      const f = estado.ficha
+      if (!f?.original || estado.trabajando) return
+      const actual = leerFormFicha()
+      const datos = cambiosFicha(f.original, actual)
+      // La misma regla que guardarFicha(): el nombre no queda vacío.
+      if (datos.nombre !== undefined && datos.nombre.length < 2) { f.error = 'El nombre no puede quedar vacío.'; pintarPieFicha(); return }
+      estado.trabajando = true
+      f.error = null
+      pintarPieFicha()
+      let guardada = false
+      try {
+        if (Object.keys(datos).length) {
+          const r = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: datos })
+          if (r.error) throw r.error
+          guardada = true
+        }
+        const { error } = await supabase.rpc('confirmar_cliente', { p_cliente_id: f.id })
+        if (error) throw error
+        mostrarExito('Cliente confirmado: ya no es provisorio.')
+        estado.trabajando = false
+        estado.clientes = null
+        estado.saldos = null
+        await asegurarDatosEmpresa()
+        actualizarProvisoriosPortada()
+        await abrirCliente(f.id)
+      } catch (err) {
+        console.error('No se pudo confirmar el cliente:', err)
+        // Lo guardado ya está guardado: no se vuelve a mandar.
+        if (guardada) f.original = { ...f.original, ...actual }
+        // Los mensajes de la base van TAL CUAL ("No tenés permiso sobre ese cliente.").
+        const msg = err?.message || 'No se pudo confirmar el cliente. Probá de nuevo.'
+        f.error = guardada ? 'La ficha se guardó, pero no se pudo confirmar el cliente: ' + msg : msg
+        estado.trabajando = false
+        pintarPieFicha()
+      }
+    }
+
+    // ── Unir con un cliente existente ─────────────────────────────────────
+
+    const MAX_DESTINOS_UNIR = 8
+
+    // Los clientes a los que se puede unir: de la MISMA empresa (la base lo
+    // exige), prendidos, y que no sean él mismo. Por nombre, razón social,
+    // apodo o CUIT (los dígitos).
+    function destinosUnir(lista, origenId, busqueda) {
+      const q = normalizar(busqueda)
+      if (!q) return []
+      const digitos = String(busqueda ?? '').replace(/\D/g, '')
+      return (Array.isArray(lista) ? lista : [])
+        .filter(c => c && c.id !== origenId && c.activo !== false)
+        .filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
+          (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)) ||
+          (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)))
+        .slice(0, MAX_DESTINOS_UNIR)
+    }
+
+    function abrirUnir(origenId) {
+      if (clientesEnTodas() || !puedeDarAlta(estado.empresaId)) return
+      const o = clienteDe(origenId)
+      if (!o) return
+      estado.unir = { origenId, origenNombre: o.nombre, unidadId: estado.empresaId, busqueda: '', destinoId: null,
+        previa: null, confirmando: false, enviando: false, error: null, turno: 0 }
+      document.getElementById('ad-unir-buscar').value = ''
+      pintarClientes()
+      pintarUnir()
+      document.getElementById('ad-panel-unir')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+      document.getElementById('ad-unir-buscar')?.focus?.()
+    }
+
+    function cerrarUnir() {
+      if (estado.unir?.enviando) return
+      estado.unir = null
+      pintarClientes()
+    }
+
+    // Cuántas cosas pasan al otro cliente. Cada una se lee por su lado: la
+    // que no se puede leer (permiso o conexión) se DICE, nunca un 0.
+    async function leerPreviaUnir(origenId, unidadId) {
+      const contar = async (tabla) => {
+        const { data, error } = await supabase.from(tabla).select('id').eq('cliente_id', origenId)
+        if (error) throw error
+        return (data ?? []).length
+      }
+      const intento = async (fn) => {
+        try { return { n: await fn() } } catch (err) { console.error('No se pudo leer para la vista previa de unir:', err); return { error: true } }
+      }
+      const [ordenes, cobranzas, pedidos, cuenta] = await Promise.all([
+        intento(() => contar('ordenes_retiro')),
+        tieneTarea('cobranzas', 'ver_todo') ? intento(() => contar('cobranzas')) : { sinPermiso: true },
+        puedeEn('pedidos', 'ver', unidadId) ? intento(() => contar('pedidos')) : { sinPermiso: true },
+        intento(async () => {
+          const { data, error } = await supabase.from('cliente_movimientos').select('importe').eq('cliente_id', origenId)
+          if (error) throw error
+          return { movimientos: (data ?? []).length, saldo: (data ?? []).reduce((s, m) => s + (Number(m.importe) || 0), 0) }
+        }),
+      ])
+      const empresa = (estado.empresas ?? []).find(e => e.id === unidadId)
+      return { ordenes, cobranzas, pedidos, cuenta, taller: limpio(empresa?.nombre) === 'Taller' }
+    }
+
+    function textoCantidad(r, uno, varios) {
+      return Number(r.n) === 1 ? '1 ' + uno : r.n + ' ' + varios
+    }
+
+    // "3 órdenes de retiro, 1 cobranza, 0 pedidos y $ 12.000 de saldo pasan
+    // a ANATOLIA." / "KIOSCO PEPE queda apagado y su nombre queda como apodo
+    // de ANATOLIA." Lo que no se pudo leer va aparte, con el porqué.
+    function textosPreviaUnir(pv, origen, destino) {
+      const pasan = []
+      const noSe = []
+      if (pv.ordenes?.error) noSe.push('las órdenes de retiro (no se pudieron leer)')
+      else if (pv.ordenes) pasan.push(textoCantidad(pv.ordenes, 'orden de retiro', 'órdenes de retiro'))
+      if (pv.cobranzas?.sinPermiso) noSe.push('las cobranzas (con tu usuario no se pueden contar)')
+      else if (pv.cobranzas?.error) noSe.push('las cobranzas (no se pudieron leer)')
+      else if (pv.cobranzas) pasan.push(textoCantidad(pv.cobranzas, 'cobranza', 'cobranzas'))
+      if (pv.pedidos?.sinPermiso) noSe.push('los pedidos (con tu usuario no se pueden contar)')
+      else if (pv.pedidos?.error) noSe.push('los pedidos (no se pudieron leer)')
+      else if (pv.pedidos) pasan.push(textoCantidad(pv.pedidos, 'pedido', 'pedidos'))
+      if (pv.cuenta?.error) noSe.push('el saldo de su cuenta (no se pudo leer)')
+      else if (pv.cuenta?.n) {
+        const c = pv.cuenta.n
+        pasan.push(c.movimientos
+          ? importeHoja(c.saldo) + ' de saldo (' + c.movimientos + ' ' + (c.movimientos === 1 ? 'movimiento' : 'movimientos') + ' de su cuenta)'
+          : 'su cuenta, que está en cero')
+      }
+      const lineas = []
+      if (pasan.length) {
+        const lista = pasan.length > 1 ? pasan.slice(0, -1).join(', ') + ' y ' + pasan[pasan.length - 1] : pasan[0]
+        lineas.push('Pasan a ' + destino + ': ' + lista + '.')
+      }
+      if (noSe.length) lineas.push('No se puede saber cuántos hay de ' + noSe.join(', ') + ': pasan igual.')
+      if (pv.taller) lineas.push('Si tiene proyectos del Taller, también pasan (no se pueden contar desde acá).')
+      lineas.push(origen + ' queda apagado y su nombre queda como apodo de ' + destino + '.')
+      return lineas
+    }
+
+    async function elegirDestinoUnir(destinoId) {
+      const u = estado.unir
+      if (!u || u.enviando) return
+      const d = clienteDe(destinoId)
+      if (!d || destinoId === u.origenId) return
+      u.destinoId = destinoId
+      u.confirmando = false
+      u.error = null
+      u.previa = { cargando: true }
+      const turno = ++u.turno
+      pintarUnir()
+      const pv = await leerPreviaUnir(u.origenId, u.unidadId)
+      if (estado.unir !== u || u.turno !== turno || u.destinoId !== destinoId) return
+      u.previa = pv
+      pintarUnir()
+    }
+
+    function cambiarDestinoUnir() {
+      const u = estado.unir
+      if (!u || u.enviando) return
+      u.turno++
+      u.destinoId = null
+      u.previa = null
+      u.confirmando = false
+      u.error = null
+      pintarUnir()
+    }
+
+    // La confirmación es propia (nunca la ventanita del navegador): un segundo paso en el panel.
+    function pedirConfirmarUnir() {
+      const u = estado.unir
+      if (!u?.destinoId || !u.previa || u.previa.cargando || u.enviando) return
+      u.confirmando = true
+      pintarUnir()
+    }
+
+    function noConfirmarUnir() {
+      const u = estado.unir
+      if (!u || u.enviando) return
+      u.confirmando = false
+      pintarUnir()
+    }
+
+    async function unirClientes() {
+      const u = estado.unir
+      if (!u?.destinoId || !u.confirmando || u.enviando) return
+      u.enviando = true
+      u.error = null
+      pintarUnir()
+      try {
+        const { error } = await supabase.rpc('unir_clientes', { p_origen_id: u.origenId, p_destino_id: u.destinoId })
+        if (error) throw error
+        const destino = clienteDe(u.destinoId)?.nombre ?? 'el otro cliente'
+        mostrarExito(`${u.origenNombre} quedó unido a ${destino}.`)
+        estado.unir = null
+        estado.clientes = null
+        await mostrarClientes()
+      } catch (err) {
+        console.error('No se pudieron unir los clientes:', err)
+        // Los mensajes de unir_clientes ya vienen escritos para una persona
+        // ("Los dos están vinculados a proveedores distintos…"): TAL CUAL.
+        u.enviando = false
+        u.error = err?.message || 'No se pudieron unir los clientes. Probá de nuevo.'
+        pintarUnir()
+      }
+    }
+
+    function htmlDestinoUnir(c) {
+      const meta = [limpio(c.razon_social) && limpio(c.razon_social) !== limpio(c.nombre) ? c.razon_social : null, c.localidad, c.cuit ? 'CUIT ' + c.cuit : null]
+        .map(limpio).filter(Boolean).join(' · ')
+      return `<button type="button" class="ad-fila" data-unir-destino="${esc(c.id)}"><span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
+        `${c.provisorio === true ? '<span class="ad-sello ad-sello--provisorio">Provisorio</span>' : ''}</span>` +
+        `${meta ? `<span class="ad-fila__meta">${esc(meta)}</span>` : ''}</button>`
+    }
+
+    function htmlUnir(u) {
+      const error = `<p class="ad-error-pegado" id="ad-unir-error"${u.error ? '' : ' hidden'}>${esc(u.error ?? '')}</p>`
+      const cancelar = `<button type="button" class="ad-btn ad-btn--suave" id="ad-unir-cancelar"${u.enviando ? ' disabled' : ''}>Cancelar</button>`
+      if (!u.destinoId) {
+        const q = limpio(u.busqueda)
+        let resultados
+        if (estado.clientes === null) resultados = '<div class="ad-vacio">Cargando los clientes…</div>'
+        else if (!q) resultados = '<p class="ad-texto-suave">Escribí para buscar el cliente que ya existía.</p>'
+        else {
+          const destinos = destinosUnir(estado.clientes, u.origenId, q)
+          resultados = destinos.length ? `<div class="ad-lista">${destinos.map(htmlDestinoUnir).join('')}</div>`
+            : `<div class="ad-vacio">${esc('Ningún cliente de esta empresa coincide con «' + q + '».')}</div>`
+        }
+        return resultados + error + `<div class="ad-panel__acciones">${cancelar}</div>`
+      }
+      const destino = clienteDe(u.destinoId)?.nombre ?? 'el cliente elegido'
+      const elegido = `<p class="ad-unir__elegido">${esc(u.origenNombre + ' → ' + destino)}</p>`
+      const previa = !u.previa || u.previa.cargando
+        ? '<p class="ad-texto-suave">Contando lo que pasa…</p>'
+        : textosPreviaUnir(u.previa, u.origenNombre, destino).map(t => `<p class="ad-texto-suave">${esc(t)}</p>`).join('')
+      const listo = !!u.previa && !u.previa.cargando
+      let acciones
+      if (u.confirmando) {
+        acciones = `<div class="ad-aviso ad-aviso--grave">${esc('¿Unir a ' + u.origenNombre + ' con ' + destino + '? No se puede deshacer desde acá.')}</div>` +
+          `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-unir-si"${u.enviando ? ' disabled' : ''}>${u.enviando ? 'Uniendo…' : 'Sí, unir'}</button>` +
+          `<button type="button" class="ad-btn ad-btn--suave" id="ad-unir-no"${u.enviando ? ' disabled' : ''}>No</button></div>`
+      } else {
+        acciones = `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-unir-pedir"${listo ? '' : ' disabled'}>Unir</button>` +
+          `<button type="button" class="ad-btn ad-btn--suave" id="ad-unir-cambiar">Elegir otro</button>${cancelar}</div>`
+      }
+      return elegido + `<div class="ad-unir__previa" id="ad-unir-previa">${previa}</div>` + error + acciones
+    }
+
+    function pintarUnir() {
+      const panel = document.getElementById('ad-panel-unir')
+      if (!panel) return
+      // Un panel de otra empresa (se cambió arriba) se cierra.
+      if (estado.unir && estado.unir.unidadId !== estado.empresaId) estado.unir = null
+      const u = estado.unir
+      panel.hidden = !u
+      if (!u) return
+      document.getElementById('ad-unir-titulo').textContent = 'Unir «' + u.origenNombre + '» con un cliente existente'
+      document.getElementById('ad-unir-campo').hidden = !!u.destinoId
+      document.getElementById('ad-unir-cuerpo').innerHTML = htmlUnir(u)
+    }
+
+    // ── Valorizar a un provisorio sin lista ──────────────────────────────
+    // Sin lista, la base no tiene de dónde sacar los precios y quedarían
+    // todos vacíos: primero se le asigna la lista en su ficha.
+    function avisarFaltaLista(d, cli, listaId) {
+      if (!d || cli?.provisorio !== true || listaId) return false
+      d.faltaLista = { clienteId: cli.id, nombre: cli.nombre }
+      pintarOrden()
+      return true
+    }
+
+    function htmlFaltaLista(d) {
+      if (!d?.faltaLista) return ''
+      return `<div class="ad-aviso ad-aviso--grave" id="ad-falta-lista">${esc('Primero asigná la lista de precios a ' + (d.faltaLista.nombre ?? 'este cliente') + ': es un cliente provisorio sin lista, y sin ella los precios quedan todos vacíos.')}</div>` +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-falta-lista-ficha">Ir a su ficha</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="ad-falta-lista-cerrar">Cerrar</button></div>`
+    }
+
+    function cerrarFaltaLista() {
+      if (estado.orden) estado.orden.faltaLista = null
+      pintarOrden()
+    }
+
+    // Su ficha, en modo "completar y confirmar" (es provisorio).
+    function irAFichaDesdeOrden() {
+      const id = estado.orden?.faltaLista?.clienteId
+      if (id) abrirCompletar(id)
+    }
+
     // ── La cuenta corriente ────────────────────────────────────────────────
 
     async function leerCuenta(clienteId) {
@@ -3034,11 +3796,14 @@
     }
 
     // "Orden de retiro N° 12 · motivo" → "Orden de retiro N-0012 · motivo".
+    // Desde el 26/09/2026 cuenta_cliente() ya manda "Orden de retiro N-0012 ·
+    // …": se saca también esa forma (si no, el código salía DOS veces).
     function detalleMovimiento(m, codigos) {
       const base = String(m?.detalle ?? '')
       if (!m?.orden_retiro_id) return base || (ETIQUETA_MOVIMIENTO[m?.tipo] ?? '—')
       const codigo = codigos?.get(m.orden_retiro_id)
-      const resto = base.replace(/^Orden de retiro N°\s*\d+/, '')
+      // La comisión dice "Comisión orden N° 12 (5%)": el número ya está en el código.
+      const resto = base.replace(/^Orden de retiro (?:N°\s*\d+|[A-Z]+-\d+)/, '').replace(/ · Comisión orden N°\s*\d+/, ' · Comisión')
       return 'Orden de retiro ' + (codigo || '(sin código)') + resto
     }
 
@@ -3098,18 +3863,58 @@
       }
       document.getElementById('ad-saldo-guardar').disabled = estado.trabajando
       document.getElementById('ad-ajuste-guardar').disabled = estado.trabajando
+      pintarCuentaUnicaCliente()
+    }
+
+    // ── LA CUENTA DE CLIENTE Y PROVEEDOR (06/10/2026) ──────────────────────
+    // Un cliente vinculado con su proveedor (clientes.proveedor_id) muestra,
+    // arriba de su cuenta, la cuenta_unificada: el neto, la lista con las dos
+    // columnas y "Compensar" (js/cuenta-unica.js, la misma de Cuentas
+    // corrientes). Su cuenta de cliente sigue abajo, con sus cobranzas.
+    // Compensar pide cobranzas:procesar Y cuentas_corrientes:registrar_pago
+    // (lo exige compensar_cuentas, con bypass de super_admin).
+    function puedeCompensarCuentas() {
+      return tieneTarea('cobranzas', 'procesar') && tieneTarea('cuentas_corrientes', 'registrar_pago')
+    }
+
+    function ctxCuentaUnica() {
+      const c = estado.cliente
+      if (!c?.unica) return null
+      return {
+        sb: supabase, cu: c.unica, contenedor: document.getElementById('ad-cuenta-unica'), hoy: hoyArgentina(),
+        puedeCompensar: puedeCompensarCuentas(),
+        alCompensado: async () => {
+          mostrarExito('Compensación registrada: las dos cuentas quedaron al día.')
+          estado.saldos = null
+          await abrirCliente(c.id)
+        },
+      }
+    }
+
+    function pintarCuentaUnicaCliente() {
+      const el = document.getElementById('ad-cuenta-unica')
+      const ctx = ctxCuentaUnica()
+      if (!ctx) { el.innerHTML = ''; el.hidden = true; return }
+      el.hidden = false
+      pintarCuentaUnica(ctx)
     }
 
     let turnoCliente = 0
 
     async function abrirCliente(id) {
       const turno = ++turnoCliente
-      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null, otras: null }
+      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null, otras: null, unica: null }
       mostrarVista('ad-vista-cliente')
       pintarCliente()
       try {
         await asegurarDatosEmpresa()
-        const r = await leerCuenta(id)
+        if (turno !== turnoCliente) return
+        // ¿Está vinculado con su proveedor? Entonces se lee también la cuenta
+        // de cliente y proveedor (cargarCuentaUnica no tira: si falla, lo dice).
+        const proveedorId = clienteDe(id)?.proveedor_id ?? null
+        if (proveedorId) estado.cliente.unica = estadoCuentaUnica({ clienteId: id, proveedorId, unidadId: estado.empresaId })
+        const cu = estado.cliente.unica
+        const [r] = await Promise.all([leerCuenta(id), cu ? cargarCuentaUnica(supabase, cu) : null])
         if (turno !== turnoCliente) return
         Object.assign(estado.cliente, r)
       } catch (err) {
@@ -3207,13 +4012,13 @@
       ['domicilio', 'texto'], ['localidad', 'texto'], ['provincia', 'texto'], ['codigo_postal', 'texto'],
       ['telefono', 'texto'], ['email', 'texto'], ['contacto_nombre', 'texto'], ['contacto_telefono', 'texto'], ['transporte_habitual', 'texto'],
       ['banco', 'texto'], ['cbu', 'texto'], ['alias_cbu', 'texto'],
-      ['lista_precio_id', 'opcion'], ['limite_credito', 'importe'], ['plazo_pago_dias', 'dias'],
+      ['lista_precio_id', 'opcion'], ['limite_credito', 'importe'], ['plazo_pago_dias', 'dias'], ['comision_habitual', 'porcentaje'],
       ['observaciones', 'texto'],
     ]
 
     async function leerFicha(clienteId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, apodos, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior')
+        .select('id, nombre, apodos, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, comision_habitual, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior')
         .eq('id', clienteId).maybeSingle()
       if (error) throw error
       return data
@@ -3230,12 +4035,15 @@
       if (estado.proveedores) return
       const { data, error } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit, estado_alta, activo').order('razon_social')
       if (error) throw error
+      // TODOS los ids que se leyeron, también los inactivos: con eso se sabe
+      // después de vincular si el proveedor ya existía o se creó.
+      estado.idsProveedores = new Set((data ?? []).map(p => p.id))
       estado.proveedores = (data ?? []).filter(p => p.activo !== false && p.estado_alta !== 'rechazado')
     }
 
     // El valor de un campo, como se compara: texto limpio, '' si no hay.
     function valorComparable(tipo, v) {
-      if (tipo === 'importe' || tipo === 'dias') return v === null || v === undefined || v === '' ? '' : String(Number(v))
+      if (tipo === 'importe' || tipo === 'dias' || tipo === 'porcentaje') return v === null || v === undefined || v === '' ? '' : String(Number(v))
       if (tipo === 'texto' && typeof v === 'string' && v.includes('\n')) return String(v).trim()
       return limpio(v)
     }
@@ -3249,7 +4057,10 @@
         const a = valorComparable(tipo, actual[clave])
         if (a !== valorComparable(tipo, original[clave])) datos[clave] = a
       }
-      if ((actual.proveedor_id ?? '') !== (original.proveedor_id ?? '')) datos.proveedor_id = actual.proveedor_id ?? ''
+      // El proveedor NO viaja con la ficha (06/10/2026): vincular y separar
+      // van por vincular_cliente_proveedor / desvincular_cliente_proveedor,
+      // que además marcan la cuenta corriente del proveedor y no dejan separar
+      // dos cuentas con compensaciones. Mandarlo acá se saltearía las dos cosas.
       return datos
     }
 
@@ -3258,9 +4069,8 @@
       const actual = {}
       for (const [clave, tipo] of CAMPOS_FICHA) {
         const el = document.getElementById(`ad-f-${clave}`)
-        actual[clave] = tipo === 'importe' || tipo === 'dias' ? leerCampoNumero(el) : el.value
+        actual[clave] = tipo === 'importe' || tipo === 'dias' || tipo === 'porcentaje' ? leerCampoNumero(el) : el.value
       }
-      actual.proveedor_id = f?.proveedorId ?? null
       return actual
     }
 
@@ -3277,12 +4087,122 @@
         (digitos.length >= 3 && String(p.cuit ?? '').includes(digitos))).slice(0, 8)
     }
 
-    function htmlProveedorElegido(id) {
+    // El proveedor con el que está vinculado, con "No es proveedor" (abre la
+    // confirmación de separar). `quitar` en false: sin el botón (el elegido
+    // del panel de vincular).
+    function htmlProveedorElegido(id, quitar = true) {
       if (!id) return '<p class="ad-texto-suave">No es proveedor.</p>'
       const p = (estado.proveedores ?? []).find(x => x.id === id)
       const texto = p ? p.razon_social + (p.cuit ? ' · CUIT ' + p.cuit : '') : 'Proveedor (no se pudo leer)'
       return `<div class="ad-fila__linea"><span class="ad-renglon__desc">${esc(texto)}</span>` +
-        `<button type="button" class="ad-btn ad-btn--suave" id="ad-f-proveedor-quitar">No es proveedor</button></div>`
+        (quitar ? `<button type="button" class="ad-btn ad-btn--suave" id="ad-f-proveedor-quitar">No es proveedor</button>` : '') + '</div>'
+    }
+
+    function nombreProveedorFicha(id) {
+      return (estado.proveedores ?? []).find(x => x.id === id)?.razon_social ?? ''
+    }
+
+    // La clasificación de la ficha: Cliente / Cliente y proveedor (la de un
+    // cliente nunca es "Proveedor" solo: esa opción va apagada).
+    function pintarClasificacionFicha() {
+      const f = estado.ficha
+      if (!f) return
+      const v = f.vinculo
+      document.getElementById('ad-f-clasificacion').innerHTML =
+        htmlClasificacion({ valor: f.proveedorActual ? 'ambos' : 'cliente', propio: 'cliente', ocupado: !!v.enviando })
+      document.getElementById('ad-f-proveedor-elegido').innerHTML = f.proveedorActual ? htmlProveedorElegido(f.proveedorActual) : ''
+      document.getElementById('ad-f-vincular').hidden = v.panel !== 'vincular'
+      document.getElementById('ad-f-desvincular').hidden = v.panel !== 'desvincular'
+      document.getElementById('ad-f-vincular-texto').textContent = f.proveedorId
+        ? `Se va a vincular con el proveedor ${nombreProveedorFicha(f.proveedorId) || 'elegido'}. Para que lo busque solo, borrá la búsqueda y tocá Vincular.`
+        : 'Si no elegís ninguno, se busca el proveedor con su mismo CUIT o nombre; si no hay, se crea en Cuentas corrientes.'
+      document.getElementById('ad-f-desvincular-texto').textContent =
+        `¿Separar las dos cuentas? ${nombreProveedorFicha(f.proveedorActual) || 'El proveedor'} deja de figurar como proveedor de este cliente; sus facturas y pagos siguen en Cuentas corrientes.`
+      for (const [id, panel] of [['ad-f-vincular-error', 'vincular'], ['ad-f-desvincular-error', 'desvincular']]) {
+        const e = document.getElementById(id)
+        e.textContent = v.panel === panel ? (v.error ?? '') : ''
+        e.hidden = !(v.panel === panel && v.error)
+      }
+      for (const id of ['ad-f-vincular-confirmar', 'ad-f-vincular-cancelar', 'ad-f-desvincular-confirmar', 'ad-f-desvincular-cancelar']) {
+        document.getElementById(id).disabled = !!v.enviando
+      }
+    }
+
+    function elegirClasificacionFicha(valor) {
+      const f = estado.ficha
+      if (!f?.original || f.vinculo.enviando) return
+      if (valor === 'ambos' && !f.proveedorActual) {
+        f.vinculo = { panel: 'vincular', error: null, enviando: false }
+        f.proveedorId = null
+        f.busquedaProveedor = ''
+        document.getElementById('ad-f-proveedor-buscar').value = ''
+      } else if (valor === 'cliente' && f.proveedorActual) {
+        f.vinculo = { panel: 'desvincular', error: null, enviando: false }
+      } else return
+      pintarProveedorFicha()
+    }
+
+    function cerrarPanelVinculo() {
+      const f = estado.ficha
+      if (!f || f.vinculo.enviando) return
+      f.vinculo = { panel: null, error: null, enviando: false }
+      pintarProveedorFicha()
+    }
+
+    // vincular_cliente_proveedor(p_cliente_id, p_proveedor_id): sin proveedor
+    // elegido lo busca la base por CUIT o nombre y, si no hay, lo crea.
+    async function confirmarVincular() {
+      const f = estado.ficha
+      if (!f?.original || f.vinculo.enviando || f.proveedorActual) return
+      const conocidos = estado.idsProveedores ? new Set(estado.idsProveedores) : null
+      f.vinculo.enviando = true
+      f.vinculo.error = null
+      pintarProveedorFicha()
+      try {
+        const { data: id, error } = await supabase.rpc('vincular_cliente_proveedor', { p_cliente_id: f.id, p_proveedor_id: f.proveedorId ?? null })
+        if (error) throw error
+        if (estado.ficha !== f) return
+        // Se vuelve a leer el padrón: el proveedor puede ser nuevo.
+        estado.proveedores = null
+        try { await asegurarProveedores() } catch (err) { console.error('No se pudo releer el padrón:', err) }
+        mostrarExito(textoVinculado({ id, conocidos, nombre: nombreProveedorFicha(id), lado: 'proveedor' }))
+        f.proveedorActual = id
+        f.original.proveedor_id = id
+        f.proveedorId = null
+        f.vinculo = { panel: null, error: null, enviando: false }
+        estado.clientes = null
+        estado.saldos = null
+      } catch (err) {
+        console.error('No se pudo vincular:', err)
+        // Los mensajes de la base vienen escritos para una persona: tal cual.
+        if (estado.ficha === f) f.vinculo = { panel: 'vincular', error: err?.message || 'No se pudo vincular. Probá de nuevo.', enviando: false }
+      }
+      if (estado.ficha === f) pintarProveedorFicha()
+    }
+
+    async function confirmarDesvincular() {
+      const f = estado.ficha
+      if (!f?.original || f.vinculo.enviando || !f.proveedorActual) return
+      const nombre = nombreProveedorFicha(f.proveedorActual)
+      f.vinculo.enviando = true
+      f.vinculo.error = null
+      pintarProveedorFicha()
+      try {
+        const { error } = await supabase.rpc('desvincular_cliente_proveedor', { p_cliente_id: f.id })
+        if (error) throw error
+        if (estado.ficha !== f) return
+        mostrarExito(`Las dos cuentas quedaron separadas${nombre ? ': ' + nombre + ' ya no figura como proveedor de este cliente' : ''}.`)
+        f.proveedorActual = null
+        f.original.proveedor_id = null
+        f.vinculo = { panel: null, error: null, enviando: false }
+        estado.clientes = null
+        estado.saldos = null
+      } catch (err) {
+        console.error('No se pudo separar:', err)
+        // "Tiene compensaciones entre sus dos cuentas: no se puede desvincular." tal cual.
+        if (estado.ficha === f) f.vinculo = { panel: 'desvincular', error: err?.message || 'No se pudieron separar las cuentas. Probá de nuevo.', enviando: false }
+      }
+      if (estado.ficha === f) pintarProveedorFicha()
     }
 
     function htmlResultadosProveedores(busqueda) {
@@ -3293,11 +4213,15 @@
         `<span class="ad-fila__meta">${esc([p.nombre_fantasia, p.cuit ? 'CUIT ' + p.cuit : null].filter(Boolean).join(' · '))}</span></button>`).join('')
     }
 
+    // La clasificación y, en el panel de vincular, el buscador del padrón
+    // (opcional: elegir a qué proveedor se vincula).
     function pintarProveedorFicha() {
       const f = estado.ficha
       if (!f) return
-      document.getElementById('ad-f-proveedor-elegido').innerHTML = htmlProveedorElegido(f.proveedorId)
-      document.getElementById('ad-f-proveedores').innerHTML = htmlResultadosProveedores(f.busquedaProveedor)
+      pintarClasificacionFicha()
+      document.getElementById('ad-f-proveedores').innerHTML = f.proveedorId && !f.busquedaProveedor
+        ? htmlProveedorElegido(f.proveedorId, false)
+        : htmlResultadosProveedores(f.busquedaProveedor)
     }
 
     function textoCambiosFicha(n) {
@@ -3305,6 +4229,7 @@
     }
 
     function pintarPieFicha() {
+      pintarConfirmarFicha()
       const f = estado.ficha
       if (!f?.original) return
       document.getElementById('ad-ficha-cambios').textContent = textoCambiosFicha(Object.keys(cambiosFicha(f.original, leerFormFicha())).length)
@@ -3322,6 +4247,7 @@
         const el = document.getElementById(`ad-f-${clave}`)
         if (tipo === 'importe') { enlazarCampoNumero(el, { decimales: DECIMALES_PRECIO }); ponerNumero(el, c[clave] === null || c[clave] === undefined ? null : Number(c[clave])) }
         else if (tipo === 'dias') { enlazarCampoNumero(el, { decimales: 0 }); ponerNumero(el, c[clave] === null || c[clave] === undefined ? null : Number(c[clave])) }
+        else if (tipo === 'porcentaje') { enlazarCampoNumero(el, { decimales: 2, max: 100 }); ponerNumero(el, c[clave] === null || c[clave] === undefined ? null : Number(c[clave])) }
         else el.value = c[clave] ?? ''
       }
       document.getElementById('ad-f-proveedor-buscar').value = ''
@@ -3338,7 +4264,10 @@
 
     async function abrirFicha(clienteId) {
       if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return
-      estado.ficha = { id: clienteId, original: null, proveedorId: null, busquedaProveedor: '', error: null }
+      // proveedorActual: con quién está vinculado hoy; proveedorId: el que se
+      // elige en el panel de vincular (null = que lo busque la base).
+      estado.ficha = { id: clienteId, original: null, proveedorActual: null, proveedorId: null, busquedaProveedor: '', error: null,
+        vinculo: { panel: null, error: null, enviando: false } }
       mostrarVista('ad-vista-ficha')
       document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-vacio">Cargando la ficha…</div>'
       try {
@@ -3346,7 +4275,7 @@
         if (estado.ficha?.id !== clienteId) return
         if (!c) { document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-aviso ad-aviso--grave">No se encontró el cliente.</div>'; return }
         estado.ficha.original = c
-        estado.ficha.proveedorId = c.proveedor_id ?? null
+        estado.ficha.proveedorActual = c.proveedor_id ?? null
         document.getElementById('ad-ficha-titulo').textContent = 'Ficha de ' + (c.nombre ?? 'cliente')
         document.getElementById('ad-ficha-aviso').innerHTML = ''
         llenarFicha(c)
@@ -3457,9 +4386,10 @@
       await guardarApodos(f.apodos.filter((_, k) => k !== i))
     }
 
+    // Elegir, en el panel de vincular, con qué proveedor del padrón.
     function elegirProveedorFicha(id) {
       const f = estado.ficha
-      if (!f || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return
+      if (!f || f.vinculo?.enviando || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return
       f.proveedorId = id || null
       f.busquedaProveedor = ''
       document.getElementById('ad-f-proveedor-buscar').value = ''
@@ -3467,18 +4397,52 @@
       pintarPieFicha()
     }
 
+    // LA COMISIÓN HABITUAL va por su propia función (06/10/2026):
+    // guardar_comision_habitual(p_cliente_id, p_porcentaje) — 0 o null la
+    // borra; fuera de 0 a 100 la base lo rechaza con su mensaje.
+    // guardar_ficha_cliente no la conoce (ignora las claves que no conoce),
+    // así que NUNCA viaja en p_datos. '' = sin comisión habitual.
+    function porcentajeComision(v) {
+      return v === '' || v === null || v === undefined ? null : Number(v)
+    }
+
     async function guardarFicha() {
       const f = estado.ficha
+      if (f?.confirmar) return guardarYConfirmarFicha()
       if (!f?.original || estado.trabajando) return
       const datos = cambiosFicha(f.original, leerFormFicha())
       if (!Object.keys(datos).length) { f.error = 'No cambiaste nada.'; pintarPieFicha(); return }
       if ('nombre' in datos && datos.nombre.length < 2) { f.error = 'El nombre no puede quedar vacío.'; pintarPieFicha(); return }
+      if ('comision_habitual' in datos && datos.comision_habitual !== '' && !(Number(datos.comision_habitual) >= 0 && Number(datos.comision_habitual) <= 100)) {
+        f.error = 'La comisión habitual va de 0 a 100 %.'; pintarPieFicha(); return
+      }
       estado.trabajando = true
       f.error = null
       pintarPieFicha()
+      const { comision_habitual: comision, ...resto } = datos
+      const conComision = 'comision_habitual' in datos
+      let fichaGuardada = false
       try {
-        const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: datos })
-        if (error) throw error
+        if (Object.keys(resto).length) {
+          const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: resto })
+          if (error) throw error
+          fichaGuardada = true
+        }
+        if (conComision) {
+          const { error } = await supabase.rpc('guardar_comision_habitual', { p_cliente_id: f.id, p_porcentaje: porcentajeComision(comision) })
+          if (error) {
+            if (!fichaGuardada) throw error
+            // La ficha quedó; la comisión no: se dice con el mensaje de la base.
+            estado.trabajando = false
+            estado.clientes = null
+            estado.saldos = null
+            const fresca = await leerFicha(f.id)
+            if (fresca && estado.ficha === f) { f.original = fresca; llenarFicha(fresca) }
+            f.error = 'Se guardó la ficha, MENOS la comisión habitual: ' + (error.message || 'no se pudo guardar.')
+            pintarPieFicha()
+            return
+          }
+        }
         mostrarExito('Ficha guardada.')
         estado.trabajando = false
         estado.clientes = null
@@ -6249,8 +7213,8 @@
       document.getElementById('ad-ordenes-volver').addEventListener('click', () => mostrarInicio())
       // Lista | detalle: al girar la tablet o achicar la ventana, se rearma.
       window.matchMedia?.(MQ_LISTA_DETALLE)?.addEventListener?.('change', () => aplicarListaDetalle())
-      for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar']) {
-        document.getElementById(id).addEventListener('change', () => leerFiltros())
+      for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar', 'ad-filtro-comision']) {
+        document.getElementById(id).addEventListener('change', () => leerFiltros(id))
       }
       // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
       // les dispara el mismo 'change' de siempre, así lo que filtran no cambia.
@@ -6271,15 +7235,28 @@
       cuerpo.addEventListener('input', (e) => {
         const t = e.target
         if (t.dataset?.precio !== undefined) cambiarPrecio(t.dataset.precio, leerCampoNumero(t))
+        else if (t.id === 'ad-comision-valor') cambiarValorComision(leerCampoNumero(t))
       })
       cuerpo.addEventListener('click', (e) => {
+        let b
         if (e.target.closest('#ad-valorizar-guardar')) guardarValorizacion()
         else if (e.target.closest('#ad-valorizar-cancelar')) cancelarValorizar()
+        else if (e.target.closest('#ad-btn-comision')) abrirComision()
+        else if ((b = e.target.closest('[data-comision-modo]'))) elegirModoComision(b.dataset.comisionModo)
+        else if (e.target.closest('#ad-comision-guardar')) guardarComision()
+        else if (e.target.closest('#ad-comision-cancelar')) cancelarComision()
+        else if (e.target.closest('#ad-falta-lista-cerrar')) cerrarFaltaLista()
+        else if (e.target.closest('#ad-falta-lista-ficha')) irAFichaDesdeOrden()
       })
       // Clientes
       document.getElementById('ad-clientes-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-clientes-buscar').addEventListener('input', (e) => { estado.busquedaClientes = e.target.value; pintarClientes() })
       document.getElementById('ad-clientes-lista').addEventListener('click', (e) => {
+        // Las acciones de un provisorio (06/10/2026) van debajo de la fila.
+        const pc = e.target.closest('[data-provisorio-completar]')
+        if (pc) { abrirCompletar(pc.dataset.provisorioCompletar); return }
+        const pu = e.target.closest('[data-provisorio-unir]')
+        if (pu) { abrirUnir(pu.dataset.provisorioUnir); return }
         const s = e.target.closest('[data-cliente-activo]')
         if (s) { cambiarActivoCliente(s.dataset.clienteActivo); return }
         const b = e.target.closest('[data-cliente]')
@@ -6290,6 +7267,17 @@
       document.getElementById('ad-btn-cliente-nuevo').addEventListener('click', () => abrirAlta())
       document.getElementById('ad-alta-guardar').addEventListener('click', () => guardarAlta())
       document.getElementById('ad-alta-cancelar').addEventListener('click', () => { estado.alta = null; pintarClientes() })
+      // Unir un provisorio con un cliente existente (06/10/2026)
+      document.getElementById('ad-unir-buscar').addEventListener('input', (e) => { if (estado.unir) { estado.unir.busqueda = e.target.value; pintarUnir() } })
+      document.getElementById('ad-unir-cuerpo').addEventListener('click', (e) => {
+        const d = e.target.closest('[data-unir-destino]')
+        if (d) { elegirDestinoUnir(d.dataset.unirDestino); return }
+        if (e.target.closest('#ad-unir-cambiar')) cambiarDestinoUnir()
+        else if (e.target.closest('#ad-unir-pedir')) pedirConfirmarUnir()
+        else if (e.target.closest('#ad-unir-si')) unirClientes()
+        else if (e.target.closest('#ad-unir-no')) noConfirmarUnir()
+        else if (e.target.closest('#ad-unir-cancelar')) cerrarUnir()
+      })
       document.getElementById('ad-cliente-volver').addEventListener('click', () => mostrarClientes())
       document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
         const b = e.target.closest('[data-cuenta-cobranza]')
@@ -6297,6 +7285,11 @@
         const o = e.target.closest('[data-otra-cuenta]')
         if (o) abrirOtraCuenta(o.dataset.otraCuenta, o.dataset.otraUnidad)
       })
+      // La cuenta de cliente y proveedor (js/cuenta-unica.js): Compensar, el
+      // filtro y los campos del panel.
+      const unica = document.getElementById('ad-cuenta-unica')
+      unica.addEventListener('click', (e) => { const ctx = ctxCuentaUnica(); if (ctx) alTocarCuentaUnica(e, ctx) })
+      for (const tipo of ['input', 'change']) unica.addEventListener(tipo, (e) => { const ctx = ctxCuentaUnica(); if (ctx) alCambiarCuentaUnica(e, ctx) })
       document.getElementById('ad-btn-ficha').addEventListener('click', () => { if (estado.cliente) abrirFicha(estado.cliente.id) })
       document.getElementById('ad-btn-saldo-inicial').addEventListener('click', () => abrirPanelCliente('saldo'))
       document.getElementById('ad-btn-ajuste').addEventListener('click', () => abrirPanelCliente('ajuste'))
@@ -6317,7 +7310,11 @@
       ficha.addEventListener('click', (e) => {
         let b
         if ((b = e.target.closest('[data-proveedor]'))) elegirProveedorFicha(b.dataset.proveedor)
-        else if (e.target.closest('#ad-f-proveedor-quitar')) elegirProveedorFicha(null)
+        else if (e.target.closest('#ad-f-proveedor-quitar')) elegirClasificacionFicha('cliente')
+        else if ((b = e.target.closest('[data-clasificacion]'))) elegirClasificacionFicha(b.dataset.clasificacion)
+        else if (e.target.closest('#ad-f-vincular-confirmar')) confirmarVincular()
+        else if (e.target.closest('#ad-f-desvincular-confirmar')) confirmarDesvincular()
+        else if (e.target.closest('#ad-f-vincular-cancelar, #ad-f-desvincular-cancelar')) cerrarPanelVinculo()
         else if ((b = e.target.closest('[data-quitar-apodo]'))) quitarApodoFicha(Number(b.dataset.quitarApodo))
         else if (e.target.closest('#ad-f-apodo-agregar')) agregarApodoFicha()
       })
@@ -6458,7 +7455,9 @@
       estado.miRolApp = emp.rol_app
       const [t, m, u] = await Promise.all([
         supabase.from('empleado_tareas').select('modulo, tarea, alcance')
-          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas']).eq('habilitado', true),
+          // 'cuentas_corrientes' entra por registrar_pago: compensar la cuenta
+          // de un cliente que también es proveedor (06/10/2026).
+          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes']).eq('habilitado', true),
         supabase.from('empleado_modulos').select('modulo').eq('empleado_id', emp.id).eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre, prefijo, razon_social, cuit, domicilio, telefono, logo_url').eq('activo', true).order('nombre'),
       ])
@@ -6512,6 +7511,7 @@
       estado.empresaId = segun === undefined ? empresaInicial(lista, leerPreferencia(CLAVE_EMPRESA)) : segun
       document.getElementById('ad-cargando').hidden = true
       conectarTodo()
+      conectarAmpliarAd()
       alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
       pintarEmpresas()
       // ?seccion=cheques (el link que deja cheques.html, con ?cheque= si se

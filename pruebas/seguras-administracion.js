@@ -19,6 +19,7 @@ const SEGURAS_ADMINISTRACION = [
   ['renglones', 'HTML armado por htmlRenglonOrden(), que escapa cada dato'],
   ['total', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del total, o vacío'],
   ['htmlValorizar(d)', 'HTML armado por htmlValorizar(), que escapa los errores y el aviso del límite'],
+  ['htmlFaltaLista(d)', 'HTML armado por htmlFaltaLista(), que escapa el nombre del cliente (06/10/2026; ejecutado con marcas en test-clientes-provisorios.js)'],
   ['filas', 'HTML ya escapado: htmlCuenta() / htmlHistorial() arman cada fila con esc() del texto y los importes'],
   ["partes.join('')", 'HTML armado por htmlFilaPrecio(), que escapa cada dato, y el separador de cada grupo, escapado'],
   // La grilla completa: lista_completa (30/09/2026)
@@ -68,6 +69,17 @@ const SEGURAS_ADMINISTRACION = [
   ['cabeza', 'HTML ya escapado: htmlSeccion() arma la cabeza con esc() del título y del chip'],
   ['cuerpo', 'HTML ya escapado: htmlSeccion() arma el cuerpo con esc() del número y la unidad, o textos constantes'],
   ['acciones', 'HTML ya escapado: htmlFilaRevisar() arma el panel del motivo con esc() del motivo y del error, o el botón "Aceptar" con esc() del id'],
+  // La comisión de una orden (06/10/2026)
+  ["opcion('porcentaje', 'Porcentaje')", 'HTML armado por opcion() de htmlPanelComision(), que escapa el modo y el texto (constantes del código)'],
+  ["opcion('monto', 'Monto fijo')", 'HTML armado por opcion() de htmlPanelComision(), que escapa el modo y el texto (constantes del código)'],
+  ["opcion('ninguna', 'Sin comisión')", 'HTML armado por opcion() de htmlPanelComision(), que escapa el modo y el texto (constantes del código)'],
+  ['selloComision', 'HTML constante del código: el sello "Comisión sin cargar" o vacío'],
+  // Los clientes provisorios (06/10/2026)
+  ['previa', 'HTML ya escapado: htmlUnir() arma la vista previa con esc() de cada línea de textosPreviaUnir(), o texto constante'],
+  ['destinos.map(htmlDestinoUnir).join(\'\')', 'HTML armado por htmlDestinoUnir(), que escapa el id, el nombre y los datos de cada cliente'],
+  ['cancelar', 'HTML constante del código: el botón Cancelar del panel de unir (con disabled o no)'],
+  ['botones.join(\'\')', 'HTML ya escapado: htmlAccionesProvisorio() arma cada botón con esc() del id del cliente y texto constante'],
+  ['htmlAccionesProvisorio(c)', 'HTML armado por htmlAccionesProvisorio(), que escapa el id del cliente y el texto (06/10/2026)'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

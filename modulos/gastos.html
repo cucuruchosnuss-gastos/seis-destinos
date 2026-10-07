@@ -2033,7 +2033,12 @@
     <header class="header">
       <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-gasto">← Volver</button>
       <span class="header__nombre-app">Detalle del gasto</span>
-      <div id="detalle-gasto-header-derecha" style="display:flex; gap:0.25rem; justify-content:flex-end; min-width:5rem;"></div>
+      <!-- "Ampliar" (06/10/2026, js/ampliar.js): en la compu, el gasto en
+           una ventana grande. Nace hidden: lo muestra la pieza. -->
+      <div class="amp-barra--cabeza">
+        <button type="button" class="amp-boton" id="btn-ampliar-gasto" hidden>Ampliar</button>
+        <div id="detalle-gasto-header-derecha" style="display:flex; gap:0.25rem; justify-content:flex-end; min-width:5rem;"></div>
+      </div>
     </header>
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-gasto-contenido"></div>
   </div><!-- /modal-detalle-gasto -->
@@ -2045,7 +2050,10 @@
     <header class="header">
       <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-factura">← Volver</button>
       <span class="header__nombre-app">Detalle de la factura</span>
-      <div id="detalle-factura-header-derecha" style="width:5rem;"></div>
+      <div class="amp-barra--cabeza">
+        <button type="button" class="amp-boton" id="btn-ampliar-factura" hidden>Ampliar</button>
+        <div id="detalle-factura-header-derecha" style="width:5rem;"></div>
+      </div>
     </header>
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-factura-contenido"></div>
   </div><!-- /modal-detalle-factura -->
@@ -2116,6 +2124,7 @@
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { crearPeriodo, ubicarPanel } from '../js/periodo.js'
+    import { crearAmpliar } from '../js/ampliar.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     // La barra de unidad de negocio, arriba (28/09/2026): es el mismo archivo
     // que carga el <head>, así que el navegador lo ejecuta UNA vez y acá se
@@ -3380,6 +3389,54 @@
     document.getElementById('campo-proyecto').addEventListener('change', () => mostrarErrorProyecto(''))
     document.getElementById('detalle-gasto-contenido').addEventListener('click', manejarClickComprobante)
     document.getElementById('detalle-factura-contenido').addEventListener('click', manejarClickComprobante)
+
+    // AMPLIAR (06/10/2026, js/ampliar.js). En la compu, el detalle de un
+    // gasto (y el de una factura pendiente, el que abre Cuentas corrientes)
+    // se puede ver en una ventana grande: el comprobante, lo anulado y los
+    // detalles a la izquierda; la clasificación y la foto a la derecha; abajo
+    // Editar / Anular. La ventana COPIA el detalle y tocar algo ahí toca el
+    // original: los mismos handlers, nada duplicado.
+    function seccionesGastoAmpliar(idContenido) {
+      const todas = [...(document.getElementById(idContenido)?.children ?? [])]
+        .filter(x => x.classList.contains('resumen-seccion'))
+      const titulo = (x) => (x.querySelector('.resumen-seccion__titulo')?.textContent ?? '').trim()
+      // La sección de la foto es la única sin renglones de datos.
+      const enGrilla = (x) => titulo(x) === 'Destino y clasificación' || !x.querySelector('.resumen-fila')
+      return { resumen: todas.filter(x => !enGrilla(x)), grilla: todas.filter(enGrilla) }
+    }
+    crearAmpliar({
+      boton: document.getElementById('btn-ampliar-gasto'),
+      observar: document.getElementById('modal-detalle-gasto'),
+      disponible: () => !document.getElementById('modal-detalle-gasto').hidden && !!estado.gastoDetalleActualId &&
+        !!document.getElementById('detalle-gasto-contenido').querySelector('.resumen-seccion'),
+      titulo: () => {
+        const g = estado.listaGastos.find(x => x.id === estado.gastoDetalleActualId)
+        return 'Gasto' + (g ? ' · ' + (g.razon_social || g.categorias?.nombre || formatearFecha(g.fecha)) : '')
+      },
+      tituloResumen: 'El gasto',
+      tituloGrilla: 'Clasificación y comprobante',
+      resumen: () => seccionesGastoAmpliar('detalle-gasto-contenido').resumen,
+      grilla: () => seccionesGastoAmpliar('detalle-gasto-contenido').grilla,
+      marcoCelda: false,
+      acciones: () => [document.getElementById('btn-editar-gasto'), document.getElementById('btn-anular-gasto')],
+    })
+    crearAmpliar({
+      boton: document.getElementById('btn-ampliar-factura'),
+      observar: document.getElementById('modal-detalle-factura'),
+      disponible: () => !document.getElementById('modal-detalle-factura').hidden && !!estado.facturaDetalleActual &&
+        !!document.getElementById('detalle-factura-contenido').querySelector('.resumen-seccion'),
+      titulo: () => {
+        const fp = estado.facturaDetalleActual
+        const nombre = fp ? (fp.proveedores?.razon_social || fp.razon_social || fp.numero_comprobante || '') : ''
+        return 'Factura' + (nombre ? ' · ' + nombre : '')
+      },
+      tituloResumen: 'La factura',
+      tituloGrilla: 'Clasificación y comprobante',
+      resumen: () => seccionesGastoAmpliar('detalle-factura-contenido').resumen,
+      grilla: () => seccionesGastoAmpliar('detalle-factura-contenido').grilla,
+      marcoCelda: false,
+      acciones: () => [document.getElementById('btn-editar-factura')],
+    })
 
     document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
       btn.addEventListener('click', () => activarFiltroFecha(btn.dataset.rango))

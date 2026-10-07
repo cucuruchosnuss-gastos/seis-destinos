@@ -15,7 +15,9 @@ correrMutaciones({
   region: limitesAdministracion,
   funciones: ['htmlInterruptor', 'htmlFilaCliente', 'htmlListaClientes'],
   equivalentes: [
+    { expr: 'esc(TEXTO_ELEGI_FABRICA)', motivo: 'texto constante del código ("Elegí una fábrica arriba para cambiarlo")' },
     { expr: 'esc(estado.errorSaldos)', motivo: 'texto constante del código: lo pone mostrarClientes()' },
+    { expr: 'esc(TEXTO_ELEGI_FABRICA)', motivo: 'constante del código ("Elegí una fábrica arriba para cambiarlo"), 30/09/2026' },
     { expr: 'esc(estado.apagados.error)', motivo: 'texto constante del código: lo pone cargarApagados()' },
     { expr: 'esc(importeHoja(c.saldo))', motivo: 'importeHoja() arma "$ " y un número formateado, o "—"' },
     { expr: "esc('Ningún cliente coincide con «' + limpio(estado.busquedaClientes) + '».')", motivo: 'lo buscado lo prueba test-administracion-clientes.js' },
@@ -24,9 +26,9 @@ correrMutaciones({
   ],
   manuales: [
     // El interruptor
-    { nombre: 'no hay interruptor', de: '      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`', a: '      return `<div class="ad-fila-cliente">${fila}</div>`' },
+    { nombre: 'no hay interruptor', de: '      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>${htmlAccionesProvisorio(c)}`', a: '      return `<div class="ad-fila-cliente">${fila}</div>${htmlAccionesProvisorio(c)}`' },
     { nombre: 'el interruptor sin permiso', de: '      if (!puedePrenderApagar(c.unidad_negocio_id ?? estado.empresaId)) return \'\'\n', a: '' },
-    { nombre: 'el interruptor con otro permiso', de: '      return puedeDarAlta(unidadId)\n    }\n\n    function htmlInterruptor', a: "      return puedeEn('retiros', 'ver', unidadId)\n    }\n\n    function htmlInterruptor" },
+    { nombre: 'el interruptor con otro permiso', de: '    function puedePrenderApagar(unidadId = estado.empresaId) {\n      return puedeDarAlta(unidadId)', a: "    function puedePrenderApagar(unidadId = estado.empresaId) {\n      return puedeEn('retiros', 'ver', unidadId)" },
     { nombre: 'el apagado se ve prendido', de: '      const prendido = !c.apagado\n', a: '      const prendido = true\n' },
     { nombre: 'mientras guarda no se traba', de: "aria-label=\"${esc((prendido ? 'Apagar a ' : 'Prender a ') + (c.nombre ?? 'este cliente'))}\"${it?.guardando ? ' disabled' : ''}>", a: "aria-label=\"${esc((prendido ? 'Apagar a ' : 'Prender a ') + (c.nombre ?? 'este cliente'))}\">" },
     { nombre: 'tocar el interruptor abre la cuenta', de: '        if (s) { cambiarActivoCliente(s.dataset.clienteActivo); return }\n', a: '' },
@@ -47,7 +49,7 @@ correrMutaciones({
     { nombre: 'los apagados de otra empresa', de: "supabase.rpc('clientes_con_saldo', { p_unidad_negocio_id: unidadId, p_incluir_apagados: true })", a: "supabase.rpc('clientes_con_saldo', { p_unidad_negocio_id: estado.empresaId + 'x', p_incluir_apagados: true })" },
     { nombre: 'los prendidos se toman como apagados', de: '.filter(c => c?.activo === false).map(c => ({ ...c, apagado: true }))', a: '.map(c => ({ ...c, apagado: true }))' },
     { nombre: 'los prendidos piden también los apagados', de: "supabase.rpc('clientes_con_saldo', { p_unidad_negocio_id: unidadId, p_incluir_apagados: false })", a: "supabase.rpc('clientes_con_saldo', { p_unidad_negocio_id: unidadId, p_incluir_apagados: true })" },
-    { nombre: 'un apagado que viene igual se mezcla con los prendidos', de: '.filter(c => c?.activo !== false)', a: '' },
+    { nombre: 'un apagado que viene igual se mezcla con los prendidos', de: '      return (Array.isArray(data) ? data : []).filter(c => c?.activo !== false)\n    }', a: '      return (Array.isArray(data) ? data : [])\n    }' },
     { nombre: 'un apagado no muestra su lista', de: "        c.lista ? 'Lista ' + c.lista : 'Sin lista', (Number(c.retiros_mes) || 0) + ' retiros este mes',", a: "        c.apagado ? null : (c.lista ? 'Lista ' + c.lista : 'Sin lista'), c.apagado ? null : (Number(c.retiros_mes) || 0) + ' retiros este mes'," },
     { nombre: 'los apagados no se leen', de: '      if (estado.mostrarApagados && !estado.apagados?.filas) cargarApagados()', a: '      if (false) cargarApagados()' },
     { nombre: 'los apagados se ven sin tildar', de: '      const apagados = estado.mostrarApagados ? (estado.apagados?.filas ?? []) : []', a: '      const apagados = estado.apagados?.filas ?? []' },
@@ -57,7 +59,7 @@ correrMutaciones({
     { nombre: 'el checkbox no refleja', de: "      document.getElementById('ad-clientes-apagados').checked = !!estado.mostrarApagados\n", a: '' },
     // Código anterior y la cuenta
     { nombre: 'sin código en la fila', de: "        codigo !== null && codigo !== undefined ? 'cód. ' + codigo : null].filter(Boolean).join(' · ')", a: "        null].filter(Boolean).join(' · ')" },
-    { nombre: 'la cuenta no dice apagado', de: "      const extras = [cli?.activo === false ?", a: '      const extras = [false ?' },
+    { nombre: 'la cuenta no dice apagado', de: "        cli?.activo === false ? '<div class=\"ad-aviso\">Cliente apagado:", a: "        false ? '<div class=\"ad-aviso\">Cliente apagado:" },
     { nombre: 'la cuenta sin código anterior', de: "        cli && textoCodigoAnterior(cli.codigo_anterior) ?", a: '        false ?' },
     { nombre: 'la ficha no lee el código anterior', de: 'proveedor_id, observaciones, unidad_negocio_id, codigo_anterior\')', a: "proveedor_id, observaciones, unidad_negocio_id')" },
     { nombre: 'el código cero no se muestra', de: "      if (codigo === null || codigo === undefined || codigo === '') return ''", a: "      if (!codigo) return ''" },

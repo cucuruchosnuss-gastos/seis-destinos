@@ -227,6 +227,8 @@ export const RESOLVER_PENDIENTES = {
   'administracion:ordenes_sin_valorizar': { tarjetas: ['retiros', 'administracion'], uno: 'orden sin valorizar', varios: 'órdenes sin valorizar', url: 'modulos/administracion.html' },
   'administracion:retiros_por_revisar': { tarjetas: ['administracion'], uno: 'retiro por revisar', varios: 'retiros por revisar', url: 'modulos/administracion.html' },
   'administracion:clientes_sobre_limite': { tarjetas: ['administracion'], uno: 'cliente pasado de su límite', varios: 'clientes pasados de su límite', url: 'modulos/administracion.html', urgente: true, franja: 'clientes pasados de su límite' },
+  // 06/10/2026: los clientes provisorios que cargó el depósito, para completar o unir.
+  'administracion:clientes_provisorios': { tarjetas: ['administracion'], uno: 'cliente provisorio por completar', varios: 'clientes provisorios por completar', url: 'modulos/administracion.html?seccion=clientes' },
 }
 
 // Filas de mis_pendientes → Map('modulo:clave' → cantidad). Solo cuentan las
