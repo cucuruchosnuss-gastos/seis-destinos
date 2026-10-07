@@ -28,7 +28,8 @@ correrMutaciones({
     { nombre: 'sin el chip Provisorio', de: "        `${esProvisorio(c) ? '<span class=\"ad-sello ad-sello--provisorio\">Provisorio</span>' : ''}` +\n", a: '' },
     { nombre: 'sin las acciones debajo de la fila', de: '${htmlInterruptor(c)}</div>${htmlAccionesProvisorio(c)}`', a: '${htmlInterruptor(c)}</div>`' },
     { nombre: 'un apagado cuenta como provisorio', de: '      if (!c || c.apagado || c.activo === false) return false', a: '      if (!c) return false' },
-    { nombre: 'la columna provisorio no se lee', de: 'limite_credito, activo, codigo_anterior, apodos, provisorio\')', a: 'limite_credito, activo, codigo_anterior, apodos\')' },
+    // (07/10/2026: al apilar, el select quedó con proveedor_id y comision_habitual en el medio.)
+    { nombre: 'la columna provisorio no se lee', de: 'comision_habitual, apodos, provisorio\')', a: 'comision_habitual, apodos\')' },
     { nombre: 'Completar sin precios', de: "      if (puedeConfirmar(unidad)) botones.push(", a: '      if (true) botones.push(' },
     { nombre: 'Unir sin permiso', de: '      if (puedeDarAlta(unidad)) botones.push(', a: '      if (true) botones.push(' },
     { nombre: 'con Todas se ofrecen las acciones', de: "      if (clientesEnTodas()) return `<div class=\"ad-provisorio\"><span class=\"ad-bloqueado-todas\">", a: "      if (false) return `<div class=\"ad-provisorio\"><span class=\"ad-bloqueado-todas\">" },

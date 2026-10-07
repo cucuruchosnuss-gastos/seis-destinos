@@ -43,7 +43,7 @@ function preparar(S) {
 {
   const S = nuevo()
   preparar(S)
-  esperas.push(S.mostrarMisRetiros().then(() => {
+  esperas.push(S.mostrarMisRetiros().then(async () => {
     const llamadas = S.__llamadas.rpc.filter(x => x[0] === 'mis_ordenes_retiro')
     chk('usa mis_ordenes_retiro con la empresa elegida', llamadas.length === 1 && llamadas[0][1].p_unidad_negocio_id === 'u-n')
     chk('NUNCA lee las tablas de órdenes', !S.__llamadas.consultas.some(c => ['ordenes_retiro', 'orden_retiro_items', 'cliente_movimientos'].includes(c[0])))
@@ -56,14 +56,17 @@ function preparar(S) {
     chk('abrir una muestra su detalle', S.estado.vista === 'rt-vista-mio' && S.__els.get('rt-mio-titulo').textContent === 'Orden N-0012')
     chk('con los lotes de cada renglón', /lotes 7030-1 \(10\)/.test(S.__els.get('rt-mio-cuerpo').innerHTML))
     chk('y los botones de la hoja habilitados', ['imprimir', 'enviar', 'compartir'].every(b => S.__els.get(`rt-mio-${b}`).disabled === false))
-    S.imprimirDesde('mio')
+    // Imprimir mide la hoja antes (07/10/2026): se espera.
+    await S.imprimirDesde('mio')
     const hoja = S.__els.get('rt-impresion').innerHTML
     chk('reimprimir arma la hoja con dos copias', S.__impresiones() === 1 && (hoja.match(/<section class="rh-copia/g) || []).length === 2)
-    chk('con el cliente completo (buscado por nombre en la empresa)', /ANATOLIA SRL/.test(hoja) && /CUIT 30712345678/.test(hoja))
-    chk('quién la cargó: la persona de la sesión', /Cargó: <strong>Emanuel Romero<\/strong>/.test(hoja))
-    chk('y SIN precios', !/Precio x caja|Subtotal|\$/.test(hoja))
+    // El cliente completo (buscado por nombre en la empresa): su localidad,
+    // que la orden no trae, sale de la ficha.
+    chk('con el cliente completo (buscado por nombre en la empresa)', /rh-cliente__nombre">Distribuidora Anatolia</.test(hoja) && /<span>Córdoba<\/span>/.test(hoja))
+    chk('quién la cargó: la persona de la sesión', /Entregó: <strong>Emanuel Romero<\/strong>/.test(hoja))
+    chk('y SIN precios', !/PRECIO|SUBTOTAL|\$/.test(hoja))
     S.abrirMia('o-2')
-    S.imprimirDesde('mio')
+    await S.imprimirDesde('mio')
     const h2 = S.__els.get('rt-impresion').innerHTML
     chk('una anulada se imprime con ANULADA cruzado', /class="rh-anulada"/.test(h2))
     chk('el cono de un renglón sin marca, con cono, es "Común"; con marca, la marca', S.conoDeRenglonMio({ producto: 'Cucurucho grande', presentacion: 'Caja x 100 con cono', marca: null }, CAT) === 'Común' &&

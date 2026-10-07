@@ -765,7 +765,7 @@
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import {
-      htmlHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden, compartirTextoOrden,
+      armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden, compartirTextoOrden,
       enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
       cantidadInsumoHoja, unidadHoja, decimalesDeUnidad,
     } from '../js/retiros-comun.js'
@@ -3181,9 +3181,11 @@
       }
     }
 
-    function imprimirOrden(o, cliente) {
+    // La hoja se MIDE antes de imprimir (07/10/2026): si los renglones no
+    // entran en media hoja, cada copia va en hojas enteras (armarHoja).
+    async function imprimirOrden(o, cliente) {
       asegurarEstilosHoja()
-      document.getElementById('rt-impresion').innerHTML = htmlHoja(ordenParaHoja(o, { cliente }), { conPrecios: false, copias: COPIAS_IMPRESION })
+      await armarHoja(document.getElementById('rt-impresion'), ordenParaHoja(o, { cliente }), { conPrecios: false, copias: COPIAS_IMPRESION })
       window.print()
     }
 
@@ -3247,7 +3249,7 @@
 
     function imprimirDesde(donde) {
       const obj = donde === 'hecho' ? estado.hecho : estado.mio
-      if (obj?.orden) imprimirOrden(obj.orden, obj.cliente)
+      if (obj?.orden) return imprimirOrden(obj.orden, obj.cliente)
     }
 
     // ═══════════════════════════════════════════════════════════════════════

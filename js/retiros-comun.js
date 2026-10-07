@@ -152,44 +152,73 @@ export function nombreInsumoHoja(r) {
 }
 
 // ── LA HOJA ────────────────────────────────────────────────────────────────
-// Las copias de una hoja impresa: arriba la del cliente y abajo la del
-// depósito, con una línea de corte. El PDF lleva una sola: la del cliente.
-export const COPIAS_IMPRESION = ['Original — Cliente', 'Duplicado — Depósito']
-export const COPIAS_PDF = ['Original — Cliente']
+// EL DISEÑO DE LA IMPRESIÓN (07/10/2026, aprobado por Facu): BLANCO Y NEGRO,
+// A4 vertical, letra Archivo (Google Fonts) con respaldo sans-serif.
+//
+// HOJA PARTIDA AL MEDIO: el ORIGINAL arriba y el DUPLICADO abajo, cada uno en
+// media A4, con una línea punteada de 1,5 px entre los dos. Si los renglones
+// no entran en media hoja —se MIDE, no se cuenta: armarHoja()— cada copia va
+// en hojas enteras (primero el original, después el duplicado) y debajo del
+// título dice "ORIGINAL · HOJA 1 DE N". Ningún renglón se corta entre páginas.
+//
+// Cada copia: la cabecera (logo en círculo, la fábrica y sus datos, "RETIRO DE
+// MERCADERÍA" con la copia, y el recuadro con el número de orden y la fecha),
+// el cliente (nombre grande; a la derecha la localidad y el transporte o
+// "Retira: en fábrica"), la tabla CAJAS · PRODUCTO · LOTE (el nombre ENTERO,
+// en dos renglones si hace falta, nunca "…") con TOTAL DE CAJAS, y el pie:
+// "Entregó", FIRMA / ACLARACIÓN / DNI y la leyenda legal entera.
+//
+// CON PRECIOS (Administración): suma PRECIO y SUBTOTAL a la tabla y el total
+// en pesos al lado de TOTAL DE CAJAS. Sin `conPrecios: true`, ninguna columna
+// de plata, aunque el objeto traiga precios.
+export const COPIAS_IMPRESION = ['ORIGINAL', 'DUPLICADO']
+export const COPIAS_PDF = ['ORIGINAL']
 export const LEYENDA_LEGAL = 'Documento interno. No válido como factura.'
 
-// LA HOJA CON EL DISEÑO "ÓRDENES DE RETIRO" (29/09/2026, handoff de Claude
-// Design, pantallas 3a y 3b): arriba el logo, el nombre de la fábrica, la
-// razón social y el CUIT, el domicilio y el teléfono; a la derecha la copia,
-// "ORDEN DE RETIRO", el código grande y la fecha. Después el cliente y el
-// transporte, la tabla # · Producto · Lotes · Cant. (y, con precios, Precio y
-// Subtotal), las observaciones y el faltante con el total, y el pie: quién
-// cargó, "Recibí conforme" con Firma, Aclaración y DNI, y la leyenda.
-function htmlEmpresaHoja(emp) {
+// Media A4 y una A4 entera, en milímetros, adentro de los 8 mm de margen de
+// @page (297 − 16 = 281). Medido en Chromium (07/10/2026): con 137 mm las dos
+// copias y la línea punteada sumaban 281,25; con 136 entran.
+export const ALTO_UTIL_A4_MM = 281
+export const ALTO_MEDIA_HOJA_MM = 136
+export const ANCHO_UTIL_A4_MM = 194
+
+function htmlLogoHoja(emp, nombre) {
   const logo = logoSeguro(emp?.logo_url)
+  // logoSeguro() ya dejó solo un nombre de archivo de imagen (la raíz del
+  // repo, un nivel arriba de modulos/); igual va con encodeURIComponent.
+  return logo
+    ? `<span class="rh-logo"><img src="../${encodeURIComponent(logo)}" alt="${escHoja(nombre)}"></span>`
+    : `<span class="rh-logo rh-logo--vacio" aria-hidden="true"></span>`
+}
+
+function htmlEmpresaHoja(emp) {
   const t = (x) => String(x ?? '').trim()
   const nombre = t(emp?.nombre) || t(emp?.razon_social) || 'Empresa'
-  const linea1 = [t(emp?.razon_social) && t(emp.razon_social) !== nombre ? t(emp.razon_social) : '', t(emp?.cuit) ? `CUIT ${t(emp.cuit)}` : '']
-    .filter(Boolean).join(' · ')
-  const linea2 = [t(emp?.domicilio), t(emp?.telefono) ? `Tel. ${t(emp.telefono)}` : ''].filter(Boolean).join(' · ')
-  return `<div class="rh-empresa">` +
-    // logoSeguro() ya dejó solo un nombre de archivo de imagen (la raíz del
-    // repo, un nivel arriba de modulos/); igual va con encodeURIComponent.
-    (logo ? `<img class="rh-logo" src="../${encodeURIComponent(logo)}" alt="${escHoja(nombre)}">` : '') +
+  const datos = [
+    t(emp?.razon_social) && t(emp.razon_social) !== nombre ? t(emp.razon_social) : '',
+    t(emp?.cuit) ? `CUIT ${t(emp.cuit)}` : '',
+    t(emp?.domicilio),
+    t(emp?.telefono) ? `Tel. ${t(emp.telefono)}` : '',
+  ].filter(Boolean)
+  return `<div class="rh-empresa">${htmlLogoHoja(emp, nombre)}` +
     `<div class="rh-empresa__datos"><strong class="rh-empresa__nombre">${escHoja(nombre)}</strong>` +
-    (linea1 ? `<span>${escHoja(linea1)}</span>` : '') + (linea2 ? `<span>${escHoja(linea2)}</span>` : '') + `</div></div>`
+    datos.map(d => `<span>${escHoja(d)}</span>`).join('') + `</div></div>`
+}
+
+// "Retira: en fábrica" cuando no hay transporte.
+export function textoTransporteHoja(transporte) {
+  const t = String(transporte ?? '').trim()
+  return t ? `Transporte: ${t}` : 'Retira: en fábrica'
 }
 
 function htmlClienteHoja(cli, transporte) {
   const t = (x) => String(x ?? '').trim()
-  const nombre = t(cli?.razon_social) || t(cli?.nombre) || 'Cliente'
-  const linea1 = [t(cli?.razon_social) && t(cli?.nombre) && t(cli.razon_social) !== t(cli.nombre) ? t(cli.nombre) : '', t(cli?.cuit) ? `CUIT ${t(cli.cuit)}` : '']
-    .filter(Boolean).join(' · ')
-  const dom = [cli?.domicilio, cli?.localidad].map(t).filter(Boolean).join(', ')
-  return `<div class="rh-datos">` +
-    `<div class="rh-datos__col"><span class="rh-rotulo">Cliente</span><strong class="rh-datos__nombre">${escHoja(nombre)}</strong>` +
-    (linea1 ? `<span>${escHoja(linea1)}</span>` : '') + (dom ? `<span>${escHoja(dom)}</span>` : '') + `</div>` +
-    `<div class="rh-datos__col"><span class="rh-rotulo">Transporte</span><strong class="rh-datos__nombre">${escHoja(t(transporte) || '—')}</strong></div></div>`
+  const nombre = t(cli?.nombre) || t(cli?.razon_social) || 'Cliente'
+  const localidad = t(cli?.localidad)
+  return `<div class="rh-cliente"><div class="rh-cliente__izq"><span class="rh-rotulo">CLIENTE</span>` +
+    `<strong class="rh-cliente__nombre">${escHoja(nombre)}</strong></div>` +
+    `<div class="rh-cliente__der">${localidad ? `<span>${escHoja(localidad)}</span>` : ''}` +
+    `<span>${escHoja(textoTransporteHoja(transporte))}</span></div></div>`
 }
 
 // "7021 ×15 · 7033 ×10", y lo que no estaba en stock (el lote "SIN STOCK")
@@ -204,7 +233,7 @@ export function textoLotesHoja(lotes, unidad = null) {
     const c = unidad ? l?.cantidad : l?.cajas
     if (lote === LOTE_SIN_STOCK_HOJA) return `faltan ${cuanto(l)}`
     if (c === null || c === undefined || c === '') return lote
-    return `${lote} ×${cuanto(l)}`
+    return lista.length === 1 ? lote : `${lote} ×${cuanto(l)}`
   }).join(' · ')
 }
 
@@ -217,8 +246,8 @@ function faltanteDeRenglon(r) {
 }
 
 // "Cucurucho grande · Caja x 100 · LOLO": el producto con su presentación y
-// su cono (o "sin cono"); un insumo con su marca.
-function descripcionHoja(r) {
+// su cono (o "sin cono"); un insumo con su marca. ENTERO, siempre.
+export function descripcionHoja(r) {
   if (r?.esInsumo) return nombreInsumoHoja(r)
   const cono = String(r?.cono ?? '').trim()
   return [r?.producto, r?.presentacion, cono && cono !== '—' ? (cono === 'Sin cono' ? 'sin cono' : cono) : '']
@@ -226,19 +255,19 @@ function descripcionHoja(r) {
 }
 
 function cantidadHoja(r) {
-  return r?.esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad) : `${enteroHoja(r?.cajas)} cajas`
+  return r?.esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad) : enteroHoja(r?.cajas)
 }
 
-function htmlFilaHoja(r, n, conPrecios, moneda) {
+function htmlFilaHoja(r, conPrecios, moneda) {
   const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)
   let precio = ''
   if (conPrecios) {
     const u = r?.esInsumo ? unidadHoja(r.unidad) : ''
     const p = importeHoja(r?.precio, moneda)
-    precio = `<td class="rh-num">${escHoja(p === '—' || !u ? p : p + ' / ' + u)}</td><td class="rh-num">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
+    precio = `<td class="rh-num rh-plata">${escHoja(p === '—' || !u ? p : p + ' / ' + u)}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
   }
-  return `<tr${r?.esInsumo ? ' class="rh-insumo"' : ''}><td class="rh-n">${escHoja(n)}</td><td class="rh-producto">${escHoja(descripcionHoja(r))}</td>` +
-    `<td class="rh-lotes">${escHoja(lotes)}</td><td class="rh-num rh-cajas">${escHoja(cantidadHoja(r))}</td>${precio}</tr>`
+  return `<tr class="rh-fila${r?.esInsumo ? ' rh-insumo' : ''}"><td class="rh-num rh-cajas">${escHoja(cantidadHoja(r))}</td>` +
+    `<td class="rh-producto">${escHoja(descripcionHoja(r))}</td><td class="rh-lote">${escHoja(lotes)}</td>${precio}</tr>`
 }
 
 // Las cantidades de los insumos, sumadas por unidad ("100 un. + 25,5 kg"):
@@ -253,19 +282,25 @@ function totalInsumosHoja(orden) {
   return [...porUnidad.entries()].map(([u, n]) => cantidadInsumoHoja(n, u || null)).join(' + ')
 }
 
-function htmlTablaHoja(renglones, desde, conPrecios, moneda) {
-  const col = `<colgroup><col class="rh-col-n"><col class="rh-col-producto"><col class="rh-col-lotes"><col class="rh-col-cant">` +
+function htmlTablaHoja(renglones, conPrecios, moneda, { conTotal, orden }) {
+  const col = '<colgroup><col class="rh-col-cajas"><col class="rh-col-producto"><col class="rh-col-lote">' +
     (conPrecios ? '<col class="rh-col-precio"><col class="rh-col-precio">' : '') + '</colgroup>'
-  const hayInsumo = renglones.some(r => r?.esInsumo)
-  const cab = `<tr><th>#</th><th>Producto</th><th>Lotes</th><th class="rh-num">Cant.</th>` +
-    (conPrecios ? `<th class="rh-num">${hayInsumo ? 'Precio' : 'Precio x caja'}</th><th class="rh-num">Subtotal</th>` : '') + '</tr>'
-  const filas = renglones.map((r, k) => htmlFilaHoja(r, desde + k + 1, conPrecios, moneda)).join('')
-  return `<table class="rh-tabla">${col}<thead>${cab}</thead><tbody>${filas}</tbody></table>`
+  const hayInsumo = (orden?.renglones ?? []).some(r => r?.esInsumo)
+  const cab = '<tr><th class="rh-num">CAJAS</th><th>PRODUCTO</th><th>LOTE</th>' +
+    (conPrecios ? `<th class="rh-num">${hayInsumo ? 'PRECIO' : 'PRECIO X CAJA'}</th><th class="rh-num">SUBTOTAL</th>` : '') + '</tr>'
+  const filas = renglones.map(r => htmlFilaHoja(r, conPrecios, moneda)).join('')
+  let pie = ''
+  if (conTotal) {
+    const insumos = totalInsumosHoja(orden)
+    pie = `<tfoot><tr class="rh-total"><td class="rh-num rh-cajas">${escHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
+      `<td colspan="2" class="rh-total__rotulo">TOTAL DE CAJAS${insumos ? ` <span class="rh-total__insumos">+ ${escHoja(insumos)}</span>` : ''}</td>` +
+      (conPrecios ? `<td></td><td class="rh-num rh-plata rh-total__plata">${escHoja(importeHoja(orden?.total, moneda))}</td>` : '') + '</tr></tfoot>'
+  }
+  return `<table class="rh-tabla">${col}<thead>${cab}</thead><tbody>${filas}</tbody>${pie}</table>`
 }
 
-// Las observaciones y el faltante a la izquierda, el total a la derecha.
-function htmlResumenHoja(orden, conPrecios) {
-  const moneda = orden?.moneda || 'ARS'
+// Las observaciones y el faltante (si hay), en un renglón chico debajo de la tabla.
+function htmlNotasHoja(orden) {
   const obs = String(orden?.observaciones ?? '').trim()
   const faltantes = (orden?.renglones ?? []).map(r => {
     const f = faltanteDeRenglon(r)
@@ -273,13 +308,15 @@ function htmlResumenHoja(orden, conPrecios) {
     const cuanto = r.esInsumo ? cantidadInsumoHoja(f, r.unidad) : `${enteroHoja(f)} ${f === 1 ? 'caja' : 'cajas'}`
     return `${cuanto} de ${descripcionHoja(r)}`
   }).filter(Boolean)
-  const izq = (obs ? `<strong>Observaciones:</strong> ${escHoja(obs)} ` : '') +
-    (faltantes.length ? `<strong>Faltante:</strong> ${escHoja(faltantes.join('; '))}, pendiente de revisión.` : '')
-  const insumos = totalInsumosHoja(orden)
-  const total = `Total ${enteroHoja(totalCajasOrden(orden))} cajas${insumos ? ' + ' + insumos : ''}`
-  return `<div class="rh-resumen"><div class="rh-obs">${izq}</div>` +
-    `<div class="rh-totales"><span class="rh-total-cajas">${escHoja(total)}</span>` +
-    (conPrecios ? `<span class="rh-total">${escHoja(importeHoja(orden?.total, moneda))}</span>` : '') + `</div></div>`
+  if (!obs && !faltantes.length) return ''
+  return '<p class="rh-notas">' + (obs ? `<strong>Observaciones:</strong> ${escHoja(obs)} ` : '') +
+    (faltantes.length ? `<strong>Faltante:</strong> ${escHoja(faltantes.join('; '))}, pendiente de revisión.` : '') + '</p>'
+}
+
+function htmlPieHoja(orden) {
+  return '<div class="rh-pie">' +
+    `<div class="rh-entrego">Entregó: <strong>${escHoja(String(orden?.cargadaPor ?? '').trim() || '—')}</strong></div>` +
+    '<div class="rh-firmas"><span class="rh-firma">FIRMA</span><span class="rh-firma">ACLARACIÓN</span><span class="rh-firma">DNI</span></div></div>'
 }
 
 function htmlSelloAnulada(orden) {
@@ -289,106 +326,183 @@ function htmlSelloAnulada(orden) {
     (detalle ? `<span class="rh-anulada__detalle">${escHoja(detalle)}</span>` : '') + `</div></div>`
 }
 
-function htmlCopiaHoja(orden, rotulo, { conPrecios, renglones, desde, pagina, paginas }) {
+// "ORIGINAL", o "ORIGINAL · HOJA 1 DE 3" en hojas enteras.
+export function rotuloCopiaHoja(copia, pagina = 1, paginas = 1, entera = false) {
+  return entera ? `${copia} · HOJA ${pagina} DE ${paginas}` : copia
+}
+
+// UNA copia en UNA página: la cabecera, el cliente, sus renglones y, en la
+// última, el total, las notas y el pie. La leyenda va en todas.
+function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, paginas = 1, entera = false }) {
   const anulada = orden?.estado === 'anulada'
   const ultima = pagina === paginas
-  return `<section class="rh-copia${anulada ? ' rh-copia--anulada' : ''}">` +
+  const fecha = orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)
+  return `<section class="rh-copia${anulada ? ' rh-copia--anulada' : ''}" data-copia="${escHoja(copia)}">` +
     `<header class="rh-cab">${htmlEmpresaHoja(orden?.empresa)}` +
-    `<div class="rh-orden"><span class="rh-copia__rotulo">${escHoja(rotulo)}</span>` +
-    `<span class="rh-orden__titulo">Orden de retiro</span>` +
+    `<div class="rh-titulo"><span class="rh-titulo__grande">RETIRO DE MERCADERÍA</span>` +
+    `<span class="rh-titulo__copia">${escHoja(rotuloCopiaHoja(copia, pagina, paginas, entera))}</span>` +
+    (anulada ? '<span class="rh-titulo__anulada">ANULADA</span>' : '') + '</div>' +
+    `<div class="rh-orden"><span class="rh-orden__rotulo">ORDEN N°</span>` +
     `<span class="rh-codigo">${escHoja(orden?.codigo || '—')}</span>` +
-    `<span class="rh-orden__fecha">${escHoja(orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha))}</span>` +
-    (paginas > 1 ? `<span class="rh-orden__hoja">Hoja ${escHoja(pagina)} de ${escHoja(paginas)}</span>` : '') +
-    (anulada ? '<span class="rh-orden__anulada">ANULADA</span>' : '') + `</div></header>` +
+    `<span class="rh-orden__fecha">${escHoja(fecha)}</span></div></header>` +
     htmlClienteHoja(orden?.cliente, orden?.transporte) +
-    htmlTablaHoja(renglones, desde, conPrecios, orden?.moneda || 'ARS') +
-    (ultima
-      ? htmlResumenHoja(orden, conPrecios) +
-        `<div class="rh-pie"><div class="rh-cargo">Cargó: <strong>${escHoja(String(orden?.cargadaPor ?? '').trim() || '—')}</strong><br>Recibí conforme:</div>` +
-        `<span class="rh-firma__linea">Firma</span><span class="rh-firma__linea">Aclaración</span><span class="rh-firma__linea">DNI</span></div>`
-      : `<p class="rh-sigue">Sigue en la hoja ${escHoja(pagina + 1)}.</p>`) +
+    htmlTablaHoja(renglones, conPrecios, orden?.moneda || 'ARS', { conTotal: ultima, orden }) +
+    (ultima ? htmlNotasHoja(orden) + htmlPieHoja(orden) : `<p class="rh-sigue">Sigue en la hoja ${escHoja(pagina + 1)}.</p>`) +
     `<p class="rh-legal">${escHoja(LEYENDA_LEGAL)}</p>` +
     (anulada ? htmlSelloAnulada(orden) : '') + `</section>`
 }
 
-// La hoja entera. `copias`: las dos para imprimir, una para el PDF. Las dos
-// páginas que la usan están en modulos/, así que el logo va con '../'.
-// CON MÁS DE 12 RENGLONES PASA A OTRA HOJA (decisión de Facu, 29/09/2026):
-// cada hoja lleva las mismas copias con el mismo encabezado ("Hoja 1 de 2") y
-// sus 12 renglones; el total, las observaciones y la firma van en la última.
-// Medido en Chromium (medirHoja() de e2e/5-maqueta.spec.js): una hoja con 12
-// renglones entra en los 281 mm útiles de una A4.
-export const CORTE_HOJA = '<div class="rh-corte" aria-hidden="true"><span>✂ cortar acá</span></div>'
-export const RENGLONES_POR_HOJA = 12
+export const CORTE_HOJA = '<div class="rh-corte" aria-hidden="true"></div>'
 
-export function paginasHoja(orden) {
-  const n = (orden?.renglones ?? []).length
-  return Math.max(1, Math.ceil(n / RENGLONES_POR_HOJA))
+// EL PLAN DE LA HOJA, con lo que se midió (puro: lo prueban las suites sin
+// navegador). `medidas`: { copiaEntera } = cuánto mide UNA copia con todos
+// sus renglones, y para las hojas enteras { fijo, final, intermedio, filas }:
+// la cabecera + el cliente + el encabezado de la tabla; lo que va al final
+// (total, notas, pie y leyenda); lo que va en una hoja que sigue ("Sigue en
+// la hoja…" y leyenda); y el alto de cada renglón. Todo en mm.
+// → { modo: 'media' } o { modo: 'entera', paginas: [[desde, hasta), …] }.
+export function planHoja(medidas, { media = ALTO_MEDIA_HOJA_MM, entera = ALTO_UTIL_A4_MM } = {}) {
+  const filas = Array.isArray(medidas?.filas) ? medidas.filas : []
+  if (Number(medidas?.copiaEntera) <= media) return { modo: 'media' }
+  const fijo = Number(medidas?.fijo) || 0, final = Number(medidas?.final) || 0, inter = Number(medidas?.intermedio) || 0
+  const paginas = []
+  let desde = 0
+  while (desde < filas.length || !paginas.length) {
+    // ¿Entra todo lo que queda, con el final?
+    let suma = 0, k = desde
+    while (k < filas.length && fijo + suma + filas[k] + final <= entera) { suma += filas[k]; k++ }
+    if (k === filas.length) { paginas.push([desde, k]); break }
+    // No: esta hoja lleva lo que entre con "Sigue en la hoja…" (al menos un renglón).
+    suma = 0; k = desde
+    while (k < filas.length && fijo + suma + filas[k] + inter <= entera) { suma += filas[k]; k++ }
+    if (k === desde) k = desde + 1
+    // Si entraron TODOS los que quedan, la hoja final quedaría sin renglones
+    // y sin lugar para el total y las firmas: el último pasa a la final.
+    if (k === filas.length && k - desde > 1) k--
+    paginas.push([desde, k])
+    desde = k
+  }
+  return { modo: 'entera', paginas }
 }
 
-export function htmlHoja(orden, { conPrecios = false, copias = COPIAS_IMPRESION } = {}) {
+// La hoja con un plan ya hecho. Sin plan (o 'media'): las copias juntas en
+// una página, con la línea punteada. 'entera': cada copia en sus hojas.
+export function htmlHoja(orden, { conPrecios = false, copias = COPIAS_IMPRESION, plan = null } = {}) {
   const todos = Array.isArray(orden?.renglones) ? orden.renglones : []
-  const paginas = paginasHoja(orden)
-  const hojas = []
-  for (let p = 0; p < paginas; p++) {
-    const desde = p * RENGLONES_POR_HOJA
-    const renglones = todos.slice(desde, desde + RENGLONES_POR_HOJA)
-    const partes = copias.map(rotulo => htmlCopiaHoja(orden, rotulo, { conPrecios: conPrecios === true, renglones, desde, pagina: p + 1, paginas }))
-    hojas.push(`<div class="rh-pagina">${partes.join(CORTE_HOJA)}</div>`)
+  const precios = conPrecios === true
+  if (!plan || plan.modo !== 'entera') {
+    const partes = copias.map(c => htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos }))
+    return `<div class="rh-hoja rh-hoja--media"><div class="rh-pagina">${partes.join(CORTE_HOJA)}</div></div>`
   }
-  return `<div class="rh-hoja">${hojas.join('')}</div>`
+  const hojas = []
+  for (const c of copias) {
+    plan.paginas.forEach(([d, h], i) => {
+      hojas.push(`<div class="rh-pagina">${htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos.slice(d, h), pagina: i + 1, paginas: plan.paginas.length, entera: true })}</div>`)
+    })
+  }
+  return `<div class="rh-hoja rh-hoja--entera">${hojas.join('')}</div>`
+}
+
+// Cuántas páginas imprime la hoja con ese plan.
+export function paginasHoja(plan, copias = COPIAS_IMPRESION) {
+  return plan?.modo === 'entera' ? plan.paginas.length * copias.length : 1
+}
+
+// ── MEDIR Y ARMAR (en el navegador) ────────────────────────────────────────
+// Arma la hoja en `contenedor`: primero la mide afuera de la pantalla (con el
+// ancho útil de la A4 y la letra ya cargada) y después pone la que corresponde.
+// Devuelve el plan. Si no se puede medir (sin DOM), media hoja.
+const MM = 96 / 25.4
+export async function medirHoja(orden, { conPrecios = false, doc = document } = {}) {
+  asegurarEstilosHoja(doc)
+  const caja = doc.createElement('div')
+  caja.style.cssText = `position:fixed;left:-10000px;top:0;width:${ANCHO_UTIL_A4_MM}mm;background:#fff`
+  doc.body.appendChild(caja)
+  try {
+    try { await Promise.race([doc.fonts?.ready, new Promise(r => setTimeout(r, 1500))]) } catch { /* sin fuentes */ }
+    const una = [COPIAS_IMPRESION[0]]
+    caja.innerHTML = htmlHoja(orden, { conPrecios, copias: una })
+    await Promise.all([...caja.querySelectorAll('img')].map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 1500) })))
+    const alto = (el) => el ? el.getBoundingClientRect().height / MM : 0
+    const copia = caja.querySelector('.rh-copia')
+    // La copia con TODO, sin el alto mínimo de la media hoja.
+    copia.style.minHeight = '0'; copia.style.height = 'auto'
+    const filas = [...copia.querySelectorAll('tbody tr')].map(alto)
+    const tabla = copia.querySelector('.rh-tabla')
+    const fijo = alto(copia.querySelector('.rh-cab')) + alto(copia.querySelector('.rh-cliente')) + alto(tabla?.querySelector('thead')) + 6
+    const final = alto(tabla?.querySelector('tfoot')) + alto(copia.querySelector('.rh-notas')) + alto(copia.querySelector('.rh-pie')) + alto(copia.querySelector('.rh-legal')) + 8
+    const intermedio = 8 + alto(copia.querySelector('.rh-legal')) + 4
+    return { copiaEntera: alto(copia), fijo, final, intermedio, filas }
+  } finally {
+    caja.remove()
+  }
+}
+
+export async function armarHoja(contenedor, orden, { conPrecios = false, copias = COPIAS_IMPRESION, doc = document } = {}) {
+  let plan = { modo: 'media' }
+  try { plan = planHoja(await medirHoja(orden, { conPrecios, doc })) } catch (err) { console.error('medir la hoja:', err) }
+  contenedor.innerHTML = htmlHoja(orden, { conPrecios, copias, plan })
+  return plan
 }
 
 // ── Los estilos de la hoja ─────────────────────────────────────────────────
-// Se inyectan UNA vez. Van en mm/pt porque la hoja es papel: una A4 con dos
-// copias, y 12 renglones entran en una página. Los valores salen del diseño
-// (en px a 794 px = 210 mm: 1 px = 0,2646 mm = 0,75 pt). Sin el naranja de la
-// app: blanco, negro y grises cálidos; el logo va a color y el sello de
-// ANULADA en bordó (así lo dibuja el diseño). La letra (6,4 a 9 pt) es más
-// chica que el mínimo habitual porque lo pide el formato de dos copias.
+// Se inyectan UNA vez. SOLO NEGRO SOBRE BLANCO (nada de grises claros; las
+// líneas de 1 px o más) y la letra Archivo, con respaldo sans-serif. Los
+// tamaños son los del diseño en px (a 96 por pulgada: 1 px = 0,26 mm). La
+// media hoja tiene alto fijo: dos copias + la línea punteada = una A4.
+export const FUENTE_HOJA = 'https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap'
 export const ESTILOS_HOJA = `
-.rh-hoja { font-family: Figtree, Inter, Arial, sans-serif; color: #1C1A17; background: #fff; width: 194mm; font-size: 7.5pt; line-height: 1.3; }
+@import url('${FUENTE_HOJA}');
+.rh-hoja { font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; width: ${ANCHO_UTIL_A4_MM}mm; font-size: 14px; line-height: 1.25; }
+.rh-hoja * { color: #000; }
 .rh-pagina + .rh-pagina { break-before: page; page-break-before: always; }
-.rh-copia { position: relative; box-sizing: border-box; padding: 3mm 2mm 2mm; min-height: 134mm; display: flex; flex-direction: column; gap: 2mm; page-break-inside: avoid; break-inside: avoid; overflow: hidden; }
-.rh-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 3.2mm; }
-.rh-empresa { display: flex; gap: 3.2mm; align-items: flex-start; min-width: 0; flex: 1; }
-.rh-logo { max-height: 14mm; max-width: 32mm; width: auto; height: auto; object-fit: contain; flex-shrink: 0; }
-.rh-empresa__datos { display: flex; flex-direction: column; font-size: 7.5pt; color: #3D3831; line-height: 1.3; }
-.rh-empresa__nombre { font-family: 'Bricolage Grotesque', Figtree, Arial, sans-serif; font-size: 12pt; font-weight: 800; color: #1C1A17; }
-.rh-orden { display: flex; flex-direction: column; align-items: flex-end; text-align: right; flex-shrink: 0; line-height: 1.15; }
-.rh-copia__rotulo { font-size: 6.75pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; border: 0.4mm solid #1C1A17; border-radius: 1mm; padding: 0.5mm 1.6mm; margin-bottom: 1mm; }
-.rh-orden__titulo { font-size: 6.75pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #6B645A; }
-.rh-codigo { font-family: 'Bricolage Grotesque', Figtree, Arial, sans-serif; font-size: 22.5pt; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.rh-orden__fecha, .rh-orden__hoja { font-size: 7.5pt; font-weight: 600; }
-.rh-orden__anulada { font-size: 9pt; font-weight: 900; color: #7A2E42; }
-.rh-datos { display: grid; grid-template-columns: 1.4fr 1fr; gap: 2.6mm; border-top: 0.4mm solid #1C1A17; border-bottom: 0.26mm solid #D6CFC4; padding: 1.6mm 0; }
-.rh-datos__col { display: flex; flex-direction: column; font-size: 7.5pt; line-height: 1.35; min-width: 0; }
-.rh-datos__nombre { font-size: 9pt; font-weight: 800; }
-.rh-rotulo { font-size: 6.4pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #6B645A; }
+.rh-copia { position: relative; box-sizing: border-box; padding: 2mm 1mm; display: flex; flex-direction: column; gap: 8px; break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
+.rh-hoja--media .rh-copia { height: ${ALTO_MEDIA_HOJA_MM}mm; }
+.rh-hoja--entera .rh-copia { min-height: ${ALTO_UTIL_A4_MM - 2}mm; }
+.rh-cab { display: flex; align-items: center; gap: 10px; min-height: 70px; }
+.rh-empresa { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 260px; }
+.rh-logo { width: 70px; height: 70px; border-radius: 50%; border: 1px solid #000; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; }
+.rh-logo img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(1); }
+.rh-empresa__datos { display: flex; flex-direction: column; font-size: 12px; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+.rh-empresa__nombre { font-size: 16px; font-weight: 800; }
+.rh-titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.rh-titulo__grande { font-size: 23px; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; }
+.rh-titulo__copia { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
+.rh-titulo__anulada { font-size: 14px; font-weight: 800; letter-spacing: 0.1em; }
+.rh-orden { width: 128px; box-sizing: border-box; border: 2px solid #000; padding: 4px 6px; display: flex; flex-direction: column; align-items: center; text-align: center; flex-shrink: 0; }
+.rh-orden__rotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
+.rh-codigo { font-size: 28px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rh-orden__fecha { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+.rh-cliente__izq { display: flex; flex-direction: column; min-width: 0; }
+.rh-rotulo { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
+.rh-cliente__nombre { font-size: 26px; font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
+.rh-cliente__der { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 14px; flex-shrink: 0; max-width: 45%; }
 .rh-tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.rh-col-n { width: 6mm; } .rh-col-producto { width: auto; } .rh-col-lotes { width: 40%; } .rh-col-cant { width: 16mm; } .rh-col-precio { width: 21mm; }
-.rh-tabla th { font-size: 6.4pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #6B645A; text-align: left; border-bottom: 0.26mm solid #1C1A17; padding: 0 1mm 0.8mm; }
-.rh-tabla td { font-size: 7.5pt; height: 4.5mm; padding: 0 1mm; border-bottom: 0.26mm solid #EFEBE5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; font-variant-numeric: tabular-nums; }
-.rh-tabla tr { page-break-inside: avoid; break-inside: avoid; }
-.rh-n { color: #6B645A; }
-.rh-producto { font-weight: 700; }
-.rh-num { text-align: right !important; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rh-cajas { font-weight: 800; }
-.rh-lotes { font-weight: 400; }
-.rh-resumen { display: flex; justify-content: space-between; align-items: baseline; gap: 3.2mm; font-size: 7.5pt; }
-.rh-obs { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.rh-totales { display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
-.rh-total-cajas, .rh-total { font-family: 'Bricolage Grotesque', Figtree, Arial, sans-serif; font-size: 10.5pt; font-weight: 800; }
-.rh-pie { margin-top: auto; display: grid; grid-template-columns: 1fr 1.3fr 1.2fr 0.8fr; gap: 3.7mm; align-items: end; font-size: 6.75pt; color: #3D3831; }
-.rh-cargo { line-height: 1.35; }
-.rh-firma__linea { border-top: 0.26mm solid #1C1A17; padding-top: 0.8mm; height: 7.4mm; display: flex; align-items: flex-end; box-sizing: border-box; }
-.rh-sigue { margin: auto 0 0; font-size: 7.5pt; font-weight: 700; color: #3D3831; }
-.rh-legal { font-size: 6.4pt; color: #6B645A; margin: 0; text-align: center; letter-spacing: 0.04em; }
-.rh-corte { height: 0; border-top: 0.4mm dashed #9A9287; position: relative; margin: 2.5mm 0; }
-.rh-corte span { position: absolute; left: 50%; top: -1.8mm; transform: translateX(-50%); background: #fff; padding: 0 2mm; font-size: 7.5pt; line-height: 1.2; color: #6B645A; font-weight: 700; }
+.rh-col-cajas { width: 74px; } .rh-col-producto { width: auto; } .rh-col-lote { width: 120px; } .rh-col-precio { width: 96px; }
+.rh-tabla th { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-align: left; border-bottom: 1px solid #000; padding: 2px 6px 3px; }
+.rh-tabla td { font-size: 16px; padding: 3px 6px; border-bottom: 1px solid #000; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
+.rh-tabla tr { break-inside: avoid; page-break-inside: avoid; }
+.rh-num { text-align: right !important; font-variant-numeric: tabular-nums; }
+.rh-cajas { font-size: 22px !important; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.rh-insumo .rh-cajas { font-size: 16px !important; white-space: normal; }
+.rh-producto { font-weight: 600; }
+.rh-plata { font-size: 14px !important; white-space: nowrap; }
+.rh-total td { border-bottom: 0; padding-top: 4px; }
+.rh-total__rotulo { font-size: 14px !important; font-weight: 800; letter-spacing: 0.08em; vertical-align: middle !important; }
+.rh-total__insumos { font-weight: 600; letter-spacing: 0; }
+.rh-total__plata { font-size: 16px !important; font-weight: 800; }
+.rh-notas { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.rh-pie { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.rh-entrego { font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.rh-firmas { width: 440px; max-width: 70%; display: grid; grid-template-columns: 1.3fr 1.3fr 1fr; gap: 12px; flex-shrink: 0; }
+.rh-firma { border-top: 1px solid #000; padding-top: 3px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; height: 34px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; }
+.rh-sigue { margin: auto 0 0; font-size: 14px; font-weight: 700; }
+.rh-legal { margin: 0; font-size: 12px; text-align: center; white-space: nowrap; }
+.rh-corte { height: 0; border-top: 1.5px dotted #000; margin: 3.5mm 0; }
 .rh-anulada-capa { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.rh-anulada { transform: rotate(-16deg); border: 1.6mm solid #7A2E42; border-radius: 3.7mm; padding: 1mm 6.9mm; color: #7A2E42; background: rgba(255,255,255,0.75); font-family: 'Bricolage Grotesque', Figtree, Arial, sans-serif; font-size: 72pt; font-weight: 800; letter-spacing: 0.08em; line-height: 1.05; text-align: center; display: flex; flex-direction: column; align-items: center; }
-.rh-anulada__detalle { font-family: Figtree, Arial, sans-serif; font-size: 9.75pt; letter-spacing: 0.02em; font-weight: 700; }
+.rh-anulada { transform: rotate(-16deg); border: 6px solid #000; border-radius: 14px; padding: 4px 26px; background: rgba(255,255,255,0.85); font-size: 72pt; font-weight: 800; letter-spacing: 0.08em; line-height: 1.05; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.rh-anulada__detalle { font-size: 10pt; letter-spacing: 0.02em; font-weight: 700; }
 .rh-copia--anulada .rh-tabla, .rh-copia--anulada .rh-codigo { text-decoration: line-through; }
 @media print { @page { size: A4; margin: 8mm; } }
 `
@@ -475,20 +589,23 @@ export function cargarScript(url, doc = document) {
   })
 }
 
-// Arma el PDF (una copia, la del cliente) en el navegador, sin servidor.
+// Arma el PDF (una copia, el original) en el navegador, sin servidor. Con la
+// MISMA medición que la impresión: si no entra en media hoja, hojas enteras.
 export async function generarPdf(orden, { conPrecios = false } = {}) {
   for (const url of LIBRERIAS_PDF) await cargarScript(url)
   asegurarEstilosHoja()
+  let plan = { modo: 'media' }
+  try { plan = planHoja(await medirHoja(orden, { conPrecios })) } catch (err) { console.error('medir la hoja:', err) }
   const cont = document.createElement('div')
   cont.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm;background:#fff;padding:8mm;box-sizing:border-box'
-  cont.innerHTML = htmlHoja(orden, { conPrecios, copias: COPIAS_PDF })
+  cont.innerHTML = htmlHoja(orden, { conPrecios, copias: COPIAS_PDF, plan })
   document.body.appendChild(cont)
   try {
     const imgs = [...cont.querySelectorAll('img')]
     await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r })))
     const { jsPDF } = window.jspdf
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
-    // Una página del PDF por hoja (con más de 12 renglones, la orden ocupa
+    // Una página del PDF por hoja (si no entra en media hoja, la orden ocupa
     // más de una): cada hoja se fotografía sola y va con 8 mm de margen.
     const hojas = [...cont.querySelectorAll('.rh-pagina')]
     const partes = hojas.length ? hojas : [cont]
