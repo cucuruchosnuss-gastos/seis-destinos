@@ -76,7 +76,8 @@ const PASOS_PLANTA = [
   // (lo más alto que se pone la pantalla: con HASTA aparece "Volvió con lote
   // nuevo"). Todo tiene que entrar sin scroll a 1000 × 540.
   ['paradas-anotar', async (page) => {
-    await page.locator('#pr-parada-sugerencias .pr-motivo').first().click()
+    // El motivo es una lista desplegable (07/10/2026): se elige el primero.
+    await page.locator('#pr-parada-motivo-lista').selectOption({ index: 1 })
     await page.locator('#pr-parada-hora [data-parada-hora="inicio"]').click()
     await expect(page.locator('#pr-hora-ventana')).toBeVisible()
   }],
@@ -97,12 +98,17 @@ const PASOS_PLANTA = [
     await page.locator('#pr-barra [data-seccion="cierre"]').click()
     await expect(page.locator('#pr-cierre')).toBeVisible()
   }],
-  // Terminó de producir antes: "¿Por qué paró antes?" con los motivos.
+  // El cierre simple (07/10/2026): "¿Paró antes de lo normal?" Sí, y la lista
+  // de motivos (lo más alto que puede quedar el cierre).
   ['cerrar-antes', async (page) => {
     await page.locator('#pr-cierre-hora').click()
     for (const d of '1310') await page.locator(`#pr-hora-ventana [data-hv-tecla="${d}"]`).click()
     await page.locator('#pr-hora-ventana-guardar').click()
+    await expect(page.locator('#pr-cierre-campo-motivo')).toBeHidden()
+    await page.locator('#pr-cierre-campo-paro [data-cierre-paro="si"]').click()
     await expect(page.locator('#pr-cierre-campo-motivo')).toBeVisible()
+    await page.locator('#pr-cierre-motivo-lista').selectOption({ label: 'Otro motivo' })
+    await expect(page.locator('#pr-cierre-motivo-detalle')).toBeVisible()
   }],
   // El botón de volver (30/09/2026): "‹ Inicio" lleva al Inicio del modo.
   ['volver-inicio', async (page) => {

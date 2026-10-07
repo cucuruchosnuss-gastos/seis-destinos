@@ -365,7 +365,7 @@ esperas.push((async () => {
   chk('Escape cierra el editor', /if \(ev\.key === 'Escape'\) \{ ev\.preventDefault\(\); cerrarEditorParada\(\); return \}/.test(FUENTE))
   chk('se escucha el teclado del editor', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE))
   chk('los botones de la planilla abren el editor', /closest\('\[data-parada-editar\]'\); if \(e\) \{ cerrarVentanaParadas\(\); return abrirEditorDesdePlanilla\('editar'/.test(FUENTE) &&
-    /closest\('\[data-parada-borrar\]'\); if \(b\) abrirEditorDesdePlanilla\('borrar'/.test(FUENTE))
+    /closest\('\[data-parada-borrar\]'\); if \(b\) \{ cerrarVentanaParadas\(\); return abrirEditorDesdePlanilla\('borrar'/.test(FUENTE))
   chk('y los del historial (en la gestión)', /abrirEditorDesdeHistorial\('editar', e\.dataset\.paradaEditar\)/.test(FUENTE_G) && /abrirEditorDesdeHistorial\('borrar', b\.dataset\.paradaBorrar\)/.test(FUENTE_G))
   chk('la gestión conecta el editor de paradas (Escape y teclado incluidos)', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE_G) && /function conectarEditorParada\(\)/.test(FUENTE_G))
   // Planta v2: cada parada del turno es un botón que abre el editor

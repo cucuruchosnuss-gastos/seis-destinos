@@ -577,15 +577,22 @@ esperas.push((async () => {
   chk('el cierre abre SIN hora: se pregunta', S.estado.cierre.hora === '' &&
     S.__doc.getElementById('pr-cierre-hora').textContent === 'Tocá para poner la hora', S.estado.cierre.hora)
   chk('sin borrador no dice que se recuperó', S.__doc.getElementById('pr-cierre-borrador').hidden === true)
-  // Planta v2: el resumen son celdas (número grande, rótulo y detalle).
-  const celda = (rot) => (html(S, 'pr-cierre-resumen').match(new RegExp(`<span class="pr-resumen__num">([^<]*)</span><span class="pr-resumen__textos"><span class="pr-resumen__rotulo">${rot}</span><span class="pr-resumen__sub">([^<]*)</span>`)) || []).slice(1).join('|')
-  chk('el resumen trae masas, paradas y lo producido',
-    // (Sin paradas dice "0 min": textoMinutos(0) no es vacío. Se acepta
-    // también "ninguna", que es lo que parece buscar el código.)
-    celda('MASAS') === '2|0 de chocolate' && /^0\|(ninguna|0 min)$/.test(celda('PARADAS')) && celda('CAJAS') === '55|25.000 unidades' &&
-    celda('SUBLOTES') === '2|7023-1 a 7023-2' && celda('OPERARIOS') === '2|Federico, Ramón', html(S, 'pr-cierre-resumen'))
-  chk('… el scrap sin cargar dice "—", nunca un 0 inventado', celda('SCRAP') === '—|sin promedio', celda('SCRAP'))
-  chk('… y el título dice desde cuándo', /^RESUMEN DEL TURNO · 06:02 A —$/.test(S.__doc.getElementById('pr-cierre-resumen-titulo').textContent),
+  // El cierre simple (07/10/2026): LO PRODUCIDO, una línea por producto (con
+  // sus cajas y unidades) y el total. Ya no los casilleros del turno.
+  const filas = [...html(S, 'pr-cierre-resumen').matchAll(/<span class="pr-cierre-prod__que">([^<]*)<\/span><span class="pr-cierre-prod__cuanto">([^<]*)<\/span>/g)].map(m => m[1] + '|' + m[2])
+  chk('lo producido: una línea por producto, con cajas y unidades',
+    filas.length === 2 && filas.includes('Cucuruchón Mini|35 cajas · 21.000 u') && filas.includes('Cucuruchón Grande|20 cajas · 4.000 u'), html(S, 'pr-cierre-resumen'))
+  chk('… y el total de todo', /<div class="pr-cierre-prod__total"><span>Total<\/span><span>55 cajas · 25\.000 u<\/span><\/div>/.test(html(S, 'pr-cierre-resumen')), html(S, 'pr-cierre-resumen'))
+  chk('… dos sublotes del mismo producto van en UNA línea', (() => {
+    const h = S.htmlResumenCierre({ items: [
+      { id: 'a', sublote: '1-1', presentacion_id: ITEMS[0].presentacion_id, cajas: 2, unidades: 10 },
+      { id: 'b', sublote: '1-2', presentacion_id: ITEMS[0].presentacion_id, cajas: 3, unidades: 15 },
+      { id: 'c', sublote: '1-3', presentacion_id: ITEMS[0].presentacion_id, cajas: 9, unidades: 45, anulado: true },
+    ] }, S.estado.catalogo)
+    return (h.match(/pr-cierre-prod__fila/g) || []).length === 1 && /<span class="pr-cierre-prod__cuanto">5 cajas · 25 u<\/span>/.test(h)
+  })())
+  chk('… sin nada cargado, lo dice', /No se cargó nada producido/.test(S.htmlResumenCierre({ items: [] }, null)))
+  chk('… y el título dice desde cuándo', /^LO PRODUCIDO · 06:02 A —$/.test(S.__doc.getElementById('pr-cierre-resumen-titulo').textContent),
     S.__doc.getElementById('pr-cierre-resumen-titulo').textContent)
 
   // Nada se marca hasta que se intenta: señalar en rojo un formulario que
@@ -870,9 +877,10 @@ esperas.push((async () => {
     X.htmlMarcas(catMalo.marcas, marca('busqueda') + 'zz', {}, null),
     ['marcaId', 'cono', 'subAnterior', 'busqueda'])
   chequearMarcas(chk, 'avisos del cierre', X.htmlAvisosCierre([marca('aviso')]), ['aviso'])
-  // Planta v2: el resumen del cierre nombra el primer y el último sublote.
-  chequearMarcas(chk, 'resumen del cierre',
-    X.htmlResumenCierre({ turno: { encargado_id: 'e-x' }, operarios: [], masas: [], paradas: [], items: [itemMalo] }, catMalo, { scrap: null }), ['sublote'])
+  // El cierre simple: lo producido nombra el producto; uno que ya no está en
+  // el catálogo, por su sublote.
+  chequearMarcas(chk, 'lo producido del cierre', X.htmlResumenCierre({ items: [itemMalo] }, catMalo), ['producto'])
+  chequearMarcas(chk, 'lo producido del cierre (sin catálogo)', X.htmlResumenCierre({ items: [itemMalo] }, null), ['sublote'])
   chequearMarcas(chk, 'lo que falta para cerrar (lo que dice la base)',
     X.htmlFaltaCierre({ intentado: false }, { items: [itemMalo] }, { falta: [
       { nivel: 'bloquea', clave: marca('clave'), texto: marca('bloquea'), accion: marca('accion') },
@@ -964,7 +972,6 @@ esperas.push((async () => {
     B.scrapAlto(8, { promedio_kg: 0, turnos: 9 }) === false)
   chk('… y se avisa, con "Revisar"', /Scrap: el doble del promedio<\/span><button type="button" class="pr-falta__link" data-cierre-ir="scrap">Revisar</.test(
     B.htmlFaltaCierre({ scrap: 9 }, { items: ITEMS }, { falta: [], scrapRef: { promedio_kg: 4, turnos: 5 } })))
-  chk('… en el resumen, el promedio de referencia', /promedio 4 kg/.test(B.htmlResumenCierre({ turno: {}, items: [], paradas: [], masas: [] }, null, { scrap: 9 }, { promedio_kg: 4, turnos: 5 })))
 
   const C = armar()
   await C.abrirPlanilla('t1')

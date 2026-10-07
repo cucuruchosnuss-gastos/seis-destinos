@@ -962,6 +962,10 @@
     /* Las paradas del turno, en su ventana. */
     .pr-pa-ventana { max-width: 520px; max-height: min(86dvh, 640px); display: flex; flex-direction: column; gap: 8px; }
     .pr-paradas__lista { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+    /* Cada parada: tocarla la corrige, y "Borrar" al lado (07/10/2026). */
+    .pr-parada-fila { display: flex; gap: 6px; align-items: stretch; flex-shrink: 0; }
+    .pr-parada-fila > .pr-parada-item { flex: 1; min-width: 0; }
+    .pr-parada-fila__borrar { flex-shrink: 0; min-width: 84px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--p-mal); background: #fff; color: var(--p-mal); font: 800 15px var(--p-texto); cursor: pointer; }
     .pr-parada-item { border-radius: 12px; border: 1px solid var(--p-borde); background: var(--p-tarjeta); padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; color: var(--p-tinta); flex-shrink: 0; }
     .pr-parada-item--programada { background: var(--p-teal-suave); border-color: var(--p-teal-borde); }
     .pr-parada-item--curso { background: var(--p-mal-suave); border-color: var(--p-mal-borde); color: var(--p-mal-txt); }
@@ -998,6 +1002,24 @@
     .pr-cierre-hora-boton { text-align: left; cursor: pointer; min-height: 44px; font-variant-numeric: tabular-nums; }
     .pr-cierre-hora-boton--vacia { font-size: 18px; color: var(--p-acento-osc); text-decoration: underline; }
     .pr-cierre-motivo { flex-direction: column; align-items: stretch; }
+    /* El cierre simple (07/10/2026): "¿Paró antes de lo normal?" No / Sí. */
+    .pr-cierre-paro { justify-content: space-between; flex-wrap: nowrap; }
+    .pr-cierre-paro .pr-cierre-caja__rotulo { flex: 1; min-width: 0; }
+    .pr-cierre__der .pr-cierre__obs { flex: 0 0 auto; }
+    .pr-cierre__der .pr-cierre__obs .pr-textarea { flex: 0 0 auto; min-height: 44px; height: 52px; }
+    .pr-cierre-paro__botones { display: flex; gap: 6px; }
+    .pr-cierre-paro__btn { min-width: 84px; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: #fff; font: 800 17px var(--p-texto); color: var(--p-tinta); cursor: pointer; }
+    .pr-cierre-paro__btn[aria-pressed="true"] { background: var(--p-acento); border-color: var(--p-acento); color: #fff; }
+    /* La lista de motivos (Paró y el cierre): un <select> agrupado. */
+    .pr-select-motivo { width: 100%; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--p-borde-boton); background: #fff; font: 700 17px var(--p-texto); color: var(--p-tinta); }
+    .pr-select-motivo:focus-visible { outline: 3px solid var(--p-acento); outline-offset: 1px; }
+    .pr-campo--mal .pr-select-motivo { border-color: var(--p-mal); }
+    /* Lo producido del cierre: una línea por producto, y el total. */
+    .pr-cierre-prod { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; }
+    .pr-cierre-prod__fila { display: flex; gap: 8px; align-items: baseline; padding: 6px 2px; border-bottom: 1px solid var(--p-borde); font-size: 16px; }
+    .pr-cierre-prod__que { flex: 1; min-width: 0; font-weight: 700; color: var(--p-tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pr-cierre-prod__cuanto { flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--p-tinta-2); font-weight: 700; }
+    .pr-cierre-prod__total { display: flex; justify-content: space-between; gap: 8px; padding: 6px 2px 0; font-weight: 800; font-size: 16px; }
     .pr-cierre-motivo__nota { font-size: 14px; font-weight: 600; color: var(--p-tinta-2); }
     .pr-cierre-motivo__lista { flex: 0 0 auto; overflow: visible; }
     .pr-cierre__obs { flex: 1; min-height: 0; flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
@@ -2121,23 +2143,16 @@
         <div class="pr-cierre" data-scroll-propio>
           <div class="pr-cierre__izq">
             <p class="pr-texto-suave" id="pr-cierre-borrador" hidden></p>
-            <!-- TERMINÓ DE PRODUCIR (05/10/2026): la hora con el teclado de
-                 la planta, sin el ± 5 minutos. Si es más de 20 minutos antes
-                 del fin del turno, abajo se pregunta por qué paró antes. -->
+            <!-- EL CIERRE SIMPLE (07/10/2026): la hora en que se apagó el
+                 fuego (el teclado de la planta), el scrap y "¿Paró antes de lo
+                 normal?" (No, de entrada). Solo con Sí, la lista de motivos:
+                 eso va en p_motivo_cierre y la base anota la parada. -->
             <div class="pr-cierre-caja" id="pr-cierre-campo-hora">
               <div class="pr-cierre-caja__dato">
-                <span class="pr-cierre-caja__rotulo" id="pr-cierre-hora-rotulo">¿A QUÉ HORA TERMINÓ DE PRODUCIR?</span>
+                <span class="pr-cierre-caja__rotulo" id="pr-cierre-hora-rotulo">¿A QUÉ HORA TERMINÓ DE PRODUCIR? (SE APAGÓ EL FUEGO)</span>
                 <button type="button" id="pr-cierre-hora" class="pr-cierre-num pr-cierre-hora-boton" aria-haspopup="dialog" aria-labelledby="pr-cierre-hora-rotulo"></button>
               </div>
               <p class="pr-campo__nota pr-cierre-caja__nota" id="pr-cierre-hora-nota" hidden></p>
-            </div>
-            <div class="pr-cierre-caja pr-cierre-motivo" id="pr-cierre-campo-motivo" hidden>
-              <div class="pr-cierre-caja__dato">
-                <span class="pr-cierre-caja__rotulo" id="pr-cierre-motivo-rotulo">¿POR QUÉ PARÓ ANTES?</span>
-                <span class="pr-cierre-motivo__nota" id="pr-cierre-motivo-nota"></span>
-              </div>
-              <div class="pr-pa-motivos pr-cierre-motivo__lista" id="pr-cierre-motivos"></div>
-              <input type="text" id="pr-cierre-motivo-detalle" class="pr-input" maxlength="200" autocomplete="off" enterkeyhint="done" aria-label="Qué pasó" placeholder="¿Qué pasó? (obligatorio)" hidden>
             </div>
             <div class="pr-cierre-caja" id="pr-cierre-campo-scrap">
               <div class="pr-cierre-caja__dato">
@@ -2148,12 +2163,20 @@
               <button type="button" class="pr-cierre-paso" data-scrap-paso="1" aria-label="Un kilo más">+</button>
               <p class="pr-campo__nota pr-cierre-caja__nota" id="pr-cierre-scrap-nota" hidden>Si no hubo, poné 0.</p>
             </div>
-            <div class="pr-cierre-caja pr-cierre__obs" id="pr-cierre-campo-obs">
-              <div class="pr-cierre-obs__cab">
-                <span class="pr-cierre-caja__rotulo" id="pr-cierre-obs-rotulo">OBSERVACIONES</span>
+            <div class="pr-cierre-caja pr-cierre-paro" id="pr-cierre-campo-paro">
+              <span class="pr-cierre-caja__rotulo" id="pr-cierre-paro-rotulo">¿PARÓ ANTES DE LO NORMAL?</span>
+              <div class="pr-cierre-paro__botones" role="group" aria-labelledby="pr-cierre-paro-rotulo">
+                <button type="button" class="pr-cierre-paro__btn" data-cierre-paro="no" aria-pressed="true">No</button>
+                <button type="button" class="pr-cierre-paro__btn" data-cierre-paro="si" aria-pressed="false">Sí</button>
               </div>
-              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000" autocomplete="off"></textarea>
-              <p class="pr-campo__nota" id="pr-cierre-obs-nota" hidden></p>
+            </div>
+            <div class="pr-cierre-caja pr-cierre-motivo" id="pr-cierre-campo-motivo" hidden>
+              <div class="pr-cierre-caja__dato">
+                <span class="pr-cierre-caja__rotulo" id="pr-cierre-motivo-rotulo">¿POR QUÉ PARÓ ANTES?</span>
+                <span class="pr-cierre-motivo__nota" id="pr-cierre-motivo-nota"></span>
+              </div>
+              <div class="pr-cierre-motivo__lista" id="pr-cierre-motivos"></div>
+              <input type="text" id="pr-cierre-motivo-detalle" class="pr-input" maxlength="200" autocomplete="off" enterkeyhint="done" aria-label="Qué pasó" placeholder="¿Qué pasó? (obligatorio)" hidden>
             </div>
             <!-- Lo que hay que confirmar antes de mandar: una parada sin
                  terminar, o que no se cargó nada producido. -->
@@ -2171,11 +2194,18 @@
           </div>
           <div class="pr-cierre__der">
             <div class="pr-cierre-tarjeta">
-              <span class="pr-cierre-caja__rotulo" id="pr-cierre-resumen-titulo">RESUMEN DEL TURNO</span>
-              <div class="pr-resumen" id="pr-cierre-resumen"></div>
+              <span class="pr-cierre-caja__rotulo" id="pr-cierre-resumen-titulo">LO PRODUCIDO</span>
+              <div class="pr-cierre-prod" id="pr-cierre-resumen" data-scroll-propio></div>
             </div>
             <!-- 7 · Lo que falta, con cómo resolverlo: lo que no deja cerrar
                  en bordó, los avisos en tono suave. -->
+            <div class="pr-cierre-caja pr-cierre__obs" id="pr-cierre-campo-obs">
+              <div class="pr-cierre-obs__cab">
+                <span class="pr-cierre-caja__rotulo" id="pr-cierre-obs-rotulo">OBSERVACIONES</span>
+              </div>
+              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000" autocomplete="off"></textarea>
+              <p class="pr-campo__nota" id="pr-cierre-obs-nota" hidden></p>
+            </div>
             <div class="pr-cierre-tarjeta pr-cierre-tarjeta--falta">
               <span class="pr-cierre-caja__rotulo">LO QUE FALTA</span>
               <div class="pr-cierre__falta" id="pr-cierre-falta" data-scroll-propio></div>
@@ -6420,10 +6450,23 @@
 
     // ── Abrir y pintar la planilla ────────────────────────────────────────
 
+    // ¿La planilla que se leyó SIGUE siendo la que está en pantalla? Caso real
+    // (06/10/2026, lotes 6221 y 6222): con dos máquinas abiertas, una relectura
+    // de la Máquina 1 (el tiempo real la dispara con cualquier cambio de la
+    // fábrica) volvió DESPUÉS de tocar la Máquina 2 y la pisó: la pantalla de
+    // la 2 mostraba la parada de la 1, y lo que se cargara ahí iba a la 1. Una
+    // respuesta vieja se tira: ni se guarda ni se dibuja.
+    function planillaSigue(turnoId, pedido) {
+      return estado.pedidoPlanilla === pedido && String(estado.planilla?.turno?.id ?? '') === String(turnoId)
+    }
+
     async function recargarPlanilla() {
       const p = estado.planilla
       if (!p) return
-      { const l = await leerPlanilla(p.turno.id); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? p.maquinaNombre } }
+      const turnoId = p.turno.id, pedido = estado.pedidoPlanilla
+      const l = await leerPlanilla(turnoId)
+      if (!planillaSigue(turnoId, pedido)) return
+      estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? p.maquinaNombre }
       pintarPlanilla()
     }
 
@@ -6573,8 +6616,9 @@
     // guardada: con motivo_id puesto, el trigger reescribe el motivo con el de
     // la lista. Por eso corregir una parada cambia solo las horas.
 
-    // Los cuatro grupos, en este orden. Una categoría que no está acá va a Otro.
-    const GRUPOS_MOTIVO = [['programada', 'Limpiezas'], ['falla', 'Fallas'], ['organizativa', 'Organización'], ['otro', 'Otro']]
+    // Los cuatro grupos, en este orden (Fallas, Organización, Limpiezas y
+    // Otro: el pedido del 07/10/2026). Una categoría que no está acá va a Otro.
+    const GRUPOS_MOTIVO = [['falla', 'Fallas'], ['organizativa', 'Organización'], ['programada', 'Limpiezas'], ['otro', 'Otro']]
 
     // Los motivos activos, en su orden. null = no se pudieron leer (la
     // pantalla lo dice y deja escribir el motivo: la base lo engancha igual).
@@ -6620,17 +6664,18 @@
         .filter(g => g.motivos.length)
     }
 
-    // Los botones de los motivos, por grupo. Los usan Paró (data-motivo) y
-    // "¿Por qué paró antes?" del cierre (data-cierre-motivo, con enCierre).
+    // LA LISTA DESPLEGABLE de los motivos (07/10/2026: reemplaza a la grilla
+    // de botones), agrupada con <optgroup>. La usan Paró (#pr-parada-motivo-lista)
+    // y "¿Por qué paró antes?" del cierre (#pr-cierre-motivo-lista, con enCierre).
     function htmlMotivosAgrupados(motivos, elegidoId, enCierre = false) {
-      const boton = (m, clave) => {
-        const pres = elegidoId === m.id ? 'true' : 'false'
-        return enCierre
-          ? `<button type="button" class="pr-motivo pr-motivo--${esc(clave)}" data-cierre-motivo="${esc(m.id)}" aria-pressed="${pres}">${esc(m.nombre)}</button>`
-          : `<button type="button" class="pr-motivo pr-motivo--${esc(clave)}" data-motivo="${esc(m.id)}" aria-pressed="${pres}">${esc(m.nombre)}</button>`
-      }
-      return motivosAgrupados(motivos).map(g => `<div class="pr-pa-grupo"><span class="pr-pa-grupo__titulo">${esc(g.titulo)}</span>` +
-        '<div class="pr-pa-motivos__grilla">' + g.motivos.map(m => boton(m, g.clave)).join('') + '</div></div>').join('')
+      const abre = enCierre
+        ? '<select id="pr-cierre-motivo-lista" class="pr-select-motivo" aria-label="Por qué paró antes">'
+        : '<select id="pr-parada-motivo-lista" class="pr-select-motivo" aria-label="Por qué paró">'
+      return abre +
+        `<option value=""${elegidoId ? '' : ' selected'}>Elegí el motivo…</option>` +
+        motivosAgrupados(motivos).map(g => `<optgroup label="${esc(g.titulo)}">` +
+          g.motivos.map(m => `<option value="${esc(m.id)}"${elegidoId === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('') +
+          '</optgroup>').join('') + '</select>'
     }
 
     function motivoElegido(f, motivos = estado.motivosParada) {
@@ -6853,6 +6898,7 @@
     function elegirMotivoParada(id) {
       const f = estado.paradaNueva
       if (!f || !Array.isArray(estado.motivosParada)) return
+      if (!id) { tocar(); f.motivoId = null; f.detalle = ''; f.errorBase = ''; return pintarParadaNueva() }
       const m = estado.motivosParada.find(x => x.id === id)
       if (!m) return
       tocar()
@@ -6984,11 +7030,15 @@
         const cat = NOMBRE_CATEGORIA_PARADA[p.categoria] ? p.categoria : null
         const horas = p.fin ? `${desde} a ${horaArgentina(p.fin) || '—'}` : `${desde} · sigue parada`
         const clases = `pr-parada-item${p.fin ? '' : ' pr-parada-item--curso'}${cat === 'programada' ? ' pr-parada-item--programada' : ''}`
-        return `<button type="button" class="${esc(clases)}" data-parada-editar="${esc(p.id)}">` +
+        // Una parada que todavía está en la cola (cola:…) no se borra: no llegó.
+        const borrar = String(p.id ?? '').startsWith('cola:') ? ''
+          : `<button type="button" class="pr-parada-fila__borrar" data-parada-borrar="${esc(p.id)}" aria-label="Borrar la parada de las ${esc(desde)}">Borrar</button>`
+        return '<div class="pr-parada-fila">' + `<button type="button" class="${esc(clases)}" data-parada-editar="${esc(p.id)}">` +
           `<span class="pr-parada-item__cab"><span class="pr-parada-item__horas">${esc(horas)}${dur ? ` · ${esc(dur)}` : ''} · <span class="pr-parada-item__que">${esc(p.motivo)}</span></span>` +
           (cat ? `<span class="pr-parada-item__cat pr-parada-item__cat--${esc(cat)}">${esc(NOMBRE_CATEGORIA_PARADA[cat])}</span>` : '') + '</span>' +
           (p.hasta_fin_de_turno ? '<span class="pr-parada-item__motivo">no volvió en todo el turno</span>' : '') +
-          (p.cola ? `<span class="pr-parada-item__cola${p.cola.estado === 'error' ? ' pr-parada-item__cola--error' : ''}">${esc(textoColaFila(p.cola))}</span>` : '') + '</button>'
+          (p.cola ? `<span class="pr-parada-item__cola${p.cola.estado === 'error' ? ' pr-parada-item__cola--error' : ''}">${esc(textoColaFila(p.cola))}</span>` : '') + '</button>' +
+          borrar + '</div>'
       }).join('')
     }
 
@@ -8908,7 +8958,7 @@
     }
 
     function borradorCierreVacio() {
-      return { hora: '', scrap: null, obs: '', motivoId: null, motivoDetalle: '' }
+      return { hora: '', scrap: null, obs: '', paroAntes: false, motivoId: null, motivoDetalle: '' }
     }
 
     function leerBorradorCierre(turnoId) {
@@ -8921,6 +8971,7 @@
           hora: typeof b.hora === 'string' ? b.hora : '',
           scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,
           obs: typeof b.obs === 'string' ? b.obs : '',
+          paroAntes: b.paroAntes === true,
           motivoId: typeof b.motivoId === 'string' ? b.motivoId : null,
           motivoDetalle: typeof b.motivoDetalle === 'string' ? b.motivoDetalle : '',
         }
@@ -8949,39 +9000,21 @@
       return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
     }
 
-    // ¿TERMINÓ ANTES? (05/10/2026) La misma regla que cerrar_turno: si la hora
-    // en que terminó de producir es más de 20 minutos antes del fin del turno
-    // y ninguna parada cubre ese hueco (empieza a más tardar 10 minutos
-    // después y llega hasta 10 minutos antes del fin), la base crea una parada
-    // de cierre anticipado: la pantalla pregunta por qué. Sin fin del turno
-    // conocido no pregunta nunca. null, o { fin, minutos }.
-    const MINUTOS_CIERRE_ANTICIPADO = 20
-    const MINUTOS_CUBRE_PARADA = 10
-    function cierreAnticipado(hora, p) {
-      const { inicio, fin } = horarioDePlanilla(p)
-      const finMs = instanteDelTurno(p?.turno?.fecha, fin, inicio)
-      const apag = instanteDelTurno(p?.turno?.fecha, hora, inicio)
-      if (finMs == null || apag == null) return null
-      if (!(apag < finMs - MINUTOS_CIERRE_ANTICIPADO * 60000)) return null
-      const cubre = (p?.paradas ?? []).some(x => {
-        const i = new Date(x.inicio).getTime()
-        const h = x.fin ? new Date(x.fin).getTime() : finMs
-        return Number.isFinite(i) && i <= apag + MINUTOS_CUBRE_PARADA * 60000 && h >= finMs - MINUTOS_CUBRE_PARADA * 60000
-      })
-      if (cubre) return null
-      return { fin, minutos: Math.round((finMs - apag) / 60000) }
-    }
-
-    // El motivo de cierre anticipado como lo espera la base: el NOMBRE de un
-    // motivo de motivos_parada ("Otro motivo: …" con el detalle). Sin los
+    // ¿PARÓ ANTES DE LO NORMAL? (el cierre simple, 07/10/2026) Lo contesta la
+    // persona: No (de entrada) o Sí. Ya no se pregunta solo según la hora.
+    // cerrar_turno crea la parada de "cierre anticipado" SOLO si llega
+    // p_motivo_cierre: con No no viaja nada y la base no crea ninguna.
+    //
+    // El motivo como lo espera la base: el NOMBRE de un motivo de
+    // motivos_parada, y "Otro motivo: <detalle>" el que pide detalle. Sin los
     // motivos leídos, lo que se escribió. null si no paró antes.
     function textoMotivoCierre(b, p, motivos = estado.motivosParada) {
-      if (!cierreAnticipado(b?.hora, p)) return null
+      if (!b?.paroAntes) return null
       const d = String(b?.motivoDetalle ?? '').trim()
       if (motivos === null) return d || null
       const m = Array.isArray(motivos) ? motivos.find(x => x.id === b?.motivoId) : null
       if (!m) return null
-      return d ? `${m.nombre}: ${d}` : m.nombre
+      return m.pide_detalle && d ? `${m.nombre}: ${d}` : m.nombre
     }
 
     // Lo que falta para poder cerrar, con el texto del ERROR (que va pegado al
@@ -8993,7 +9026,7 @@
       }
       if (b.scrap == null) faltan.push({ campo: 'scrap', error: 'Falta el scrap. Si no hubo, poné 0.', nota: 'Si no hubo, poné 0.' })
       else if (b.scrap < 0) faltan.push({ campo: 'scrap', error: 'El scrap no puede ser negativo.', nota: 'No puede ser negativo.' })
-      if (cierreAnticipado(b.hora, p)) {
+      if (b.paroAntes) {
         const d = String(b.motivoDetalle ?? '').trim()
         const m = Array.isArray(motivos) ? motivos.find(x => x.id === b.motivoId) : null
         if (motivos === undefined) faltan.push({ campo: 'motivo', error: 'Esperá a que se lean los motivos.', nota: '' })
@@ -9094,27 +9127,25 @@
       return (avisos ?? []).map(a => `<p>${esc(a)}</p>`).join('')
     }
 
-    function htmlResumenCierre(p, cat, b = estado.cierre, ref = estado.cierreBase?.scrapRef) {
+    // LO PRODUCIDO del cierre (07/10/2026): una línea por producto —todas sus
+    // presentaciones y conos juntos— con las cajas y las unidades, y el total.
+    function htmlResumenCierre(p, cat) {
       const vivos = itemsVivos(p?.items)
+      if (!vivos.length) return '<p class="pr-texto-suave">No se cargó nada producido.</p>'
+      const filas = new Map()
+      for (const it of vivos) {
+        const d = describirProducido(it, cat)
+        const nombre = d ? d.producto : (it.sublote ? `Sublote ${it.sublote}` : 'Producto')
+        const f = filas.get(nombre) ?? { nombre, cajas: 0, unidades: 0 }
+        f.cajas += Number(it.cajas) || 0
+        f.unidades += Number(it.unidades ?? d?.unidades) || 0
+        filas.set(nombre, f)
+      }
       const t = totalesProducido(p?.items)
-      const min = minutosParadas(p?.paradas)
-      const encargado = p?.turno?.encargado_id ?? null
-      const ops = [...(encargado ? [encargado] : []), ...(p?.operarios ?? []).filter(o => !o.hasta && o.empleado_id !== encargado).map(o => o.empleado_id)]
-      const masas = (p?.masas ?? []).filter(m => !esTirada(m))
-      const choco = masas.filter(m => m.es_chocolate).length
-      const prom = Number(ref?.promedio_kg)
-      const celdas = [
-        { cl: 'teal', num: ops.length, rot: 'OPERARIOS', sub: ops.map(apellidoDe).filter(Boolean).join(', ') || 'ninguno' },
-        { cl: 'trigo', num: masas.length, rot: 'MASAS', sub: `${choco} de chocolate` },
-        { cl: 'tinta', num: formatearNumeroAr(t.cajas, { decimales: 0 }), rot: 'CAJAS', sub: `${formatearNumeroAr(t.unidades, { decimales: 0 })} unidades` },
-        { cl: 'bordo', num: (p?.paradas ?? []).length, rot: 'PARADAS', sub: (p?.paradas ?? []).length ? (textoMinutos(min) || '0 min') : 'ninguna' },
-        { cl: 'tinta', num: b?.scrap == null ? '—' : `${formatearNumeroAr(b.scrap, { decimales: 3, minimos: 0 })} kg`, rot: 'SCRAP',
-          sub: Number.isFinite(prom) && Number(ref?.turnos) > 0 ? `promedio ${formatearNumeroAr(prom, { decimales: 1, minimos: 0 })} kg` : 'sin promedio' },
-        { cl: 'tinta', num: vivos.length, rot: 'SUBLOTES', sub: vivos.length ? (vivos.length === 1 ? vivos[0].sublote : `${vivos[0].sublote} a ${vivos[vivos.length - 1].sublote}`) : 'ninguno' },
-      ]
-      return celdas.map(c => `<div class="pr-resumen__celda pr-resumen__celda--${c.cl}">` +
-        `<span class="pr-resumen__num">${esc(c.num)}</span>` +
-        `<span class="pr-resumen__textos"><span class="pr-resumen__rotulo">${esc(c.rot)}</span><span class="pr-resumen__sub">${esc(c.sub)}</span></span></div>`).join('')
+      const cuanto = (cajas, unidades) => `${formatearNumeroAr(cajas, { decimales: 0 })} ${cajas === 1 ? 'caja' : 'cajas'} · ${formatearNumeroAr(unidades, { decimales: 0 })} u`
+      return [...filas.values()].map(f => '<div class="pr-cierre-prod__fila">' +
+        `<span class="pr-cierre-prod__que">${esc(f.nombre)}</span><span class="pr-cierre-prod__cuanto">${esc(cuanto(f.cajas, f.unidades))}</span></div>`).join('') +
+        `<div class="pr-cierre-prod__total"><span>Total</span><span>${esc(cuanto(t.cajas, t.unidades))}</span></div>`
     }
 
     // El cierre se abre SIEMPRE, también con una parada en curso: la base la
@@ -9163,8 +9194,8 @@
       botonHora.className = 'pr-cierre-num pr-cierre-hora-boton' + (hora ? '' : ' pr-cierre-hora-boton--vacia')
       pintarMotivoCierre()
       const desde = horaCorta(p.turno.hora_largada) || horaArgentina(p.turno.abierto_en) || '—'
-      document.getElementById('pr-cierre-resumen-titulo').textContent = `RESUMEN DEL TURNO · ${desde} A ${normalizarHora(b.hora) || '—'}`
-      document.getElementById('pr-cierre-resumen').innerHTML = htmlResumenCierre(p, estado.catalogo, b)
+      document.getElementById('pr-cierre-resumen-titulo').textContent = `LO PRODUCIDO · ${desde} A ${normalizarHora(b.hora) || '—'}`
+      document.getElementById('pr-cierre-resumen').innerHTML = htmlResumenCierre(p, estado.catalogo)
       document.getElementById('pr-cierre-falta').innerHTML = htmlFaltaCierre(b, p)
 
       // El campo que falta se marca SOLO después de intentar: marcarlo antes
@@ -9220,7 +9251,7 @@
       b.obs = document.getElementById('pr-cierre-obs').value
       b.motivoDetalle = document.getElementById('pr-cierre-motivo-detalle').value
       b.errorBase = ''
-      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, motivoId: b.motivoId ?? null, motivoDetalle: b.motivoDetalle ?? '' })
+      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, paroAntes: !!b.paroAntes, motivoId: b.motivoId ?? null, motivoDetalle: b.motivoDetalle ?? '' })
       pintarCierre()
     }
 
@@ -9232,38 +9263,50 @@
       cambioEnCierre()
     }
 
-    // "¿Por qué paró antes?": solo si la hora quedó más de 20 minutos antes
-    // del fin del turno. Los mismos motivos que Paró.
+    // "¿Paró antes de lo normal?" No / Sí y, solo con Sí, "¿Por qué paró
+    // antes?" con la misma lista de Paró. El detalle, solo en "Otro motivo"
+    // (pide_detalle), o si los motivos no se pudieron leer.
     function pintarMotivoCierre() {
-      const b = estado.cierre, p = estado.planilla
+      const b = estado.cierre
+      for (const bt of document.querySelectorAll('[data-cierre-paro]')) {
+        bt.setAttribute('aria-pressed', (bt.dataset.cierreParo === 'si') === !!b?.paroAntes ? 'true' : 'false')
+      }
       const caja = document.getElementById('pr-cierre-campo-motivo')
-      const ant = b && p ? cierreAnticipado(b.hora, p) : null
-      caja.hidden = !ant
-      if (!ant) return
+      caja.hidden = !b?.paroAntes
+      if (!b?.paroAntes) return
       const motivos = estado.motivosParada
-      document.getElementById('pr-cierre-motivo-nota').textContent =
-        `Terminó a las ${normalizarHora(b.hora)} y el turno es hasta las ${ant.fin}: ${textoDuracion(ant.minutos)} antes. Queda anotado como parada.`
+      document.getElementById('pr-cierre-motivo-nota').textContent = 'Queda anotado como parada hasta el fin del turno.'
       document.getElementById('pr-cierre-motivos').innerHTML = motivos === undefined
         ? '<p class="pr-texto-suave">Leyendo los motivos…</p>'
         : (Array.isArray(motivos) ? htmlMotivosAgrupados(motivos, b.motivoId ?? null, true)
           : '<p class="pr-pa-sin-motivos" role="alert">No se pudieron leer los motivos. Escribí por qué paró antes.</p>')
       const m = Array.isArray(motivos) ? motivos.find(x => x.id === b.motivoId) : null
       const det = document.getElementById('pr-cierre-motivo-detalle')
-      det.hidden = !(motivos === null || m)
-      det.placeholder = motivos === null || m?.pide_detalle ? '¿Qué pasó? (obligatorio)' : 'Detalle (opcional)'
+      det.hidden = !(motivos === null || m?.pide_detalle)
+      det.placeholder = '¿Qué pasó? (obligatorio)'
       if (document.activeElement !== det) det.value = b.motivoDetalle ?? ''
+    }
+
+    function elegirParoAntes(si) {
+      const b = estado.cierre
+      if (!b) return
+      tocar()
+      b.paroAntes = !!si
+      if (!si) { b.motivoId = null; b.motivoDetalle = ''; document.getElementById('pr-cierre-motivo-detalle').value = '' }
+      cambioEnCierre()
+      if (si) document.getElementById('pr-cierre-motivo-lista')?.focus?.()
     }
 
     function elegirMotivoCierre(id) {
       const b = estado.cierre
       if (!b || !Array.isArray(estado.motivosParada)) return
-      const m = estado.motivosParada.find(x => x.id === id)
-      if (!m) return
+      const m = id ? estado.motivosParada.find(x => x.id === id) : null
+      if (id && !m) return
       tocar()
-      if (b.motivoId !== id) { b.motivoDetalle = ''; document.getElementById('pr-cierre-motivo-detalle').value = '' }
-      b.motivoId = id
+      if (b.motivoId !== (id || null)) { b.motivoDetalle = ''; document.getElementById('pr-cierre-motivo-detalle').value = '' }
+      b.motivoId = id || null
       cambioEnCierre()
-      if (m.pide_detalle) document.getElementById('pr-cierre-motivo-detalle').focus?.()
+      if (m?.pide_detalle) document.getElementById('pr-cierre-motivo-detalle').focus?.()
     }
 
     function cambiarScrapCierre(kg) {
@@ -9340,7 +9383,9 @@
       // y "Volvió con lote nuevo".
       document.getElementById('pr-parada-sugerencias').addEventListener('click', ev => {
         if (ev.target.closest('[data-motivos-reintentar]')) { asegurarMotivosParada({ forzar: true }); return }
-        const b = ev.target.closest('[data-motivo]'); if (b) elegirMotivoParada(b.dataset.motivo)
+      })
+      document.getElementById('pr-parada-sugerencias').addEventListener('change', ev => {
+        if (ev.target.id === 'pr-parada-motivo-lista') elegirMotivoParada(ev.target.value || null)
       })
       document.getElementById('pr-parada-motivo').addEventListener('input', ev => escribirDetalleParada(ev.target.value))
       document.getElementById('pr-parada-hora').addEventListener('click', ev => {
@@ -9383,7 +9428,7 @@
       }
       document.getElementById('pr-planilla-paradas').addEventListener('click', ev => {
         const e = ev.target.closest('[data-parada-editar]'); if (e) { cerrarVentanaParadas(); return abrirEditorDesdePlanilla('editar', e.dataset.paradaEditar) }
-        const b = ev.target.closest('[data-parada-borrar]'); if (b) abrirEditorDesdePlanilla('borrar', b.dataset.paradaBorrar)
+        const b = ev.target.closest('[data-parada-borrar]'); if (b) { cerrarVentanaParadas(); return abrirEditorDesdePlanilla('borrar', b.dataset.paradaBorrar) }
       })
       const editor = document.getElementById('pr-parada-editor')
       editor.addEventListener('click', ev => {
@@ -9502,8 +9547,11 @@
       for (const id of ['pr-cierre-scrap', 'pr-cierre-obs', 'pr-cierre-motivo-detalle']) {
         document.getElementById(id).addEventListener('input', cambioEnCierre)
       }
-      document.getElementById('pr-cierre-motivos').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-cierre-motivo]'); if (b) elegirMotivoCierre(b.dataset.cierreMotivo)
+      document.getElementById('pr-cierre-motivos').addEventListener('change', ev => {
+        if (ev.target.id === 'pr-cierre-motivo-lista') elegirMotivoCierre(ev.target.value || null)
+      })
+      document.getElementById('pr-cierre-campo-paro').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-cierre-paro]'); if (b) elegirParoAntes(b.dataset.cierreParo === 'si')
       })
       document.getElementById('pr-cierre-campo-scrap').addEventListener('click', ev => {
         const b = ev.target.closest('[data-scrap-paso]'); if (b) cambiarScrapCierre(Number(b.dataset.scrapPaso))
@@ -12467,8 +12515,11 @@
     async function repintarConCola() {
       const p = estado.planilla
       if (!p) return
+      const turnoId = p.turno.id, pedido = estado.pedidoPlanilla
       await refrescarListaCola()
-      estado.planilla = { ...planillaConCola(p), maquinaNombre: p.maquinaNombre }
+      // Mientras se leía la cola se pudo tocar otra máquina (planillaSigue).
+      if (!planillaSigue(turnoId, pedido)) return
+      estado.planilla = { ...planillaConCola(estado.planilla), maquinaNombre: estado.planilla.maquinaNombre ?? p.maquinaNombre }
       if (['pr-planilla', 'pr-paradas'].includes(estado.vista)) pintarPlanilla()
     }
 
@@ -12859,8 +12910,9 @@
         }
         else if (estado.planilla && ['pr-agregar-prod', 'pr-cierre'].includes(estado.vista)) {
           // Se actualizan los datos sin redibujar lo que se está cargando.
-          const l = await leerPlanilla(estado.planilla.turno.id)
-          estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? estado.planilla.maquinaNombre }
+          const turnoId = estado.planilla.turno.id, pedido = estado.pedidoPlanilla
+          const l = await leerPlanilla(turnoId)
+          if (planillaSigue(turnoId, pedido)) estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? estado.planilla.maquinaNombre }
         }
       } catch (err) { console.error('tiempo real (redibujar):', err) }
       pintarLateral()

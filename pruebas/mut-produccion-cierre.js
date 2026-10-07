@@ -30,8 +30,9 @@ correrMutacionesProduccion({
     { expr: 'esc(x.boton)', motivo: 'htmlFaltaCierre(): "Ir a Paradas", "Ir a Sala de masa", "Ir a Lo producido" o "Revisar", constantes del código' },
     { expr: 'esc(a.ir)', motivo: 'htmlFaltaCierre(): "sala" o "producido", constantes del código' },
     { expr: 'esc(a.boton)', motivo: 'htmlFaltaCierre(): "Ir a Sala de masa" o "Corregir producto", constantes del código' },
-    { expr: 'esc(c.num)', motivo: 'htmlResumenCierre(): conteos, formatearNumeroAr() o "—"' },
-    { expr: 'esc(c.rot)', motivo: 'htmlResumenCierre(): el rótulo de cada celda, constante del código' },
+    { expr: 'esc(cuanto(f.cajas, f.unidades))', motivo: 'htmlResumenCierre(): cajas y unidades con formatearNumeroAr() y "caja(s)"/"u"' },
+    { expr: 'esc(cuanto(t.cajas, t.unidades))', motivo: 'htmlResumenCierre(): el total, con formatearNumeroAr()' },
+    { expr: 'esc(textoColaFila(p.cola))', motivo: 'textoColaFila() devuelve uno de cuatro textos fijos del código' },
     { expr: 'esc(hasta)', motivo: 'htmlParadasTurno(): horaArgentina() ("HH:MM"), "—" o "ahora"' },
     { expr: 'esc(sub)', motivo: 'htmlMasasResumen(): conteos y textos del código (en htmlAccionParo el sub lleva el motivo y se prueba en test-produccion-paradas-simple.js)' },
     { expr: 'esc(sufijo(t))', motivo: 'htmlPendientesCompletar(): " · cerrada a la fuerza" o " · falta completar", constantes del código' },
@@ -75,14 +76,17 @@ correrMutacionesProduccion({
     { expr: 'esc(quien)', motivo: 'nombrePersona() sale de estado.personal; se escapa igual en la assertion de XSS' },
   ],
   manuales: [
+    // Lo producido del cierre simple (07/10/2026): una línea por producto.
+    { nombre: 'lo producido del cierre, un renglón por sublote', de: "        const nombre = d ? d.producto : (it.sublote ? `Sublote ${it.sublote}` : 'Producto')", a: "        const nombre = (d ? d.producto : 'Producto') + ' ' + it.sublote" },
+    { nombre: 'lo producido del cierre cuenta los anulados', de: '      const vivos = itemsVivos(p?.items)\n      if (!vivos.length) return \'<p class="pr-texto-suave">No se cargó nada producido.</p>\'', a: '      const vivos = p?.items ?? []\n      if (!vivos.length) return \'<p class="pr-texto-suave">No se cargó nada producido.</p>\'' },
     // ── Lo producido: orden, anulados, totales ──────────────────────────
     { nombre: "los sublotes salen en otro orden", de: "      return (items ?? []).map(it => htmlProducido(it, cat)).join('')", a: "      return [...(items ?? [])].reverse().map(it => htmlProducido(it, cat)).join('')" },
     { nombre: "un sublote anulado se esconde", de: "      return (items ?? []).map(it => htmlProducido(it, cat)).join('')", a: "      return itemsVivos(items).map(it => htmlProducido(it, cat)).join('')" },
     { nombre: 'el anulado suma al total', de: '      for (const it of itemsVivos(items)) {\n        cajas += it.cajas', a: '      for (const it of (items ?? [])) {\n        cajas += it.cajas' },
     { nombre: 'las unidades se recalculan contra el catálogo de hoy', de: '        unidades += it.unidades ?? 0', a: '        unidades += it.cajas * (it.unidades_por_caja ?? 0)' },
     { nombre: 'itemsVivos deja pasar los anulados', de: '      return (items ?? []).filter(it => !it.anulado)', a: '      return (items ?? [])' },
-    { nombre: "un anulado igual ofrece corregir y borrar", de: "      const botones = it.anulado\n        ? '<span class=\"pr-fp__anulado\">Anulado</span>'", a: "      const botones = false\n        ? '<span class=\"pr-fp__anulado\">Anulado</span>'" },
-    { nombre: "un anulado no se marca como anulado", de: "const clases = 'pr-fila-prod' + (it.anulado ? ' pr-fila-prod--anulado' : '')", a: "const clases = 'pr-fila-prod' + (false ? ' pr-fila-prod--anulado' : '')" },
+    { nombre: "un anulado igual ofrece corregir y borrar", de: "      const botones = it.cola ? htmlEstadoColaFila(it.cola) : it.anulado\n        ? '<span class=\"pr-fp__anulado\">Anulado</span>'", a: "      const botones = it.cola ? htmlEstadoColaFila(it.cola) : false\n        ? '<span class=\"pr-fp__anulado\">Anulado</span>'" },
+    { nombre: "un anulado no se marca como anulado", de: "(it.anulado ? ' pr-fila-prod--anulado' : '')", a: "(false ? ' pr-fila-prod--anulado' : '')" },
     { nombre: "la presentación que ya no está no se distingue de un catálogo caído", de: "${cat ? 'Un producto que ya no está en el catálogo' : 'Producto'}", a: "${false ? 'Un producto que ya no está en el catálogo' : 'Producto'}" },
 
     // ── Corregir y anular ───────────────────────────────────────────────
@@ -98,8 +102,8 @@ correrMutacionesProduccion({
     // ── Registrar un producto ───────────────────────────────────────────
     { nombre: 'registrar pierde el cono', de: "p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas,", a: 'p_presentacion_id: a.presentacionId, p_marca_id: null, p_cajas: a.cajas,' },
     { nombre: 'registrar sin cajas', de: '      if (!Number.isInteger(a.cajas) || a.cajas <= 0) { err.textContent', a: '      if (false) { err.textContent' },
-    { nombre: 'no se dice el sublote que devolvió la base', de: "        mostrarExito(`Sublote ${data?.sublote ?? ''} cargado.`)", a: "        mostrarExito('Listo.')" },
-    { nombre: 'no se vuelve a la planilla después de cargar', de: "        await recargarPlanilla()\n        mostrarVista('pr-planilla')", a: '        await recargarPlanilla()' },
+    { nombre: 'no se dice el sublote que devolvió la base', de: "`Sublote ${r.data?.sublote ?? ''} cargado.`", a: "'Listo.'" },
+    { nombre: 'no se vuelve a la planilla después de cargar', de: "        await repintarConCola()\n      }\n      mostrarVista('pr-planilla')\n", a: "        await repintarConCola()\n      }\n" },
 
     // ── Los pasos ───────────────────────────────────────────────────────
     { nombre: "sin cono el paso del cono no dice \"Sin cono\"", de: "(a.conCono ? (marca ? marca.nombre : 'Común') : 'Sin cono')", a: "(a.conCono ? (marca ? marca.nombre : 'Común') : '')" },
@@ -198,11 +202,11 @@ correrMutacionesProduccion({
     { nombre: 'se pregunta siempre, aunque ya se confirmó', de: '      if (avisos.length && !b.confirmado) {', a: '      if (avisos.length) {' },
 
     // ── El borrador ─────────────────────────────────────────────────────
-    { nombre: 'no guarda el borrador', de: "      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, motivoId: b.motivoId ?? null, motivoDetalle: b.motivoDetalle ?? '' })\n", a: '' },
-    { nombre: 'el borrador pierde la hora', de: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, motivoId:', a: "{ hora: '', scrap: b.scrap, obs: b.obs, motivoId:" },
+    { nombre: 'no guarda el borrador', de: "      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, paroAntes: !!b.paroAntes, motivoId: b.motivoId ?? null, motivoDetalle: b.motivoDetalle ?? '' })\n", a: '' },
+    { nombre: 'el borrador pierde la hora', de: '{ hora: b.hora, scrap: b.scrap, obs: b.obs, paroAntes:', a: "{ hora: '', scrap: b.scrap, obs: b.obs, paroAntes:" },
     { nombre: 'no recupera el borrador', de: '      const guardado = leerBorradorCierre(p.turno.id)', a: '      const guardado = null' },
-    { nombre: 'el borrador se borra aunque falle', de: "        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre, estado.planilla))\n        if (error) throw error", a: "        guardarPreferencia(claveBorradorCierre(turnoId), null)\n        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre, estado.planilla))\n        if (error) throw error" },
-    { nombre: 'el borrador no se borra al cerrar', de: '        // Recién ahora se borra el borrador: la base ya tiene todo.\n        guardarPreferencia(claveBorradorCierre(turnoId), null)\n', a: '' },
+    { nombre: 'el borrador se borra aunque falle', de: "        // A la cola, con la hora que se eligió adentro de los parámetros.\n        const r = await mandarCarga({", a: "        guardarPreferencia(claveBorradorCierre(turnoId), null)\n        const r = await mandarCarga({" },
+    { nombre: 'el borrador no se borra al cerrar', de: '        // Recién ahora se borra el borrador: la base (o la cola) ya tiene todo.\n        guardarPreferencia(claveBorradorCierre(turnoId), null)\n', a: '' },
     { nombre: 'un JSON roto rompe', de: '      } catch { return null }\n    }\n\n    function guardarBorradorCierre', a: '      } finally {}\n    }\n\n    function guardarBorradorCierre' },
     { nombre: 'un scrap que no es número se acepta', de: "          scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,", a: '          scrap: b.scrap ?? null,' },
     { nombre: 'un cambio no limpia el error de la base', de: "      b.errorBase = ''\n      guardarBorradorCierre", a: '      guardarBorradorCierre' },
@@ -259,7 +263,6 @@ correrMutacionesProduccion({
     { nombre: "7 scrap alto desde 1,5 veces", de: "      return Number(scrap) >= 2 * prom", a: "      return Number(scrap) >= 1.5 * prom" },
     { nombre: "7 el scrap alto no se avisa", de: "      if (scrapAlto(b?.scrap, base?.scrapRef)) avisos.push", a: "      if (false) avisos.push" },
     { nombre: "7 el resumen sin el promedio", de: "`promedio ${formatearNumeroAr(prom, { decimales: 1, minimos: 0 })} kg`", a: "'sin promedio'" },
-    { nombre: "7 el scrap sin cargar se muestra como 0", de: "num: b?.scrap == null ? '—' :", a: "num: b?.scrap == null ? 0 :" },
     { nombre: 'abrir agregar sin catálogo', de: '      if (!estado.catalogo || !estado.planilla) return\n      estado.agregar = {', a: '      if (!estado.planilla) return\n      estado.agregar = {' },
   ],
 })

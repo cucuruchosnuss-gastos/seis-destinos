@@ -5,8 +5,10 @@
 //  1. "Empezó a producir 06:40" y verlo en la planilla;
 //  2. una parada de 15:00 a 16:00 con motivo;
 //  3. una parada que sigue y termina con "Volvió a las…";
-//  4. terminar a las 13:10 en un turno de 06 a 15 pide el motivo y lo manda;
-//  5. terminar a las 14:50 no pide nada.
+//  4. el cierre simple (07/10/2026): "¿Paró antes de lo normal?" Sí y el motivo
+//     de la lista desplegable, que viaja; todo entra en la pantalla;
+//  5. con "No" (de entrada) no pide nada ni manda motivo;
+//  6. "Borrar" una parada pide confirmación y manda borrar_parada.
 // Las horas se escriben con la ventana de la hora (el teclado de la planta).
 // Qué se mandó a la base se lee del console.log de la maqueta ("[maqueta] rpc
 // nombre parámetros"). La maqueta es fija: lo que la planilla vuelve a leer
@@ -108,7 +110,7 @@ for (const [ancho, alto] of TAMANOS) {
     await entrarALaPlanilla(page, ancho, alto);
     await page.locator('#pr-planilla-paradas-resumen').click();
     await expect(page.locator('#pr-paradas')).toBeVisible();
-    await page.locator('#pr-parada-sugerencias [data-motivo]', { hasText: 'Limpieza de planchas' }).click();
+    await page.locator('#pr-parada-motivo-lista').selectOption({ label: 'Limpieza de planchas' });
     await page.locator('#pr-parada-hora [data-parada-hora="inicio"]').click();
     await escribirHora(page, '1500');
     await page.locator('#pr-parada-hora [data-parada-hora="fin"]').click();
@@ -132,7 +134,7 @@ for (const [ancho, alto] of TAMANOS) {
     const problemas = [];
     await entrarALaPlanilla(page, ancho, alto);
     await page.locator('#pr-barra [data-seccion="paradas"]').click();
-    await page.locator('#pr-parada-sugerencias [data-motivo]', { hasText: 'Corte de cadena' }).click();
+    await page.locator('#pr-parada-motivo-lista').selectOption({ label: 'Corte de cadena' });
     await page.locator('#pr-parada-hora [data-parada-hora="inicio"]').click();
     await escribirHora(page, '1530');
     await page.locator('#pr-parada-hora [data-parada-sigue]').click();
@@ -155,7 +157,7 @@ for (const [ancho, alto] of TAMANOS) {
     expect(problemas, `\n${problemas.join('\n')}`).toEqual([]);
   });
 
-  test(`4 · terminar a las 13:10 (turno de 06 a 15) pide el motivo y lo manda, a ${ancho}×${alto}`, async ({ page }, info) => {
+  test(`4 · el cierre simple: Sí y "Se retiró personal" de la lista, y lo manda, a ${ancho}×${alto}`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     const problemas = [];
@@ -167,14 +169,23 @@ for (const [ancho, alto] of TAMANOS) {
     await page.locator('#pr-cierre-hora').click();
     await expect(page.locator('#pr-hora-ventana-titulo')).toHaveText('¿A qué hora terminó de producir?');
     await escribirHora(page, '1310');
+    // Ya no se pregunta solo: "¿Paró antes de lo normal?" arranca en No.
+    await expect(page.locator('#pr-cierre-campo-motivo')).toBeHidden();
+    await expect(page.locator('#pr-cierre-campo-paro [data-cierre-paro="no"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#pr-cierre-campo-paro [data-cierre-paro="si"]').click();
     await expect(page.locator('#pr-cierre-campo-motivo')).toBeVisible();
-    await expect(page.locator('#pr-cierre-motivo-nota')).toContainText('el turno es hasta las 15:00');
+    await expect(page.locator('#pr-cierre-motivo-lista optgroup')).toHaveCount(4);
     await page.locator('#pr-cierre-scrap').fill('0');
     await medir(page, `paradas-cierre-antes-${ancho}x${alto}`, info, problemas);
+    // A tamaño tablet, el cierre entero entra sin scrollear: el botón se ve.
+    if (ancho >= 1000) {
+      await expect(page.locator('#pr-cierre-enviar')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#pr-cierre-resumen')).toBeInViewport();
+    }
     await page.locator('#pr-cierre-enviar').click();
     await expect(page.locator('#pr-cierre-error')).toContainText('Falta por qué paró antes.');
     expect(pedidas(rpc, 'cerrar_turno')).toEqual([]);
-    await page.locator('#pr-cierre-motivos [data-cierre-motivo="mp-personal"]').click();
+    await page.locator('#pr-cierre-motivo-lista').selectOption({ label: 'Se retiró personal' });
     await page.locator('#pr-cierre-enviar').click();
     await expect.poll(() => pedidas(rpc, 'cerrar_turno')).toEqual([{
       p_turno_id: 't1', p_hora_apagado: '13:10', p_scrap_kg: 0, p_observaciones: null, p_productos: [],
@@ -184,21 +195,42 @@ for (const [ancho, alto] of TAMANOS) {
     expect(problemas, `\n${problemas.join('\n')}`).toEqual([]);
   });
 
-  test(`5 · terminar a las 14:50 no pide nada, a ${ancho}×${alto}`, async ({ page }) => {
+  test(`5 · con "No" (de entrada) no pide nada ni manda motivo, a ${ancho}×${alto}`, async ({ page }) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await entrarALaPlanilla(page, ancho, alto);
     await page.locator('#pr-barra [data-seccion="cierre"]').click();
     await page.locator('#pr-cierre-hora').click();
-    await escribirHora(page, '1450');
-    await expect(page.locator('#pr-cierre-hora')).toHaveText('14:50');
+    await escribirHora(page, '1050');
+    await expect(page.locator('#pr-cierre-hora')).toHaveText('10:50');
     await expect(page.locator('#pr-cierre-campo-motivo')).toBeHidden();
     await page.locator('#pr-cierre-scrap').fill('2');
     await page.locator('#pr-cierre-enviar').click();
     await expect.poll(() => pedidas(rpc, 'cerrar_turno')).toEqual([{
-      p_turno_id: 't1', p_hora_apagado: '14:50', p_scrap_kg: 2, p_observaciones: null, p_productos: [],
+      p_turno_id: 't1', p_hora_apagado: '10:50', p_scrap_kg: 2, p_observaciones: null, p_productos: [],
       p_hora_fin: null, p_motivo_cierre: null,
     }]);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
+  test(`6 · "Borrar" una parada pide confirmación y manda borrar_parada, a ${ancho}×${alto}`, async ({ page }) => {
+    const errores = vigilarErrores(page);
+    const rpc = anotarRpc(page);
+    await entrarALaPlanilla(page, ancho, alto);
+    await page.evaluate(() => globalThis.__maquetaTablas.paradas_produccion.push({ id: 'pa-borrar', turno_id: 't1', inicio: '2099-12-31T13:00:00Z', fin: '2099-12-31T13:20:00Z', motivo: 'Corte de luz', motivo_id: 'mp-luz', categoria: 'falla', detalle: null }));
+    // Desde el Inicio, entrar a Paradas vuelve a leer la planilla (abrirPlanilla), con la nueva.
+    await page.locator('#pr-barra [data-seccion="inicio"]').click();
+    await expect(page.locator('#pr-produccion')).toBeVisible();
+    await page.locator('#pr-barra [data-seccion="paradas"]').click();
+    await page.locator('#pr-btn-ver-paradas').click();
+    const borrar = page.locator('#pr-planilla-paradas [data-parada-borrar="pa-borrar"]');
+    await expect(borrar).toHaveText('Borrar');
+    await borrar.click();
+    await expect(page.locator('#pr-parada-editor')).toBeVisible();
+    await expect(page.locator('#pr-parada-editor-guardar')).toHaveText('Borrar la parada');
+    expect(pedidas(rpc, 'borrar_parada')).toEqual([]);
+    await page.locator('#pr-parada-editor-guardar').click();
+    await expect.poll(() => pedidas(rpc, 'borrar_parada')).toEqual([{ p_parada_id: 'pa-borrar', p_motivo: null }]);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 }

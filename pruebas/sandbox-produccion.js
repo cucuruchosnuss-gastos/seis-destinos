@@ -385,7 +385,9 @@ const NUEVAS_PLANTA = [
   'horaSugerida', 'horaCorta', 'abrirHoraVentana', 'cerrarHoraVentana', 'muestraHoraVentana', 'conAhoraVentana', 'htmlHoraVentana',
   'textosHoraVentana', 'pintarHoraVentana', 'teclaHoraVentana', 'ahoraHoraVentana', 'alternarLoteNuevoVentana', 'instanteDelTurno', 'instanteLargada',
   'vueltaDeParada', 'pedidoHoraVentana', 'confirmarHoraVentana', 'teclaVentanaHora',
-  'cierreAnticipado', 'textoMotivoCierre', 'ponerHoraCierre', 'pintarMotivoCierre', 'elegirMotivoCierre',
+  'textoMotivoCierre', 'ponerHoraCierre', 'pintarMotivoCierre', 'elegirMotivoCierre',
+  // El cierre simple y la planilla que llega tarde (07/10/2026).
+  'elegirParoAntes', 'planillaSigue',
   // Sin internet (06/10/2026): la cola y la copia (de js/sin-internet.js) y
   // lo propio de la planta. La cola corre de verdad, con el almacén en
   // memoria (no hay IndexedDB en el sandbox).
@@ -415,7 +417,7 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // El botón de volver (30/09/2026)
   'VISTAS_INICIO',
   // Paradas (30/09/2026)
-  'NOMBRE_CATEGORIA_PARADA', 'GRUPOS_MOTIVO', 'MINUTOS_CIERRE_ANTICIPADO', 'MINUTOS_CUBRE_PARADA',
+  'NOMBRE_CATEGORIA_PARADA', 'GRUPOS_MOTIVO',
   // La hora de largada con la regla de las 2 horas de la base (05/10/2026)
   'MARGEN_LARGADA_MS',
   'VISTAS_CON_PESTANAS',

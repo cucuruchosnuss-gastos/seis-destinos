@@ -222,7 +222,10 @@ esperas.push((async () => {
   chk('… sin tiradas no las nombra', !/tirada/.test(sinEtiquetas(X.htmlMasasResumen([M(1)]))))
   chk('una masa de chocolate TIRADA no cuenta como masa de chocolate (como la base)',
     X.hayMasaChocolate({ masas: [M(1, { es_chocolate: true, descartada: true })] }) === false && X.hayMasaChocolate({ masas: [M(1, { es_chocolate: true })] }) === true)
-  chk('el resumen del cierre no cuenta las tiradas', /const masas = \(p\?\.masas \?\? \[\]\)\.filter\(m => !esTirada\(m\)\)/.test(FUENTE))
+  // 07/10/2026: el cierre simple ya no cuenta masas (muestra lo producido, una
+  // línea por producto): no hay cuenta de masas en el cierre que pueda sumar
+  // las tiradas.
+  chk('el cierre no cuenta masas (ni las tiradas)', !/masas/.test(require('./extraer').extraerFn(FUENTE, 'htmlResumenCierre')))
 
   // ── "Anterior": si se tiró, lo dice ────────────────────────────────────
   const S7 = planta([M(2, { id: 'mA', descartada: true })])
