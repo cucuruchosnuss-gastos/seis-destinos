@@ -123,7 +123,7 @@ correrMutaciones({
     { nombre: 'anular sin motivo', de: "      if (motivo.length < LARGO_MINIMO_MOTIVO) { d.anular.error = 'Escribí por qué se anula la orden.'; pintarAccionesOrden(); return }\n", a: '' },
     { nombre: 'el motivo sin limpiar', de: "      const motivo = limpio(document.getElementById('ad-anular-motivo').value)", a: "      const motivo = document.getElementById('ad-anular-motivo').value" },
     // La hoja
-    { nombre: 'imprimir sin precios', de: "htmlHoja(ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })", a: "htmlHoja(ordenParaHoja(d), { conPrecios: false, copias: COPIAS_IMPRESION })" },
+    { nombre: 'imprimir sin precios', de: "ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })", a: "ordenParaHoja(d), { conPrecios: false, copias: COPIAS_IMPRESION })" },
     { nombre: 'sin valorizar la hoja inventa precios', de: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,", a: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: it.precio_caja ?? 0," },
     { nombre: 'la hoja sin quién cargó', de: "        cargadaPor: estado.nombres.get(o.cargada_por) ?? '',", a: "        cargadaPor: ''," },
   ],
