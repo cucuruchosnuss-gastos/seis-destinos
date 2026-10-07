@@ -74,7 +74,6 @@ correrMutacionesProduccion({
     { nombre: 'planilla: la cuenta suma las tiradas', de: '      const lista = todas.filter(m => !esTirada(m))\n', a: '      const lista = todas\n' },
     { nombre: 'planilla: no dice las tiradas aparte', de: "        (tiradas ? ` · ${tiradas === 1 ? '1 tirada' : `${tiradas} tiradas`}` : '')", a: "        ''" },
     { nombre: 'una de chocolate tirada cuenta como chocolate', de: '.some(m => m.es_chocolate && !esTirada(m))', a: '.some(m => m.es_chocolate)' },
-    { nombre: 'el cierre cuenta las tiradas', de: 'const masas = (p?.masas ?? []).filter(m => !esTirada(m))', a: 'const masas = p?.masas ?? []' },
     // Anterior
     { nombre: 'Anterior: no dice que se tiró', de: "${anteriorFueTirada(a) ? ' <span class=\"pr-como__choco pr-como__tirada\">· tirada</span>' : ''}", a: '' },
     { nombre: 'Anterior: el title no dice que se tiró', de: '      return partes.join(\' · \') + choco + tirada\n', a: '      return partes.join(\' · \') + choco\n' },

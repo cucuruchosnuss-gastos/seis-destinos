@@ -242,12 +242,16 @@ esperas.push((async () => {
     await S.asegurarMotivosParada()
     S.pintarParadas()
     const h = html(S, 'pr-parada-sugerencias')
-    const grupos = [...h.matchAll(/pr-pa-grupo__titulo">([^<]+)</g)].map(m => m[1])
-    chk('cuatro grupos, en este orden: Limpiezas, Fallas, Organización, Otro', JSON.stringify(grupos) === '["Limpiezas","Fallas","Organización","Otro"]', grupos.join(','))
-    const ids = [...h.matchAll(/data-motivo="([^"]+)"/g)].map(m => m[1])
+    // 07/10/2026: una LISTA DESPLEGABLE (<select>) agrupada, en lugar de la
+    // grilla de botones, en el orden Fallas, Organización, Limpiezas y Otro.
+    chk('Paró: el motivo es una lista desplegable', /^<select id="pr-parada-motivo-lista" class="pr-select-motivo"/.test(h) && !/<button[^>]*data-motivo=/.test(h), h.slice(0, 120))
+    const grupos = [...h.matchAll(/<optgroup label="([^"]+)">/g)].map(m => m[1])
+    chk('cuatro grupos, en este orden: Fallas, Organización, Limpiezas, Otro', JSON.stringify(grupos) === '["Fallas","Organización","Limpiezas","Otro"]', grupos.join(','))
+    const ids = [...h.matchAll(/<option value="([^"]+)"/g)].map(m => m[1])
     chk('adentro de cada grupo, en el orden de la base', JSON.stringify(ids) ===
-      '["mo-limp","mo-tachos","mo-cadena","mo-luz","mo-personal","mo-pedido","mo-otro"]', ids.join(','))
-    chk('ninguno elegido de antemano', !/aria-pressed="true"/.test(h))
+      '["mo-cadena","mo-luz","mo-personal","mo-pedido","mo-limp","mo-tachos","mo-otro"]', ids.join(','))
+    chk('ninguno elegido de antemano: arranca en "Elegí el motivo…"', /<option value="" selected>Elegí el motivo…<\/option>/.test(h) && !/<option value="[^"]+" selected>/.test(h))
+    chk('elegir en la lista elige el motivo (el evento change)', /addEventListener\('change', ev => \{\s*if \(ev\.target\.id === 'pr-parada-motivo-lista'\) elegirMotivoParada\(ev\.target\.value \|\| null\)/.test(FUENTE))
     chk('una categoría desconocida va a Otro', JSON.stringify(S.motivosAgrupados([{ id: 'x', nombre: 'X', categoria: 'rara' }]).map(g => g.clave)) === '["otro"]')
     chk('los motivos se leen de la base, activos y por orden',
       /from\('motivos_parada'\)\s*\n?\s*\.select\('id, nombre, categoria, pide_detalle, orden'\)\.eq\('activo', true\)\.order\('orden'\)/.test(FUENTE))
@@ -256,6 +260,9 @@ esperas.push((async () => {
     chk('"Otro motivo" abre el detalle, obligatorio', el(S, 'pr-parada-otro').hidden === false && el(S, 'pr-parada-motivo').placeholder === '¿Qué pasó? (obligatorio)')
     S.elegirMotivoParada('mo-personal')
     chk('una organizativa: detalle opcional', el(S, 'pr-parada-motivo').placeholder === 'Detalle (opcional)')
+    chk('… y la lista queda en ese motivo', /<option value="mo-personal" selected>/.test(html(S, 'pr-parada-sugerencias')))
+    S.elegirMotivoParada(null)
+    chk('volver a "Elegí el motivo…" deja la parada sin motivo', S.estado.paradaNueva.motivoId === null && el(S, 'pr-parada-otro').hidden === true)
   }
 
   // ═══ CASO 2 · Una parada de 15:00 a 16:00 con motivo ═══════════════════
@@ -424,7 +431,9 @@ esperas.push((async () => {
     chk('en una pendiente de completar no se ofrece "Volvió con lote nuevo"', !/data-parada-lote-nuevo/.test(html(P, 'pr-parada-hora')))
   }
 
-  // ═══ CASO 4 · Terminar a las 13:10 en un turno de 06 a 15: pide motivo ═══
+  // ═══ CASO 4 · EL CIERRE SIMPLE (07/10/2026): "¿Paró antes de lo normal?" ═══
+  // No (de entrada) o Sí. Ya no se pregunta solo según la hora: con No no
+  // viaja ningún motivo y la base no crea parada; con Sí, el motivo de la lista.
   {
     const S = armar()
     await S.abrirPlanilla('t1')
@@ -432,26 +441,37 @@ esperas.push((async () => {
       html(S, 'pr-btn-termino'))
     await S.mostrarCierre()
     chk('"¿A qué hora terminó de producir?" arranca sin hora', S.estado.cierre.hora === '' && el(S, 'pr-cierre-hora').textContent === 'Tocá para poner la hora')
+    chk('el rótulo dice "(se apagó el fuego)"', /¿A QUÉ HORA TERMINÓ DE PRODUCIR\? \(SE APAGÓ EL FUEGO\)/.test(FUENTE))
     S.abrirHoraVentana('termino', AHORA)
     chk('la ventana: "¿A qué hora terminó de producir?", sin ± 5', el(S, 'pr-hora-ventana-titulo').textContent === '¿A qué hora terminó de producir?' && !/data-hv-paso/.test(html(S, 'pr-hora-ventana-hora')))
     for (const d of '1310') S.teclaHoraVentana(d)
     await S.confirmarHoraVentana(AHORA)
     chk('13:10 en el cierre', S.estado.cierre.hora === '13:10' && el(S, 'pr-cierre-hora').textContent === '13:10')
-    chk('… pregunta "¿Por qué paró antes?"', el(S, 'pr-cierre-campo-motivo').hidden === false &&
-      /Terminó a las 13:10 y el turno es hasta las 15:00: 1 h 50 antes/.test(el(S, 'pr-cierre-motivo-nota').textContent), el(S, 'pr-cierre-motivo-nota').textContent)
-    chk('… con la misma lista de motivos, agrupada', /data-cierre-motivo="mo-personal"/.test(html(S, 'pr-cierre-motivos')) && /pr-pa-grupo__titulo">Organización</.test(html(S, 'pr-cierre-motivos')),
+    chk('"¿Paró antes de lo normal?" arranca en NO', S.estado.cierre.paroAntes === false &&
+      /data-cierre-paro="no" aria-pressed="true"/.test(FUENTE) && /data-cierre-paro="si" aria-pressed="false"/.test(FUENTE))
+    chk('… y aunque terminó casi 2 h antes, NO pregunta el motivo solo', el(S, 'pr-cierre-campo-motivo').hidden === true)
+    S.elegirParoAntes(true)
+    chk('con SÍ aparece "¿Por qué paró antes?"', el(S, 'pr-cierre-campo-motivo').hidden === false && S.estado.cierre.paroAntes === true)
+    chk('… con la lista desplegable agrupada', /^<select id="pr-cierre-motivo-lista" class="pr-select-motivo"/.test(html(S, 'pr-cierre-motivos')) &&
+      /<optgroup label="Organización"><option value="mo-personal">Se retiró personal<\/option>/.test(html(S, 'pr-cierre-motivos')),
       html(S, 'pr-cierre-motivos').slice(0, 300))
+    chk('… sin el detalle (solo "Otro" lo pide)', el(S, 'pr-cierre-motivo-detalle').hidden === true)
+    chk('tocar Sí / No elige la respuesta (el clic de data-cierre-paro)',
+      /closest\('\[data-cierre-paro\]'\); if \(b\) elegirParoAntes\(b\.dataset\.cierreParo === 'si'\)/.test(FUENTE))
+    chk('elegir en la lista del cierre elige el motivo (el evento change)',
+      /addEventListener\('change', ev => \{\s*if \(ev\.target\.id === 'pr-cierre-motivo-lista'\) elegirMotivoCierre\(ev\.target\.value \|\| null\)/.test(FUENTE))
     S.ponerNumero(el(S, 'pr-cierre-scrap'), 0)
     S.cambioEnCierre()
     S.intentarCerrar()
     await tic()
-    chk('sin motivo no se manda, y se dice', rpcs(S, 'cerrar_turno').length === 0 && /Falta por qué paró antes\./.test(el(S, 'pr-cierre-error').textContent) &&
+    chk('con SÍ y sin motivo no se manda, y se dice', rpcs(S, 'cerrar_turno').length === 0 && /Falta por qué paró antes\./.test(el(S, 'pr-cierre-error').textContent) &&
       /pr-campo--mal/.test(el(S, 'pr-cierre-campo-motivo').className))
     S.elegirMotivoCierre('mo-personal')
-    chk('el motivo elegido se marca', /data-cierre-motivo="mo-personal" aria-pressed="true"/.test(html(S, 'pr-cierre-motivos')))
+    chk('el motivo elegido queda en la lista', S.estado.cierre.motivoId === 'mo-personal' && /<option value="mo-personal" selected>/.test(html(S, 'pr-cierre-motivos')))
+    chk('… y "Se retiró personal" no pide detalle', el(S, 'pr-cierre-motivo-detalle').hidden === true)
     S.intentarCerrar()
     await tic()
-    chk('cerrar_turno con TODOS los parámetros y el motivo de cierre anticipado',
+    chk('cerrar_turno con TODOS los parámetros y "Se retiró personal"',
       JSON.stringify(rpcs(S, 'cerrar_turno')[0]?.[1]) ===
       '{"p_turno_id":"t1","p_hora_apagado":"13:10","p_scrap_kg":0,"p_observaciones":null,"p_productos":[],"p_hora_fin":null,"p_motivo_cierre":"Se retiró personal"}',
       JSON.stringify(rpcs(S, 'cerrar_turno')[0]?.[1]))
@@ -462,6 +482,7 @@ esperas.push((async () => {
     O.ponerHoraCierre('13:10')
     O.ponerNumero(el(O, 'pr-cierre-scrap'), 0)
     O.cambioEnCierre()
+    O.elegirParoAntes(true)
     O.elegirMotivoCierre('mo-otro')
     chk('"Otro motivo": el detalle aparece, obligatorio', el(O, 'pr-cierre-motivo-detalle').hidden === false && el(O, 'pr-cierre-motivo-detalle').placeholder === '¿Qué pasó? (obligatorio)')
     O.intentarCerrar()
@@ -469,57 +490,58 @@ esperas.push((async () => {
     chk('… sin detalle no se manda', rpcs(O, 'cerrar_turno').length === 0 && /Contá por qué paró antes/.test(el(O, 'pr-cierre-error').textContent))
     el(O, 'pr-cierre-motivo-detalle').value = 'Se terminó la harina'
     O.cambioEnCierre()
-    chk('el borrador del cierre guarda el motivo elegido y su detalle', (() => {
+    chk('el borrador del cierre guarda la respuesta, el motivo y su detalle', (() => {
       const b = JSON.parse(O.localStorage.getItem('produccion.cierre.t1') || '{}')
-      return b.motivoId === 'mo-otro' && b.motivoDetalle === 'Se terminó la harina' && b.hora === '13:10'
+      return b.paroAntes === true && b.motivoId === 'mo-otro' && b.motivoDetalle === 'Se terminó la harina' && b.hora === '13:10'
     })())
     O.intentarCerrar()
     await tic()
     chk('… con detalle: "Otro motivo: Se terminó la harina"', rpcs(O, 'cerrar_turno')[0]?.[1]?.p_motivo_cierre === 'Otro motivo: Se terminó la harina')
   }
 
-  // ═══ CASO 5 · Terminar a las 14:50: no pide nada ════════════════════════
+  // ═══ CASO 5 · Cerrar a las 23:12 (el pedido del 07/10/2026) ═════════════
   {
-    const S = armar()
-    await S.abrirPlanilla('t1')
-    await S.mostrarCierre()
-    await escribirHora(S, 'termino', ['1', '4', '5', '0'])
-    chk('14:50 (10 minutos antes del fin): no pregunta', el(S, 'pr-cierre-campo-motivo').hidden === true)
-    S.ponerNumero(el(S, 'pr-cierre-scrap'), 1.5)
-    S.cambioEnCierre()
-    const p = S.estado.planilla
-    S.intentarCerrar()
-    await tic()
-    chk('… y cerrar_turno va con p_motivo_cierre null y p_hora_fin null', JSON.stringify(rpcs(S, 'cerrar_turno')[0]?.[1]) ===
-      '{"p_turno_id":"t1","p_hora_apagado":"14:50","p_scrap_kg":1.5,"p_observaciones":null,"p_productos":[],"p_hora_fin":null,"p_motivo_cierre":null}',
-      JSON.stringify(rpcs(S, 'cerrar_turno')[0]?.[1]))
-    // El borde: 20 minutos justos no pregunta; 21 sí.
-    chk('14:40 (20 minutos justos) no pregunta; 14:39 sí', S.cierreAnticipado('14:40', p) === null && S.cierreAnticipado('14:39', p)?.minutos === 21)
-    chk('un motivo elegido no viaja si ya no terminó antes', S.textoMotivoCierre({ hora: '14:50', motivoId: 'mo-personal', motivoDetalle: '' }, p) === null)
-    // Una parada que cubre el hueco: la base no crea otra, la pantalla no pregunta.
-    chk('con una parada que sigue (llega al fin del turno), no pregunta',
-      S.cierreAnticipado('13:10', { ...p, paradas: [{ inicio: '2026-10-05T13:05:00-03:00', fin: null }] }) === null)
-    chk('con una parada que cubre el hueco, tampoco',
-      S.cierreAnticipado('13:10', { ...p, paradas: [{ inicio: '2026-10-05T13:15:00-03:00', fin: '2026-10-05T14:55:00-03:00' }] }) === null)
-    chk('una que empieza más de 10 minutos después no lo cubre',
-      S.cierreAnticipado('13:10', { ...p, paradas: [{ inicio: '2026-10-05T13:25:00-03:00', fin: '2026-10-05T15:00:00-03:00' }] })?.minutos === 110)
-    chk('una que no llega a 10 minutos del fin tampoco',
-      S.cierreAnticipado('13:10', { ...p, paradas: [{ inicio: '2026-10-05T13:10:00-03:00', fin: '2026-10-05T14:45:00-03:00' }] })?.minutos === 110)
-    // Sin horario conocido no se pregunta nunca (no se inventa un fin).
-    const N = armar({ horarios: [] })
+    // Un turno Tarde de 15 a 23.
+    const tarde = { turno: { ...TURNO, turno: 'Tarde', hora_inicio: '15:00:00' }, horarios: [{ turno: 'Tarde', hora_inicio: '15:00:00', hora_fin: '23:00:00', activo: true }] }
+    const N = armar(tarde)
     await N.abrirPlanilla('t1')
-    chk('sin horario del turno: nunca pregunta', N.cierreAnticipado('09:00', N.estado.planilla) === null)
-    chk('… y "Terminó de producir" no inventa un fin', !/El turno es hasta/.test(html(N, 'pr-btn-termino')))
-    // La hora de fin de la planilla le gana al horario.
-    const H = armar({ turno: { ...TURNO, hora_fin: '14:00:00' } })
+    await N.mostrarCierre()
+    N.ponerHoraCierre('23:12')
+    N.ponerNumero(el(N, 'pr-cierre-scrap'), 2)
+    N.cambioEnCierre()
+    chk('23:12 con NO: no pregunta nada', el(N, 'pr-cierre-campo-motivo').hidden === true)
+    N.intentarCerrar()
+    await tic()
+    chk('… y cerrar_turno va SIN motivo de cierre (la base no crea parada)', JSON.stringify(rpcs(N, 'cerrar_turno')[0]?.[1]) ===
+      '{"p_turno_id":"t1","p_hora_apagado":"23:12","p_scrap_kg":2,"p_observaciones":null,"p_productos":[],"p_hora_fin":null,"p_motivo_cierre":null}',
+      JSON.stringify(rpcs(N, 'cerrar_turno')[0]?.[1]))
+    const Y = armar(tarde)
+    await Y.abrirPlanilla('t1')
+    await Y.mostrarCierre()
+    Y.ponerHoraCierre('23:12')
+    Y.ponerNumero(el(Y, 'pr-cierre-scrap'), 2)
+    Y.cambioEnCierre()
+    Y.elegirParoAntes(true)
+    Y.elegirMotivoCierre('mo-personal')
+    Y.intentarCerrar()
+    await tic()
+    chk('23:12 con SÍ y "Se retiró personal": lo manda', rpcs(Y, 'cerrar_turno')[0]?.[1]?.p_motivo_cierre === 'Se retiró personal' &&
+      rpcs(Y, 'cerrar_turno')[0]?.[1]?.p_hora_apagado === '23:12', JSON.stringify(rpcs(Y, 'cerrar_turno')[0]?.[1]))
+    // Volver a NO suelta el motivo: con NO nunca viaja.
+    const V = armar(tarde)
+    await V.abrirPlanilla('t1')
+    await V.mostrarCierre()
+    V.elegirParoAntes(true)
+    V.elegirMotivoCierre('mo-personal')
+    V.elegirParoAntes(false)
+    chk('volver a NO esconde la lista y suelta el motivo', el(V, 'pr-cierre-campo-motivo').hidden === true && V.estado.cierre.motivoId === null)
+    chk('con NO, un motivo que quedó elegido no viaja', V.textoMotivoCierre({ hora: '13:10', paroAntes: false, motivoId: 'mo-personal', motivoDetalle: '' }, V.estado.planilla) === null)
+    chk('con SÍ, un motivo que no pide detalle va sin el detalle', V.textoMotivoCierre({ hora: '13:10', paroAntes: true, motivoId: 'mo-personal', motivoDetalle: 'algo' }, V.estado.planilla) === 'Se retiró personal')
+    // Sin horario conocido no se inventa un fin.
+    const H = armar({ horarios: [] })
     await H.abrirPlanilla('t1')
-    chk('la hora de fin de la planilla le gana al horario', H.cierreAnticipado('13:45', H.estado.planilla) === null && H.cierreAnticipado('13:39', H.estado.planilla)?.fin === '14:00')
-    // Un turno de noche: el fin es al otro día.
-    const T = armar({ turno: { ...TURNO, turno: 'Noche', hora_inicio: '22:00:00' }, horarios: [{ turno: 'Noche', hora_inicio: '22:00:00', hora_fin: '06:00:00', activo: true }] })
-    await T.abrirPlanilla('t1')
-    chk('turno de noche: terminar 05:50 no pregunta; 04:00 sí (2 h antes)', T.cierreAnticipado('05:50', T.estado.planilla) === null &&
-      T.cierreAnticipado('04:00', T.estado.planilla)?.minutos === 120)
-    chk('… y terminar 23:00 (antes de la medianoche) son 7 h antes del fin de mañana', T.cierreAnticipado('23:00', T.estado.planilla)?.minutos === 420)
+    chk('sin horario del turno, "Terminó de producir" no inventa un fin', !/El turno es hasta/.test(html(H, 'pr-btn-termino')))
+    chk('la pregunta automática de los 20 minutos se fue', !/MINUTOS_CIERRE_ANTICIPADO|function cierreAnticipado/.test(FUENTE))
   }
 
   // ═══ El botón de volver y lo que queda a medio cargar ═══════════════════
@@ -553,8 +575,10 @@ esperas.push((async () => {
     // En el cierre, sin motivos se escribe por qué paró antes.
     await S.mostrarCierre()
     S.ponerHoraCierre('13:10')
+    S.elegirParoAntes(true)
     chk('en el cierre, sin motivos: el campo para escribir', el(S, 'pr-cierre-motivo-detalle').hidden === false && /No se pudieron leer los motivos/.test(html(S, 'pr-cierre-motivos')))
-    chk('… y viaja lo escrito', S.textoMotivoCierre({ hora: '13:10', motivoId: null, motivoDetalle: ' Se fue la luz ' }, S.estado.planilla, null) === 'Se fue la luz')
+    chk('… y viaja lo escrito', S.textoMotivoCierre({ hora: '13:10', paroAntes: true, motivoId: null, motivoDetalle: ' Se fue la luz ' }, S.estado.planilla, null) === 'Se fue la luz')
+    chk('… salvo con NO', S.textoMotivoCierre({ hora: '13:10', paroAntes: false, motivoId: null, motivoDetalle: 'Se fue la luz' }, S.estado.planilla, null) === null)
   }
 
   // ═══ La planilla que dejó "Volvió con lote nuevo" ══════════════════════
@@ -574,8 +598,9 @@ esperas.push((async () => {
   {
     const X = armar()
     chequearMarcas(chk, 'htmlMotivosAgrupados', X.htmlMotivosAgrupados([{ id: '"x', nombre: marca('nombre'), categoria: 'falla' }], null), ['nombre'])
-    chk('… el id del motivo va escapado', /data-motivo="&quot;x"/.test(X.htmlMotivosAgrupados([{ id: '"x', nombre: 'n', categoria: 'falla' }], null)))
-    chk('… también en el cierre', /data-cierre-motivo="&quot;x"/.test(X.htmlMotivosAgrupados([{ id: '"x', nombre: 'n', categoria: 'falla' }], null, true)))
+    chk('… el id del motivo va escapado', /<option value="&quot;x">/.test(X.htmlMotivosAgrupados([{ id: '"x', nombre: 'n', categoria: 'falla' }], null)))
+    chk('… también en el cierre', /id="pr-cierre-motivo-lista"/.test(X.htmlMotivosAgrupados([{ id: '"x', nombre: 'n', categoria: 'falla' }], null, true)) &&
+      /<option value="&quot;x">/.test(X.htmlMotivosAgrupados([{ id: '"x', nombre: 'n', categoria: 'falla' }], null, true)))
     chequearMarcas(chk, 'htmlMotivosAgrupados (cierre)', X.htmlMotivosAgrupados([{ id: 'y', nombre: marca('nombreCierre'), categoria: 'organizativa' }], null, true), ['nombreCierre'])
     chequearMarcas(chk, 'htmlAccionParo', X.htmlAccionParo([{ motivo: marca('motivo'), inicio: '2026-10-05T15:00:00-03:00', fin: null }]), ['motivo'])
     chequearMarcas(chk, 'htmlParadasTurno', X.htmlParadasTurno([{ id: marca('id'), motivo: marca('motivo2'), inicio: '2026-10-05T15:00:00-03:00', fin: '2026-10-05T16:00:00-03:00', categoria: '"><b>' }]), ['id', 'motivo2'])

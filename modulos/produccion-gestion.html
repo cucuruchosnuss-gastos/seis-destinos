@@ -3121,16 +3121,14 @@
     // Las paradas: la EN CURSO primero y en bordó, porque es la única que
     // sigue pasando; las terminadas con su rango y su duración.
     //
-    // Con `acciones` ({ editar, borrar }), cada renglón lleva UN botón
-    // (terminar la tablet, parte 4): "Corregir" si se puede corregir —y ahí
-    // adentro está "Borrar esta parada" si también se puede borrar—, o
-    // "Borrar" si solo se puede borrar (configurar sin cargar, en el
-    // historial). Qué se ofrece lo decide quien llama, según dónde está y qué
-    // permisos hay.
+    // Con `acciones` ({ editar, borrar }): "Corregir" si se puede corregir y
+    // "Borrar" si se puede borrar, los dos a la vista (07/10/2026: antes
+    // Borrar quedaba adentro de Corregir). Borrar abre la confirmación; con la
+    // planilla cerrada pide el motivo (borrar_parada lo exige). Qué se ofrece
+    // lo decide quien llama, según dónde está y qué permisos hay.
     function htmlAccionesParada(p, acciones) {
-      if (acciones?.editar) return `<button type="button" class="pr-btn pr-btn--secundario pr-renglon__accion" data-parada-editar="${esc(p.id)}">Corregir</button>`
-      if (acciones?.borrar) return `<button type="button" class="pr-btn pr-btn--secundario pr-renglon__accion" data-parada-borrar="${esc(p.id)}">Borrar</button>`
-      return ''
+      return (acciones?.editar ? `<button type="button" class="pr-btn pr-btn--secundario pr-renglon__accion" data-parada-editar="${esc(p.id)}">Corregir</button>` : '') +
+        (acciones?.borrar ? `<button type="button" class="pr-btn pr-btn--secundario pr-renglon__accion" data-parada-borrar="${esc(p.id)}">Borrar</button>` : '')
     }
 
     // `finTurno` (01/10/2026): la hora de fin del turno abierto. Sin ella, no

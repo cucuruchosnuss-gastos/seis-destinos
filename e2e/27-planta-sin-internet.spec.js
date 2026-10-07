@@ -21,9 +21,13 @@ function hoyAr(d = new Date()) {
 }
 
 function datos(ejecuciones) {
+  // El turno se abrió HOY: hace 3 horas, pero nunca antes de la medianoche
+  // (07/10/2026: corrida de madrugada, quedaba abierto a las 23:00 de ayer con
+  // fecha de hoy, y "Empezó a producir" ahora era una hora "futura").
   const hoy = hoyAr();
+  const abierto = new Date(Math.max(Date.now() - 3 * 3600 * 1000, new Date(`${hoy}T00:01:00-03:00`).getTime()));
   const turno = { id: 't-1', lote: 7023, maquina_id: 'm-1', unidad_negocio_id: 'u-1', fecha: hoy, turno: 'Mañana', encargado_id: 'p-1',
-    abierto_en: new Date(Date.now() - 3 * 3600 * 1000).toISOString(), estado: 'abierto', forzado_por: null, forzado_en: null, forzado_motivo: null,
+    abierto_en: abierto.toISOString(), estado: 'abierto', forzado_por: null, forzado_en: null, forzado_motivo: null,
     hora_inicio: null, hora_fin: null, hora_largada: null };
   const claves = new Map();
   return {
@@ -121,7 +125,7 @@ for (const tam of [{ ancho: 1000, alto: 540 }, { ancho: 390, alto: 844 }]) {
     await expect(page.locator('#pr-planilla-producido')).toContainText('pendiente de enviar');
     // Una parada (que sigue).
     await page.locator('#pr-planilla-paradas-resumen').click();
-    await page.locator('[data-motivo="mo-luz"]').click();
+    await page.locator('#pr-parada-motivo-lista').selectOption('mo-luz');
     await page.locator('[data-parada-hora]').first().click();
     await page.locator('#pr-hora-ventana-guardar').click();
     await page.locator('[data-parada-sigue]').click();

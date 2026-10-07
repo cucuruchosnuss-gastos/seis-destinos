@@ -115,6 +115,9 @@ const RENOMBRADOS = [
 // la gracia de este chequeo. Un control que se fue sin explicación es
 // indistinguible de uno que se perdió al mover código.
 const RETIRADOS = [
+  ['control:button[data-motivo][type=button]',
+    'El cierre simple (07/10/2026, pedido de Facu): en Paró el motivo pasó de la grilla de botones a una LISTA DESPLEGABLE ' +
+    'agrupada (#pr-parada-motivo-lista, con <optgroup> Fallas, Organización, Limpiezas y Otro). Los motivos siguen siendo los mismos.'],
   ['control:a#pr-volver-dashboard[href=../dashboard.html]',
     'Rediseño parte 1: la tablet está en modo kiosco y el diseño no tiene "Volver" (README, barra de modos). ' +
     'El dashboard se sigue alcanzando desde el menú de la cabecera, que queda para la oficina.'],
