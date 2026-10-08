@@ -138,7 +138,7 @@ const FUNCIONES_BASE = [
   'abrirPanelTemporal', 'cerrarPanelTemporal', 'parametrosDarTemporal', 'confirmarTemporal', 'revocarTemporal',
   // B7 + rediseño parte 7: historial de turnos y stock terminado
   'unidadesDeHistorial', 'sumarDias', 'fechaDelDia', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
-  'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
+  'pintarEstadosHistorial', 'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
   'sumarMedido', 'textoEntero', 'leerDetalleTurno', 'totalesConsumidos', 'detalleIncompleto',
   'nombreInsumo', 'nombreIngredienteItem', 'htmlOperariosHistorial', 'htmlMasaHistorial',
   'correccionesDe', 'htmlCorreccion', 'htmlSubloteHistorial', 'totalSublotes',
@@ -188,7 +188,7 @@ const SOLO_GESTION = [
   'olvidarCampoPin', 'cerrarPanelPin', 'confirmarPinConfig', 'htmlTiraPin', 'mostrarHojaPines', 'cerrarHojaPines',
   'generarPines', 'abrirPanelTemporal', 'cerrarPanelTemporal', 'parametrosDarTemporal', 'confirmarTemporal',
   'revocarTemporal', 'unidadesDeHistorial', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
-  'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
+  'pintarEstadosHistorial', 'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
   'sumarMedido', 'textoEntero', 'leerDetalleTurno', 'totalesConsumidos', 'detalleIncompleto', 'nombreInsumo',
   'nombreIngredienteItem', 'htmlOperariosHistorial', 'htmlMasaHistorial', 'correccionesDe', 'htmlCorreccion',
   'htmlSubloteHistorial', 'totalSublotes', 'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado',

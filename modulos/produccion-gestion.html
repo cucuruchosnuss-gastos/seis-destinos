@@ -1551,6 +1551,8 @@
     .pg-seg__op[aria-pressed="true"] { background: var(--naranja); color: #fff; }
     .pg-seg__op:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; }
     .pg-unidad__seg { display: none; }
+    .pr-historial-estados { margin: 0 0 1rem; }
+    .pr-historial-estados .pg-seg__op { min-height: 44px; }
     @media (min-width: 900px) {
       .pg-unidad__seg { display: inline-flex; }
       .pg-unidad__select { display: none !important; }
@@ -2425,7 +2427,7 @@
       <div class="pg-menu__bloque" id="pr-menu-bloque-control">
         <p class="pg-menu__grupo">Control</p>
         <button type="button" class="pg-menu__item" data-ir-pendientes id="pr-btn-ir-pendientes" hidden><span class="pg-menu__txt">Planillas pendientes</span><span class="pg-menu__n pg-menu__n--grave" id="pr-menu-n-pendientes" hidden></span></button>
-        <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Historial</span></button>
+        <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Planillas</span></button>
         <button type="button" class="pg-menu__item" data-menu="stock" id="pr-menu-stock" hidden><span class="pg-menu__txt">Stock terminado</span></button>
       </div>
       <div class="pg-menu__bloque" id="pr-menu-bloque-catalogo">
@@ -2580,21 +2582,21 @@
           <div class="pr-tarjeta">
             <div class="pr-fila-titulo">
               <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-historial-volver">‹ Menú</button>
-              <h1 class="pr-titulo">Historial de producción</h1>
+              <h1 class="pr-titulo">Planillas</h1>
+            </div>
+            <!-- Planillas (08/10/2026): arranca en CERRADAS y las abiertas están a un
+                 toque. Reemplaza al <select> de estado (dos toques para cambiar). -->
+            <div class="pg-seg pr-historial-estados" id="pr-historial-estados" role="group" aria-label="Qué planillas mostrar">
+              <button type="button" class="pg-seg__op" data-historial-estado="cerrado" aria-pressed="true">Cerradas</button>
+              <button type="button" class="pg-seg__op" data-historial-estado="abierto" aria-pressed="false">Abiertas</button>
+              <button type="button" class="pg-seg__op" data-historial-estado="pendiente_completar" aria-pressed="false">Pendientes de completar</button>
+              <button type="button" class="pg-seg__op" data-historial-estado="" aria-pressed="false">Todas</button>
             </div>
             <div class="pr-campos">
               <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-historial-unidad" class="pr-select"></select></label>
               <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-historial-desde" class="pr-input"></label>
               <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-historial-hasta" class="pr-input"></label>
               <label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select id="pr-historial-maquina" class="pr-select"></select></label>
-              <label class="pr-campo"><span class="pr-campo__rotulo">Estado</span>
-                <select id="pr-historial-estado" class="pr-select">
-                  <option value="">Todos</option>
-                  <option value="abierto">Abiertos</option>
-                  <option value="pendiente_completar">Pendientes de completar</option>
-                  <option value="cerrado">Cerrados</option>
-                </select>
-              </label>
             </div>
           </div>
           <div id="pr-historial-aviso"></div>
@@ -2602,7 +2604,7 @@
         </div>
         <div class="pr-tarjeta" id="pr-historial-detalle" hidden>
           <div class="pr-fila-titulo">
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Historial</button>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Planillas</button>
           </div>
           <div id="pr-historial-detalle-cuerpo"></div>
         </div>
@@ -8091,7 +8093,10 @@
       const unidades = unidadesDeHistorial()
       if (!unidades.length) return
       const hoy = hoyArgentina()
-      estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: '' }
+      estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: 'cerrado' }
+      // Entrar desde el menú ("Planillas") arranca siempre en las CERRADAS; los
+      // pendientes y los indicadores mandan su propio estado en filtro.
+      if (!filtro) estado.historial.estado = 'cerrado'
       // "Planillas pendientes" del menú es este mismo historial, filtrado: el
       // menú lo marca como su renglón mientras no se cambie el filtro.
       estado.historial.desdePendientes = false
@@ -8100,11 +8105,19 @@
       pintarSelectorUnidad('pr-historial-unidad', unidades, estado.historial.unidadId)
       document.getElementById('pr-historial-desde').value = estado.historial.desde
       document.getElementById('pr-historial-hasta').value = estado.historial.hasta
-      document.getElementById('pr-historial-estado').value = estado.historial.estado
+      pintarEstadosHistorial()
       document.getElementById('pr-historial-detalle').hidden = true
       document.getElementById('pr-historial-listado').hidden = false
       mostrarVista('pr-historial')
       await cargarHistorial()
+    }
+
+    // El segmentado Cerradas / Abiertas / Pendientes / Todas marca el estado elegido.
+    function pintarEstadosHistorial() {
+      const actual = estado.historial?.estado ?? ''
+      for (const b of document.querySelectorAll('[data-historial-estado]')) {
+        b.setAttribute('aria-pressed', b.dataset.historialEstado === actual ? 'true' : 'false')
+      }
     }
 
     function filtrosHistorialValidos(h) {
@@ -8832,7 +8845,12 @@
       // obligatorias: cargarHistorial() necesita las dos fechas (no busca "sin fechas").
       crearPeriodo({ desde: document.getElementById('pr-historial-desde'), hasta: document.getElementById('pr-historial-hasta'), obligatorias: true })
       document.getElementById('pr-historial-maquina').addEventListener('change', cambio('maquina'))
-      document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
+      document.getElementById('pr-historial-estados').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-historial-estado]'); if (!b) return
+        estado.historial.estado = b.dataset.historialEstado
+        estado.historial.desdePendientes = false
+        pintarEstadosHistorial(); pintarMenuActivo(); cargarHistorial()
+      })
       document.getElementById('pr-historial-lista').addEventListener('click', ev => {
         const b = ev.target.closest('[data-historial-turno]'); if (b) abrirDetalleHistorial(b.dataset.historialTurno)
       })
