@@ -17,6 +17,9 @@ correrMutaciones({
     { nombre: 'sin escHoja en el nombre de la empresa', de: '<strong class="rh-empresa__nombre">${escHoja(nombre)}</strong>', a: '<strong class="rh-empresa__nombre">${nombre}</strong>' },
     { nombre: 'sin escHoja en el código', de: '<span class="rh-codigo">${escHoja(orden?.codigo || \'—\')}</span>', a: '<span class="rh-codigo">${orden?.codigo || \'—\'}</span>' },
     { nombre: 'sin escHoja en quién cargó', de: "${escHoja(String(orden?.cargadaPor ?? '').trim() || '—')}", a: "${String(orden?.cargadaPor ?? '').trim() || '—'}" },
+    // El título impreso (08/10/2026: "ORDEN DE PEDIDO")
+    { nombre: 'el título vuelve a "RETIRO DE MERCADERÍA"', de: '<span class="rh-titulo__grande">ORDEN DE PEDIDO</span>', a: '<span class="rh-titulo__grande">RETIRO DE MERCADERÍA</span>' },
+    { nombre: 'el título impreso sin texto', de: '<span class="rh-titulo__grande">ORDEN DE PEDIDO</span>', a: '<span class="rh-titulo__grande"></span>' },
     // Los insumos
     { nombre: 'los insumos suman al total de cajas', de: '(r?.esInsumo ? 0 : (Number(r.cajas) || 0))', a: '(Number(r.cajas) || Number(r.cantidad) || 0)' },
     { nombre: 'el total de unidades con insumos queda en —', de: "  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo)", a: '  const rs = orden?.renglones ?? []' },

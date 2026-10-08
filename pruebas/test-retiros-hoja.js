@@ -43,7 +43,9 @@ const ORDEN = {
   chk('arriba el ORIGINAL y abajo el DUPLICADO', h.indexOf('rh-titulo__copia">ORIGINAL<') > 0 && h.indexOf('rh-titulo__copia">DUPLICADO<') > h.indexOf('rh-titulo__copia">ORIGINAL<'))
   chk('con la línea punteada entre las dos, en media hoja', (h.match(/class="rh-corte"/g) || []).length === 1 && /rh-hoja rh-hoja--media/.test(h) &&
     h.indexOf('rh-corte') > h.indexOf('ORIGINAL<') && h.indexOf('rh-corte') < h.indexOf('DUPLICADO<'))
-  chk('"RETIRO DE MERCADERÍA" en cada copia', (h.match(/rh-titulo__grande">RETIRO DE MERCADERÍA</g) || []).length === 2)
+  // 08/10/2026 (pedido de Facu): el título impreso dice "ORDEN DE PEDIDO" (antes "RETIRO DE MERCADERÍA").
+  chk('"ORDEN DE PEDIDO" en cada copia', (h.match(/rh-titulo__grande">ORDEN DE PEDIDO</g) || []).length === 2)
+  chk('el título viejo "RETIRO DE MERCADERÍA" ya no aparece', !/RETIRO DE MERCADER/i.test(h))
   chk('el logo de ESA empresa, en círculo, en cada copia', (h.match(/<span class="rh-logo"><img src="\.\.\/logo-cucuruchos-nuss\.png"/g) || []).length === 2)
   chk('la fábrica, la razón social, el CUIT, el domicilio y el teléfono', /rh-empresa__nombre">Cucuruchos Nuss</.test(h) && /NUSS SRL/.test(h) && /CUIT 30700000001/.test(h) && /Ruta 9 km 700/.test(h) && /Tel\. 351 555-0000/.test(h))
   chk('el CUIT va tal cual, sin puntos de miles', !/30\.700\.000\.001/.test(h))
@@ -132,7 +134,7 @@ const ORDEN = {
   chk('la línea punteada de 1,5 px', /\.rh-corte \{[^}]*border-top: 1\.5px dotted #000/.test(css))
   chk('la cabecera de unos 70 px', /\.rh-cab \{[^}]*min-height: 70px/.test(css))
   chk('la fábrica en 16 px negrita y sus datos en 12 px', /\.rh-empresa__nombre \{ font-size: 16px; font-weight: 800/.test(css) && /\.rh-empresa__datos \{[^}]*font-size: 12px/.test(css))
-  chk('"RETIRO DE MERCADERÍA" en 800 y 23 px, sin fondo', /\.rh-titulo__grande \{ font-size: 23px; font-weight: 800/.test(css) && !/\.rh-titulo[^{]*\{[^}]*background/.test(css))
+  chk('"ORDEN DE PEDIDO" en 800 y 23 px, sin fondo', /\.rh-titulo__grande \{ font-size: 23px; font-weight: 800/.test(css) && !/\.rh-titulo[^{]*\{[^}]*background/.test(css))
   chk('la copia en 12 px con espaciado', /\.rh-titulo__copia \{ font-size: 12px;[^}]*letter-spacing/.test(css))
   chk('el recuadro de 128 px con borde negro de 2 px', /\.rh-orden \{ width: 128px;[^}]*border: 2px solid #000/.test(css))
   chk('el número de orden en 28 px negrita y la fecha en 12 px', /\.rh-codigo \{ font-size: 28px; font-weight: 800/.test(css) && /\.rh-orden__fecha \{ font-size: 12px/.test(css))

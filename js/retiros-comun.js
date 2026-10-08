@@ -339,7 +339,7 @@ function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, pagina
   const fecha = orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)
   return `<section class="rh-copia${anulada ? ' rh-copia--anulada' : ''}" data-copia="${escHoja(copia)}">` +
     `<header class="rh-cab">${htmlEmpresaHoja(orden?.empresa)}` +
-    `<div class="rh-titulo"><span class="rh-titulo__grande">RETIRO DE MERCADERÍA</span>` +
+    `<div class="rh-titulo"><span class="rh-titulo__grande">ORDEN DE PEDIDO</span>` +
     `<span class="rh-titulo__copia">${escHoja(rotuloCopiaHoja(copia, pagina, paginas, entera))}</span>` +
     (anulada ? '<span class="rh-titulo__anulada">ANULADA</span>' : '') + '</div>' +
     `<div class="rh-orden"><span class="rh-orden__rotulo">ORDEN N°</span>` +
