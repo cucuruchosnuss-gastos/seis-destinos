@@ -304,6 +304,7 @@ const RETIRADAS = [
   'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
+  'operarioAdentro',
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
   'elegirMaestro', 'personasParaAcceso', 'detallePersonaAcceso', 'htmlPersonaAcceso', 'htmlNotaAcceso',
   'sinAcceso', 'leerMiSesion', 'destinoDeSesion',

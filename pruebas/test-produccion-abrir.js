@@ -165,7 +165,13 @@ esperas.push((async () => {
     (html.match(/pr-maquina__libre">Sin turno abierto</g) || []).length === 2 && (html.match(/pr-maquina--libre/g) || []).length === 2 &&
     (html.match(/<span class="pr-maquina__punto"><\/span>Sin turno<\/span>/g) || []).length === 2 &&
     /data-abrir-libre="m2">Abrir turno</.test(html) && /data-abrir-libre="m3">Abrir turno</.test(html))
-  chk('las cajas se leen de lo producido', S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('turno_id, cajas')))
+  // El tablero lee SOLO los turnos 'abierto' de ESTA fábrica (el doble no
+  // filtra: se mira la consulta).
+  chk('el tablero lee los turnos abiertos de esta fábrica', S.__llamadas.consultas.some(([t, f]) => t === 'turnos_produccion' &&
+    f.some(x => x[0] === 'select' && /\blote\b/.test(x[1])) &&
+    f.some(x => x[0] === 'eq' && x[1] === 'estado' && x[2] === 'abierto') &&
+    f.some(x => x[0] === 'eq' && x[1] === 'unidad_negocio_id' && x[2] === S.estado.unidadId)))
+  chk('las cajas se leen de lo producido',S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('turno_id, cajas')))
   chk('mil cajas con su punto de miles', S.textoCajasTablero(1234) === '1.234 cajas' && S.textoCajasTablero(1) === '1 caja' && S.textoCajasTablero(0) === '0 cajas')
   // "Abrir turno" desde la tarjeta: esa máquina ya viene elegida.
   await S.mostrarAbrir('m3')
