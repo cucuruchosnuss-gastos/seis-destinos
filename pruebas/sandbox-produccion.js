@@ -163,6 +163,9 @@ const EN_AMBOS = [
   'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'sinCajaDescontada', 'textoSinCaja', 'normalizarHora',
   'horaConPaso', 'redondearKg', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'fechaCorta',
   'sumarDias', 'fechaDelDia', 'mapaDeUnidades', 'personalSinPruebas',
+  // Corregir todo un sublote desde la gestión (08/10/2026): las reglas del
+  // empaque y de los conos, con la misma copia que la planta.
+  'conoOfrecible', 'cajasDe', 'cajaInicial', 'embolsadoSugerido', 'conoDobleBolsa', 'opcionesEmbolsado',
 ]
 const SOLO_GESTION = [
   'cerrarMenu', 'alternarMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
@@ -253,6 +256,9 @@ const NUEVAS_GESTION = [
   // traídos de ci-prueba/planta-horarios el 05/10/2026)
   'leerHorariosConfig', 'horarioGuardado', 'horarioEnPantalla', 'duracionHorario', 'htmlConfigHorarios', 'tocarHorario',
   'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto', 'finDelTurnoMs', 'htmlNotaNoVolvio',
+  // Corregir todo un sublote (08/10/2026): corregir_produccion_item_completo
+  'leerCatalogoCorreccion', 'presentacionCorr', 'embolsadoCorreccion', 'datosCorreccionSublote', 'opcion',
+  'htmlCamposCorreccion', 'cargarCatalogoCorreccion', 'cambiarCampoCorreccion',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',

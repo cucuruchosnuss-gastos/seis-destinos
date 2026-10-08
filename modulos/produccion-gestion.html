@@ -1812,6 +1812,9 @@
     .pg-corr { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px; }
     .pg-corr__cajas { flex: 0 0 8rem; }
     .pg-corr__motivo { flex: 1 1 16rem; }
+    .pg-corr__campo { flex: 1 1 12rem; min-width: 0; }
+    .pg-corr__campo .pr-select { width: 100%; }
+    .pg-corr__ancho { flex: 1 1 100%; margin: 0; }
     .pg-corr__acc { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     @media (max-width: 899px) {
       /* Cada renglón de lo producido pasa a dos líneas. */
@@ -8361,9 +8364,13 @@
     const TIPO_CORRECCION = { anulado: 'Anulado', agregado: 'Agregado después del cierre' }
 
     function htmlCorreccion(c, d) {
+      // 'datos' = corregir_produccion_item_completo (producto, cono, caja,
+      // embolsado y/o cajas): se dice "Corregido" y, si cambiaron, las cajas.
       const que = c.tipo === 'cajas'
         ? `Cajas ${textoEntero(c.cajas_antes)} → ${textoEntero(c.cajas_despues)}`
-        : (TIPO_CORRECCION[c.tipo] ?? c.tipo)
+        : c.tipo === 'datos'
+          ? `Corregido${c.cajas_antes !== c.cajas_despues ? ` · cajas ${textoEntero(c.cajas_antes)} → ${textoEntero(c.cajas_despues)}` : ''}`
+          : (TIPO_CORRECCION[c.tipo] ?? c.tipo)
       const cuando = [fechaCorta(c.hecha_en), horaArgentina(c.hecha_en)].filter(Boolean).join(' ')
       return `<div class="pr-of-correccion">${esc(que)} · ${esc(c.motivo)} · ${esc(d.nombres.get(c.hecha_por) ?? '—')}${cuando ? ` · ${esc(cuando)}` : ''}</div>`
     }
@@ -8385,12 +8392,178 @@
       return unidadesCon(tarea).includes(turno.unidad_negocio_id)
     }
 
+    // CORREGIR TODO UN SUBLOTE (08/10/2026): producto y presentación, cono,
+    // caja, embolsado y cajas, con corregir_produccion_item_completo(p_item_id,
+    // p_datos, p_motivo). La base deja como estaba toda clave que NO viene en
+    // p_datos, así que se manda SOLO lo que cambió; una clave en null sí
+    // significa algo (marca_id null = Común; caja_insumo_id null = sin caja).
+    // Las reglas del empaque son las de la planta al agregar: solo las cajas
+    // habilitadas para la presentación, el embolsado que sugiere la caja, y un
+    // cono de doble bolsa lo fuerza a 'doble' (la RPC de corregir NO lo fuerza:
+    // lo hace la pantalla). Los conos rechazados o inactivos no se ofrecen.
+    function conoOfrecible(m) {
+      return !!m && m.activa !== false && (m.estado_alta === 'aprobada' || m.estado_alta === 'pendiente_revision')
+    }
+
+    function cajasDe(cat, presentacionId) {
+      return (cat?.cajas ?? []).filter(c => c.presentacion_id === presentacionId)
+    }
+
+    // La caja con la que arranca un renglón al cambiar de presentación: la de
+    // la unidad si está habilitada; si no, la única; si no, hay que elegir.
+    function cajaInicial(cat, presentacionId) {
+      const cajas = cajasDe(cat, presentacionId)
+      if (!cajas.length) return { cajaId: null, cajaElegida: true }
+      const pred = cat?.cajaPredeterminadaId
+      if (pred && cajas.some(c => c.insumo_id === pred)) return { cajaId: pred, cajaElegida: true }
+      if (cajas.length === 1) return { cajaId: cajas[0].insumo_id, cajaElegida: true }
+      return { cajaId: null, cajaElegida: false }
+    }
+
+    function embolsadoSugerido(cat, presentacionId, cajaId) {
+      if (!cajaId) return 'ninguno'
+      return cajasDe(cat, presentacionId).find(c => c.insumo_id === cajaId)?.embolsado_sugerido ?? 'ninguno'
+    }
+
+    function conoDobleBolsa(cat, marcaId) {
+      return !!marcaId && (cat?.marcas ?? []).find(m => m.id === marcaId)?.doble_bolsa === true
+    }
+
+    function opcionesEmbolsado(cat, presentacionId, cajaId) {
+      const sug = embolsadoSugerido(cat, presentacionId, cajaId)
+      return EMBOLSADOS.filter(o => o.valor !== 'ninguno' || sug === 'ninguno')
+    }
+
+    // El catálogo de la fábrica del turno: productos activos (sin la reventa,
+    // que no se produce), sus presentaciones activas, los conos activos y el
+    // empaque. Si el empaque no se puede leer, la caja y el embolsado quedan
+    // como estaban (empaqueError) y lo demás se corrige igual.
+    async function leerCatalogoCorreccion(unidadId) {
+      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
+      const productos = (await leer(supabase.from('productos_terminados')
+        .select('id, nombre, tipo_masa, orden, origen_producto_id').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')))
+        .filter(p => p?.origen_producto_id == null)
+      const ids = productos.map(p => p.id)
+      const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones')
+        .select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, orden').in('producto_id', ids).eq('activa', true).order('orden')) : []
+      const marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre, estado_alta, activa, doble_bolsa').eq('activa', true).order('nombre'))
+      let emp = { cajas: [], insumos: [], cajaPredeterminadaId: null, empaqueError: false }
+      try {
+        const presIds = presentaciones.map(pr => pr.id)
+        const cajas = presIds.length ? await leer(supabase.from('presentacion_cajas').select('presentacion_id, insumo_id, embolsado_sugerido').in('presentacion_id', presIds)) : []
+        const [unidad] = await leer(supabase.from('unidades_negocio').select('id, caja_predeterminada_id').eq('id', unidadId))
+        const insIds = [...new Set(cajas.map(c => c.insumo_id))]
+        const insumos = insIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insIds)) : []
+        emp = { cajas, insumos, cajaPredeterminadaId: unidad?.caja_predeterminada_id ?? null, empaqueError: false }
+      } catch (err) {
+        console.error('empaque para corregir:', err)
+        emp = { cajas: [], insumos: [], cajaPredeterminadaId: null, empaqueError: true }
+      }
+      return { productos, presentaciones, marcas, ...emp }
+    }
+
+    // La presentación de un id: la del catálogo, o la del propio detalle (una
+    // que ya no está activa sigue sirviendo para saber si lleva cono).
+    function presentacionCorr(e, id, d = estado.detalleHistorial) {
+      return (e?.cat?.presentaciones ?? []).find(x => x.id === id) ?? (d?.presentaciones ?? []).find(x => x.id === id) ?? null
+    }
+
+    function embolsadoCorreccion(e) {
+      const pr = presentacionCorr(e, e.presentacionId)
+      if (pr?.con_cono && conoDobleBolsa(e.cat, e.marcaId)) return 'doble'
+      return e.embolsado ?? 'ninguno'
+    }
+
+    // SOLO las claves que cambiaron respecto del renglón guardado.
+    function datosCorreccionSublote(e, p) {
+      const antes = { presentacion_id: p.presentacion_id, marca_id: p.marca_id ?? null,
+        caja_insumo_id: p.caja_insumo_id ?? null, embolsado: p.embolsado ?? null, cajas: numeroInd(p.cajas) }
+      const ahora = { cajas: e.cajas }
+      if (e.cat) {
+        const pr = presentacionCorr(e, e.presentacionId)
+        ahora.presentacion_id = e.presentacionId
+        ahora.marca_id = pr?.con_cono ? (e.marcaId ?? null) : null
+        if (!e.cat.empaqueError) {
+          ahora.caja_insumo_id = e.cajaId ?? null
+          const emb = embolsadoCorreccion(e)
+          if (!(antes.embolsado == null && e.embolsado == null && emb === 'ninguno')) ahora.embolsado = emb
+        }
+      }
+      const datos = {}
+      for (const [k, v] of Object.entries(ahora)) if ((antes[k] ?? null) !== (v ?? null)) datos[k] = v
+      return datos
+    }
+
+    function opcion(valor, texto, elegido, extra = '') {
+      return `<option value="${esc(valor)}"${elegido ? ' selected' : ''}${extra}>${esc(texto)}</option>`
+    }
+
+    // Los campos de la oficina: producto, presentación, cono, caja, embolsado.
+    function htmlCamposCorreccion(e, p, d = estado.detalleHistorial) {
+      if (!e.cat && !e.catError) return '<p class="pr-texto-suave pg-corr__ancho">Cargando los productos…</p>'
+      if (!e.cat) return '<div class="pr-aviso pr-aviso--grave pg-corr__ancho">No se pudieron leer los productos de la fábrica: por ahora solo se pueden corregir las cajas.</div>'
+      const cat = e.cat
+      const campo = (id, rotulo, cuerpo) => `<label class="pr-campo pg-corr__campo"><span class="pr-campo__rotulo">${esc(rotulo)}</span>${cuerpo}</label>`
+      // Producto: los comunes y después los de chocolate, separados.
+      let opsProductos = cat.productos.filter(x => !esProductoChocolate(x)).map(x => opcion(x.id, x.nombre, x.id === e.productoId)).join('')
+      const choco = cat.productos.filter(x => esProductoChocolate(x))
+      const opsChoco = choco.map(x => opcion(x.id, x.nombre, x.id === e.productoId)).join('')
+      if (choco.length) opsProductos += `<optgroup label="Chocolate">${opsChoco}</optgroup>`
+      if (e.productoId && !cat.productos.some(x => x.id === e.productoId)) {
+        const viejo = (d?.productos ?? []).find(x => x.id === e.productoId)
+        opsProductos = opcion(e.productoId, `${viejo?.nombre ?? 'Producto'} (ya no está activo)`, true) + opsProductos
+      }
+      let html = campo('pr-hist-corr-producto', 'Producto', `<select class="pr-select" id="pr-hist-corr-producto" aria-label="Producto del sublote ${esc(p.sublote)}">${opsProductos}</select>`)
+      // Presentación.
+      const presDe = cat.presentaciones.filter(x => x.producto_id === e.productoId)
+      let opsPresentaciones = (e.presentacionId ? '' : opcion('', 'Elegí la presentación', true, ' disabled')) +
+        presDe.map(x => opcion(x.id, `${x.nombre} · ×${formatearNumeroAr(x.unidades_por_caja, { decimales: 0 })}`, x.id === e.presentacionId)).join('')
+      if (e.presentacionId && !presDe.some(x => x.id === e.presentacionId)) {
+        const vieja = presentacionCorr(e, e.presentacionId, d)
+        opsPresentaciones = opcion(e.presentacionId, `${vieja?.nombre ?? 'Presentación'} (ya no está activa)`, true) + opsPresentaciones
+      }
+      html += campo('pr-hist-corr-presentacion', 'Presentación', `<select class="pr-select" id="pr-hist-corr-presentacion">${opsPresentaciones}</select>`)
+      const pr = presentacionCorr(e, e.presentacionId, d)
+      // Cono: solo si la presentación lleva cono. Común = sin marca.
+      if (pr?.con_cono) {
+        const ofrecibles = (cat.marcas ?? []).filter(conoOfrecible)
+        let opsConos = opcion('', 'Común (sin marca)', !e.marcaId) +
+          ofrecibles.map(m => opcion(m.id, `${m.nombre}${m.estado_alta === 'pendiente_revision' ? ' · nuevo, a revisar' : ''}${m.doble_bolsa ? ' · doble bolsa' : ''}`, m.id === e.marcaId)).join('')
+        if (e.marcaId && !ofrecibles.some(m => m.id === e.marcaId)) {
+          const viejo = (d?.marcas ?? []).find(m => m.id === e.marcaId)
+          opsConos = opcion(e.marcaId, `${viejo?.nombre ?? 'Cono'} (el que tiene; ya no se ofrece)`, true) + opsConos
+        }
+        html += campo('pr-hist-corr-cono', 'Cono', `<select class="pr-select" id="pr-hist-corr-cono">${opsConos}</select>`)
+      }
+      // Caja y embolsado.
+      if (cat.empaqueError) {
+        html += '<p class="pr-texto-suave pg-corr__ancho">No se pudo leer el empaque: la caja y el embolsado quedan como estaban.</p>'
+      } else {
+        const habilitadas = cajasDe(cat, e.presentacionId)
+        const nombreCaja = id => { const i = (cat.insumos ?? []).find(x => x.id === id) ?? (d?.insumosEmpaque ?? []).find(x => x.id === id); return i ? textoInsumoEmpaque(i) : 'caja sin nombre' }
+        let opsCajas = (e.cajaElegida ? '' : opcion('__elegir', 'Elegí la caja', true, ' disabled')) +
+          habilitadas.map(c => opcion(c.insumo_id, nombreCaja(c.insumo_id), e.cajaElegida && c.insumo_id === e.cajaId)).join('')
+        if (!habilitadas.length || (e.cajaElegida && !e.cajaId)) opsCajas += opcion('', 'Sin caja', e.cajaElegida && !e.cajaId)
+        if (e.cajaId && !habilitadas.some(c => c.insumo_id === e.cajaId)) opsCajas = opcion(e.cajaId, `${nombreCaja(e.cajaId)} (no habilitada para esta presentación)`, true) + opsCajas
+        html += campo('pr-hist-corr-caja', 'Caja', `<select class="pr-select" id="pr-hist-corr-caja">${opsCajas}</select>`)
+        const forzado = pr?.con_cono && conoDobleBolsa(cat, e.marcaId)
+        const emb = embolsadoCorreccion(e)
+        const ops = forzado ? EMBOLSADOS.filter(o => o.valor === 'doble') : opcionesEmbolsado(cat, e.presentacionId, e.cajaId)
+        let opsEmbolsado = ops.map(o => opcion(o.valor, o.texto, o.valor === emb)).join('')
+        if (!ops.some(o => o.valor === emb)) opsEmbolsado = opcion(emb, TEXTO_EMBOLSADO[emb] ?? emb, true) + opsEmbolsado
+        html += campo('pr-hist-corr-embolsado', 'Embolsado', `<select class="pr-select" id="pr-hist-corr-embolsado"${forzado ? ' disabled' : ''}>${opsEmbolsado}</select>` +
+          (forzado ? '<span class="pr-texto-suave">Este cono va con doble bolsa.</span>' : ''))
+      }
+      return html
+    }
+
     function htmlEditorSublote(p) {
       const e = estado.corrigeHist
       const anular = e.modo === 'anular'
+      const camposCorr = anular ? '' : htmlCamposCorreccion(e, p)
       const campoCajas = anular ? '' : `<label class="pr-campo pg-corr__cajas"><span class="pr-campo__rotulo">Cajas</span>` +
         `<input type="text" class="pr-input" id="pr-hist-corr-cajas" data-numero="${esc(e.cajas ?? p.cajas ?? '')}" data-decimales="0" aria-label="Cajas del sublote ${esc(p.sublote)}"></label>`
-      return `<div class="pg-corr" id="pr-hist-corr">${campoCajas}` +
+      return `<div class="pg-corr" id="pr-hist-corr">${camposCorr}${campoCajas}` +
         `<label class="pr-campo pg-corr__motivo"><span class="pr-campo__rotulo">Motivo <span class="pr-obligatorio">· obligatorio</span></span>` +
         `<input type="text" class="pr-input" id="pr-hist-corr-motivo" maxlength="300" autocomplete="off" value="${esc(e.motivo ?? '')}"></label>` +
         `<div class="pg-corr__acc"><button type="button" class="pr-btn pr-btn--secundario" id="pr-hist-corr-cancelar">Cancelar</button>` +
@@ -8523,10 +8696,71 @@
       const d = estado.detalleHistorial
       const p = d?.producido?.find(x => x.id === itemId)
       if (!p || !puedeCorregirSublote(d.turno, p)) return false
-      estado.corrigeHist = { itemId, modo, cajas: modo === 'corregir' ? numeroInd(p.cajas) : null, motivo: '', error: null, enviando: false }
+      const prDetalle = (d.presentaciones ?? []).find(x => x.id === p.presentacion_id)
+      const e = { itemId, modo, cajas: modo === 'corregir' ? numeroInd(p.cajas) : null, motivo: '', error: null, enviando: false,
+        cat: null, catError: false, carga: null,
+        productoId: prDetalle?.producto_id ?? '', presentacionId: p.presentacion_id, marcaId: p.marca_id ?? null,
+        cajaId: p.caja_insumo_id ?? null, cajaElegida: true, embolsado: p.embolsado ?? null }
+      estado.corrigeHist = e
+      if (modo === 'corregir') e.carga = cargarCatalogoCorreccion(e, d.turno.unidad_negocio_id)
       pintarDetalleHistorial()
       document.getElementById(modo === 'corregir' ? 'pr-hist-corr-cajas' : 'pr-hist-corr-motivo')?.focus?.()
       return true
+    }
+
+    // El catálogo llega después: el editor ya se ve con las cajas y el motivo.
+    async function cargarCatalogoCorreccion(e, unidadId) {
+      try {
+        e.cat = await leerCatalogoCorreccion(unidadId)
+      } catch (err) {
+        console.error('catálogo para corregir:', err)
+        e.cat = null
+        e.catError = true
+      }
+      if (estado.corrigeHist !== e) return
+      const pr = presentacionCorr(e, e.presentacionId)
+      if (pr?.producto_id) e.productoId = pr.producto_id
+      pintarDetalleHistorial()
+    }
+
+    // Cambiar un campo de la oficina, con las reglas de la planta al agregar:
+    // otro producto suelta la presentación (o elige la única); otra
+    // presentación trae su caja inicial y el embolsado que sugiere esa caja,
+    // y sin cono suelta el cono; otra caja trae su embolsado sugerido.
+    function cambiarCampoCorreccion(id, valor) {
+      const e = estado.corrigeHist
+      if (!e || !e.cat || e.enviando) return
+      const cat = e.cat
+      const ponerPresentacion = (presId) => {
+        e.presentacionId = presId
+        const pr = presentacionCorr(e, presId)
+        if (!pr?.con_cono) e.marcaId = null
+        const ini = cajaInicial(cat, presId)
+        e.cajaId = ini.cajaId
+        e.cajaElegida = ini.cajaElegida
+        e.embolsado = embolsadoSugerido(cat, presId, e.cajaId)
+      }
+      if (id === 'pr-hist-corr-producto') {
+        if (valor === e.productoId) return
+        e.productoId = valor
+        const presDe = cat.presentaciones.filter(x => x.producto_id === valor)
+        if (presDe.length === 1) ponerPresentacion(presDe[0].id)
+        else { e.presentacionId = ''; e.cajaId = null; e.cajaElegida = true; e.embolsado = null }
+      } else if (id === 'pr-hist-corr-presentacion') {
+        if (valor === e.presentacionId) return
+        ponerPresentacion(valor)
+      } else if (id === 'pr-hist-corr-cono') {
+        e.marcaId = valor || null
+      } else if (id === 'pr-hist-corr-caja') {
+        if (valor === '__elegir') return
+        e.cajaId = valor || null
+        e.cajaElegida = true
+        e.embolsado = embolsadoSugerido(cat, e.presentacionId, e.cajaId)
+      } else if (id === 'pr-hist-corr-embolsado') {
+        e.embolsado = valor || null
+      } else return
+      e.error = null
+      pintarDetalleHistorial()
     }
 
     function cerrarCorreccionSublote() {
@@ -8539,8 +8773,11 @@
     function faltaEnCorreccion(e, p) {
       if (String(e.motivo ?? '').trim().length < 3) return 'Escribí el motivo para guardar.'
       if (e.modo === 'anular') return null
+      if (!e.cat && !e.catError) return 'Esperá a que carguen los productos.'
+      if (e.cat && !e.presentacionId) return 'Elegí la presentación.'
+      if (e.cat && !e.cat.empaqueError && !e.cajaElegida) return 'Elegí la caja.'
       if (!Number.isInteger(e.cajas) || e.cajas <= 0) return 'Poné las cajas: un número entero mayor a cero. Para sacarlo, anulalo.'
-      if (e.cajas === numeroInd(p.cajas)) return 'Tiene esas mismas cajas: poné la cantidad corregida.'
+      if (!Object.keys(datosCorreccionSublote(e, p)).length) return 'No cambiaste nada: cambiá lo que está mal y escribí por qué.'
       return null
     }
 
@@ -8558,7 +8795,7 @@
       try {
         const { error: err } = e.modo === 'anular'
           ? await supabase.rpc('anular_produccion_item', { p_item_id: p.id, p_motivo: motivo })
-          : await supabase.rpc('corregir_produccion_item', { p_item_id: p.id, p_cajas: e.cajas, p_motivo: motivo })
+          : await supabase.rpc('corregir_produccion_item_completo', { p_item_id: p.id, p_datos: datosCorreccionSublote(e, p), p_motivo: motivo })
         if (err) throw err
       } catch (err) {
         console.error('corregir sublote:', err)
@@ -8852,6 +9089,9 @@
         const e = estado.corrigeHist; if (!e) return
         if (ev.target.id === 'pr-hist-corr-motivo') e.motivo = ev.target.value
         if (ev.target.id === 'pr-hist-corr-cajas') e.cajas = leerCampoNumero(ev.target)
+      })
+      document.getElementById('pr-historial-detalle-cuerpo').addEventListener('change', ev => {
+        if (String(ev.target?.id ?? '').startsWith('pr-hist-corr-') && ev.target.tagName === 'SELECT') cambiarCampoCorreccion(ev.target.id, ev.target.value)
       })
       document.getElementById('pr-stock-unidad').addEventListener('change', ev => { estado.stockUnidad = ev.target.value; cargarStockTerminado() })
     }

@@ -250,6 +250,15 @@ const SEGURAS_PRODUCCION = [
   ['ahora', 'HTML constante del código: el botón "Ahora" de la ventana de la hora, o vacío'],
   ['htmlEstadoTurno(t.estado, t)', 'HTML armado por htmlEstadoTurno(), que escapa el texto del estado; la clase sale de ESTADO_TURNO o es la literal "pendiente" (relanzada)'],
   ['htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas, el id y la hora de fin adentro'],
+  // Corregir todo un sublote desde la gestión (08/10/2026): las opciones las
+  // arma opcion(), que escapa el valor y el texto; campo() escapa el rótulo.
+  ['opsProductos', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsChoco', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsPresentaciones', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsConos', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsCajas', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsEmbolsado', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['camposCorr', 'HTML armado por htmlCamposCorreccion(), que escapa adentro (opcion() y esc())'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

@@ -207,5 +207,7 @@ module.exports = {
     datos_para_masa: { turno: { id: 't1', lote: 7033 }, original: ORIGINAL, anterior: ANTERIOR, insumos: INSUMOS },
     stock_para_masa: STOCK,
     mis_pendientes: [],
+    // Corregir todo un sublote (08/10/2026): la base devuelve void.
+    corregir_produccion_item_completo: null,
   },
 };
