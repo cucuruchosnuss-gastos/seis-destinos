@@ -19,10 +19,10 @@ correrMutacionesProduccion({
     { nombre: 'la lista trae las masas de todas las máquinas', de: '        const masas = await leerMasasSala([turnoId])', a: '        const masas = await leerMasasSala(maquinasAbiertas().map(x => x.turno.id))' },
     { nombre: 'la anulada cuenta en el título', de: '      const vivas = (h.masas ?? []).filter(x => !x.anulada && !esTirada(x)).length', a: '      const vivas = (h.masas ?? []).filter(x => !esTirada(x)).length' },
     { nombre: 'arranca elegida la primera y no la última', de: '      h.elegida = (ultima ?? masAlta)?.id ?? null', a: '      h.elegida = h.masas?.[0]?.id ?? null' },
-    { nombre: 'la elegida no se marca', de: "aria-pressed=\"${elegida ? 'true' : 'false'}\" title=\"${esc(origenHist)}\">", a: "aria-pressed=\"false\" title=\"${esc(origenHist)}\">" },
-    { nombre: 'el origen no va en el title', de: "aria-pressed=\"${elegida ? 'true' : 'false'}\" title=\"${esc(origenHist)}\">", a: "aria-pressed=\"${elegida ? 'true' : 'false'}\">" },
-    { nombre: 'la anulada no lo dice en la lista', de: "      return `<button type=\"button\" class=\"pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}${tirada", a: "      return `<button type=\"button\" class=\"pr-hm__masa${tirada" },
-    { nombre: 'sin el tamaño en la lista', de: "<span class=\"pr-hm__masa-l2\">${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</span>", a: "<span class=\"pr-hm__masa-l2\">${esc(horaArgentina(m.hora) || '—')}</span>" },
+    // La lista compacta (08/10/2026): el renglón es htmlRenglonMasa().
+    { nombre: 'la elegida no se marca', de: "aria-pressed=\"${elegida ? 'true' : 'false'}\" aria-controls=\"pr-hm-detalle\">", a: "aria-pressed=\"false\" aria-controls=\"pr-hm-detalle\">" },
+    { nombre: 'el historial pierde hora, origen y tamaño', de: "aria-controls=\"pr-hm-detalle\">` +\n        htmlRenglonMasa(m) + '</button>'", a: "aria-controls=\"pr-hm-detalle\">` +\n        `Masa ${esc(m.nro)}` + '</button>'" },
+    { nombre: 'la anulada no lo dice en la lista', de: "class=\"pr-hm__masa pr-mc${m.anulada ? ' pr-hm__masa--anulada' : ''}${tirada", a: "class=\"pr-hm__masa pr-mc${tirada" },
     { nombre: 'la lista vuelve a la más vieja arriba', de: '        const orden = [...h.masas].sort((a, z) => Number(z.nro) - Number(a.nro))', a: '        const orden = [...h.masas].sort((a, z) => Number(a.nro) - Number(z.nro))' },
     { nombre: 'las pendientes (las más nuevas) van abajo', de: "        const filas = pend.map(htmlMasaRecetaPendiente).join('') + orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('')", a: "        const filas = orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('') + pend.map(htmlMasaRecetaPendiente).join('')" },
     { nombre: 'el detalle pierde el tamaño en el título', de: "<h2 class=\"pr-hm__det-titulo\">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</h2>", a: '<h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)}</h2>' },
@@ -30,7 +30,7 @@ correrMutacionesProduccion({
     { nombre: 'la nota de anular no dice cuál', de: '      nota.textContent = ultima ? `Solo se puede anular la última masa (la ${ultima.nro}).` : \'\'', a: "      nota.textContent = ultima ? 'Solo se puede anular la última masa.' : ''" },
     { nombre: 'el botón no nombra la máquina', de: "      document.getElementById('pr-hm-nueva').textContent = `+ Nueva masa para ${h.maquinaNombre}`", a: "      document.getElementById('pr-hm-nueva').textContent = '+ Nueva masa'" },
     // El detalle.
-    { nombre: 'no dice quién la hizo', de: "      const quien = (estado.personal ?? []).find(x => x.id === m.masero_id)?.nombre ?? ''", a: "      const quien = ''" },
+    { nombre: 'no dice quién la hizo', de: "      return (estado.personal ?? []).find(x => x.id === m?.masero_id)?.nombre ?? ''", a: "      return ''" },
     { nombre: 'no muestra el motivo', de: "m.motivo ? `“${esc(m.motivo)}”` : ''", a: "false ? `“${esc(m.motivo)}”` : ''" },
     { nombre: 'no dice por qué se anuló', de: '      if (m.anulada && m.anulada_motivo) html += ', a: '      if (false) html += ' },
     { nombre: 'nunca dice "agregado"', de: "            if (!(rec > 0)) cambioReceta = ' <span class=\"pr-rec__agregado\">agregado</span>'", a: "            if (false) cambioReceta = ''" },

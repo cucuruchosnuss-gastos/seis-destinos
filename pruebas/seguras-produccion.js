@@ -141,7 +141,6 @@ const SEGURAS_PRODUCCION = [
   ['textoTamanoMasa(m)', 'constante del código: "SIMPLE" o "DOBLE"'],
   ['textoTamanoMasa(b)', 'constante del código: "SIMPLE" o "DOBLE"'],
   ['chipsDeMasa(m)', 'HTML constante del código (htmlChipsMasa): "Modificada" / "Chocolate" según banderas, sin datos de nadie'],
-  ['htmlTirada(m)', 'HTML armado en htmlTirada: "Tirada" fijo y el motivo de la base con esc() adentro (lo ejecuta test-produccion-tirar.js con texto malicioso)'],
   ['htmlChipsMasa({ modificada: !!b.cambiada, chocolate: esChocolate(b, estado.defineChocolate) })', 'HTML constante del código: los chips salen de dos booleanos'],
   ['htmlParadas(d.paradas, accionesParadaHistorial(t))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas y el id adentro'],
   ['manual', 'HTML ya escapado: htmlCeldaLote() lo arma arriba con esc() del ingrediente, o vacío'],
@@ -250,6 +249,15 @@ const SEGURAS_PRODUCCION = [
   ['ahora', 'HTML constante del código: el botón "Ahora" de la ventana de la hora, o vacío'],
   ['htmlEstadoTurno(t.estado, t)', 'HTML armado por htmlEstadoTurno(), que escapa el texto del estado; la clase sale de ESTADO_TURNO o es la literal "pendiente" (relanzada)'],
   ['htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas, el id y la hora de fin adentro'],
+  // La lista de masas compacta (08/10/2026)
+  ['textoOrigenMasa(m)', "texto constante del código: 'Original' o 'Modificada' según masas.origen, nunca el dato"],
+  ['marca', 'HTML constante del código en htmlRenglonMasa() (lo que devuelve htmlMarcaMasa: Anulada / Tirada / Chocolate) y en htmlMasaHistorial() de la gestión (los mismos tres textos), o vacío'],
+  ['htmlOrigenMasa(m)', 'HTML constante del código: una clase y textoOrigenMasa() (Original / Modificada)'],
+  ['htmlMarcaMasa(m)', 'HTML constante del código: "Anulada", "Tirada" o "Chocolate", o vacío'],
+  ['htmlRenglonMasa(m)', 'HTML armado por htmlRenglonMasa(), que escapa el número y la hora; el resto son textos constantes'],
+  ['htmlRenglonMasa(como)', 'HTML armado por htmlRenglonMasa(), que escapa el número y la hora; el resto son textos constantes'],
+  ['renglon', 'HTML ya escapado: htmlMasaHistorial() lo arma arriba con esc() del id, el número y la hora, y textos constantes'],
+  ['det', 'HTML ya escapado: htmlMasaHistorial() lo arma arriba con esc() del masero, el cuándo, el tipo, los motivos y las diferencias, y htmlFormulaMasa() (escapa adentro), o vacío'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

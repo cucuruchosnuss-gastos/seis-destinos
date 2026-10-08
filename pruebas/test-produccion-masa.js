@@ -675,7 +675,8 @@ esperas.push((async () => {
   await T.cargarMasasReceta()
   const der = T.__doc.getElementById('pr-receta-masas').innerHTML
   chk('a la derecha, "Masas del turno · Máquina 1 · tarde"', /Masas del turno · Máquina 1 · tarde/.test(der), der.slice(0, 200))
-  chk('… solo las de ESTE turno de ESTA máquina', /pr-rm__nro">Masa 1</.test(der) && /pr-rm__nro">Masa 2</.test(der) && !/13:05|10:05/.test(der.replace(/<h2[\s\S]*?<\/h2>/, '')), der)
+  chk('… solo las de ESTE turno de ESTA máquina', /pr-mc__nro"><span class="pr-mc__palabra">Masa <\/span>1</.test(der) && /pr-mc__nro"><span class="pr-mc__palabra">Masa <\/span>2</.test(der) && !/13:05|10:05/.test(der.replace(/<h2[\s\S]*?<\/h2>/, '')), der)
+  chk('… cada una un renglón que se toca para ver el detalle', (der.match(/<button type="button" class="pr-rm__fila pr-mc[^"]*" data-masa-ver="/g) ?? []).length === 3 && /aria-haspopup="dialog"/.test(der))
   chk('… la de chocolate con su chip, la anulada dice Anulada', /pr-chip-choco">Chocolate/.test(der) && /pr-rm__anulada">Anulada/.test(der))
   chk('al pie, "Anular la última masa"', /data-anular-ultima/.test(der))
   chk('la última que se puede anular es la de número más alto no anulada', T.ultimaMasaAnulable(T.estado.masasReceta)?.id === 'ma4')
@@ -704,10 +705,13 @@ esperas.push((async () => {
   chk('… y va PRIMERO', lista.includes('ma1') && lista.indexOf('pr-masa-fila--espera') < lista.indexOf('ma1'))
   chk('… y dice "Esperando conexión" en bordó', /pr-masa-fila__espera">Esperando conexión/.test(lista))
   chk('las enviadas dicen "✓ Enviada" en verde', (lista.match(/pr-masa-fila__ok">✓ Enviada/g) || []).length === 3)
-  chk('"Modificada" con su chip bordó; Original y Anterior sin chip', /pr-chip-modificada">Modificada/.test(lista) && !/pr-chip-origen|>Original<|>Anterior</.test(lista), lista)
-  chk('SIMPLE / DOBLE en grande', /pr-masa-fila__tam pr-masa-tam">(SIMPLE|DOBLE)</.test(lista) && !/>Simple<|>Doble</.test(lista))
+  // La lista compacta (08/10/2026): el origen se dice (Original o Modificada,
+  // esta en bordó; una "anterior" es Original), y Simple o Doble.
+  chk('"Modificada" en bordó; Original y Anterior dicen "Original"', /pr-mc__origen pr-mc__origen--modificada">Modificada/.test(lista) && /pr-mc__origen">Original/.test(lista) && !/pr-chip-origen|>Anterior</.test(lista), lista)
+  chk('Simple / Doble en cada renglón', /pr-mc__tam">Simple</.test(lista) && /pr-mc__tam">Doble</.test(lista))
+  chk('la lista no lleva la fórmula', !/pr-hm__ing|kg</.test(lista))
   chk('una de chocolate lo dice con su chip', (lista.match(/pr-chip-choco">Chocolate</g) || []).length === 2 && !/choc\./.test(lista), lista)
-  chk('la anulada se ve anulada, con su motivo y sin "Anular"', /pr-masa-fila--anulada/.test(lista) && /Anulada: Se quemó/.test(lista) && !/data-anular-masa="ma3"/.test(lista))
+  chk('la anulada se ve anulada (el motivo, en el detalle) y sin "Anular"', /pr-masa-fila--anulada/.test(lista) && /pr-rm__anulada">Anulada</.test(lista) && !/Se quemó/.test(lista) && !/data-anular-masa="ma3"/.test(lista))
   chk('sin produccion:cargar no hay botón de anular', !/data-anular-masa/.test(T.htmlFilaMasaTurno({ id: 'ma1', nro: 1, turno_id: 't1', hora: null, doble: false, origen: 'original', anulada: false }, false)))
   chk('una masa sin turno conocido no se cuelga de una máquina libre', T.nombreDeTurno(undefined) === '—' && T.nombreDeTurno('t-que-no-existe') === '—')
   chk('la banda de sin conexión también se ve acá', T.__doc.getElementById('pr-masas-sin').hidden === false && /No la cargues de nuevo/.test(T.__doc.getElementById('pr-masas-sin-texto').textContent))
@@ -777,8 +781,9 @@ esperas.push((async () => {
   chequearMarcas(chk, 'masa pendiente en "Masas del turno"', X.htmlFilaMasaPendiente({ nro: marca('pendNro'), maquinaNombre: marca('pendMaq'), lote: marca('pendLote'), doble: false }), ['pendNro', 'pendMaq', 'pendLote'])
   X.estado.tablero = [{ maquina: { nombre: marca('maqTablero') }, turno: { id: 't9', lote: marca('loteTablero') }, masas: 0, ultimaMasa: null, parada: null }]
   chequearMarcas(chk, 'la máquina y el lote en "Masas del turno"', X.htmlFilaMasaTurno({ id: 'x', nro: 1, turno_id: 't9', hora: null, doble: false, origen: 'original', anulada: false }, true), ['maqTablero', 'loteTablero'])
+  chequearMarcas(chk, 'renglón de la columna de la receta', X.htmlMasaReceta({ id: marca('idReceta'), nro: marca('nroReceta'), hora: null, doble: false, origen: 'original', anulada: false }), ['idReceta', 'nroReceta'])
   chequearMarcas(chk, 'masa enviada en "Masas del turno"', X.htmlFilaMasaTurno({ id: marca('masaId'), nro: marca('nro'), hora: null, doble: false, origen: 'modificada', es_chocolate: true, anulada: false }, true) +
-    X.htmlFilaMasaTurno({ id: 'x', nro: 1, hora: null, doble: false, origen: 'original', anulada: true, anulada_motivo: marca('motivoAnul') }, true), ['masaId', 'nro', 'motivoAnul'])
+    X.htmlCuerpoMasa({ id: 'x', nro: 1, hora: null, doble: false, origen: 'original', anulada: true, anulada_motivo: marca('motivoAnul') }, null), ['masaId', 'nro', 'motivoAnul'])
   const Y = armar({ turnos: [{ id: marca('turnoY'), lote: marca('loteY'), maquina_id: 'm1', fecha: '2026-09-23', abierto_en: null }], masas: [] })
   Y.__tablas.maquinas = [{ id: 'm1', nombre: marca('maqY'), orden: 1 }, { id: 'm2', nombre: 'Otra', orden: 2 }]
   Y.__tablas.turnos_produccion = [{ id: marca('turnoY'), lote: marca('loteY'), maquina_id: 'm1', fecha: '2026-09-23', abierto_en: null },

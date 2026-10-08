@@ -175,25 +175,32 @@ const hist = (extra) => {
     { id: 'm3', nro: 3, hora: '2026-09-22T13:00:00Z', doble: false, origen: 'modificada', es_chocolate: true, anulada: false, turno_id: 't' },
   ]
   const fila = (m) => S.htmlFilaMasaTurno(m, false)
-  chk('sala: original sin chip', !/pr-chip/.test(fila(M[0])) && /pr-masa-tam">SIMPLE</.test(fila(M[0])), fila(M[0]))
-  chk('sala: anterior sin chip, DOBLE grande', !/pr-chip/.test(fila(M[1])) && /pr-masa-tam">DOBLE</.test(fila(M[1])), fila(M[1]))
-  chk('sala: modificada con su chip bordó, chocolate con el suyo', /pr-chip-modificada">Modificada</.test(fila(M[2])) && /pr-chip-choco">Chocolate</.test(fila(M[2])))
+  // La lista de masas compacta (08/10/2026): el renglón DICE el origen
+  // (Original o Modificada, esta en bordó) y Simple o Doble; "Chocolate"
+  // solo cuando lo es. Una "anterior" se dice Original.
+  chk('sala: original dice "Original", sin chips, Simple', /pr-mc__origen">Original</.test(fila(M[0])) && !/pr-chip|pr-mc__origen--modificada/.test(fila(M[0])) && /pr-mc__tam">Simple</.test(fila(M[0])), fila(M[0]))
+  chk('sala: anterior dice "Original", Doble', /pr-mc__origen">Original</.test(fila(M[1])) && !/pr-chip|pr-mc__origen--modificada/.test(fila(M[1])) && /pr-mc__tam">Doble</.test(fila(M[1])), fila(M[1]))
+  chk('sala: modificada en bordó, chocolate con su chip', /pr-mc__origen pr-mc__origen--modificada">Modificada</.test(fila(M[2])) && /pr-chip-choco">Chocolate</.test(fila(M[2])))
   chk('sala: chocolate SOLO con cacao', !/Chocolate/.test(fila(M[0]) + fila(M[1])))
   S.estado.defineChocolate = new Set(['i-cacao'])
   const pend = (b) => S.htmlFilaMasaPendiente({ nro: 4, maquinaNombre: 'M1', lote: 7023, doble: true, cambiada: false, cantidades: {}, otros: [], ...b })
-  chk('sala, esperando: sin chip si no se tocó', !/pr-chip/.test(pend({})) && /pr-masa-tam">DOBLE</.test(pend({})), pend({}))
-  chk('sala, esperando: "Modificada" si se tocó', /pr-chip-modificada/.test(pend({ cambiada: true })))
+  chk('sala, esperando: "Original" si no se tocó, Doble', /pr-mc__origen">Original</.test(pend({})) && !/pr-chip/.test(pend({})) && /pr-mc__tam">Doble</.test(pend({})), pend({}))
+  chk('sala, esperando: "Modificada" si se tocó', /pr-mc__origen pr-mc__origen--modificada">Modificada</.test(pend({ cambiada: true })))
+  chk('sala, esperando: no se toca (no está en la base)', !/data-masa-ver|<button/.test(pend({})))
   chk('sala, esperando: "Chocolate" con la regla de la sala (esChocolate)', /pr-chip-choco/.test(pend({ cantidades: { 'i-cacao': 2 } })) && !/pr-chip-choco/.test(pend({ cantidades: { 'i-cacao': 0, 'i-harina': 25 } })),
     pend({ cantidades: { 'i-cacao': 2 } }))
   const pl = S.htmlMasasPlanilla([M[2], M[1]].reverse())
-  chk('planilla: SIMPLE / DOBLE grande', /pr-masa-tam">DOBLE</.test(pl) && /pr-masa-tam">SIMPLE</.test(pl), pl)
+  // Cada masa con SU tamaño (la 2 es doble, la 3 simple): desde la lista
+  // compacta (08/10/2026) ninguna otra lista usa textoTamanoMasa().
+  chk('planilla: SIMPLE / DOBLE grande, cada una el suyo', /<strong>2<\/strong> · [^<]* · <span class="pr-masa-tam">DOBLE</.test(pl) && /<strong>3<\/strong> · [^<]* · <span class="pr-masa-tam">SIMPLE</.test(pl), pl)
   chk('planilla: un solo chip "Modificada" y ninguno de origen', (pl.match(/pr-chip-modificada/g) || []).length === 1 && !/pr-chip-origen|Anterior|Original/.test(pl), pl)
   chk('planilla: chocolate solo en la de cacao', (pl.match(/pr-chip-choco/g) || []).length === 1)
   const d = { items: [], recItems: [], ingredientes: [], insumos: [], nombres: new Map([['e', 'Juan']]) }
   const hm = (m) => G.htmlMasaHistorial({ ...m, tipo_masa: 'Común', receta_id: 'r', masero_id: 'e' }, d)
-  chk('historial: original y anterior sin chip', !/pr-chip/.test(hm(M[0]) + hm(M[1])))
-  chk('historial: modificada y chocolate con su chip', /pr-chip-modificada/.test(hm(M[2])) && /pr-chip-choco/.test(hm(M[2])))
-  chk('historial: SIMPLE / DOBLE', /pr-masa-tam">SIMPLE</.test(hm(M[0])) && /pr-masa-tam">DOBLE</.test(hm(M[1])))
+  chk('historial: original y anterior dicen "Original", sin chips', /pg-masa__origen">Original</.test(hm(M[0])) && /pg-masa__origen">Original</.test(hm(M[1])) &&
+    !/pr-chip|pg-masa__origen--modificada/.test(hm(M[0]) + hm(M[1])))
+  chk('historial: modificada en bordó y chocolate con su chip', /pg-masa__origen pg-masa__origen--modificada">Modificada</.test(hm(M[2])) && /pr-chip-choco/.test(hm(M[2])))
+  chk('historial: Simple / Doble', /pg-masa__tam">Simple</.test(hm(M[0])) && /pg-masa__tam">Doble</.test(hm(M[1])))
   // El CSS: "Modificada" en bordó (Planta v2: el bordó es --p-mal /
   // --p-mal-suave, #7A2E42 / #F5E8EC) y nunca en el naranja.
   // (28/09/2026) Se eliminaron por diseño: el chip de origen de la cabecera
@@ -269,7 +276,11 @@ esperas.push((async () => {
     productosConCono: ['p'], correcciones: [{ produccion_item_id: 'it', tipo: 'cajas', cajas_antes: 1, cajas_despues: 2, motivo: marca('motivoCorr'), hecha_por: 'e', hecha_en: null }], nombres: new Map(),
   }), ['producto', 'presentacion', 'cono', 'caja', 'cajaMarca', 'embolsado', 'motivoCorr'])
   chequearMarcas(chk, 'lista de conos', S.htmlMarcas(catMalo.marcas, '', {}, null), ['cono'])
-  chequearMarcas(chk, 'masa anulada en la sala', S.htmlFilaMasaTurno({ id: 'x', nro: 1, doble: false, origen: 'modificada', es_chocolate: true, anulada: true, anulada_motivo: marca('motivoMasa') }, true), ['motivoMasa'])
+  // La lista compacta (08/10/2026): el motivo de la anulada va en el detalle.
+  const anuladaSala = { id: 'x', nro: 1, doble: false, origen: 'modificada', es_chocolate: true, anulada: true, anulada_motivo: marca('motivoMasa') }
+  chk('masa anulada en la sala: el renglón no lleva el motivo', !/motivoMasa/.test(S.htmlFilaMasaTurno(anuladaSala, true)))
+  chequearMarcas(chk, 'masa anulada en la sala (su detalle)', S.htmlCuerpoMasa(anuladaSala, null), ['motivoMasa'])
+  G.estado.masaHistAbierta = 'x'
   chequearMarcas(chk, 'masa anulada en el historial', G.htmlMasaHistorial({ id: 'x', nro: 1, doble: true, origen: 'modificada', es_chocolate: true, anulada: true, anulada_motivo: marca('motivoHist'), tipo_masa: marca('tipoMasa'), masero_id: 'e' },
     { items: [], recItems: [], ingredientes: [], insumos: [], nombres: new Map([['e', marca('masero')]]) }), ['motivoHist', 'tipoMasa', 'masero'])
 }

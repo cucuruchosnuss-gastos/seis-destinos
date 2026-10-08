@@ -1796,6 +1796,28 @@
     @media (max-width: 1099px) { .pg-turno__grilla { grid-template-columns: minmax(0, 1fr); } }
     .pg-caja { border: 1px solid var(--color-borde); border-radius: 16px; padding: 12px 16px; min-width: 0; }
     .pg-caja--ancha { margin-top: 14px; }
+    /* LA LISTA DE MASAS COMPACTA (08/10/2026): un renglón por masa y, al
+       tocarlo, el detalle (quién la cargó, cuándo y la fórmula). */
+    .pg-masa.pr-lista__item { padding: 0; background: transparent; border-bottom: 1px solid var(--color-divisor); border-radius: 0; }
+    .pg-masa__renglon { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; padding: 6px 4px;
+      background: transparent; border: 0; text-align: left; font: inherit; color: var(--color-texto); cursor: pointer; }
+    .pg-masa__renglon:focus-visible { outline: 3px solid var(--color-acento); outline-offset: -3px; border-radius: 8px; }
+    .pg-masa__nro { font-weight: 800; white-space: nowrap; }
+    .pg-masa__hora { color: var(--color-texto-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .pg-masa__origen { white-space: nowrap; }
+    .pg-masa__origen--modificada { color: var(--bordo); font-weight: 800; }
+    .pg-masa__tam { font-weight: 800; white-space: nowrap; }
+    .pg-masa__marca { font-weight: 800; color: var(--bordo); white-space: nowrap; }
+    .pg-masa__flecha { margin-left: auto; color: var(--color-texto-suave); font-size: 0.75rem; }
+    .pg-masa--anulada .pg-masa__nro, .pg-masa--anulada .pg-masa__hora, .pg-masa--anulada .pg-masa__origen, .pg-masa--anulada .pg-masa__tam,
+    .pg-masa--tirada .pg-masa__nro, .pg-masa--tirada .pg-masa__hora, .pg-masa--tirada .pg-masa__origen, .pg-masa--tirada .pg-masa__tam { text-decoration: line-through; color: var(--color-texto-suave); }
+    .pg-masa__det { padding: 4px 4px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .pg-masa__det p { margin: 0; }
+    .pg-mf { display: flex; flex-direction: column; border-top: 1px solid var(--color-divisor); }
+    .pg-mf__ing { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.2fr); gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--color-divisor); }
+    .pg-mf__nombre { font-weight: 700; }
+    .pg-mf__cant { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pg-mf__marca { color: var(--color-texto-2); }
     .pg-gestion .pg-caja .pr-subtitulo { margin-top: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
     .pg-caja__ctx { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--pg-texto-2); margin-left: 6px; }
     .pg-turno__totales { display: flex; gap: 20px; margin: 10px 0 0; }
@@ -8336,22 +8358,68 @@
       return it.ingrediente_libre || 'Otro'
     }
 
+    // LA LISTA DE MASAS COMPACTA (08/10/2026, pedido de Facu). Cada masa es
+    // UN renglón: el número, la hora, Original o Modificada y Simple o Doble
+    // (más "Chocolate", "Anulada" o "Tirada"). La fórmula ya no va debajo de
+    // cada masa: al tocar el renglón se abre su detalle —quién la cargó,
+    // cuándo, la diferencia contra su receta y cada ingrediente con su marca,
+    // la cantidad como salió (×2 en una doble) y el lote—. Una a la vez. Una
+    // masa 'anterior' se dice "Original": es la receta sin cambios, copiada de
+    // la masa anterior (lo que se aparta lo marca la base como 'modificada').
+    function textoOrigenMasa(m) {
+      return m?.origen === 'modificada' ? 'Modificada' : 'Original'
+    }
+
+    // La fórmula: cantidad_kg es lo que SALIÓ (la base guarda ×2 en una doble).
+    function htmlFormulaMasa(m, d) {
+      const orden = (i) => d.ingredientes.find(g => g.id === i.ingrediente_id)?.orden ?? 999
+      const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0).sort((a, z) => orden(a) - orden(z))
+      if (!suyos.length) return '<p class="pr-texto-suave">Sin ingredientes.</p>'
+      return '<div class="pg-mf">' + suyos.map(i => {
+        const ins = i.insumo_id ? d.insumos.find(x => x.id === i.insumo_id) : null
+        const marca = ins ? (ins.marca || ins.nombre || '') : (i.insumo_id ? 'Insumo' : (i.ingrediente_id ? '' : 'escrito a mano'))
+        const lote = i.lote ? `lote ${esc(i.lote)}${i.lote_fuera_de_stock ? ' · fuera de stock' : ''}` : (i.insumo_id ? 'sin lote' : 'no lleva lote')
+        return `<div class="pg-mf__ing"><span class="pg-mf__nombre">${esc(nombreIngredienteItem(d, i))}</span>` +
+          `<span class="pg-mf__cant">${esc(textoKg(Number(i.cantidad_kg)))}</span>` +
+          `<span class="pg-mf__marca">${marca ? `${esc(marca)} · ` : ''}${lote}</span></div>`
+      }).join('') + '</div>'
+    }
+
     function htmlMasaHistorial(m, d) {
-      const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0)
-      const detalle = suyos.map(i => `${nombreIngredienteItem(d, i)} ${textoKg(Number(i.cantidad_kg))}` +
-        (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
-      const dif = textoDiferencias(diferenciaDeMasa(m, d))
+      const abierta = estado.masaHistAbierta === m.id
+      const tirada = !m.anulada && m.descartada === true
       // El chip de chocolate sale de masas.es_chocolate, que escribe
-      // registrar_masa mirando los ingredientes: no se recalcula acá. Los
-      // chips, con el criterio de las listas (chipsDeMasa).
-      const chips = chipsDeMasa(m)
-      return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
-        `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · <span class="pr-masa-tam">${textoTamanoMasa(m)}</span>` +
-        `${chips ? ` ${chips}` : ''} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
-        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}`
-          : m.descartada === true ? `<br><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock`
-          : `<br>${esc(dif)}`) +
-        `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
+      // registrar_masa mirando los ingredientes: no se recalcula acá.
+      const marca = m.anulada ? '<span class="pg-masa__marca">Anulada</span>'
+        : tirada ? '<span class="pg-masa__marca">Tirada</span>'
+        : (m.es_chocolate ? '<span class="pr-chip-choco">Chocolate</span>' : '')
+      const idDet = `pg-masa-det-${m.id}`
+      const renglon = `<button type="button" class="pg-masa__renglon" data-masa-hist="${esc(m.id)}" aria-expanded="${abierta ? 'true' : 'false'}"${abierta ? ` aria-controls="${esc(idDet)}"` : ''}>` +
+        `<span class="pg-masa__nro">Masa ${esc(m.nro)}</span><span class="pg-masa__hora">${esc(horaArgentina(m.hora) || '—')}</span>` +
+        `<span class="pg-masa__origen${m.origen === 'modificada' ? ' pg-masa__origen--modificada' : ''}">${textoOrigenMasa(m)}</span>` +
+        `<span class="pg-masa__tam">${m.doble ? 'Doble' : 'Simple'}</span>${marca}` +
+        `<span class="pg-masa__flecha" aria-hidden="true">${abierta ? '▲' : '▼'}</span></button>`
+      let det = ''
+      if (abierta) {
+        const cuando = [fechaCorta(m.hora), horaArgentina(m.hora)].filter(Boolean).join(' · ')
+        det = `<div class="pg-masa__det" id="${esc(idDet)}">` +
+          `<p>La cargó <strong>${esc(d.nombres.get(m.masero_id) ?? '—')}</strong> · ${esc(cuando || '—')}${m.tipo_masa ? ` · ${esc(m.tipo_masa)}` : ''}</p>` +
+          (m.anulada ? `<p><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}</p>`
+            : tirada ? `<p><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock</p>`
+            : `<p>${esc(textoDiferencias(diferenciaDeMasa(m, d)))}</p>`) +
+          htmlFormulaMasa(m, d) + '</div>'
+      }
+      return `<li class="pr-lista__item pg-masa${m.anulada ? ' pg-masa--anulada' : ''}${tirada ? ' pg-masa--tirada' : ''}">${renglon}${det}</li>`
+    }
+
+    // Tocar el renglón abre su detalle; tocarlo otra vez lo cierra.
+    function alternarMasaHistorial(masaId) {
+      if (!(estado.detalleHistorial?.masas ?? []).some(m => m.id === masaId)) return false
+      estado.masaHistAbierta = estado.masaHistAbierta === masaId ? null : masaId
+      pintarDetalleHistorial()
+      const b = document.querySelector(`[data-masa-hist="${masaId}"]`)
+      if (b) b.focus()
+      return true
     }
 
     function correccionesDe(d, itemId) {
@@ -8577,7 +8645,7 @@
       const cont = document.getElementById('pr-historial-detalle-cuerpo')
       document.getElementById('pr-historial-listado').hidden = true
       document.getElementById('pr-historial-detalle').hidden = false
-      if (estado.detalleHistorial?.turno?.id !== turnoId) estado.corrigeHist = null
+      if (estado.detalleHistorial?.turno?.id !== turnoId) { estado.corrigeHist = null; estado.masaHistAbierta = null }
       cont.innerHTML = '<p class="pr-texto-suave">Cargando el turno…</p>'
       try {
         estado.detalleHistorial = await leerDetalleTurno(turnoId)
@@ -8838,6 +8906,7 @@
       })
       // Corregir, borrar y anotar paradas de una planilla CERRADA.
       document.getElementById('pr-historial-detalle-cuerpo').addEventListener('click', ev => {
+        const mh = ev.target.closest('[data-masa-hist]'); if (mh) return alternarMasaHistorial(mh.dataset.masaHist)
         if (ev.target.closest('#pr-historial-anotar-parada')) return abrirEditorDesdeHistorial('anotar')
         const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdeHistorial('editar', e.dataset.paradaEditar)
         const b = ev.target.closest('[data-parada-borrar]'); if (b) return abrirEditorDesdeHistorial('borrar', b.dataset.paradaBorrar)
