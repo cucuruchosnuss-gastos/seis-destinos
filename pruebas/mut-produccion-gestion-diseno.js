@@ -51,7 +51,7 @@ correrMutacionesProduccion({
     { nombre: "\"‹\" de Configuración no abre el menú", de: "      abrirMenu()\n    }\n\n    // ── Lo que falta configurar", a: "      cerrarMenu()\n    }\n\n    // ── Lo que falta configurar" },
     { nombre: 'tocar un renglón no cierra el menú', de: '    function irA(destino) {\n      cerrarMenu()\n', a: '    function irA(destino) {\n' },
     { nombre: 'Control se ve sin ver', de: "      document.getElementById('pr-menu-bloque-control').hidden = !ver", a: "      document.getElementById('pr-menu-bloque-control').hidden = false" },
-    { nombre: 'los renglones de Control se ven sin ver', de: "for (const id of ['pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver", a: "for (const id of ['pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = false" },
+    { nombre: 'los renglones de Control se ven sin ver', de: "for (const id of ['pr-menu-tabla', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver", a: "for (const id of ['pr-menu-tabla', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = false" },
     { nombre: 'Personas se ve sin configurar', de: "      document.getElementById('pr-menu-bloque-personas').hidden = !conf", a: "      document.getElementById('pr-menu-bloque-personas').hidden = false" },
     { nombre: 'el menú no se muestra', de: "      document.getElementById('pr-menu').hidden = false\n      document.body.classList.add('pg-con-menu')", a: "      document.body.classList.add('pg-con-menu')" },
     { nombre: 'sin la clase de la barra lateral', de: "      document.body.classList.add('pg-con-menu')\n", a: '' },
