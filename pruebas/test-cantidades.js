@@ -57,6 +57,9 @@ const PRELUDIO_STOCK = `
   function coberturaDe() { return null }
   function filasCoberturaDe() { return [] }
   function coberturaPorNombre() { return new Map() }
+  // El stock valorizado (09/10/2026) lo prueba test-stock-costos.js.
+  function pintarValorizado() {}
+  function htmlValorStock() { return '' }
   function abrirLotes() {}
   var estado = { stock: [], unidadBarra: null, cobertura: new Map(), filtroCobertura: false }
 `

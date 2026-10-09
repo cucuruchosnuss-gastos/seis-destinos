@@ -1,0 +1,120 @@
+// Mutaciones de test-stock-costos.js. Ver mutar.js (los tres guards).
+// Corren de a una.
+//
+//   node pruebas/mut-stock-costos.js
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+const RAIZ = path.join(__dirname, '..')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-stock-costos.js'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/stock.html'),
+  // Cada ${esc(...)} de estas funciones pierde su esc(): la suite las ejecuta
+  // con texto malicioso en cada dato de la base.
+  funciones: ['htmlFilaCosto', 'htmlHistorialCosto', 'renderizarCostos', 'renderizarChipsCostos'],
+  // esc() de textos que solo pueden tener números, fechas (columnas date) y
+  // texto fijo: sacarlos no cambia ninguna salida posible.
+  equivalentes: [
+    { expr: 'esc(textoInsumosSinCosto(sin))', motivo: 'número: un conteo con texto fijo' },
+    { expr: 'esc(formatearFecha(String(h.vigente_desde)))', motivo: 'fecha: insumo_costos.vigente_desde es date' },
+  ],
+  manuales: [
+    // ── Permisos ─────────────────────────────────────────────────────────
+    { nombre: 'sin bypass de super_admin',
+      de: "      if (estado.miRolApp === 'super_admin') return true\n      const clave = `stock:${tarea}`",
+      a: "      const clave = `stock:${tarea}`" },
+    { nombre: 'un alcance null da todas',
+      de: '      if (alcance && alcance.todas === true) return true\n      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))\n    }\n\n    // Las fábricas donde se pueden VER costos',
+      a: '      if (!alcance || alcance.todas === true) return true\n      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))\n    }\n\n    // Las fábricas donde se pueden VER costos' },
+    { nombre: 'ver costos sin mirar la tarea',
+      de: "      if (!estado.misTareas.has(clave)) return false\n      const alcance = estado.alcancesTareas.get(clave)",
+      a: "      const alcance = estado.alcancesTareas.get(clave) ?? { todas: true }" },
+    { nombre: 'la fábrica de pruebas entra',
+      de: "      return sinUnidadesDePrueba([...porId.values()], estado.fabrica).filter(u => puedeCostosEn('ver_costos', u.id))",
+      a: "      return [...porId.values()].filter(u => puedeCostosEn('ver_costos', u.id))" },
+    { nombre: 'el valorizado sigue la barra aunque no haya permiso ahí',
+      de: "      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''\n      return lista.length === 1 ? lista[0].id : ''",
+      a: "      if (estado.unidadBarra) return estado.unidadBarra\n      return lista.length === 1 ? lista[0].id : ''" },
+    { nombre: 'con Todas y varias se valoriza la primera',
+      de: "      return lista.length === 1 ? lista[0].id : ''",
+      a: "      return lista.length >= 1 ? lista[0].id : ''" },
+    { nombre: 'la pantalla de costos consulta sin fábrica',
+      de: "      if (!unidad) {\n        estado.costos = null\n        renderizarCostos()\n        return true\n      }",
+      a: "      if (!unidad && false) {\n        estado.costos = null\n        renderizarCostos()\n        return true\n      }" },
+    { nombre: 'sin cargar_costos igual hay formulario',
+      de: "      const puedeCargar = puedeCostosEn('cargar_costos', m.unidad)",
+      a: "      const puedeCargar = puedeCostosEn('ver_costos', m.unidad)" },
+    // ── El total ─────────────────────────────────────────────────────────
+    { nombre: 'el total suma también los sin costo como 0',
+      de: "        if (costo === null || valor === null) { sinCosto++; continue }",
+      a: "        if (costo === null || valor === null) { sinCosto++ }" },
+    { nombre: 'el total sin centavos (suma de flotantes)',
+      de: "        centavos += Math.round(valor * 100)",
+      a: "        centavos += valor * 100" },
+    { nombre: 'sin ninguno con costo da 0',
+      de: "      return { total: conCosto ? centavos / 100 : null, conCosto, sinCosto }",
+      a: "      return { total: centavos / 100, conCosto, sinCosto }" },
+    { nombre: 'el total no cuenta los sin costo',
+      de: "      const sin = r.sinCosto > 0 ? ' · ' + textoInsumosSinCosto(r.sinCosto) : ''",
+      a: "      const sin = ''" },
+    { nombre: 'la fila sin valor',
+      de: "              ${htmlValorStock(f)}\n",
+      a: '' },
+    { nombre: 'el valor de la fila sin escapar (plata)',
+      de: "      return `<span class=\"valor-stock\">Valor ${esc(plataCosto(r.valor))}</span>`",
+      a: "      return `<span class=\"valor-stock\">Valor ${plataCosto(0)}</span>`" },
+    { nombre: 'un sin costo dice $ 0',
+      de: "      return v === null ? '—' : `$ ${formatearNumeroAr(v, { decimales, minimos: 2 })}`",
+      a: "      return `$ ${formatearNumeroAr(v ?? 0, { decimales, minimos: 2 })}`" },
+    { nombre: 'Todas no pide la fábrica',
+      de: "      const pedir = !estado.unidadBarra && unidadesConCostos().length > 1",
+      a: "      const pedir = false" },
+    // ── La lista de costos ───────────────────────────────────────────────
+    { nombre: 'los sin costo no van arriba',
+      de: "      return [...sin, ...con]",
+      a: "      return [...con, ...sin]" },
+    { nombre: 'la variación al revés de colores',
+      de: "      if (n > 0) return `<span class=\"variacion-costo variacion-costo--sube\"",
+      a: "      if (n > 0) return `<span class=\"variacion-costo variacion-costo--baja\"" },
+    // ── Cargar ───────────────────────────────────────────────────────────
+    { nombre: 'por bulto no divide',
+      de: "        return Math.round(p / contenido * 10000) / 10000",
+      a: "        return Math.round(p * 10000) / 10000" },
+    { nombre: 'el bulto sale del contenido aunque haya varias presentaciones',
+      de: "      const contenido = s && Number(s.presentaciones) === 1 ? numeroCosto(s.contenido_unico) : null",
+      a: "      const contenido = s ? numeroCosto(s.contenido_unico) ?? 50 : null" },
+    { nombre: 'cambiar de modo no vacía el campo',
+      de: "      ponerNumero(document.getElementById('costo-precio'), null)\n      pintarModalCosto()\n    }",
+      a: "      pintarModalCosto()\n    }" },
+    { nombre: 'doble toque manda dos veces',
+      de: "      if (!m || m.enviando) return\n      const precio",
+      a: "      if (!m) return\n      const precio" },
+    { nombre: 'el error de la base no se muestra',
+      de: "        m.error = error.message || 'No se pudo guardar el costo.'",
+      a: "        m.error = 'No se pudo guardar el costo.'" },
+    { nombre: 'no valida la fecha muy adelante',
+      de: "      if (desde && desde > sumarDiasIso(hoy, 60)) return 'La fecha no puede ser tan adelante.'\n",
+      a: '' },
+    { nombre: 'la nota vacía viaja como texto',
+      de: "      const nota = document.getElementById('costo-nota').value.trim() || null",
+      a: "      const nota = document.getElementById('costo-nota').value.trim()" },
+    { nombre: 'no relee los costos al guardar',
+      de: "    async function despuesDeCambiarCosto(m) {\n      await cargarCostos()",
+      a: "    async function despuesDeCambiarCosto(m) {" },
+    // ── Anular ───────────────────────────────────────────────────────────
+    { nombre: 'anula sin confirmar',
+      de: "      if (!m || m.anulandoEnvio || m.anulando !== id) return",
+      a: "      if (!m || m.anulandoEnvio) return" },
+    { nombre: 'anula dos veces con doble toque',
+      de: "      if (!m || m.anulandoEnvio || m.anulando !== id) return",
+      a: "      if (!m || m.anulando !== id) return" },
+    { nombre: 'el anulado tiene botón Anular',
+      de: "        const acciones = h.anulado || !puedeAnular ? ''",
+      a: "        const acciones = !puedeAnular ? ''" },
+    { nombre: 'los nombres del historial no se leen',
+      de: "          const r = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)",
+      a: "          const r = { data: [] }" },
+  ],
+})

@@ -1,0 +1,78 @@
+// Mutaciones de test-administracion-costos.js. Ver mutar.js.
+//
+//   node pruebas/mut-administracion-costos.js
+//
+// UN RUNNER POR VEZ.
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+// Solo la parte de Administración: la cartera de cheques la mutan sus suites.
+const { limitesAdministracion } = require('./fuente-cheques')
+
+correrMutaciones({
+  region: limitesAdministracion,
+  suite: path.join(__dirname, 'test-administracion-costos.js'),
+  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/administracion.html'),
+  escape: 'esc',
+  funciones: ['htmlInsumosLista', 'htmlOpcionInsumoLista', 'htmlEditorInsumoLista'],
+  equivalentes: [
+    { expr: 'esc(fechaCorta(f.vigente_desde))', motivo: 'fecha dd/mm/aaaa de una columna date' },
+    { expr: 'esc(ed.desde)', motivo: 'fecha AAAA-MM-DD de un input date o de hoyArgentina()' },
+  ],
+  manuales: [
+    { nombre: 'lee el costo sin ver_costos',
+      de: "      if (puedeEn('stock', 'ver_costos', empresaId)) pedidos.push(",
+      a: "      pedidos.push(" },
+    { nombre: 'se ofrece Costo + % sin ver_costos',
+      de: "          ${veCostos ? `<button type=\"button\" class=\"ad-segmento__opcion\" data-ins-modo=\"costo\"",
+      a: "          ${true ? `<button type=\"button\" class=\"ad-segmento__opcion\" data-ins-modo=\"costo\"" },
+    { nombre: 'se puede pasar a costo sin ver_costos',
+      de: "      if (modo === 'costo' && !puedeEn('stock', 'ver_costos')) return\n",
+      a: '' },
+    { nombre: 'los de la grilla de arriba se repiten',
+      de: "      return (Array.isArray(filas) ? filas : []).filter(f => f?.tipo === 'costo_mas_pct' || numeroONull(f?.precio_unitario) !== null)",
+      a: "      return (Array.isArray(filas) ? filas : []).filter(f => !!f)" },
+    { nombre: 'sin costo no se marca',
+      de: '<div class="ad-insumo-precio${f.sin_costo === true ? \' ad-insumo-precio--sin-costo\' : \'\'}">',
+      a: '<div class="ad-insumo-precio">' },
+    { nombre: 'sin costo no dice que falta',
+      de: "        if (f.sin_costo === true) return `${cabeza} · falta cargar el costo`\n",
+      a: '' },
+    { nombre: 'el recargo mal redondeado (sin centavos)',
+      de: '      return Math.round(c * (100 + p)) / 100',
+      a: '      return c * (1 + p) / 100' },
+    { nombre: 'costo + % manda también el precio',
+      de: "        p_precio_unitario: ed.modo === 'fijo' ? valor : null,",
+      a: "        p_precio_unitario: valor," },
+    { nombre: 'precio fijo manda también el %',
+      de: "        p_recargo_costo_pct: ed.modo === 'costo' ? valor : null,",
+      a: "        p_recargo_costo_pct: valor," },
+    { nombre: 'cambiar de modo no vacía el campo',
+      de: "      // Cambiar entre un precio y un % VACÍA el campo: un 15 no es lo mismo.\n      ed.valor = null\n",
+      a: '' },
+    { nombre: 'doble toque manda dos veces',
+      de: "      if (!ed || ed.enviando) return\n      const valor = leerCampoNumero(campoValorInsumo())",
+      a: "      if (!ed) return\n      const valor = leerCampoNumero(campoValorInsumo())" },
+    { nombre: 'el error de la base no se muestra',
+      de: "        ed.error = error.message || 'No se pudo guardar el precio.'",
+      a: "        ed.error = 'No se pudo guardar el precio.'" },
+    { nombre: 'acepta -100 %',
+      de: "        if (valor <= -100) return 'El % no puede ser -100 o menos.'\n",
+      a: '' },
+    { nombre: 'sin insumo se manda igual',
+      de: "      if (!ed.insumoId) return 'Elegí el insumo.'\n",
+      a: '' },
+    { nombre: 'no relee al guardar',
+      de: "      pintarInsumosLista()\n      await cargarInsumosLista(l)\n    }",
+      a: "      pintarInsumosLista()\n    }" },
+    { nombre: 'ofrece insumos inactivos',
+      de: "      const catalogo = (estado.catalogo?.insumos ?? []).filter(i => i.activo !== false)",
+      a: "      const catalogo = (estado.catalogo?.insumos ?? [])" },
+    { nombre: 'la vista previa sin costo dice $ 0',
+      de: "      const costo = l.insumos?.costos?.get(ed.insumoId) ?? null\n      if (costo === null)",
+      a: "      const costo = l.insumos?.costos?.get(ed.insumoId) ?? 0\n      if (costo === null)" },
+    { nombre: 'la tarjeta no se carga al abrir la lista',
+      de: "        cargarInsumosLista(estado.lista)\n",
+      a: '' },
+  ],
+})

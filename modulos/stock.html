@@ -2350,6 +2350,101 @@
     .trp-exito { background: var(--verde-suave); color: var(--verde-oscuro); border: 1px solid var(--verde); border-radius: var(--radio-input); padding: 0.625rem 0.75rem; margin-top: 0.75rem; font-size: 0.875rem; }
     .trp-acciones { margin-top: 0.75rem; }
     .trp-error { margin-top: 0.5rem; }
+    /* ── Costos de insumos y stock valorizado (09/10/2026) ───────────────── */
+    .stock-valorizado {
+      margin: 0 0 0.75rem;
+      padding: 0.625rem 0.875rem;
+      border-radius: 12px;
+      background: var(--verde-suave);
+      color: var(--verde-oscuro);
+      font-size: 0.875rem;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+    .stock-valorizado--error { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .valor-stock {
+      display: inline-block;
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+    }
+    .valor-stock--sin { color: var(--bordo-oscuro); font-weight: 600; }
+    .fila-costo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      width: 100%;
+      text-align: left;
+      font-family: var(--fuente);
+      cursor: pointer;
+      min-width: 0;
+    }
+    .fila-costo__info { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+    .fila-costo__marca { color: var(--color-texto-2); font-weight: 600; }
+    .fila-costo__derecha {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.1875rem;
+      flex-shrink: 0;
+      max-width: 50%;
+      text-align: right;
+    }
+    .fila-costo__costo { font-weight: 700; color: var(--color-texto); font-size: 0.9375rem; overflow-wrap: anywhere; }
+    .chip-sin-costo, .variacion-costo {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .chip-sin-costo { background: var(--bordo-suave); color: var(--bordo-oscuro); border: 1px solid var(--bordo); }
+    .variacion-costo--sube { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .variacion-costo--baja { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .variacion-costo--igual { background: var(--color-superficie); color: var(--color-texto-2); }
+    .costos-resumen { margin: 0 0 0.5rem; font-size: 0.8125rem; font-weight: 650; color: var(--bordo-oscuro); }
+    .costo-modos { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; min-width: 0; }
+    .costo-modos[hidden] { display: none; }
+    .costo-modo {
+      flex: 1 1 9rem;
+      min-width: 0;
+      min-height: 44px;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+    .costo-modo[aria-pressed="true"] { border-color: var(--verde); background: var(--verde-suave); color: var(--verde-oscuro); }
+    .costo-equivale { margin-top: 0.3125rem; font-size: 0.8125rem; font-weight: 650; color: var(--verde-oscuro); min-height: 1em; }
+    .costo-hist {
+      border-top: 1px solid var(--color-borde);
+      padding: 0.625rem 0;
+      min-width: 0;
+    }
+    .costo-hist__fila { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .costo-hist__valor { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+    .costo-hist__meta { font-size: 0.75rem; color: var(--color-texto-2); margin-top: 0.125rem; }
+    .costo-hist__nota { font-size: 0.8125rem; color: var(--color-texto); margin-top: 0.25rem; overflow-wrap: anywhere; }
+    .costo-hist--anulado .costo-hist__valor { text-decoration: line-through; color: var(--color-texto-suave); }
+    .costo-hist__confirmar {
+      margin-top: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      border-radius: 10px;
+      background: var(--bordo-suave);
+      border: 1px solid var(--bordo);
+      color: var(--bordo-oscuro);
+      font-size: 0.8125rem;
+    }
+    .costo-hist__confirmar p { margin: 0 0 0.5rem; }
+    #modal-costo .modal-stock__titulo { padding-right: 2rem; overflow-wrap: anywhere; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2411,7 +2506,13 @@
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-mermas">Mermas</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-traspaso" hidden>Traspaso a otra fábrica</button>
+        <!-- Costos de insumos (09/10/2026): solo con stock:ver_costos en alguna fábrica. -->
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-costos" hidden>Costos</button>
       </div>
+
+      <!-- Stock valorizado (09/10/2026): de la fábrica de la barra, solo con
+           stock:ver_costos ahí. Los sin costo se cuentan y no suman. -->
+      <div class="stock-valorizado" id="stock-valorizado" hidden></div>
 
       <!-- Para cuántos días hábiles alcanza (02/10/2026): cuántos insumos
            alcanzan para 7 días hábiles o menos. Al tocarlo filtra la lista a
@@ -2719,6 +2820,20 @@
       <div class="campo-stock__error trp-error" id="trp-error" role="alert" hidden></div>
     </div><!-- /vista-traspaso -->
 
+    <!-- ══ VISTA: COSTOS DE INSUMOS (09/10/2026) ═════════════════════════
+         Drill-down de Stock: PESTANA_DE_VISTA la deja marcada como Stock.
+         Los costos son de cada fábrica: la elige la barra de arriba, y con
+         "Todas" se pide acá con chips. -->
+    <div class="vista-stock" id="vista-costos" hidden>
+      <button type="button" class="hist-volver" id="btn-volver-de-costos">‹ Volver al stock</button>
+      <div class="rec-aviso rec-aviso--info" id="costos-aviso-unidad" hidden></div>
+      <div class="chips-unidad" id="chips-unidad-costos" hidden></div>
+      <input type="search" class="buscador-stock" id="buscador-costos" placeholder="Buscar por nombre o marca…" autocomplete="off">
+      <div class="lista-contenido" id="lista-costos"></div>
+      <div class="estado-vacio-stock" id="costos-cargando" hidden>Cargando los costos…</div>
+      <div class="estado-vacio-stock" id="costos-vacio" hidden></div>
+    </div><!-- /vista-costos -->
+
 
 
   </div><!-- /contenedor -->
@@ -2763,6 +2878,54 @@
       </div>
     </div>
   </div><!-- /modal-stock-lotes -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — EL COSTO DE UN INSUMO (09/10/2026)
+       Cargar uno nuevo (con stock:cargar_costos) y el historial, con Anular
+       en cada uno (con su propia confirmación, nunca confirm()).
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-costo" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-costo></div>
+    <div class="modal-stock__panel" role="dialog" aria-modal="true" aria-labelledby="costo-nombre">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-costo aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo" id="costo-nombre">—</h2>
+      <div class="detalle-insumo__marca" id="costo-unidad"></div>
+
+      <div class="total-stock">
+        <span class="total-stock__etiqueta">Costo actual</span>
+        <span class="total-stock__valor" id="costo-actual">—</span>
+      </div>
+
+      <div id="costo-carga" hidden>
+        <div class="hist-titulo-bloque">Cargar un costo nuevo</div>
+        <div class="costo-modos" id="costo-modos" role="group" aria-label="Cómo lo escribís" hidden>
+          <button type="button" class="costo-modo" data-costo-modo="bulto" aria-pressed="false">Por bulto</button>
+          <button type="button" class="costo-modo" data-costo-modo="unidad" aria-pressed="true">Por unidad</button>
+        </div>
+        <div class="campo-stock">
+          <label for="costo-precio" id="costo-precio-rotulo">Precio</label>
+          <input type="text" id="costo-precio" inputmode="decimal" autocomplete="off">
+          <div class="costo-equivale" id="costo-equivale" aria-live="polite"></div>
+        </div>
+        <div class="campo-stock">
+          <label for="costo-desde">Vigente desde</label>
+          <input type="date" id="costo-desde">
+        </div>
+        <div class="campo-stock">
+          <label for="costo-nota">Nota (opcional)</label>
+          <input type="text" id="costo-nota" maxlength="300" autocomplete="off" placeholder="Por ejemplo: factura de agosto">
+        </div>
+        <div class="rec-aviso" id="costo-error" hidden></div>
+        <div class="modal-stock__acciones">
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-guardar-costo">Guardar el costo</button>
+        </div>
+      </div>
+
+      <div class="hist-titulo-bloque">Historial de costos</div>
+      <div class="estado-vacio-stock" id="costo-historial-cargando" hidden>Cargando el historial…</div>
+      <div id="costo-historial"></div>
+    </div>
+  </div><!-- /modal-costo -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -3598,6 +3761,9 @@
       miEmpleadoId: null,
       miRolApp: null,
       misTareas: new Set(),   // claves 'modulo:tarea' de empleado_tareas
+      // El alcance de cada tarea ('modulo:tarea' -> {todas} | {unidades}):
+      // lo usan las dos de costos, que son por fábrica (puedeCostosEn).
+      alcancesTareas: new Map(),
       insumos: [],
       filtro: 'todos',
       busqueda: '',
@@ -3708,6 +3874,16 @@
       // fábricas, leído una vez al abrir la pantalla.
       trp: null,
       trpCatalogo: null,
+
+      // ── Costos de insumos (09/10/2026) ────────────────────────────────
+      costosUnidad: '',     // la fábrica de la pantalla de costos
+      costos: null,         // { unidad, filas (de costos_insumos) | null, error }
+      busquedaCostos: '',
+      costo: null,          // el modal abierto de un insumo
+      valorizado: null,     // { unidad, filas (de stock_valorizado), porInsumo, error }
+      // Turnos: una respuesta vieja no pisa la nueva (cambiar la barra).
+      turnoValorizado: 0,
+      turnoCostos: 0,
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -3783,7 +3959,8 @@
     // unidad: guarda lo contado antes de cambiar y relee (con su turno).
     async function alCambiarBarra(e) {
       aplicarEstadoBarra(e)
-      if (estado.cargados.has('stock')) renderizarStock()
+      if (estado.cargados.has('stock')) { renderizarStock(); cargarValorizado() }
+      if (estado.cargados.has('costos')) cargarCostos()
       if (estado.cargados.has('historial')) renderizarHistorial()
       if (estado.cargados.has('mermas')) renderizarMermas()
       if (estado.cargados.has('transito')) { renderizarTransito(); renderizarTransfHistorial() }
@@ -4401,6 +4578,9 @@
       await estado.barraLista
       estado.cargados.add('stock')
       renderizarStock()
+      // El stock valorizado, solo con stock:ver_costos en la fábrica (si no,
+      // no se llama a la RPC).
+      await cargarValorizado()
       return true
     }
 
@@ -4648,9 +4828,11 @@
         vacioEl.hidden = true
         pintarAvisoCobertura([])
         pintarAvisoUnidad('stock-aviso-unidad', textoSinPermiso('ver el stock'))
+        pintarValorizado()
         return
       }
       pintarAvisoUnidad('stock-aviso-unidad', '')
+      pintarValorizado()
 
       const visibles = filasStockVisibles()
       const conUnidades = stockConUnidades()
@@ -4753,6 +4935,7 @@
                 ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
               </div>
               ${htmlCobertura(coberturaDe(filasCoberturaDe(f)))}
+              ${htmlValorStock(f)}
             </div>
             <div class="fila-stock__total ${negativo ? 'fila-stock__total--negativa' : ''}">${esc(destacado)}</div>
           </div>`
@@ -8841,6 +9024,570 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // COSTOS DE INSUMOS Y STOCK VALORIZADO (09/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Dos tareas CON ALCANCE por unidad: stock:ver_costos (ver los costos y
+    // cuánto vale el stock) y stock:cargar_costos (cargar y anular un costo).
+    // Las RPCs (costos_insumos, stock_valorizado, guardar_costo_insumo,
+    // anular_costo_insumo) las revalidan con tiene_tarea_alcance(); acá la
+    // MISMA regla decide qué se dibuja: sin ver_costos en la fábrica no aparece
+    // nada (ni el botón, ni el valor, ni el total) y no se llama a ninguna RPC
+    // de costos.
+    //
+    // UN COSTO SE GUARDA POR UNIDAD DE MEDIDA (kg, L, u) y la base lo redondea
+    // a 4 decimales. Se puede ESCRIBIR por bulto cuando el insumo tiene UNA
+    // presentación conocida en esa fábrica (v_stock_insumos.contenido_unico,
+    // con presentaciones = 1: la misma fuente que el listado usa para decir
+    // los bultos); acá se divide y viaja el costo por unidad.
+    //
+    // Un dato ausente es "—" o "sin costo", NUNCA "$ 0".
+
+    // La MISMA regla que tiene_tarea_alcance(): super_admin, o la tarea con
+    // alcance {"todas": true} o con la unidad en {"unidades": [...]}. Un
+    // alcance null no da ninguna unidad (como en la base).
+    function puedeCostosEn(tarea, unidadId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      const clave = `stock:${tarea}`
+      if (!estado.misTareas.has(clave)) return false
+      const alcance = estado.alcancesTareas.get(clave)
+      if (alcance && alcance.todas === true) return true
+      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
+
+    // Las fábricas donde se pueden VER costos: las de la barra de arriba (que
+    // ya son las de esta persona) más las de stock, sin la fábrica de pruebas
+    // para una cuenta real.
+    function unidadesConCostos() {
+      const porId = new Map()
+      for (const u of [...(estado.unidadesBarra || []), ...(estado.unidadesStock || [])]) {
+        if (u?.id && !porId.has(u.id)) porId.set(u.id, { id: u.id, nombre: u.nombre })
+      }
+      return sinUnidadesDePrueba([...porId.values()], estado.fabrica).filter(u => puedeCostosEn('ver_costos', u.id))
+    }
+
+    // Un numeric de la base (puede llegar como texto) o null. null, '' y un
+    // texto ilegible NO son un cero.
+    function numeroCosto(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    function plataCosto(n, decimales = 2) {
+      const v = numeroCosto(n)
+      return v === null ? '—' : `$ ${formatearNumeroAr(v, { decimales, minimos: 2 })}`
+    }
+
+    // "por kg", "por L", "por unidad".
+    function porUnidadDeMedida(unidad) {
+      const u = unidadCorta(unidad)
+      return `por ${u === 'u' || u === 'unidades' ? 'unidad' : u}`
+    }
+
+    function textoCostoUnitario(costo, unidad) {
+      const v = numeroCosto(costo)
+      return v === null ? 'Sin costo' : `${plataCosto(v, 4)} ${porUnidadDeMedida(unidad)}`
+    }
+
+    // Hoy en Argentina, 'AAAA-MM-DD' (la base usa _cobranza_hoy_ar()).
+    function hoyArgentinaCostos() {
+      return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+    }
+
+    function sumarDiasIso(iso, dias) {
+      const [a, m, d] = String(iso).split('-').map(Number)
+      const f = new Date(Date.UTC(a, m - 1, d + dias))
+      return f.toISOString().slice(0, 10)
+    }
+
+    // ↑ en bordó (subió: más caro), ↓ en verde (bajó), = en gris. Sin dato,
+    // nada.
+    function htmlVariacion(pct) {
+      const n = numeroCosto(pct)
+      if (n === null) return ''
+      const txt = formatearNumeroAr(Math.abs(n), { decimales: 1, minimos: 0 })
+      if (n > 0) return `<span class="variacion-costo variacion-costo--sube" title="Subió contra el costo anterior">↑ ${esc(txt)} %</span>`
+      if (n < 0) return `<span class="variacion-costo variacion-costo--baja" title="Bajó contra el costo anterior">↓ ${esc(txt)} %</span>`
+      return '<span class="variacion-costo variacion-costo--igual">= 0 %</span>'
+    }
+
+    // ── El stock valorizado (en la lista de stock) ─────────────────────────
+
+    // De qué fábrica se valoriza: la de la barra si ahí se ven costos; con
+    // "Todas", la única posible. Con varias no se elige ninguna: se pide
+    // elegir la fábrica arriba (un valor de "todas" sumaría costos de
+    // fábricas distintas sin decirlo).
+    function unidadValorizado() {
+      const lista = unidadesConCostos()
+      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      return lista.length === 1 ? lista[0].id : ''
+    }
+
+    // Lo de arriba de la lista: la suma EN CENTAVOS de los insumos con costo;
+    // los sin costo se cuentan y no suman.
+    function resumenValorizado(filas) {
+      let centavos = 0, conCosto = 0, sinCosto = 0
+      for (const f of filas ?? []) {
+        const costo = numeroCosto(f.costo_unitario), valor = numeroCosto(f.valor)
+        if (costo === null || valor === null) { sinCosto++; continue }
+        centavos += Math.round(valor * 100)
+        conCosto++
+      }
+      return { total: conCosto ? centavos / 100 : null, conCosto, sinCosto }
+    }
+
+    function textoInsumosSinCosto(n) {
+      return n === 1 ? '1 insumo sin costo' : `${n} insumos sin costo`
+    }
+
+    function textoValorizado(r) {
+      const sin = r.sinCosto > 0 ? ' · ' + textoInsumosSinCosto(r.sinCosto) : ''
+      return `Stock valorizado: ${plataCosto(r.total)}${sin}`
+    }
+
+    async function cargarValorizado() {
+      const turno = ++estado.turnoValorizado
+      const unidad = unidadValorizado()
+      if (!unidad) {
+        estado.valorizado = null
+        pintarValorizado()
+        return
+      }
+      if (estado.valorizado?.unidad !== unidad) estado.valorizado = { unidad, filas: null, porInsumo: null, error: null }
+      pintarValorizado()
+      const { data, error } = await supabase.rpc('stock_valorizado', { p_unidad_negocio_id: unidad })
+      if (turno !== estado.turnoValorizado) return
+      if (error) {
+        console.error('stock_valorizado:', error)
+        estado.valorizado = { unidad, filas: null, porInsumo: null, error: error.message || 'No se pudo calcular el stock valorizado.' }
+      } else {
+        const filas = Array.isArray(data) ? data : []
+        estado.valorizado = { unidad, filas, porInsumo: new Map(filas.map(f => [f.insumo_id, f])), error: null }
+      }
+      if (estado.cargados.has('stock')) renderizarStock()
+      else pintarValorizado()
+    }
+
+    function pintarValorizado() {
+      const el = document.getElementById('stock-valorizado')
+      const v = estado.valorizado
+      if (v) {
+        el.hidden = false
+        el.classList.toggle('stock-valorizado--error', !!v.error)
+        el.textContent = v.error ? `Stock valorizado: no se pudo calcular (${v.error})`
+          : v.filas ? textoValorizado(resumenValorizado(v.filas)) : 'Stock valorizado: calculando…'
+        return
+      }
+      // Con "Todas" y varias fábricas con costos, se pide la fábrica. Sin
+      // ver_costos en ninguna, nada.
+      const pedir = !estado.unidadBarra && unidadesConCostos().length > 1
+      el.hidden = !pedir
+      el.classList.remove('stock-valorizado--error')
+      el.textContent = pedir ? 'Elegí una fábrica arriba para ver el stock valorizado.' : ''
+    }
+
+    // El valor de una fila de la lista (solo de la fábrica valorizada).
+    function htmlValorStock(f) {
+      const v = estado.valorizado
+      if (!v?.porInsumo || f?.unidad_negocio_id !== v.unidad) return ''
+      const r = v.porInsumo.get(f.insumo_id)
+      if (!r) return ''
+      if (numeroCosto(r.costo_unitario) === null || numeroCosto(r.valor) === null) {
+        return '<span class="valor-stock valor-stock--sin">sin costo</span>'
+      }
+      return `<span class="valor-stock">Valor ${esc(plataCosto(r.valor))}</span>`
+    }
+
+    // ── La pantalla de costos ───────────────────────────────────────────────
+
+    // De qué fábrica se ven los costos: la de la barra (si ahí se puede); con
+    // "Todas", la única posible, o la ya elegida acá con los chips.
+    function unidadCostosPorBarra() {
+      const lista = unidadesConCostos()
+      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      if (lista.length === 1) return lista[0].id
+      return lista.some(u => u.id === estado.costosUnidad) ? estado.costosUnidad : ''
+    }
+
+    function puedeVerCostosAlgo() {
+      return unidadesConCostos().length > 0
+    }
+
+    async function abrirCostos() {
+      mostrarVista('costos')
+      await cargarCostos()
+    }
+
+    async function cargarCostos() {
+      const turno = ++estado.turnoCostos
+      estado.costosUnidad = unidadCostosPorBarra()
+      const unidad = estado.costosUnidad
+      estado.cargados.add('costos')
+      if (!unidad) {
+        estado.costos = null
+        renderizarCostos()
+        return true
+      }
+      estado.costos = { unidad, filas: null, error: null }
+      renderizarCostos()
+      const { data, error } = await supabase.rpc('costos_insumos', { p_unidad_negocio_id: unidad })
+      if (turno !== estado.turnoCostos) return true
+      if (error) {
+        console.error('costos_insumos:', error)
+        estado.costos = { unidad, filas: null, error: error.message || 'No se pudieron leer los costos.' }
+      } else {
+        estado.costos = { unidad, filas: Array.isArray(data) ? data : [], error: null }
+      }
+      renderizarCostos()
+      return !error
+    }
+
+    // Los sin costo ARRIBA (es lo que falta cargar); el resto, en el orden de
+    // la base (por categoría y nombre).
+    function filasCostosVisibles() {
+      const filas = (estado.costos?.filas ?? []).filter(f => {
+        const t = normalizar(estado.busquedaCostos)
+        return !t || normalizar(`${f.insumo} ${f.marca || ''}`).includes(t)
+      })
+      const sin = filas.filter(f => numeroCosto(f.costo_unitario) === null)
+      const con = filas.filter(f => numeroCosto(f.costo_unitario) !== null)
+      return [...sin, ...con]
+    }
+
+    function htmlFilaCosto(f) {
+      const costo = numeroCosto(f.costo_unitario)
+      const meta = costo === null ? 'Todavía no tiene costo cargado en esta fábrica'
+        : [f.vigente_desde ? `desde ${formatearFecha(String(f.vigente_desde))}` : '', f.cargado_por ? `cargó ${f.cargado_por}` : ''].filter(Boolean).join(' · ')
+      const derecha = costo === null
+        ? '<span class="chip-sin-costo">Sin costo</span>'
+        : `<span class="fila-costo__costo">${esc(textoCostoUnitario(costo, f.unidad_medida))}</span>${htmlVariacion(f.variacion_pct)}`
+      return `
+        <button type="button" class="tarjeta-lista fila-costo${costo === null ? ' fila-costo--sin' : ''}" data-costo="${esc(f.insumo_id)}">
+          <span class="fila-costo__info">
+            <span class="fila-stock__nombre">${esc(f.insumo)}${f.marca ? ` <span class="fila-costo__marca">· ${esc(f.marca)}</span>` : ''}</span>
+            <span class="fila-stock__meta"><span class="fila-stock__meta-texto">${esc(meta)}</span></span>
+          </span>
+          <span class="fila-costo__derecha">${derecha}</span>
+        </button>`
+    }
+
+    function renderizarChipsCostos() {
+      const cont = document.getElementById('chips-unidad-costos')
+      const lista = unidadesConCostos()
+      cont.hidden = !!estado.unidadBarra || lista.length < 2
+      if (cont.hidden) { cont.innerHTML = ''; return }
+      cont.innerHTML = lista.map(u => `
+        <button type="button" class="chip-unidad ${estado.costosUnidad === u.id ? 'chip-unidad--activa' : ''}" data-unidad-costos="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-unidad-costos]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.unidadCostos === estado.costosUnidad) return
+          estado.costosUnidad = btn.dataset.unidadCostos
+          cargarCostos()
+        })
+      })
+    }
+
+    function renderizarCostos() {
+      const listaEl = document.getElementById('lista-costos')
+      const vacioEl = document.getElementById('costos-vacio')
+      const cargandoEl = document.getElementById('costos-cargando')
+      renderizarChipsCostos()
+      const lista = unidadesConCostos()
+      cargandoEl.hidden = !(estado.costos && estado.costos.filas === null && !estado.costos.error)
+      if (sinPermisoEnBarra(lista)) {
+        pintarAvisoUnidad('costos-aviso-unidad', textoSinPermiso('ver los costos'))
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        return
+      }
+      if (!estado.costosUnidad) {
+        pintarAvisoUnidad('costos-aviso-unidad', lista.length > 1 ? 'Elegí de qué fábrica ver los costos: cada fábrica tiene los suyos.' : '')
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        return
+      }
+      pintarAvisoUnidad('costos-aviso-unidad', '')
+      const c = estado.costos
+      if (!c || c.filas === null) {
+        listaEl.innerHTML = c?.error ? `<div class="rec-aviso">${esc('No se pudieron leer los costos: ' + c.error)}</div>` : ''
+        vacioEl.hidden = true
+        return
+      }
+      const filas = filasCostosVisibles()
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.textContent = c.filas.length
+          ? 'No se encontró ningún insumo con ese nombre o marca.'
+          : `${nombreDeUnidadBarra(c.unidad)} todavía no tiene insumos con stock ni costos cargados.`
+        return
+      }
+      vacioEl.hidden = true
+      const sin = filas.filter(f => numeroCosto(f.costo_unitario) === null).length
+      const resumen = sin ? `<div class="costos-resumen">${esc(textoInsumosSinCosto(sin))}</div>` : ''
+      listaEl.innerHTML = resumen + filas.map(htmlFilaCosto).join('')
+      listaEl.querySelectorAll('[data-costo]').forEach(b => b.addEventListener('click', () => abrirCosto(b.dataset.costo)))
+    }
+
+    // ── El modal de un insumo: cargar un costo y su historial ──────────────
+
+    // La presentación del insumo en esa fábrica: el contenido de UN bulto, o
+    // null (con varias presentaciones o ninguna, no hay "un" bulto).
+    function presentacionCosto(unidadId, insumoId) {
+      const s = (estado.stock || []).find(x => x.unidad_negocio_id === unidadId && x.insumo_id === insumoId)
+      const contenido = s && Number(s.presentaciones) === 1 ? numeroCosto(s.contenido_unico) : null
+      return { contenido: contenido && contenido > 0 ? contenido : null, vista: s?.vista_preferida ?? 'base' }
+    }
+
+    // Lo que viaja a guardar_costo_insumo: SIEMPRE por unidad de medida, con
+    // 4 decimales (los mismos que guarda la base). null si no se puede.
+    function costoUnitarioDe(precio, modo, contenido) {
+      const p = numeroCosto(precio)
+      if (p === null || p < 0) return null
+      if (modo === 'bulto') {
+        if (!contenido) return null
+        return Math.round(p / contenido * 10000) / 10000
+      }
+      return Math.round(p * 10000) / 10000
+    }
+
+    function rotuloPrecioCosto(m) {
+      return m.modo === 'bulto'
+        ? `Precio por bulto de ${formatearCantidadStock(m.contenido, m.unidad)}`
+        : `Precio ${porUnidadDeMedida(m.unidad)}`
+    }
+
+    // Debajo del campo: lo que se va a guardar (en bulto) o cuánto es el
+    // bulto (en unidad).
+    function textoEquivaleCosto(m, precio) {
+      const unit = costoUnitarioDe(precio, m.modo, m.contenido)
+      if (unit === null) return ''
+      if (m.modo === 'bulto') return `→ ${plataCosto(unit, 4)} ${porUnidadDeMedida(m.unidad)}`
+      if (m.contenido) return `→ ${plataCosto(unit * m.contenido)} el bulto de ${formatearCantidadStock(m.contenido, m.unidad)}`
+      return ''
+    }
+
+    function abrirCosto(insumoId) {
+      const c = estado.costos
+      const f = (c?.filas ?? []).find(x => x.insumo_id === insumoId)
+      if (!f) return
+      const { contenido, vista } = presentacionCosto(c.unidad, insumoId)
+      estado.costo = {
+        unidad: c.unidad, fila: f, unidadMedida: f.unidad_medida,
+        contenido, modo: contenido && vista === 'bulto' ? 'bulto' : 'unidad',
+        historial: null, errorHistorial: null, nombres: new Map(),
+        enviando: false, error: null, anulando: null, errorAnular: null, anulandoEnvio: false,
+      }
+      document.getElementById('costo-nombre').textContent = f.insumo + (f.marca ? ` · ${f.marca}` : '')
+      document.getElementById('costo-unidad').textContent = nombreDeUnidadBarra(c.unidad)
+      const precio = document.getElementById('costo-precio')
+      enlazarCampoNumero(precio, { decimales: 4 })
+      ponerNumero(precio, null)
+      document.getElementById('costo-desde').value = hoyArgentinaCostos()
+      document.getElementById('costo-nota').value = ''
+      document.getElementById('modal-costo').hidden = false
+      abrirConHistorial(cerrarModalCosto)
+      pintarModalCosto()
+      cargarHistorialCosto()
+    }
+
+    function cerrarModalCosto() {
+      document.getElementById('modal-costo').hidden = true
+      estado.costo = null
+      cerrarConHistorial()
+    }
+
+    function pintarModalCosto() {
+      const m = estado.costo
+      if (!m) return
+      document.getElementById('costo-actual').textContent = textoCostoUnitario(m.fila.costo_unitario, m.unidadMedida)
+      const puedeCargar = puedeCostosEn('cargar_costos', m.unidad)
+      document.getElementById('costo-carga').hidden = !puedeCargar
+      if (puedeCargar) {
+        const modos = document.getElementById('costo-modos')
+        modos.hidden = !m.contenido
+        modos.querySelectorAll('[data-costo-modo]').forEach(b => {
+          b.setAttribute('aria-pressed', b.dataset.costoModo === m.modo ? 'true' : 'false')
+          if (b.dataset.costoModo === 'bulto' && m.contenido) b.textContent = `Por bulto de ${formatearCantidadStock(m.contenido, m.unidadMedida)}`
+          if (b.dataset.costoModo === 'unidad') b.textContent = `Por ${porUnidadDeMedida(m.unidadMedida).replace(/^por /, '')}`
+        })
+        document.getElementById('costo-precio-rotulo').textContent = rotuloPrecioCosto({ ...m, unidad: m.unidadMedida })
+        document.getElementById('costo-equivale').textContent =
+          textoEquivaleCosto({ ...m, unidad: m.unidadMedida }, leerCampoNumero(document.getElementById('costo-precio')))
+        const err = document.getElementById('costo-error')
+        err.hidden = !m.error
+        err.textContent = m.error || ''
+        document.getElementById('btn-guardar-costo').disabled = m.enviando
+        document.getElementById('btn-guardar-costo').textContent = m.enviando ? 'Guardando…' : 'Guardar el costo'
+      }
+      pintarHistorialCosto()
+    }
+
+    function cambiarModoCosto(modo) {
+      const m = estado.costo
+      if (!m || m.modo === modo || (modo === 'bulto' && !m.contenido)) return
+      m.modo = modo
+      m.error = null
+      // Cambiar en qué se escribe VACÍA el campo: un 50.000 pensado por bulto
+      // no puede pasar a significar 50.000 por kg sin que nadie lo toque.
+      ponerNumero(document.getElementById('costo-precio'), null)
+      pintarModalCosto()
+    }
+
+    async function cargarHistorialCosto() {
+      const m = estado.costo
+      if (!m) return
+      const yo = m
+      document.getElementById('costo-historial-cargando').hidden = false
+      const { data, error } = await supabase.from('insumo_costos')
+        .select('id, costo_unitario, vigente_desde, nota, cargado_por, cargado_en, anulado, origen')
+        .eq('unidad_negocio_id', m.unidad).eq('insumo_id', m.fila.insumo_id)
+        .order('vigente_desde', { ascending: false }).order('cargado_en', { ascending: false })
+      if (estado.costo !== yo) return
+      document.getElementById('costo-historial-cargando').hidden = true
+      if (error) {
+        console.error('insumo_costos:', error)
+        yo.errorHistorial = error.message || 'No se pudo leer el historial.'
+        yo.historial = null
+      } else {
+        yo.historial = Array.isArray(data) ? data : []
+        yo.errorHistorial = null
+        // Los nombres por v_empleados_publico, nunca por un embed a empleados.
+        const ids = [...new Set(yo.historial.map(h => h.cargado_por).filter(Boolean))]
+        if (ids.length) {
+          const r = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)
+          if (estado.costo !== yo) return
+          yo.nombres = new Map((r.data ?? []).map(e => [e.id, e.nombre]))
+        }
+      }
+      pintarHistorialCosto()
+    }
+
+    function htmlHistorialCosto(m) {
+      if (m.errorHistorial) return `<div class="rec-aviso">${esc('No se pudo leer el historial: ' + m.errorHistorial)}</div>`
+      if (!m.historial) return ''
+      if (!m.historial.length) return '<div class="estado-vacio-stock">Todavía no se cargó ningún costo de este insumo en esta fábrica.</div>'
+      const puedeAnular = puedeCostosEn('cargar_costos', m.unidad)
+      return m.historial.map(h => {
+        const quien = h.cargado_por ? (m.nombres.get(h.cargado_por) || 'alguien') : ''
+        const meta = [h.vigente_desde ? `desde ${formatearFecha(String(h.vigente_desde))}` : '', quien ? `cargó ${quien}` : '', h.anulado ? 'anulado' : ''].filter(Boolean).join(' · ')
+        const confirmando = m.anulando === h.id
+        const acciones = h.anulado || !puedeAnular ? ''
+          : confirmando
+            ? `<div class="costo-hist__confirmar">
+                <p>¿Anular el costo de ${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida))}${h.vigente_desde ? ` desde el ${esc(formatearFecha(String(h.vigente_desde)))}` : ''}? Deja de contar y vuelve a regir el anterior.</p>
+                ${m.errorAnular ? `<div class="rec-aviso">${esc(m.errorAnular)}</div>` : ''}
+                <div class="rec-acciones">
+                  <button type="button" class="btn-stock btn-stock--alerta btn-stock--chico" data-costo-anular-si="${esc(h.id)}"${m.anulandoEnvio ? ' disabled' : ''}>${m.anulandoEnvio ? 'Anulando…' : 'Sí, anular'}</button>
+                  <button type="button" class="btn-stock btn-stock--chico" data-costo-anular-no${m.anulandoEnvio ? ' disabled' : ''}>No</button>
+                </div>
+              </div>`
+            : `<button type="button" class="btn-stock btn-stock--alerta btn-stock--chico" data-costo-anular="${esc(h.id)}">Anular</button>`
+        return `
+          <div class="costo-hist${h.anulado ? ' costo-hist--anulado' : ''}">
+            <div class="costo-hist__fila">
+              <span class="costo-hist__valor">${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida))}</span>
+              ${confirmando ? '' : acciones}
+            </div>
+            <div class="costo-hist__meta">${esc(meta)}</div>
+            ${h.nota ? `<div class="costo-hist__nota">${esc(h.nota)}</div>` : ''}
+            ${confirmando ? acciones : ''}
+          </div>`
+      }).join('')
+    }
+
+    function pintarHistorialCosto() {
+      const m = estado.costo
+      if (!m) return
+      const cont = document.getElementById('costo-historial')
+      cont.innerHTML = htmlHistorialCosto(m)
+      cont.querySelectorAll('[data-costo-anular]').forEach(b => b.addEventListener('click', () => {
+        m.anulando = b.dataset.costoAnular
+        m.errorAnular = null
+        pintarHistorialCosto()
+      }))
+      cont.querySelectorAll('[data-costo-anular-no]').forEach(b => b.addEventListener('click', () => {
+        if (m.anulandoEnvio) return
+        m.anulando = null
+        m.errorAnular = null
+        pintarHistorialCosto()
+      }))
+      cont.querySelectorAll('[data-costo-anular-si]').forEach(b => b.addEventListener('click', () => anularCosto(b.dataset.costoAnularSi)))
+    }
+
+    // Valida antes de llamar con los MISMOS textos de la base; un error de la
+    // base va TAL CUAL, pegado al botón. Un doble toque manda una sola vez.
+    function validarCosto(m, unitario, desde, hoy) {
+      if (unitario === null) return m.modo === 'bulto' ? 'Escribí el precio del bulto.' : 'Poné un costo válido (0 o más).'
+      if (desde && desde > sumarDiasIso(hoy, 60)) return 'La fecha no puede ser tan adelante.'
+      return null
+    }
+
+    async function guardarCosto() {
+      const m = estado.costo
+      if (!m || m.enviando) return
+      const precio = leerCampoNumero(document.getElementById('costo-precio'))
+      const unitario = costoUnitarioDe(precio, m.modo, m.contenido)
+      const desde = document.getElementById('costo-desde').value || null
+      const nota = document.getElementById('costo-nota').value.trim() || null
+      const problema = validarCosto(m, unitario, desde, hoyArgentinaCostos())
+      if (problema) { m.error = problema; pintarModalCosto(); return }
+      m.enviando = true
+      m.error = null
+      pintarModalCosto()
+      const { error } = await supabase.rpc('guardar_costo_insumo', {
+        p_unidad_negocio_id: m.unidad, p_insumo_id: m.fila.insumo_id, p_costo_unitario: unitario,
+        p_vigente_desde: desde, p_nota: nota,
+      })
+      if (estado.costo !== m) return
+      m.enviando = false
+      if (error) {
+        console.error('guardar_costo_insumo:', error)
+        m.error = error.message || 'No se pudo guardar el costo.'
+        pintarModalCosto()
+        return
+      }
+      mostrarExito('Costo guardado.')
+      ponerNumero(document.getElementById('costo-precio'), null)
+      document.getElementById('costo-nota').value = ''
+      await despuesDeCambiarCosto(m)
+    }
+
+    async function anularCosto(id) {
+      const m = estado.costo
+      if (!m || m.anulandoEnvio || m.anulando !== id) return
+      m.anulandoEnvio = true
+      m.errorAnular = null
+      pintarHistorialCosto()
+      const { error } = await supabase.rpc('anular_costo_insumo', { p_id: id })
+      if (estado.costo !== m) return
+      m.anulandoEnvio = false
+      if (error) {
+        console.error('anular_costo_insumo:', error)
+        m.errorAnular = error.message || 'No se pudo anular el costo.'
+        pintarHistorialCosto()
+        return
+      }
+      m.anulando = null
+      mostrarExito('Costo anulado.')
+      await despuesDeCambiarCosto(m)
+    }
+
+    // Después de guardar o anular: la lista, el costo actual del modal, el
+    // historial y el stock valorizado.
+    async function despuesDeCambiarCosto(m) {
+      await cargarCostos()
+      const nueva = (estado.costos?.filas ?? []).find(x => x.insumo_id === m.fila.insumo_id)
+      if (estado.costo === m && nueva) m.fila = nueva
+      pintarModalCosto()
+      cargarHistorialCosto()
+      if (estado.cargados.has('stock')) cargarValorizado()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // PESTAÑAS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -8853,12 +9600,13 @@
       transito: 'Transferencias entre unidades',
       mermas: 'Mermas',
       traspaso: 'Traspaso a otra fábrica',
+      costos: 'Costos de insumos',
     }
 
     // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
     // entran en 375px. Mientras se lo mira, la pestaña que queda marcada sigue
     // siendo la de Stock.
-    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock', mermas: 'stock', traspaso: 'stock' }
+    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock', mermas: 'stock', traspaso: 'stock', costos: 'stock' }
 
     function mostrarVista(id) {
       estado.vista = id
@@ -8869,6 +9617,7 @@
       document.getElementById('vista-transito').hidden = id !== 'transito'
       document.getElementById('vista-mermas').hidden = id !== 'mermas'
       document.getElementById('vista-traspaso').hidden = id !== 'traspaso'
+      document.getElementById('vista-costos').hidden = id !== 'costos'
       document.getElementById('vista-alias').hidden = id !== 'alias'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
@@ -10420,6 +11169,15 @@
     document.getElementById('btn-volver-de-transito').addEventListener('click', () => mostrarVista('stock'))
 
     document.getElementById('btn-ver-mermas').addEventListener('click', abrirMermas)
+
+    // ── Costos de insumos ──────────────────────────────────────────────────
+    document.getElementById('btn-ver-costos').addEventListener('click', abrirCostos)
+    document.getElementById('btn-volver-de-costos').addEventListener('click', () => mostrarVista('stock'))
+    document.getElementById('buscador-costos').addEventListener('input', (e) => { estado.busquedaCostos = e.target.value; renderizarCostos() })
+    document.querySelectorAll('[data-cerrar-costo]').forEach(el => el.addEventListener('click', cerrarModalCosto))
+    document.querySelectorAll('[data-costo-modo]').forEach(b => b.addEventListener('click', () => cambiarModoCosto(b.dataset.costoModo)))
+    document.getElementById('costo-precio').addEventListener('input', () => { if (estado.costo) { estado.costo.error = null; pintarModalCosto() } })
+    document.getElementById('btn-guardar-costo').addEventListener('click', guardarCosto)
     document.getElementById('btn-volver-de-mermas').addEventListener('click', () => mostrarVista('stock'))
 
     // ── Traspaso a otra fábrica ────────────────────────────────────────────
@@ -10693,6 +11451,7 @@
       if (estado.vista === 'historial') tareas.push(cargarHistorial())
       if (estado.vista === 'mermas') tareas.push(cargarMermas())
       if (estado.vista === 'transito') tareas.push(cargarTransito())
+      if (estado.vista === 'costos') tareas.push(cargarCostos())
       tareas.push(cargarPendientesStock())
       const res = await Promise.all(tareas)
       return res.every(r => r !== false)
@@ -10824,11 +11583,12 @@
 
       const { data: tareas } = await supabase
         .from('empleado_tareas')
-        .select('modulo, tarea')
+        .select('modulo, tarea, alcance')
         .eq('empleado_id', emp.id)
         .in('modulo', ['stock'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
+      estado.alcancesTareas = new Map((tareas ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? null]))
 
       // Los botones de escritura solo aparecen con la tarea. Es cosmético: las
       // 4 RPCs revalidan del lado del servidor.
@@ -10917,6 +11677,10 @@
       // sin dos unidades reales (la de pruebas ya salió en cargarStock) no hay
       // entre qué pasar.
       document.getElementById('btn-ver-traspaso').hidden = !puedeTraspasar()
+      // Costos: solo con stock:ver_costos en alguna fábrica (y stock:ver,
+      // porque vive en la vista de stock). La barra ya sabe sus unidades.
+      await estado.barraLista
+      document.getElementById('btn-ver-costos').hidden = !(verStock && puedeVerCostosAlgo())
 
       if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()
       cargarPendientesStock()

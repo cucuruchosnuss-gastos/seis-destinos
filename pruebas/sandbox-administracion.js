@@ -73,6 +73,11 @@ const FUNCIONES_BASE = [
   'leerListaCompleta', 'leerListaCompletaSegura', 'completaDelProducto', 'listaDerivada', 'filaEditable', 'numeroONull',
   'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'chocanMismaFecha', 'textoChoqueMismaFecha',
   'htmlFilaProducto', 'htmlConito', 'plantillaConito', 'textoConConoNuevo', 'pintarConConoNuevo', 'recargoDeLista',
+  // Los insumos de una lista a precio fijo o costo + % (09/10/2026)
+  'plataInsumoLista', 'porUnidadInsumo', 'renglonesInsumosLista', 'precioConRecargo', 'textoRenglonInsumo', 'leerInsumosLista',
+  'cargarInsumosLista', 'htmlInsumosLista', 'htmlOpcionInsumoLista', 'htmlEditorInsumoLista', 'textoPreviaInsumoLista', 'campoValorInsumo',
+  'pintarPreviaInsumoLista', 'pintarInsumosLista', 'abrirEditorInsumoLista', 'cambiarModoInsumoLista', 'validarInsumoLista',
+  'parametrosPrecioInsumoLista', 'guardarInsumoLista',
   // Los clientes de una lista (30/09/2026)
   'clientesActivosEmpresa', 'htmlNombresCortos', 'htmlResumenClientesLista', 'htmlClientesLista', 'pintarClientesLista', 'cambiarListaCliente',
   // js/retiros-comun.js
