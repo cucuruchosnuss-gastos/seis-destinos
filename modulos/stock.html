@@ -4827,8 +4827,8 @@
         listaEl.innerHTML = ''
         vacioEl.hidden = true
         pintarAvisoCobertura([])
-        pintarAvisoUnidad('stock-aviso-unidad', textoSinPermiso('ver el stock'))
         pintarValorizado()
+        pintarAvisoUnidad('stock-aviso-unidad', textoSinPermiso('ver el stock'))
         return
       }
       pintarAvisoUnidad('stock-aviso-unidad', '')
@@ -9070,9 +9070,7 @@
     // Un numeric de la base (puede llegar como texto) o null. null, '' y un
     // texto ilegible NO son un cero.
     function numeroCosto(v) {
-      if (v === null || v === undefined || v === '') return null
-      const n = Number(v)
-      return Number.isFinite(n) ? n : null
+      return numeroCobertura(v)
     }
 
     function plataCosto(n, decimales = 2) {
@@ -9120,9 +9118,9 @@
     // elegir la fábrica arriba (un valor de "todas" sumaría costos de
     // fábricas distintas sin decirlo).
     function unidadValorizado() {
-      const lista = unidadesConCostos()
-      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
-      return lista.length === 1 ? lista[0].id : ''
+      const fabricas = unidadesConCostos()
+      if (estado.unidadBarra) return fabricas.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      return fabricas.length === 1 ? fabricas[0].id : ''
     }
 
     // Lo de arriba de la lista: la suma EN CENTAVOS de los insumos con costo;
@@ -9205,10 +9203,10 @@
     // De qué fábrica se ven los costos: la de la barra (si ahí se puede); con
     // "Todas", la única posible, o la ya elegida acá con los chips.
     function unidadCostosPorBarra() {
-      const lista = unidadesConCostos()
-      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
-      if (lista.length === 1) return lista[0].id
-      return lista.some(u => u.id === estado.costosUnidad) ? estado.costosUnidad : ''
+      const fabricas = unidadesConCostos()
+      if (estado.unidadBarra) return fabricas.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      if (fabricas.length === 1) return fabricas[0].id
+      return fabricas.some(u => u.id === estado.costosUnidad) ? estado.costosUnidad : ''
     }
 
     function puedeVerCostosAlgo() {
