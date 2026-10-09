@@ -547,7 +547,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   const S = nuevo()
   chk('el HTML de la carga no tiene ningún campo de plata', !/(precio|importe|saldo|subtotal)/i.test(src.slice(src.indexOf('<body'), src.indexOf('<script type="module">')).replace(/<!--[\s\S]*?-->/g, '').replace('<p class="rt-sin-precios">Sin precios: la valoriza Administración.</p>', '')))
   chk('la carga nunca llama a valorizar ni lee listas de precios', !/valorizar_orden_retiro|lista_precios|cliente_movimientos|clientes_con_saldo|cuenta_cliente/.test(src))
-  chk('la hoja de la carga se arma con conPrecios: false', /htmlHoja\(ordenParaHoja\(o, \{ cliente \}\), \{ conPrecios: false/.test(src) && !/conPrecios: true/.test(src))
+  chk('la hoja de la carga se arma con conPrecios: false', /armarHoja\(document\.getElementById\('rt-impresion'\), ordenParaHoja\(o, \{ cliente \}\), \{ conPrecios: false/.test(src) && !/conPrecios: true/.test(src))
 }
 {
   const S = nuevo()

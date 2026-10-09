@@ -30,32 +30,46 @@ const ALTO_UTIL_A4_MM = 297 - 2 * 8;
 
 // Mide la hoja que armó la pantalla en `contenedor`, como se imprime: con los
 // estilos de impresión (emulateMedia) y en milímetros (96 px = 25,4 mm).
+// LA IMPRESIÓN NUEVA (07/10/2026): la hoja se MIDE antes de imprimir; con
+// pocos renglones van las dos copias en media hoja cada una, y si no entran,
+// cada copia en hojas enteras. Lo que se exige: el original y el duplicado con
+// TODOS los renglones, ninguna página más alta que la A4, ningún renglón ni el
+// pie cortados. (El detalle, con 3 y 25 renglones, en e2e/28-hoja-retiro.)
 async function medirHoja(page, boton, contenedor, info, nombre) {
   await page.evaluate(() => { window.print = () => {} });
   await page.locator(boton).click();
+  await expect(page.locator(`${contenedor} .rh-copia`).first()).toBeAttached();
   await page.emulateMedia({ media: 'print' });
   const m = await page.evaluate((sel) => {
     const el = document.querySelector(sel);
     const mm = (px) => px / (96 / 25.4);
-    const hoja = el.querySelector('.rh-hoja');
+    const r = (x) => x.getBoundingClientRect();
     const copias = [...el.querySelectorAll('.rh-copia')];
+    const de = (c) => copias.filter(x => x.dataset.copia === c);
+    const afuera = [];
+    for (const c of copias) for (const x of c.querySelectorAll('tbody tr, tfoot tr, .rh-pie, .rh-legal')) if (r(x).bottom > r(c).bottom + 0.5) afuera.push(x.className || x.tagName);
     return {
-      copias: copias.length,
-      altoHoja: hoja ? mm(hoja.getBoundingClientRect().height) : null,
-      altoCopias: copias.map((c) => mm(c.getBoundingClientRect().height)),
-      renglones: copias[0] ? copias[0].querySelectorAll('tbody tr').length : 0,
-      insumos: copias[0] ? copias[0].querySelectorAll('tbody tr.rh-insumo').length : 0,
+      media: !!el.querySelector('.rh-hoja--media'),
+      originales: de('ORIGINAL').length, duplicados: de('DUPLICADO').length,
+      paginas: [...el.querySelectorAll('.rh-pagina')].map(p => mm(r(p).height)),
+      altoCopias: copias.map((c) => mm(r(c).height)),
+      renglones: de('ORIGINAL').reduce((s, c) => s + c.querySelectorAll('tbody tr').length, 0),
+      insumos: de('ORIGINAL').reduce((s, c) => s + c.querySelectorAll('tbody tr.rh-insumo').length, 0),
+      afuera,
     };
   }, contenedor);
   await captura(page, `hoja-${nombre}`, info);
   await page.emulateMedia({ media: 'screen' });
-  expect(m.copias, 'la hoja impresa tiene dos copias').toBe(2);
-  expect(m.renglones, 'la orden de prueba tiene 12 renglones').toBe(12);
+  expect(m.originales, 'hay original').toBeGreaterThan(0);
+  expect(m.duplicados, 'y duplicado, en la misma cantidad de hojas').toBe(m.originales);
+  expect(m.renglones, 'la orden de prueba tiene 12 renglones, todos en el original').toBe(12);
   expect(m.insumos, 'y algunos son insumos').toBeGreaterThan(0);
   expect(m.renglones - m.insumos, 'y otros son productos').toBeGreaterThan(0);
-  expect(m.altoHoja, `las dos copias y el corte miden ${m.altoHoja?.toFixed(1)} mm y en la A4 entran ${ALTO_UTIL_A4_MM}`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM);
-  for (const a of m.altoCopias) expect(a, `una copia mide ${a.toFixed(1)} mm: más de media hoja`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM / 2);
-  console.log(`[hoja ${nombre}] ${m.renglones} renglones (${m.insumos} de insumos): ${m.altoHoja.toFixed(1)} mm de ${ALTO_UTIL_A4_MM}`);
+  for (const a of m.altoCopias) expect(a, 'cada copia mide de verdad (no está escondida)').toBeGreaterThan(100);
+  for (const a of m.paginas) expect(a, `una página mide ${a.toFixed(1)} mm y en la A4 entran ${ALTO_UTIL_A4_MM}`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM);
+  if (m.media) for (const a of m.altoCopias) expect(a, `en media hoja una copia mide ${a.toFixed(1)} mm`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM / 2);
+  expect(m.afuera, 'ningún renglón ni el pie se cortan').toEqual([]);
+  console.log(`[hoja ${nombre}] ${m.renglones} renglones (${m.insumos} de insumos): ${m.media ? 'media hoja' : `${m.originales} hojas enteras por copia`}; páginas ${m.paginas.map(a => a.toFixed(1)).join(' / ')} mm`);
 }
 
 // Sube un archivo al importador (el input escondido) y espera la vista previa.

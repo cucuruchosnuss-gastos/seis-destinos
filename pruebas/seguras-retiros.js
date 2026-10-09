@@ -73,6 +73,11 @@ const SEGURAS_HOJA = [
   ['col','HTML constante del código: el colgroup de la tabla de la hoja'],
   ['izq', 'HTML ya escapado: htmlResumenHoja() arma las observaciones y el faltante con escHoja()'],
   ['partes.join(CORTE_HOJA)', 'HTML ya escapado: las copias de htmlCopiaHoja() (que escapa todo) unidas con CORTE_HOJA, constante'],
+  // La impresión nueva (07/10/2026).
+  ['htmlLogoHoja(emp, nombre)', 'HTML armado por htmlLogoHoja(), que pasa el logo por logoSeguro() + encodeURIComponent y escapa el nombre'],
+  ['htmlClienteHoja(orden?.cliente, orden?.transporte)', 'HTML armado por htmlClienteHoja(), que escapa el nombre, la localidad y el transporte'],
+  ['htmlTablaHoja(renglones, conPrecios, orden?.moneda || \'ARS\', { conTotal: ultima, orden })', 'HTML armado por htmlTablaHoja(), que escapa cada dato con escHoja()'],
+  ['htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos.slice(d, h), pagina: i + 1, paginas: plan.paginas.length, entera: true })', 'HTML armado por htmlCopiaHoja(), que escapa todo'],
 ]
 
 module.exports = { SEGURAS_RETIROS, SEGURAS_REGEX_RETIROS, SEGURAS_HOJA }

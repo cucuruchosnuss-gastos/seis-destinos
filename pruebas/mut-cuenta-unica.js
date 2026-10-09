@@ -110,7 +110,8 @@ correrMutacionesEnVarios([
       { nombre: 'admin: compensar con UNA de las dos tareas', de: "      return tieneTarea('cobranzas', 'procesar') && tieneTarea('cuentas_corrientes', 'registrar_pago')", a: "      return tieneTarea('cobranzas', 'procesar') || tieneTarea('cuentas_corrientes', 'registrar_pago')" },
       { nombre: 'admin: no se pinta la cuenta juntas', de: '      pintarCuentaUnicaCliente()\n    }', a: '    }' },
       { nombre: 'admin: no se leen las tareas de cuentas_corrientes', de: "'produccion', 'cobranzas', 'cuentas_corrientes']", a: "'produccion', 'cobranzas']" },
-      { nombre: 'admin: la lista de clientes sin proveedor_id', de: 'codigo_anterior, proveedor_id\')', a: 'codigo_anterior\')' },
+      // (07/10/2026: al apilar, el select siguió con más columnas después de proveedor_id.)
+      { nombre: 'admin: la lista de clientes sin proveedor_id', de: 'codigo_anterior, proveedor_id, comision_habitual', a: 'codigo_anterior, comision_habitual' },
       { nombre: 'admin: vincular sin el proveedor elegido', de: "{ p_cliente_id: f.id, p_proveedor_id: f.proveedorId ?? null }", a: '{ p_cliente_id: f.id, p_proveedor_id: null }' },
       { nombre: 'admin: vincular sin saber qué había antes (nunca dice que se creó)', de: '      const conocidos = estado.idsProveedores ? new Set(estado.idsProveedores) : null', a: '      const conocidos = null' },
       { nombre: 'admin: el padrón se lee sin los ids', de: '      estado.idsProveedores = new Set((data ?? []).map(p => p.id))\n', a: '' },

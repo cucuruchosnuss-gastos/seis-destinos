@@ -1004,7 +1004,7 @@
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import {
-      htmlHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
+      armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
       cantidadInsumoHoja, unidadHoja, cargarScript,
     } from '../js/retiros-comun.js'
@@ -2766,11 +2766,13 @@
       }
     }
 
-    function imprimirOrden() {
+    // La hoja se MIDE antes de imprimir (07/10/2026): si los renglones no
+    // entran en media hoja, cada copia va en hojas enteras (armarHoja).
+    async function imprimirOrden() {
       const d = estado.orden
       if (!d?.orden) return
       asegurarEstilosHoja()
-      document.getElementById('ad-impresion').innerHTML = htmlHoja(ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })
+      await armarHoja(document.getElementById('ad-impresion'), ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })
       window.print()
     }
 

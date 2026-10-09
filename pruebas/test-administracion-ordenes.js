@@ -446,20 +446,21 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
 {
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, estado_valorizacion: 'valorizada', total: 46000 }, items: ITEMS.map(i => ({ ...i, precio_caja: i.id === 'i1' ? 3000 : 4000, subtotal: i.id === 'i1' ? 30000 : 16000 })) })
-  esperas.push(S.abrirOrden('o1').then(() => {
-    S.imprimirOrden()
+  esperas.push(S.abrirOrden('o1').then(async () => {
+    // Imprimir mide la hoja antes (07/10/2026): se espera.
+    await S.imprimirOrden()
     const h = S.__els.get('ad-impresion').innerHTML
-    chk('imprimir desde Administración lleva PRECIOS', S.__impresiones() === 1 && /Precio x caja/.test(h) && /\$ 30\.000,00/.test(h) && /rh-total">\$ 46\.000,00/.test(h))
+    chk('imprimir desde Administración lleva PRECIOS', S.__impresiones() === 1 && /PRECIO X CAJA/.test(h) && /\$ 30\.000,00/.test(h) && /rh-total__plata">\$ 46\.000,00/.test(h))
     chk('con la misma hoja: dos copias y la leyenda', (h.match(/<section class="rh-copia/g) || []).length === 2 && /No válido como factura/.test(h))
     chk('con el logo de la empresa de la orden', /logo-cucuruchos-nuss\.png/.test(h) && /NUSS SRL/.test(h))
-    chk('y quién la cargó', /Cargó: <strong>Emanuel Romero<\/strong>/.test(h))
+    chk('y quién la cargó', /Entregó: <strong>Emanuel Romero<\/strong>/.test(h))
   }))
   const T = nuevo()
   preparar(T)
-  esperas.push(T.abrirOrden('o1').then(() => {
-    T.imprimirOrden()
+  esperas.push(T.abrirOrden('o1').then(async () => {
+    await T.imprimirOrden()
     const h = T.__els.get('ad-impresion').innerHTML
-    chk('sin valorizar, la hoja con precios dice "—" (nunca $ 0,00)', /Precio x caja/.test(h) && !/0,00/.test(h))
+    chk('sin valorizar, la hoja con precios dice "—" (nunca $ 0,00)', /PRECIO X CAJA/.test(h) && !/0,00/.test(h))
   }))
 }
 {
