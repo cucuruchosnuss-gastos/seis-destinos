@@ -2398,6 +2398,53 @@
     .mq-como { margin-top: 16px; font-size: 14px; }
     .mq-como summary { cursor: pointer; font-weight: 800; min-height: 44px; display: flex; align-items: center; }
     .mq-como ul { margin: 0; padding-left: 1.25rem; display: grid; gap: 6px; color: var(--color-texto-menu); }
+
+    /* ── LA TABLA DE PRODUCCIÓN (09/10/2026) ────────────────────────────
+       Cuatro tarjetas de período, los filtros y una tabla dinámica en
+       UNIDADES. La tabla scrollea de costado ADENTRO de su caja (la página
+       no), con la primera columna fija. */
+    #pr-tabla { min-width: 0; }
+    .pt-tarjetas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.625rem; margin: 0.75rem 0 0.25rem; }
+    .pt-tarjeta {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; min-width: 0; min-height: 44px;
+      text-align: left; font: inherit; color: inherit; cursor: pointer; background: #fff;
+      border: 1px solid var(--color-borde-boton, var(--color-borde)); border-radius: 14px; padding: 0.625rem 0.875rem;
+    }
+    .pt-tarjeta:hover { background: var(--color-fila-hover, var(--color-superficie)); }
+    .pt-tarjeta:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+    .pt-tarjeta[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); }
+    .pt-tarjeta__titulo { font-size: 0.8125rem; font-weight: 800; color: var(--color-texto-2, var(--pr-texto-secundario)); }
+    .pt-tarjeta__n { font-family: var(--fuente-titulo, inherit); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; max-width: 100%; }
+    .pt-tarjeta__rango { font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .pt-filtros { grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: 0.625rem; margin-top: 0.75rem; }
+    .pt-filtros .pr-campo { min-width: 0; }
+    .pt-filtros .pr-select { width: 100%; min-width: 0; }
+    .pt-periodo { grid-column: 1 / -1; }
+    .pt-scroll {
+      overflow-x: auto; max-width: 100%; border: 1px solid var(--color-borde); border-radius: 16px; background: #fff;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pt-scroll:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+    .pt-tabla { border-collapse: separate; border-spacing: 0; min-width: 100%; font-variant-numeric: tabular-nums; font-size: 0.9375rem; }
+    .pt-tabla th, .pt-tabla td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-divisor, var(--color-borde)); white-space: nowrap; }
+    .pt-tabla td { text-align: right; }
+    .pt-tabla thead th { background: var(--color-superficie); font-size: 0.8125rem; font-weight: 800; text-align: right; color: var(--color-texto-menu, inherit); }
+    .pt-tabla th[scope="row"], .pt-tabla .pt-esquina {
+      position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; font-weight: 700;
+      border-right: 1px solid var(--color-borde); max-width: 14rem; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pt-tabla thead .pt-esquina { background: var(--color-superficie); z-index: 2; }
+    .pt-tabla .pt-total { font-weight: 800; }
+    .pt-tabla tfoot th, .pt-tabla tfoot td { font-weight: 800; background: var(--color-superficie); border-bottom: none; }
+    .pt-tabla tfoot th[scope="row"] { background: var(--color-superficie); }
+    .pt-tabla .pt-sin { color: var(--color-texto-suave); }
+    .pt-promedios { margin: 0.625rem 0 0; font-size: 0.9375rem; color: var(--color-texto-menu, inherit); }
+    .pt-promedios strong { font-variant-numeric: tabular-nums; }
+    @media (max-width: 700px) {
+      .pt-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pt-tabla th[scope="row"], .pt-tabla .pt-esquina { max-width: 9rem; }
+    }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2424,6 +2471,7 @@
       <button type="button" class="pg-menu__item pg-menu__item--inicio" data-menu="inicio" id="pr-menu-inicio">Indicadores</button>
       <div class="pg-menu__bloque" id="pr-menu-bloque-control">
         <p class="pg-menu__grupo">Control</p>
+        <button type="button" class="pg-menu__item" data-menu="tabla" id="pr-menu-tabla" hidden><span class="pg-menu__txt">Tabla de producción</span></button>
         <button type="button" class="pg-menu__item" data-ir-pendientes id="pr-btn-ir-pendientes" hidden><span class="pg-menu__txt">Planillas pendientes</span><span class="pg-menu__n pg-menu__n--grave" id="pr-menu-n-pendientes" hidden></span></button>
         <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Historial</span></button>
         <button type="button" class="pg-menu__item" data-menu="stock" id="pr-menu-stock" hidden><span class="pg-menu__txt">Stock terminado</span></button>
@@ -2575,6 +2623,33 @@
 
       <!-- B7: historial de turnos (produccion:ver o :configurar). Se mira en
            la compu, así que va con la densidad de oficina (.pr-of). -->
+      <!-- LA TABLA DE PRODUCCIÓN (09/10/2026): cuánto se produjo, en UNIDADES,
+           con filas y columnas a elegir (día, semana, mes, máquina, turno,
+           producto). UNA consulta a produccion_resumen por período; todo lo
+           demás se arma en la pantalla. Lo arma cargarTabla(). -->
+      <section id="pr-tabla" class="pr-of" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-tabla-volver">‹ Menú</button>
+            <h1 class="pr-titulo">Tabla de producción</h1>
+          </div>
+          <p class="pr-texto-suave">En unidades, sin los sublotes anulados. Tocá un período para verlo en la tabla.</p>
+          <div class="pt-tarjetas" id="pr-tabla-tarjetas" role="group" aria-label="Períodos"></div>
+          <div class="pr-campos pt-filtros">
+            <div class="pt-periodo">
+              <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-tabla-desde" class="pr-input"></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-tabla-hasta" class="pr-input"></label>
+            </div>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select id="pr-tabla-maquina" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Turno</span><select id="pr-tabla-turno" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Producto</span><select id="pr-tabla-producto" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Filas</span><select id="pr-tabla-filas" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Columnas</span><select id="pr-tabla-columnas" class="pr-select"></select></label>
+          </div>
+        </div>
+        <div id="pr-tabla-cuerpo"></div>
+      </section>
+
       <section id="pr-historial" class="pr-of" hidden>
         <div id="pr-historial-listado">
           <div class="pr-tarjeta">
@@ -2866,7 +2941,7 @@
 
     // La gestión: todas sus pantallas son "de oficina". La tablet quedó en
     // produccion.html.
-    const VISTAS = ['pr-inicio', 'pr-config', 'pr-historial', 'pr-stock']
+    const VISTAS = ['pr-inicio', 'pr-config', 'pr-tabla', 'pr-historial', 'pr-stock']
     function mostrarVista(id) {
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -2912,6 +2987,7 @@
       if (estado.vista === 'pr-config') return `config:${estado.config?.tab ?? ''}`
       if (estado.vista === 'pr-historial') return estado.historial?.estado === 'pendiente_completar' && estado.historial?.desdePendientes ? 'pendientes' : 'historial'
       if (estado.vista === 'pr-stock') return 'stock'
+      if (estado.vista === 'pr-tabla') return 'tabla'
       return 'inicio'
     }
 
@@ -2924,7 +3000,7 @@
     function pintarMenuActivo() {
       const actual = seccionActual()
       const items = [...document.querySelectorAll('.pg-menu__item')]
-      for (const id of ['pr-menu-inicio', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) {
+      for (const id of ['pr-menu-inicio', 'pr-menu-tabla', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) {
         const el = document.getElementById(id)
         if (!items.includes(el)) items.push(el)
       }
@@ -2948,6 +3024,7 @@
     }
 
     function navegar(destino) {
+      if (destino === 'tabla') return mostrarTabla()
       if (destino === 'historial') return mostrarHistorial()
       if (destino === 'stock') return mostrarStockTerminado()
       if (destino === 'pendientes') return irDesdeIndicador('pendientes')
@@ -3033,6 +3110,7 @@
       conectarEditorParada()
       conectarConfig()
       conectarHistorial()
+      conectarTabla()
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           cargarBurbujaConos()
@@ -3853,6 +3931,8 @@
         document.getElementById('pr-historial-detalle').hidden = true
         document.getElementById('pr-historial-listado').hidden = false
         cargarHistorial()
+      } else if (estado.vista === 'pr-tabla') {
+        cambiarUnidadTabla(id)
       } else if (estado.vista === 'pr-stock') {
         pintarSelectorUnidad('pr-stock-unidad', unidadesDeHistorial(), id)
         cargarStockTerminado()
@@ -5073,6 +5153,477 @@
     }
 
     // El inicio de la gestión: los indicadores de la unidad.
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA TABLA DE PRODUCCIÓN (09/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Cuánto se produjo, SIEMPRE en unidades, con filas y columnas a elegir.
+    // Sale de produccion_resumen(p_unidad_negocio_id, p_desde, p_hasta)
+    // (verificada en la base el 09/10/2026): una fila por fecha · turno ·
+    // máquina · producto · presentación, sin anulados, con `planillas` =
+    // count(distinct turno) DENTRO de ese grupo. Desde y hasta obligatorios y
+    // como mucho 400 días entre los dos. Los bigint pueden llegar como texto.
+    //
+    // UNA consulta por período: la de las cuatro tarjetas cubre del 1º del mes
+    // pasado a hoy, y si el período de la tabla entra ahí, la tabla usa esa
+    // misma (no hay una segunda llamada). Todo lo demás —filtros, filas,
+    // columnas, totales y promedios— se arma acá.
+    //
+    // NUNCA un cero de un dato ausente: una celda sin producción dice "—".
+
+    const DIMENSIONES_TABLA = [
+      { clave: 'dia', texto: 'Día' }, { clave: 'semana', texto: 'Semana' }, { clave: 'mes', texto: 'Mes' },
+      { clave: 'maquina', texto: 'Máquina' }, { clave: 'turno', texto: 'Turno' }, { clave: 'producto', texto: 'Producto' },
+      { clave: 'ninguna', texto: 'Ninguna' },
+    ]
+    const TURNOS_TABLA = ['Mañana', 'Tarde', 'Noche']
+    const MESES_TABLA = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    const DIAS_TABLA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+    const MAX_DIAS_TABLA = 400
+    const CLAVE_TABLA = 'produccion.gestion.tabla'
+
+    function esFechaTabla(v) {
+      return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
+    }
+
+    // Lo que devuelve la RPC, con los números convertidos (pueden venir como
+    // texto) y las fechas como 'aaaa-mm-dd'. Una fila sin fecha no se cuenta.
+    function normalizarResumen(data) {
+      const texto = (v) => (v === null || v === undefined ? '' : String(v))
+      return (Array.isArray(data) ? data : [])
+        .filter(f => f && esFechaTabla(texto(f.fecha).slice(0, 10)))
+        .map(f => ({
+          fecha: texto(f.fecha).slice(0, 10), turno: texto(f.turno), maquina_id: texto(f.maquina_id), maquina: texto(f.maquina),
+          producto: texto(f.producto), presentacion_id: texto(f.presentacion_id), presentacion: texto(f.presentacion),
+          planillas: numeroInd(f.planillas), cajas: numeroInd(f.cajas), unidades: numeroInd(f.unidades),
+        }))
+    }
+
+    // Las cuatro tarjetas, en hora de Argentina (`hoy` ya es el de Argentina).
+    // La semana va del LUNES a hoy, como el control de período.
+    function periodosTarjetasTabla(hoy) {
+      const primero = hoy.slice(0, 8) + '01'
+      const finPasado = sumarDias(primero, -1)
+      const ayer = sumarDias(hoy, -1)
+      return [
+        { clave: 'ayer', titulo: 'Ayer', desde: ayer, hasta: ayer },
+        { clave: 'semana', titulo: 'Esta semana', desde: lunesDe(hoy), hasta: hoy },
+        { clave: 'mes', titulo: 'Este mes', desde: primero, hasta: hoy },
+        { clave: 'mes_pasado', titulo: 'Mes pasado', desde: finPasado.slice(0, 8) + '01', hasta: finPasado },
+      ]
+    }
+
+    // La consulta de las tarjetas: del 1º del mes pasado a hoy. Las cuatro
+    // entran siempre (la semana empieza como mucho 6 días atrás).
+    function rangoBaseTabla(hoy) {
+      const p = periodosTarjetasTabla(hoy)
+      return { desde: p[3].desde, hasta: hoy }
+    }
+
+    // El mismo control que la base, antes de pedir nada.
+    function errorPeriodoTabla(desde, hasta) {
+      if (!esFechaTabla(desde) || !esFechaTabla(hasta)) return 'Elegí las dos fechas.'
+      if (desde > hasta) return '"Desde" tiene que ser antes que "Hasta".'
+      if (diasEntreInd(desde, hasta) > MAX_DIAS_TABLA) return 'El período no puede pasar de 400 días.'
+      return ''
+    }
+
+    function filtrarResumen(filas, f = {}) {
+      return (filas ?? []).filter(r =>
+        (!f.desde || r.fecha >= f.desde) && (!f.hasta || r.fecha <= f.hasta) &&
+        (!f.maquina || r.maquina_id === f.maquina) && (!f.turno || r.turno === f.turno) &&
+        (!f.producto || r.producto === f.producto))
+    }
+
+    // La suma de las unidades conocidas; null si no hay ninguna (nunca un 0
+    // inventado).
+    function sumaUnidadesTabla(filas) {
+      let s = null
+      for (const r of filas ?? []) if (r?.unidades !== null && r?.unidades !== undefined) s = (s ?? 0) + r.unidades
+      return s
+    }
+
+    function textoDiaTabla(iso) {
+      const d = new Date(`${iso}T12:00:00Z`)
+      return `${DIAS_TABLA[d.getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+    }
+
+    function textoMesTabla(aaaamm) {
+      const m = Number(aaaamm.slice(5, 7))
+      const nombre = MESES_TABLA[m - 1] ?? aaaamm
+      return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${aaaamm.slice(0, 4)}`
+    }
+
+    // A qué renglón (o columna) va una fila según la dimensión elegida.
+    // `orden` decide el orden: las fechas de la más vieja a la más nueva, los
+    // turnos Mañana · Tarde · Noche, lo demás por nombre.
+    function grupoTabla(r, dim) {
+      if (dim === 'dia') return { clave: r.fecha, orden: r.fecha, etiqueta: textoDiaTabla(r.fecha) }
+      if (dim === 'semana') { const l = lunesDe(r.fecha); return { clave: l, orden: l, etiqueta: `Semana del ${l.slice(8, 10)}/${l.slice(5, 7)}` } }
+      if (dim === 'mes') { const m = r.fecha.slice(0, 7); return { clave: m, orden: m, etiqueta: textoMesTabla(m) } }
+      if (dim === 'maquina') return { clave: r.maquina_id, orden: r.maquina, etiqueta: r.maquina || 'Sin máquina' }
+      if (dim === 'turno') {
+        const i = TURNOS_TABLA.indexOf(r.turno)
+        return { clave: r.turno, orden: `${i < 0 ? 9 : i}|${r.turno}`, etiqueta: r.turno || 'Sin turno' }
+      }
+      if (dim === 'producto') return { clave: r.producto, orden: r.producto, etiqueta: r.producto || 'Sin producto' }
+      return { clave: '', orden: '', etiqueta: 'Total' }
+    }
+
+    // La tabla: renglones, columnas, cada celda, los totales de cada renglón
+    // y columna, y el total general. Una celda sin filas no existe (se dibuja
+    // "—"); una con filas pero sin unidades conocidas es null (también "—").
+    function armarTabla(filas, dimFilas, dimCols) {
+      const fs = new Map(), cs = new Map(), celdas = new Map(), totFila = new Map(), totCol = new Map()
+      const sumar = (m, k, v) => { if (v === null || v === undefined) { if (!m.has(k)) m.set(k, null); return } m.set(k, (m.get(k) ?? 0) + v) }
+      let total = null
+      for (const r of filas ?? []) {
+        const gf = grupoTabla(r, dimFilas), gc = grupoTabla(r, dimCols)
+        if (!fs.has(gf.clave)) fs.set(gf.clave, gf)
+        if (!cs.has(gc.clave)) cs.set(gc.clave, gc)
+        if (!celdas.has(gf.clave)) celdas.set(gf.clave, new Map())
+        sumar(celdas.get(gf.clave), gc.clave, r.unidades)
+        sumar(totFila, gf.clave, r.unidades)
+        sumar(totCol, gc.clave, r.unidades)
+        if (r.unidades !== null && r.unidades !== undefined) total = (total ?? 0) + r.unidades
+      }
+      const ordenar = (m) => [...m.values()].sort((a, b) => String(a.orden).localeCompare(String(b.orden), 'es', { numeric: true }) || String(a.clave).localeCompare(String(b.clave)))
+      return { filas: ordenar(fs), cols: ordenar(cs), celdas, totFila, totCol, total }
+    }
+
+    // Promedio por día con producción y por planilla. Las planillas se cuentan
+    // por (fecha, turno, máquina), NUNCA sumando la columna: la RPC repite la
+    // misma planilla en cada presentación. Dentro de esa clave se toma el
+    // MAYOR `planillas` (si una máquina se relanzó con lote nuevo en el mismo
+    // turno, son dos), y sin dato, una.
+    function promediosTabla(filas) {
+      const total = sumaUnidadesTabla(filas)
+      const dias = new Set(), planillas = new Map()
+      for (const r of filas ?? []) {
+        dias.add(r.fecha)
+        const k = `${r.fecha}|${r.turno}|${r.maquina_id}`
+        const n = r.planillas !== null && r.planillas !== undefined && r.planillas > 0 ? r.planillas : 1
+        planillas.set(k, Math.max(planillas.get(k) ?? 0, n))
+      }
+      let nPlanillas = 0
+      for (const n of planillas.values()) nPlanillas += n
+      return {
+        total, dias: dias.size, planillas: nPlanillas,
+        porDia: total !== null && dias.size > 0 ? total / dias.size : null,
+        porPlanilla: total !== null && nPlanillas > 0 ? total / nPlanillas : null,
+      }
+    }
+
+    // Elegir Filas o Columnas: si se elige lo mismo que tiene la otra, se
+    // intercambian (una tabla Día × Día no dice nada).
+    function cambiarDimensionTabla(dims, cual, valor) {
+      if (!DIMENSIONES_TABLA.some(d => d.clave === valor) || (cual !== 'filas' && cual !== 'columnas')) return { ...dims }
+      const otra = cual === 'filas' ? 'columnas' : 'filas'
+      const r = { filas: dims.filas, columnas: dims.columnas }
+      if (valor !== 'ninguna' && r[otra] === valor) r[otra] = r[cual]
+      r[cual] = valor
+      return r
+    }
+
+    // Lo que se recuerda (localStorage, con try/catch en leer/guardarPreferencia):
+    // filas, columnas, los filtros y el período (como tarjeta, si era una,
+    // así "Este mes" sigue siendo este mes mañana).
+    function estadoInicialTabla(guardado, hoy) {
+      let g = {}
+      try { g = guardado ? JSON.parse(guardado) : {} } catch { g = {} }
+      if (!g || typeof g !== 'object') g = {}
+      const dim = (v, def) => DIMENSIONES_TABLA.some(d => d.clave === v) ? v : def
+      const t = {
+        filas: dim(g.filas, 'dia'), columnas: dim(g.columnas, 'maquina'),
+        maquina: typeof g.maquina === 'string' ? g.maquina : '', maquinaNombre: typeof g.maquinaNombre === 'string' ? g.maquinaNombre : '',
+        turno: typeof g.turno === 'string' ? g.turno : '', producto: typeof g.producto === 'string' ? g.producto : '',
+        unidadId: typeof g.unidadId === 'string' ? g.unidadId : null,
+        periodoClave: null, desde: '', hasta: '', base: null, periodo: null,
+      }
+      if (t.filas !== 'ninguna' && t.filas === t.columnas) t.columnas = 'ninguna'
+      const tarjeta = periodosTarjetasTabla(hoy).find(p => p.clave === g.periodoClave)
+      if (tarjeta) { t.periodoClave = tarjeta.clave; t.desde = tarjeta.desde; t.hasta = tarjeta.hasta }
+      else if (!errorPeriodoTabla(g.desde, g.hasta)) { t.desde = g.desde; t.hasta = g.hasta }
+      else { const m = periodosTarjetasTabla(hoy)[2]; t.periodoClave = 'mes'; t.desde = m.desde; t.hasta = m.hasta }
+      return t
+    }
+
+    function guardarTabla(t) {
+      guardarPreferencia(CLAVE_TABLA, JSON.stringify({
+        filas: t.filas, columnas: t.columnas, maquina: t.maquina, maquinaNombre: t.maquinaNombre, turno: t.turno, producto: t.producto,
+        unidadId: t.unidadId, periodoClave: t.periodoClave, desde: t.desde, hasta: t.hasta,
+      }))
+    }
+
+    // Las filas que van a la tabla: las de la consulta base si el período
+    // entra ahí, las de su propia consulta si no. Siempre recortadas al
+    // período (la RPC ya lo hace; esto es la red).
+    function datosDeLaTabla(t) {
+      const fuente = t?.periodo?.usaBase ? t.base : t?.periodo
+      if (!fuente) return { estado: 'cargando', filas: [] }
+      if (fuente.validacion) return { estado: 'invalido', error: fuente.error, filas: [] }
+      if (fuente.cargando) return { estado: 'cargando', filas: [] }
+      if (fuente.error) return { estado: 'error', error: fuente.error, filas: [] }
+      return { estado: 'ok', filas: filtrarResumen(fuente.filas, { desde: t.desde, hasta: t.hasta }) }
+    }
+
+    function hayFiltrosTabla(t) {
+      return !!(t.maquina || t.turno || t.producto)
+    }
+
+    function unidadesTexto(n) {
+      return n === null || n === undefined ? '—' : `${formatearNumeroAr(Math.round(n), { decimales: 0 })} u`
+    }
+
+    function rangoCortoTabla(desde, hasta) {
+      const dm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+      return desde === hasta ? dm(desde) : `${dm(desde)} al ${dm(hasta)}`
+    }
+
+    // Las cuatro tarjetas, con los MISMOS filtros que la tabla (así, tocar una
+    // da una tabla cuyo total es el de la tarjeta).
+    function htmlTarjetasTabla(t, hoy) {
+      const base = t.base
+      return periodosTarjetasTabla(hoy).map(p => {
+        let n = '—', pie = rangoCortoTabla(p.desde, p.hasta)
+        if (!base || base.cargando) { n = '…'; pie = 'Cargando…' }
+        else if (base.error) pie = 'No se pudo leer'
+        else {
+          const s = sumaUnidadesTabla(filtrarResumen(base.filas, { desde: p.desde, hasta: p.hasta, maquina: t.maquina, turno: t.turno, producto: t.producto }))
+          if (s === null) pie = `Sin producción · ${rangoCortoTabla(p.desde, p.hasta)}`
+          else n = unidadesTexto(s)
+        }
+        const activa = t.desde === p.desde && t.hasta === p.hasta
+        return `<button type="button" class="pt-tarjeta" data-tabla-periodo="${esc(p.clave)}" aria-pressed="${activa ? 'true' : 'false'}">` +
+          `<span class="pt-tarjeta__titulo">${esc(p.titulo)}</span><span class="pt-tarjeta__n">${esc(n)}</span>` +
+          `<span class="pt-tarjeta__rango">${esc(pie)}</span></button>`
+      }).join('')
+    }
+
+    // Las opciones de un filtro salen de los datos del período (antes de los
+    // otros filtros); la elegida se conserva aunque ya no esté.
+    function opcionesFiltroTabla(filas, campo, elegido, nombreElegido) {
+      const m = new Map()
+      for (const r of filas ?? []) {
+        if (campo === 'maquina') { if (r.maquina_id) m.set(r.maquina_id, { v: r.maquina_id, t: r.maquina || 'Sin máquina', o: r.maquina }) }
+        else if (r[campo]) {
+          const i = campo === 'turno' ? TURNOS_TABLA.indexOf(r.turno) : 0
+          m.set(r[campo], { v: r[campo], t: r[campo], o: campo === 'turno' ? `${i < 0 ? 9 : i}|${r.turno}` : r[campo] })
+        }
+      }
+      if (elegido && !m.has(elegido)) m.set(elegido, { v: elegido, t: nombreElegido || elegido, o: nombreElegido || elegido })
+      return [...m.values()].sort((a, b) => String(a.o).localeCompare(String(b.o), 'es', { numeric: true }))
+    }
+
+    function htmlOpcionesTabla(lista, elegido, todos) {
+      return `<option value=""${elegido ? '' : ' selected'}>${esc(todos)}</option>` +
+        lista.map(o => `<option value="${esc(o.v)}"${o.v === elegido ? ' selected' : ''}>${esc(o.t)}</option>`).join('')
+    }
+
+    function htmlDimensionesTabla(elegida) {
+      return DIMENSIONES_TABLA.map(d => `<option value="${esc(d.clave)}"${d.clave === elegida ? ' selected' : ''}>${esc(d.texto)}</option>`).join('')
+    }
+
+    function textoDimension(clave) {
+      return DIMENSIONES_TABLA.find(d => d.clave === clave)?.texto ?? ''
+    }
+
+    function celdaTabla(v, clase = '') {
+      if (v === null || v === undefined) return `<td class="pt-sin${clase ? ' ' + clase : ''}">—</td>`
+      return `<td${clase ? ` class="${clase}"` : ''}>${esc(formatearNumeroAr(Math.round(v), { decimales: 0 }))}</td>`
+    }
+
+    // La tabla. Con Filas o Columnas en "Ninguna" esa dimensión no se dibuja:
+    // queda solo el total.
+    function htmlTablaProduccion(tab, dimFilas, dimCols) {
+      const sinFilas = dimFilas === 'ninguna', sinCols = dimCols === 'ninguna'
+      const esquina = sinFilas && sinCols ? 'Unidades' : sinFilas ? textoDimension(dimCols) : sinCols ? textoDimension(dimFilas) : `${textoDimension(dimFilas)} / ${textoDimension(dimCols)}`
+      const cols = sinCols ? [] : tab.cols
+      let h = '<div class="pt-scroll" role="region" aria-label="Tabla de producción" tabindex="0"><table class="pt-tabla"><thead><tr>' +
+        `<th scope="col" class="pt-esquina">${esc(esquina)}</th>` +
+        cols.map(c => `<th scope="col">${esc(c.etiqueta)}</th>`).join('') +
+        '<th scope="col" class="pt-total">Total</th></tr></thead><tbody>'
+      if (!sinFilas) {
+        for (const f of tab.filas) {
+          const fila = tab.celdas.get(f.clave) ?? new Map()
+          h += `<tr><th scope="row" title="${esc(f.etiqueta)}">${esc(f.etiqueta)}</th>` +
+            cols.map(c => celdaTabla(fila.has(c.clave) ? fila.get(c.clave) : null)).join('') +
+            celdaTabla(tab.totFila.get(f.clave) ?? null, 'pt-total') + '</tr>'
+        }
+      }
+      h += '</tbody><tfoot><tr><th scope="row">Total</th>' +
+        cols.map(c => celdaTabla(tab.totCol.has(c.clave) ? tab.totCol.get(c.clave) : null)).join('') +
+        celdaTabla(tab.total, 'pt-total') + '</tr></tfoot></table></div>'
+      return h
+    }
+
+    function htmlPromediosTabla(p) {
+      return `<p class="pt-promedios">Promedio por día con producción: <strong>${esc(unidadesTexto(p.porDia))}</strong>` +
+        ` · por planilla: <strong>${esc(unidadesTexto(p.porPlanilla))}</strong>` +
+        ` <span class="pr-texto-suave">(${esc(String(p.dias))} ${p.dias === 1 ? 'día' : 'días'}, ${esc(String(p.planillas))} ${p.planillas === 1 ? 'planilla' : 'planillas'})</span></p>`
+    }
+
+    function htmlCuerpoTabla(t) {
+      const d = datosDeLaTabla(t)
+      if (d.estado === 'cargando') return '<p class="pr-texto-suave">Cargando…</p>'
+      if (d.estado === 'invalido') return `<div class="pr-aviso pr-aviso--grave" role="alert">${esc(d.error)}</div>`
+      if (d.estado === 'error') {
+        return `<div class="pg-ind-falla"><p class="pg-ind-falla__que">No se pudo leer la producción.</p><div class="pg-ind-falla__pie">` +
+          `<div class="pr-ind__error" role="alert">${esc(d.error)}</div>` +
+          '<button type="button" class="pr-btn pr-btn--secundario" data-tabla-reintentar="1">Reintentar</button></div></div>'
+      }
+      const filas = filtrarResumen(d.filas, { maquina: t.maquina, turno: t.turno, producto: t.producto })
+      if (!filas.length) {
+        return `<div class="pr-tarjeta"><p class="pr-of-vacio">No hubo producción del ${esc(fechaDelDia(t.desde))} al ${esc(fechaDelDia(t.hasta))}` +
+          `${hayFiltrosTabla(t) ? ' con estos filtros' : ''}.</p></div>`
+      }
+      return htmlTablaProduccion(armarTabla(filas, t.filas, t.columnas), t.filas, t.columnas) + htmlPromediosTabla(promediosTabla(filas))
+    }
+
+    function pintarTabla() {
+      const t = estado.tabla
+      if (!t) return
+      const hoy = hoyArgentina()
+      document.getElementById('pr-tabla-tarjetas').innerHTML = htmlTarjetasTabla(t, hoy)
+      const d = datosDeLaTabla(t)
+      const delPeriodo = d.estado === 'ok' ? d.filas : []
+      document.getElementById('pr-tabla-maquina').innerHTML = htmlOpcionesTabla(opcionesFiltroTabla(delPeriodo, 'maquina', t.maquina, t.maquinaNombre), t.maquina, 'Todas')
+      document.getElementById('pr-tabla-turno').innerHTML = htmlOpcionesTabla(opcionesFiltroTabla(delPeriodo, 'turno', t.turno), t.turno, 'Todos')
+      document.getElementById('pr-tabla-producto').innerHTML = htmlOpcionesTabla(opcionesFiltroTabla(delPeriodo, 'producto', t.producto), t.producto, 'Todos')
+      document.getElementById('pr-tabla-filas').innerHTML = htmlDimensionesTabla(t.filas)
+      document.getElementById('pr-tabla-columnas').innerHTML = htmlDimensionesTabla(t.columnas)
+      document.getElementById('pr-tabla-cuerpo').innerHTML = htmlCuerpoTabla(t)
+    }
+
+    async function leerResumen(unidadId, desde, hasta) {
+      const { data, error } = await supabase.rpc('produccion_resumen', { p_unidad_negocio_id: unidadId, p_desde: desde, p_hasta: hasta })
+      if (error) throw error
+      return normalizarResumen(data)
+    }
+
+    // Con un turno: la respuesta de un período o una unidad que ya no está
+    // elegido no pisa la del nuevo. Una consulta todavía en vuelo cuenta como
+    // vieja: si la tapó un turno nuevo, se vuelve a pedir. Una que falló
+    // también: por eso "Reintentar" es volver a llamar.
+    let turnoTabla = 0
+    async function cargarTabla() {
+      const t = estado.tabla
+      if (!t) return
+      const turno = ++turnoTabla
+      const unidad = estado.unidadId
+      if (!unidad) { t.base = { error: 'Elegí una unidad arriba.' }; t.periodo = { usaBase: true }; return pintarTabla() }
+      const rb = rangoBaseTabla(hoyArgentina())
+      const pedidos = []
+      const vieja = (c, r) => !c || c.unidadId !== unidad || c.desde !== r.desde || c.hasta !== r.hasta || !!c.error || !!c.cargando
+      if (vieja(t.base, rb)) { t.base = { unidadId: unidad, desde: rb.desde, hasta: rb.hasta, cargando: true }; pedidos.push('base') }
+      const err = errorPeriodoTabla(t.desde, t.hasta)
+      if (err) t.periodo = { validacion: true, error: err }
+      else if (t.desde >= rb.desde && t.hasta <= rb.hasta) t.periodo = { usaBase: true }
+      else if (vieja(t.periodo, t)) { t.periodo = { unidadId: unidad, desde: t.desde, hasta: t.hasta, cargando: true }; pedidos.push('periodo') }
+      pintarTabla()
+      if (!pedidos.length) return
+      const res = await Promise.all(pedidos.map(async (q) => {
+        try { return [q, { filas: await leerResumen(unidad, t[q].desde, t[q].hasta), cargando: false }] } catch (e) {
+          console.error('produccion_resumen:', e)
+          return [q, { error: e?.message || 'No hubo respuesta del servidor. Revisá la conexión.', cargando: false }]
+        }
+      }))
+      if (turno !== turnoTabla || estado.tabla !== t) return
+      for (const [q, r] of res) t[q] = { ...t[q], ...r }
+      pintarTabla()
+    }
+
+    function mostrarTabla() {
+      if (sinUnidadPorBarra()) { mostrarError(textoSinProduccionEnBarra()); return }
+      const hoy = hoyArgentina()
+      if (!estado.tabla) estado.tabla = estadoInicialTabla(leerPreferencia(CLAVE_TABLA), hoy)
+      const t = estado.tabla
+      // Una máquina es de una unidad: la recordada de otra no sirve.
+      if (t.unidadId !== estado.unidadId) { t.maquina = ''; t.maquinaNombre = ''; t.unidadId = estado.unidadId }
+      // "Este mes" es este mes también si la página quedó abierta de ayer.
+      const tarjeta = periodosTarjetasTabla(hoy).find(p => p.clave === t.periodoClave)
+      if (tarjeta) { t.desde = tarjeta.desde; t.hasta = tarjeta.hasta }
+      ponerPeriodoTabla(t)
+      mostrarVista('pr-tabla')
+      cargarTabla()
+    }
+
+    function cambiarUnidadTabla(id) {
+      const t = estado.tabla
+      if (!t) return
+      t.unidadId = id; t.maquina = ''; t.maquinaNombre = ''
+      guardarTabla(t)
+      cargarTabla()
+    }
+
+    // Pone el período en los dos campos (el control de período se entera solo).
+    function ponerPeriodoTabla(t) {
+      const d = document.getElementById('pr-tabla-desde'), h = document.getElementById('pr-tabla-hasta')
+      if (d.value !== t.desde) d.value = t.desde
+      if (h.value !== t.hasta) h.value = t.hasta
+    }
+
+    function elegirPeriodoTabla(clave) {
+      const t = estado.tabla
+      const p = periodosTarjetasTabla(hoyArgentina()).find(x => x.clave === clave)
+      if (!t || !p) return
+      t.periodoClave = p.clave; t.desde = p.desde; t.hasta = p.hasta
+      ponerPeriodoTabla(t)
+      guardarTabla(t)
+      cargarTabla()
+    }
+
+    // Las fechas cambiaron desde el control de período (o a mano).
+    function alCambiarFechasTabla() {
+      const t = estado.tabla
+      if (!t) return
+      t.desde = document.getElementById('pr-tabla-desde').value
+      t.hasta = document.getElementById('pr-tabla-hasta').value
+      t.periodoClave = periodosTarjetasTabla(hoyArgentina()).find(p => p.desde === t.desde && p.hasta === t.hasta)?.clave ?? null
+      guardarTabla(t)
+      cargarTabla()
+    }
+
+    function cambiarFiltroTabla(campo, valor, nombre = '') {
+      const t = estado.tabla
+      if (!t) return
+      t[campo] = valor ?? ''
+      if (campo === 'maquina') t.maquinaNombre = valor ? nombre : ''
+      guardarTabla(t)
+      pintarTabla()
+    }
+
+    function elegirDimensionTabla(cual, valor) {
+      const t = estado.tabla
+      if (!t) return
+      const r = cambiarDimensionTabla({ filas: t.filas, columnas: t.columnas }, cual, valor)
+      t.filas = r.filas; t.columnas = r.columnas
+      guardarTabla(t)
+      pintarTabla()
+    }
+
+    function conectarTabla() {
+      const d = document.getElementById('pr-tabla-desde'), h = document.getElementById('pr-tabla-hasta')
+      d.addEventListener('change', alCambiarFechasTabla)
+      h.addEventListener('change', alCambiarFechasTabla)
+      crearPeriodo({ desde: d, hasta: h, obligatorias: true })
+      document.getElementById('pr-tabla-volver').addEventListener('click', abrirMenu)
+      document.getElementById('pr-tabla-tarjetas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-tabla-periodo]'); if (b) elegirPeriodoTabla(b.dataset.tablaPeriodo)
+      })
+      document.getElementById('pr-tabla-cuerpo').addEventListener('click', ev => {
+        if (ev.target.closest('[data-tabla-reintentar]')) cargarTabla()
+      })
+      document.getElementById('pr-tabla-maquina').addEventListener('change', ev => {
+        const op = ev.target.selectedOptions?.[0]
+        cambiarFiltroTabla('maquina', ev.target.value, op ? op.textContent : '')
+      })
+      document.getElementById('pr-tabla-turno').addEventListener('change', ev => cambiarFiltroTabla('turno', ev.target.value))
+      document.getElementById('pr-tabla-producto').addEventListener('change', ev => cambiarFiltroTabla('producto', ev.target.value))
+      document.getElementById('pr-tabla-filas').addEventListener('change', ev => elegirDimensionTabla('filas', ev.target.value))
+      document.getElementById('pr-tabla-columnas').addEventListener('change', ev => elegirDimensionTabla('columnas', ev.target.value))
+    }
+
     function mostrarInicioOficina() {
       pintarAccesosOficina()
       mostrarVista('pr-inicio')
@@ -5131,7 +5682,7 @@
       const ver = puedeVerHistorial(), conf = tieneTarea('configurar')
       document.getElementById('pr-menu').hidden = false
       document.body.classList.add('pg-con-menu')
-      for (const id of ['pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver
+      for (const id of ['pr-menu-tabla', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver
       for (const b of document.querySelectorAll('[data-ir-config]')) b.hidden = !tieneTarea('configurar')
       document.getElementById('pr-menu-bloque-control').hidden = !ver
       document.getElementById('pr-menu-bloque-catalogo').hidden = !conf
