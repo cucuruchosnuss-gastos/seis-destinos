@@ -12,6 +12,8 @@
 //  - Cada mutación necesita un ANCLA ÚNICA en el archivo. La automática agranda
 //    el contexto hasta conseguirla; la de a mano, si no es única, aborta
 //    nombrándola en vez de mutar el renglón equivocado.
+//    Cuando el texto NO EXISTE (el código cambió), dice la línea más parecida
+//    del archivo (parecido.js), y cuando NO ES ÚNICO, en qué líneas está.
 //  - Una mutación que no cambia el archivo es un ERROR DEL TEST, nunca
 //    cobertura. Y el sub-proceso informa cuántos caracteres leyó, para que el
 //    runner confirme que leyó el mutado y no el limpio.
@@ -24,6 +26,7 @@ const path = require('path')
 const { execFileSync } = require('child_process')
 const { interpolaciones } = require('./escaner-interpolaciones')
 const { rangosDeFunciones } = require('./circuito-comun')
+const { pistaDeAncla } = require('./parecido')
 
 // `variable`: la variable de entorno por la que la suite recibe el archivo
 // (ARCHIVO_TEST por defecto; una suite que lee DOS archivos recibe el otro por
@@ -105,7 +108,11 @@ function correrMutacionesEn({ suite, original, funciones, escape = 'esc', manual
 
   // ── A mano ──────────────────────────────────────────────────────────────
   for (const m of manuales) {
-    if (!unica(zona, m.de)) { ambiguas.push(`«${m.nombre}»: el texto a reemplazar ${zona.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'}`); continue }
+    if (!unica(zona, m.de)) {
+      const lineasAntes = src.slice(0, RI).split('\n').length - 1
+      ambiguas.push(`«${m.nombre}»: el texto a reemplazar ${zona.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'} en ${path.basename(original)}\n${pistaDeAncla(zona, m.de, lineasAntes)}`)
+      continue
+    }
     mutaciones.push({ nombre: m.nombre, mutado: enZona(zona.replace(m.de, () => m.a)) })
   }
 
@@ -138,6 +145,8 @@ function correrMutacionesEn({ suite, original, funciones, escape = 'esc', manual
   for (const e of errores) console.log('  ERROR DEL TEST: ' + e)
   for (const e of equivs) console.log('  equivalente: ' + e)
   console.log(`${detectadas}/${total} mutaciones detectadas${equivs.length ? ` (+${equivs.length} equivalentes, aparte)` : ''}`)
+  // Un "0/0" con errores del test no es verde: se dice (antes se leía como si no hubiera nada que medir).
+  if (errores.length) console.log(`ROJO: ${errores.length} ${errores.length === 1 ? 'error' : 'errores'} del test (arriba): esas mutaciones no midieron nada`)
   const res = { detectadas, total, equivalentes: equivs.length, fallas: escaparon.length + errores.length }
   if (!salir) return res
   process.exit(escaparon.length || errores.length ? 1 : 0)

@@ -30,6 +30,8 @@ if (modoMut) {
     ...archivos.filter(f => /^controles-.*\.js$/.test(f) && f !== 'controles-comun.js')];
 }
 if (filtro) trabajos = trabajos.filter(f => f.includes(filtro));
+// SOLO=a.js,b.js: exactamente esa lista (la arma correr-rama.js).
+if (process.env.SOLO) { const solo = new Set(process.env.SOLO.split(',')); trabajos = trabajos.filter(f => solo.has(f)); }
 
 const resultados = [];
 const inicio = Date.now();
