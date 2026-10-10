@@ -116,7 +116,8 @@ esperas.push((async () => {
   chk('arranca en los últimos 7 días', S.estado.historial.hasta === S.hoyArgentina() && S.estado.historial.desde === S.sumarDias(S.hoyArgentina(), -7))
   const q = S.__llamadas.consultas.find(([t]) => t === 'turnos_produccion')?.[1] ?? []
   chk('filtra por unidad y fechas', JSON.stringify(q).includes('["eq","unidad_negocio_id","u-cn"]') && JSON.stringify(q).includes('["gte","fecha"') && JSON.stringify(q).includes('["lte","fecha"'))
-  chk('sin máquina ni estado elegidos no los filtra', !JSON.stringify(q).includes('["eq","maquina_id"') && !JSON.stringify(q).includes('["eq","estado"'))
+  // Desde el 08/10/2026 la lista ("Planillas") arranca en las CERRADAS (test-produccion-planillas.js).
+  chk('sin máquina elegida no la filtra, y arranca en las cerradas', !JSON.stringify(q).includes('["eq","maquina_id"') && JSON.stringify(q).includes('["eq","estado","cerrado"]'))
   const hl = S.__doc.getElementById('pr-historial-lista').innerHTML
   chk('la lista es una tabla con su cabecera', /pr-of-cab pr-of-turnos[\s\S]*Lote<\/span>[\s\S]*Encargado<\/span>/.test(hl))
   chk('cada turno con lote, fecha, turno, máquina y encargado', /pr-of-lote">7023<\/span><span>22\/09\/2026<\/span><span>Mañana<\/span><span>Máquina 1<\/span><span>Federico Silva<\/span>/.test(hl), hl.slice(0, 900))
