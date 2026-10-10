@@ -258,6 +258,15 @@ const SEGURAS_PRODUCCION = [
   ['htmlRenglonMasa(como)', 'HTML armado por htmlRenglonMasa(), que escapa el número y la hora; el resto son textos constantes'],
   ['renglon', 'HTML ya escapado: htmlMasaHistorial() lo arma arriba con esc() del id, el número y la hora, y textos constantes'],
   ['det', 'HTML ya escapado: htmlMasaHistorial() lo arma arriba con esc() del masero, el cuándo, el tipo, los motivos y las diferencias, y htmlFormulaMasa() (escapa adentro), o vacío'],
+  // Corregir todo un sublote desde la gestión (08/10/2026): las opciones las
+  // arma opcion(), que escapa el valor y el texto; campo() escapa el rótulo.
+  ['opsProductos', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsChoco', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsPresentaciones', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsConos', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsCajas', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['opsEmbolsado', 'HTML armado por opcion() (escapa valor y texto) en htmlCamposCorreccion()'],
+  ['camposCorr', 'HTML armado por htmlCamposCorreccion(), que escapa adentro (opcion() y esc())'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

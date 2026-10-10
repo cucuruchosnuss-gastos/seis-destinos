@@ -8011,7 +8011,10 @@
       }
       if (!sinEmpaque) {
         ahora.caja_insumo_id = a.cajaId ?? null
-        ahora.embolsado = embolsadoEfectivo(a, cat)
+        // Un renglón viejo sin embolsado (null) que nadie tocó no lo gana de
+        // regalo: 'ninguno' sería un cambio que la persona no hizo.
+        const emb = embolsadoEfectivo(a, cat)
+        if (!(antes.embolsado == null && a.embolsado == null && emb === 'ninguno')) ahora.embolsado = emb
       }
       const datos = {}
       for (const [k, v] of Object.entries(ahora)) if ((antes[k] ?? null) !== (v ?? null)) datos[k] = v
@@ -8036,6 +8039,14 @@
         err.hidden = false
         return
       }
+      // Sin catálogo se corrigen solo las cajas, pero con la MISMA RPC que el
+      // resto (corregir_produccion_item_completo, solo con lo que cambió).
+      const it = (estado.planilla?.items ?? []).find(x => x.id === c.id)
+      if (c.modo === 'corregir' && it && cajas === Number(it.cajas)) {
+        err.textContent = 'No cambiaste nada: poné las cajas corregidas.'
+        err.hidden = false
+        return
+      }
       c.guardando = true
       const btn = document.getElementById('pr-corregir-confirmar')
       btn.disabled = true
@@ -8043,7 +8054,7 @@
       try {
         const { error } = c.modo === 'anular'
           ? await supabase.rpc('anular_produccion_item', { p_item_id: c.id, p_motivo: motivo })
-          : await supabase.rpc('corregir_produccion_item', { p_item_id: c.id, p_cajas: cajas, p_motivo: motivo })
+          : await supabase.rpc('corregir_produccion_item_completo', { p_item_id: c.id, p_datos: { cajas }, p_motivo: motivo })
         if (error) throw error
         guardado = true
         await recargarPlanilla()

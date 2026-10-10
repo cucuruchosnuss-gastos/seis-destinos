@@ -165,6 +165,9 @@ const EN_AMBOS = [
   'sumarDias', 'fechaDelDia', 'mapaDeUnidades', 'personalSinPruebas',
   // La lista de masas compacta (08/10/2026)
   'textoOrigenMasa',
+  // Corregir todo un sublote desde la gestión (08/10/2026): las reglas del
+  // empaque y de los conos, con la misma copia que la planta.
+  'conoOfrecible', 'cajasDe', 'cajaInicial', 'embolsadoSugerido', 'conoDobleBolsa', 'opcionesEmbolsado',
 ]
 const SOLO_GESTION = [
   'cerrarMenu', 'alternarMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
@@ -257,6 +260,9 @@ const NUEVAS_GESTION = [
   'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto', 'finDelTurnoMs', 'htmlNotaNoVolvio',
   // La lista de masas compacta (08/10/2026): el renglón y su detalle.
   'htmlFormulaMasa', 'alternarMasaHistorial',
+  // Corregir todo un sublote (08/10/2026): corregir_produccion_item_completo
+  'leerCatalogoCorreccion', 'presentacionCorr', 'embolsadoCorreccion', 'datosCorreccionSublote', 'opcion',
+  'htmlCamposCorreccion', 'cargarCatalogoCorreccion', 'cambiarCampoCorreccion',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
