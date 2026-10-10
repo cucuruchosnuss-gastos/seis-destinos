@@ -1243,6 +1243,30 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   .hoja-mas__accion:disabled { opacity: 0.6; }
 }
 
+/* REVISIÓN EN EL CELULAR (10/10/2026, e2e/30-revision-celular.spec.js).
+   - La burbuja de la barra de abajo no se sale de su pestaña: con pestañas de
+     60 px (un celular de 360) la de "Más" quedaba 5 px afuera de la pantalla.
+     Con pestañas anchas (76 px o más) queda donde estaba.
+   - En un celular angosto el nombre de la pestaña (sigue en 12,5 px, decisión
+     del 05/10/2026) va un poco más apretado y puede bajar a un segundo renglón
+     ("Proyectos / Taller"): "Producción" y "Cobranzas" se cortaban con "…".
+     Una sola palabra más larga que la pestaña ("Administración") se sigue
+     cortando: eso pide un nombre corto en la barra.
+   - El punto de la versión (js/version-banner.js) va arriba a la derecha:
+     abajo quedaba ENCIMA de la pestaña "Más" y de los botones de abajo
+     ("Siguiente", "Guardar", "Enviar"). Solo con la barra de abajo (la planta
+     no la tiene y no cambia). */
+@media (max-width: 1023.98px) {
+  .barra-abajo__burbuja { left: min(calc(50% + 8px), calc(100% - 30px)); }
+  body.con-barra-lateral #version-banner { top: calc(6px + env(safe-area-inset-top, 0px)) !important; bottom: auto !important; right: 4px !important; }
+}
+@media (max-width: 430px) {
+  .barra-abajo__nombre {
+    letter-spacing: -0.04em; line-height: 1.1; padding: 0; text-align: center;
+    white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  }
+}
+
 @media print {
   .barra-lateral, .barra-abajo, .hoja-mas, .hoja-abajo { display: none !important; }
   body.con-barra-lateral { margin-left: 0 !important; padding-bottom: 0 !important; }
