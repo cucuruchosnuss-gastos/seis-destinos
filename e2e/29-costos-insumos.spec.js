@@ -69,6 +69,7 @@ for (const ancho of [390, 1280]) {
     await expect(page.locator('#costo-equivale')).toHaveText('→ $ 1.100,00 por kg');
     await expect(page.locator('#costo-historial')).toContainText('Factura de octubre del molino');
     await expect(page.locator('#costo-historial .costo-hist--anulado')).toHaveCount(1);
+    await expect(page.locator('#costo-historial .costo-hist__anulado')).toHaveText('Anulado por Facu Maqueta el 01/09/2026');
     await modalEnteroALaVista(page, '#modal-costo .modal-stock__panel');
     await sinScrollHorizontal(page);
     await captura(page, `costos-modal-${ancho}`, info);
@@ -98,6 +99,9 @@ for (const ancho of [390, 1280]) {
     await expect(card).toContainText('Precio fijo $ 1.500,00 por kg');
     await expect(card).toContainText('Costo + 15 %');
     await expect(card.locator('.ad-insumo-precio--sin-costo')).toContainText('falta cargar el costo');
+    // La base ya usa estos precios al valorizar (09/10/2026): el aviso viejo no está.
+    await expect(card).not.toContainText('todavía');
+    await expect(card).toContainText('Es el precio que se propone al valorizar una orden');
     await sinScrollHorizontal(page);
     await captura(page, `costos-lista-precios-${ancho}`, info);
 

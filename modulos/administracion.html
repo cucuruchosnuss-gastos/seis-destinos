@@ -2471,17 +2471,30 @@
       return x?.insumo_id ? 'ins:' + x.insumo_id : x?.presentacion_id
     }
 
-    // Los precios vigentes por presentación o por insumo (precio_vigente() y
-    // precio_vigente_insumo() en la base hacen lo mismo).
-    function preciosVigentes(items, fecha) {
-      const porClave = new Map()
-      for (const x of Array.isArray(items) ? items : []) {
-        if (!esFechaIso(x.vigente_desde) || x.vigente_desde > fecha) continue
-        const k = clavePrecio(x)
-        const a = porClave.get(k)
-        if (!a || x.vigente_desde > a.vigente_desde) porClave.set(k, x)
+    // EL PRECIO DE UN INSUMO AL VALORIZAR (09/10/2026): lo calcula la BASE con
+    // precios_insumos_lista(p_lista_id, p_fecha = la fecha del retiro), que usa
+    // la MISMA regla que precio_vigente_insumo() (verificado con
+    // pg_get_functiondef el 09/10/2026): el renglón vigente a esa fecha; con
+    // recargo_costo_pct, el costo vigente × (1 + % / 100) redondeado a 2; si no,
+    // coalesce(precio_unitario, precio_caja). Se lee de la base y no se copia
+    // acá porque el costo pide stock:ver_costos y quien valoriza puede no
+    // tenerlo: la función devuelve el precio ya calculado igual.
+    // Devuelve 'ins:<id>' -> { precio | null, origen | null }.
+    function preciosInsumosDeLista(filas) {
+      const m = new Map()
+      for (const f of Array.isArray(filas) ? filas : []) {
+        if (!f?.insumo_id) continue
+        const precio = numeroONull(f.precio_unitario)
+        let origen = null
+        if (f.tipo === 'costo_mas_pct') {
+          const pct = numeroONull(f.recargo_costo_pct)
+          origen = f.sin_costo === true || precio === null
+            ? { texto: 'La lista lo pone a costo + %, y a este insumo le falta cargar el costo en Stock: escribí el precio.', grave: true }
+            : { texto: pct === null ? 'Sobre el costo (lista)' : `Costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} % (lista)`, grave: false }
+        }
+        m.set('ins:' + f.insumo_id, { precio: f.sin_costo === true ? null : precio, origen })
       }
-      return new Map([...porClave].map(([k, v]) => [k, Number(v.precio_caja)]))
+      return m
     }
 
     async function leerSaldoCliente(clienteId) {
@@ -2565,10 +2578,9 @@
         try {
           let vigentes = new Map()
           if (listaId && d.items.some(it => it.insumo_id && !vigente(it))) {
-            const { data, error } = await supabase.from('lista_precios_items')
-              .select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
+            const { data, error } = await supabase.rpc('precios_insumos_lista', { p_lista_id: cli.lista_precio_id, p_fecha: o.fecha })
             if (error) throw error
-            vigentes = preciosVigentes(data, o.fecha)
+            vigentes = preciosInsumosDeLista(data)
           }
           const saldo = await leerSaldoCliente(o.cliente_id)
           return { vigentes, saldo }
@@ -2597,7 +2609,10 @@
         for (const it of d.items) {
           if (!it.insumo_id || vigente(it)) continue
           const k = clavePrecio(it)
-          if (resto.vigentes.has(k)) { v.precios[it.id] = resto.vigentes.get(k); v.desdeLista.add(it.id) }
+          const r = resto.vigentes.get(k)
+          if (!r) continue
+          if (r.precio !== null) { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }
+          if (r.origen) v.origen[it.id] = r.origen
         }
         v.saldo = resto.saldo
       }
@@ -4564,7 +4579,7 @@
 
     async function leerPreciosLista(listaId) {
       const { data, error } = await supabase.from('lista_precios_items')
-        .select('presentacion_id, insumo_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)
+        .select('presentacion_id, insumo_id, precio_caja, precio_unitario, recargo_costo_pct, vigente_desde, cargado_en').eq('lista_id', listaId)
       if (error) throw error
       return data ?? []
     }
@@ -4629,6 +4644,22 @@
       return Number.isFinite(n) ? n : null
     }
 
+    // El precio FIJO de una versión de un insumo (la regla de
+    // precio_vigente_insumo: coalesce(precio_unitario, precio_caja)), o null si
+    // la versión es costo + % o no tiene precio.
+    function precioFijoDeVersion(v) {
+      if (numeroONull(v?.recargo_costo_pct) !== null) return null
+      return numeroONull(v?.precio_unitario) ?? numeroONull(v?.precio_caja)
+    }
+
+    // Cómo se dice una versión de un insumo en la grilla: su precio fijo, o
+    // "costo + N %" (el precio sale del costo de cada día: ver la tarjeta).
+    function textoPrecioInsumoGrilla(v, moneda) {
+      const pct = numeroONull(v?.recargo_costo_pct)
+      if (pct !== null) return `costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} %`
+      return importeHoja(precioFijoDeVersion(v), moneda)
+    }
+
     // "$ 30,8333" por unidad, o el guion si no hay dato (nunca "$ 0").
     function precioUnitarioONada(v) {
       const n = numeroONull(v)
@@ -4666,6 +4697,12 @@
     function chocanMismaFecha(precios, items, desde, nombreDe) {
       const nombres = []
       for (const it of items ?? []) {
+        if (it?.insumo_id) {
+          const chocaIns = (precios ?? []).some(p => p.insumo_id === it.insumo_id && p.vigente_desde === desde &&
+            (numeroONull(p.precio_unitario) !== null || numeroONull(p.recargo_costo_pct) !== null))
+          if (chocaIns) nombres.push(nombreDe('ins:' + it.insumo_id))
+          continue
+        }
         if (!it?.presentacion_id) continue
         const choca = (precios ?? []).some(p => p.presentacion_id === it.presentacion_id && p.vigente_desde === desde && numeroONull(p.precio_unitario) !== null)
         if (choca) nombres.push(nombreDe(it.presentacion_id))
@@ -4751,7 +4788,8 @@
         const f = (l.filas ?? []).find(x => x.clave === clave)
         if (!f || !filaEditable(f, meta)) continue
         const actual = vigenteYProximo(l.precios, clave, hoy).vigente
-        if (actual && Number(actual.precio_caja) === Number(precio)) continue
+        const actualFijo = !actual ? null : String(clave).startsWith('ins:') ? precioFijoDeVersion(actual) : numeroONull(actual.precio_caja)
+        if (actualFijo !== null && actualFijo === Number(precio)) continue
         items.push(String(clave).startsWith('ins:')
           ? { insumo_id: String(clave).slice(4), precio_caja: Number(precio) }
           : { presentacion_id: clave, precio_caja: Number(precio) })
@@ -4770,7 +4808,10 @@
         if (!filaEditable(f, meta)) continue
         const v = vigenteYProximo(l.precios, f.clave, hoy).vigente
         if (!v) continue
-        nuevos.set(f.clave, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)
+        // Un insumo a costo + % ya sigue al costo: no se le pone un precio fijo.
+        const base = f.insumoId ? precioFijoDeVersion(v) : numeroONull(v.precio_caja)
+        if (base === null) continue
+        nuevos.set(f.clave, Math.round(base * (1 + porcentaje / 100) * 100) / 100)
       }
       return nuevos
     }
@@ -4857,8 +4898,8 @@
       const { vigente, proximo } = vigenteYProximo(l.precios, f.clave, hoy)
       const moneda = listaDe(l.id)?.moneda || 'ARS'
       const pendiente = l.pendientes.has(f.clave) && l.pendientes.get(f.clave) !== null
-      const actual = vigente ? importeHoja(vigente.precio_caja, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
-      const prox = proximo ? ' · próximo ' + importeHoja(proximo.precio_caja, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
+      const actual = vigente ? textoPrecioInsumoGrilla(vigente, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
+      const prox = proximo ? ' · próximo ' + textoPrecioInsumoGrilla(proximo, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
       return `<div class="ad-precio${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.clave)}">` +
         `<div><div class="ad-renglon__desc">${esc(f.producto + ' · ' + f.presentacion)}</div>` +
         `<div class="ad-renglon__lotes">${esc(actual + prox)}</div></div>` +
@@ -4899,7 +4940,7 @@
       const versiones = versionesDe(l.precios, clave)
       const filas = versiones.length ? versiones.map(v =>
         `<div class="ad-renglon"><div class="ad-renglon__desc">${esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))}</div>` +
-        `<div class="ad-renglon__plata">${esc(importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
+        `<div class="ad-renglon__plata">${esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda) : importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
       return `<h2 class="ad-subtitulo">${esc('Historial · ' + (f ? f.producto + ' · ' + f.presentacion : ''))}</h2>${filas}` +
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" id="ad-historial-cerrar">Cerrar</button></div>`
     }
@@ -5083,13 +5124,12 @@
     // lista (puedeEn('stock', 'ver_costos')), así que sin ese permiso no se
     // ofrece. El % se aplica al costo de la fábrica (costos_insumos).
     //
-    // CONVIVENCIA CON LA GRILLA DE ARRIBA (decisión del 09/10/2026): la grilla
-    // sigue guardando el precio de un insumo con guardar_precios (precio_caja),
-    // que es lo que VALORIZAR lee hoy (precio_vigente_insumo() mira solo
-    // precio_caja: hueco de base). Esta tarjeta muestra y guarda los renglones
-    // de la RPC nueva (precio_unitario o recargo_costo_pct); uno de la grilla
-    // de arriba (solo precio_caja) llega con precio_unitario null y tipo 'fijo'
-    // y no se repite acá. La pantalla lo dice.
+    // CONVIVENCIA CON LA GRILLA DE ARRIBA: la grilla sigue guardando el precio
+    // fijo de un insumo con guardar_precios (precio_caja); esta tarjeta guarda
+    // precio_unitario o recargo_costo_pct. Desde el 09/10/2026 la base lee las
+    // dos cosas (precio_vigente_insumo y precios_insumos_lista: recargo →
+    // costo × (1 + %); si no, coalesce(precio_unitario, precio_caja)), así que
+    // valorizar usa lo de las dos y un precio de la grilla también se ve acá.
 
     function plataInsumoLista(n, moneda) {
       const v = numeroONull(n)
@@ -5101,7 +5141,8 @@
       return 'por ' + (unidadHoja(unidad) || 'unidad')
     }
 
-    // Los renglones que son de esta tarjeta (ver la convivencia, arriba).
+    // Los renglones con precio o a costo + % (también los de la grilla de
+    // arriba, que la base ya devuelve con su precio).
     function renglonesInsumosLista(filas) {
       return (Array.isArray(filas) ? filas : []).filter(f => f?.tipo === 'costo_mas_pct' || numeroONull(f?.precio_unitario) !== null)
     }
@@ -5161,7 +5202,7 @@
       const veCostos = puedeEn('stock', 'ver_costos')
       const intro = '<p class="ad-texto-suave">Un insumo a <strong>precio fijo</strong> por unidad, o a su <strong>costo + %</strong>' +
         (veCostos ? '' : ' (el % sobre el costo lo pone quien ve los costos de esta fábrica)') +
-        '. Al valorizar una orden todavía se propone el precio de la grilla de arriba (Materia prima e insumos): la base no toma estos todavía.</p>'
+        '. Es el precio que se propone al valorizar una orden.</p>'
       const ins = l.insumos
       if (!ins) return intro + '<div class="ad-vacio">Cargando los precios de insumos…</div>'
       if (ins.error) return intro + `<div class="ad-aviso ad-aviso--grave">${esc('No se pudieron leer los precios de insumos: ' + ins.error)}</div>`
@@ -5412,7 +5453,7 @@
       const items = preciosAGuardar(l, hoyArgentina())
       if (!items.length) { l.errorPorcentaje = 'No hay precios nuevos para guardar.'; pintarLista(false); return }
       if (items.some(x => x.precio_caja < 0)) { l.errorPorcentaje = 'Un precio no puede ser negativo.'; pintarLista(false); return }
-      const chocan = chocanMismaFecha(l.precios, items, desde, (id) => (l.filas.find(f => f.presentacionId === id)?.producto ?? 'un producto'))
+      const chocan = chocanMismaFecha(l.precios, items, desde, (id) => (l.filas.find(f => f.presentacionId === id || f.clave === id)?.producto ?? 'un producto'))
       if (chocan.length) { l.errorPorcentaje = textoChoqueMismaFecha(chocan, desde); pintarLista(false); return }
       l.errorPorcentaje = null
       l.confirmar = { items, desde, error: null }

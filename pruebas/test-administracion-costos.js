@@ -6,7 +6,11 @@
 //    de la fábrica con costos_insumos SOLO con stock:ver_costos ahí;
 //  - un renglón dice "Precio fijo $ X por kg" o "Costo + N % → $ X por kg";
 //    sin_costo = true va en bordó con "falta cargar el costo";
-//  - los renglones de la grilla de arriba (solo precio_caja) no se repiten;
+//  - un renglón de la grilla de arriba (precio_caja) la base ya lo devuelve con
+//    su precio (coalesce(precio_unitario, precio_caja), 09/10/2026) y se ve
+//    como precio fijo; y el aviso de que valorizar no los usa YA NO está;
+//  - la grilla de arriba dice "costo + N %" de un insumo a costo + %, "Aumentar
+//    todo" no le pone un precio fijo, y guardar el mismo día lo frena;
 //  - "Costo + %" solo lo ve quien tiene stock:ver_costos en la fábrica de la
 //    lista; costo 1.000 + 15 % dice $ 1.150 en la vista previa y viajan
 //    p_recargo_costo_pct = 15 y p_precio_unitario = null; un precio fijo viaja
@@ -41,8 +45,8 @@ const PRECIOS_INS = [
   { insumo_id: 'i1', insumo: 'Harina 000', unidad_medida: 'kg', precio_unitario: '1500', tipo: 'fijo', recargo_costo_pct: null, vigente_desde: '2026-10-01', sin_costo: false },
   { insumo_id: 'i2', insumo: 'Bolsa', unidad_medida: 'un', precio_unitario: '57.5', tipo: 'costo_mas_pct', recargo_costo_pct: '15', vigente_desde: '2026-10-01', sin_costo: false },
   { insumo_id: 'i3', insumo: 'Azúcar', unidad_medida: 'kg', precio_unitario: null, tipo: 'costo_mas_pct', recargo_costo_pct: '20', vigente_desde: '2026-10-01', sin_costo: true },
-  // Uno de la grilla de arriba (solo precio_caja): no se repite acá.
-  { insumo_id: 'i9', insumo: 'Vieja', unidad_medida: 'kg', precio_unitario: null, tipo: 'fijo', recargo_costo_pct: null, vigente_desde: '2026-09-01', sin_costo: false },
+  // Uno de la grilla de arriba (solo precio_caja): la base lo devuelve con su precio.
+  { insumo_id: 'i9', insumo: 'Vieja', unidad_medida: 'kg', precio_unitario: '120', tipo: 'fijo', recargo_costo_pct: null, vigente_desde: '2026-09-01', sin_costo: false },
 ]
 const COSTOS = [
   { insumo_id: 'i1', costo_unitario: '1000.0000' },
@@ -90,9 +94,9 @@ async function correr() {
     chk('precio fijo', /Precio fijo \$ 1\.500,00 por kg · desde el 01\/10\/2026/.test(h), h)
     chk('costo + %', /Costo \+ 15 % → \$ 57,50 por u/.test(h), h)
     chk('sin costo en bordó con "falta cargar el costo"', /ad-insumo-precio--sin-costo[\s\S]*?Costo \+ 20 % · falta cargar el costo/.test(h))
-    chk('un renglón de la grilla de arriba no se repite', !/Vieja/.test(h))
+    chk('un renglón de la grilla de arriba se ve como precio fijo', /Vieja[\s\S]*?Precio fijo \$ 120,00 por kg/.test(h), h)
     chk('se puede agregar', /id="ad-ins-agregar"/.test(h))
-    chk('dice que valorizar todavía usa la grilla de arriba', /todavía se propone el precio de la grilla de arriba/.test(h))
+    chk('el aviso de que valorizar no los usa YA NO está', !/todavía/.test(h) && !/la base no toma/.test(h) && /Es el precio que se propone al valorizar una orden/.test(h))
   }
   // Sin ver_costos: no se lee el costo, y el % no se ve.
   {
@@ -207,6 +211,33 @@ async function correr() {
     await esperar(); await esperar()
     chk('el error escapado', !/<img src=x/.test(tarjeta(S2)) && /&lt;img/.test(tarjeta(S2)))
   }
+  // ── La grilla de arriba con un insumo a costo + % ─────────────────────────
+  {
+    const S = nuevo()
+    S.__tablas.lista_precios_items = [
+      { presentacion_id: null, insumo_id: 'i1', precio_caja: null, precio_unitario: null, recargo_costo_pct: 15, vigente_desde: '2026-09-01', cargado_en: '2026-09-01T10:00:00Z' },
+      { presentacion_id: null, insumo_id: 'i2', precio_caja: null, precio_unitario: 80, recargo_costo_pct: null, vigente_desde: '2026-09-01', cargado_en: '2026-09-01T10:00:00Z' },
+      { presentacion_id: null, insumo_id: 'i3', precio_caja: 40, precio_unitario: null, recargo_costo_pct: null, vigente_desde: '2026-09-01', cargado_en: '2026-09-01T10:00:00Z' },
+    ]
+    await S.abrirLista('l1')
+    await esperar(); await esperar()
+    const l = S.estado.lista
+    const g = S.__els.get('ad-lista-grilla').innerHTML
+    chk('grilla: el insumo a costo + % lo dice', /costo \+ 15 % desde 01\/09\/2026/.test(g), g)
+    // importeHoja separa el $ con un espacio duro (U+00A0): \s lo cubre.
+    chk('grilla: un precio por unidad (de la tarjeta) se ve', /\$\s80,00 desde 01\/09\/2026/.test(g), g)
+    chk('grilla: el precio por caja de siempre se ve', /\$\s40,00 desde 01\/09\/2026/.test(g))
+    const sel = (S.__llamadas.consultas.find(c => c[0] === 'lista_precios_items') || [null, []])[1].find(f => f[0] === 'select')
+    chk('grilla: lee recargo_costo_pct', /recargo_costo_pct/.test(sel?.[1]))
+    const aumento = S.calcularAumento(l, 10, '2030-01-01')
+    chk('aumentar todo: el de costo + % no recibe un precio fijo', !aumento.has('ins:i1'))
+    chk('aumentar todo: sube el precio por unidad y el por caja', aumento.get('ins:i2') === 88 && aumento.get('ins:i3') === 44)
+    l.pendientes = new Map([['ins:i2', 80], ['ins:i3', 40]])
+    chk('el mismo precio por unidad no se guarda de nuevo', S.preciosAGuardar(l, '2030-01-01').length === 0)
+    const choca = S.chocanMismaFecha(l.precios, [{ insumo_id: 'i1', precio_caja: 5 }, { insumo_id: 'i3', precio_caja: 5 }], '2026-09-01', id => id)
+    chk('mismo día: un insumo con costo + % choca; uno de la grilla no', choca.length === 1 && choca[0] === 'ins:i1', JSON.stringify(choca))
+  }
+
   // El cableado.
   chk('la tarjeta está en la vista de la lista', /<div id="ad-lista-insumos"><\/div>/.test(src))
   chk('las tareas de stock se leen con su alcance', /\.in\('modulo', \[[^\]]*'stock'[^\]]*\]\)/.test(src))

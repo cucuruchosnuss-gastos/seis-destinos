@@ -2432,6 +2432,7 @@
     .costo-hist__fila { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
     .costo-hist__valor { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
     .costo-hist__meta { font-size: 0.75rem; color: var(--color-texto-2); margin-top: 0.125rem; }
+    .costo-hist__anulado { font-size: 0.75rem; font-weight: 650; color: var(--bordo-oscuro); margin-top: 0.125rem; }
     .costo-hist__nota { font-size: 0.8125rem; color: var(--color-texto); margin-top: 0.25rem; overflow-wrap: anywhere; }
     .costo-hist--anulado .costo-hist__valor { text-decoration: line-through; color: var(--color-texto-suave); }
     .costo-hist__confirmar {
@@ -9441,7 +9442,7 @@
       const yo = m
       document.getElementById('costo-historial-cargando').hidden = false
       const { data, error } = await supabase.from('insumo_costos')
-        .select('id, costo_unitario, vigente_desde, nota, cargado_por, cargado_en, anulado, origen')
+        .select('id, costo_unitario, vigente_desde, nota, cargado_por, cargado_en, anulado, anulado_por, anulado_en, origen')
         .eq('unidad_negocio_id', m.unidad).eq('insumo_id', m.fila.insumo_id)
         .order('vigente_desde', { ascending: false }).order('cargado_en', { ascending: false })
       if (estado.costo !== yo) return
@@ -9454,7 +9455,7 @@
         yo.historial = Array.isArray(data) ? data : []
         yo.errorHistorial = null
         // Los nombres por v_empleados_publico, nunca por un embed a empleados.
-        const ids = [...new Set(yo.historial.map(h => h.cargado_por).filter(Boolean))]
+        const ids = [...new Set(yo.historial.flatMap(h => [h.cargado_por, h.anulado_por]).filter(Boolean))]
         if (ids.length) {
           const r = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)
           if (estado.costo !== yo) return
@@ -9464,6 +9465,18 @@
       pintarHistorialCosto()
     }
 
+    // "Anulado por X el dd/mm/aaaa" (anulado_por y anulado_en, que guarda
+    // anular_costo_insumo desde el 09/10/2026; el nombre por
+    // v_empleados_publico). Lo que no se sabe no se inventa.
+    function textoAnuladoCosto(h, nombres) {
+      const quien = h.anulado_por ? (nombres?.get(h.anulado_por) || 'alguien') : ''
+      const d = h.anulado_en ? new Date(h.anulado_en) : null
+      const cuando = d && !Number.isNaN(d.getTime())
+        ? d.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' })
+        : ''
+      return ['Anulado', quien ? `por ${quien}` : '', cuando ? `el ${cuando}` : ''].filter(Boolean).join(' ')
+    }
+
     function htmlHistorialCosto(m) {
       if (m.errorHistorial) return `<div class="rec-aviso">${esc('No se pudo leer el historial: ' + m.errorHistorial)}</div>`
       if (!m.historial) return ''
@@ -9471,7 +9484,7 @@
       const puedeAnular = puedeCostosEn('cargar_costos', m.unidad)
       return m.historial.map(h => {
         const quien = h.cargado_por ? (m.nombres.get(h.cargado_por) || 'alguien') : ''
-        const meta = [h.vigente_desde ? `desde ${formatearFecha(String(h.vigente_desde))}` : '', quien ? `cargó ${quien}` : '', h.anulado ? 'anulado' : ''].filter(Boolean).join(' · ')
+        const meta = [h.vigente_desde ? `desde ${formatearFecha(String(h.vigente_desde))}` : '', quien ? `cargó ${quien}` : ''].filter(Boolean).join(' · ')
         const confirmando = m.anulando === h.id
         const acciones = h.anulado || !puedeAnular ? ''
           : confirmando
@@ -9491,6 +9504,7 @@
               ${confirmando ? '' : acciones}
             </div>
             <div class="costo-hist__meta">${esc(meta)}</div>
+            ${h.anulado ? `<div class="costo-hist__anulado">${esc(textoAnuladoCosto(h, m.nombres))}</div>` : ''}
             ${h.nota ? `<div class="costo-hist__nota">${esc(h.nota)}</div>` : ''}
             ${confirmando ? acciones : ''}
           </div>`

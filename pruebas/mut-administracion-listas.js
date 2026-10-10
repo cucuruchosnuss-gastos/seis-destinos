@@ -23,6 +23,7 @@ correrMutaciones({
     { expr: 'esc(f.grupo)', motivo: 'el grupo es una constante del código (CATEGORIAS_PRODUCTO, TITULO_OTROS_PRODUCTOS, TITULO_INSUMOS)' },
     { expr: 'esc(actual + prox)', motivo: 'importes formateados y fechas dd/mm/aaaa' },
     { expr: 'esc(importeHoja(v.precio_caja, moneda))', motivo: 'un importe formateado por importeHoja()' },
+    { expr: "esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda) : importeHoja(v.precio_caja, moneda))", motivo: 'un importe formateado por importeHoja() o "costo + N %" con un número formateado (09/10/2026)' },
     { expr: "esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))", motivo: 'una fecha dd/mm/aaaa y texto constante' },
   ],
   manuales: [
@@ -36,10 +37,10 @@ correrMutaciones({
     { nombre: 'la grilla sin los insumos', de: "      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {", a: "      for (const i of []) {" },
     { nombre: 'la grilla con los insumos inactivos', de: "      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {", a: "      for (const i of (cat?.insumos ?? [])) {" },
     { nombre: 'el precio del insumo viaja como presentación', de: "        items.push(String(clave).startsWith('ins:')", a: "        items.push(false" },
-    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)", a: ".select('presentacion_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)" },
+    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, precio_unitario, recargo_costo_pct, vigente_desde, cargado_en').eq('lista_id', listaId)", a: ".select('presentacion_id, precio_caja, precio_unitario, recargo_costo_pct, vigente_desde, cargado_en').eq('lista_id', listaId)" },
     { nombre: 'sin encabezado por grupo', de: "        const sep = f.grupo !== grupo ? `<div class=\"ad-separador-grilla\">${esc(f.grupo)}</div>` : ''", a: "        const sep = ''" },
     // Guardar
-    { nombre: 'un precio igual al vigente cuenta como nuevo', de: '        if (actual && Number(actual.precio_caja) === Number(precio)) continue\n', a: '' },
+    { nombre: 'un precio igual al vigente cuenta como nuevo', de: '        if (actualFijo !== null && actualFijo === Number(precio)) continue\n', a: '' },
     { nombre: 'guardar sin confirmar', de: '      l.confirmar = { items, desde, error: null }\n      pintarLista(false)\n    }', a: '      l.confirmar = { items, desde, error: null }\n      confirmarGuardarPrecios()\n    }' },
     { nombre: 'guarda sin fecha', de: "      if (!esFechaIso(desde)) { l.errorPorcentaje = 'Poné desde qué fecha rigen los precios nuevos.'; pintarLista(false); return }\n", a: '' },
     { nombre: 'guarda sin nada nuevo', de: "      if (!items.length) { l.errorPorcentaje = 'No hay precios nuevos para guardar.'; pintarLista(false); return }\n", a: '' },
@@ -49,8 +50,8 @@ correrMutaciones({
     { nombre: 'la fecha pasada no se avisa', de: "      aviso.textContent = esFechaIso(desde) && desde < hoy ?", a: '      aviso.textContent = false ?' },
     // Aumento
     { nombre: 'el aumento guarda solo', de: '      l.pendientes = calcularAumento(l, pct, hoyArgentina())\n      l.confirmar = null\n      pintarLista(true)', a: '      l.pendientes = calcularAumento(l, pct, hoyArgentina())\n      l.confirmar = { items: preciosAGuardar(l, hoyArgentina()), desde: hoyArgentina(), error: null }\n      confirmarGuardarPrecios()' },
-    { nombre: 'el aumento sin redondear', de: '        nuevos.set(f.clave, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)', a: '        nuevos.set(f.clave, Number(v.precio_caja) * (1 + porcentaje / 100) + 0.001)' },
-    { nombre: 'el aumento inventa precio donde no había', de: '        if (!v) continue\n        nuevos.set', a: '        if (!v) { nuevos.set(f.presentacionId, 0); continue }\n        nuevos.set' },
+    { nombre: 'el aumento sin redondear', de: '        nuevos.set(f.clave, Math.round(base * (1 + porcentaje / 100) * 100) / 100)', a: '        nuevos.set(f.clave, base * (1 + porcentaje / 100) + 0.001)' },
+    { nombre: 'el aumento inventa precio donde no había', de: '        if (!v) continue\n        // Un insumo a costo + %', a: '        if (!v) { nuevos.set(f.presentacionId, 0); continue }\n        // Un insumo a costo + %' },
     { nombre: 'el aumento sobre el precio futuro', de: '        const v = vigenteYProximo(l.precios, f.clave, hoy).vigente\n        if (!v) continue', a: '        const v = vigenteYProximo(l.precios, f.clave, hoy).proximo ?? vigenteYProximo(l.precios, f.clave, hoy).vigente\n        if (!v) continue' },
     { nombre: 'sin porcentaje se aplica igual', de: "      if (pct === null || pct === 0) { l.errorPorcentaje = 'Escribí el porcentaje (por ejemplo 12,5).'; pintarLista(false); return }\n", a: '' },
     { nombre: 'descartar no descarta', de: '      l.pendientes = new Map()\n      l.confirmar = null\n      pintarLista(true)', a: '      l.confirmar = null\n      pintarLista(true)' },

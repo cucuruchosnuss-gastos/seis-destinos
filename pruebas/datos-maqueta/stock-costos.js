@@ -25,7 +25,7 @@ t.empleado_tareas.push(
 t.insumo_costos = [
   { id: 'ic-3', unidad_negocio_id: NUSS, insumo_id: 'i-harina', costo_unitario: 1100, moneda: 'ARS', vigente_desde: '2026-10-01', origen: 'manual', gasto_id: null, nota: 'Factura de octubre del molino', cargado_por: EMP, cargado_en: '2026-10-01T12:00:00Z', anulado: false },
   { id: 'ic-2', unidad_negocio_id: NUSS, insumo_id: 'i-harina', costo_unitario: 980, moneda: 'ARS', vigente_desde: '2026-09-01', origen: 'manual', gasto_id: null, nota: null, cargado_por: EMP, cargado_en: '2026-09-01T12:00:00Z', anulado: false },
-  { id: 'ic-1', unidad_negocio_id: NUSS, insumo_id: 'i-harina', costo_unitario: 9800, moneda: 'ARS', vigente_desde: '2026-09-01', origen: 'manual', gasto_id: null, nota: 'Cargado de más (un cero de más)', cargado_por: EMP, cargado_en: '2026-08-31T12:00:00Z', anulado: true },
+  { id: 'ic-1', unidad_negocio_id: NUSS, insumo_id: 'i-harina', costo_unitario: 9800, moneda: 'ARS', vigente_desde: '2026-09-01', origen: 'manual', gasto_id: null, nota: 'Cargado de más (un cero de más)', cargado_por: EMP, cargado_en: '2026-08-31T12:00:00Z', anulado: true, anulado_por: EMP, anulado_en: '2026-09-01T13:00:00Z' },
 ];
 
 // Como devuelve la base: los numeric como texto.

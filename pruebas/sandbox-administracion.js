@@ -25,7 +25,8 @@ const FUNCIONES_BASE = [
   'htmlSelloOrden', 'leerOrdenes', 'htmlFilaOrden', 'htmlListaOrdenes', 'htmlOpcionesClientes', 'pintarOrdenes',
   'cargarOrdenes', 'mostrarOrdenes', 'leerFiltros',
   'leerOrden', 'lotesDeRenglon', 'cantidadValorizable', 'htmlDatoAd', 'htmlRenglonOrden', 'htmlDetalleOrden', 'pintarOrden', 'pintarAccionesOrden', 'abrirOrden',
-  'clavePrecio', 'preciosVigentes', 'leerSaldoCliente', 'abrirValorizar',
+  'clavePrecio', 'preciosInsumosDeLista', 'leerSaldoCliente', 'abrirValorizar',
+  'precioFijoDeVersion', 'textoPrecioInsumoGrilla',
   // Valorizar con precio_venta() (30/09/2026)
   'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',

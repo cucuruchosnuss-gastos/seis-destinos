@@ -105,10 +105,14 @@ const PRELUDIO = `
   function __consulta(tabla) {
     const q = { filtros: [] }
     __consultas.push(tabla)
-    for (const k of ['select', 'neq', 'in', 'is', 'order', 'gte', 'lte', 'limit', 'range', 'not', 'or']) q[k] = () => q
+    for (const k of ['select', 'neq', 'is', 'order', 'gte', 'lte', 'limit', 'range', 'not', 'or']) q[k] = () => q
+    // .in() SÍ filtra: el nombre de quien anuló tiene que estar en lo que se pide.
+    q.in = (c, v) => { q.filtros.push(['in', c, v]); return q }
     q.eq = (c, v) => { q.filtros.push([c, v]); return q }
     q.maybeSingle = () => q
-    q.then = (res, rej) => Promise.resolve({ data: (__datos[tabla] ?? []).map(f => ({ ...f })), error: null }).then(res, rej)
+    q.then = (res, rej) => Promise.resolve({ data: (__datos[tabla] ?? [])
+      .filter(f => q.filtros.every(([op, c, v]) => op !== 'in' || v.includes(f[c])))
+      .map(f => ({ ...f })), error: null }).then(res, rej)
     return q
   }
   var supabase = {
@@ -417,9 +421,10 @@ async function correr() {
     const S = nuevo({ tareas: verCostosNuss() })
     S.__setDatos('insumo_costos', [
       { id: 'c2', costo_unitario: '1000', vigente_desde: '2026-10-01', nota: 'Factura 123', cargado_por: 'e1', cargado_en: '2026-10-01T10:00:00Z', anulado: false, origen: 'manual' },
-      { id: 'c1', costo_unitario: '900', vigente_desde: '2026-09-01', nota: null, cargado_por: 'e1', cargado_en: '2026-09-01T10:00:00Z', anulado: true, origen: 'manual' },
+      // Anulado el 01/09 a las 23:30 de Argentina (en UTC ya es el 02/09).
+      { id: 'c1', costo_unitario: '900', vigente_desde: '2026-09-01', nota: null, cargado_por: 'e1', cargado_en: '2026-09-01T10:00:00Z', anulado: true, anulado_por: 'e2', anulado_en: '2026-09-02T02:30:00Z', origen: 'manual' },
     ])
-    S.__setDatos('v_empleados_publico', [{ id: 'e1', nombre: 'Facundo' }])
+    S.__setDatos('v_empleados_publico', [{ id: 'e1', nombre: 'Facundo' }, { id: 'e2', nombre: 'Pablo' }])
     await S.alCambiarBarra(barra(NUSS))
     await S.cargarStock()
     await S.cargarCostos()
@@ -429,6 +434,8 @@ async function correr() {
     chk('el historial con quién (por v_empleados_publico)', /cargó Facundo/.test(h), h)
     chk('la nota', /Factura 123/.test(h))
     chk('el anulado tachado y sin botón', /costo-hist--anulado/.test(h) && (h.match(/data-costo-anular="/g) || []).length === 1)
+    chk('el anulado dice quién y cuándo (día de Argentina)', /costo-hist__anulado">Anulado por Pablo el 01\/09\/2026</.test(h), h)
+    chk('sin datos de quién anuló: "Anulado" a secas, sin inventar', S.textoAnuladoCosto({ anulado: true }, new Map()) === 'Anulado')
     // Anular sin confirmar: no llama.
     await S.anularCosto('c2')
     chk('sin confirmar: no llama', S.__llamadas.filter(l => l.n === 'anular_costo_insumo').length === 0)
@@ -461,6 +468,7 @@ async function correr() {
     S.__setDatos('insumo_costos', [
       { id: 'x"><b', costo_unitario: '1', vigente_desde: '2026-10-01', nota: malo, cargado_por: 'e1', anulado: false },
       { id: 'y"><s>', costo_unitario: '2', vigente_desde: '2026-09-01', nota: null, cargado_por: 'e1', anulado: false },
+      { id: 'w', costo_unitario: '3', vigente_desde: '2026-08-01', nota: null, cargado_por: 'e1', anulado: true, anulado_por: 'e1', anulado_en: '2026-08-02T12:00:00Z' },
     ])
     S.__setDatos('v_empleados_publico', [{ id: 'e1', nombre: malo }])
     await S.alCambiarBarra(barra(NUSS))
@@ -498,6 +506,7 @@ async function correr() {
   chk('el botón Costos depende de ver_costos en alguna fábrica', /getElementById\('btn-ver-costos'\)\.hidden = !\(verStock && puedeVerCostosAlgo\(\)\)/.test(SRC))
   chk('el botón Costos nace escondido', /id="btn-ver-costos" hidden>Costos</.test(FUENTE))
   chk('el total nace escondido', /<div class="stock-valorizado" id="stock-valorizado" hidden><\/div>/.test(FUENTE))
+  chk('el historial trae quién anuló y cuándo', /select\('id, costo_unitario, vigente_desde, nota, cargado_por, cargado_en, anulado, anulado_por, anulado_en, origen'\)/.test(SRC))
   chk('las tareas se leen con su alcance', /\.select\('modulo, tarea, alcance'\)/.test(SRC) && /estado\.alcancesTareas = new Map/.test(SRC))
   chk('costos es un drill-down de Stock', /costos: 'stock' \}/.test(SRC))
   const bloque = SRC.slice(SRC.indexOf('// COSTOS DE INSUMOS Y STOCK VALORIZADO'), SRC.indexOf('// PESTAÑAS'))
