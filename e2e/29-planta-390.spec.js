@@ -18,41 +18,18 @@
 //  - algo se sale de su recuadro (medirPantalla: el contenido más ancho que
 //    su caja);
 //  - un campo de texto tiene letra de menos de 16 px (Chrome hace zoom al
-//    tocarlo).
+//    tocarlo);
+//  - (10/10/2026) una pieza de la planta se corta por dentro
+//    (medirCortesPlanta: el encargado, el lote, el chip de estado, "Andando",
+//    la tarjeta de la Sala de masa, las pestañas). A 360 px lo mide
+//    e2e/30-planta-360.spec.js.
 // Corre en cada push, sin credenciales.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
-const { medirPantalla } = require('./medir-pantalla');
+const { medirPantalla, medirCostado, medirCortesPlanta, PIEZAS_CELULAR } = require('./medir-pantalla');
 const { PASOS_PLANTA } = require('./pasos-planta');
 
 const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
-
-// Lo que tiene que entrar en el ancho de la pantalla: la página y el marco.
-function medirCostado() {
-  const ancho = document.documentElement.clientWidth
-  const marcos = [
-    document.documentElement, document.body,
-    document.querySelector('.pr-app'), document.getElementById('pr-vista'),
-    document.getElementById('pr-barra'),
-    ...document.querySelectorAll('#pr-vista > section'),
-  ].filter(el => el && !el.hidden && getComputedStyle(el).display !== 'none')
-  const nombre = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/)[0] : '')
-  const mal = []
-  for (const el of marcos) {
-    if (el.scrollWidth > el.clientWidth + 1) mal.push(`${nombre(el)} mide ${el.scrollWidth} px de ancho en ${el.clientWidth}`)
-    if (el.scrollLeft > 0) mal.push(`${nombre(el)} quedó corrido ${el.scrollLeft} px de costado`)
-    const r = el.getBoundingClientRect()
-    if (r.right > ancho + 1 || r.left < -1) mal.push(`${nombre(el)} va de ${Math.round(r.left)} a ${Math.round(r.right)} (pantalla de ${ancho})`)
-  }
-  // Los campos donde se escribe, con letra de 16 px o más.
-  const chicos = [...document.querySelectorAll('input, select, textarea')].filter(c => {
-    if (c.type === 'hidden' || c.type === 'checkbox' || c.type === 'radio') return false
-    const cs = getComputedStyle(c), r = c.getBoundingClientRect()
-    if (cs.display === 'none' || cs.visibility === 'hidden' || r.width === 0) return false
-    return parseFloat(cs.fontSize) < 16
-  }).map(c => `${nombre(c)} con letra de ${getComputedStyle(c).fontSize}`)
-  return { mal, chicos }
-}
 
 const MODOS = [
   ['una ventana de 390 px', {}],
@@ -82,6 +59,9 @@ for (const [cual, opciones] of MODOS) {
         for (const x of c.mal) problemas.push(`${nombre}: ${x}`);
         for (const a of m.afuera) problemas.push(`${nombre}: se sale de su recuadro ${a}`);
         for (const x of c.chicos) problemas.push(`${nombre}: campo ${x}`);
+        // (10/10/2026) Lo que se corta por dentro (el encargado de Abrir
+        // turno y las pestañas de las máquinas también se cortaban a 390).
+        for (const x of await page.evaluate(medirCortesPlanta, PIEZAS_CELULAR)) problemas.push(`${nombre}: ${x}`);
       });
     }
     await contexto.close();
