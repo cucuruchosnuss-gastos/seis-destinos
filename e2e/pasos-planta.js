@@ -56,10 +56,12 @@ const PASOS_PLANTA = [
   ['lo-producido-cono', async (page) => {
     await page.locator('[data-ag-producto]').first().click()
     await expect(page.locator('#pr-agregar-cono')).toBeVisible()
-    await expect(page.locator('#pr-agregar-marcas [data-marca]').nth(3)).toBeVisible()
+    // Sin "Común" (10/10/2026): el que era el 4.º botón es el 3.º.
+    await expect(page.locator('#pr-agregar-marcas [data-marca]').nth(2)).toBeVisible()
   }],
   ['lo-producido-presentacion', async (page) => {
-    await page.locator('#pr-agregar-marcas [data-marca]').nth(2).click()
+    // El mismo cono de siempre (antes era el 3.er botón, con "Común" primero).
+    await page.locator('#pr-agregar-marcas [data-marca]').nth(1).click()
     await expect(page.locator('[data-ag-presentacion]').first()).toBeVisible()
   }],
   ['lo-producido-cajas', async (page) => {

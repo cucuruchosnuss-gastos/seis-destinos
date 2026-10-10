@@ -94,7 +94,7 @@ test('el "atrás" nunca saca de la planta y cierra lo que corresponde', async ({
     await expect(page.locator('#pr-agregar-prod')).toBeVisible();
     await page.locator('[data-ag-producto]').first().click();
     await expect(page.locator('#pr-agregar-cono')).toBeVisible();
-    await page.locator('#pr-agregar-marcas [data-marca]').nth(2).click();
+    await page.locator('#pr-agregar-marcas [data-marca]').nth(1).click(); // sin "Común" primero (10/10/2026)
     await expect(page.locator('[data-ag-presentacion]').first()).toBeVisible();
     const paso = () => page.evaluate(() => document.querySelector('#pr-agregar-prod [aria-current="step"]')?.textContent ?? '');
     const antes = await paso();
