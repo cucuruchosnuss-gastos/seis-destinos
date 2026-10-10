@@ -20,6 +20,7 @@ const fs = require('fs')
 const path = require('path')
 const { execFileSync } = require('child_process')
 const { RUTA_COMUN } = require('./fuente-cobranzas')
+const { pistaDeAncla } = require('./parecido')
 
 function correrMutacionesComun({ suite, manuales }) {
   const src = fs.readFileSync(RUTA_COMUN, 'utf8')
@@ -43,7 +44,7 @@ function correrMutacionesComun({ suite, manuales }) {
     process.exit(2)
   }
   const unica = (aguja) => src.split(aguja).length === 2
-  const ambiguas = manuales.filter(m => !unica(m.de)).map(m => `«${m.nombre}»: el texto a reemplazar ${src.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'} en ${RUTA_COMUN}`)
+  const ambiguas = manuales.filter(m => !unica(m.de)).map(m => `«${m.nombre}»: el texto a reemplazar ${src.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'} en ${RUTA_COMUN}\n${pistaDeAncla(src, m.de)}`)
   if (ambiguas.length) {
     console.log('ABORTADO (común): mutaciones sin ancla única:')
     for (const a of ambiguas) console.log('  ' + a)

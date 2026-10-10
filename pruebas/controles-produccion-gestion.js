@@ -48,6 +48,7 @@ const RETIRADOS = [
   ['control:button#pr-btn-ir-stock[type=button]', 'Diseño "Producción · Gestión" (26/09/2026): la grilla "Ir a" se fue; el stock terminado es el renglón #pr-menu-stock del menú'],
   ['control:button[data-config-tab][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): no hay fila de pestañas en Configuración; cada sección es un renglón del menú (data-ir-config) y la pantalla dice cuál es en su título'],
   ['control:button[data-marca-activa][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): el botón Activar/Desactivar de cada cono pasó a ser el interruptor "Activo" (input[data-marca-activo], role=switch), que se guarda al tocarlo'],
+  ['control:select#pr-historial-estado', 'Planillas (08/10/2026, pedido de Facu): la lista arranca en CERRADAS y las abiertas están a un toque, así que el <select> de estado pasó a ser el segmentado Cerradas / Abiertas / Pendientes de completar / Todas (button[data-historial-estado] en #pr-historial-estados)'],
   ['control:select[data-receta-maquina]', 'Diseño "Producción · Configuración" (29/09/2026): en Recetas la máquina se elige en la LISTA de la izquierda (button[data-cfg-sel]), como en las otras secciones con lista | detalle'],
 ]
 

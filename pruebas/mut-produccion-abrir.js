@@ -78,9 +78,9 @@ correrMutacionesProduccion({
     { nombre: 'acepta fecha futura', de: "      else if (fecha > hoyArgentina()) faltan.push('una fecha que no sea futura')\n", a: '' },
     { nombre: 'no exige máquina', de: "      if (!form.filas.some(f => f.elegida && !f.bloqueada)) faltan.push('al menos una máquina')\n", a: '' },
     { nombre: 'no exige turno', de: "      if (!TURNOS.includes(form.turno)) faltan.push('el turno')\n", a: '' },
-    { nombre: 'el encargado no es la persona', de: "supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null))", a: "supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, null))" },
-    { nombre: 'una llamada por máquina', de: "        const { data, error } = await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null))\n        if (error) throw error", a: "        for (const f of form.filas) await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null))\n        const { data, error } = await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null))\n        if (error) throw error" },
-    { nombre: 'el error de la base se tapa', de: "        err.textContent = e?.message || 'No se pudo abrir el turno.'", a: "        err.textContent = 'No se pudo abrir el turno.'" },
+    { nombre: 'el encargado no es la persona', de: "        const params = parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null)", a: "        const params = parametrosAbrirTurnos(form, fecha, null)" },
+    { nombre: 'una llamada por máquina', de: "        const { data: resp, error } = await supabase.rpc('ejecutar_tablet', { p_client_uuid: form.envio.id, p_operacion: 'abrir_turnos', p_params: params })\n        if (error) throw error", a: "        for (const f of form.filas) await supabase.rpc('abrir_turnos', params)\n        const { data: resp, error } = await supabase.rpc('ejecutar_tablet', { p_client_uuid: form.envio.id, p_operacion: 'abrir_turnos', p_params: params })\n        if (error) throw error" },
+    { nombre: 'el error de la base se tapa', de: "MENSAJE_ABRIR_SIN_RED : (e?.message || 'No se pudo abrir el turno.')", a: "MENSAJE_ABRIR_SIN_RED : 'No se pudo abrir el turno.'" },
     { nombre: 'SALA DE MASA no se habilita al abrir', de: '        marcarAbiertas(true)\n        document.getElementById(\'pr-abiertos-titulo\')', a: '        document.getElementById(\'pr-abiertos-titulo\')' },
     { nombre: 'el botón queda trabado después de un error', de: '      } finally {\n        estado.abriendo = false\n        pintarBotonAbrir()', a: '      } finally {\n        pintarBotonAbrir()' },
     { nombre: 'el lote asignado no se muestra grande', de: '<span class="pr-lote-tarjeta__lote">${esc(f.lote)}</span>`', a: '<span>${esc(f.lote)}</span>`' },
@@ -113,8 +113,8 @@ correrMutacionesProduccion({
     // del historial (rediseño parte 7) usa el MISMO texto, así que sin el
     // renglón de arriba esta mutación pegaría en el archivo dos veces.
     { nombre: 'la planilla no lee hasta', de: "= await supabase.from('turno_operarios')\n        .select('empleado_id, desde, hasta')", a: "= await supabase.from('turno_operarios')\n        .select('empleado_id, desde')" },
-    { nombre: 'el que se fue desaparece de la lista', de: '        filas.filter(o => o.hasta).map(o =>\n', a: '        [].map(o =>\n' },
-    { nombre: 'el que se fue no dice a qué hora salió', de: "} · salió ${esc(horaArgentina(o.hasta) || '—')}</span>", a: '}</span>' },
+    { nombre: 'el que se fue desaparece de la lista', de: '        filas.filter(o => !operarioAdentro(o, p?.turno)).map(o =>\n', a: '        [].map(o =>\n' },
+    { nombre: 'el que se fue no dice a qué hora salió', de: "? `salió ${esc(horaArgentina(o.hasta) || '—')}` :", a: "? '' :" },
     { nombre: 'al que se fue se le ofrece la ×', de: '      const chipsHtml = adentro.map(o =>', a: '      const chipsHtml = filas.map(o =>' },
     { nombre: 'se ofrece sumar a quien ya está adentro', de: '        ? htmlBuscadorOperarios(candidatosOperario(personas, ops.busqueda, adentro.map(o => o.empleado_id)), ops.busqueda, CTX_PLANILLA)', a: '        ? htmlBuscadorOperarios(candidatosOperario(personas, ops.busqueda, []), ops.busqueda, CTX_PLANILLA)' },
     { nombre: 'sumar no manda el turno', de: "        const { error } = await supabase.rpc(rpc, { p_turno_id: p.turno.id, p_empleado_id: id })", a: "        const { error } = await supabase.rpc(rpc, { p_turno_id: null, p_empleado_id: id })" },

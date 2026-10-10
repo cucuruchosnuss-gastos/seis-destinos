@@ -260,22 +260,31 @@ esperas.push((async () => {
     /7023-1/.test(C.__doc.getElementById('pr-corregir-titulo').textContent) &&
     C.leerCampoNumero(C.__doc.getElementById('pr-corregir-cajas')) === 35)
   chk('… con el campo de cajas a la vista', C.__doc.getElementById('pr-corregir-campo-cajas').hidden === false)
+  // Con cajas CAMBIADAS: así lo único que frena es el motivo (con las mismas
+  // cajas frenaría también "No cambiaste nada" y el motivo no se mediría).
+  C.ponerNumero(C.__doc.getElementById('pr-corregir-cajas'), 33)
   await C.confirmarCorregir()
-  chk('… sin motivo no se manda', rpcs(C, 'corregir_produccion_item').length === 0 &&
-    C.__doc.getElementById('pr-corregir-error').hidden === false)
+  chk('… sin motivo no se manda', rpcs(C, 'corregir_produccion_item_completo').length === 0 &&
+    C.__doc.getElementById('pr-corregir-error').hidden === false && /tres letras/.test(C.__doc.getElementById('pr-corregir-error').textContent))
   C.__doc.getElementById('pr-corregir-motivo').value = 'ok'
   await C.confirmarCorregir()
-  chk('… con un motivo de dos letras tampoco (la base pide tres)', rpcs(C, 'corregir_produccion_item').length === 0)
+  chk('… con un motivo de dos letras tampoco (la base pide tres)', rpcs(C, 'corregir_produccion_item_completo').length === 0 &&
+    /tres letras/.test(C.__doc.getElementById('pr-corregir-error').textContent))
   C.__doc.getElementById('pr-corregir-motivo').value = '  Se contaron mal  '
   C.ponerNumero(C.__doc.getElementById('pr-corregir-cajas'), 0)
   await C.confirmarCorregir()
-  chk('… con cero cajas tampoco: para sacarlo, se borra', rpcs(C, 'corregir_produccion_item').length === 0 &&
+  chk('… con cero cajas tampoco: para sacarlo, se borra', rpcs(C, 'corregir_produccion_item_completo').length === 0 &&
     /borralo/.test(C.__doc.getElementById('pr-corregir-error').textContent))
+  C.ponerNumero(C.__doc.getElementById('pr-corregir-cajas'), 35)
+  await C.confirmarCorregir()
+  chk('… con las mismas cajas no se manda y se dice', rpcs(C, 'corregir_produccion_item_completo').length === 0 &&
+    /No cambiaste nada/.test(C.__doc.getElementById('pr-corregir-error').textContent))
   C.ponerNumero(C.__doc.getElementById('pr-corregir-cajas'), 32)
   await C.confirmarCorregir()
-  chk('corregir manda el item, las cajas y el motivo recortado',
-    JSON.stringify(rpcs(C, 'corregir_produccion_item')[0]?.[1]) === '{"p_item_id":"it-1","p_cajas":32,"p_motivo":"Se contaron mal"}',
-    JSON.stringify(rpcs(C, 'corregir_produccion_item')[0]))
+  chk('corregir (sin catálogo) manda SOLO las cajas a la RPC completa, con el motivo recortado',
+    JSON.stringify(rpcs(C, 'corregir_produccion_item_completo')[0]?.[1]) === '{"p_item_id":"it-1","p_datos":{"cajas":32},"p_motivo":"Se contaron mal"}' &&
+    rpcs(C, 'corregir_produccion_item').length === 0,
+    JSON.stringify(rpcs(C, 'corregir_produccion_item_completo')[0]))
   chk('… y el panel se cierra', C.__doc.getElementById('pr-corregir').hidden === true)
 
   // Borrar = ANULAR: no hay DELETE.

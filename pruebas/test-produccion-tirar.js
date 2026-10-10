@@ -79,18 +79,21 @@ esperas.push((async () => {
 
   // ── La fila de la columna MASAS DEL TURNO ─────────────────────────────
   const fila = X.htmlMasaReceta(M(3, { descartada: true, descarte_motivo: 'se puso el triple de azúcar', es_chocolate: true, origen: 'modificada' }))
-  chk('fila tirada: va tachada (clase pr-rm__fila--tirada)', /class="pr-rm__fila pr-rm__fila--tirada"/.test(fila), fila)
-  chk('fila tirada: dice "Tirada" y su motivo', /Tirada: <span class="pr-tirada__motivo">se puso el triple de azúcar<\/span>/.test(fila), fila)
+  chk('fila tirada: va tachada (clase pr-rm__fila--tirada)', /class="pr-rm__fila pr-mc pr-rm__fila--tirada"/.test(fila), fila)
+  // La lista compacta (08/10/2026): el renglón dice "Tirada"; el motivo, en
+  // el detalle que se abre al tocarlo.
+  chk('fila tirada: dice "Tirada"; su motivo va en el detalle', /pr-mc__marca"><span class="pr-tirada">Tirada<\/span>/.test(fila) && !/triple/.test(fila) &&
+    /Se tiró:<\/span> se puso el triple de azúcar · lo que se usó quedó descontado del stock/.test(X.htmlCuerpoMasa(M(3, { descartada: true, descarte_motivo: 'se puso el triple de azúcar' }), null)), fila)
   chk('fila tirada: sin los chips de la masa (Modificada / Chocolate)', !/pr-chip-modificada|pr-chip-choco/.test(fila))
   const anulada = X.htmlMasaReceta(M(2, { anulada: true, descartada: true }))
   chk('una anulada sigue diciendo "Anulada" (anular gana)', /Anulada/.test(anulada) && !/Tirada/.test(anulada) && !/--tirada/.test(anulada))
   const normal = X.htmlMasaReceta(M(1))
   chk('una normal no dice "Tirada"', !/Tirada|--tirada/.test(normal))
-  chequearMarcas(chk, 'fila tirada con motivo malicioso', X.htmlMasaReceta(M(4, { descartada: true, descarte_motivo: marca('motivo') })), ['motivo'])
+  chequearMarcas(chk, 'detalle de una tirada con motivo malicioso', X.htmlCuerpoMasa(M(4, { descartada: true, descarte_motivo: marca('motivo') }), null), ['motivo'])
   const SX = planta([M(1)])
   SX.estado.tirarUltima = { masaId: 'm1', motivo: '', error: null }
   chequearMarcas(chk, 'panel de tirar con número malicioso', SX.htmlTirarUltima(M(1, { nro: marca('nro') })), ['nro'])
-  chk('htmlTirada sin motivo: "Tirada" a secas', X.htmlTirada({ descartada: true }) === '<span class="pr-tirada">Tirada</span>')
+  chk('el detalle de una tirada sin motivo lo dice', /Se tiró:<\/span> sin motivo · lo que se usó quedó descontado del stock/.test(X.htmlCuerpoMasa({ descartada: true }, null)))
 
   // ── La columna: cuenta y botones ──────────────────────────────────────
   const S = planta([M(1), M(2), M(3, { descartada: true, descarte_motivo: 'se cortó la luz' })])
@@ -166,7 +169,7 @@ esperas.push((async () => {
   chk('salió bien: lo dice, con la consecuencia', S3.__llamadas.exitos.includes('Masa tirada: lo que se usó queda descontado del stock.'), JSON.stringify(S3.__llamadas.exitos))
   chk('… el panel se cierra y se vuelven a leer las masas', S3.estado.tirarUltima === null && S3.estado.masasReceta?.some(m => m.id === 'm2' && m.descartada))
   const hOk = htmlCol(S3)
-  chk('… y la 2 aparece tirada, con su motivo, y la cuenta baja a 1', /pr-rm__fila--tirada/.test(hOk) && /se cortó la luz/.test(hOk) && /pr-rm__cuenta">1</.test(hOk))
+  chk('… y la 2 aparece tirada, y la cuenta baja a 1', /pr-rm__fila--tirada/.test(hOk) && /pr-tirada">Tirada</.test(hOk) && /pr-rm__cuenta">1</.test(hOk))
   chk('… y ahora se puede tirar o anular la 1', /data-tirar-ultima/.test(hOk) && S3.ultimaMasaAnulable(S3.estado.masasReceta)?.id === 'm1')
 
   // Sin produccion:cargar no hay botones.
@@ -184,7 +187,7 @@ esperas.push((async () => {
 
   // ── Masas del turno (todas las máquinas): sin "Anular" en una tirada ──
   const f1 = X.htmlFilaMasaTurno(M(3, { descartada: true, descarte_motivo: 'se cortó la luz' }), true)
-  chk('masas del turno: la tirada va tachada con "Tirada" y su motivo', /pr-masa-fila pr-masa-fila--tirada/.test(f1) && /Tirada: <span class="pr-tirada__motivo">se cortó la luz/.test(f1))
+  chk('masas del turno: la tirada va tachada con "Tirada"', /pr-masa-fila pr-masa-fila--tirada/.test(f1) && /pr-tirada">Tirada</.test(f1))
   chk('… y NO ofrece "Anular" (anularla devolvería el stock)', !/data-anular-masa/.test(f1))
   chk('una normal sigue ofreciendo "Anular"', /data-anular-masa="m1"/.test(X.htmlFilaMasaTurno(M(1), true)))
   const S5 = planta([])
@@ -194,7 +197,7 @@ esperas.push((async () => {
 
   // ── El historial de una máquina ───────────────────────────────────────
   const hb = X.htmlMasaHist(M(3, { descartada: true, descarte_motivo: 'se cortó la luz' }), false)
-  chk('historial: la tirada tachada (pr-hm__masa--tirada) con "Tirada" y su motivo', /pr-hm__masa pr-hm__masa--tirada/.test(hb) && /Tirada: <span class="pr-tirada__motivo">se cortó la luz/.test(hb))
+  chk('historial: la tirada tachada (pr-hm__masa--tirada) con "Tirada"', /pr-hm__masa pr-mc pr-hm__masa--tirada/.test(hb) && /pr-tirada">Tirada</.test(hb))
   const S6 = planta([])
   S6.estado.personal = []
   const hm = { turnoId: 't1', maquinaNombre: 'Máquina 1', lote: 7023, turno: 'Mañana', masas: [M(1), M(2, { descartada: true, descarte_motivo: marca('desc') })],
@@ -344,7 +347,8 @@ esperas.push((async () => {
 
   // ── El historial de un turno en la gestión ──
   chk('historial de un turno: lee descartada y su motivo', /anulada, anulada_motivo, descartada, descarte_motivo, es_chocolate'\)\.eq\('turno_id', turnoId\)/.test(FUENTE_G))
-  chk('… muestra "Tirada:" con su motivo', /m\.descartada === true \? `<br><strong>Tirada:<\/strong> \$\{esc\(m\.descarte_motivo \?\? ''\)\} · lo que se usó quedó descontado del stock`/.test(FUENTE_G))
+  chk('… muestra "Tirada:" con su motivo (en el detalle de la masa)', /tirada \? `<p><strong>Tirada:<\/strong> \$\{esc\(m\.descarte_motivo \?\? ''\)\} · lo que se usó quedó descontado del stock<\/p>`/.test(FUENTE_G) &&
+    /const tirada = !m\.anulada && m\.descartada === true/.test(FUENTE_G))
   chk('… y la cuenta de masas no suma las tiradas', /const vivas = d\.masas\.filter\(m => !m\.anulada && m\.descartada !== true\)\.length/.test(FUENTE_G))
 })())
 

@@ -56,6 +56,30 @@ function metricasYParadas() {
 }
 const METRICAS = metricasYParadas()
 
+// LA TABLA DE PRODUCCIÓN (09/10/2026): lo que devuelve produccion_resumen,
+// armado de las MISMAS planillas: la Máquina 1 hace Mini y Cono dulce, la 2
+// solo Mini. Los números van la mitad como texto (los bigint pueden llegar
+// así) y la otra mitad como número. La maqueta devuelve todo sin mirar las
+// fechas: la pantalla recorta al período.
+function resumenProduccion() {
+  const r = []
+  let i = 0
+  for (const f of METRICAS.filas) {
+    const partes = f.maquina_id === 'maq-1'
+      ? [['Mini', 'pr1', 'Caja x 600', 600, Math.round(f.unidades * 0.7 / 600) * 600], ['Cono dulce', 'pr2', 'Caja x 100', 100, 0]]
+      : [['Mini', 'pr1', 'Caja x 600', 600, f.unidades]]
+    if (partes.length === 2) partes[1][4] = f.unidades - partes[0][4]
+    for (const [producto, presentacion_id, presentacion, porCaja, unidades] of partes) {
+      if (unidades <= 0) continue
+      i++
+      const n = (v) => (i % 2 ? String(v) : v)
+      r.push({ fecha: f.fecha, turno: f.turno, maquina_id: f.maquina_id, maquina: f.maquina, producto, presentacion_id, presentacion,
+        planillas: n(1), cajas: n(Math.round(unidades / porCaja)), unidades: n(unidades) })
+    }
+  }
+  return r
+}
+
 module.exports = {
   "uid": "uid-maqueta",
   "tablas": {
@@ -276,6 +300,7 @@ module.exports = {
     ]
   },
   "rpc": {
+    "produccion_resumen": resumenProduccion(),
     "mi_sesion_produccion": {
       "empleado_id": "emp-1",
       "nombre": "Facu Maqueta",

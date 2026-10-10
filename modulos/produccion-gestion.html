@@ -1551,6 +1551,8 @@
     .pg-seg__op[aria-pressed="true"] { background: var(--naranja); color: #fff; }
     .pg-seg__op:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; }
     .pg-unidad__seg { display: none; }
+    .pr-historial-estados { margin: 0 0 1rem; }
+    .pr-historial-estados .pg-seg__op { min-height: 44px; }
     @media (min-width: 900px) {
       .pg-unidad__seg { display: inline-flex; }
       .pg-unidad__select { display: none !important; }
@@ -1796,6 +1798,28 @@
     @media (max-width: 1099px) { .pg-turno__grilla { grid-template-columns: minmax(0, 1fr); } }
     .pg-caja { border: 1px solid var(--color-borde); border-radius: 16px; padding: 12px 16px; min-width: 0; }
     .pg-caja--ancha { margin-top: 14px; }
+    /* LA LISTA DE MASAS COMPACTA (08/10/2026): un renglón por masa y, al
+       tocarlo, el detalle (quién la cargó, cuándo y la fórmula). */
+    .pg-masa.pr-lista__item { padding: 0; background: transparent; border-bottom: 1px solid var(--color-divisor); border-radius: 0; }
+    .pg-masa__renglon { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; padding: 6px 4px;
+      background: transparent; border: 0; text-align: left; font: inherit; color: var(--color-texto); cursor: pointer; }
+    .pg-masa__renglon:focus-visible { outline: 3px solid var(--color-acento); outline-offset: -3px; border-radius: 8px; }
+    .pg-masa__nro { font-weight: 800; white-space: nowrap; }
+    .pg-masa__hora { color: var(--color-texto-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .pg-masa__origen { white-space: nowrap; }
+    .pg-masa__origen--modificada { color: var(--bordo); font-weight: 800; }
+    .pg-masa__tam { font-weight: 800; white-space: nowrap; }
+    .pg-masa__marca { font-weight: 800; color: var(--bordo); white-space: nowrap; }
+    .pg-masa__flecha { margin-left: auto; color: var(--color-texto-suave); font-size: 0.75rem; }
+    .pg-masa--anulada .pg-masa__nro, .pg-masa--anulada .pg-masa__hora, .pg-masa--anulada .pg-masa__origen, .pg-masa--anulada .pg-masa__tam,
+    .pg-masa--tirada .pg-masa__nro, .pg-masa--tirada .pg-masa__hora, .pg-masa--tirada .pg-masa__origen, .pg-masa--tirada .pg-masa__tam { text-decoration: line-through; color: var(--color-texto-suave); }
+    .pg-masa__det { padding: 4px 4px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .pg-masa__det p { margin: 0; }
+    .pg-mf { display: flex; flex-direction: column; border-top: 1px solid var(--color-divisor); }
+    .pg-mf__ing { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.2fr); gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--color-divisor); }
+    .pg-mf__nombre { font-weight: 700; }
+    .pg-mf__cant { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pg-mf__marca { color: var(--color-texto-2); }
     .pg-gestion .pg-caja .pr-subtitulo { margin-top: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
     .pg-caja__ctx { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--pg-texto-2); margin-left: 6px; }
     .pg-turno__totales { display: flex; gap: 20px; margin: 10px 0 0; }
@@ -1812,6 +1836,9 @@
     .pg-corr { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px; }
     .pg-corr__cajas { flex: 0 0 8rem; }
     .pg-corr__motivo { flex: 1 1 16rem; }
+    .pg-corr__campo { flex: 1 1 12rem; min-width: 0; }
+    .pg-corr__campo .pr-select { width: 100%; }
+    .pg-corr__ancho { flex: 1 1 100%; margin: 0; }
     .pg-corr__acc { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     @media (max-width: 899px) {
       /* Cada renglón de lo producido pasa a dos líneas. */
@@ -2398,6 +2425,53 @@
     .mq-como { margin-top: 16px; font-size: 14px; }
     .mq-como summary { cursor: pointer; font-weight: 800; min-height: 44px; display: flex; align-items: center; }
     .mq-como ul { margin: 0; padding-left: 1.25rem; display: grid; gap: 6px; color: var(--color-texto-menu); }
+
+    /* ── LA TABLA DE PRODUCCIÓN (09/10/2026) ────────────────────────────
+       Cuatro tarjetas de período, los filtros y una tabla dinámica en
+       UNIDADES. La tabla scrollea de costado ADENTRO de su caja (la página
+       no), con la primera columna fija. */
+    #pr-tabla { min-width: 0; }
+    .pt-tarjetas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.625rem; margin: 0.75rem 0 0.25rem; }
+    .pt-tarjeta {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; min-width: 0; min-height: 44px;
+      text-align: left; font: inherit; color: inherit; cursor: pointer; background: #fff;
+      border: 1px solid var(--color-borde-boton, var(--color-borde)); border-radius: 14px; padding: 0.625rem 0.875rem;
+    }
+    .pt-tarjeta:hover { background: var(--color-fila-hover, var(--color-superficie)); }
+    .pt-tarjeta:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+    .pt-tarjeta[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); }
+    .pt-tarjeta__titulo { font-size: 0.8125rem; font-weight: 800; color: var(--color-texto-2, var(--pr-texto-secundario)); }
+    .pt-tarjeta__n { font-family: var(--fuente-titulo, inherit); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; max-width: 100%; }
+    .pt-tarjeta__rango { font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .pt-filtros { grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: 0.625rem; margin-top: 0.75rem; }
+    .pt-filtros .pr-campo { min-width: 0; }
+    .pt-filtros .pr-select { width: 100%; min-width: 0; }
+    .pt-periodo { grid-column: 1 / -1; }
+    .pt-scroll {
+      overflow-x: auto; max-width: 100%; border: 1px solid var(--color-borde); border-radius: 16px; background: #fff;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pt-scroll:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+    .pt-tabla { border-collapse: separate; border-spacing: 0; min-width: 100%; font-variant-numeric: tabular-nums; font-size: 0.9375rem; }
+    .pt-tabla th, .pt-tabla td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-divisor, var(--color-borde)); white-space: nowrap; }
+    .pt-tabla td { text-align: right; }
+    .pt-tabla thead th { background: var(--color-superficie); font-size: 0.8125rem; font-weight: 800; text-align: right; color: var(--color-texto-menu, inherit); }
+    .pt-tabla th[scope="row"], .pt-tabla .pt-esquina {
+      position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; font-weight: 700;
+      border-right: 1px solid var(--color-borde); max-width: 14rem; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pt-tabla thead .pt-esquina { background: var(--color-superficie); z-index: 2; }
+    .pt-tabla .pt-total { font-weight: 800; }
+    .pt-tabla tfoot th, .pt-tabla tfoot td { font-weight: 800; background: var(--color-superficie); border-bottom: none; }
+    .pt-tabla tfoot th[scope="row"] { background: var(--color-superficie); }
+    .pt-tabla .pt-sin { color: var(--color-texto-suave); }
+    .pt-promedios { margin: 0.625rem 0 0; font-size: 0.9375rem; color: var(--color-texto-menu, inherit); }
+    .pt-promedios strong { font-variant-numeric: tabular-nums; }
+    @media (max-width: 700px) {
+      .pt-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pt-tabla th[scope="row"], .pt-tabla .pt-esquina { max-width: 9rem; }
+    }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2421,11 +2495,14 @@
         <span class="pg-menu__titulo">Producción</span>
         <button type="button" class="pg-menu__cerrar" id="pr-menu-cerrar">Cerrar</button>
       </div>
-      <button type="button" class="pg-menu__item pg-menu__item--inicio" data-menu="inicio" id="pr-menu-inicio">Indicadores</button>
+      <!-- La gestión ABRE en la tabla de producción (09/10/2026, pedido de
+           Facu); los indicadores son una entrada más, a continuación. -->
       <div class="pg-menu__bloque" id="pr-menu-bloque-control">
         <p class="pg-menu__grupo">Control</p>
+        <button type="button" class="pg-menu__item" data-menu="tabla" id="pr-menu-tabla" hidden><span class="pg-menu__txt">Tabla de producción</span></button>
+        <button type="button" class="pg-menu__item" data-menu="inicio" id="pr-menu-inicio"><span class="pg-menu__txt">Indicadores</span></button>
         <button type="button" class="pg-menu__item" data-ir-pendientes id="pr-btn-ir-pendientes" hidden><span class="pg-menu__txt">Planillas pendientes</span><span class="pg-menu__n pg-menu__n--grave" id="pr-menu-n-pendientes" hidden></span></button>
-        <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Historial</span></button>
+        <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Planillas</span></button>
         <button type="button" class="pg-menu__item" data-menu="stock" id="pr-menu-stock" hidden><span class="pg-menu__txt">Stock terminado</span></button>
       </div>
       <div class="pg-menu__bloque" id="pr-menu-bloque-catalogo">
@@ -2545,7 +2622,7 @@
            su propio scroll (la página no se mueve). En el celular, ‹ atrás, el
            título, y lista → detalle a pantalla completa. Mientras se está acá,
            el menú de la gestión se esconde en la compu: "Producción" vuelve a
-           los indicadores, donde está. -->
+           la tabla de producción, el inicio de la gestión. -->
       <section id="pr-config" class="pr-cfg pc" hidden>
         <div class="pc-cab">
           <button type="button" class="pc-atras" id="pr-config-volver" aria-label="Atrás">
@@ -2575,26 +2652,53 @@
 
       <!-- B7: historial de turnos (produccion:ver o :configurar). Se mira en
            la compu, así que va con la densidad de oficina (.pr-of). -->
+      <!-- LA TABLA DE PRODUCCIÓN (09/10/2026): cuánto se produjo, en UNIDADES,
+           con filas y columnas a elegir (día, semana, mes, máquina, turno,
+           producto). UNA consulta a produccion_resumen por período; todo lo
+           demás se arma en la pantalla. Lo arma cargarTabla(). -->
+      <section id="pr-tabla" class="pr-of" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-tabla-volver">‹ Menú</button>
+            <h1 class="pr-titulo">Tabla de producción</h1>
+          </div>
+          <p class="pr-texto-suave">En unidades, sin los sublotes anulados. Tocá un período para verlo en la tabla.</p>
+          <div class="pt-tarjetas" id="pr-tabla-tarjetas" role="group" aria-label="Períodos"></div>
+          <div class="pr-campos pt-filtros">
+            <div class="pt-periodo">
+              <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-tabla-desde" class="pr-input"></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-tabla-hasta" class="pr-input"></label>
+            </div>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select id="pr-tabla-maquina" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Turno</span><select id="pr-tabla-turno" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Producto</span><select id="pr-tabla-producto" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Filas</span><select id="pr-tabla-filas" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Columnas</span><select id="pr-tabla-columnas" class="pr-select"></select></label>
+          </div>
+        </div>
+        <div id="pr-tabla-cuerpo"></div>
+      </section>
+
       <section id="pr-historial" class="pr-of" hidden>
         <div id="pr-historial-listado">
           <div class="pr-tarjeta">
             <div class="pr-fila-titulo">
               <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-historial-volver">‹ Menú</button>
-              <h1 class="pr-titulo">Historial de producción</h1>
+              <h1 class="pr-titulo">Planillas</h1>
+            </div>
+            <!-- Planillas (08/10/2026): arranca en CERRADAS y las abiertas están a un
+                 toque. Reemplaza al <select> de estado (dos toques para cambiar). -->
+            <div class="pg-seg pr-historial-estados" id="pr-historial-estados" role="group" aria-label="Qué planillas mostrar">
+              <button type="button" class="pg-seg__op" data-historial-estado="cerrado" aria-pressed="true">Cerradas</button>
+              <button type="button" class="pg-seg__op" data-historial-estado="abierto" aria-pressed="false">Abiertas</button>
+              <button type="button" class="pg-seg__op" data-historial-estado="pendiente_completar" aria-pressed="false">Pendientes de completar</button>
+              <button type="button" class="pg-seg__op" data-historial-estado="" aria-pressed="false">Todas</button>
             </div>
             <div class="pr-campos">
               <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-historial-unidad" class="pr-select"></select></label>
               <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-historial-desde" class="pr-input"></label>
               <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-historial-hasta" class="pr-input"></label>
               <label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select id="pr-historial-maquina" class="pr-select"></select></label>
-              <label class="pr-campo"><span class="pr-campo__rotulo">Estado</span>
-                <select id="pr-historial-estado" class="pr-select">
-                  <option value="">Todos</option>
-                  <option value="abierto">Abiertos</option>
-                  <option value="pendiente_completar">Pendientes de completar</option>
-                  <option value="cerrado">Cerrados</option>
-                </select>
-              </label>
             </div>
           </div>
           <div id="pr-historial-aviso"></div>
@@ -2602,7 +2706,7 @@
         </div>
         <div class="pr-tarjeta" id="pr-historial-detalle" hidden>
           <div class="pr-fila-titulo">
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Historial</button>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Planillas</button>
           </div>
           <div id="pr-historial-detalle-cuerpo"></div>
         </div>
@@ -2866,7 +2970,7 @@
 
     // La gestión: todas sus pantallas son "de oficina". La tablet quedó en
     // produccion.html.
-    const VISTAS = ['pr-inicio', 'pr-config', 'pr-historial', 'pr-stock']
+    const VISTAS = ['pr-inicio', 'pr-config', 'pr-tabla', 'pr-historial', 'pr-stock']
     function mostrarVista(id) {
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -2912,6 +3016,7 @@
       if (estado.vista === 'pr-config') return `config:${estado.config?.tab ?? ''}`
       if (estado.vista === 'pr-historial') return estado.historial?.estado === 'pendiente_completar' && estado.historial?.desdePendientes ? 'pendientes' : 'historial'
       if (estado.vista === 'pr-stock') return 'stock'
+      if (estado.vista === 'pr-tabla') return 'tabla'
       return 'inicio'
     }
 
@@ -2924,7 +3029,7 @@
     function pintarMenuActivo() {
       const actual = seccionActual()
       const items = [...document.querySelectorAll('.pg-menu__item')]
-      for (const id of ['pr-menu-inicio', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) {
+      for (const id of ['pr-menu-inicio', 'pr-menu-tabla', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) {
         const el = document.getElementById(id)
         if (!items.includes(el)) items.push(el)
       }
@@ -2948,6 +3053,7 @@
     }
 
     function navegar(destino) {
+      if (destino === 'tabla') return mostrarTabla()
       if (destino === 'historial') return mostrarHistorial()
       if (destino === 'stock') return mostrarStockTerminado()
       if (destino === 'pendientes') return irDesdeIndicador('pendientes')
@@ -3033,6 +3139,7 @@
       conectarEditorParada()
       conectarConfig()
       conectarHistorial()
+      conectarTabla()
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           cargarBurbujaConos()
@@ -3853,6 +3960,8 @@
         document.getElementById('pr-historial-detalle').hidden = true
         document.getElementById('pr-historial-listado').hidden = false
         cargarHistorial()
+      } else if (estado.vista === 'pr-tabla') {
+        cambiarUnidadTabla(id)
       } else if (estado.vista === 'pr-stock') {
         pintarSelectorUnidad('pr-stock-unidad', unidadesDeHistorial(), id)
         cargarStockTerminado()
@@ -3876,8 +3985,10 @@
         pintarSelectorGestion()
         pintarCabecera()
         pintarNumerosMenu()
-        if (estado.vista !== 'pr-inicio') mostrarInicioOficina()
-        else cargarIndicadores()
+        // En los indicadores, ellos lo dicen; en cualquier otra sección, se
+        // vuelve al inicio de la gestión (la tabla), que también lo dice.
+        if (estado.vista === 'pr-inicio') cargarIndicadores()
+        else navegar(INICIO_GESTION)
         return
       }
       if (segun === estado.unidadId) { pintarSelectorGestion(); return }
@@ -5067,12 +5178,506 @@
       if (que === 'conos') return mostrarConfig('marcas')
     }
 
-    // A dónde vuelve "Salir sin guardar" sin otro destino: al inicio.
+    // A dónde vuelve "Salir sin guardar" sin otro destino: al inicio de la
+    // gestión, que desde el 09/10/2026 es la tabla de producción.
     function volverDeOficina() {
-      mostrarInicioOficina()
+      navegar(INICIO_GESTION)
     }
 
-    // El inicio de la gestión: los indicadores de la unidad.
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA TABLA DE PRODUCCIÓN (09/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Cuánto se produjo, SIEMPRE en unidades, con filas y columnas a elegir.
+    // Sale de produccion_resumen(p_unidad_negocio_id, p_desde, p_hasta)
+    // (verificada en la base el 09/10/2026): una fila por fecha · turno ·
+    // máquina · producto · presentación, sin anulados, con `planillas` =
+    // count(distinct turno) DENTRO de ese grupo. Desde y hasta obligatorios y
+    // como mucho 400 días entre los dos. Los bigint pueden llegar como texto.
+    //
+    // UNA consulta por período: la de las cuatro tarjetas cubre del 1º del mes
+    // pasado a hoy, y si el período de la tabla entra ahí, la tabla usa esa
+    // misma (no hay una segunda llamada). Todo lo demás —filtros, filas,
+    // columnas, totales y promedios— se arma acá.
+    //
+    // NUNCA un cero de un dato ausente: una celda sin producción dice "—".
+
+    const DIMENSIONES_TABLA = [
+      { clave: 'dia', texto: 'Día' }, { clave: 'semana', texto: 'Semana' }, { clave: 'mes', texto: 'Mes' },
+      { clave: 'maquina', texto: 'Máquina' }, { clave: 'turno', texto: 'Turno' }, { clave: 'producto', texto: 'Producto' },
+      { clave: 'ninguna', texto: 'Ninguna' },
+    ]
+    const TURNOS_TABLA = ['Mañana', 'Tarde', 'Noche']
+    const MESES_TABLA = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    const DIAS_TABLA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+    const MAX_DIAS_TABLA = 400
+    const CLAVE_TABLA = 'produccion.gestion.tabla'
+
+    // LA GESTIÓN ABRE EN LA TABLA (09/10/2026, pedido de Facu). Los
+    // indicadores son una entrada más del menú. `?vista=` abre derecho en una
+    // sección (lo usan los links del tablero del dashboard): lo que no está
+    // en la lista abre en la tabla.
+    const INICIO_GESTION = 'tabla'
+    const VISTAS_DE_ENTRADA = { tabla: 'tabla', indicadores: 'inicio', pendientes: 'pendientes', historial: 'historial', stock: 'stock', conos: 'config:marcas' }
+
+    function vistaDeEntrada(search) {
+      let v = null
+      try { v = new URLSearchParams(search ?? '').get('vista') } catch { v = null }
+      return v && Object.prototype.hasOwnProperty.call(VISTAS_DE_ENTRADA, v) ? VISTAS_DE_ENTRADA[v] : INICIO_GESTION
+    }
+
+    function esFechaTabla(v) {
+      return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
+    }
+
+    // Lo que devuelve la RPC, con los números convertidos (pueden venir como
+    // texto) y las fechas como 'aaaa-mm-dd'. Una fila sin fecha no se cuenta.
+    function normalizarResumen(data) {
+      const texto = (v) => (v === null || v === undefined ? '' : String(v))
+      return (Array.isArray(data) ? data : [])
+        .filter(f => f && esFechaTabla(texto(f.fecha).slice(0, 10)))
+        .map(f => ({
+          fecha: texto(f.fecha).slice(0, 10), turno: texto(f.turno), maquina_id: texto(f.maquina_id), maquina: texto(f.maquina),
+          producto: texto(f.producto), presentacion_id: texto(f.presentacion_id), presentacion: texto(f.presentacion),
+          planillas: numeroInd(f.planillas), cajas: numeroInd(f.cajas), unidades: numeroInd(f.unidades),
+        }))
+    }
+
+    // Las cuatro tarjetas, en hora de Argentina (`hoy` ya es el de Argentina).
+    // La semana va del LUNES a hoy, como el control de período.
+    function periodosTarjetasTabla(hoy) {
+      const primero = hoy.slice(0, 8) + '01'
+      const finPasado = sumarDias(primero, -1)
+      const ayer = sumarDias(hoy, -1)
+      return [
+        { clave: 'ayer', titulo: 'Ayer', desde: ayer, hasta: ayer },
+        { clave: 'semana', titulo: 'Esta semana', desde: lunesDe(hoy), hasta: hoy },
+        { clave: 'mes', titulo: 'Este mes', desde: primero, hasta: hoy },
+        { clave: 'mes_pasado', titulo: 'Mes pasado', desde: finPasado.slice(0, 8) + '01', hasta: finPasado },
+      ]
+    }
+
+    // La consulta de las tarjetas: del 1º del mes pasado a hoy. Las cuatro
+    // entran siempre (la semana empieza como mucho 6 días atrás).
+    function rangoBaseTabla(hoy) {
+      const p = periodosTarjetasTabla(hoy)
+      return { desde: p[3].desde, hasta: hoy }
+    }
+
+    // El mismo control que la base, antes de pedir nada.
+    function errorPeriodoTabla(desde, hasta) {
+      if (!esFechaTabla(desde) || !esFechaTabla(hasta)) return 'Elegí las dos fechas.'
+      if (desde > hasta) return '"Desde" tiene que ser antes que "Hasta".'
+      if (diasEntreInd(desde, hasta) > MAX_DIAS_TABLA) return 'El período no puede pasar de 400 días.'
+      return ''
+    }
+
+    function filtrarResumen(filas, f = {}) {
+      return (filas ?? []).filter(r =>
+        (!f.desde || r.fecha >= f.desde) && (!f.hasta || r.fecha <= f.hasta) &&
+        (!f.maquina || r.maquina_id === f.maquina) && (!f.turno || r.turno === f.turno) &&
+        (!f.producto || r.producto === f.producto))
+    }
+
+    // La suma de las unidades conocidas; null si no hay ninguna (nunca un 0
+    // inventado).
+    function sumaUnidadesTabla(filas) {
+      let s = null
+      for (const r of filas ?? []) if (r?.unidades !== null && r?.unidades !== undefined) s = (s ?? 0) + r.unidades
+      return s
+    }
+
+    function textoDiaTabla(iso) {
+      const d = new Date(`${iso}T12:00:00Z`)
+      return `${DIAS_TABLA[d.getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+    }
+
+    function textoMesTabla(aaaamm) {
+      const m = Number(aaaamm.slice(5, 7))
+      const nombre = MESES_TABLA[m - 1] ?? aaaamm
+      return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${aaaamm.slice(0, 4)}`
+    }
+
+    // A qué renglón (o columna) va una fila según la dimensión elegida.
+    // `orden` decide el orden: las fechas de la más vieja a la más nueva, los
+    // turnos Mañana · Tarde · Noche, lo demás por nombre.
+    function grupoTabla(r, dim) {
+      if (dim === 'dia') return { clave: r.fecha, orden: r.fecha, etiqueta: textoDiaTabla(r.fecha) }
+      if (dim === 'semana') { const l = lunesDe(r.fecha); return { clave: l, orden: l, etiqueta: `Semana del ${l.slice(8, 10)}/${l.slice(5, 7)}` } }
+      if (dim === 'mes') { const m = r.fecha.slice(0, 7); return { clave: m, orden: m, etiqueta: textoMesTabla(m) } }
+      if (dim === 'maquina') return { clave: r.maquina_id, orden: r.maquina, etiqueta: r.maquina || 'Sin máquina' }
+      if (dim === 'turno') {
+        const i = TURNOS_TABLA.indexOf(r.turno)
+        return { clave: r.turno, orden: `${i < 0 ? 9 : i}|${r.turno}`, etiqueta: r.turno || 'Sin turno' }
+      }
+      if (dim === 'producto') return { clave: r.producto, orden: r.producto, etiqueta: r.producto || 'Sin producto' }
+      return { clave: '', orden: '', etiqueta: 'Total' }
+    }
+
+    // La tabla: renglones, columnas, cada celda, los totales de cada renglón
+    // y columna, y el total general. Una celda sin filas no existe (se dibuja
+    // "—"); una con filas pero sin unidades conocidas es null (también "—").
+    function armarTabla(filas, dimFilas, dimCols) {
+      const fs = new Map(), cs = new Map(), celdas = new Map(), totFila = new Map(), totCol = new Map()
+      const sumar = (m, k, v) => { if (v === null || v === undefined) { if (!m.has(k)) m.set(k, null); return } m.set(k, (m.get(k) ?? 0) + v) }
+      let total = null
+      for (const r of filas ?? []) {
+        const gf = grupoTabla(r, dimFilas), gc = grupoTabla(r, dimCols)
+        if (!fs.has(gf.clave)) fs.set(gf.clave, gf)
+        if (!cs.has(gc.clave)) cs.set(gc.clave, gc)
+        if (!celdas.has(gf.clave)) celdas.set(gf.clave, new Map())
+        sumar(celdas.get(gf.clave), gc.clave, r.unidades)
+        sumar(totFila, gf.clave, r.unidades)
+        sumar(totCol, gc.clave, r.unidades)
+        if (r.unidades !== null && r.unidades !== undefined) total = (total ?? 0) + r.unidades
+      }
+      const ordenar = (m) => [...m.values()].sort((a, b) => String(a.orden).localeCompare(String(b.orden), 'es', { numeric: true }) || String(a.clave).localeCompare(String(b.clave)))
+      return { filas: ordenar(fs), cols: ordenar(cs), celdas, totFila, totCol, total }
+    }
+
+    // Promedio por día con producción y por planilla. Las planillas se cuentan
+    // por (fecha, turno, máquina), NUNCA sumando la columna: la RPC repite la
+    // misma planilla en cada presentación. Dentro de esa clave se toma el
+    // MAYOR `planillas` (si una máquina se relanzó con lote nuevo en el mismo
+    // turno, son dos), y sin dato, una.
+    function promediosTabla(filas) {
+      const total = sumaUnidadesTabla(filas)
+      const dias = new Set(), planillas = new Map()
+      for (const r of filas ?? []) {
+        dias.add(r.fecha)
+        const k = `${r.fecha}|${r.turno}|${r.maquina_id}`
+        const n = r.planillas !== null && r.planillas !== undefined && r.planillas > 0 ? r.planillas : 1
+        planillas.set(k, Math.max(planillas.get(k) ?? 0, n))
+      }
+      let nPlanillas = 0
+      for (const n of planillas.values()) nPlanillas += n
+      return {
+        total, dias: dias.size, planillas: nPlanillas,
+        porDia: total !== null && dias.size > 0 ? total / dias.size : null,
+        porPlanilla: total !== null && nPlanillas > 0 ? total / nPlanillas : null,
+      }
+    }
+
+    // Elegir Filas o Columnas: si se elige lo mismo que tiene la otra, se
+    // intercambian (una tabla Día × Día no dice nada).
+    function cambiarDimensionTabla(dims, cual, valor) {
+      if (!DIMENSIONES_TABLA.some(d => d.clave === valor) || (cual !== 'filas' && cual !== 'columnas')) return { ...dims }
+      const otra = cual === 'filas' ? 'columnas' : 'filas'
+      const r = { filas: dims.filas, columnas: dims.columnas }
+      if (valor !== 'ninguna' && r[otra] === valor) r[otra] = r[cual]
+      r[cual] = valor
+      return r
+    }
+
+    // Lo que se recuerda (localStorage, con try/catch en leer/guardarPreferencia):
+    // filas, columnas, los filtros y el período (como tarjeta, si era una,
+    // así "Este mes" sigue siendo este mes mañana).
+    function estadoInicialTabla(guardado, hoy) {
+      let g = {}
+      try { g = guardado ? JSON.parse(guardado) : {} } catch { g = {} }
+      if (!g || typeof g !== 'object') g = {}
+      const dim = (v, def) => DIMENSIONES_TABLA.some(d => d.clave === v) ? v : def
+      const t = {
+        filas: dim(g.filas, 'dia'), columnas: dim(g.columnas, 'maquina'),
+        maquina: typeof g.maquina === 'string' ? g.maquina : '', maquinaNombre: typeof g.maquinaNombre === 'string' ? g.maquinaNombre : '',
+        turno: typeof g.turno === 'string' ? g.turno : '', producto: typeof g.producto === 'string' ? g.producto : '',
+        unidadId: typeof g.unidadId === 'string' ? g.unidadId : null,
+        periodoClave: null, desde: '', hasta: '', base: null, periodo: null,
+      }
+      if (t.filas !== 'ninguna' && t.filas === t.columnas) t.columnas = 'ninguna'
+      const tarjeta = periodosTarjetasTabla(hoy).find(p => p.clave === g.periodoClave)
+      if (tarjeta) { t.periodoClave = tarjeta.clave; t.desde = tarjeta.desde; t.hasta = tarjeta.hasta }
+      else if (!errorPeriodoTabla(g.desde, g.hasta)) { t.desde = g.desde; t.hasta = g.hasta }
+      else { const m = periodosTarjetasTabla(hoy)[2]; t.periodoClave = 'mes'; t.desde = m.desde; t.hasta = m.hasta }
+      return t
+    }
+
+    function guardarTabla(t) {
+      guardarPreferencia(CLAVE_TABLA, JSON.stringify({
+        filas: t.filas, columnas: t.columnas, maquina: t.maquina, maquinaNombre: t.maquinaNombre, turno: t.turno, producto: t.producto,
+        unidadId: t.unidadId, periodoClave: t.periodoClave, desde: t.desde, hasta: t.hasta,
+      }))
+    }
+
+    // Las filas que van a la tabla: las de la consulta base si el período
+    // entra ahí, las de su propia consulta si no. Siempre recortadas al
+    // período (la RPC ya lo hace; esto es la red).
+    function datosDeLaTabla(t) {
+      const fuente = t?.periodo?.usaBase ? t.base : t?.periodo
+      if (!fuente) return { estado: 'cargando', filas: [] }
+      if (fuente.validacion) return { estado: 'invalido', error: fuente.error, filas: [] }
+      if (fuente.cargando) return { estado: 'cargando', filas: [] }
+      if (fuente.error) return { estado: 'error', error: fuente.error, filas: [] }
+      return { estado: 'ok', filas: filtrarResumen(fuente.filas, { desde: t.desde, hasta: t.hasta }) }
+    }
+
+    function hayFiltrosTabla(t) {
+      return !!(t.maquina || t.turno || t.producto)
+    }
+
+    function unidadesTexto(n) {
+      return n === null || n === undefined ? '—' : `${formatearNumeroAr(Math.round(n), { decimales: 0 })} u`
+    }
+
+    function rangoCortoTabla(desde, hasta) {
+      const dm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+      return desde === hasta ? dm(desde) : `${dm(desde)} al ${dm(hasta)}`
+    }
+
+    // Las cuatro tarjetas, con los MISMOS filtros que la tabla (así, tocar una
+    // da una tabla cuyo total es el de la tarjeta).
+    function htmlTarjetasTabla(t, hoy) {
+      const base = t.base
+      return periodosTarjetasTabla(hoy).map(p => {
+        let n = '—', pie = rangoCortoTabla(p.desde, p.hasta)
+        if (!base || base.cargando) { n = '…'; pie = 'Cargando…' }
+        else if (base.error) pie = 'No se pudo leer'
+        else {
+          const s = sumaUnidadesTabla(filtrarResumen(base.filas, { desde: p.desde, hasta: p.hasta, maquina: t.maquina, turno: t.turno, producto: t.producto }))
+          if (s === null) pie = `Sin producción · ${rangoCortoTabla(p.desde, p.hasta)}`
+          else n = unidadesTexto(s)
+        }
+        const activa = t.desde === p.desde && t.hasta === p.hasta
+        return `<button type="button" class="pt-tarjeta" data-tabla-periodo="${esc(p.clave)}" aria-pressed="${activa ? 'true' : 'false'}">` +
+          `<span class="pt-tarjeta__titulo">${esc(p.titulo)}</span><span class="pt-tarjeta__n">${esc(n)}</span>` +
+          `<span class="pt-tarjeta__rango">${esc(pie)}</span></button>`
+      }).join('')
+    }
+
+    // Las opciones de un filtro salen de los datos del período (antes de los
+    // otros filtros); la elegida se conserva aunque ya no esté.
+    function opcionesFiltroTabla(filas, campo, elegido, nombreElegido) {
+      const m = new Map()
+      for (const r of filas ?? []) {
+        if (campo === 'maquina') { if (r.maquina_id) m.set(r.maquina_id, { v: r.maquina_id, t: r.maquina || 'Sin máquina', o: r.maquina }) }
+        else if (r[campo]) {
+          const i = campo === 'turno' ? TURNOS_TABLA.indexOf(r.turno) : 0
+          m.set(r[campo], { v: r[campo], t: r[campo], o: campo === 'turno' ? `${i < 0 ? 9 : i}|${r.turno}` : r[campo] })
+        }
+      }
+      if (elegido && !m.has(elegido)) m.set(elegido, { v: elegido, t: nombreElegido || elegido, o: nombreElegido || elegido })
+      return [...m.values()].sort((a, b) => String(a.o).localeCompare(String(b.o), 'es', { numeric: true }))
+    }
+
+    function htmlOpcionesTabla(lista, elegido, todos) {
+      return `<option value=""${elegido ? '' : ' selected'}>${esc(todos)}</option>` +
+        lista.map(o => `<option value="${esc(o.v)}"${o.v === elegido ? ' selected' : ''}>${esc(o.t)}</option>`).join('')
+    }
+
+    function htmlDimensionesTabla(elegida) {
+      return DIMENSIONES_TABLA.map(d => `<option value="${esc(d.clave)}"${d.clave === elegida ? ' selected' : ''}>${esc(d.texto)}</option>`).join('')
+    }
+
+    function textoDimension(clave) {
+      return DIMENSIONES_TABLA.find(d => d.clave === clave)?.texto ?? ''
+    }
+
+    function celdaTabla(v, clase = '') {
+      if (v === null || v === undefined) return `<td class="pt-sin${clase ? ' ' + clase : ''}">—</td>`
+      return `<td${clase ? ` class="${clase}"` : ''}>${esc(formatearNumeroAr(Math.round(v), { decimales: 0 }))}</td>`
+    }
+
+    // La tabla. Con Filas o Columnas en "Ninguna" esa dimensión no se dibuja:
+    // queda solo el total.
+    function htmlTablaProduccion(tab, dimFilas, dimCols) {
+      const sinFilas = dimFilas === 'ninguna', sinCols = dimCols === 'ninguna'
+      const esquina = sinFilas && sinCols ? 'Unidades' : sinFilas ? textoDimension(dimCols) : sinCols ? textoDimension(dimFilas) : `${textoDimension(dimFilas)} / ${textoDimension(dimCols)}`
+      const cols = sinCols ? [] : tab.cols
+      let h = '<div class="pt-scroll" role="region" aria-label="Tabla de producción" tabindex="0"><table class="pt-tabla"><thead><tr>' +
+        `<th scope="col" class="pt-esquina">${esc(esquina)}</th>` +
+        cols.map(c => `<th scope="col">${esc(c.etiqueta)}</th>`).join('') +
+        '<th scope="col" class="pt-total">Total</th></tr></thead><tbody>'
+      if (!sinFilas) {
+        for (const f of tab.filas) {
+          const fila = tab.celdas.get(f.clave) ?? new Map()
+          h += `<tr><th scope="row" title="${esc(f.etiqueta)}">${esc(f.etiqueta)}</th>` +
+            cols.map(c => celdaTabla(fila.has(c.clave) ? fila.get(c.clave) : null)).join('') +
+            celdaTabla(tab.totFila.get(f.clave) ?? null, 'pt-total') + '</tr>'
+        }
+      }
+      h += '</tbody><tfoot><tr><th scope="row">Total</th>' +
+        cols.map(c => celdaTabla(tab.totCol.has(c.clave) ? tab.totCol.get(c.clave) : null)).join('') +
+        celdaTabla(tab.total, 'pt-total') + '</tr></tfoot></table></div>'
+      return h
+    }
+
+    function htmlPromediosTabla(p) {
+      return `<p class="pt-promedios">Promedio por día con producción: <strong>${esc(unidadesTexto(p.porDia))}</strong>` +
+        ` · por planilla: <strong>${esc(unidadesTexto(p.porPlanilla))}</strong>` +
+        ` <span class="pr-texto-suave">(${esc(String(p.dias))} ${p.dias === 1 ? 'día' : 'días'}, ${esc(String(p.planillas))} ${p.planillas === 1 ? 'planilla' : 'planillas'})</span></p>`
+    }
+
+    function htmlCuerpoTabla(t) {
+      const d = datosDeLaTabla(t)
+      if (d.estado === 'cargando') return '<p class="pr-texto-suave">Cargando…</p>'
+      if (d.estado === 'invalido') return `<div class="pr-aviso pr-aviso--grave" role="alert">${esc(d.error)}</div>`
+      if (d.estado === 'error') {
+        return `<div class="pg-ind-falla"><p class="pg-ind-falla__que">No se pudo leer la producción.</p><div class="pg-ind-falla__pie">` +
+          `<div class="pr-ind__error" role="alert">${esc(d.error)}</div>` +
+          '<button type="button" class="pr-btn pr-btn--secundario" data-tabla-reintentar="1">Reintentar</button></div></div>'
+      }
+      const filas = filtrarResumen(d.filas, { maquina: t.maquina, turno: t.turno, producto: t.producto })
+      if (!filas.length) {
+        return `<div class="pr-tarjeta"><p class="pr-of-vacio">No hubo producción del ${esc(fechaDelDia(t.desde))} al ${esc(fechaDelDia(t.hasta))}` +
+          `${hayFiltrosTabla(t) ? ' con estos filtros' : ''}.</p></div>`
+      }
+      return htmlTablaProduccion(armarTabla(filas, t.filas, t.columnas), t.filas, t.columnas) + htmlPromediosTabla(promediosTabla(filas))
+    }
+
+    function pintarTabla() {
+      const t = estado.tabla
+      if (!t) return
+      const hoy = hoyArgentina()
+      document.getElementById('pr-tabla-tarjetas').innerHTML = htmlTarjetasTabla(t, hoy)
+      const d = datosDeLaTabla(t)
+      const delPeriodo = d.estado === 'ok' ? d.filas : []
+      document.getElementById('pr-tabla-maquina').innerHTML = htmlOpcionesTabla(opcionesFiltroTabla(delPeriodo, 'maquina', t.maquina, t.maquinaNombre), t.maquina, 'Todas')
+      document.getElementById('pr-tabla-turno').innerHTML = htmlOpcionesTabla(opcionesFiltroTabla(delPeriodo, 'turno', t.turno), t.turno, 'Todos')
+      document.getElementById('pr-tabla-producto').innerHTML = htmlOpcionesTabla(opcionesFiltroTabla(delPeriodo, 'producto', t.producto), t.producto, 'Todos')
+      document.getElementById('pr-tabla-filas').innerHTML = htmlDimensionesTabla(t.filas)
+      document.getElementById('pr-tabla-columnas').innerHTML = htmlDimensionesTabla(t.columnas)
+      document.getElementById('pr-tabla-cuerpo').innerHTML = htmlCuerpoTabla(t)
+    }
+
+    async function leerResumen(unidadId, desde, hasta) {
+      const { data, error } = await supabase.rpc('produccion_resumen', { p_unidad_negocio_id: unidadId, p_desde: desde, p_hasta: hasta })
+      if (error) throw error
+      return normalizarResumen(data)
+    }
+
+    // Con un turno: la respuesta de un período o una unidad que ya no está
+    // elegido no pisa la del nuevo. Una consulta todavía en vuelo cuenta como
+    // vieja: si la tapó un turno nuevo, se vuelve a pedir. Una que falló
+    // también: por eso "Reintentar" es volver a llamar.
+    let turnoTabla = 0
+    async function cargarTabla() {
+      const t = estado.tabla
+      if (!t) return
+      const turno = ++turnoTabla
+      const unidad = estado.unidadId
+      if (!unidad) { t.base = { error: 'Elegí una unidad arriba.' }; t.periodo = { usaBase: true }; return pintarTabla() }
+      const rb = rangoBaseTabla(hoyArgentina())
+      const pedidos = []
+      const vieja = (c, r) => !c || c.unidadId !== unidad || c.desde !== r.desde || c.hasta !== r.hasta || !!c.error || !!c.cargando
+      if (vieja(t.base, rb)) { t.base = { unidadId: unidad, desde: rb.desde, hasta: rb.hasta, cargando: true }; pedidos.push('base') }
+      const err = errorPeriodoTabla(t.desde, t.hasta)
+      if (err) t.periodo = { validacion: true, error: err }
+      else if (t.desde >= rb.desde && t.hasta <= rb.hasta) t.periodo = { usaBase: true }
+      else if (vieja(t.periodo, t)) { t.periodo = { unidadId: unidad, desde: t.desde, hasta: t.hasta, cargando: true }; pedidos.push('periodo') }
+      pintarTabla()
+      if (!pedidos.length) return
+      const res = await Promise.all(pedidos.map(async (q) => {
+        try { return [q, { filas: await leerResumen(unidad, t[q].desde, t[q].hasta), cargando: false }] } catch (e) {
+          console.error('produccion_resumen:', e)
+          return [q, { error: e?.message || 'No hubo respuesta del servidor. Revisá la conexión.', cargando: false }]
+        }
+      }))
+      if (turno !== turnoTabla || estado.tabla !== t) return
+      for (const [q, r] of res) t[q] = { ...t[q], ...r }
+      pintarTabla()
+    }
+
+    function mostrarTabla() {
+      // Es la pantalla con la que abre la gestión: con una unidad de la barra
+      // sin Producción, se abre igual y lo dice (como hacían los indicadores),
+      // sin pedir nada a la base.
+      if (sinUnidadPorBarra()) {
+        mostrarVista('pr-tabla')
+        document.getElementById('pr-tabla-tarjetas').innerHTML = ''
+        document.getElementById('pr-tabla-cuerpo').innerHTML = `<div class="pr-aviso">${esc(textoSinProduccionEnBarra())}</div>`
+        return
+      }
+      const hoy = hoyArgentina()
+      if (!estado.tabla) estado.tabla = estadoInicialTabla(leerPreferencia(CLAVE_TABLA), hoy)
+      const t = estado.tabla
+      // Una máquina es de una unidad: la recordada de otra no sirve.
+      if (t.unidadId !== estado.unidadId) { t.maquina = ''; t.maquinaNombre = ''; t.unidadId = estado.unidadId }
+      // "Este mes" es este mes también si la página quedó abierta de ayer.
+      const tarjeta = periodosTarjetasTabla(hoy).find(p => p.clave === t.periodoClave)
+      if (tarjeta) { t.desde = tarjeta.desde; t.hasta = tarjeta.hasta }
+      ponerPeriodoTabla(t)
+      mostrarVista('pr-tabla')
+      cargarTabla()
+    }
+
+    function cambiarUnidadTabla(id) {
+      const t = estado.tabla
+      // Abierta sin unidad (la barra tenía una sin Producción): recién ahora
+      // se arma.
+      if (!t) return mostrarTabla()
+      t.unidadId = id; t.maquina = ''; t.maquinaNombre = ''
+      guardarTabla(t)
+      cargarTabla()
+    }
+
+    // Pone el período en los dos campos (el control de período se entera solo).
+    function ponerPeriodoTabla(t) {
+      const d = document.getElementById('pr-tabla-desde'), h = document.getElementById('pr-tabla-hasta')
+      if (d.value !== t.desde) d.value = t.desde
+      if (h.value !== t.hasta) h.value = t.hasta
+    }
+
+    function elegirPeriodoTabla(clave) {
+      const t = estado.tabla
+      const p = periodosTarjetasTabla(hoyArgentina()).find(x => x.clave === clave)
+      if (!t || !p) return
+      t.periodoClave = p.clave; t.desde = p.desde; t.hasta = p.hasta
+      ponerPeriodoTabla(t)
+      guardarTabla(t)
+      cargarTabla()
+    }
+
+    // Las fechas cambiaron desde el control de período (o a mano).
+    function alCambiarFechasTabla() {
+      const t = estado.tabla
+      if (!t) return
+      t.desde = document.getElementById('pr-tabla-desde').value
+      t.hasta = document.getElementById('pr-tabla-hasta').value
+      t.periodoClave = periodosTarjetasTabla(hoyArgentina()).find(p => p.desde === t.desde && p.hasta === t.hasta)?.clave ?? null
+      guardarTabla(t)
+      cargarTabla()
+    }
+
+    function cambiarFiltroTabla(campo, valor, nombre = '') {
+      const t = estado.tabla
+      if (!t) return
+      t[campo] = valor ?? ''
+      if (campo === 'maquina') t.maquinaNombre = valor ? nombre : ''
+      guardarTabla(t)
+      pintarTabla()
+    }
+
+    function elegirDimensionTabla(cual, valor) {
+      const t = estado.tabla
+      if (!t) return
+      const r = cambiarDimensionTabla({ filas: t.filas, columnas: t.columnas }, cual, valor)
+      t.filas = r.filas; t.columnas = r.columnas
+      guardarTabla(t)
+      pintarTabla()
+    }
+
+    function conectarTabla() {
+      const d = document.getElementById('pr-tabla-desde'), h = document.getElementById('pr-tabla-hasta')
+      d.addEventListener('change', alCambiarFechasTabla)
+      h.addEventListener('change', alCambiarFechasTabla)
+      crearPeriodo({ desde: d, hasta: h, obligatorias: true })
+      document.getElementById('pr-tabla-volver').addEventListener('click', abrirMenu)
+      document.getElementById('pr-tabla-tarjetas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-tabla-periodo]'); if (b) elegirPeriodoTabla(b.dataset.tablaPeriodo)
+      })
+      document.getElementById('pr-tabla-cuerpo').addEventListener('click', ev => {
+        if (ev.target.closest('[data-tabla-reintentar]')) cargarTabla()
+      })
+      document.getElementById('pr-tabla-maquina').addEventListener('change', ev => {
+        const op = ev.target.selectedOptions?.[0]
+        cambiarFiltroTabla('maquina', ev.target.value, op ? op.textContent : '')
+      })
+      document.getElementById('pr-tabla-turno').addEventListener('change', ev => cambiarFiltroTabla('turno', ev.target.value))
+      document.getElementById('pr-tabla-producto').addEventListener('change', ev => cambiarFiltroTabla('producto', ev.target.value))
+      document.getElementById('pr-tabla-filas').addEventListener('change', ev => elegirDimensionTabla('filas', ev.target.value))
+      document.getElementById('pr-tabla-columnas').addEventListener('change', ev => elegirDimensionTabla('columnas', ev.target.value))
+    }
+
     function mostrarInicioOficina() {
       pintarAccesosOficina()
       mostrarVista('pr-inicio')
@@ -5131,7 +5736,7 @@
       const ver = puedeVerHistorial(), conf = tieneTarea('configurar')
       document.getElementById('pr-menu').hidden = false
       document.body.classList.add('pg-con-menu')
-      for (const id of ['pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver
+      for (const id of ['pr-menu-tabla', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver
       for (const b of document.querySelectorAll('[data-ir-config]')) b.hidden = !tieneTarea('configurar')
       document.getElementById('pr-menu-bloque-control').hidden = !ver
       document.getElementById('pr-menu-bloque-catalogo').hidden = !conf
@@ -7902,8 +8507,9 @@
       // se va de la sección, así que no hay nada que preguntar). Irse lo
       // pregunta irA().
       document.getElementById('pr-config-volver').addEventListener('click', volverEnConfig)
-      // "Producción" de las migas: vuelve a los indicadores, donde está el menú.
-      document.getElementById('pr-config-a-produccion').addEventListener('click', () => irA('inicio'))
+      // "Producción" de las migas: vuelve al inicio de la gestión (la tabla,
+      // desde el 09/10/2026), donde está el menú.
+      document.getElementById('pr-config-a-produccion').addEventListener('click', () => irA(INICIO_GESTION))
       document.getElementById('pr-config-secciones').addEventListener('click', ev => {
         const b = ev.target.closest('[data-config-seccion]'); if (b) cambiarSeccionConfig(b.dataset.configSeccion)
       })
@@ -8091,7 +8697,10 @@
       const unidades = unidadesDeHistorial()
       if (!unidades.length) return
       const hoy = hoyArgentina()
-      estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: '' }
+      estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: 'cerrado' }
+      // Entrar desde el menú ("Planillas") arranca siempre en las CERRADAS; los
+      // pendientes y los indicadores mandan su propio estado en filtro.
+      if (!filtro) estado.historial.estado = 'cerrado'
       // "Planillas pendientes" del menú es este mismo historial, filtrado: el
       // menú lo marca como su renglón mientras no se cambie el filtro.
       estado.historial.desdePendientes = false
@@ -8100,11 +8709,19 @@
       pintarSelectorUnidad('pr-historial-unidad', unidades, estado.historial.unidadId)
       document.getElementById('pr-historial-desde').value = estado.historial.desde
       document.getElementById('pr-historial-hasta').value = estado.historial.hasta
-      document.getElementById('pr-historial-estado').value = estado.historial.estado
+      pintarEstadosHistorial()
       document.getElementById('pr-historial-detalle').hidden = true
       document.getElementById('pr-historial-listado').hidden = false
       mostrarVista('pr-historial')
       await cargarHistorial()
+    }
+
+    // El segmentado Cerradas / Abiertas / Pendientes / Todas marca el estado elegido.
+    function pintarEstadosHistorial() {
+      const actual = estado.historial?.estado ?? ''
+      for (const b of document.querySelectorAll('[data-historial-estado]')) {
+        b.setAttribute('aria-pressed', b.dataset.historialEstado === actual ? 'true' : 'false')
+      }
     }
 
     function filtrosHistorialValidos(h) {
@@ -8336,22 +8953,68 @@
       return it.ingrediente_libre || 'Otro'
     }
 
+    // LA LISTA DE MASAS COMPACTA (08/10/2026, pedido de Facu). Cada masa es
+    // UN renglón: el número, la hora, Original o Modificada y Simple o Doble
+    // (más "Chocolate", "Anulada" o "Tirada"). La fórmula ya no va debajo de
+    // cada masa: al tocar el renglón se abre su detalle —quién la cargó,
+    // cuándo, la diferencia contra su receta y cada ingrediente con su marca,
+    // la cantidad como salió (×2 en una doble) y el lote—. Una a la vez. Una
+    // masa 'anterior' se dice "Original": es la receta sin cambios, copiada de
+    // la masa anterior (lo que se aparta lo marca la base como 'modificada').
+    function textoOrigenMasa(m) {
+      return m?.origen === 'modificada' ? 'Modificada' : 'Original'
+    }
+
+    // La fórmula: cantidad_kg es lo que SALIÓ (la base guarda ×2 en una doble).
+    function htmlFormulaMasa(m, d) {
+      const orden = (i) => d.ingredientes.find(g => g.id === i.ingrediente_id)?.orden ?? 999
+      const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0).sort((a, z) => orden(a) - orden(z))
+      if (!suyos.length) return '<p class="pr-texto-suave">Sin ingredientes.</p>'
+      return '<div class="pg-mf">' + suyos.map(i => {
+        const ins = i.insumo_id ? d.insumos.find(x => x.id === i.insumo_id) : null
+        const marca = ins ? (ins.marca || ins.nombre || '') : (i.insumo_id ? 'Insumo' : (i.ingrediente_id ? '' : 'escrito a mano'))
+        const lote = i.lote ? `lote ${esc(i.lote)}${i.lote_fuera_de_stock ? ' · fuera de stock' : ''}` : (i.insumo_id ? 'sin lote' : 'no lleva lote')
+        return `<div class="pg-mf__ing"><span class="pg-mf__nombre">${esc(nombreIngredienteItem(d, i))}</span>` +
+          `<span class="pg-mf__cant">${esc(textoKg(Number(i.cantidad_kg)))}</span>` +
+          `<span class="pg-mf__marca">${marca ? `${esc(marca)} · ` : ''}${lote}</span></div>`
+      }).join('') + '</div>'
+    }
+
     function htmlMasaHistorial(m, d) {
-      const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0)
-      const detalle = suyos.map(i => `${nombreIngredienteItem(d, i)} ${textoKg(Number(i.cantidad_kg))}` +
-        (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
-      const dif = textoDiferencias(diferenciaDeMasa(m, d))
+      const abierta = estado.masaHistAbierta === m.id
+      const tirada = !m.anulada && m.descartada === true
       // El chip de chocolate sale de masas.es_chocolate, que escribe
-      // registrar_masa mirando los ingredientes: no se recalcula acá. Los
-      // chips, con el criterio de las listas (chipsDeMasa).
-      const chips = chipsDeMasa(m)
-      return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
-        `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · <span class="pr-masa-tam">${textoTamanoMasa(m)}</span>` +
-        `${chips ? ` ${chips}` : ''} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
-        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}`
-          : m.descartada === true ? `<br><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock`
-          : `<br>${esc(dif)}`) +
-        `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
+      // registrar_masa mirando los ingredientes: no se recalcula acá.
+      const marca = m.anulada ? '<span class="pg-masa__marca">Anulada</span>'
+        : tirada ? '<span class="pg-masa__marca">Tirada</span>'
+        : (m.es_chocolate ? '<span class="pr-chip-choco">Chocolate</span>' : '')
+      const idDet = `pg-masa-det-${m.id}`
+      const renglon = `<button type="button" class="pg-masa__renglon" data-masa-hist="${esc(m.id)}" aria-expanded="${abierta ? 'true' : 'false'}"${abierta ? ` aria-controls="${esc(idDet)}"` : ''}>` +
+        `<span class="pg-masa__nro">Masa ${esc(m.nro)}</span><span class="pg-masa__hora">${esc(horaArgentina(m.hora) || '—')}</span>` +
+        `<span class="pg-masa__origen${m.origen === 'modificada' ? ' pg-masa__origen--modificada' : ''}">${textoOrigenMasa(m)}</span>` +
+        `<span class="pg-masa__tam">${m.doble ? 'Doble' : 'Simple'}</span>${marca}` +
+        `<span class="pg-masa__flecha" aria-hidden="true">${abierta ? '▲' : '▼'}</span></button>`
+      let det = ''
+      if (abierta) {
+        const cuando = [fechaCorta(m.hora), horaArgentina(m.hora)].filter(Boolean).join(' · ')
+        det = `<div class="pg-masa__det" id="${esc(idDet)}">` +
+          `<p>La cargó <strong>${esc(d.nombres.get(m.masero_id) ?? '—')}</strong> · ${esc(cuando || '—')}${m.tipo_masa ? ` · ${esc(m.tipo_masa)}` : ''}</p>` +
+          (m.anulada ? `<p><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}</p>`
+            : tirada ? `<p><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock</p>`
+            : `<p>${esc(textoDiferencias(diferenciaDeMasa(m, d)))}</p>`) +
+          htmlFormulaMasa(m, d) + '</div>'
+      }
+      return `<li class="pr-lista__item pg-masa${m.anulada ? ' pg-masa--anulada' : ''}${tirada ? ' pg-masa--tirada' : ''}">${renglon}${det}</li>`
+    }
+
+    // Tocar el renglón abre su detalle; tocarlo otra vez lo cierra.
+    function alternarMasaHistorial(masaId) {
+      if (!(estado.detalleHistorial?.masas ?? []).some(m => m.id === masaId)) return false
+      estado.masaHistAbierta = estado.masaHistAbierta === masaId ? null : masaId
+      pintarDetalleHistorial()
+      const b = document.querySelector(`[data-masa-hist="${masaId}"]`)
+      if (b) b.focus()
+      return true
     }
 
     function correccionesDe(d, itemId) {
@@ -8361,9 +9024,13 @@
     const TIPO_CORRECCION = { anulado: 'Anulado', agregado: 'Agregado después del cierre' }
 
     function htmlCorreccion(c, d) {
+      // 'datos' = corregir_produccion_item_completo (producto, cono, caja,
+      // embolsado y/o cajas): se dice "Corregido" y, si cambiaron, las cajas.
       const que = c.tipo === 'cajas'
         ? `Cajas ${textoEntero(c.cajas_antes)} → ${textoEntero(c.cajas_despues)}`
-        : (TIPO_CORRECCION[c.tipo] ?? c.tipo)
+        : c.tipo === 'datos'
+          ? `Corregido${c.cajas_antes !== c.cajas_despues ? ` · cajas ${textoEntero(c.cajas_antes)} → ${textoEntero(c.cajas_despues)}` : ''}`
+          : (TIPO_CORRECCION[c.tipo] ?? c.tipo)
       const cuando = [fechaCorta(c.hecha_en), horaArgentina(c.hecha_en)].filter(Boolean).join(' ')
       return `<div class="pr-of-correccion">${esc(que)} · ${esc(c.motivo)} · ${esc(d.nombres.get(c.hecha_por) ?? '—')}${cuando ? ` · ${esc(cuando)}` : ''}</div>`
     }
@@ -8385,12 +9052,178 @@
       return unidadesCon(tarea).includes(turno.unidad_negocio_id)
     }
 
+    // CORREGIR TODO UN SUBLOTE (08/10/2026): producto y presentación, cono,
+    // caja, embolsado y cajas, con corregir_produccion_item_completo(p_item_id,
+    // p_datos, p_motivo). La base deja como estaba toda clave que NO viene en
+    // p_datos, así que se manda SOLO lo que cambió; una clave en null sí
+    // significa algo (marca_id null = Común; caja_insumo_id null = sin caja).
+    // Las reglas del empaque son las de la planta al agregar: solo las cajas
+    // habilitadas para la presentación, el embolsado que sugiere la caja, y un
+    // cono de doble bolsa lo fuerza a 'doble' (la RPC de corregir NO lo fuerza:
+    // lo hace la pantalla). Los conos rechazados o inactivos no se ofrecen.
+    function conoOfrecible(m) {
+      return !!m && m.activa !== false && (m.estado_alta === 'aprobada' || m.estado_alta === 'pendiente_revision')
+    }
+
+    function cajasDe(cat, presentacionId) {
+      return (cat?.cajas ?? []).filter(c => c.presentacion_id === presentacionId)
+    }
+
+    // La caja con la que arranca un renglón al cambiar de presentación: la de
+    // la unidad si está habilitada; si no, la única; si no, hay que elegir.
+    function cajaInicial(cat, presentacionId) {
+      const cajas = cajasDe(cat, presentacionId)
+      if (!cajas.length) return { cajaId: null, cajaElegida: true }
+      const pred = cat?.cajaPredeterminadaId
+      if (pred && cajas.some(c => c.insumo_id === pred)) return { cajaId: pred, cajaElegida: true }
+      if (cajas.length === 1) return { cajaId: cajas[0].insumo_id, cajaElegida: true }
+      return { cajaId: null, cajaElegida: false }
+    }
+
+    function embolsadoSugerido(cat, presentacionId, cajaId) {
+      if (!cajaId) return 'ninguno'
+      return cajasDe(cat, presentacionId).find(c => c.insumo_id === cajaId)?.embolsado_sugerido ?? 'ninguno'
+    }
+
+    function conoDobleBolsa(cat, marcaId) {
+      return !!marcaId && (cat?.marcas ?? []).find(m => m.id === marcaId)?.doble_bolsa === true
+    }
+
+    function opcionesEmbolsado(cat, presentacionId, cajaId) {
+      const sug = embolsadoSugerido(cat, presentacionId, cajaId)
+      return EMBOLSADOS.filter(o => o.valor !== 'ninguno' || sug === 'ninguno')
+    }
+
+    // El catálogo de la fábrica del turno: productos activos (sin la reventa,
+    // que no se produce), sus presentaciones activas, los conos activos y el
+    // empaque. Si el empaque no se puede leer, la caja y el embolsado quedan
+    // como estaban (empaqueError) y lo demás se corrige igual.
+    async function leerCatalogoCorreccion(unidadId) {
+      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
+      const productos = (await leer(supabase.from('productos_terminados')
+        .select('id, nombre, tipo_masa, orden, origen_producto_id').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')))
+        .filter(p => p?.origen_producto_id == null)
+      const ids = productos.map(p => p.id)
+      const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones')
+        .select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, orden').in('producto_id', ids).eq('activa', true).order('orden')) : []
+      const marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre, estado_alta, activa, doble_bolsa').eq('activa', true).order('nombre'))
+      let emp = { cajas: [], insumos: [], cajaPredeterminadaId: null, empaqueError: false }
+      try {
+        const presIds = presentaciones.map(pr => pr.id)
+        const cajas = presIds.length ? await leer(supabase.from('presentacion_cajas').select('presentacion_id, insumo_id, embolsado_sugerido').in('presentacion_id', presIds)) : []
+        const [unidad] = await leer(supabase.from('unidades_negocio').select('id, caja_predeterminada_id').eq('id', unidadId))
+        const insIds = [...new Set(cajas.map(c => c.insumo_id))]
+        const insumos = insIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insIds)) : []
+        emp = { cajas, insumos, cajaPredeterminadaId: unidad?.caja_predeterminada_id ?? null, empaqueError: false }
+      } catch (err) {
+        console.error('empaque para corregir:', err)
+        emp = { cajas: [], insumos: [], cajaPredeterminadaId: null, empaqueError: true }
+      }
+      return { productos, presentaciones, marcas, ...emp }
+    }
+
+    // La presentación de un id: la del catálogo, o la del propio detalle (una
+    // que ya no está activa sigue sirviendo para saber si lleva cono).
+    function presentacionCorr(e, id, d = estado.detalleHistorial) {
+      return (e?.cat?.presentaciones ?? []).find(x => x.id === id) ?? (d?.presentaciones ?? []).find(x => x.id === id) ?? null
+    }
+
+    function embolsadoCorreccion(e) {
+      const pr = presentacionCorr(e, e.presentacionId)
+      if (pr?.con_cono && conoDobleBolsa(e.cat, e.marcaId)) return 'doble'
+      return e.embolsado ?? 'ninguno'
+    }
+
+    // SOLO las claves que cambiaron respecto del renglón guardado.
+    function datosCorreccionSublote(e, p) {
+      const antes = { presentacion_id: p.presentacion_id, marca_id: p.marca_id ?? null,
+        caja_insumo_id: p.caja_insumo_id ?? null, embolsado: p.embolsado ?? null, cajas: numeroInd(p.cajas) }
+      const ahora = { cajas: e.cajas }
+      if (e.cat) {
+        const pr = presentacionCorr(e, e.presentacionId)
+        ahora.presentacion_id = e.presentacionId
+        ahora.marca_id = pr?.con_cono ? (e.marcaId ?? null) : null
+        if (!e.cat.empaqueError) {
+          ahora.caja_insumo_id = e.cajaId ?? null
+          const emb = embolsadoCorreccion(e)
+          if (!(antes.embolsado == null && e.embolsado == null && emb === 'ninguno')) ahora.embolsado = emb
+        }
+      }
+      const datos = {}
+      for (const [k, v] of Object.entries(ahora)) if ((antes[k] ?? null) !== (v ?? null)) datos[k] = v
+      return datos
+    }
+
+    function opcion(valor, texto, elegido, extra = '') {
+      return `<option value="${esc(valor)}"${elegido ? ' selected' : ''}${extra}>${esc(texto)}</option>`
+    }
+
+    // Los campos de la oficina: producto, presentación, cono, caja, embolsado.
+    function htmlCamposCorreccion(e, p, d = estado.detalleHistorial) {
+      if (!e.cat && !e.catError) return '<p class="pr-texto-suave pg-corr__ancho">Cargando los productos…</p>'
+      if (!e.cat) return '<div class="pr-aviso pr-aviso--grave pg-corr__ancho">No se pudieron leer los productos de la fábrica: por ahora solo se pueden corregir las cajas.</div>'
+      const cat = e.cat
+      const campo = (id, rotulo, cuerpo) => `<label class="pr-campo pg-corr__campo"><span class="pr-campo__rotulo">${esc(rotulo)}</span>${cuerpo}</label>`
+      // Producto: los comunes y después los de chocolate, separados.
+      let opsProductos = cat.productos.filter(x => !esProductoChocolate(x)).map(x => opcion(x.id, x.nombre, x.id === e.productoId)).join('')
+      const choco = cat.productos.filter(x => esProductoChocolate(x))
+      const opsChoco = choco.map(x => opcion(x.id, x.nombre, x.id === e.productoId)).join('')
+      if (choco.length) opsProductos += `<optgroup label="Chocolate">${opsChoco}</optgroup>`
+      if (e.productoId && !cat.productos.some(x => x.id === e.productoId)) {
+        const viejo = (d?.productos ?? []).find(x => x.id === e.productoId)
+        opsProductos = opcion(e.productoId, `${viejo?.nombre ?? 'Producto'} (ya no está activo)`, true) + opsProductos
+      }
+      let html = campo('pr-hist-corr-producto', 'Producto', `<select class="pr-select" id="pr-hist-corr-producto" aria-label="Producto del sublote ${esc(p.sublote)}">${opsProductos}</select>`)
+      // Presentación.
+      const presDe = cat.presentaciones.filter(x => x.producto_id === e.productoId)
+      let opsPresentaciones = (e.presentacionId ? '' : opcion('', 'Elegí la presentación', true, ' disabled')) +
+        presDe.map(x => opcion(x.id, `${x.nombre} · ×${formatearNumeroAr(x.unidades_por_caja, { decimales: 0 })}`, x.id === e.presentacionId)).join('')
+      if (e.presentacionId && !presDe.some(x => x.id === e.presentacionId)) {
+        const vieja = presentacionCorr(e, e.presentacionId, d)
+        opsPresentaciones = opcion(e.presentacionId, `${vieja?.nombre ?? 'Presentación'} (ya no está activa)`, true) + opsPresentaciones
+      }
+      html += campo('pr-hist-corr-presentacion', 'Presentación', `<select class="pr-select" id="pr-hist-corr-presentacion">${opsPresentaciones}</select>`)
+      const pr = presentacionCorr(e, e.presentacionId, d)
+      // Cono: solo si la presentación lleva cono. Común = sin marca.
+      if (pr?.con_cono) {
+        const ofrecibles = (cat.marcas ?? []).filter(conoOfrecible)
+        let opsConos = opcion('', 'Común (sin marca)', !e.marcaId) +
+          ofrecibles.map(m => opcion(m.id, `${m.nombre}${m.estado_alta === 'pendiente_revision' ? ' · nuevo, a revisar' : ''}${m.doble_bolsa ? ' · doble bolsa' : ''}`, m.id === e.marcaId)).join('')
+        if (e.marcaId && !ofrecibles.some(m => m.id === e.marcaId)) {
+          const viejo = (d?.marcas ?? []).find(m => m.id === e.marcaId)
+          opsConos = opcion(e.marcaId, `${viejo?.nombre ?? 'Cono'} (el que tiene; ya no se ofrece)`, true) + opsConos
+        }
+        html += campo('pr-hist-corr-cono', 'Cono', `<select class="pr-select" id="pr-hist-corr-cono">${opsConos}</select>`)
+      }
+      // Caja y embolsado.
+      if (cat.empaqueError) {
+        html += '<p class="pr-texto-suave pg-corr__ancho">No se pudo leer el empaque: la caja y el embolsado quedan como estaban.</p>'
+      } else {
+        const habilitadas = cajasDe(cat, e.presentacionId)
+        const nombreCaja = id => { const i = (cat.insumos ?? []).find(x => x.id === id) ?? (d?.insumosEmpaque ?? []).find(x => x.id === id); return i ? textoInsumoEmpaque(i) : 'caja sin nombre' }
+        let opsCajas = (e.cajaElegida ? '' : opcion('__elegir', 'Elegí la caja', true, ' disabled')) +
+          habilitadas.map(c => opcion(c.insumo_id, nombreCaja(c.insumo_id), e.cajaElegida && c.insumo_id === e.cajaId)).join('')
+        if (!habilitadas.length || (e.cajaElegida && !e.cajaId)) opsCajas += opcion('', 'Sin caja', e.cajaElegida && !e.cajaId)
+        if (e.cajaId && !habilitadas.some(c => c.insumo_id === e.cajaId)) opsCajas = opcion(e.cajaId, `${nombreCaja(e.cajaId)} (no habilitada para esta presentación)`, true) + opsCajas
+        html += campo('pr-hist-corr-caja', 'Caja', `<select class="pr-select" id="pr-hist-corr-caja">${opsCajas}</select>`)
+        const forzado = pr?.con_cono && conoDobleBolsa(cat, e.marcaId)
+        const emb = embolsadoCorreccion(e)
+        const ops = forzado ? EMBOLSADOS.filter(o => o.valor === 'doble') : opcionesEmbolsado(cat, e.presentacionId, e.cajaId)
+        let opsEmbolsado = ops.map(o => opcion(o.valor, o.texto, o.valor === emb)).join('')
+        if (!ops.some(o => o.valor === emb)) opsEmbolsado = opcion(emb, TEXTO_EMBOLSADO[emb] ?? emb, true) + opsEmbolsado
+        html += campo('pr-hist-corr-embolsado', 'Embolsado', `<select class="pr-select" id="pr-hist-corr-embolsado"${forzado ? ' disabled' : ''}>${opsEmbolsado}</select>` +
+          (forzado ? '<span class="pr-texto-suave">Este cono va con doble bolsa.</span>' : ''))
+      }
+      return html
+    }
+
     function htmlEditorSublote(p) {
       const e = estado.corrigeHist
       const anular = e.modo === 'anular'
+      const camposCorr = anular ? '' : htmlCamposCorreccion(e, p)
       const campoCajas = anular ? '' : `<label class="pr-campo pg-corr__cajas"><span class="pr-campo__rotulo">Cajas</span>` +
         `<input type="text" class="pr-input" id="pr-hist-corr-cajas" data-numero="${esc(e.cajas ?? p.cajas ?? '')}" data-decimales="0" aria-label="Cajas del sublote ${esc(p.sublote)}"></label>`
-      return `<div class="pg-corr" id="pr-hist-corr">${campoCajas}` +
+      return `<div class="pg-corr" id="pr-hist-corr">${camposCorr}${campoCajas}` +
         `<label class="pr-campo pg-corr__motivo"><span class="pr-campo__rotulo">Motivo <span class="pr-obligatorio">· obligatorio</span></span>` +
         `<input type="text" class="pr-input" id="pr-hist-corr-motivo" maxlength="300" autocomplete="off" value="${esc(e.motivo ?? '')}"></label>` +
         `<div class="pg-corr__acc"><button type="button" class="pr-btn pr-btn--secundario" id="pr-hist-corr-cancelar">Cancelar</button>` +
@@ -8523,10 +9356,71 @@
       const d = estado.detalleHistorial
       const p = d?.producido?.find(x => x.id === itemId)
       if (!p || !puedeCorregirSublote(d.turno, p)) return false
-      estado.corrigeHist = { itemId, modo, cajas: modo === 'corregir' ? numeroInd(p.cajas) : null, motivo: '', error: null, enviando: false }
+      const prDetalle = (d.presentaciones ?? []).find(x => x.id === p.presentacion_id)
+      const e = { itemId, modo, cajas: modo === 'corregir' ? numeroInd(p.cajas) : null, motivo: '', error: null, enviando: false,
+        cat: null, catError: false, carga: null,
+        productoId: prDetalle?.producto_id ?? '', presentacionId: p.presentacion_id, marcaId: p.marca_id ?? null,
+        cajaId: p.caja_insumo_id ?? null, cajaElegida: true, embolsado: p.embolsado ?? null }
+      estado.corrigeHist = e
+      if (modo === 'corregir') e.carga = cargarCatalogoCorreccion(e, d.turno.unidad_negocio_id)
       pintarDetalleHistorial()
       document.getElementById(modo === 'corregir' ? 'pr-hist-corr-cajas' : 'pr-hist-corr-motivo')?.focus?.()
       return true
+    }
+
+    // El catálogo llega después: el editor ya se ve con las cajas y el motivo.
+    async function cargarCatalogoCorreccion(e, unidadId) {
+      try {
+        e.cat = await leerCatalogoCorreccion(unidadId)
+      } catch (err) {
+        console.error('catálogo para corregir:', err)
+        e.cat = null
+        e.catError = true
+      }
+      if (estado.corrigeHist !== e) return
+      const pr = presentacionCorr(e, e.presentacionId)
+      if (pr?.producto_id) e.productoId = pr.producto_id
+      pintarDetalleHistorial()
+    }
+
+    // Cambiar un campo de la oficina, con las reglas de la planta al agregar:
+    // otro producto suelta la presentación (o elige la única); otra
+    // presentación trae su caja inicial y el embolsado que sugiere esa caja,
+    // y sin cono suelta el cono; otra caja trae su embolsado sugerido.
+    function cambiarCampoCorreccion(id, valor) {
+      const e = estado.corrigeHist
+      if (!e || !e.cat || e.enviando) return
+      const cat = e.cat
+      const ponerPresentacion = (presId) => {
+        e.presentacionId = presId
+        const pr = presentacionCorr(e, presId)
+        if (!pr?.con_cono) e.marcaId = null
+        const ini = cajaInicial(cat, presId)
+        e.cajaId = ini.cajaId
+        e.cajaElegida = ini.cajaElegida
+        e.embolsado = embolsadoSugerido(cat, presId, e.cajaId)
+      }
+      if (id === 'pr-hist-corr-producto') {
+        if (valor === e.productoId) return
+        e.productoId = valor
+        const presDe = cat.presentaciones.filter(x => x.producto_id === valor)
+        if (presDe.length === 1) ponerPresentacion(presDe[0].id)
+        else { e.presentacionId = ''; e.cajaId = null; e.cajaElegida = true; e.embolsado = null }
+      } else if (id === 'pr-hist-corr-presentacion') {
+        if (valor === e.presentacionId) return
+        ponerPresentacion(valor)
+      } else if (id === 'pr-hist-corr-cono') {
+        e.marcaId = valor || null
+      } else if (id === 'pr-hist-corr-caja') {
+        if (valor === '__elegir') return
+        e.cajaId = valor || null
+        e.cajaElegida = true
+        e.embolsado = embolsadoSugerido(cat, e.presentacionId, e.cajaId)
+      } else if (id === 'pr-hist-corr-embolsado') {
+        e.embolsado = valor || null
+      } else return
+      e.error = null
+      pintarDetalleHistorial()
     }
 
     function cerrarCorreccionSublote() {
@@ -8539,8 +9433,11 @@
     function faltaEnCorreccion(e, p) {
       if (String(e.motivo ?? '').trim().length < 3) return 'Escribí el motivo para guardar.'
       if (e.modo === 'anular') return null
+      if (!e.cat && !e.catError) return 'Esperá a que carguen los productos.'
+      if (e.cat && !e.presentacionId) return 'Elegí la presentación.'
+      if (e.cat && !e.cat.empaqueError && !e.cajaElegida) return 'Elegí la caja.'
       if (!Number.isInteger(e.cajas) || e.cajas <= 0) return 'Poné las cajas: un número entero mayor a cero. Para sacarlo, anulalo.'
-      if (e.cajas === numeroInd(p.cajas)) return 'Tiene esas mismas cajas: poné la cantidad corregida.'
+      if (!Object.keys(datosCorreccionSublote(e, p)).length) return 'No cambiaste nada: cambiá lo que está mal y escribí por qué.'
       return null
     }
 
@@ -8558,7 +9455,7 @@
       try {
         const { error: err } = e.modo === 'anular'
           ? await supabase.rpc('anular_produccion_item', { p_item_id: p.id, p_motivo: motivo })
-          : await supabase.rpc('corregir_produccion_item', { p_item_id: p.id, p_cajas: e.cajas, p_motivo: motivo })
+          : await supabase.rpc('corregir_produccion_item_completo', { p_item_id: p.id, p_datos: datosCorreccionSublote(e, p), p_motivo: motivo })
         if (err) throw err
       } catch (err) {
         console.error('corregir sublote:', err)
@@ -8577,7 +9474,7 @@
       const cont = document.getElementById('pr-historial-detalle-cuerpo')
       document.getElementById('pr-historial-listado').hidden = true
       document.getElementById('pr-historial-detalle').hidden = false
-      if (estado.detalleHistorial?.turno?.id !== turnoId) estado.corrigeHist = null
+      if (estado.detalleHistorial?.turno?.id !== turnoId) { estado.corrigeHist = null; estado.masaHistAbierta = null }
       cont.innerHTML = '<p class="pr-texto-suave">Cargando el turno…</p>'
       try {
         estado.detalleHistorial = await leerDetalleTurno(turnoId)
@@ -8832,12 +9729,18 @@
       // obligatorias: cargarHistorial() necesita las dos fechas (no busca "sin fechas").
       crearPeriodo({ desde: document.getElementById('pr-historial-desde'), hasta: document.getElementById('pr-historial-hasta'), obligatorias: true })
       document.getElementById('pr-historial-maquina').addEventListener('change', cambio('maquina'))
-      document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
+      document.getElementById('pr-historial-estados').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-historial-estado]'); if (!b) return
+        estado.historial.estado = b.dataset.historialEstado
+        estado.historial.desdePendientes = false
+        pintarEstadosHistorial(); pintarMenuActivo(); cargarHistorial()
+      })
       document.getElementById('pr-historial-lista').addEventListener('click', ev => {
         const b = ev.target.closest('[data-historial-turno]'); if (b) abrirDetalleHistorial(b.dataset.historialTurno)
       })
       // Corregir, borrar y anotar paradas de una planilla CERRADA.
       document.getElementById('pr-historial-detalle-cuerpo').addEventListener('click', ev => {
+        const mh = ev.target.closest('[data-masa-hist]'); if (mh) return alternarMasaHistorial(mh.dataset.masaHist)
         if (ev.target.closest('#pr-historial-anotar-parada')) return abrirEditorDesdeHistorial('anotar')
         const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdeHistorial('editar', e.dataset.paradaEditar)
         const b = ev.target.closest('[data-parada-borrar]'); if (b) return abrirEditorDesdeHistorial('borrar', b.dataset.paradaBorrar)
@@ -8852,6 +9755,9 @@
         const e = estado.corrigeHist; if (!e) return
         if (ev.target.id === 'pr-hist-corr-motivo') e.motivo = ev.target.value
         if (ev.target.id === 'pr-hist-corr-cajas') e.cajas = leerCampoNumero(ev.target)
+      })
+      document.getElementById('pr-historial-detalle-cuerpo').addEventListener('change', ev => {
+        if (String(ev.target?.id ?? '').startsWith('pr-hist-corr-') && ev.target.tagName === 'SELECT') cambiarCampoCorreccion(ev.target.id, ev.target.value)
       })
       document.getElementById('pr-stock-unidad').addEventListener('change', ev => { estado.stockUnidad = ev.target.value; cargarStockTerminado() })
     }
@@ -8951,7 +9857,14 @@
       pintarSelectorGestion()
       pintarAccesosOficina()
       cargarBurbujaConos()
-      mostrarInicioOficina()
+      // Abre en la tabla de producción (09/10/2026), o en la sección que pida
+      // `?vista=`, que se saca de la dirección para que recargar abra la tabla.
+      const entrada = vistaDeEntrada(window.location?.search)
+      if (window.location?.search && window.history?.replaceState) {
+        const url = new URL(window.location.href)
+        if (url.searchParams.has('vista')) { url.searchParams.delete('vista'); window.history.replaceState(null, '', url.pathname + url.search + url.hash) }
+      }
+      navegar(entrada)
     }
 
     init()

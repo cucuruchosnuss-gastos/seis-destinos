@@ -116,7 +116,8 @@ esperas.push((async () => {
   chk('arranca en los últimos 7 días', S.estado.historial.hasta === S.hoyArgentina() && S.estado.historial.desde === S.sumarDias(S.hoyArgentina(), -7))
   const q = S.__llamadas.consultas.find(([t]) => t === 'turnos_produccion')?.[1] ?? []
   chk('filtra por unidad y fechas', JSON.stringify(q).includes('["eq","unidad_negocio_id","u-cn"]') && JSON.stringify(q).includes('["gte","fecha"') && JSON.stringify(q).includes('["lte","fecha"'))
-  chk('sin máquina ni estado elegidos no los filtra', !JSON.stringify(q).includes('["eq","maquina_id"') && !JSON.stringify(q).includes('["eq","estado"'))
+  // Desde el 08/10/2026 la lista ("Planillas") arranca en las CERRADAS (test-produccion-planillas.js).
+  chk('sin máquina elegida no la filtra, y arranca en las cerradas', !JSON.stringify(q).includes('["eq","maquina_id"') && JSON.stringify(q).includes('["eq","estado","cerrado"]'))
   const hl = S.__doc.getElementById('pr-historial-lista').innerHTML
   chk('la lista es una tabla con su cabecera', /pr-of-cab pr-of-turnos[\s\S]*Lote<\/span>[\s\S]*Encargado<\/span>/.test(hl))
   chk('cada turno con lote, fecha, turno, máquina y encargado', /pr-of-lote">7023<\/span><span>22\/09\/2026<\/span><span>Mañana<\/span><span>Máquina 1<\/span><span>Federico Silva<\/span>/.test(hl), hl.slice(0, 900))
@@ -187,17 +188,45 @@ esperas.push((async () => {
   chk('… scrap y observaciones', /3,5 kg/.test(hd) && /Se cortó la luz/.test(hd))
   chk('… los operarios con sus horas', /Ramón Díaz<\/span><span class="pr-renglon__dato">desde 06:02 · sigue/.test(hd), hd.slice(hd.indexOf('Ramón') - 60, hd.indexOf('Ramón') + 200))
   chk('… y el que se fue sigue en la lista, con su rango y su duración', /Marcos Vera<\/span><span class="pr-renglon__dato">06:02 → 08:40 · 2 h 38 min/.test(hd))
-  // Terminar la tablet, parte 5: SIMPLE / DOBLE en grande; "Modificada" solo en la que lo es; original sin chip.
-  chk('… cada masa con su tamaño, su masero y "Modificada" solo si lo es', /Masa 1<\/strong> · 06:30 · Común · <span class="pr-masa-tam">DOBLE<\/span>/.test(hd) &&
-    /Masa 2<\/strong> · 07:30 · Común · <span class="pr-masa-tam">SIMPLE<\/span> · masero/.test(hd) &&
-    /masero Juan Masero/.test(hd) && (hd.match(/pr-chip-modificada">Modificada</g) ?? []).length === 1 && !/pr-chip-origen|>Original</.test(hd), hd.slice(hd.indexOf('Masa 1') - 20, hd.indexOf('Masa 3')))
+  // LA LISTA DE MASAS COMPACTA (08/10/2026): un renglón por masa —número,
+  // hora, Original o Modificada, Simple o Doble— y la fórmula recién al
+  // tocarlo. Las masas, en su caja (entre "Masas" y "Paradas y scrap").
+  const seccionMasas = (h) => h.slice(h.indexOf('Masas <span'), h.indexOf('Paradas y scrap'))
+  const sm = seccionMasas(hd)
+  chk('… cada masa, un renglón: Masa 1 · 06:30 · Modificada · Doble, y Chocolate',
+    /data-masa-hist="ma1" aria-expanded="false"><span class="pg-masa__nro">Masa 1<\/span><span class="pg-masa__hora">06:30<\/span><span class="pg-masa__origen pg-masa__origen--modificada">Modificada<\/span><span class="pg-masa__tam">Doble<\/span><span class="pr-chip-choco">Chocolate/.test(sm), sm.slice(0, 700))
+  chk('… y Masa 2 · 07:30 · Original · Simple', /Masa 2<\/span><span class="pg-masa__hora">07:30<\/span><span class="pg-masa__origen">Original<\/span><span class="pg-masa__tam">Simple</.test(sm))
   chk('… el chip de chocolate solo en la masa que lo es', (hd.match(/pr-chip-choco/g) ?? []).length === 1 &&
     hd.indexOf('pr-chip-choco') > hd.indexOf('Masa 1') && hd.indexOf('pr-chip-choco') < hd.indexOf('Masa 2'))
-  chk('… con ingredientes, insumo y lote', /Harina 50,4 kg \(Harina 000 · Jupiter, lote L-100\)/.test(hd))
-  chk('… un "otro" se muestra con el nombre que le pusieron, no como "Ingrediente"', /Esencia de vainilla 0,1 kg/.test(hd) && !/Ingrediente 0,1/.test(hd))
-  chk('… el lote fuera de stock se marca', /lote A-X, lote fuera de stock/.test(hd))
-  chk('… la diferencia contra su receta', /\+200 g Harina/.test(hd))
-  chk('… la anulada, con su motivo', /Anulada:<\/strong> Se volcó/.test(hd))
+  chk('… la anulada, tachada y diciendo "Anulada"', /pr-lista__item pg-masa pg-masa--anulada"><button type="button" class="pg-masa__renglon" data-masa-hist="ma3"[^>]*>[\s\S]*?pg-masa__marca">Anulada</.test(sm))
+  chk('… la lista no lleva la fórmula ni el masero (el recuadro gris se fue)', !/Jupiter|L-100|Esencia|Juan Masero|pg-masa__det|pr-texto-suave/.test(sm))
+  chk('… cada renglón es un botón', (sm.match(/<button type="button" class="pg-masa__renglon"/g) ?? []).length === 3)
+  chk('tocar un renglón lo abre', D.alternarMasaHistorial('ma1') === true && D.estado.masaHistAbierta === 'ma1')
+  const m1 = seccionMasas(D.__doc.getElementById('pr-historial-detalle-cuerpo').innerHTML)
+  chk('… con aria-expanded y aria-controls', /data-masa-hist="ma1" aria-expanded="true" aria-controls="pg-masa-det-ma1">/.test(m1) && /<div class="pg-masa__det" id="pg-masa-det-ma1">/.test(m1))
+  chk('… quién la cargó y cuándo (fecha y hora de Argentina)', /La cargó <strong>Juan Masero<\/strong> · 22\/09\/2026 · 06:30 · Común/.test(m1), m1.slice(m1.indexOf('pg-masa__det'), m1.indexOf('pg-masa__det') + 400))
+  chk('… la diferencia contra su receta', /\+200 g Harina/.test(m1))
+  chk('… cada ingrediente con su marca, la cantidad como salió (×2) y el lote', /pg-mf__nombre">Harina<\/span><span class="pg-mf__cant">50,4 kg<\/span><span class="pg-mf__marca">Jupiter · lote L-100</.test(m1))
+  chk('… un "otro" con el nombre que le pusieron, "escrito a mano"', /Esencia de vainilla<\/span><span class="pg-mf__cant">0,1 kg<\/span><span class="pg-mf__marca">escrito a mano · no lleva lote/.test(m1) && !/>Ingrediente</.test(m1))
+  chk('… lo que no tiene insumo: "no lleva lote"', /Grasa<\/span><span class="pg-mf__cant">4 kg<\/span><span class="pg-mf__marca">no lleva lote/.test(m1))
+  chk('… en el orden de los ingredientes', m1.indexOf('>Harina<') < m1.indexOf('>Grasa<'))
+  chk('… una sola abierta: las demás siguen cerradas', /data-masa-hist="ma2" aria-expanded="false">/.test(m1) && (m1.match(/class="pg-masa__det"/g) ?? []).length === 1)
+  D.alternarMasaHistorial('ma2')
+  const m2 = seccionMasas(D.__doc.getElementById('pr-historial-detalle-cuerpo').innerHTML)
+  chk('tocar otra masa abre esa y cierra la anterior', /data-masa-hist="ma2" aria-expanded="true"/.test(m2) && /data-masa-hist="ma1" aria-expanded="false"/.test(m2))
+  chk('… el lote fuera de stock se marca', /Azúcar<\/span><span class="pg-mf__cant">5 kg<\/span><span class="pg-mf__marca">Azúcar · lote A-X · fuera de stock/.test(m2), m2.slice(m2.indexOf('pg-mf'), m2.indexOf('pg-mf') + 600))
+  D.alternarMasaHistorial('ma3')
+  const m3 = seccionMasas(D.__doc.getElementById('pr-historial-detalle-cuerpo').innerHTML)
+  chk('… la anulada, con su motivo', /Anulada:<\/strong> Se volcó/.test(m3))
+  D.alternarMasaHistorial('ma3')
+  const m4 = seccionMasas(D.__doc.getElementById('pr-historial-detalle-cuerpo').innerHTML)
+  chk('tocarla otra vez la cierra', D.estado.masaHistAbierta === null && !/class="pg-masa__det"/.test(m4) && /data-masa-hist="ma3" aria-expanded="false">/.test(m4))
+  chk('una masa que no está no abre nada', D.alternarMasaHistorial('no-existe') === false && D.estado.masaHistAbierta === null)
+  chk('el renglón se toca desde el listener del detalle', /const mh = ev\.target\.closest\('\[data-masa-hist\]'\); if \(mh\) return alternarMasaHistorial\(mh\.dataset\.masaHist\)/.test(require('fs').readFileSync(ARCHIVO, 'utf8')))
+  D.alternarMasaHistorial('ma1')
+  D.estado.detalleHistorial = { ...D.estado.detalleHistorial, turno: { ...D.estado.detalleHistorial.turno, id: 't-otro' } }
+  await D.abrirDetalleHistorial('t1')
+  chk('abrir otro turno cierra la masa abierta', D.estado.masaHistAbierta === null)
   // htmlParadas() es la MISMA de la planilla (rediseño parte 3): la hora
   // primero, en tabular, y el motivo después.
   chk('… las paradas con su duración', /09:00–09:45<\/strong> · Cambio de molde[\s\S]*45 min/.test(hd), hd.slice(hd.indexOf('Cambio de molde') - 200, hd.indexOf('Cambio de molde') + 80))
@@ -302,8 +331,13 @@ esperas.push((async () => {
     correcciones: [{ produccion_item_id: 'pi', tipo: marca('tipoCorr'), cajas_antes: 1, cajas_despues: 2, motivo: marca('motivoCorr'), hecha_por: 'e', hecha_en: '2026-09-22T14:00:00Z' }],
     presentaciones: [{ id: 'pr', producto_id: 'p', nombre: marca('presentacion'), con_cono: true }], productos: [{ id: 'p', nombre: marca('producto') }], marcas: [{ id: 'mk', nombre: marca('marcaProd') }],
   }
-  chequearMarcas(chk, 'detalle del turno', X.htmlDetalleTurno(dm), ['loteT', 'turnoT', 'persona', 'obs', 'forzado', 'nro', 'tipo', 'motivo', 'loteIns', 'libre',
+  // La masa abierta (lista compacta, 08/10/2026): su detalle también escapa.
+  X.estado.masaHistAbierta = 'm1'
+  chequearMarcas(chk, 'detalle del turno', X.htmlDetalleTurno(dm), ['loteT', 'turnoT', 'persona', 'obs', 'forzado', 'nro', 'tipo', 'loteIns', 'libre',
     'ingrediente', 'insumo', 'marcaIns', 'parada', 'sublote', 'presentacion', 'producto', 'marcaProd', 'tipoCorr', 'motivoCorr'])
+  X.estado.masaHistAbierta = 'm2'
+  chequearMarcas(chk, 'masa anulada abierta', X.htmlDetalleTurno(dm), ['motivo'])
+  X.estado.masaHistAbierta = null
   const hh = X.htmlDetalleTurno(dm)
   chk('las horas se recortan a HH:MM y salen escapadas', hh.includes('&lt;i&gt;x') && hh.includes('&lt;u&gt;y') && !hh.includes('<i>x') && !hh.includes('<u>y'))
   chequearMarcas(chk, 'stock terminado', X.htmlStockTerminado([{ presentacion_id: 'pr', marca_id: 'mk', lote: marca('loteStock'), cajas: 1, unidades: 1 }],

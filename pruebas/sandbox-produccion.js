@@ -84,7 +84,7 @@ const FUNCIONES_BASE = [
   'opcionesEmbolsado', 'consumoPorCaja', 'consumoTotal', 'textoConsumo', 'textoCajaElegida', 'htmlEmbolsado', 'htmlPasoCaja',
   'htmlEmpaqueAgregar', 'soltarCaja', 'elegirCaja', 'elegirEmbolsado', 'seguirConCajas',
   'cargarPermisoStock', 'puedeVerStockEn', 'nombreCajaItem', 'envasePresentacion', 'partesProducido',
-  'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'conoOfrecible', 'conosParaElegir', 'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno',
+  'textoTamanoMasa', 'textoOrigenMasa', 'htmlChipsMasa', 'chipsDeMasa', 'conoOfrecible', 'conosParaElegir', 'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno',
   'leerEmpaqueConfig', 'faltaEmpaque', 'nombreInsumoConfig', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque',
   'sincronizarCantidadesEmpaque', 'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque',
   'cambiarSelectEmpaque', 'cambiarDobleBolsa',
@@ -138,7 +138,7 @@ const FUNCIONES_BASE = [
   'abrirPanelTemporal', 'cerrarPanelTemporal', 'parametrosDarTemporal', 'confirmarTemporal', 'revocarTemporal',
   // B7 + rediseño parte 7: historial de turnos y stock terminado
   'unidadesDeHistorial', 'sumarDias', 'fechaDelDia', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
-  'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
+  'pintarEstadosHistorial', 'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
   'sumarMedido', 'textoEntero', 'leerDetalleTurno', 'totalesConsumidos', 'detalleIncompleto',
   'nombreInsumo', 'nombreIngredienteItem', 'htmlOperariosHistorial', 'htmlMasaHistorial',
   'correccionesDe', 'htmlCorreccion', 'htmlSubloteHistorial', 'totalSublotes',
@@ -163,6 +163,11 @@ const EN_AMBOS = [
   'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'sinCajaDescontada', 'textoSinCaja', 'normalizarHora',
   'horaConPaso', 'redondearKg', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'fechaCorta',
   'sumarDias', 'fechaDelDia', 'mapaDeUnidades', 'personalSinPruebas',
+  // La lista de masas compacta (08/10/2026)
+  'textoOrigenMasa',
+  // Corregir todo un sublote desde la gestión (08/10/2026): las reglas del
+  // empaque y de los conos, con la misma copia que la planta.
+  'conoOfrecible', 'cajasDe', 'cajaInicial', 'embolsadoSugerido', 'conoDobleBolsa', 'opcionesEmbolsado',
 ]
 const SOLO_GESTION = [
   'cerrarMenu', 'alternarMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
@@ -188,7 +193,7 @@ const SOLO_GESTION = [
   'olvidarCampoPin', 'cerrarPanelPin', 'confirmarPinConfig', 'htmlTiraPin', 'mostrarHojaPines', 'cerrarHojaPines',
   'generarPines', 'abrirPanelTemporal', 'cerrarPanelTemporal', 'parametrosDarTemporal', 'confirmarTemporal',
   'revocarTemporal', 'unidadesDeHistorial', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
-  'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
+  'pintarEstadosHistorial', 'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
   'sumarMedido', 'textoEntero', 'leerDetalleTurno', 'totalesConsumidos', 'detalleIncompleto', 'nombreInsumo',
   'nombreIngredienteItem', 'htmlOperariosHistorial', 'htmlMasaHistorial', 'correccionesDe', 'htmlCorreccion',
   'htmlSubloteHistorial', 'totalSublotes', 'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado',
@@ -253,8 +258,23 @@ const NUEVAS_GESTION = [
   // traídos de ci-prueba/planta-horarios el 05/10/2026)
   'leerHorariosConfig', 'horarioGuardado', 'horarioEnPantalla', 'duracionHorario', 'htmlConfigHorarios', 'tocarHorario',
   'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto', 'finDelTurnoMs', 'htmlNotaNoVolvio',
+  // La lista de masas compacta (08/10/2026): el renglón y su detalle.
+  'htmlFormulaMasa', 'alternarMasaHistorial',
+  // Corregir todo un sublote (08/10/2026): corregir_produccion_item_completo
+  'leerCatalogoCorreccion', 'presentacionCorr', 'embolsadoCorreccion', 'datosCorreccionSublote', 'opcion',
+  'htmlCamposCorreccion', 'cargarCatalogoCorreccion', 'cambiarCampoCorreccion',
+  // La tabla de producción (09/10/2026): la pantalla con la que abre la gestión.
+  'esFechaTabla', 'normalizarResumen', 'periodosTarjetasTabla', 'rangoBaseTabla', 'errorPeriodoTabla', 'filtrarResumen',
+  'sumaUnidadesTabla', 'textoDiaTabla', 'textoMesTabla', 'grupoTabla', 'armarTabla', 'promediosTabla', 'cambiarDimensionTabla',
+  'estadoInicialTabla', 'guardarTabla', 'datosDeLaTabla', 'hayFiltrosTabla', 'unidadesTexto', 'rangoCortoTabla',
+  'htmlTarjetasTabla', 'opcionesFiltroTabla', 'htmlOpcionesTabla', 'htmlDimensionesTabla', 'textoDimension', 'celdaTabla',
+  'htmlTablaProduccion', 'htmlPromediosTabla', 'htmlCuerpoTabla', 'pintarTabla', 'leerResumen', 'cargarTabla', 'mostrarTabla',
+  'cambiarUnidadTabla', 'ponerPeriodoTabla', 'elegirPeriodoTabla', 'alCambiarFechasTabla', 'cambiarFiltroTabla',
+  'elegirDimensionTabla', 'vistaDeEntrada',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
+  // La tabla de producción (09/10/2026)
+  'DIMENSIONES_TABLA', 'TURNOS_TABLA', 'MESES_TABLA', 'DIAS_TABLA', 'MAX_DIAS_TABLA', 'CLAVE_TABLA', 'INICIO_GESTION', 'VISTAS_DE_ENTRADA',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
   // El diseño "Producción · Configuración" (29/09/2026)
   'SECCIONES_CONFIG', 'ALIAS_CONFIG', 'CON_LISTA', 'ICONO_BUSCAR', 'ICONO_MAS', 'ICONO_CAJA', 'ICONO_CHEVRON', 'ICONO_ALERTA',
@@ -304,6 +324,7 @@ const RETIRADAS = [
   'NOMBRE_LIMPIEZA', 'DURACIONES_PARADA', 'ALTO_RUEDA', 'MINUTOS_LIMPIEZA']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
+  'operarioAdentro',
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
   'elegirMaestro', 'personasParaAcceso', 'detallePersonaAcceso', 'htmlPersonaAcceso', 'htmlNotaAcceso',
   'sinAcceso', 'leerMiSesion', 'destinoDeSesion',
@@ -334,7 +355,7 @@ const NUEVAS_PLANTA = [
   'cargarMasasReceta', 'ultimaMasaAnulable', 'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima',
   'pintarMasasReceta', 'pedirAnularUltima', 'cancelarAnularUltima', 'confirmarAnularUltima',
   // Tirar una masa (30/09/2026): se hizo y se tiró, el stock no vuelve.
-  'esTirada', 'htmlTirada', 'anteriorFueTirada', 'repintarOpcionesReceta', 'htmlTirarUltima',
+  'esTirada', 'anteriorFueTirada', 'repintarOpcionesReceta', 'htmlTirarUltima',
   'pedirTirarUltima', 'cancelarTirarUltima', 'confirmarTirarUltima',
   'opcionesOtroInsumo', 'htmlPanelOtroInsumo', 'elegirInsumoOtro',
   // Parte 0 (28/09/2026): escribir un lote en la ventana, desde cualquier estado.
@@ -342,6 +363,9 @@ const NUEVAS_PLANTA = [
   // 4h · El historial de una máquina.
   'cargarDetalleHist', 'htmlMasaHist', 'htmlIngredientesHist', 'htmlAnularHist', 'htmlDetalleHist', 'pintarHistMaq',
   'elegirMasaHist', 'pedirAnularHist', 'cancelarAnularHist', 'confirmarAnularHist', 'nuevaMasaDesdeHist',
+  // La lista de masas compacta (08/10/2026): el renglón y la ventana del detalle.
+  'htmlOrigenMasa', 'htmlMarcaMasa', 'htmlRenglonMasa', 'cuandoMasa', 'quienMasa', 'leerDetalleMasa', 'htmlCuerpoMasa',
+  'buscarMasaVista', 'abrirVerMasa', 'pintarVerMasa', 'cerrarVerMasa', 'teclaVerMasa',
   // Producción con dos modos: el inicio y lo que falta para cerrar.
   'textoCajasTablero', 'htmlFaltaCierre',
   // Arreglos en la tablet real (28/09/2026): el personal se asegura en cada camino.
@@ -507,6 +531,7 @@ const PRELUDIO = `
   var relojBotonRegistrada = null
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
+  var turnoTabla = 0
   var turnoIndicadores = 0
   var turnoMaquinas = 0
   var esperaAnchoMaquinas = null

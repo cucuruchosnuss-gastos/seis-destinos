@@ -20,8 +20,9 @@ correrMutaciones({
       de: '        .filter(f => pasaFiltroUnidad(f.unidad_negocio_id, estado.unidadBarra))\n        .filter(f => coincideStock',
       a: '        .filter(f => true)\n        .filter(f => coincideStock' },
     { nombre: '"Todas" no agrupa por insumo',
-      de: '      const filas = conUnidades ? agruparStockPorInsumo(visibles) : visibles',
-      a: '      const filas = visibles' },
+      // (09/10/2026: puesto al día con el código, que ahora la llama `todas`.)
+      de: '      const todas = conUnidades ? agruparStockPorInsumo(visibles) : visibles',
+      a: '      const todas = visibles' },
     { nombre: 'la suma de "Todas" se queda con la primera unidad',
       de: '          cantidad_total: deEse.reduce((s, f) => s + Number(f.cantidad_total), 0),',
       a: '          cantidad_total: Number(deEse[0].cantidad_total),' },
@@ -40,8 +41,10 @@ correrMutaciones({
       de: "        pintarAvisoUnidad('stock-aviso-unidad', textoSinPermiso('ver el stock'))\n        return",
       a: "        return" },
     { nombre: 'sin permiso de ver: se lista igual',
-      de: "      if (sinPermisoEnBarra(estado.unidadesStock)) {\n        listaEl.innerHTML = ''\n        vacioEl.hidden = true\n        pintarAvisoUnidad('stock-aviso-unidad'",
-      a: "      if (false) {\n        listaEl.innerHTML = ''\n        vacioEl.hidden = true\n        pintarAvisoUnidad('stock-aviso-unidad'" },
+      // (09/10/2026: el ancla no existía desde que se sumó pintarAvisoCobertura;
+      // se puso al día con el código, misma mutación.)
+      de: "      if (sinPermisoEnBarra(estado.unidadesStock)) {\n        listaEl.innerHTML = ''\n        vacioEl.hidden = true\n        pintarAvisoCobertura([])",
+      a: "      if (false) {\n        listaEl.innerHTML = ''\n        vacioEl.hidden = true\n        pintarAvisoCobertura([])" },
     { nombre: 'el vacío de una unidad sin stock dice "el libro está en cero"',
       de: "            ? `Todavía no hay stock en ${nombreDeUnidadBarra(estado.unidadBarra)}.`",
       a: "            ? 'Todavía no hay movimientos de stock.'" },

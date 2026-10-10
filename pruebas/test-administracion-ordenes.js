@@ -52,8 +52,14 @@ const PRECIO_VENTA = {
   'pr1|': { precio_unitario: 30, precio_caja: 3000, unidades_por_caja: 100, producto_unitario: 30, conito_unitario: 0, papel_conito: null, lista: 'Heladerías', recargo_pct: 0, sin_precio: false },
   'pr2|m1': { precio_unitario: 40, precio_caja: 4000, unidades_por_caja: 100, producto_unitario: 30, conito_unitario: 10, papel_conito: 'comun', lista: 'Heladerías', recargo_pct: 0, sin_precio: false },
 }
-function rpcPrecioVenta(tabla = RESP_PV, llamadas = []) {
+// El precio de los INSUMOS al valorizar lo calcula la base con
+// precios_insumos_lista(p_lista_id, p_fecha = fecha del retiro) (09/10/2026):
+// el doble devuelve INSUMOS_LISTA y anota cada llamada en LLAMADAS_INS.
+const INSUMOS_LISTA = [{ insumo_id: 'ins-h', insumo: 'Harina 000', unidad_medida: 'kg', precio_unitario: '100', tipo: 'fijo', recargo_costo_pct: null, vigente_desde: '2026-09-01', sin_costo: false }]
+const LLAMADAS_INS = []
+function rpcPrecioVenta(tabla = RESP_PV, llamadas = [], insumos = INSUMOS_LISTA) {
   return async (n, p) => {
+    if (n === 'precios_insumos_lista') { LLAMADAS_INS.push(p); return { data: insumos, error: null } }
     if (n !== 'precio_venta') return { data: null, error: null }
     llamadas.push(p)
     const r = tabla[p.p_presentacion_id + '|' + (p.p_marca_id ?? '')]
@@ -227,12 +233,18 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
 
 // ── Valorizar con la lista del cliente ──────────────────────────────────────
 {
+  // El precio de un insumo, como lo devuelve precios_insumos_lista (09/10/2026).
   const S = nuevo()
-  chk('los precios vigentes a la fecha del retiro: el más nuevo que no sea posterior', (() => {
-    const m = S.preciosVigentes(LISTA, '2026-09-20')
-    return m.get('pr1') === 3000 && m.get('pr2') === 4000
-  })())
-  chk('un precio que empieza después del retiro no vale', S.preciosVigentes(LISTA, '2026-09-10').get('pr1') === 2500)
+  const m = S.preciosInsumosDeLista([
+    { insumo_id: 'a', precio_unitario: '100', tipo: 'fijo', recargo_costo_pct: null, sin_costo: false },
+    { insumo_id: 'b', precio_unitario: '1150', tipo: 'costo_mas_pct', recargo_costo_pct: '15', sin_costo: false },
+    { insumo_id: 'c', precio_unitario: '57.5', tipo: 'costo_mas_pct', recargo_costo_pct: null, sin_costo: false },
+    { insumo_id: 'd', precio_unitario: null, tipo: 'costo_mas_pct', recargo_costo_pct: '20', sin_costo: true },
+  ])
+  chk('un precio fijo: su precio y sin origen', m.get('ins:a').precio === 100 && m.get('ins:a').origen === null)
+  chk('costo + %: el precio de la base y lo dice', m.get('ins:b').precio === 1150 && m.get('ins:b').origen.texto === 'Costo + 15 % (lista)' && !m.get('ins:b').origen.grave)
+  chk('costo + % sin ver costos: "sobre el costo"', m.get('ins:c').precio === 57.5 && m.get('ins:c').origen.texto === 'Sobre el costo (lista)')
+  chk('sin costo: sin precio (nunca 0) y en bordó', m.get('ins:d').precio === null && m.get('ins:d').origen.grave === true && /falta cargar el costo/.test(m.get('ins:d').origen.texto))
 }
 {
   const S = nuevo()
@@ -314,7 +326,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     const p1 = llamadas.find(p => p.p_presentacion_id === 'pr1')
     const p2 = llamadas.find(p => p.p_presentacion_id === 'pr2')
     chk('con la lista del cliente, la fecha del retiro y el cono del renglón', p1 && p1.p_lista_id === 'l1' && p1.p_fecha === '2026-09-20' && p1.p_marca_id === null && p2 && p2.p_marca_id === 'm1')
-    chk('no lee lista_precios_items si no hay insumos', !S.__llamadas.consultas.some(c => c[0] === 'lista_precios_items'))
+    chk('no pide el precio de insumos si no hay insumos', !S.__llamadas.rpc.some(r => r[0] === 'precios_insumos_lista') && !S.__llamadas.consultas.some(c => c[0] === 'lista_precios_items'))
     const h = S.__els.get('ad-orden-cuerpo').innerHTML
     chk('con cono dice de dónde sale: unidad + conito', /lista Heladerías · \$ 30,00 por unidad \+ conito \$ 10,00/.test(h), h)
     chk('sin cono, solo la unidad', v.origen.i1.texto === 'lista Heladerías · $ 30,00 por unidad' && !v.origen.i1.grave)
@@ -400,6 +412,23 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
     const v = S.estado.orden.valorizar
     chk('un insumo no llama a precio_venta y sale de la lista', llamadas.length === 0 && v.precios.i3 === 100 && v.desdeLista.has('i3') && !v.origen.i3)
+    const pi = S.__llamadas.rpc.filter(r => r[0] === 'precios_insumos_lista')
+    chk('el precio del insumo lo calcula la base con la fecha del retiro', pi.length === 1 && pi[0][1].p_lista_id === 'l1' && pi[0][1].p_fecha === '2026-09-20', JSON.stringify(pi))
+  }))
+}
+{
+  // Insumo a costo + % (09/10/2026): el precio que calculó la base; sin costo, sin precio y en bordó.
+  const ITEM = (id, ins) => ({ id, orden: 1, presentacion_id: null, marca_id: null, cajas: null, unidades: null, insumo_id: ins, cantidad: 2, precio_caja: null, subtotal: null, lote: null })
+  const S = nuevo()
+  preparar(S, { items: [ITEM('i3', 'ins-h'), ITEM('i4', 'ins-z')] })
+  S.__setRpc(rpcPrecioVenta(RESP_PV, [], [
+    { insumo_id: 'ins-h', insumo: 'Harina 000', unidad_medida: 'kg', precio_unitario: '1150', tipo: 'costo_mas_pct', recargo_costo_pct: '15', vigente_desde: '2026-09-01', sin_costo: false },
+    { insumo_id: 'ins-z', insumo: 'Azúcar', unidad_medida: 'kg', precio_unitario: null, tipo: 'costo_mas_pct', recargo_costo_pct: '20', vigente_desde: '2026-09-01', sin_costo: true },
+  ]))
+  esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+    const v = S.estado.orden.valorizar
+    chk('costo + %: propone el precio de la base', v.precios.i3 === 1150 && v.desdeLista.has('i3') && v.origen.i3.texto === 'Costo + 15 % (lista)')
+    chk('sin costo: no propone nada (nunca 0) y lo dice en bordó', v.precios.i4 === null && !v.desdeLista.has('i4') && v.origen.i4.grave === true)
   }))
 }
 {
@@ -518,7 +547,7 @@ const LISTA_INS = [...LISTA, { presentacion_id: null, insumo_id: 'ins-h', precio
     const v = S.estado.orden.valorizar
     const selDe = (tabla) => ((S.__llamadas.consultas.find(c => c[0] === tabla) || [null, []])[1].find(f => f[0] === 'select') || [null, ''])[1]
     chk('los renglones se leen con el insumo y su cantidad (se afirma sobre el select)', /insumo_id/.test(selDe('orden_retiro_items')) && /cantidad/.test(selDe('orden_retiro_items')))
-    chk('los precios de la lista se leen con el insumo', /insumo_id/.test(selDe('lista_precios_items')))
+    chk('los precios de los insumos los calcula la base (precios_insumos_lista), no la pantalla', S.__llamadas.rpc.some(r => r[0] === 'precios_insumos_lista') && !S.__llamadas.consultas.some(c => c[0] === 'lista_precios_items'))
     chk('valorizar trae el precio del insumo de la lista del cliente', v.precios.i3 === 100 && v.desdeLista.has('i3'))
     chk('el subtotal del insumo es precio por CANTIDAD', S.subtotalValorizar(S.estado.orden, ITEMS_INS[1]) === 2550)
     chk('el total suma cajas y cantidad', S.totalValorizar(S.estado.orden) === 30000 + 2550)
@@ -542,7 +571,6 @@ const LISTA_INS = [...LISTA, { presentacion_id: null, insumo_id: 'ins-h', precio
 {
   const S = nuevo()
   chk('la cantidad valorizable: cajas o cantidad del insumo', S.cantidadValorizable(ITEMS[0]) === 10 && S.cantidadValorizable(ITEMS_INS[1]) === 25.5)
-  chk('el precio vigente de un insumo por su clave', S.preciosVigentes(LISTA_INS, '2026-09-20').get('ins:ins-h') === 100)
   const S2 = nuevo()
   S2.estado.catalogo = { ...CAT, insumos: [{ id: 'ins-x', nombre: marca('ins-nombre'), marca: marca('ins-marca'), unidad_medida: marca('ins-unidad') }] }
   S2.estado.clientes = CLIENTES
