@@ -844,6 +844,7 @@
     .pr-fp__cono { min-width: 0; }
     .pr-cono-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.25; }
     .pr-fp__sin { font-size: 13.5px; color: var(--p-suave); }
+    .pr-fp__falta-cono { font-size: 13.5px; font-weight: 700; color: var(--p-mal-txt); }
     .pr-fp__caja { font-size: 13.5px; color: var(--p-tinta-2); line-height: 1.25; min-width: 0; }
     .pr-fp__cajas { text-align: right; font-family: var(--p-titulo); font-size: 19px; font-weight: 800; }
     .pr-fp__uni { text-align: right; font-size: 14px; color: var(--p-gris); }
@@ -1079,6 +1080,9 @@
     /* Parada, cada paso ocupa lo que pide su texto ("PRESENTACIÓN" es más
        ancho que "CONO"): con cuatro partes iguales se salía de su recuadro. */
     .pr-paso--actual { background: var(--p-acento-suave); border-color: var(--p-acento); }
+    /* El paso del cono que falta (con cono y sin cono elegido): se toca para volver. */
+    button.pr-paso--falta { cursor: pointer; border-color: var(--p-mal); }
+    button.pr-paso--falta .pr-paso__v { color: var(--p-mal-txt); }
     .pr-paso__n { width: 30px; height: 30px; border-radius: 999px; background: #fff; color: var(--p-suave); border: 2px solid var(--p-linea); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; }
     .pr-paso--hecho .pr-paso__n { background: var(--p-tinta); border-color: var(--p-tinta); color: #fff; }
     .pr-paso--actual .pr-paso__n { background: var(--p-acento); border-color: var(--p-acento); color: #fff; }
@@ -6566,11 +6570,26 @@
       return {
         producto,
         presentacion: pr.nombre,
-        marca: marcaNombre ?? 'Común',
+        marca: marcaNombre ?? (pr.con_cono ? TEXTO_FALTA_CONO : 'Sin cono'),
         unidadesPorCaja,
         unidades: item.cajas * unidadesPorCaja,
         pr, conConoEnProducto, marcaNombre,
       }
+    }
+
+    // UN SOLO "SIN CONO" (10/10/2026, pedido de Facu). Una presentación CON
+    // cono lleva SIEMPRE un cono con nombre: ya no existe el "Común" (marca
+    // null) adentro de "Caja con cono", que era lo mismo que "Caja sin cono"
+    // y quedaba separado en el stock. Si es común, se elige la presentación
+    // SIN cono. Un renglón viejo con cono y sin marca (los datos viejos los
+    // pasa Facu a "sin cono") dice "Falta el cono", en bordó: nunca "Común".
+    const TEXTO_FALTA_CONO = 'Falta el cono'
+    const TEXTO_ELEGI_CONO = 'Elegí el cono: con cono tiene que tener un cono con nombre. Si es común, elegí «Sin cono».'
+
+    // ¿Falta elegir el cono? Solo con una presentación CON cono y sin marca.
+    function faltaConoAgregar(a, cat = estado.catalogo) {
+      const pr = (cat?.presentaciones ?? []).find(x => x.id === a?.presentacionId)
+      return !!pr?.con_cono && !a?.marcaId
     }
 
     // Los sublotes que cuentan: un anulado se sigue viendo, pero no suma.
@@ -6609,7 +6628,8 @@
     //   producto · con cono / sin cono · cono · caja ×N · caja de empaque · embolsado
     //
     //  - "con cono" si la presentación es con cono, y ahí el CONO: su marca, o
-    //    "Común" si no tiene. Sin cono, el cono no se nombra.
+    //    "falta el cono" si no tiene (un dato viejo: desde el 10/10/2026 con
+    //    cono el cono es obligatorio). Sin cono, el cono no se nombra.
     //  - "sin cono" SOLO si ese producto tiene alguna presentación con cono: en
     //    un Vaso o una Oblea no hay nada que distinguir y sería ruido.
     //  - El envase sale del nombre de la presentación SIN el "con cono" / "sin
@@ -6639,7 +6659,7 @@
       }
       if (pr?.con_cono) {
         sumar('con cono')
-        sumar(marcaNombre ?? 'Común')
+        sumar(marcaNombre ?? TEXTO_FALTA_CONO.toLocaleLowerCase('es'))
       } else if (conConoEnProducto) {
         sumar('sin cono')
       }
@@ -6688,7 +6708,7 @@
         ? htmlNombreProducto(prod, d.producto)
         : `<span class="pr-prod-nombre">${cat ? 'Un producto que ya no está en el catálogo' : 'Producto'}</span>`
       const cono = !d ? ''
-        : (d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común', it.marca_id) : (d.conConoEnProducto ? '<span class="pr-fp__sin">sin cono</span>' : ''))
+        : (d.pr?.con_cono ? (d.marcaNombre ? htmlChipCono(d.marcaNombre, it.marca_id) : `<span class="pr-fp__falta-cono">${esc(TEXTO_FALTA_CONO)}</span>`) : (d.conConoEnProducto ? '<span class="pr-fp__sin">sin cono</span>' : ''))
       // "Caja y bolsa": la caja de empaque (o el envase de la presentación) y
       // el embolsado en palabras.
       const envase = caja || (d ? envasePresentacion(d.pr, d.producto) : '')
@@ -8071,8 +8091,8 @@
       const antes = { presentacion_id: it.presentacion_id, marca_id: it.marca_id ?? null,
         caja_insumo_id: it.caja_insumo_id ?? null, embolsado: it.embolsado ?? null, cajas: it.cajas }
       estado.agregar = {
-        paso: pr ? 'cajas' : 'producto', productoId: pr?.producto_id ?? '', conCono: pr ? !!pr.con_cono : null,
-        presentacionId: pr ? it.presentacion_id : '', marcaId: it.marca_id ?? null, marcaElegida: !!pr,
+        paso: !pr ? 'producto' : (pr.con_cono && !it.marca_id ? 'cono' : 'cajas'), productoId: pr?.producto_id ?? '', conCono: pr ? !!pr.con_cono : null,
+        presentacionId: pr ? it.presentacion_id : '', marcaId: it.marca_id ?? null, marcaElegida: !!pr && (!pr.con_cono || !!it.marca_id),
         busqueda: '', cajas: it.cajas, guardando: false,
         cajaId: it.caja_insumo_id ?? null, cajaElegida: !!pr, embolsado: it.embolsado ?? null, faltaCaja: false, stock: null,
         corrige: { id: it.id, sublote: it.sublote, antes }, motivo: '',
@@ -8552,7 +8572,7 @@
       const prod = (cat?.productos ?? []).find(p => p.id === a.productoId)
       const pres = (cat?.presentaciones ?? []).find(pr => pr.id === a.presentacionId)
       const marca = a.marcaId ? [...(cat?.marcas ?? []), ...(estado.planilla?.marcasItems ?? [])].find(m => m.id === a.marcaId) : null
-      const conoTexto = !a.marcaElegida ? '' : (a.conCono ? (marca ? marca.nombre : 'Común') : 'Sin cono')
+      const conoTexto = !a.marcaElegida ? '' : (a.conCono ? (marca ? marca.nombre : (a.marcaId ? 'Cono que ya no está' : '')) : 'Sin cono')
       const presTexto = pres ? `${mayusculaInicial(envasePresentacion(pres, prod?.nombre ?? ''))} · ${formatearNumeroAr(pres.unidades_por_caja, { decimales: 0 })}` : ''
       const pasos = [
         { clave: 'producto', titulo: 'Producto', valor: prod ? prod.nombre : '' },
@@ -8565,7 +8585,12 @@
         pasos.push({ clave: 'caja', titulo: 'Caja', valor: a.presentacionId && a.cajaElegida ? textoCajaElegida(a, cat) : '' })
       }
       pasos.push({ clave: 'cajas', titulo: 'Cajas', valor: a.cajas ? `${formatearNumeroAr(a.cajas, { decimales: 0 })} ${a.cajas === 1 ? 'caja' : 'cajas'}` : '' })
-      return pasos.map((x, i) => ({ ...x, n: i + 1, estado: x.clave === a.paso ? 'actual' : (x.valor ? 'hecho' : 'falta') }))
+      // Con cono y sin cono elegido, pero con la presentación ya puesta (corregir
+      // un sublote viejo, 10/10/2026): el paso del cono falta, y se puede TOCAR
+      // para volver a él aunque se esté en las cajas.
+      const conoPendiente = !!a.presentacionId && faltaConoAgregar(a, cat)
+      return pasos.map((x, i) => ({ ...x, n: i + 1, estado: x.clave === a.paso ? 'actual' : (x.valor ? 'hecho' : 'falta'),
+        tocable: x.clave === 'cono' && conoPendiente && x.clave !== a.paso }))
     }
 
     function mayusculaInicial(t) {
@@ -8579,10 +8604,11 @@
     function htmlPasosAgregar(pasos) {
       return pasos.map(x => {
         const n = x.estado === 'hecho' ? '&#10003;' : esc(x.n)
-        const valor = x.estado === 'actual' ? 'elegí abajo' : (x.estado === 'hecho' ? x.valor : '—')
+        const valor = x.estado === 'actual' ? 'elegí abajo' : (x.estado === 'hecho' ? x.valor : (x.tocable ? 'falta elegir' : '—'))
         const cuerpo = `<span class="pr-paso__n">${n}</span><span class="pr-paso__t"><span class="pr-paso__l">${esc(x.titulo.toLocaleUpperCase('es'))}</span>` +
           `<span class="pr-paso__v">${esc(valor)}</span></span>`
         if (x.estado === 'hecho') return `<button type="button" class="pr-paso pr-paso--hecho" data-paso-ag="${esc(x.clave)}">${cuerpo}</button>`
+        if (x.tocable) return `<button type="button" class="pr-paso pr-paso--falta" data-paso-ag="${esc(x.clave)}">${cuerpo}</button>`
         return `<div class="pr-paso pr-paso--${x.estado}"${x.estado === 'actual' ? ' aria-current="step"' : ''}>${cuerpo}</div>`
       }).join('')
     }
@@ -8831,16 +8857,14 @@
       return uso
     }
 
-    // La lista de conos. "Común" va primera y es un caso real —un cono sin
-    // marca de cliente—, no un placeholder. Un cono propuesto desde la tablet
-    // se puede usar IGUAL: lo dice el chip, no se esconde.
+    // La lista de conos. Desde el 10/10/2026 NO hay "Común": con cono se
+    // elige un cono con nombre (o se propone uno nuevo); un cono común es la
+    // presentación SIN cono (el botón "Sin cono" de arriba). Un cono propuesto
+    // desde la tablet se puede usar IGUAL: lo dice el chip, no se esconde.
     function htmlMarcas(marcas, texto, a, anterior) {
       const elegida = a?.marcaId ?? null
       const conCono = a?.conCono === true && a?.marcaElegida
       const lista = conosParaElegir(marcas, texto)
-      const comun = !texto || normalizarBusqueda('común').includes(normalizarBusqueda(texto))
-        ? `<button type="button" class="pr-cono pr-cono--comun" data-marca="" aria-pressed="${conCono && !elegida ? 'true' : 'false'}">Común<span class="pr-cono__nota">con cono, sin marca</span></button>`
-        : ''
       const botones = lista.map(m => {
         const col = colorCono(m.id)
         const notas = (anterior && anterior.marcaId === m.id ? `<span class="pr-cono__nota">el de ${esc(anterior.sublote)}</span>` : '') +
@@ -8849,7 +8873,7 @@
           `<span>${htmlResaltado(m.nombre, texto)}</span>${notas}</button>`
       }).join('')
       const nada = texto && !lista.length ? `<span class="pr-op__nada">Ningún cono coincide con "${esc(texto)}". Si es nuevo, agregalo acá abajo.</span>` : ''
-      return comun + botones + nada
+      return botones + nada
     }
 
     function abrirAgregar() {
@@ -8950,7 +8974,7 @@
 
     function elegirCono(id) {
       const a = estado.agregar
-      if (!a) return
+      if (!a || !id) return
       if (a.conCono !== true) { a.presentacionId = ''; soltarCaja(a) }
       a.conCono = true
       a.marcaId = id || null
@@ -9158,6 +9182,7 @@
       const err = document.getElementById('pr-agregar-error')
       err.hidden = true
       if (!a.presentacionId) { err.textContent = 'Elegí el producto y la presentación.'; err.hidden = false; return }
+      if (faltaConoAgregar(a)) { err.textContent = TEXTO_ELEGI_CONO; err.hidden = false; return }
       if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }
       if (!Number.isInteger(a.cajas) || a.cajas <= 0) { err.textContent = 'Poné cuántas cajas (un número entero mayor a cero).'; err.hidden = false; return }
       if (a.corrige) return confirmarCorregirCompleto(a, err)

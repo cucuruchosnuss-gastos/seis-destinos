@@ -65,7 +65,7 @@ esperas.push((async () => {
   const h = retiros(S)
   chk('hay una sección "Lo que salió por retiros"', /<h2 class="pr-subtitulo">Lo que salió por retiros<\/h2>/.test(h))
   chk('la salida dice el CÓDIGO de la orden', /Retiro N-0001/.test(h))
-  chk('… con el producto, la presentación y el cono', /Cucuruchón Mini · Caja con cono · Común/.test(h) && /Cucuruchón Mini · Caja con cono · GRIDO/.test(h))
+  chk('… con el producto, la presentación y el cono', /Cucuruchón Mini · Caja con cono</.test(h) && !/· Común/.test(h) && /Cucuruchón Mini · Caja con cono · GRIDO/.test(h))
   chk('… el sublote', /7033-1/.test(h) && /SIN STOCK/.test(h))
   chk('… y las cajas que salieron, sin signo raro', /salieron 5 cajas/.test(h))
   chk('la orden anulada lo dice en su salida', /Retiro N-0002 · anulado/.test(h))

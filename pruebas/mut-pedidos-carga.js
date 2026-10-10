@@ -32,8 +32,8 @@ correrMutaciones({
     // El cono
     { nombre: 'el buscador de conos aparece sin cono', de: '      if (!r.conCono) return seg\n', a: '' },
     { nombre: 'volver a sin cono no olvida el cono', de: "      if (!conCono) { r.marcaId = null; r.marcaBusqueda = '' }\n", a: '' },
-    { nombre: 'se elige cono estando sin cono', de: '      if (!r || !r.conCono) return\n      if (id && !(estado.catalogo?.marcas', a: '      if (!r) return\n      if (id && !(estado.catalogo?.marcas' },
-    { nombre: 'un cono inexistente se elige', de: "      if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return\n", a: '' },
+    { nombre: 'se elige cono estando sin cono', de: '      if (!r || !r.conCono || !id) return\n      if (!(estado.catalogo?.marcas', a: '      if (!r || !id) return\n      if (!(estado.catalogo?.marcas' },
+    { nombre: 'un cono inexistente se elige', de: "      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return\n      r.marcaId = id\n", a: "      r.marcaId = id\n" },
     { nombre: 'el buscador de conos no filtra', de: '      if (!q) return lista\n      return lista.filter(m => normalizar(m.nombre).includes(q))', a: '      return lista' },
     // El chocolate
     { nombre: 'el chocolate va primero', de: "      return `<div class=\"pe-opciones\" role=\"group\" aria-label=\"Producto\">${comunes.map(boton).join('')}${choco}</div>`", a: "      return `<div class=\"pe-opciones\" role=\"group\" aria-label=\"Producto\">${choco}${comunes.map(boton).join('')}</div>`" },
@@ -85,5 +85,10 @@ correrMutaciones({
     // Números
     { nombre: 'un dato ausente sale como 0', de: "      if (n === null || n === undefined || n === '') return '—'", a: "      if (n === null || n === undefined || n === '') return '0'" },
     { nombre: 'las cajas se enlazan sin decimales', de: '    const DECIMALES_CAJAS = 2', a: '    const DECIMALES_CAJAS = 0' },
+    // Un solo "sin cono" (10/10/2026)
+    { nombre: 'con cono y sin cono elegido, el renglón está completo', de: "      if (r.conCono && !r.marcaId) return 'elegí el cono (si es común, elegí «Sin cono»)'\n", a: '' },
+    { nombre: 'vuelve el botón "Cono común"', de: "      return `${botones}${vacio}`", a: "      return `<button type=\"button\" class=\"pe-opcion\" data-r-marca=\"${i}\" data-id=\"\" aria-pressed=\"true\">Cono común</button>${botones}${vacio}`" },
+    { nombre: 'un cono sin id se elige', de: "      if (!r || !r.conCono || !id) return\n      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return\n      r.marcaId = id", a: "      if (!r || !r.conCono) return\n      if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return\n      r.marcaId = id || null" },
+    { nombre: 'con cono y sin marca vuelve a ser "cono común"', de: ": 'falta el cono'))", a: ": 'cono común'))" },
   ],
 })

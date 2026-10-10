@@ -103,7 +103,7 @@ correrMutaciones({
     { nombre: 'el detalle no muestra los operarios', de: '`<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}</section>`', a: '`<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2></section>`' },
 
     // ── El stock terminado ──────────────────────────────────────────────
-    { nombre: 'sin marca no dice Común', de: "        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'", a: "        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : ''" },
+    { nombre: 'sin marca vuelve a decir Común', de: "        const marcaNombre = nombreConoStock(pr, f.marca_id, cat.marcas)", a: "        const marcaNombre = f.marca_id ? nombreConoStock(pr, f.marca_id, cat.marcas) : 'Común'" },
     { nombre: 'stock: un sublote en cero se lista', de: '      return [...mapa.values()].filter(x => x.cajas !== 0 || x.unidades !== 0)', a: '      return [...mapa.values()]' },
     { nombre: 'stock: suma sin medir y un ilegible cuenta cero', de: '        act.cajas = sumarMedido(act.cajas, m.cajas)\n        act.unidades = sumarMedido(act.unidades, m.unidades)', a: '        act.cajas += Number(m.cajas) || 0\n        act.unidades += Number(m.unidades) || 0' },
     { nombre: 'stock: el total del grupo suma sin medir', de: '        g.cajas = sumarMedido(g.cajas, f.cajas); g.unidades = sumarMedido(g.unidades, f.unidades); g.sublotes.push(f)', a: '        g.cajas += Number(f.cajas) || 0; g.unidades += Number(f.unidades) || 0; g.sublotes.push(f)' },

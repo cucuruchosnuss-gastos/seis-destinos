@@ -130,5 +130,10 @@ correrMutaciones({
     // El celular (diseño 2026)
     { nombre: 'el encabezado de columnas se ve en el celular', de: '    .rt-orden-cab { display: none; }\n', a: '' },
     { nombre: 'el pie del celular se esconde', de: '    .rt-pie-orden { display: contents; }\n', a: '    .rt-pie-orden { display: none; }\n' },
+    // Un solo "sin cono" (10/10/2026)
+    { nombre: 'con cono y sin cono elegido, el renglón está completo', de: "      if (r.conCono && !r.marcaId) return 'elegí el cono (si es común, elegí «Sin cono»)'\n", a: '' },
+    { nombre: 'vuelve el botón "Cono común"', de: "      return `${botones}${vacio}`", a: "      return `<button type=\"button\" class=\"rt-opcion\" data-r-marca=\"${i}\" data-id=\"\">Cono común</button>${botones}${vacio}`" },
+    { nombre: 'un cono sin id se elige', de: "      if (!r || !r.conCono || !id) return\n      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return", a: "      if (!r || !r.conCono) return\n      if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return" },
+    { nombre: 'con cono y sin marca vuelve a ser "Común"', de: "      if (!marcaId) return TEXTO_FALTA_CONO", a: "      if (!marcaId) return 'Común'" },
   ],
 })

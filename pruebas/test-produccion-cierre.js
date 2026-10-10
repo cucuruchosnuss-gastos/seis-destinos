@@ -395,7 +395,7 @@ esperas.push((async () => {
   })())
 
   const conos = html(S, 'pr-agregar-marcas')
-  chk('conos: "Común" primero, y es una opción de verdad', conos.indexOf('data-marca=""') === conos.indexOf('data-marca'))
+  chk('conos: ya no hay "Común" (con cono y sin marca): todos tienen su id', !/data-marca=""/.test(conos) && !/>Común</.test(conos) && /data-marca="mk-grido"/.test(conos))
   chk('… el del sublote anterior se dice', /el de 7023-1/.test(conos), conos)
   chk('conoAnterior toma el último sublote VIVO con cono', (() => {
     const c = S.conoAnterior([
@@ -520,8 +520,9 @@ esperas.push((async () => {
   Z.abrirAgregar()
   Z.elegirProductoAgregar('p-mini')
   Z.elegirCono('')
+  chk('un cono sin id no es elegir un cono', Z.estado.agregar.marcaElegida === false && Z.estado.agregar.marcaId === null)
+  Z.elegirCono('mk-grido')
   Z.elegirPresentacionAgregar('pr-mini-600')
-  chk('"Común" también es elegir un cono', Z.estado.agregar.marcaElegida === true && Z.estado.agregar.marcaId === null)
   await Z.confirmarAgregar()
   chk('sin cajas no se manda nada', rpcs(Z, 'registrar_produccion_item').length === 0 &&
     Z.__doc.getElementById('pr-agregar-error').hidden === false)

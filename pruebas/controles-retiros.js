@@ -59,6 +59,10 @@ const RETIRADOS = [
 // clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
 // la declaración sobra y se dice.
 const MENOS_COPIAS = [
+  ['control:button[data-id][data-r-marca][type=button]', 1,
+    'Un solo "sin cono" (10/10/2026, pedido de Facu): el buscador de conos del renglón ya no tiene el botón ' +
+    '"Cono común" (data-id="", con cono y sin marca), que era lo mismo que la presentación SIN cono y quedaba separado en el ' +
+    'stock. Queda el botón de cada cono con nombre (data-r-marca con su id), y lo común es el segmento "Sin cono".'],
 ]
 
 let ok = 0

@@ -3306,7 +3306,8 @@
     //   producto · con cono / sin cono · cono · caja ×N · caja de empaque · embolsado
     //
     //  - "con cono" si la presentación es con cono, y ahí el CONO: su marca, o
-    //    "Común" si no tiene. Sin cono, el cono no se nombra.
+    //    "falta el cono" si no tiene (un dato viejo: desde el 10/10/2026 con
+    //    cono el cono es obligatorio). Sin cono, el cono no se nombra.
     //  - "sin cono" SOLO si ese producto tiene alguna presentación con cono: en
     //    un Vaso o una Oblea no hay nada que distinguir y sería ruido.
     //  - El envase sale del nombre de la presentación SIN el "con cono" / "sin
@@ -3325,6 +3326,21 @@
       return t.charAt(0).toLocaleLowerCase('es') + t.slice(1)
     }
 
+    // UN SOLO "SIN CONO" (10/10/2026, pedido de Facu): una presentación CON
+    // cono lleva SIEMPRE un cono con nombre; el "Común" (marca null) adentro
+    // de "Caja con cono" ya no existe (si es común, es la presentación SIN
+    // cono). Un renglón viejo con cono y sin marca dice "falta el cono".
+    const TEXTO_FALTA_CONO = 'Falta el cono'
+    const TEXTO_ELEGI_CONO = 'Elegí el cono: con cono tiene que tener un cono con nombre. Si es común, elegí la presentación sin cono.'
+
+    // El cono de un movimiento o un sublote, para mostrar: su nombre; nada
+    // en una presentación sin cono (el nombre de la presentación ya lo dice);
+    // y "falta el cono" en una con cono sin marca. Nunca "Común".
+    function nombreConoStock(pr, marcaId, marcas) {
+      if (marcaId) return (marcas ?? []).find(x => x.id === marcaId)?.nombre ?? 'Marca'
+      return pr?.con_cono ? TEXTO_FALTA_CONO.toLocaleLowerCase('es') : ''
+    }
+
     function partesProducido({ producto, pr, conConoEnProducto = false, marcaNombre = null, unidadesPorCaja, caja = '', embolsado = null }) {
       const partes = []
       const vistos = new Set([normalizarBusqueda(producto)])
@@ -3336,7 +3352,7 @@
       }
       if (pr?.con_cono) {
         sumar('con cono')
-        sumar(marcaNombre ?? 'Común')
+        sumar(marcaNombre ?? TEXTO_FALTA_CONO.toLocaleLowerCase('es'))
       } else if (conConoEnProducto) {
         sumar('sin cono')
       }
@@ -9075,7 +9091,8 @@
     // caja, embolsado y cajas, con corregir_produccion_item_completo(p_item_id,
     // p_datos, p_motivo). La base deja como estaba toda clave que NO viene en
     // p_datos, así que se manda SOLO lo que cambió; una clave en null sí
-    // significa algo (marca_id null = Común; caja_insumo_id null = sin caja).
+    // significa algo (marca_id null = sin cono; caja_insumo_id null = sin caja).
+    // Con una presentación CON cono, el cono es obligatorio (10/10/2026).
     // Las reglas del empaque son las de la planta al agregar: solo las cajas
     // habilitadas para la presentación, el embolsado que sugiere la caja, y un
     // cono de doble bolsa lo fuerza a 'doble' (la RPC de corregir NO lo fuerza:
@@ -9203,10 +9220,12 @@
       }
       html += campo('pr-hist-corr-presentacion', 'Presentación', `<select class="pr-select" id="pr-hist-corr-presentacion">${opsPresentaciones}</select>`)
       const pr = presentacionCorr(e, e.presentacionId, d)
-      // Cono: solo si la presentación lleva cono. Común = sin marca.
+      // Cono: solo si la presentación lleva cono, y es OBLIGATORIO: ya no
+      // hay opción de cono común sin marca (10/10/2026). Si es común, es la presentación
+      // sin cono.
       if (pr?.con_cono) {
         const ofrecibles = (cat.marcas ?? []).filter(conoOfrecible)
-        let opsConos = opcion('', 'Común (sin marca)', !e.marcaId) +
+        let opsConos = (e.marcaId ? '' : opcion('', 'Elegí el cono', true, ' disabled')) +
           ofrecibles.map(m => opcion(m.id, `${m.nombre}${m.estado_alta === 'pendiente_revision' ? ' · nuevo, a revisar' : ''}${m.doble_bolsa ? ' · doble bolsa' : ''}`, m.id === e.marcaId)).join('')
         if (e.marcaId && !ofrecibles.some(m => m.id === e.marcaId)) {
           const viejo = (d?.marcas ?? []).find(m => m.id === e.marcaId)
@@ -9454,6 +9473,7 @@
       if (e.modo === 'anular') return null
       if (!e.cat && !e.catError) return 'Esperá a que carguen los productos.'
       if (e.cat && !e.presentacionId) return 'Elegí la presentación.'
+      if (e.cat && presentacionCorr(e, e.presentacionId)?.con_cono && !e.marcaId) return TEXTO_ELEGI_CONO
       if (e.cat && !e.cat.empaqueError && !e.cajaElegida) return 'Elegí la caja.'
       if (!Number.isInteger(e.cajas) || e.cajas <= 0) return 'Poné las cajas: un número entero mayor a cero. Para sacarlo, anulalo.'
       if (!Object.keys(datosCorreccionSublote(e, p)).length) return 'No cambiaste nada: cambiá lo que está mal y escribí por qué.'
@@ -9592,8 +9612,8 @@
       const filas = salidas.map(m => {
         const pr = cat.presentaciones.find(x => x.id === m.presentacion_id)
         const prod = cat.productos.find(x => x.id === pr?.producto_id)
-        const cono = m.marca_id ? (cat.marcas.find(x => x.id === m.marca_id)?.nombre ?? 'Marca') : 'Común'
-        const queRetiro = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].join(' · ')
+        const cono = nombreConoStock(pr, m.marca_id, cat.marcas)
+        const queRetiro = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].filter(Boolean).join(' · ')
         const r = codigoRetiro(m.orden_retiro_id, info)
         const vuelve = m.tipo === 'ajuste'
         const titulo = vuelve
@@ -9674,8 +9694,8 @@
       const filas = traspasos.map(m => {
         const pr = cat.presentaciones.find(x => x.id === m.presentacion_id)
         const prod = cat.productos.find(x => x.id === pr?.producto_id)
-        const cono = m.marca_id ? (cat.marcas.find(x => x.id === m.marca_id)?.nombre ?? 'Marca') : 'Común'
-        const que = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].join(' · ')
+        const cono = nombreConoStock(pr, m.marca_id, cat.marcas)
+        const que = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].filter(Boolean).join(' · ')
         const cajasTr = numeroInd(m.cajas)
         const sale = m.tipo === 'traspaso_salida'
         const cuenta = `${sale ? 'salieron' : 'entraron'} ${cajasTr === null ? '—' : textoEntero(Math.abs(cajasTr))} ${cajasTr !== null && Math.abs(cajasTr) === 1 ? 'caja' : 'cajas'}`
@@ -9714,8 +9734,8 @@
       for (const f of filas) {
         const pr = cat.presentaciones.find(x => x.id === f.presentacion_id)
         const prod = cat.productos.find(x => x.id === pr?.producto_id)
-        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'
-        const clave = `${prod?.nombre ?? 'Producto'} · ${pr?.nombre ?? 'Presentación'} · ${marcaNombre}`
+        const marcaNombre = nombreConoStock(pr, f.marca_id, cat.marcas)
+        const clave = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', marcaNombre].filter(Boolean).join(' · ')
         const g = grupos.get(clave) ?? { titulo: clave, reventa: etiquetaReventa(prod, cat), cajas: 0, unidades: 0, sublotes: [] }
         g.cajas = sumarMedido(g.cajas, f.cajas); g.unidades = sumarMedido(g.unidades, f.unidades); g.sublotes.push(f)
         grupos.set(clave, g)

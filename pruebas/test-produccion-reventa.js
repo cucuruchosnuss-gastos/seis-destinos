@@ -81,7 +81,7 @@ esperas.push((async () => {
   chk('… con su unidad', selectDe(cIn).split(/,\s*/).includes('unidad_negocio_id'), selectDe(cIn))
   const h = lista(S)
   chk('un producto de reventa dice "Reventa · Dolce Pasta"', /Cono dulce · Caja x100 · GRIDO<span class="pg-reventa">Reventa · Dolce Pasta<\/span>/.test(h), titulo(h, 'Cono dulce'))
-  chk('… cada producto de reventa lleva la suya', /Canoli · Caja x100 · Común<span class="pg-reventa">Reventa · Dolce Pasta<\/span>/.test(h), titulo(h, 'Canoli'))
+  chk('… cada producto de reventa lleva la suya', /Canoli · Caja x100<span class="pg-reventa">Reventa · Dolce Pasta<\/span>/.test(h), titulo(h, 'Canoli'))
   chk('un producto propio NO lleva etiqueta', !/pg-reventa/.test(titulo(h, 'Cucuruchón Mini')), titulo(h, 'Cucuruchón Mini'))
   chk('la etiqueta es neutra: ni bordó ni naranja', /\.pg-reventa \{[^}]*background: var\(--color-pista\)[^}]*color: var\(--color-texto-2\)/.test(leer(ARCHIVO)) &&
     !/\.pg-reventa \{[^}]*(bordo|naranja)/.test(leer(ARCHIVO)))
@@ -104,7 +104,7 @@ esperas.push((async () => {
   const X = armar({ origenes: [{ id: 'pt-dp-1', unidad_negocio_id: 'u-otra' }, ORIGENES[1]] })
   await X.cargarStockTerminado()
   chk('un origen de una unidad que no está en el mapa: "Reventa" a secas', /Cono dulce · Caja x100 · GRIDO<span class="pg-reventa">Reventa<\/span>/.test(lista(X)) &&
-    /Canoli · Caja x100 · Común<span class="pg-reventa">Reventa · Dolce Pasta<\/span>/.test(lista(X)))
+    /Canoli · Caja x100<span class="pg-reventa">Reventa · Dolce Pasta<\/span>/.test(lista(X)))
   chk('etiquetaReventa sin cat.origenes (null) no rompe', X.etiquetaReventa({ origen_producto_id: 'pt-dp-1' }, { origenes: null }) === 'Reventa')
   chk('etiquetaReventa de un producto propio: null', X.etiquetaReventa({ origen_producto_id: null }, { origenes: new Map() }) === null && X.etiquetaReventa(undefined, {}) === null)
 
@@ -120,7 +120,7 @@ esperas.push((async () => {
   chk('traspaso_salida se nombra "Traspaso a otra fábrica"', /<strong>Traspaso a otra fábrica<\/strong>/.test(ht))
   chk('traspaso_entrada se nombra "Traspaso desde otra fábrica"', /<strong>Traspaso desde otra fábrica<\/strong>/.test(ht))
   chk('ningún tipo crudo en pantalla', !/traspaso_(salida|entrada)/.test(ht))
-  chk('… con el producto, la presentación, el cono y el sublote', /Cucuruchón Mini · Caja con cono · Común/.test(ht) && /Cono dulce · Caja x100 · GRIDO/.test(ht) && /7033-1/.test(ht) && /D-120-2/.test(ht))
+  chk('… con el producto, la presentación, el cono y el sublote', /Cucuruchón Mini · Caja con cono</.test(ht) && !/· Común/.test(ht) && /Cono dulce · Caja x100 · GRIDO/.test(ht) && /7033-1/.test(ht) && /D-120-2/.test(ht))
   chk('… y las cajas sin signo: salieron / entraron', /salieron 5 cajas/.test(ht) && /entraron 12 cajas/.test(ht) && /entraron 4 cajas/.test(ht))
   chk('lo más nuevo primero', ht.indexOf('D-120-2') < ht.indexOf('7033-1') && ht.indexOf('7033-1') < ht.indexOf('D-9-1'))
   const mismoDia = S.traspasosDeStock([

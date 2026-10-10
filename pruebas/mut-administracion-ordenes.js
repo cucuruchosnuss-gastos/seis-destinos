@@ -132,5 +132,7 @@ correrMutaciones({
     { nombre: 'imprimir sin precios', de: "ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })", a: "ordenParaHoja(d), { conPrecios: false, copias: COPIAS_IMPRESION })" },
     { nombre: 'sin valorizar la hoja inventa precios', de: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,", a: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: it.precio_caja ?? 0," },
     { nombre: 'la hoja sin quién cargó', de: "        cargadaPor: estado.nombres.get(o.cargada_por) ?? '',", a: "        cargadaPor: ''," },
+    // Un solo "sin cono" (10/10/2026)
+    { nombre: 'con cono y sin marca vuelve a ser "Común"', de: "?.nombre ?? 'Cono que no se pudo leer') : 'Falta el cono')", a: "?.nombre ?? 'Cono que no se pudo leer') : 'Común')" },
   ],
 })

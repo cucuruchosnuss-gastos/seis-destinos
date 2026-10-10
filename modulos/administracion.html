@@ -1496,12 +1496,14 @@
       for (const e of data ?? []) estado.nombres.set(e.id, e.nombre)
     }
 
-    // "Cucurucho grande · Caja x 100 · LOLO"
+    // "Cucurucho grande · Caja x 100 · LOLO". Con cono y sin marca (una orden
+    // vieja) dice "Falta el cono": desde el 10/10/2026 no existe el "Común"
+    // adentro de "Caja con cono" (lo común es la presentación sin cono).
     function partesRenglon(cat, it) {
       const pr = (cat?.presentaciones ?? []).find(x => x.id === it.presentacion_id)
       const prod = pr ? (cat?.productos ?? []).find(x => x.id === pr.producto_id) : null
       let cono = '—'
-      if (pr) cono = !pr.con_cono ? 'Sin cono' : (it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? 'Cono que no se pudo leer') : 'Común')
+      if (pr) cono = !pr.con_cono ? 'Sin cono' : (it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? 'Cono que no se pudo leer') : 'Falta el cono')
       return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono }
     }
 

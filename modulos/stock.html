@@ -8361,9 +8361,11 @@
       return s.porLote.filter(l => l.presentacion_id === presId && l.saldo > 0).reduce((x, l) => x + l.saldo, 0)
     }
 
-    // Los conos de una presentación con cono: el común (marca null) y las
-    // marcas activas, más cualquier marca que tenga stock aunque esté apagada.
-    // Los que tienen stock van primero.
+    // Los conos de una presentación con cono: las marcas activas, más
+    // cualquier marca que tenga stock aunque esté apagada. Los que tienen
+    // stock van primero. Desde el 10/10/2026 NO hay "Común" (marca null): con
+    // cono es siempre un cono con nombre, y lo común es la presentación SIN
+    // cono (pedido de Facu: eran lo mismo y quedaban separados en el stock).
     function conosTrp(t, pres) {
       if (!pres?.con_cono) return []
       const conStock = new Map()
@@ -8372,7 +8374,7 @@
         const k = l.marca_id ?? ''
         conStock.set(k, (conStock.get(k) ?? 0) + l.saldo)
       }
-      const opciones = [{ marcaId: null, nombre: 'Común', stock: conStock.get('') ?? 0 }]
+      const opciones = []
       for (const m of estado.trpCatalogo?.marcas ?? []) {
         const s = conStock.get(m.id) ?? 0
         if (s > 0 || (m.activa && m.estado_alta !== 'rechazada')) opciones.push({ marcaId: m.id, nombre: m.nombre, stock: s })
@@ -8383,7 +8385,7 @@
 
     function nombreConoTrp(pres, marcaId) {
       if (!pres?.con_cono) return 'sin cono'
-      if (!marcaId) return 'cono común'
+      if (!marcaId) return 'falta el cono'
       const m = (estado.trpCatalogo?.marcas ?? []).find(x => x.id === marcaId)
       return m ? `cono ${m.nombre}` : 'un cono que ya no está'
     }
@@ -8877,6 +8879,8 @@
       const t = estado.trp
       if (!t) return
       const marca = marcaId || null
+      // Con cono, el cono es obligatorio (no hay "Común").
+      if (presentacionTrp(presId)?.con_cono && !marca) return
       if (t.renglones.some(r => r.presentacionId === presId && (r.marcaId ?? null) === marca)) {
         if (t.eligiendo) { t.eligiendo.aviso = 'Eso ya está en la lista: cambiá las cajas en su renglón.'; pintarElegirTrp(t) }
         return

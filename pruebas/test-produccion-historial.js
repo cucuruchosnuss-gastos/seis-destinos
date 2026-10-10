@@ -290,7 +290,7 @@ esperas.push((async () => {
   Object.assign(K.__tablas, { stock_terminado_movimientos: movs, productos_terminados: DETALLE.productos_terminados, producto_presentaciones: DETALLE.producto_presentaciones, marcas_personalizadas: DETALLE.marcas_personalizadas })
   await K.mostrarStockTerminado()
   const hk = K.__doc.getElementById('pr-stock-lista').innerHTML
-  chk('agrupa por producto · presentación · marca', /Cucuruchón Mini · Caja x600 · Común/.test(hk) && /Cucuruchón Mini · Caja x600 · GRIDO/.test(hk))
+  chk('agrupa por producto · presentación · marca', />Cucuruchón Mini · Caja x600</.test(hk) && !/· Común/.test(hk) && /Cucuruchón Mini · Caja x600 · GRIDO/.test(hk))
   chk('con el total del grupo', /15 cajas · 9\.000 unidades/.test(hk))
   chk('cada grupo con su cabecera de columnas', /pr-of-cab pr-of-stock[\s\S]*Sublote<\/span>[\s\S]*Cajas<\/span>[\s\S]*Unidades<\/span>/.test(hk))
   chk('y cada sublote, en orden', /7020-1<\/span>[\s\S]*5<\/span>[\s\S]*3\.000[\s\S]*7023-1<\/span>/.test(hk), hk.slice(0, 1200))

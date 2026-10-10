@@ -16,7 +16,7 @@ correrMutaciones({
     { nombre: 'letra que no se lee', de: "fg: 'oklch(0.46 0.1 90)',", a: "fg: 'oklch(0.75 0.1 90)'," },
     { nombre: 'siete colores', de: "      { nombre: 'marron',   bg: 'oklch(0.83 0.045 60)',  fg: 'oklch(0.34 0.06 55)',  bd: 'oklch(0.7 0.06 60)' },\n", a: '' },
     { nombre: 'el color por el nombre', de: "        const col = colorCono(m.id)\n", a: "        const col = colorCono(m.nombre)\n" },
-    { nombre: 'la planilla no pasa el id', de: "htmlChipCono(d.marcaNombre ?? 'Común', it.marca_id)", a: "htmlChipCono(d.marcaNombre ?? 'Común')" },
+    { nombre: 'la planilla no pasa el id', de: "htmlChipCono(d.marcaNombre, it.marca_id)", a: "htmlChipCono(d.marcaNombre)" },
     { nombre: 'el chip usa el nombre', de: "    function htmlChipCono(nombre, id) {\n      const col = colorCono(id)", a: "    function htmlChipCono(nombre, id) {\n      const col = colorCono(nombre)" },
     { nombre: 'el común toma un color de la paleta', de: "      if (id == null || id === '') return COLOR_CONO_COMUN\n", a: '' },
     { nombre: 'siempre el primero', de: '      return PALETA_CONO[indiceDeNombre(String(id), PALETA_CONO.length)]', a: '      return PALETA_CONO[0]' },

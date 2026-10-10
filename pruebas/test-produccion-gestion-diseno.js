@@ -353,7 +353,7 @@ const DETALLE = {
     { id: 'i2', orden: 2, sublote: '7023-2', presentacion_id: 'pr1', marca_id: null, cajas: 10, unidades_por_caja: 320, unidades: 3200, anulado: true },
   ],
   produccion_correcciones: [],
-  producto_presentaciones: [{ id: 'pr1', producto_id: 'pt1', nombre: 'Caja', con_cono: true }],
+  producto_presentaciones: [{ id: 'pr1', producto_id: 'pt1', nombre: 'Caja', con_cono: false }],
   productos_terminados: [{ id: 'pt1', nombre: 'Cucuruchón Mini' }],
   marcas_personalizadas: [],
   v_empleados_publico: [{ id: 'e1', nombre: 'Agustín Barrera' }],

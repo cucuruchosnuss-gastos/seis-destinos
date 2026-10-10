@@ -212,7 +212,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     const h = S.__els.get('ad-orden-cuerpo').innerHTML
     chk('el detalle muestra cada renglón con cono y presentación', /10 cajas · Cucurucho grande · Caja x 100 · Sin cono/.test(h) && /4 cajas · Cucurucho grande · Caja x 100 con cono · LOLO/.test(h))
     chk('y los lotes de cada renglón', /lotes 7030-1 \(6\) · 7031-2 \(4\)/.test(h) && /lotes 7032-1 \(4\)</.test(h))
-    chk('el lote de un cono no se mezcla con el del cono común de la misma presentación', /Común<\/div><div class="ad-renglon__lotes">200 unidades · lotes 7039-9 \(2\)</.test(h))
+    chk('el lote de un cono no se mezcla con el de la misma presentación sin marca (dato viejo: "Falta el cono", nunca "Común")', /Falta el cono<\/div><div class="ad-renglon__lotes">200 unidades · lotes 7039-9 \(2\)</.test(h) && !/· Común</.test(h))
     chk('quién la cargó (por v_empleados_publico, sin embed)', /Emanuel Romero/.test(h) && S.__llamadas.consultas.some(c => c[0] === 'v_empleados_publico'))
     chk('el título dice el código', S.__els.get('ad-orden-titulo').textContent === 'Orden N-0012')
     chk('con precios: "Valorizar" visible', S.__els.get('ad-btn-valorizar').hidden === false && S.__els.get('ad-btn-corregir-valor').hidden === true)
