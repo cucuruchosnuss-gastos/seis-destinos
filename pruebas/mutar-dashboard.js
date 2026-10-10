@@ -30,7 +30,14 @@ function repartir(lista, D, M, faltan, T = '') {
     if (M.includes(de)) { enM.push({ ...m, de, a: sinSangria(m.a) }); continue }
     if (T.includes(m.de)) { enT.push(m); continue }
     if (T.includes(de)) { enT.push({ ...m, de, a: sinSangria(m.a) }); continue }
-    faltan.push(`«${m.nombre}»`)
+    // Lo más parecido, en el archivo donde se parece más (parecido.js).
+    const { parteQueFalta, lineaMasParecida, pistaDeAncla } = require('./parecido')
+    const falta = parteQueFalta(D, m.de)
+    const [nombre, texto] = [['dashboard.html', D], ['js/modulos.js', M], ['js/tablero.js', T]]
+      .filter(([, t]) => t)
+      .map(([n, t]) => [n, t, lineaMasParecida(t, falta)?.parecido ?? 0])
+      .sort((a, b) => b[2] - a[2])[0]
+    faltan.push(`«${m.nombre}» (${nombre})\n${pistaDeAncla(texto, m.de)}`)
   }
   return [enD, enM, enT]
 }

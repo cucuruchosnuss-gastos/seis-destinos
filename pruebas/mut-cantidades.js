@@ -92,8 +92,9 @@ const tandas = [
         de: "        console.error('bultos de la sala:', err)\n        pres.vista = new Map()",
         a: "        console.error('bultos de la sala:', err)" },
       { nombre: 'planta: las preferencias de todos (sin filtrar bulto)',
-        de: ".select('id, vista_preferida').eq('vista_preferida', 'bulto')",
-        a: ".select('id, vista_preferida')" },
+        // La de leerPresentacionesMasa (la precarga sin internet tiene otra igual).
+        de: "const { data: prefs, error } = await supabase.from('insumos').select('id, vista_preferida').eq('vista_preferida', 'bulto')",
+        a: "const { data: prefs, error } = await supabase.from('insumos').select('id, vista_preferida')" },
       { nombre: 'planta: el empaque sin bultos',
         de: '      return cantidadSegunVista(args).enBultos ? textoSegunVista(args, { conKilos: true }) : num(hay)',
         a: '      return num(hay)' },

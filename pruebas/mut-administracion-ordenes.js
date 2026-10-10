@@ -83,10 +83,16 @@ correrMutaciones({
     { nombre: 'sin permiso se consultan los lotes', de: '      let lotes = null\n      if (puedeVerLotes()) {', a: '      let lotes = null\n      if (true) {' },
     { nombre: 'los lotes de otro cono', de: "      return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))", a: '      return lotes.filter(l => l.presentacion_id === it.presentacion_id)' },
     // Valorizar
-    { nombre: 'vale un precio posterior al retiro', de: "        if (!esFechaIso(x.vigente_desde) || x.vigente_desde > fecha) continue", a: '        if (!esFechaIso(x.vigente_desde)) continue' },
-    { nombre: 'toma el precio más viejo', de: '        if (!a || x.vigente_desde > a.vigente_desde) porClave.set(k, x)', a: '        if (!a) porClave.set(k, x)' },
+    // (09/10/2026: se fue preciosVigentes(); el precio vigente a la fecha del
+    // retiro de un insumo lo elige la base en precios_insumos_lista, y la
+    // mutación de abajo exige que viaje la fecha del retiro.)
     { nombre: 'el precio de un insumo se busca por presentación', de: "      return x?.insumo_id ? 'ins:' + x.insumo_id : x?.presentacion_id", a: '      return x?.presentacion_id' },
-    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)", a: ".select('presentacion_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)" },
+    // El precio de un insumo lo calcula la base (precios_insumos_lista, 09/10/2026).
+    { nombre: 'el precio del insumo con la fecha de hoy y no la del retiro', de: "supabase.rpc('precios_insumos_lista', { p_lista_id: cli.lista_precio_id, p_fecha: o.fecha })", a: "supabase.rpc('precios_insumos_lista', { p_lista_id: cli.lista_precio_id, p_fecha: null })" },
+    { nombre: 'sin costo propone 0', de: "        m.set('ins:' + f.insumo_id, { precio: f.sin_costo === true ? null : precio, origen })", a: "        m.set('ins:' + f.insumo_id, { precio: f.sin_costo === true ? 0 : precio, origen })" },
+    { nombre: 'costo + % no dice de dónde sale', de: "          if (r.origen) v.origen[it.id] = r.origen", a: '' },
+    { nombre: 'un precio null se propone igual', de: "          if (r.precio !== null) { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }", a: "          { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }" },
+    { nombre: 'el % de la lista no se nombra', de: ": { texto: pct === null ? 'Sobre el costo (lista)' :", a: ": { texto: true ? 'Sobre el costo (lista)' :" },
     { nombre: 'el insumo se valoriza por cajas', de: '      return it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)', a: '      return Number(it?.cajas)' },
     { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, lote')" },
     { nombre: 'los lotes de los insumos sin stock:ver', de: "      if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {", a: "      if ((items ?? []).some(it => it.insumo_id)) {" },

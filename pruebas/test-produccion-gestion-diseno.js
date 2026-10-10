@@ -381,24 +381,26 @@ esperas.push((async () => {
 
   // Corregir: sin motivo no se manda, y el error va pegado al botón.
   chk('abrir la corrección', S.abrirCorreccionSublote('i1', 'corregir') === true && /id="pr-hist-corr"/.test(cuerpoHist(S)))
+  await S.estado.corrigeHist.carga
   await S.guardarCorreccionSublote()
   h = cuerpoHist(S)
-  chk('sin motivo: no se manda nada y se dice pegado al botón', rpcs(S, 'corregir_produccion_item').length === 0 &&
+  chk('sin motivo: no se manda nada y se dice pegado al botón', rpcs(S, 'corregir_produccion_item_completo').length === 0 &&
     /<div class="pr-cfg-error" role="alert">Escribí el motivo para guardar\.<\/div><button type="button" class="pr-btn" id="pr-hist-corr-guardar">Guardar corrección<\/button>/.test(h))
   chk('… y el botón NO se traba por lo que falta', !/id="pr-hist-corr-guardar"[^>]*disabled/.test(h))
   S.estado.corrigeHist.motivo = 'Se contaron mal'
   await S.guardarCorreccionSublote()
-  chk('con las mismas cajas: se dice que no cambió nada', /Tiene esas mismas cajas/.test(cuerpoHist(S)) && rpcs(S, 'corregir_produccion_item').length === 0)
+  chk('con las mismas cajas: se dice que no cambió nada', /No cambiaste nada/.test(cuerpoHist(S)) && rpcs(S, 'corregir_produccion_item_completo').length === 0)
   S.estado.corrigeHist.cajas = 0
   await S.guardarCorreccionSublote()
-  chk('cero cajas: para sacarlo, anularlo', /Para sacarlo, anulalo/.test(cuerpoHist(S)) && rpcs(S, 'corregir_produccion_item').length === 0)
+  chk('cero cajas: para sacarlo, anularlo', /Para sacarlo, anulalo/.test(cuerpoHist(S)) && rpcs(S, 'corregir_produccion_item_completo').length === 0)
   S.estado.corrigeHist.cajas = 2.5
   await S.guardarCorreccionSublote()
-  chk('cajas con decimales: no se manda', rpcs(S, 'corregir_produccion_item').length === 0)
+  chk('cajas con decimales: no se manda', rpcs(S, 'corregir_produccion_item_completo').length === 0)
   S.estado.corrigeHist.cajas = 33
   S.__setRpc(async () => ({ data: null, error: { message: 'No tenés permiso para corregir este turno.' } }))
   await S.guardarCorreccionSublote()
-  chk('bien armado: corregir_produccion_item con el sublote, las cajas y el motivo recortado', JSON.stringify(rpcs(S, 'corregir_produccion_item').at(-1)) === '{"p_item_id":"i1","p_cajas":33,"p_motivo":"Se contaron mal"}')
+  chk('bien armado: corregir_produccion_item_completo con el sublote, SOLO las cajas y el motivo recortado', JSON.stringify(rpcs(S, 'corregir_produccion_item_completo').at(-1)) === '{"p_item_id":"i1","p_datos":{"cajas":33},"p_motivo":"Se contaron mal"}' &&
+    rpcs(S, 'corregir_produccion_item').length === 0)
   chk('… el rechazo de la base, tal cual, pegado al botón, y lo escrito se conserva',
     /role="alert">No tenés permiso para corregir este turno\.<\/div><button type="button" class="pr-btn" id="pr-hist-corr-guardar">/.test(cuerpoHist(S)) &&
     S.estado.corrigeHist?.motivo === 'Se contaron mal' && S.estado.corrigeHist?.enviando === false)

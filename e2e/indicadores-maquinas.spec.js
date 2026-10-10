@@ -32,6 +32,13 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
     const errores = vigilarErrores(page);
     await page.setViewportSize(viewport);
     await page.goto(MAQUETA + '/modulos/produccion-gestion.html?maqueta=produccion-gestion');
+    // La gestión abre en la tabla de producción (09/10/2026): los
+    // indicadores se abren desde el menú.
+    await expect(page.locator('#pr-tabla')).toBeVisible();
+    await expect(page.locator('#pr-inicio')).toBeHidden();
+    if (viewport.width < 900) await page.locator('#pr-btn-menu').click();
+    await page.locator('#pr-menu-inicio').click();
+    await expect(page.locator('#pr-inicio')).toBeVisible();
     const seccion = page.locator('#pr-maquinas');
     await expect(seccion).toBeVisible();
     await expect(page.locator('#pr-mq-desde-periodo')).toContainText('Período');

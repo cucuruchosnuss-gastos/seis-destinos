@@ -65,8 +65,9 @@ correrMutacionesProduccion({
     // b) las masas
     { nombre: 'toda masa lleva chip "Modificada"', de: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })", a: "      return htmlChipsMasa({ modificada: true, chocolate: !!m?.es_chocolate })" },
     { nombre: 'chocolate sin mirar es_chocolate', de: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })", a: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: true })" },
-    { nombre: 'la esperando no dice "Modificada"', de: 'htmlChipsMasa({ modificada: !!b.cambiada,', a: 'htmlChipsMasa({ modificada: false,' },
-    { nombre: 'la esperando no dice "Chocolate"', de: 'chocolate: esChocolate(b, estado.defineChocolate) })', a: 'chocolate: false })' },
+    // La lista compacta (08/10/2026): la esperando arma el mismo renglón.
+    { nombre: 'la esperando no dice "Modificada"', de: "origen: b.cambiada ? 'modificada' : 'original'", a: "origen: 'original'" },
+    { nombre: 'la esperando no dice "Chocolate"', de: 'es_chocolate: esChocolate(b, estado.defineChocolate) }', a: 'es_chocolate: false }' },
     { nombre: 'SIMPLE y DOBLE al revés', de: "      return m?.doble ? 'DOBLE' : 'SIMPLE'", a: "      return m?.doble ? 'SIMPLE' : 'DOBLE'" },
     { nombre: 'la planilla vuelve al chip de origen', de: '        `${chipsDeMasa(m)}</div>`).join(\'\')', a: '        `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(m.origen)}</span></div>`).join(\'\')' },
     { nombre: '"Modificada" en naranja', de: '    .pr-chip-modificada { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-mal-suave); color: var(--p-mal);', a: '    .pr-chip-modificada { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-acento-suave); color: var(--p-acento-osc);' },

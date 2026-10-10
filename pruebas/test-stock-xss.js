@@ -450,6 +450,7 @@ const H_ACL = 'HTML de htmlAclaracion(), que escapa adentro (ejecutado arriba co
 const H_MARCA = 'HTML de htmlMarca(), que escapa adentro (ejecutado arriba con la marca «…_marca2»)'
 const H_COB = 'HTML de htmlCobertura(), que escapa adentro (solo números y texto fijo; ejecutado en test-stock-dias-habiles.js)'
 const NUM = 'número: largo de un array o conteo calculado en el código'
+const H_COSTOS = 'HTML de un html* de costos, que escapa adentro (ejecutado con texto malicioso en test-stock-costos.js)'
 const SEGURAS = {
   htmlAgrupado: {
     'c.filas.length': NUM,
@@ -477,7 +478,14 @@ const SEGURAS = {
   renderizarStock: {
     'htmlMarca(f.marca, marcaArriba)': H_MARCA, 'htmlAclaracion(f.aclaracion)': H_ACL,
     'htmlCobertura(coberturaDe(filasCoberturaDe(f)))': H_COB,
+    'htmlValorStock(f)': H_COSTOS,
   },
+  // Costos de insumos (09/10/2026): los html* escapan adentro y
+  // test-stock-costos.js los EJECUTA con texto malicioso en cada dato.
+  htmlFilaCosto: { 'htmlVariacion(f.variacion_pct)': H_COSTOS, derecha: HTML_PROPIO },
+  renderizarCostos: { resumen: HTML_PROPIO, "filas.map(htmlFilaCosto).join('')": H_COSTOS },
+  htmlHistorialCosto: { acciones: HTML_PROPIO },
+  pintarHistorialCosto: { 'htmlHistorialCosto(m)': H_COSTOS },
   // La tarjeta sumada de "Todas" (barra de unidad, 28/09/2026).
   htmlGrupoStock: {
     'htmlMarca(g.marca, marcaArriba)': H_MARCA, 'htmlAclaracion(g.aclaracion)': H_ACL,

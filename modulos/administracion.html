@@ -481,6 +481,18 @@
     html[data-embebido] .ad-header,
     html[data-embebido] #ad-clientes-volver { display: none !important; }
     html[data-embebido] body { margin-left: 0; padding-bottom: 1rem; }
+    /* Los insumos de una lista a precio fijo o costo + % (09/10/2026) */
+    .ad-insumo-precio { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0; border-top: 1px solid var(--color-borde); min-width: 0; }
+    .ad-insumo-precio:first-of-type { border-top: none; }
+    .ad-insumo-precio__texto { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+    .ad-insumo-precio__nombre { font-weight: 700; color: var(--color-texto); overflow-wrap: anywhere; margin: 0; }
+    .ad-insumo-precio__detalle { font-size: 0.875rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .ad-insumo-precio--sin-costo { background: var(--bordo-suave); border-left: 3px solid var(--bordo); padding-left: 0.625rem; border-radius: 8px; }
+    .ad-insumo-precio--sin-costo .ad-insumo-precio__detalle { color: var(--bordo-oscuro); font-weight: 600; }
+    .ad-insumo-editor { margin-top: 0.75rem; }
+    .ad-insumo-editor .ad-segmento { margin-bottom: 0.75rem; }
+    .ad-insumo-previa { font-size: 0.875rem; font-weight: 600; color: var(--color-texto); margin: 0 0 0.75rem; min-height: 1em; overflow-wrap: anywhere; }
+    #ad-ins-agregar { margin-top: 0.75rem; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -846,6 +858,12 @@
         <p class="ad-error-pegado" id="ad-lista-porcentaje-error" hidden></p>
       </div>
       <div id="ad-lista-grilla"></div>
+      <!-- Los insumos a precio fijo o a costo + % (09/10/2026): precios_insumos_lista
+           y guardar_precio_insumo_lista. El "costo + %" solo con stock:ver_costos. -->
+      <section class="ad-tarjeta" aria-labelledby="ad-lista-insumos-titulo">
+        <h2 class="ad-subtitulo" id="ad-lista-insumos-titulo">Insumos: precio fijo o costo + %</h2>
+        <div id="ad-lista-insumos"></div>
+      </section>
       <div class="ad-panel" id="ad-panel-historial" hidden></div>
       <div class="ad-panel" id="ad-panel-confirmar-precios" hidden>
         <p id="ad-confirmar-precios-texto"></p>
@@ -2453,17 +2471,30 @@
       return x?.insumo_id ? 'ins:' + x.insumo_id : x?.presentacion_id
     }
 
-    // Los precios vigentes por presentación o por insumo (precio_vigente() y
-    // precio_vigente_insumo() en la base hacen lo mismo).
-    function preciosVigentes(items, fecha) {
-      const porClave = new Map()
-      for (const x of Array.isArray(items) ? items : []) {
-        if (!esFechaIso(x.vigente_desde) || x.vigente_desde > fecha) continue
-        const k = clavePrecio(x)
-        const a = porClave.get(k)
-        if (!a || x.vigente_desde > a.vigente_desde) porClave.set(k, x)
+    // EL PRECIO DE UN INSUMO AL VALORIZAR (09/10/2026): lo calcula la BASE con
+    // precios_insumos_lista(p_lista_id, p_fecha = la fecha del retiro), que usa
+    // la MISMA regla que precio_vigente_insumo() (verificado con
+    // pg_get_functiondef el 09/10/2026): el renglón vigente a esa fecha; con
+    // recargo_costo_pct, el costo vigente × (1 + % / 100) redondeado a 2; si no,
+    // coalesce(precio_unitario, precio_caja). Se lee de la base y no se copia
+    // acá porque el costo pide stock:ver_costos y quien valoriza puede no
+    // tenerlo: la función devuelve el precio ya calculado igual.
+    // Devuelve 'ins:<id>' -> { precio | null, origen | null }.
+    function preciosInsumosDeLista(filas) {
+      const m = new Map()
+      for (const f of Array.isArray(filas) ? filas : []) {
+        if (!f?.insumo_id) continue
+        const precio = numeroONull(f.precio_unitario)
+        let origen = null
+        if (f.tipo === 'costo_mas_pct') {
+          const pct = numeroONull(f.recargo_costo_pct)
+          origen = f.sin_costo === true || precio === null
+            ? { texto: 'La lista lo pone a costo + %, y a este insumo le falta cargar el costo en Stock: escribí el precio.', grave: true }
+            : { texto: pct === null ? 'Sobre el costo (lista)' : `Costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} % (lista)`, grave: false }
+        }
+        m.set('ins:' + f.insumo_id, { precio: f.sin_costo === true ? null : precio, origen })
       }
-      return new Map([...porClave].map(([k, v]) => [k, Number(v.precio_caja)]))
+      return m
     }
 
     async function leerSaldoCliente(clienteId) {
@@ -2547,10 +2578,9 @@
         try {
           let vigentes = new Map()
           if (listaId && d.items.some(it => it.insumo_id && !vigente(it))) {
-            const { data, error } = await supabase.from('lista_precios_items')
-              .select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
+            const { data, error } = await supabase.rpc('precios_insumos_lista', { p_lista_id: cli.lista_precio_id, p_fecha: o.fecha })
             if (error) throw error
-            vigentes = preciosVigentes(data, o.fecha)
+            vigentes = preciosInsumosDeLista(data)
           }
           const saldo = await leerSaldoCliente(o.cliente_id)
           return { vigentes, saldo }
@@ -2579,7 +2609,10 @@
         for (const it of d.items) {
           if (!it.insumo_id || vigente(it)) continue
           const k = clavePrecio(it)
-          if (resto.vigentes.has(k)) { v.precios[it.id] = resto.vigentes.get(k); v.desdeLista.add(it.id) }
+          const r = resto.vigentes.get(k)
+          if (!r) continue
+          if (r.precio !== null) { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }
+          if (r.origen) v.origen[it.id] = r.origen
         }
         v.saldo = resto.saldo
       }
@@ -4546,7 +4579,7 @@
 
     async function leerPreciosLista(listaId) {
       const { data, error } = await supabase.from('lista_precios_items')
-        .select('presentacion_id, insumo_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)
+        .select('presentacion_id, insumo_id, precio_caja, precio_unitario, recargo_costo_pct, vigente_desde, cargado_en').eq('lista_id', listaId)
       if (error) throw error
       return data ?? []
     }
@@ -4611,6 +4644,22 @@
       return Number.isFinite(n) ? n : null
     }
 
+    // El precio FIJO de una versión de un insumo (la regla de
+    // precio_vigente_insumo: coalesce(precio_unitario, precio_caja)), o null si
+    // la versión es costo + % o no tiene precio.
+    function precioFijoDeVersion(v) {
+      if (numeroONull(v?.recargo_costo_pct) !== null) return null
+      return numeroONull(v?.precio_unitario) ?? numeroONull(v?.precio_caja)
+    }
+
+    // Cómo se dice una versión de un insumo en la grilla: su precio fijo, o
+    // "costo + N %" (el precio sale del costo de cada día: ver la tarjeta).
+    function textoPrecioInsumoGrilla(v, moneda) {
+      const pct = numeroONull(v?.recargo_costo_pct)
+      if (pct !== null) return `costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} %`
+      return importeHoja(precioFijoDeVersion(v), moneda)
+    }
+
     // "$ 30,8333" por unidad, o el guion si no hay dato (nunca "$ 0").
     function precioUnitarioONada(v) {
       const n = numeroONull(v)
@@ -4648,6 +4697,12 @@
     function chocanMismaFecha(precios, items, desde, nombreDe) {
       const nombres = []
       for (const it of items ?? []) {
+        if (it?.insumo_id) {
+          const chocaIns = (precios ?? []).some(p => p.insumo_id === it.insumo_id && p.vigente_desde === desde &&
+            (numeroONull(p.precio_unitario) !== null || numeroONull(p.recargo_costo_pct) !== null))
+          if (chocaIns) nombres.push(nombreDe('ins:' + it.insumo_id))
+          continue
+        }
         if (!it?.presentacion_id) continue
         const choca = (precios ?? []).some(p => p.presentacion_id === it.presentacion_id && p.vigente_desde === desde && numeroONull(p.precio_unitario) !== null)
         if (choca) nombres.push(nombreDe(it.presentacion_id))
@@ -4733,7 +4788,8 @@
         const f = (l.filas ?? []).find(x => x.clave === clave)
         if (!f || !filaEditable(f, meta)) continue
         const actual = vigenteYProximo(l.precios, clave, hoy).vigente
-        if (actual && Number(actual.precio_caja) === Number(precio)) continue
+        const actualFijo = !actual ? null : String(clave).startsWith('ins:') ? precioFijoDeVersion(actual) : numeroONull(actual.precio_caja)
+        if (actualFijo !== null && actualFijo === Number(precio)) continue
         items.push(String(clave).startsWith('ins:')
           ? { insumo_id: String(clave).slice(4), precio_caja: Number(precio) }
           : { presentacion_id: clave, precio_caja: Number(precio) })
@@ -4752,7 +4808,10 @@
         if (!filaEditable(f, meta)) continue
         const v = vigenteYProximo(l.precios, f.clave, hoy).vigente
         if (!v) continue
-        nuevos.set(f.clave, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)
+        // Un insumo a costo + % ya sigue al costo: no se le pone un precio fijo.
+        const base = f.insumoId ? precioFijoDeVersion(v) : numeroONull(v.precio_caja)
+        if (base === null) continue
+        nuevos.set(f.clave, Math.round(base * (1 + porcentaje / 100) * 100) / 100)
       }
       return nuevos
     }
@@ -4839,8 +4898,8 @@
       const { vigente, proximo } = vigenteYProximo(l.precios, f.clave, hoy)
       const moneda = listaDe(l.id)?.moneda || 'ARS'
       const pendiente = l.pendientes.has(f.clave) && l.pendientes.get(f.clave) !== null
-      const actual = vigente ? importeHoja(vigente.precio_caja, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
-      const prox = proximo ? ' · próximo ' + importeHoja(proximo.precio_caja, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
+      const actual = vigente ? textoPrecioInsumoGrilla(vigente, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
+      const prox = proximo ? ' · próximo ' + textoPrecioInsumoGrilla(proximo, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
       return `<div class="ad-precio${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.clave)}">` +
         `<div><div class="ad-renglon__desc">${esc(f.producto + ' · ' + f.presentacion)}</div>` +
         `<div class="ad-renglon__lotes">${esc(actual + prox)}</div></div>` +
@@ -4881,7 +4940,7 @@
       const versiones = versionesDe(l.precios, clave)
       const filas = versiones.length ? versiones.map(v =>
         `<div class="ad-renglon"><div class="ad-renglon__desc">${esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))}</div>` +
-        `<div class="ad-renglon__plata">${esc(importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
+        `<div class="ad-renglon__plata">${esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda) : importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
       return `<h2 class="ad-subtitulo">${esc('Historial · ' + (f ? f.producto + ' · ' + f.presentacion : ''))}</h2>${filas}` +
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" id="ad-historial-cerrar">Cerrar</button></div>`
     }
@@ -4945,6 +5004,7 @@
         }
       }
       pintarConConoNuevo(grilla, l)
+      if (conValores) pintarInsumosLista()
       const n = preciosAGuardar(l, hoy).length
       document.getElementById('ad-lista-pendientes').textContent = textoPendientes(n)
       document.getElementById('ad-lista-guardar').disabled = estado.trabajando
@@ -5053,6 +5113,269 @@
       if (estado.lista === l) pintarClientesLista()
     }
 
+    // ── LOS INSUMOS DE UNA LISTA: PRECIO FIJO O COSTO + % (09/10/2026) ─────
+    // precios_insumos_lista(p_lista_id, p_fecha) → los renglones de insumos que
+    // rigen hoy: { insumo_id, insumo, unidad_medida, precio_unitario (ya
+    // calculado), tipo 'fijo' | 'costo_mas_pct', recargo_costo_pct (null si
+    // quien mira no ve costos), vigente_desde, sin_costo }. Se guardan con
+    // guardar_precio_insumo_lista(p_lista_id, p_insumo_id, p_precio_unitario,
+    // p_recargo_costo_pct, p_vigente_desde): EXACTAMENTE uno de los dos (el
+    // otro null); el "costo + %" exige stock:ver_costos en la fábrica de la
+    // lista (puedeEn('stock', 'ver_costos')), así que sin ese permiso no se
+    // ofrece. El % se aplica al costo de la fábrica (costos_insumos).
+    //
+    // CONVIVENCIA CON LA GRILLA DE ARRIBA: la grilla sigue guardando el precio
+    // fijo de un insumo con guardar_precios (precio_caja); esta tarjeta guarda
+    // precio_unitario o recargo_costo_pct. Desde el 09/10/2026 la base lee las
+    // dos cosas (precio_vigente_insumo y precios_insumos_lista: recargo →
+    // costo × (1 + %); si no, coalesce(precio_unitario, precio_caja)), así que
+    // valorizar usa lo de las dos y un precio de la grilla también se ve acá.
+
+    function plataInsumoLista(n, moneda) {
+      const v = numeroONull(n)
+      if (v === null) return '—'
+      return `${moneda === 'USD' ? 'US$' : '$'} ${formatearNumeroAr(v, { decimales: 4, minimos: 2 })}`
+    }
+
+    function porUnidadInsumo(unidad) {
+      return 'por ' + (unidadHoja(unidad) || 'unidad')
+    }
+
+    // Los renglones con precio o a costo + % (también los de la grilla de
+    // arriba, que la base ya devuelve con su precio).
+    function renglonesInsumosLista(filas) {
+      return (Array.isArray(filas) ? filas : []).filter(f => f?.tipo === 'costo_mas_pct' || numeroONull(f?.precio_unitario) !== null)
+    }
+
+    // El precio con el % sobre el costo, redondeado a centavos como la base
+    // (round(costo * (1 + pct / 100), 2)). null si falta algo.
+    function precioConRecargo(costo, pct) {
+      const c = numeroONull(costo), p = numeroONull(pct)
+      if (c === null || p === null) return null
+      return Math.round(c * (100 + p)) / 100
+    }
+
+    function textoRenglonInsumo(f, moneda) {
+      const unidad = porUnidadInsumo(f.unidad_medida)
+      if (f.tipo === 'costo_mas_pct') {
+        const pct = numeroONull(f.recargo_costo_pct)
+        const cabeza = pct === null ? 'Sobre el costo' : `Costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} %`
+        if (f.sin_costo === true) return `${cabeza} · falta cargar el costo`
+        return `${cabeza} → ${plataInsumoLista(f.precio_unitario, moneda)} ${unidad}`
+      }
+      return `Precio fijo ${plataInsumoLista(f.precio_unitario, moneda)} ${unidad}`
+    }
+
+    async function leerInsumosLista(listaId, empresaId) {
+      const pedidos = [supabase.rpc('precios_insumos_lista', { p_lista_id: listaId, p_fecha: null })]
+      // El costo de cada insumo, solo con ver_costos en la fábrica (si no, no se llama).
+      if (puedeEn('stock', 'ver_costos', empresaId)) pedidos.push(supabase.rpc('costos_insumos', { p_unidad_negocio_id: empresaId }))
+      const [precios, costos] = await Promise.all(pedidos)
+      if (precios.error) throw precios.error
+      const mapa = new Map()
+      if (costos && !costos.error) {
+        for (const c of Array.isArray(costos.data) ? costos.data : []) {
+          if (numeroONull(c.costo_unitario) !== null) mapa.set(c.insumo_id, numeroONull(c.costo_unitario))
+        }
+      } else if (costos?.error) {
+        console.error('costos_insumos:', costos.error)
+      }
+      return { filas: Array.isArray(precios.data) ? precios.data : [], costos: costos ? (costos.error ? null : mapa) : null }
+    }
+
+    async function cargarInsumosLista(l) {
+      try {
+        const r = await leerInsumosLista(l.id, estado.empresaId)
+        if (estado.lista !== l) return
+        l.insumos = { filas: r.filas, costos: r.costos, error: null }
+      } catch (err) {
+        if (estado.lista !== l) return
+        console.error('precios_insumos_lista:', err)
+        l.insumos = { filas: null, costos: null, error: limpio(err?.message) || 'No se pudieron leer los precios de insumos.' }
+      }
+      pintarInsumosLista()
+    }
+
+    function htmlInsumosLista(l) {
+      const meta = listaDe(l.id)
+      const moneda = meta?.moneda ?? 'ARS'
+      const veCostos = puedeEn('stock', 'ver_costos')
+      const intro = '<p class="ad-texto-suave">Un insumo a <strong>precio fijo</strong> por unidad, o a su <strong>costo + %</strong>' +
+        (veCostos ? '' : ' (el % sobre el costo lo pone quien ve los costos de esta fábrica)') +
+        '. Es el precio que se propone al valorizar una orden.</p>'
+      const ins = l.insumos
+      if (!ins) return intro + '<div class="ad-vacio">Cargando los precios de insumos…</div>'
+      if (ins.error) return intro + `<div class="ad-aviso ad-aviso--grave">${esc('No se pudieron leer los precios de insumos: ' + ins.error)}</div>`
+      const filas = renglonesInsumosLista(ins.filas)
+      const lista = filas.length
+        ? filas.map(f => `
+          <div class="ad-insumo-precio${f.sin_costo === true ? ' ad-insumo-precio--sin-costo' : ''}">
+            <div class="ad-insumo-precio__texto">
+              <span class="ad-insumo-precio__nombre">${esc(f.insumo)}</span>
+              <span class="ad-insumo-precio__detalle">${esc(textoRenglonInsumo(f, moneda))}${esFechaIso(f.vigente_desde) ? ` · desde el ${esc(fechaCorta(f.vigente_desde))}` : ''}</span>
+            </div>
+            <button type="button" class="ad-btn ad-btn--suave" data-insumo-precio-editar="${esc(f.insumo_id)}">Cambiar</button>
+          </div>`).join('')
+        : '<div class="ad-vacio">Ningún insumo tiene precio fijo ni costo + % en esta lista.</div>'
+      const agregar = l.insumosEd ? '' : '<button type="button" class="ad-btn ad-btn--secundario" id="ad-ins-agregar">+ Agregar un insumo</button>'
+      return intro + lista + agregar + (l.insumosEd ? htmlEditorInsumoLista(l, moneda, veCostos) : '')
+    }
+
+    function htmlOpcionInsumoLista(i, elegido) {
+      const texto = [i.nombre, i.marca].map(limpio).filter(Boolean).join(' · ')
+      return `<option value="${esc(i.id)}"${i.id === elegido ? ' selected' : ''}>${esc(texto)}</option>`
+    }
+
+    function htmlEditorInsumoLista(l, moneda, veCostos) {
+      const ed = l.insumosEd
+      const catalogo = (estado.catalogo?.insumos ?? []).filter(i => i.activo !== false)
+      const insumo = ed.insumoId ? (insumoDe(estado.catalogo, ed.insumoId) ?? renglonesInsumosLista(l.insumos?.filas).find(f => f.insumo_id === ed.insumoId)) : null
+      const nombre = insumo ? (insumo.nombre ?? insumo.insumo) : ''
+      const elegir = ed.nuevo
+        ? `<div class="ad-campo"><label for="ad-ins-insumo">Insumo</label><select class="ad-select" id="ad-ins-insumo">
+            <option value="">Elegí el insumo…</option>
+            ${catalogo.map(i => htmlOpcionInsumoLista(i, ed.insumoId)).join('')}
+          </select></div>`
+        : `<p class="ad-insumo-precio__nombre">${esc(nombre)}</p>`
+      const modos = `<div class="ad-segmento" role="group" aria-label="Cómo se pone el precio" id="ad-ins-modo">
+          <button type="button" class="ad-segmento__opcion" data-ins-modo="fijo" aria-pressed="${ed.modo === 'fijo' ? 'true' : 'false'}">Precio fijo</button>
+          ${veCostos ? `<button type="button" class="ad-segmento__opcion" data-ins-modo="costo" aria-pressed="${ed.modo === 'costo' ? 'true' : 'false'}">Costo + %</button>` : ''}
+        </div>`
+      const unidad = porUnidadInsumo(insumo?.unidad_medida)
+      const campo = ed.modo === 'costo'
+        ? `<div class="ad-campo"><label for="ad-ins-pct">Porcentaje sobre el costo (%)</label><input type="text" class="ad-input" id="ad-ins-pct" autocomplete="off"></div>`
+        : `<div class="ad-campo"><label for="ad-ins-precio">Precio ${esc(unidad)}</label><input type="text" class="ad-input" id="ad-ins-precio" autocomplete="off"></div>`
+      return `<div class="ad-panel ad-insumo-editor" id="ad-ins-editor">
+          ${elegir}${modos}${campo}
+          <p class="ad-insumo-previa" id="ad-ins-previa" aria-live="polite"></p>
+          <div class="ad-campo"><label for="ad-ins-desde">Rige desde</label><input type="date" class="ad-input" id="ad-ins-desde" value="${esc(ed.desde)}"></div>
+          <p class="ad-error-pegado" id="ad-ins-error" hidden></p>
+          <div class="ad-panel__acciones">
+            <button type="button" class="ad-btn" id="ad-ins-guardar">Guardar</button>
+            <button type="button" class="ad-btn ad-btn--suave" id="ad-ins-cancelar">Cancelar</button>
+          </div>
+        </div>`
+    }
+
+    // Lo que se va a guardar, dicho antes: el precio fijo, o el costo de hoy
+    // + el % (y si falta el costo, que falta).
+    function textoPreviaInsumoLista(l, valor) {
+      const ed = l.insumosEd
+      if (!ed?.insumoId || valor === null) return ''
+      const moneda = listaDe(l.id)?.moneda ?? 'ARS'
+      const unidad = porUnidadInsumo((insumoDe(estado.catalogo, ed.insumoId) ?? renglonesInsumosLista(l.insumos?.filas).find(f => f.insumo_id === ed.insumoId))?.unidad_medida)
+      if (ed.modo === 'fijo') return `Va a quedar a ${plataInsumoLista(valor, moneda)} ${unidad}.`
+      const costo = l.insumos?.costos?.get(ed.insumoId) ?? null
+      if (costo === null) return 'Este insumo todavía no tiene costo cargado en esta fábrica: hasta que se cargue (en Stock → Costos) no tiene precio.'
+      return `Costo ${plataInsumoLista(costo, moneda)} + ${formatearNumeroAr(valor, { decimales: 2, minimos: 0 })} % = ${plataInsumoLista(precioConRecargo(costo, valor), moneda)} ${unidad} (con el costo de hoy).`
+    }
+
+    function campoValorInsumo() {
+      return document.getElementById(estado.lista?.insumosEd?.modo === 'costo' ? 'ad-ins-pct' : 'ad-ins-precio')
+    }
+
+    function pintarPreviaInsumoLista() {
+      const l = estado.lista
+      if (!l?.insumosEd) return
+      document.getElementById('ad-ins-previa').textContent = textoPreviaInsumoLista(l, leerCampoNumero(campoValorInsumo()))
+      const e = document.getElementById('ad-ins-error')
+      e.textContent = l.insumosEd.error ?? ''
+      e.hidden = !l.insumosEd.error
+      const g = document.getElementById('ad-ins-guardar')
+      g.disabled = l.insumosEd.enviando
+      g.textContent = l.insumosEd.enviando ? 'Guardando…' : 'Guardar'
+    }
+
+    function pintarInsumosLista() {
+      const l = estado.lista
+      if (!l) return
+      const cont = document.getElementById('ad-lista-insumos')
+      cont.innerHTML = htmlInsumosLista(l)
+      if (l.insumosEd) {
+        const precio = document.getElementById('ad-ins-precio')
+        const pct = document.getElementById('ad-ins-pct')
+        if (precio) { enlazarCampoNumero(precio, { decimales: 4 }); ponerNumero(precio, l.insumosEd.valor) }
+        if (pct) { enlazarCampoNumero(pct, { decimales: 2, negativos: true }); ponerNumero(pct, l.insumosEd.valor) }
+        pintarPreviaInsumoLista()
+      }
+    }
+
+    function abrirEditorInsumoLista(insumoId) {
+      const l = estado.lista
+      if (!l?.insumos?.filas) return
+      const f = insumoId ? renglonesInsumosLista(l.insumos.filas).find(x => x.insumo_id === insumoId) : null
+      const veCostos = puedeEn('stock', 'ver_costos')
+      const modo = f?.tipo === 'costo_mas_pct' && veCostos ? 'costo' : 'fijo'
+      l.insumosEd = {
+        insumoId: f ? f.insumo_id : null, nuevo: !f, modo,
+        valor: f ? (modo === 'costo' ? numeroONull(f.recargo_costo_pct) : numeroONull(f.precio_unitario)) : null,
+        desde: hoyArgentina(), error: null, enviando: false,
+      }
+      pintarInsumosLista()
+    }
+
+    function cambiarModoInsumoLista(modo) {
+      const ed = estado.lista?.insumosEd
+      if (!ed || ed.modo === modo || ed.enviando) return
+      if (modo === 'costo' && !puedeEn('stock', 'ver_costos')) return
+      ed.modo = modo === 'costo' ? 'costo' : 'fijo'
+      // Cambiar entre un precio y un % VACÍA el campo: un 15 no es lo mismo.
+      ed.valor = null
+      ed.error = null
+      pintarInsumosLista()
+    }
+
+    function validarInsumoLista(ed, valor) {
+      if (!ed.insumoId) return 'Elegí el insumo.'
+      if (ed.modo === 'costo') {
+        if (valor === null) return 'Escribí el % sobre el costo.'
+        if (valor <= -100) return 'El % no puede ser -100 o menos.'
+      } else {
+        if (valor === null) return 'Escribí el precio.'
+        if (valor < 0) return 'El precio no puede ser negativo.'
+      }
+      if (!esFechaIso(ed.desde)) return 'Poné desde qué fecha rige.'
+      return null
+    }
+
+    // EXACTAMENTE uno de los dos: el otro viaja null.
+    function parametrosPrecioInsumoLista(listaId, ed, valor) {
+      return {
+        p_lista_id: listaId, p_insumo_id: ed.insumoId,
+        p_precio_unitario: ed.modo === 'fijo' ? valor : null,
+        p_recargo_costo_pct: ed.modo === 'costo' ? valor : null,
+        p_vigente_desde: ed.desde,
+      }
+    }
+
+    async function guardarInsumoLista() {
+      const l = estado.lista
+      const ed = l?.insumosEd
+      if (!ed || ed.enviando) return
+      const valor = leerCampoNumero(campoValorInsumo())
+      ed.valor = valor
+      const problema = validarInsumoLista(ed, valor)
+      if (problema) { ed.error = problema; pintarPreviaInsumoLista(); return }
+      ed.enviando = true
+      ed.error = null
+      pintarPreviaInsumoLista()
+      const { error } = await supabase.rpc('guardar_precio_insumo_lista', parametrosPrecioInsumoLista(l.id, ed, valor))
+      if (estado.lista !== l || l.insumosEd !== ed) return
+      ed.enviando = false
+      if (error) {
+        console.error('guardar_precio_insumo_lista:', error)
+        // El error de la base, tal cual, pegado al botón.
+        ed.error = error.message || 'No se pudo guardar el precio.'
+        pintarPreviaInsumoLista()
+        return
+      }
+      mostrarExito('Precio del insumo guardado.')
+      l.insumosEd = null
+      l.insumos = null
+      pintarInsumosLista()
+      await cargarInsumosLista(l)
+    }
+
     let turnoLista = 0
 
     async function abrirLista(id) {
@@ -5060,7 +5383,9 @@
       const turno = ++turnoLista
       // completa: undefined = todavía no se leyó; null = no se pudo (errorCompleta lo dice).
       estado.lista = { id, precios: null, filas: [], pendientes: new Map(), historial: null, confirmar: null, error: null, errorPorcentaje: null, guardando: null, errores: new Map(),
-        completa: undefined, errorCompleta: null }
+        completa: undefined, errorCompleta: null,
+        // Los insumos a precio fijo o costo + % (09/10/2026): null = cargando.
+        insumos: null, insumosEd: null }
       mostrarVista('ad-vista-lista')
       document.getElementById('ad-lista-desde').value = hoyArgentina()
       ponerNumero(enlazarPorcentaje(), null)
@@ -5073,6 +5398,8 @@
         estado.lista.completa = completa.completa ?? null
         estado.lista.errorCompleta = completa.error ?? null
         estado.lista.filas = filasGrilla(estado.catalogo)
+        // Aparte: si falla, la grilla igual se ve (lo dice su tarjeta).
+        cargarInsumosLista(estado.lista)
       } catch (err) {
         if (turno !== turnoLista) return
         console.error('No se pudieron leer los precios:', err)
@@ -5126,7 +5453,7 @@
       const items = preciosAGuardar(l, hoyArgentina())
       if (!items.length) { l.errorPorcentaje = 'No hay precios nuevos para guardar.'; pintarLista(false); return }
       if (items.some(x => x.precio_caja < 0)) { l.errorPorcentaje = 'Un precio no puede ser negativo.'; pintarLista(false); return }
-      const chocan = chocanMismaFecha(l.precios, items, desde, (id) => (l.filas.find(f => f.presentacionId === id)?.producto ?? 'un producto'))
+      const chocan = chocanMismaFecha(l.precios, items, desde, (id) => (l.filas.find(f => f.presentacionId === id || f.clave === id)?.producto ?? 'un producto'))
       if (chocan.length) { l.errorPorcentaje = textoChoqueMismaFecha(chocan, desde); pintarLista(false); return }
       l.errorPorcentaje = null
       l.confirmar = { items, desde, error: null }
@@ -7351,6 +7678,28 @@
       })
       document.getElementById('ad-panel-historial').addEventListener('click', (e) => {
         if (e.target.closest('#ad-historial-cerrar') && estado.lista) { estado.lista.historial = null; pintarLista(false) }
+      })
+      // Los insumos a precio fijo o costo + % (09/10/2026)
+      const insLista = document.getElementById('ad-lista-insumos')
+      insLista.addEventListener('click', (e) => {
+        const ed = e.target.closest('[data-insumo-precio-editar]')
+        if (ed) { abrirEditorInsumoLista(ed.dataset.insumoPrecioEditar); return }
+        if (e.target.closest('#ad-ins-agregar')) { abrirEditorInsumoLista(null); return }
+        const m = e.target.closest('[data-ins-modo]')
+        if (m) { cambiarModoInsumoLista(m.dataset.insModo); return }
+        if (e.target.closest('#ad-ins-guardar')) { guardarInsumoLista(); return }
+        if (e.target.closest('#ad-ins-cancelar') && estado.lista && !estado.lista.insumosEd?.enviando) { estado.lista.insumosEd = null; pintarInsumosLista() }
+      })
+      insLista.addEventListener('input', (e) => {
+        const ed = estado.lista?.insumosEd
+        if (!ed) return
+        if (e.target.id === 'ad-ins-precio' || e.target.id === 'ad-ins-pct') { ed.valor = leerCampoNumero(e.target); ed.error = null; pintarPreviaInsumoLista() }
+      })
+      insLista.addEventListener('change', (e) => {
+        const ed = estado.lista?.insumosEd
+        if (!ed) return
+        if (e.target.id === 'ad-ins-insumo') { ed.valor = leerCampoNumero(campoValorInsumo()); ed.insumoId = e.target.value || null; ed.error = null; pintarInsumosLista() }
+        if (e.target.id === 'ad-ins-desde') { ed.desde = e.target.value; ed.error = null; pintarPreviaInsumoLista() }
       })
       document.getElementById('ad-lista-clientes').addEventListener('change', (e) => {
         const t = e.target.closest('[data-lista-cliente]')

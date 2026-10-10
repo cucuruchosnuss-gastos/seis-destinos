@@ -1378,6 +1378,40 @@
     .pr-hm__ing-cant { font-family: var(--p-titulo); font-size: 19px; font-weight: 800; }
     .pr-hm__ing-marca { font-size: 13.5px; color: var(--p-tinta-2); }
     .pr-hm__anular-btn { align-self: flex-start; margin-top: 6px; }
+    /* LA LISTA DE MASAS COMPACTA (08/10/2026): cada masa UN renglón —número,
+       hora, Original o Modificada, Simple o Doble— y al tocarlo, el detalle
+       (quién la cargó, cuándo y la fórmula). Sin la fórmula en la lista. */
+    .pr-mc { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; min-width: 0; text-align: left; font: inherit; color: var(--p-tinta); line-height: 1.2; }
+    .pr-mc__nro { font-size: 15px; font-weight: 800; white-space: nowrap; }
+    .pr-mc__hora { font-size: 14px; color: var(--p-gris); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .pr-mc__origen { font-size: 14px; color: var(--p-tinta-2); white-space: nowrap; }
+    .pr-mc__origen--modificada { color: var(--p-mal); font-weight: 800; }
+    .pr-mc__tam { font-size: 14px; font-weight: 800; white-space: nowrap; }
+    .pr-mc__marca { margin-left: auto; display: inline-flex; gap: 4px; white-space: nowrap; }
+    .pr-mc__marca .pr-chip-choco { height: 22px; font-size: 11.5px; padding: 0 6px; }
+    .pr-mc__maq { font-size: 13.5px; color: var(--p-gris); white-space: nowrap; }
+    /* La columna de la receta es angosta: "Masa" queda para el lector de
+       pantalla y el renglón entra en una línea ("6 · 09:25 Original Simple"). */
+    .pr-rm__fila .pr-mc__palabra { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .pr-rm__fila.pr-mc { gap: 2px 8px; position: relative; }   /* relative: la palabra escondida no se escapa del scroll de la lista */
+    .pr-rm__fila .pr-mc__hora, .pr-rm__fila .pr-mc__origen, .pr-rm__fila .pr-mc__tam { font-size: 13px; }
+    button.pr-mc { cursor: pointer; }
+    .pr-hm__masa.pr-mc { min-height: 48px; flex: 0 0 auto; }
+    .pr-hm__masa--tirada .pr-mc__nro, .pr-hm__masa--tirada .pr-mc__hora, .pr-hm__masa--tirada .pr-mc__origen, .pr-hm__masa--tirada .pr-mc__tam,
+    .pr-rm__fila--tirada .pr-mc__nro, .pr-rm__fila--tirada .pr-mc__hora, .pr-rm__fila--tirada .pr-mc__origen, .pr-rm__fila--tirada .pr-mc__tam,
+    .pr-masa-fila--tirada .pr-mc__nro, .pr-masa-fila--tirada .pr-mc__hora, .pr-masa-fila--tirada .pr-mc__origen, .pr-masa-fila--tirada .pr-mc__tam { text-decoration: line-through; color: var(--p-gris); }
+    button.pr-rm__fila { width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--p-div); border-radius: 0; padding: 4px 2px; }
+    button.pr-rm__fila:focus-visible, .pr-masa-fila__ver:focus-visible { outline: 3px solid var(--p-acento); outline-offset: -3px; }
+    .pr-rm__fila--anulada.pr-mc { text-decoration: none; }
+    .pr-rm__fila--anulada .pr-mc__nro, .pr-rm__fila--anulada .pr-mc__hora, .pr-rm__fila--anulada .pr-mc__origen, .pr-rm__fila--anulada .pr-mc__tam { text-decoration: line-through; }
+    .pr-masa-fila { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--p-div); min-height: 48px; }
+    .pr-masa-fila__ver { flex: 1; min-width: 0; min-height: 48px; background: transparent; border: 0; padding: 4px 6px; }
+    .pr-masa-fila__estado { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; white-space: nowrap; }
+    .pr-masa-fila--anulada .pr-mc__nro, .pr-masa-fila--anulada .pr-mc__hora, .pr-masa-fila--anulada .pr-mc__origen, .pr-masa-fila--anulada .pr-mc__tam { text-decoration: line-through; color: var(--p-gris); }
+    /* La ventana del detalle de una masa (la lista de la receta y "Masas del
+       turno"): el cuerpo scrollea adentro. */
+    #pr-masa-ventana .pr-lp__caja { max-height: calc(100dvh - 24px); }
+    .pr-mv__cuerpo { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 
     /* ══ 10b / 10c · EL ACCESO MAESTRO, PANTALLA PROPIA ══
        Banda blanca de 56 px de borde a borde (como la de ¿Quién sos?, pero
@@ -2289,6 +2323,23 @@
         </div>
       </div>
 
+      <!-- El detalle de una masa (la lista de masas compacta, 08/10/2026): se
+           abre al tocar un renglón de la lista de la receta o de "Masas del
+           turno". Foco atrapado, Escape y el fondo cierran, el foco vuelve al
+           renglón. -->
+      <div class="pr-lp" id="pr-masa-ventana" hidden role="dialog" aria-modal="true" aria-labelledby="pr-masa-ventana-titulo">
+        <div class="pr-lp__caja">
+          <div class="pr-lp__cab">
+            <div class="pr-lp__titulos">
+              <h2 class="pr-lp__titulo" id="pr-masa-ventana-titulo"></h2>
+              <span class="pr-lp__sub" id="pr-masa-ventana-sub"></span>
+            </div>
+            <button type="button" class="pr-cerrar-x" id="pr-masa-ventana-cerrar" aria-label="Cerrar">&times;</button>
+          </div>
+          <div class="pr-mv__cuerpo" id="pr-masa-ventana-cuerpo" data-scroll-propio></div>
+        </div>
+      </div>
+
       <!-- 4b / 4c · LA MASA NUEVA (la planta con dos modos, 28/09/2026). Arriba
            el número, el tamaño y "Máquina · Cambiar"; debajo de dónde sale
            (Original / Anterior / Modificar) y la receta, un renglón por lo que
@@ -2421,9 +2472,6 @@
           </div>
         </div>
         <div class="pr-tarjeta pr-masas">
-          <div class="pr-masas__cab">
-            <span>Masa</span><span>Hora</span><span>Máquina</span><span>Tamaño</span><span>Detalle</span><span class="pr-masas__der">Estado</span>
-          </div>
           <div id="pr-masas-lista"></div>
         </div>
       </section>
@@ -3504,10 +3552,87 @@
       if (h.elegida) await cargarDetalleHist(h.elegida)
     }
 
-    // 4h · El detalle de una masa: sus renglones (masa_items, con el nombre del
-    // ingrediente y la marca del insumo) y la receta con la que se hizo, para
-    // decir qué se agregó y qué cambió. Sin receta conocida no se compara:
-    // nunca se inventa una diferencia.
+    // LA LISTA DE MASAS COMPACTA (08/10/2026, pedido de Facu). En las tres
+    // listas de masas de la planta (la de la receta, "Masas del turno" y el
+    // historial de una máquina) cada masa es UN renglón: el número, la hora,
+    // Original o Modificada y Simple o Doble, más "Chocolate", "Anulada" o
+    // "Tirada" cuando corresponde. La fórmula NO va en la lista: al tocar el
+    // renglón se abre el detalle (quién la cargó, cuándo y cada ingrediente).
+    // Una masa con origen 'anterior' se dice "Original": es la receta sin
+    // cambios (copiada de la masa anterior); lo que se aparta de la receta la
+    // base lo marca 'modificada' (registrar_masa calcula el origen).
+    function textoOrigenMasa(m) {
+      return m?.origen === 'modificada' ? 'Modificada' : 'Original'
+    }
+
+    function htmlOrigenMasa(m) {
+      return `<span class="pr-mc__origen${m?.origen === 'modificada' ? ' pr-mc__origen--modificada' : ''}">${textoOrigenMasa(m)}</span>`
+    }
+
+    // Lo que no es lo normal: anulada, tirada o de chocolate (una sola cosa).
+    function htmlMarcaMasa(m) {
+      if (m?.anulada) return '<span class="pr-rm__anulada">Anulada</span>'
+      if (esTirada(m)) return '<span class="pr-tirada">Tirada</span>'
+      return m?.es_chocolate ? '<span class="pr-chip-choco">Chocolate</span>' : ''
+    }
+
+    function htmlRenglonMasa(m) {
+      const marca = htmlMarcaMasa(m)
+      return `<span class="pr-mc__nro"><span class="pr-mc__palabra">Masa </span>${esc(m?.nro ?? '—')}</span>` +
+        `<span class="pr-mc__hora">${esc(horaArgentina(m?.hora) || '—')}</span>` +
+        htmlOrigenMasa(m) +
+        `<span class="pr-mc__tam">${m?.doble ? 'Doble' : 'Simple'}</span>` +
+        (marca ? `<span class="pr-mc__marca">${marca}</span>` : '')
+    }
+
+    // Cuándo se cargó: "28/09/2026 · 07:40", en Argentina ('' si no se sabe).
+    function cuandoMasa(m) {
+      return [fechaCorta(m?.hora), horaArgentina(m?.hora)].filter(Boolean).join(' · ')
+    }
+
+    // Quién la cargó: el masero, del personal de la fábrica ('' si no está).
+    function quienMasa(m) {
+      return (estado.personal ?? []).find(x => x.id === m?.masero_id)?.nombre ?? ''
+    }
+
+    // Lo que lee el detalle de una masa: sus renglones (masa_items, con el
+    // nombre del ingrediente y la marca del insumo) y la receta con la que se
+    // hizo, para decir qué se agregó y qué cambió. Sin receta conocida no se
+    // compara: nunca se inventa una diferencia. Lo usan el historial de la
+    // máquina y la ventana del detalle.
+    async function leerDetalleMasa(m) {
+      const [it, rec] = await Promise.all([
+        supabase.from('masa_items')
+          .select('ingrediente_id, insumo_id, lote, cantidad_simple_kg, ingrediente_libre, ingredientes(nombre, orden), insumos(nombre, marca)')
+          .eq('masa_id', m.id),
+        m.receta_id
+          ? supabase.from('receta_items').select('ingrediente_id, cantidad_kg').eq('receta_id', m.receta_id)
+          : Promise.resolve({ data: null, error: null }),
+      ])
+      if (it.error) throw it.error
+      if (rec.error) throw rec.error
+      return {
+        items: it.data ?? [],
+        receta: rec.data ? new Map(rec.data.map(r => [r.ingrediente_id, Number(r.cantidad_kg ?? 0)])) : null,
+      }
+    }
+
+    // El cuerpo del detalle: quién la cargó y cuándo, el motivo, por qué se
+    // anuló o se tiró, y la fórmula. Lo comparten el historial de la máquina y
+    // la ventana.
+    function htmlCuerpoMasa(m, d) {
+      const quien = quienMasa(m)
+      const sub = [esc(cuandoMasa(m) || '—'), quien ? `la cargó ${esc(quien)}` : '', m.motivo ? `“${esc(m.motivo)}”` : ''].filter(Boolean).join(' · ')
+      let html = `<p class="pr-hm__det-sub">${sub}</p>`
+      if (m.anulada && m.anulada_motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se anuló:</span> ${esc(m.anulada_motivo)}</p>`
+      if (!m.anulada && esTirada(m)) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se tiró:</span> ${esc(m.descarte_motivo || 'sin motivo')} · lo que se usó quedó descontado del stock.</p>`
+      if (d && d.error) html += '<p class="pr-aviso pr-aviso--grave">No se pudo leer el detalle de esta masa.</p>'
+      else if (!d || d.items == null) html += '<p class="pr-texto-suave">Cargando…</p>'
+      else html += htmlIngredientesHist(d, m)
+      return html
+    }
+
+    // 4h · El detalle de una masa del historial de la máquina.
     async function cargarDetalleHist(masaId) {
       const h = estado.histMaq
       if (!h) return
@@ -3517,19 +3642,10 @@
       h.detalle = { masaId, items: null, receta: null, error: false }
       pintarHistMaq()
       try {
-        const [it, rec] = await Promise.all([
-          supabase.from('masa_items')
-            .select('ingrediente_id, insumo_id, lote, cantidad_simple_kg, ingrediente_libre, ingredientes(nombre, orden), insumos(nombre, marca)')
-            .eq('masa_id', masaId),
-          m.receta_id
-            ? supabase.from('receta_items').select('ingrediente_id, cantidad_kg').eq('receta_id', m.receta_id)
-            : Promise.resolve({ data: null, error: null }),
-        ])
-        if (it.error) throw it.error
-        if (rec.error) throw rec.error
+        const r = await leerDetalleMasa(m)
         if (pedido !== estado.pedidoDetalleHist || estado.histMaq !== h) return
-        h.detalle.items = it.data ?? []
-        h.detalle.receta = rec.data ? new Map(rec.data.map(r => [r.ingrediente_id, Number(r.cantidad_kg ?? 0)])) : null
+        h.detalle.items = r.items
+        h.detalle.receta = r.receta
       } catch (err) {
         if (pedido !== estado.pedidoDetalleHist || estado.histMaq !== h) return
         console.error('detalle de la masa:', err)
@@ -3538,13 +3654,11 @@
       pintarHistMaq()
     }
 
+    // Un renglón del historial: tocarlo lo elige y su detalle se ve al lado.
     function htmlMasaHist(m, elegida) {
-      const origenHist = m.origen ? (ETIQUETA_ORIGEN[m.origen] ?? m.origen) : ''
       const tirada = !m.anulada && esTirada(m)
-      return `<button type="button" class="pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}${tirada ? ' pr-hm__masa--tirada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}" title="${esc(origenHist)}">` +
-        `<span class="pr-hm__masa-col"><span class="pr-hm__masa-l1">Masa ${esc(m.nro)}</span>` +
-        `<span class="pr-hm__masa-l2">${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</span></span>` +
-        `<span class="pr-hm__masa-chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : (tirada ? htmlTirada(m) : chipsDeMasa(m))}</span></button>`
+      return `<button type="button" class="pr-hm__masa pr-mc${m.anulada ? ' pr-hm__masa--anulada' : ''}${tirada ? ' pr-hm__masa--tirada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}" aria-controls="pr-hm-detalle">` +
+        htmlRenglonMasa(m) + '</button>'
     }
 
     // Cada ingrediente con su marca, cantidad y lote. Lo agregado (la receta
@@ -3592,17 +3706,9 @@
     function htmlDetalleHist(h) {
       const m = (h.masas ?? []).find(x => x.id === h.elegida)
       if (!m) return '<p class="pr-texto-suave">Tocá una masa para ver su detalle.</p>'
-      const quien = (estado.personal ?? []).find(x => x.id === m.masero_id)?.nombre ?? ''
-      const chips = m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : (esTirada(m) ? '<span class="pr-tirada">Tirada</span>' : chipsDeMasa(m))
-      const sub = [horaArgentina(m.hora) || '—', quien ? `la hizo ${esc(quien)}` : '', m.motivo ? `“${esc(m.motivo)}”` : ''].filter(Boolean).join(' · ')
-      let html = `<div class="pr-hm__det-cab"><h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</h2>${chips}</div>` +
-        `<p class="pr-hm__det-sub">${sub}</p>`
-      if (m.anulada && m.anulada_motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se anuló:</span> ${esc(m.anulada_motivo)}</p>`
-      if (!m.anulada && esTirada(m)) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se tiró:</span> ${esc(m.descarte_motivo || 'sin motivo')} · lo que se usó quedó descontado del stock.</p>`
       const d = h.detalle && h.detalle.masaId === m.id ? h.detalle : null
-      if (d && d.error) html += '<p class="pr-aviso pr-aviso--grave">No se pudo leer el detalle de esta masa.</p>'
-      else if (!d || d.items == null) html += '<p class="pr-texto-suave">Cargando…</p>'
-      else html += htmlIngredientesHist(d, m)
+      let html = `<div class="pr-hm__det-cab"><h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</h2>` +
+        `${htmlOrigenMasa(m)}${htmlMarcaMasa(m)}</div>` + htmlCuerpoMasa(m, d)
       // Solo la ÚLTIMA se anula, y con produccion:cargar.
       const ultima = ultimaMasaAnulable(h.masas)
       if (ultima && ultima.id === m.id && tieneTarea('cargar')) {
@@ -3696,6 +3802,67 @@
       mostrarVista('pr-sala')
       pintarSala()
       await elegirMaquinaSala(turnoId)
+    }
+
+    // LA VENTANA DEL DETALLE DE UNA MASA (08/10/2026): tocar un renglón de la
+    // lista de la receta o de "Masas del turno" la abre, con quién la cargó,
+    // cuándo y la fórmula (htmlCuerpoMasa, la misma del historial).
+    function buscarMasaVista(masaId) {
+      return [...(estado.masasReceta ?? []), ...(estado.masasTurno ?? [])].find(x => x.id === masaId) ?? null
+    }
+
+    async function abrirVerMasa(masaId) {
+      const m = buscarMasaVista(masaId)
+      if (!m) return
+      tocar()
+      const pedido = (estado.pedidoVerMasa = (estado.pedidoVerMasa ?? 0) + 1)
+      estado.verMasa = { masaId, masa: m, detalle: { masaId, items: null, receta: null, error: false } }
+      pintarVerMasa()
+      document.getElementById('pr-masa-ventana').hidden = false
+      document.getElementById('pr-masa-ventana-cerrar').focus()
+      try {
+        const r = await leerDetalleMasa(m)
+        if (pedido !== estado.pedidoVerMasa || estado.verMasa?.masaId !== masaId) return
+        estado.verMasa.detalle.items = r.items
+        estado.verMasa.detalle.receta = r.receta
+      } catch (err) {
+        if (pedido !== estado.pedidoVerMasa || estado.verMasa?.masaId !== masaId) return
+        console.error('detalle de la masa:', err)
+        estado.verMasa.detalle.error = true
+      }
+      pintarVerMasa()
+    }
+
+    function pintarVerMasa() {
+      const v = estado.verMasa
+      if (!v) return
+      const m = v.masa
+      document.getElementById('pr-masa-ventana-titulo').textContent = `Masa ${m.nro ?? '—'} · ${m.doble ? 'Doble' : 'Simple'}`
+      const maq = nombreDeTurno(m.turno_id)
+      document.getElementById('pr-masa-ventana-sub').textContent = maq === '—' ? '' : maq
+      document.getElementById('pr-masa-ventana-cuerpo').innerHTML =
+        `<div class="pr-hm__det-cab">${htmlOrigenMasa(m)}${htmlMarcaMasa(m)}</div>` + htmlCuerpoMasa(m, v.detalle)
+    }
+
+    // El foco vuelve al renglón que la abrió.
+    function cerrarVerMasa({ devolverFoco = true } = {}) {
+      const v = estado.verMasa
+      estado.verMasa = null
+      document.getElementById('pr-masa-ventana').hidden = true
+      if (!v || !devolverFoco) return
+      const el = document.querySelector(`[data-masa-ver="${v.masaId}"]`)
+      if (el) el.focus()
+    }
+
+    function teclaVerMasa(ev) {
+      if (!estado.verMasa) return
+      if (ev.key === 'Escape') { ev.preventDefault(); cerrarVerMasa(); return }
+      if (ev.key !== 'Tab') return
+      const focos = [...document.getElementById('pr-masa-ventana').querySelectorAll('button:not([disabled])')]
+      if (!focos.length) return
+      const i = focos.indexOf(document.activeElement)
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }
+      else if (!ev.shiftKey && i === focos.length - 1) { ev.preventDefault(); focos[0].focus() }
     }
 
     // "Sacar al masero": el encargado adentro de Producción (verificado con su
@@ -3817,6 +3984,8 @@
       if (id !== 'pr-asignar') estado.asignar = null
       // Una pregunta de "¿Salir sin guardar?" es de la pantalla que se deja.
       if (estado.confirma) { estado.confirma = null; pintarConfirma() }
+      // El detalle de una masa también.
+      if (estado.verMasa && id !== estado.vista) cerrarVerMasa({ devolverFoco: false })
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       pintarCabecera()
@@ -5496,9 +5665,9 @@
       }
       const grupo = (titulo, gente) => gente.length
         ? `<div class="pr-op-grupo">${esc(titulo)}</div><div class="pr-op-grilla">${gente.map(tag).join('')}</div>` : ''
-      if (!hace.length) return grupo(q ? 'OPERARIOS' : 'OPERARIOS · EN GRIS, LOS QUE YA ESTÁN EN OTRA MÁQUINA HOY', resto)
+      if (!hace.length) return grupo(q ? 'OPERARIOS' : 'OPERARIOS · EN GRIS, LOS QUE ESTÁN AHORA EN OTRA MÁQUINA', resto)
       return grupo(`TRABAJARON HACE POCO EN ${String(f.nombre).toLocaleUpperCase('es')}`, hace) +
-        grupo('EL RESTO · EN GRIS, LOS QUE YA ESTÁN EN OTRA MÁQUINA HOY', resto)
+        grupo('EL RESTO · EN GRIS, LOS QUE ESTÁN AHORA EN OTRA MÁQUINA', resto)
     }
 
     // Qué falta para poder abrir. Lista vacía = se puede.
@@ -5561,28 +5730,46 @@
       pintarAbrir()
       mostrarVista('pr-abrir')
       const form = estado.abrir
-      const r = await leerOcupadosYRecientes(estado.unidadId, (estado.tablero ?? []).filter(e => e.turno && !esDeAyer(e, hoy)), form.filas.map(f => f.maquinaId))
+      const nombresMaquina = new Map((estado.tablero ?? []).map(e => [e.maquina?.id, e.maquina?.nombre]))
+      const r = await leerOcupadosYRecientes(estado.unidadId, form.filas.map(f => f.maquinaId), nombresMaquina)
       if (estado.abrir !== form) return
       form.ocupados = r.ocupados
       form.recientes = r.recientes
       pintarAbrir()
     }
 
-    // Quién ya está en otra máquina HOY (los operarios de los turnos abiertos,
-    // sin hora de salida) y quiénes trabajaron hace poco en cada máquina (los
-    // de sus 3 últimos turnos cerrados). Si algo falla no se dice nada: los
-    // grupos no se inventan.
-    async function leerOcupadosYRecientes(unidadId, abiertas, maquinaIds) {
+    // Quién está AHORA en otra máquina y quiénes trabajaron hace poco en cada
+    // máquina (los de sus 3 últimos turnos cerrados). Si algo falla no se dice
+    // nada: los grupos no se inventan.
+    //
+    // OCUPADO = su fila de turno_operarios sigue sin `hasta` Y su planilla está
+    // 'abierto' (08/10/2026). No es "trabajó hoy": la base le pone `hasta` a
+    // todos cuando la planilla sale de 'abierto' (trigger
+    // trg_turno_cierra_operarios sobre turnos_produccion, verificado con
+    // pg_get_functiondef el 08/10/2026), así que el operario de la planilla de
+    // la mañana, ya cerrada, se puede elegir en el turno siguiente. Los turnos
+    // abiertos se leen de la BASE en el momento (no del tablero, que puede
+    // estar viejo), también el que quedó abierto de un día anterior: sigue
+    // abierto y su gente sigue sin salida. Las dos condiciones se piden en la
+    // consulta y se vuelven a mirar acá (un dato viejo con `hasta` vacío en
+    // una planilla cerrada no ocupa a nadie).
+    async function leerOcupadosYRecientes(unidadId, maquinaIds, nombresMaquina = new Map()) {
       const ocupados = new Map(), recientes = new Map()
       try {
-        const ids = abiertas.map(e => e.turno.id)
+        const { data: abiertos, error: e0 } = await supabase.from('turnos_produccion')
+          .select('id, maquina_id, estado, unidad_negocio_id').eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')
+        if (e0) throw e0
+        const porTurno = new Map((abiertos ?? []).filter(t => t?.estado === 'abierto' && t.unidad_negocio_id === unidadId).map(t => [t.id, t]))
+        const ids = [...porTurno.keys()]
         if (ids.length) {
-          const { data, error } = await supabase.from('turno_operarios').select('turno_id, empleado_id, hasta').in('turno_id', ids)
+          const { data, error } = await supabase.from('turno_operarios').select('turno_id, empleado_id, hasta')
+            .in('turno_id', ids).is('hasta', null)
           if (error) throw error
           for (const o of data ?? []) {
             if (o.hasta) continue
-            const e = abiertas.find(x => x.turno.id === o.turno_id)
-            if (e) ocupados.set(o.empleado_id, `en ${e.maquina.nombre}`)
+            const t = porTurno.get(o.turno_id)
+            if (!t) continue
+            ocupados.set(o.empleado_id, `en ${nombresMaquina.get(t.maquina_id) ?? 'otra máquina'}`)
           }
         }
         if (maquinaIds.length) {
@@ -6053,11 +6240,20 @@
       return n === '—' ? '' : n.split(/\s+/)[0]
     }
 
+    // Los que están trabajando AHORA en una planilla: sin hora de salida y con
+    // la planilla 'abierto' (08/10/2026). En una planilla que ya no está
+    // abierta no hay nadie adentro (la base les pone `hasta` al cerrarla). Un
+    // turno sin estado leído se toma como abierto: es la planilla en pantalla.
+    function operarioAdentro(o, turno) {
+      if (!o || o.hasta) return false
+      return (turno?.estado ?? 'abierto') === 'abierto'
+    }
+
     // 4a · Operarios: el encargado primero, con su marca, y los que están
     // adentro. Se toca para sumar o sacar.
     function htmlOpsResumen(p) {
       const encargado = p?.turno?.encargado_id ?? null
-      const adentro = (p?.operarios ?? []).filter(o => !o.hasta).map(o => o.empleado_id).filter(id => id !== encargado)
+      const adentro = (p?.operarios ?? []).filter(o => operarioAdentro(o, p?.turno)).map(o => o.empleado_id).filter(id => id !== encargado)
       const gente = [...(encargado ? [{ id: encargado, enc: true }] : []), ...adentro.map(id => ({ id, enc: false }))]
       const vistos = gente.length > 3 ? gente.slice(0, 2) : gente
       const filas = vistos.map(g => `<span class="pr-res__persona">${esc(nombrePersona(g.id))}${g.enc ? '<span class="pr-res__enc">ENCARGADO</span>' : ''}</span>`).join('') +
@@ -6203,11 +6399,11 @@
     // justo lo que la planilla tiene que poder contar después.
     function htmlOperariosPlanilla(p, ops, personas) {
       const filas = Array.isArray(p?.operarios) ? p.operarios : []
-      const adentro = filas.filter(o => !o.hasta)
+      const adentro = filas.filter(o => operarioAdentro(o, p?.turno))
       const chipsHtml = adentro.map(o =>
         htmlChipOperario(nombrePersona(o.empleado_id), CTX_PLANILLA, o.empleado_id)).join('') +
-        filas.filter(o => o.hasta).map(o =>
-          `<span class="pr-chip-op pr-chip-op--fuera">${esc(nombrePersona(o.empleado_id))} · salió ${esc(horaArgentina(o.hasta) || '—')}</span>`).join('')
+        filas.filter(o => !operarioAdentro(o, p?.turno)).map(o =>
+          `<span class="pr-chip-op pr-chip-op--fuera">${esc(nombrePersona(o.empleado_id))} · ${o.hasta ? `salió ${esc(horaArgentina(o.hasta) || '—')}` : 'sin hora de salida'}</span>`).join('')
       const vacioHtml = filas.length ? '' : '<span class="pr-texto-suave">Todavía no hay operarios en esta máquina.</span>'
       const sumarHtml = ops.buscando ? '' : `<button type="button" class="pr-btn pr-btn--secundario" data-mas-operario="${CTX_PLANILLA}">+ Sumar</button>`
       const buscadorHtml = ops.buscando
@@ -6242,7 +6438,7 @@
     function pintarResultadosPlanillaOp() {
       const cont = document.querySelector(`[data-res-op="${CTX_PLANILLA}"]`)
       if (!cont || !estado.planilla) return
-      const adentro = (estado.planilla.operarios ?? []).filter(o => !o.hasta).map(o => o.empleado_id)
+      const adentro = (estado.planilla.operarios ?? []).filter(o => operarioAdentro(o, estado.planilla.turno)).map(o => o.empleado_id)
       const texto = estado.opsPlanilla.busqueda
       cont.innerHTML = htmlResultadosOperario(candidatosOperario(estado.operarios ?? [], texto, adentro), texto, CTX_PLANILLA)
     }
@@ -7815,7 +8011,10 @@
       }
       if (!sinEmpaque) {
         ahora.caja_insumo_id = a.cajaId ?? null
-        ahora.embolsado = embolsadoEfectivo(a, cat)
+        // Un renglón viejo sin embolsado (null) que nadie tocó no lo gana de
+        // regalo: 'ninguno' sería un cambio que la persona no hizo.
+        const emb = embolsadoEfectivo(a, cat)
+        if (!(antes.embolsado == null && a.embolsado == null && emb === 'ninguno')) ahora.embolsado = emb
       }
       const datos = {}
       for (const [k, v] of Object.entries(ahora)) if ((antes[k] ?? null) !== (v ?? null)) datos[k] = v
@@ -7840,6 +8039,14 @@
         err.hidden = false
         return
       }
+      // Sin catálogo se corrigen solo las cajas, pero con la MISMA RPC que el
+      // resto (corregir_produccion_item_completo, solo con lo que cambió).
+      const it = (estado.planilla?.items ?? []).find(x => x.id === c.id)
+      if (c.modo === 'corregir' && it && cajas === Number(it.cajas)) {
+        err.textContent = 'No cambiaste nada: poné las cajas corregidas.'
+        err.hidden = false
+        return
+      }
       c.guardando = true
       const btn = document.getElementById('pr-corregir-confirmar')
       btn.disabled = true
@@ -7847,7 +8054,7 @@
       try {
         const { error } = c.modo === 'anular'
           ? await supabase.rpc('anular_produccion_item', { p_item_id: c.id, p_motivo: motivo })
-          : await supabase.rpc('corregir_produccion_item', { p_item_id: c.id, p_cajas: cajas, p_motivo: motivo })
+          : await supabase.rpc('corregir_produccion_item_completo', { p_item_id: c.id, p_datos: { cajas }, p_motivo: motivo })
         if (error) throw error
         guardado = true
         await recargarPlanilla()
@@ -11656,13 +11863,10 @@
     // tiró: lo que se usó QUEDA descontado (`tirar_masa` pone
     // `masas.descartada` y no toca el stock). Una tirada no suma en la cuenta
     // de masas, no se puede anular (anularla devolvería ese stock) y en las
-    // listas va tachada con "Tirada" y su motivo.
+    // listas va tachada con "Tirada" (la lista compacta, 08/10/2026: el
+    // motivo se lee en el detalle de la masa, htmlCuerpoMasa).
     function esTirada(m) {
       return m?.descartada === true
-    }
-
-    function htmlTirada(m) {
-      return `<span class="pr-tirada">Tirada${m?.descarte_motivo ? `: <span class="pr-tirada__motivo">${esc(m.descarte_motivo)}</span>` : ''}</span>`
     }
 
     // ¿La "Anterior" que ofrece la base es una masa que se tiró? La base no
@@ -11685,12 +11889,11 @@
       return vivas.reduce((a, m) => (a == null || Number(m.nro) > Number(a.nro) ? m : a), null)
     }
 
+    // Un renglón de la lista de la receta: tocarlo abre el detalle.
     function htmlMasaReceta(m) {
       const tirada = !m.anulada && esTirada(m)
-      return `<div class="pr-rm__fila${m.anulada ? ' pr-rm__fila--anulada' : ''}${tirada ? ' pr-rm__fila--tirada' : ''}">` +
-        `<span class="pr-rm__nro">Masa ${esc(m.nro)}</span>` +
-        `<span class="pr-rm__det"><span class="pr-rm__tam pr-masa-tam">${m.doble ? 'Doble' : 'Simple'}</span> · <span class="pr-rm__hora">${esc(horaArgentina(m.hora) || '—')}</span></span>` +
-        `<span class="pr-rm__chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : (tirada ? htmlTirada(m) : chipsDeMasa(m))}</span></div>`
+      return `<button type="button" class="pr-rm__fila pr-mc${m.anulada ? ' pr-rm__fila--anulada' : ''}${tirada ? ' pr-rm__fila--tirada' : ''}" data-masa-ver="${esc(m.id)}" aria-haspopup="dialog">` +
+        htmlRenglonMasa(m) + '</button>'
     }
 
     function htmlMasaRecetaPendiente(b) {
@@ -11914,32 +12117,27 @@
       return e ? `${e.maquina.nombre} · ${e.turno.lote}` : '—'
     }
 
+    // Una masa que todavía no se mandó: el mismo renglón, sin detalle (no
+    // está en la base) y "Esperando conexión".
     function htmlFilaMasaPendiente(b) {
+      const como = { nro: b.nro, hora: null, doble: b.doble, origen: b.cambiada ? 'modificada' : 'original', es_chocolate: esChocolate(b, estado.defineChocolate) }
       return '<div class="pr-masa-fila pr-masa-fila--espera">' +
-        `<span class="pr-masa-fila__nro">${esc(b.nro ?? '—')}</span>` +
-        '<span class="pr-masa-fila__hora">—</span>' +
-        `<span class="pr-masa-fila__maq">${esc(b.maquinaNombre ?? '')} · ${esc(b.lote ?? '')}</span>` +
-        `<span class="pr-masa-fila__tam pr-masa-tam">${textoTamanoMasa(b)}</span>` +
-        `<span class="pr-masa-fila__origen">${htmlChipsMasa({ modificada: !!b.cambiada, chocolate: esChocolate(b, estado.defineChocolate) })}</span>` +
+        `<span class="pr-mc pr-masa-fila__ver">${htmlRenglonMasa(como)}<span class="pr-mc__maq">${esc(b.maquinaNombre ?? '')} · ${esc(b.lote ?? '')}</span></span>` +
         '<span class="pr-masa-fila__estado"><span class="pr-masa-fila__espera">Esperando conexión</span></span>' +
         '</div>'
     }
 
     function htmlFilaMasaTurno(m, puedeAnular) {
       // Una tirada no ofrece "Anular": anularla devolvería el stock que se usó.
+      // Lo anulado y lo tirado lo dice el renglón; el motivo está en el detalle.
       const tirada = !m.anulada && esTirada(m)
-      const estadoHtml = m.anulada
-        ? `<span class="pr-masa-fila__espera">Anulada${m.anulada_motivo ? `: ${esc(m.anulada_motivo)}` : ''}</span>`
-        : tirada ? htmlTirada(m)
+      const estadoHtml = (m.anulada || tirada) ? ''
         : '<span class="pr-masa-fila__ok">✓ Enviada</span>' +
           (puedeAnular ? `<button type="button" class="pr-btn pr-btn--secundario" data-anular-masa="${esc(m.id)}">Anular</button>` : '')
       return `<div class="pr-masa-fila${m.anulada ? ' pr-masa-fila--anulada' : ''}${tirada ? ' pr-masa-fila--tirada' : ''}">` +
-        `<span class="pr-masa-fila__nro">${esc(m.nro)}</span>` +
-        `<span class="pr-masa-fila__hora">${esc(horaArgentina(m.hora) || '—')}</span>` +
-        `<span class="pr-masa-fila__maq">${esc(nombreDeTurno(m.turno_id))}</span>` +
-        `<span class="pr-masa-fila__tam pr-masa-tam">${textoTamanoMasa(m)}</span>` +
-        `<span class="pr-masa-fila__origen">${chipsDeMasa(m)}</span>` +
-        `<span class="pr-masa-fila__estado">${estadoHtml}</span></div>`
+        `<button type="button" class="pr-mc pr-masa-fila__ver" data-masa-ver="${esc(m.id)}" aria-haspopup="dialog">${htmlRenglonMasa(m)}` +
+        `<span class="pr-mc__maq">${esc(nombreDeTurno(m.turno_id))}</span></button>` +
+        (estadoHtml ? `<span class="pr-masa-fila__estado">${estadoHtml}</span>` : '') + '</div>'
     }
 
     async function mostrarMasasTurno() {
@@ -12051,6 +12249,7 @@
       // La columna derecha: anular la última masa (4f).
       const masasReceta = document.getElementById('pr-receta-masas')
       masasReceta.addEventListener('click', ev => {
+        const ver = ev.target.closest('[data-masa-ver]'); if (ver) { abrirVerMasa(ver.dataset.masaVer); return }
         if (ev.target.closest('[data-anular-ultima]')) { pedirAnularUltima(); return }
         if (ev.target.closest('#pr-rm-anular-cancelar')) { cancelarAnularUltima(); return }
         if (ev.target.closest('#pr-rm-anular-confirmar')) { confirmarAnularUltima(); return }
@@ -12135,8 +12334,15 @@
       document.getElementById('pr-masas-volver').addEventListener('click', mostrarSala)
       document.getElementById('pr-masas-nueva').addEventListener('click', mostrarSala)
       document.getElementById('pr-masas-lista').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-anular-masa]'); if (b) pedirAnularMasa(b.dataset.anularMasa)
+        const b = ev.target.closest('[data-anular-masa]'); if (b) { pedirAnularMasa(b.dataset.anularMasa); return }
+        const ver = ev.target.closest('[data-masa-ver]'); if (ver) abrirVerMasa(ver.dataset.masaVer)
       })
+      // La ventana del detalle de una masa: la X y el fondo cierran.
+      const ventanaMasa = document.getElementById('pr-masa-ventana')
+      ventanaMasa.addEventListener('click', ev => {
+        if (ev.target === ventanaMasa || ev.target.closest('#pr-masa-ventana-cerrar')) cerrarVerMasa()
+      })
+      ventanaMasa.addEventListener('keydown', teclaVerMasa)
       document.getElementById('pr-anular-masa-cancelar').addEventListener('click', () => { document.getElementById('pr-anular-masa').hidden = true; estado.anulando = null })
       document.getElementById('pr-anular-masa-confirmar').addEventListener('click', confirmarAnularMasa)
       window.addEventListener('online', reintentarPendientes)
@@ -12993,6 +13199,7 @@
         return 'ventana'
       }
       if (visible('pr-lote-panel')) { cerrarPanelLote(); return 'ventana' }
+      if (estado.verMasa) { cerrarVerMasa(); return 'ventana' }
       if (visible('pr-agregar-ing')) { cerrarAgregarIngrediente(); return 'ventana' }
       if (visible('pr-otro')) { cerrarOtro(); return 'ventana' }
       if (visible('pr-anular-masa')) { document.getElementById('pr-anular-masa').hidden = true; estado.anulando = null; return 'ventana' }

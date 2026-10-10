@@ -80,6 +80,12 @@ const SEGURAS_ADMINISTRACION = [
   ['cancelar', 'HTML constante del código: el botón Cancelar del panel de unir (con disabled o no)'],
   ['botones.join(\'\')', 'HTML ya escapado: htmlAccionesProvisorio() arma cada botón con esc() del id del cliente y texto constante'],
   ['htmlAccionesProvisorio(c)', 'HTML armado por htmlAccionesProvisorio(), que escapa el id del cliente y el texto (06/10/2026)'],
+  // Los insumos de una lista a precio fijo o costo + % (09/10/2026): los
+  // ejecuta con texto malicioso test-administracion-costos.js.
+  ["catalogo.map(i => htmlOpcionInsumoLista(i, ed.insumoId)).join('')", 'HTML armado por htmlOpcionInsumoLista(), que escapa el id y el nombre del insumo'],
+  ['elegir', 'HTML ya escapado: htmlEditorInsumoLista() arma el selector (o el nombre) con esc()'],
+  ['modos', 'HTML constante del código: el segmento Precio fijo / Costo + %'],
+  ['campo', 'HTML ya escapado: htmlEditorInsumoLista() arma el campo con esc() de la unidad'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

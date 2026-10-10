@@ -125,6 +125,17 @@ const PASOS_PLANTA = [
     await page.locator('[data-sala-turno="t1"]').first().click()
     await expect(page.locator('#pr-receta')).toContainText('Esencia de vainilla')
   }],
+  // La lista de masas compacta (08/10/2026): tocar un renglón de "Masas del
+  // turno" abre su detalle (quién, cuándo, la fórmula) en una ventana.
+  ['masa-detalle', async (page) => {
+    await page.locator('#pr-receta-masas [data-masa-ver="ma-2"]').click();
+    await expect(page.locator('#pr-masa-ventana')).toBeVisible();
+    await expect(page.locator('#pr-masa-ventana-cuerpo')).toContainText('Júpiter');
+  }],
+  ['masa-detalle-cerrar', async (page) => {
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#pr-masa-ventana')).toBeHidden();
+  }, false],
   ['receta-modificar', async (page) => {
     await page.locator('#pr-receta-opciones [data-base="modificar"]').click()
   }],
