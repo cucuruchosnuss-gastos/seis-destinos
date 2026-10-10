@@ -236,5 +236,8 @@ correrMutaciones({
     { nombre: 'la fábrica de pruebas entra en las unidades de stock',
       de: '      estado.unidadesStock = sinUnidadesDePrueba(unidades.data ?? [], estado.fabrica)',
       a: '      estado.unidadesStock = unidades.data ?? []' },
+    // Un solo "sin cono" (10/10/2026)
+    { nombre: 'vuelve el cono "Común" a los conos del traspaso', de: '      const opciones = []\n      for (const m of estado.trpCatalogo', a: "      const opciones = [{ marcaId: null, nombre: 'Común', stock: conStock.get('') ?? 0 }]\n      for (const m of estado.trpCatalogo" },
+    { nombre: 'un renglón con cono sin cono se agrega', de: '      if (presentacionTrp(presId)?.con_cono && !marca) return\n', a: '' },
   ],
 })

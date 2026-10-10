@@ -1371,7 +1371,10 @@
         const stockPres = pr.stock_cajas === null || pr.stock_cajas === undefined ? null : Number(pr.stock_cajas)
         if (!base.conCono) { sin.push({ ...base, grupo: 'sin_cono', marcaId: null, stock: stockPres }); continue }
         if (stockConos instanceof Map) {
-          const deEsta = [...stockConos.entries()].filter(([k, v]) => k.startsWith(pr.id + '|') && v > 0)
+          // UN SOLO "SIN CONO" (10/10/2026): solo los conos CON NOMBRE. El
+          // "Común" adentro de "Caja con cono" (clave 'presentacion|') ya no se
+          // ofrece: lo común es la presentación SIN cono.
+          const deEsta = [...stockConos.entries()].filter(([k, v]) => k.startsWith(pr.id + '|') && k.length > pr.id.length + 1 && v > 0)
           for (const [k, v] of deEsta) {
             const marcaId = k.slice(pr.id.length + 1) || null
             const cono = textoCono(cat, true, marcaId)
@@ -1428,10 +1431,13 @@
       return lista.filter(m => normalizar(m.nombre).includes(q))
     }
 
-    // Cómo se nombra el cono de un renglón: la marca, "Común" o "Sin cono".
+    const TEXTO_FALTA_CONO = 'Falta el cono'
+
+    // Cómo se nombra el cono de un renglón: la marca o "Sin cono". Con cono
+    // y sin marca falta elegirlo: ya no existe el "Común" (10/10/2026).
     function textoCono(cat, conCono, marcaId) {
       if (!conCono) return 'Sin cono'
-      if (!marcaId) return 'Común'
+      if (!marcaId) return TEXTO_FALTA_CONO
       return (cat?.marcas ?? []).find(m => m.id === marcaId)?.nombre ?? 'Cono que no se pudo leer'
     }
 
@@ -1673,6 +1679,7 @@
       }
       if (!r.productoId) return 'elegí el producto'
       if (!r.presentacionId) return 'elegí la presentación'
+      if (r.conCono && !r.marcaId) return 'elegí el cono (si es común, elegí «Sin cono»)'
       if (r.cajas === null || r.cajas === undefined || !(Number(r.cajas) > 0) || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'
       return faltaEnLotes(r)
     }
@@ -2334,10 +2341,9 @@
 
     function htmlMarcasRenglon(r, i, cat) {
       const lista = marcasFiltradas(cat?.marcas, r.marcaBusqueda).slice(0, 10)
-      const comun = `<button type="button" class="rt-opcion" data-r-marca="${i}" data-id="" aria-pressed="${r.marcaId ? 'false' : 'true'}">${htmlChipCono('Cono común', null)}</button>`
       const botones = lista.map(m => `<button type="button" class="rt-opcion" data-r-marca="${i}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${htmlChipCono(m.nombre, m.id)}</button>`).join('')
       const vacio = !lista.length && limpio(r.marcaBusqueda) ? `<span class="rt-texto-suave">Ningún cono coincide con «${esc(limpio(r.marcaBusqueda))}».</span>` : ''
-      return `${comun}${botones}${vacio}`
+      return `${botones}${vacio}`
     }
 
     function htmlConoRenglon(r, i, cat) {
@@ -2473,7 +2479,7 @@
         // El cono y la presentación se eligen acá solo si la opción no los
         // trajo (una presentación con cono sin el cono, o un producto de un
         // borrador viejo).
-        const faltaElegir = !r.presentacionId || r.marcaElegir === true
+        const faltaElegir = !r.presentacionId || r.marcaElegir === true || (r.conCono && !r.marcaId)
         if (faltaElegir) opciones = `<div class="rt-opciones-bloque">${htmlConoRenglon(r, i, cat)}${htmlPresentacionesRenglon(r, i, cat)}</div>`
         cuanto = `<div class="rt-cuanto"><label for="rt-r-cajas-${i}">¿Cuántas cajas se lleva?</label>` +
           `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="Una caja menos">−</button>` +
@@ -2824,8 +2830,8 @@
 
     function elegirMarcaRenglon(i, id) {
       const r = renglon(i)
-      if (!r || !r.conCono) return
-      if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return
+      if (!r || !r.conCono || !id) return
+      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return
       r.marcaId = id || null
       // Los lotes son del stock de ESE cono: cambiar el cono los suelta.
       r.lotes = {}
@@ -3150,7 +3156,7 @@
       const prod = (cat?.productos ?? []).find(p => p.nombre === r?.producto)
       const pr = prod ? (cat?.presentaciones ?? []).find(x => x.producto_id === prod.id && x.nombre === r?.presentacion) : null
       if (!pr) return '—'
-      return pr.con_cono ? 'Común' : 'Sin cono'
+      return pr.con_cono ? '—' : 'Sin cono'
     }
 
     // El cliente de una orden de mis_ordenes_retiro: la función devuelve el

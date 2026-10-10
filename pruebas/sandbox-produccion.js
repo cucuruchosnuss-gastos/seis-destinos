@@ -271,6 +271,8 @@ const NUEVAS_GESTION = [
   'htmlTablaProduccion', 'htmlPromediosTabla', 'htmlCuerpoTabla', 'pintarTabla', 'leerResumen', 'cargarTabla', 'mostrarTabla',
   'cambiarUnidadTabla', 'ponerPeriodoTabla', 'elegirPeriodoTabla', 'alCambiarFechasTabla', 'cambiarFiltroTabla',
   'elegirDimensionTabla', 'vistaDeEntrada',
+  // Un solo "sin cono" (10/10/2026)
+  'nombreConoStock',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   // La tabla de producción (09/10/2026)
@@ -285,7 +287,9 @@ const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJET
   // Los indicadores de las máquinas (04/10/2026)
   'COLORES_MAQUINA', 'COLOR_UH_TURNO', 'CATEGORIAS_PARADA', 'PARTES_TURNO', 'GRANULARIDADES', 'MESES_CORTOS', 'TOPE_PAGINAS_METRICAS',
   // Horarios de turno (01/10/2026)
-  'TURNOS_HORARIO']
+  'TURNOS_HORARIO',
+  // Un solo "sin cono" (10/10/2026)
+  'TEXTO_FALTA_CONO', 'TEXTO_ELEGI_CONO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = [
@@ -424,6 +428,8 @@ const NUEVAS_PLANTA = [
   'etiquetaMasa',
   // La calculadora de cajas (06/10/2026)
   'sumarCajas', 'recordarCajas', 'sumarCajasAgregar', 'deshacerCajasAgregar', 'borrarCajasAgregar',
+  // Un solo "sin cono" (10/10/2026)
+  'faltaConoAgregar',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -450,7 +456,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // Sin internet (06/10/2026): de js/sin-internet.js y de la planta
   'NOMBRE_BASE', 'VERSION_BASE', 'CADA_REINTENTO_MS', 'GUARDAR_ENVIADOS_MS', 'VIDA_COPIA_MS', 'ORDEN',
   'CLAVE_SESION_SB', 'CADA_PRECARGA_MS', 'CADA_REVISAR_VERSION_MS', 'MS_TODO_ENVIADO',
-  'MENSAJE_ABRIR_SIN_RED', 'MENSAJE_PIN_SIN_RED', 'MENSAJE_LOTE_NUEVO_SIN_RED', 'MENSAJE_SIN_RED']
+  'MENSAJE_ABRIR_SIN_RED', 'MENSAJE_PIN_SIN_RED', 'MENSAJE_LOTE_NUEVO_SIN_RED', 'MENSAJE_SIN_RED',
+  // Un solo "sin cono" (10/10/2026)
+  'TEXTO_FALTA_CONO', 'TEXTO_ELEGI_CONO']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

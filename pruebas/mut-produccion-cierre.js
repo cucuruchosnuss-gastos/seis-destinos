@@ -21,6 +21,7 @@ correrMutacionesProduccion({
     'htmlPendientesCompletar', 'htmlFaltaCierre',
   ],
   equivalentes: [
+    { expr: 'esc(TEXTO_FALTA_CONO)', motivo: 'texto constante del código ("Falta el cono")' },
     { expr: 'esc(clases)', motivo: 'las clases de una parada salen del código (pr-parada-item, --curso, --programada): nada escapable' },
     { expr: 'esc(cat)', motivo: 'cat es una clave de NOMBRE_CATEGORIA_PARADA (programada / falla / otro) o null: una categoría desconocida no se dibuja' },
     { expr: 'esc(NOMBRE_CATEGORIA_PARADA[cat])', motivo: "'Programada' / 'Falla' / 'Otro', escritos en el código" },
@@ -106,13 +107,15 @@ correrMutacionesProduccion({
     { nombre: 'no se vuelve a la planilla después de cargar', de: "        await repintarConCola()\n      }\n      mostrarVista('pr-planilla')\n", a: "        await repintarConCola()\n      }\n" },
 
     // ── Los pasos ───────────────────────────────────────────────────────
-    { nombre: "sin cono el paso del cono no dice \"Sin cono\"", de: "(a.conCono ? (marca ? marca.nombre : 'Común') : 'Sin cono')", a: "(a.conCono ? (marca ? marca.nombre : 'Común') : '')" },
+    { nombre: "sin cono el paso del cono no dice \"Sin cono\"", de: "(a.conCono ? (marca ? marca.nombre : (a.marcaId ? 'Cono que ya no está' : '')) : 'Sin cono')", a: "(a.conCono ? (marca ? marca.nombre : (a.marcaId ? 'Cono que ya no está' : '')) : '')" },
     { nombre: "un paso que falta ya muestra un valor", de: "const valor = x.estado === 'actual' ? 'elegí abajo' : (x.estado === 'hecho' ? x.valor : '—')", a: "const valor = x.estado === 'actual' ? 'elegí abajo' : (x.valor || '—')" },
     { nombre: "los pasos hechos no se pueden tocar", de: "if (x.estado === 'hecho') return `<button type=\"button\" class=\"pr-paso pr-paso--hecho\" data-paso-ag=\"${esc(x.clave)}\">${cuerpo}</button>`", a: "if (x.estado === 'hecho') return `<div class=\"pr-paso pr-paso--hecho\">${cuerpo}</div>`" },
     { nombre: 'elegir otro producto deja la presentación del anterior', de: "      if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }", a: '      if (false) { a.conCono = null }' },
     { nombre: "volver al cono borra la presentación", de: "      if (a.conCono !== true) { a.presentacionId = ''; soltarCaja(a) }", a: "      if (true) { a.presentacionId = ''; soltarCaja(a) }" },
     { nombre: "con cono se saltea el paso del cono", de: "      } else {\n        a.paso = 'cono'\n      }", a: "      } else {\n        a.paso = 'presentacion'\n      }" },
-    { nombre: 'elegir "Común" no cuenta como elegir', de: '      a.marcaId = id || null\n      a.marcaElegida = true', a: '      a.marcaId = id || null\n      a.marcaElegida = !!id' },
+    // 'elegir "Común" no cuenta como elegir' se fue (10/10/2026): elegirCono
+    // ya no acepta un cono sin id (lo mide "un cono sin id vuelve a ser elegir
+    // un cono").
     // (28/09/2026) Tres columnas: el cono ocupa la columna de las opciones, solo.
     { nombre: "el cono se sigue viendo después de elegirlo", de: "      cono.hidden = a.paso !== 'cono'", a: "      cono.hidden = !a.conCono && a.paso !== 'cono'" },
     { nombre: 'la grilla cambia con el cono', de: "      document.getElementById('pr-ag-grilla').className = 'pr-ag'\n", a: "      document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')\n" },
@@ -129,7 +132,7 @@ correrMutacionesProduccion({
     { nombre: 'el cono del sublote anterior no se dice', de: "        const notas = (anterior && anterior.marcaId === m.id ? `<span class=\"pr-cono__nota\">el de ${esc(anterior.sublote)}</span>` : '') +", a: "        const notas = '' +" },
     { nombre: 'el cono anterior sale del primero y no del último', de: '      const ult = conMarca[conMarca.length - 1]', a: '      const ult = conMarca[0]' },
     { nombre: 'el cono anterior cuenta los anulados', de: '      const conMarca = itemsVivos(items).filter(it => it.marca_id)', a: '      const conMarca = (items ?? []).filter(it => it.marca_id)' },
-    { nombre: "sin \"Común\" no se puede cargar un cono sin marca", de: "? `<button type=\"button\" class=\"pr-cono pr-cono--comun\" data-marca=\"\"", a: "? `<span class=\"pr-cono pr-cono--comun\" data-nada=\"\"" },
+    { nombre: "un cono sin id vuelve a ser elegir un cono (el \"Común\" de antes)", de: "      if (!a || !id) return\n      if (a.conCono !== true)", a: "      if (!a) return\n      if (a.conCono !== true)" },
     { nombre: 'el buscador de conos distingue acentos', de: "      return String(t ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase()", a: "      return String(t ?? '').toLowerCase()" },
     { nombre: 'una búsqueda sin resultados no dice nada', de: '      const nada = texto && !lista.length ?', a: '      const nada = false ?' },
     { nombre: 'la coincidencia no va en negrita', de: '          `<span>${htmlResaltado(m.nombre, texto)}</span>${notas}</button>`', a: '          `<span>${esc(m.nombre)}</span>${notas}</button>`' },

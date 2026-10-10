@@ -1184,7 +1184,7 @@
       const partes = [prod.nombre, pr.nombre]
       if (pr.con_cono) {
         const m = it.marca_id ? (cat?.marcas ?? []).find(x => x.id === it.marca_id) : null
-        partes.push(m ? `cono ${m.nombre}` : (it.marca_id ? 'cono (marca que no se pudo leer)' : 'cono común'))
+        partes.push(m ? `cono ${m.nombre}` : (it.marca_id ? 'cono (marca que no se pudo leer)' : 'falta el cono'))
       } else {
         partes.push('sin cono')
       }
@@ -1264,6 +1264,8 @@
       }
       if (!r.productoId) return 'elegí el producto'
       if (!r.presentacionId) return 'elegí la presentación'
+      // Un solo "sin cono" (10/10/2026): con cono, el cono es obligatorio.
+      if (r.conCono && !r.marcaId) return 'elegí el cono (si es común, elegí «Sin cono»)'
       if (r.cajas === null || r.cajas === undefined || !(Number(r.cajas) > 0)) return 'poné las cajas'
       return null
     }
@@ -1409,10 +1411,9 @@
 
     function htmlMarcasRenglon(r, i, cat) {
       const lista = marcasFiltradas(cat?.marcas, r.marcaBusqueda).slice(0, 10)
-      const comun = `<button type="button" class="pe-opcion" data-r-marca="${i}" data-id="" aria-pressed="${r.marcaId ? 'false' : 'true'}">Cono común</button>`
       const botones = lista.map(m => `<button type="button" class="pe-opcion" data-r-marca="${i}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
       const vacio = !lista.length && limpio(r.marcaBusqueda) ? `<span class="pe-texto-suave">Ningún cono coincide con «${esc(limpio(r.marcaBusqueda))}».</span>` : ''
-      return `${comun}${botones}${vacio}`
+      return `${botones}${vacio}`
     }
 
     // El buscador de conos aparece RECIÉN al elegir "con cono".
@@ -1545,9 +1546,9 @@
 
     function elegirMarcaRenglon(i, id) {
       const r = renglon(i)
-      if (!r || !r.conCono) return
-      if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return
-      r.marcaId = id || null
+      if (!r || !r.conCono || !id) return
+      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return
+      r.marcaId = id
       pintarRenglones()
     }
 

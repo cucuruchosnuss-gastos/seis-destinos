@@ -45,7 +45,6 @@ const SEGURAS_RETIROS = [
   ["g.lista.map(boton).join('')", 'HTML ya escapado: boton() arma cada opción con esc()'],
   ["htmlProductosRenglon(i, cat, r?.busqueda ?? '')", 'HTML armado por htmlProductosRenglon(), que escapa cada opción y lo buscado'],
   ['htmlEsqueletoCatalogo()', 'HTML armado por htmlEsqueletoCatalogo(): forma constante y el nombre de la fábrica con esc()'],
-  ["htmlChipCono('Cono común', null)", 'HTML armado por htmlChipCono(), que escapa el nombre'],
   ['htmlChipCono(m.nombre, m.id)', 'HTML armado por htmlChipCono(), que escapa el nombre (el color sale de una paleta fija)'],
   ['completar', 'HTML constante del código: el botón "Completar con los más viejos" con el índice numérico, o vacío'],
   ['htmlAvisoFaltante(r, asignacion(r, lista))', 'HTML armado por htmlAvisoFaltante(), que escapa cada cantidad'],

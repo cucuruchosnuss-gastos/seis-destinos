@@ -10,6 +10,7 @@ correrMutacionesProduccion({
   escape: 'esc',
   funciones: ['htmlProducido', 'htmlSubloteHistorial', 'htmlMasasPlanilla', 'htmlFilaMasaTurno', 'htmlFilaMasaPendiente', 'htmlMasaHistorial', 'htmlMarcas'],
   equivalentes: [
+    { expr: 'esc(TEXTO_FALTA_CONO)', motivo: 'texto constante del código ("Falta el cono")' },
     { expr: 'esc(formatearNumeroAr(it.cajas, { decimales: 0 }))', motivo: 'un número formateado: solo dígitos y puntos' },
     { expr: 'esc(formatearNumeroAr(it.unidades, { decimales: 0 }))', motivo: 'un número formateado: solo dígitos y puntos' },
     { expr: 'esc(textoEntero(p.cajas))', motivo: 'un número formateado' },
@@ -35,7 +36,7 @@ correrMutacionesProduccion({
   manuales: [
     // a) el renglón
     { nombre: 'el cono se nombra también sin cono', de: "      } else if (conConoEnProducto) {\n        sumar('sin cono')\n      }", a: "      } else if (conConoEnProducto) {\n        sumar('sin cono')\n        sumar(marcaNombre ?? 'Común')\n      }" },
-    { nombre: 'con cono no dice "Común"', de: "        sumar(marcaNombre ?? 'Común')\n      } else", a: "        sumar(marcaNombre ?? '')\n      } else" },
+    { nombre: 'con cono y sin marca no dice "falta el cono"', de: "        sumar(marcaNombre ?? TEXTO_FALTA_CONO.toLocaleLowerCase('es'))\n      } else", a: "        sumar(marcaNombre ?? '')\n      } else" },
     { nombre: '"sin cono" siempre', de: '      } else if (conConoEnProducto) {', a: '      } else if (true) {' },
     { nombre: '"sin cono" nunca', de: '      } else if (conConoEnProducto) {', a: '      } else if (false) {' },
     { nombre: 'se repite lo ya dicho', de: '        if (!k || vistos.has(k)) return\n', a: '        if (!k) return\n' },
@@ -54,14 +55,14 @@ correrMutacionesProduccion({
     { nombre: 'el historial no sabe qué productos van con cono', de: "(d.productosConCono ?? []).includes(pr?.producto_id)", a: 'false' },
     { nombre: 'el historial repite las unidades por caja', de: '`<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades`', a: '`<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades`' },
     // Planta v2 (28/09/2026): la fila de tabla de la planilla.
-    { nombre: 'la columna del cono no nombra la marca', de: "(d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común', it.marca_id) :", a: "(d.pr?.con_cono ? htmlChipCono('Común', it.marca_id) :" },
+    { nombre: 'la columna del cono no nombra la marca', de: "(d.pr?.con_cono ? (d.marcaNombre ? htmlChipCono(d.marcaNombre, it.marca_id) :", a: "(d.pr?.con_cono ? (d.marcaNombre ? htmlChipCono('Común', it.marca_id) :" },
     { nombre: 'la columna del cono no dice "sin cono"', de: "(d.conConoEnProducto ? '<span class=\"pr-fp__sin\">sin cono</span>' : ''))", a: "'')" },
     { nombre: 'la columna del cono dice "sin cono" también en un Vaso', de: "(d.conConoEnProducto ? '<span class=\"pr-fp__sin\">sin cono</span>' : ''))", a: "'<span class=\"pr-fp__sin\">sin cono</span>')" },
     { nombre: 'la columna de caja sin la bolsa', de: ": '', bolsa].filter(Boolean).join(' · ')", a: ": ''].filter(Boolean).join(' · ')" },
     { nombre: 'la fila sin el texto entero en el title', de: ' title="${esc(d ? [d.producto, ...partes].join(\' · \') : \'\')}">', a: '>' },
     { nombre: 'el anulado no se marca en la fila', de: "(it.anulado ? ' pr-fila-prod--anulado' : '')", a: "('')" },
     { nombre: 'la fila sin empaque no se marca', de: "(sinCaja ? ' pr-fila-prod--sin-caja' : '')", a: "('')" },
-    { nombre: 'el producto se repite en la columna del cono', de: "        : (d.pr?.con_cono ? htmlChipCono(", a: "        : d.producto + (d.pr?.con_cono ? htmlChipCono(" },
+    { nombre: 'el producto se repite en la columna del cono', de: "        : (d.pr?.con_cono ? (d.marcaNombre ? htmlChipCono(", a: "        : d.producto + (d.pr?.con_cono ? (d.marcaNombre ? htmlChipCono(" },
     // b) las masas
     { nombre: 'toda masa lleva chip "Modificada"', de: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })", a: "      return htmlChipsMasa({ modificada: true, chocolate: !!m?.es_chocolate })" },
     { nombre: 'chocolate sin mirar es_chocolate', de: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })", a: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: true })" },
@@ -75,8 +76,8 @@ correrMutacionesProduccion({
     { nombre: 'el bordó deja de ser el de la app', de: '      --p-mal: #7A2E42;', a: '      --p-mal: #9B2335;' },
     { nombre: '"Chocolate" en bordó', de: '    .pr-chip-choco { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-choco);', a: '    .pr-chip-choco { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-mal);' },
     // c) el buscador
-    { nombre: '"Común" aparece aunque la búsqueda no lo nombre', de: "      const comun = !texto || normalizarBusqueda('común').includes(normalizarBusqueda(texto))", a: '      const comun = true' },
-    { nombre: '"Común" desaparece al buscarlo', de: "      const comun = !texto || normalizarBusqueda('común').includes(normalizarBusqueda(texto))", a: '      const comun = !texto' },
+    // El botón "Común" de la lista de conos ya no existe (10/10/2026): que no
+    // vuelva lo miden test-produccion-sin-cono.js y su mut.
     { nombre: 'se ofrecen los inactivos', de: '      return !!m && m.activa !== false && (', a: '      return !!m && (' },
     { nombre: 'se ofrecen los rechazados', de: "(m.estado_alta === 'aprobada' || m.estado_alta === 'pendiente_revision')", a: "m.estado_alta !== 'x'" },
     { nombre: 'se esconden los pendientes', de: "(m.estado_alta === 'aprobada' || m.estado_alta === 'pendiente_revision')", a: "(m.estado_alta === 'aprobada')" },

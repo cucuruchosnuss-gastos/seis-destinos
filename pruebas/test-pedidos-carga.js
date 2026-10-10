@@ -71,7 +71,10 @@ function conForm(S) {
   h = S.htmlRenglon(r, 0, CAT, false)
   chk('con cono aparece el buscador de conos', /data-r-cono-buscar="0"/.test(h))
   chk('con cono aparecen los conos para elegir', /data-r-marca="0" data-id="m-lolo"/.test(h))
-  chk('y "Cono común" viene elegido', /data-id="" aria-pressed="true">Cono común/.test(h))
+  chk('y NO hay "Cono común" (10/10/2026: con cono se elige un cono con nombre)', !/data-id=""/.test(h) && !/Cono común/.test(h))
+  chk('… y con cono sin cono elegido, falta el cono', S.faltanRenglon(r) === 'elegí el cono (si es común, elegí «Sin cono»)')
+  S.elegirMarcaRenglon(0, '')
+  chk('… un cono sin id no se elige', r.marcaId === null)
   chk('con cono cambia la presentación a la de con cono', r.presentacionId === 'pr-cuc-con')
   S.buscarConoRenglon(0, 'lol')
   chk('buscar el cono guarda lo escrito', r.marcaBusqueda === 'lol')
@@ -81,6 +84,8 @@ function conForm(S) {
   chk('elegir un cono', r.marcaId === 'm-lolo')
   S.elegirMarcaRenglon(0, 'no-existe')
   chk('un cono que no está en el catálogo no se elige', r.marcaId === 'm-lolo')
+  S.elegirMarcaRenglon(0, '')
+  chk('tocar un cono sin id (el "Cono común" de antes) no borra el elegido', r.marcaId === 'm-lolo')
   S.elegirConoRenglon(0, false)
   chk('volver a sin cono olvida el cono', r.marcaId === null && r.marcaBusqueda === '')
   chk('y vuelve a la presentación sin cono', r.presentacionId === 'pr-cuc-sin')
@@ -167,9 +172,9 @@ function conForm(S) {
   chk('y lo que decía el mensaje queda como nota', f.renglones[2].observacion === '3 de las rosadas')
   const p2 = S.itemParaBase(f.renglones[2])
   chk('el identificado viaja sin texto_libre', !('texto_libre' in p2))
-  // Con cono y "Cono común": marca null.
+  // Con cono y sin cono elegido: no se puede guardar.
   const r = S.renglonProducto(); r.productoId = 'p-cuc'; r.conCono = true; r.presentacionId = 'pr-cuc-con'; r.cajas = 1
-  chk('con cono común, marca_id null', S.itemParaBase(r).marca_id === null)
+  chk('con cono y sin cono elegido: el renglón no está completo', /elegí el cono/.test(S.faltanRenglon(r) ?? ''))
   // Un renglón que tuvo cono y volvió a sin cono no manda la marca vieja.
   r.conCono = false; r.marcaId = 'm-lolo'
   chk('sin cono no manda marca aunque haya quedado una', S.itemParaBase(r).marca_id === null)
@@ -309,7 +314,7 @@ esperas.push((async () => {
   const S = nuevo()
   chk('producto sin cono', S.descripcionRenglon(CAT, { presentacion_id: 'pr-cuc-sin' }) === 'Cucurucho grande · Caja x 100 · sin cono')
   chk('producto con cono de marca', S.descripcionRenglon(CAT, { presentacion_id: 'pr-cuc-con', marca_id: 'm-lolo' }) === 'Cucurucho grande · Caja x 100 con cono · cono LOLO')
-  chk('producto con cono común', /cono común$/.test(S.descripcionRenglon(CAT, { presentacion_id: 'pr-cuc-con', marca_id: null })))
+  chk('producto con cono y sin marca (dato viejo): falta el cono, nunca "común"', /falta el cono$/.test(S.descripcionRenglon(CAT, { presentacion_id: 'pr-cuc-con', marca_id: null })))
   chk('texto libre', S.descripcionRenglon(CAT, { presentacion_id: null, texto_libre: '  las rosas ' }) === 'las rosas')
   chk('sin catálogo no inventa un producto', /no se pudo leer/.test(S.descripcionRenglon(null, { presentacion_id: 'x' })))
 }

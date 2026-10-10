@@ -69,7 +69,7 @@ function preparar(S) {
     await S.imprimirDesde('mio')
     const h2 = S.__els.get('rt-impresion').innerHTML
     chk('una anulada se imprime con ANULADA cruzado', /class="rh-anulada"/.test(h2))
-    chk('el cono de un renglón sin marca, con cono, es "Común"; con marca, la marca', S.conoDeRenglonMio({ producto: 'Cucurucho grande', presentacion: 'Caja x 100 con cono', marca: null }, CAT) === 'Común' &&
+    chk('el cono de un renglón sin marca, con cono, es "—" (nunca "Común"); con marca, la marca', S.conoDeRenglonMio({ producto: 'Cucurucho grande', presentacion: 'Caja x 100 con cono', marca: null }, CAT) === '—' &&
       S.conoDeRenglonMio({ producto: 'Cucurucho grande', presentacion: 'Caja x 100', marca: null }, CAT) === 'Sin cono' &&
       S.conoDeRenglonMio({ marca: 'LOLO' }, CAT) === 'LOLO')
     S.abrirMia('no-existe')

@@ -94,7 +94,7 @@ const hist = (extra) => {
     ['con cono, con marca, caja y bolsa grande',
       { presentacion_id: 'pr-con', marca_id: 'mk-caserato', unidades_por_caja: 320, caja_insumo_id: 'i-nuss', embolsado: 'grande' },
       'con cono · CASERATO · caja ×320 · Caja N°1 Nuss · bolsa grande'],
-    ['con cono común', { presentacion_id: 'pr-con', unidades_por_caja: 320 }, 'con cono · Común · caja ×320'],
+    ['con cono y sin marca (dato viejo): falta el cono, nunca "Común"', { presentacion_id: 'pr-con', unidades_por_caja: 320 }, 'con cono · falta el cono · caja ×320'],
     ['sin cono, de un producto que también va con cono', { presentacion_id: 'pr-sin', unidades_por_caja: 320 }, 'sin cono · caja ×320'],
     ['media caja', { presentacion_id: 'pr-media', unidades_por_caja: 160, caja_insumo_id: 'i-nuss', embolsado: 'individual' },
       'sin cono · media caja ×160 · Caja N°1 Nuss · bolsitas individuales'],
@@ -121,8 +121,8 @@ const hist = (extra) => {
   // se cuenta lo que se VE, sin el title.
   const visto = h.replace(/ title="[^"]*"/g, '')
   chk('planilla: el producto una sola vez', (visto.match(/Cucuruchón Mini/g) || []).length === 1 && /pr-fp__prod">[^]*?pr-prod-nombre"[^>]*>Cucuruchón Mini</.test(h), h)
-  chk('planilla: la fila con el texto entero en el title', /<div class="pr-fila-prod" title="Cucuruchón Mini · con cono · Común · caja ×320">/.test(h), h)
-  chk('planilla: el cono UNA vez, en su columna (el común dice "Común")', /pr-fp__cono"><span class="pr-cono-chip"[^>]*>Común<\/span>/.test(h) && (visto.match(/Común/g) || []).length === 1, h)
+  chk('planilla: la fila con el texto entero en el title', /<div class="pr-fila-prod" title="Cucuruchón Mini · con cono · falta el cono · caja ×320">/.test(h), h)
+  chk('planilla: con cono y sin marca dice "Falta el cono" en su columna, nunca "Común"', /pr-fp__cono"><span class="pr-fp__falta-cono">Falta el cono<\/span>/.test(h) && !/Común/.test(visto), h)
   // La columna "caja y bolsa": la caja de empaque y el embolsado, en palabras.
   const hCaja = S.htmlProducido(item({ presentacion_id: 'pr-con', marca_id: 'mk-caserato', unidades_por_caja: 320, caja_insumo_id: 'i-nuss', embolsado: 'grande' }), CAT, INSUMOS)
   chk('planilla: la columna de caja dice la caja de empaque y la bolsa', /pr-fp__caja">Caja N°1 Nuss · bolsa grande</.test(hCaja) && /pr-cono-chip"[^>]*>CASERATO</.test(hCaja), hCaja)
@@ -133,7 +133,7 @@ const hist = (extra) => {
   const hVaso = S.htmlProducido(item({ presentacion_id: 'pr-vaso', unidades_por_caja: 350 }), CAT, INSUMOS)
   chk('planilla: un Vaso no dice "sin cono" en la columna del cono', /pr-fp__cono"><\/span>/.test(hVaso) && !/sin cono/.test(hVaso.replace(/ title="[^"]*"/g, '')), hVaso)
   // Las unidades por caja GUARDADAS en el renglón, no las del catálogo de hoy.
-  chk('las unidades por caja guardadas en el renglón mandan', renglon({ presentacion_id: 'pr-con', unidades_por_caja: 300 }) === 'con cono · Común · caja ×300')
+  chk('las unidades por caja guardadas en el renglón mandan', renglon({ presentacion_id: 'pr-con', unidades_por_caja: 300 }) === 'con cono · falta el cono · caja ×300')
   // Un nombre que ya trae las unidades no las repite; un nombre igual al producto no se repite.
   chk('"Caja x600" no dice "×600" otra vez', S.partesProducido({ producto: 'X', pr: { nombre: 'Caja x600', con_cono: false }, unidadesPorCaja: 600 }).join(' · ') === 'caja x600')
   chk('… pero sí si las unidades son otras', S.partesProducido({ producto: 'X', pr: { nombre: 'Caja x600', con_cono: false }, unidadesPorCaja: 500 }).join(' · ') === 'caja x600 ×500')
@@ -226,10 +226,11 @@ const hist = (extra) => {
   chk('un estado que no se conoce no se ofrece', S.conosParaElegir([{ id: 'x', nombre: 'RARO', estado_alta: 'otra' }], '').length === 0)
   const lista = S.htmlMarcas(CAT.marcas, 'h', { marcaElegida: false }, null)
   chk('el pendiente, con "nuevo, a revisar"', /ELADERÍA DEL SOL/.test(lista) && /pr-cono__pendiente">nuevo, a revisar</.test(lista), lista)
-  // Planta v2: "Común" es una opción de verdad y se filtra como las demás:
+  // Un solo "sin cono" (10/10/2026): "Común" ya NO es una opción, se busque
+  // lo que se busque (lo común es la presentación sin cono).
   // está sin texto y cuando la búsqueda lo nombra, no con "h".
-  const conComun = (t) => /data-marca="" aria-pressed="false">Común/.test(S.htmlMarcas(CAT.marcas, t, { marcaElegida: false }, null))
-  chk('"Común" está sin buscar y cuando la búsqueda lo nombra (sin acentos)', conComun('') && conComun('com') && conComun('COMÚN'))
+  const conComun = (t) => /data-marca=""|>Común|con cono, sin marca/.test(S.htmlMarcas(CAT.marcas, t, { marcaElegida: false }, null))
+  chk('"Común" no está ni sin buscar ni cuando la búsqueda lo nombra', !conComun('') && !conComun('com') && !conComun('COMÚN'))
   chk('… y no aparece si la búsqueda no lo nombra', !/data-marca=""/.test(lista))
   chk('la lista no ofrece el dado de baja ni el rechazado', !/mk-baja|mk-rech/.test(S.htmlMarcas(CAT.marcas, '', {}, null)))
   // En CADA tecla, sin apretar nada: el listener de input vuelve a dibujar la lista.

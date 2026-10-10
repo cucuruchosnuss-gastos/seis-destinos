@@ -287,6 +287,10 @@ const RETIRADOS = [
 // clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
 // la declaración sobra y se dice.
 const MENOS_COPIAS = [
+  ['control:button[data-marca][type=button]', 1,
+    'Un solo "sin cono" (10/10/2026, pedido de Facu): la lista de conos de Agregar producto ya no tiene el botón ' +
+    '"Común" (data-marca="", con cono y sin marca), que era lo mismo que la presentación SIN cono y quedaba separado ' +
+    'en el stock. Queda el botón de cada cono con nombre (data-marca con su id), y el común es el botón "Sin cono".'],
   ['control:button[data-planilla][type=button]', 2,
     'La planta con dos modos (28/09/2026): la tarjeta de una máquina andando o parada ya no lleva a su planilla sino a ' +
     'Lo producido (decisión 3 del handoff: "tocar una máquina lleva a Lo producido"), con data-producido. data-planilla ' +

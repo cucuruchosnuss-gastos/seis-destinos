@@ -70,9 +70,9 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('tres grupos, en orden: SIN CONO, CON CONO, insumos', g.map(x => x.tipo).join() === 'sin_cono,con_cono,insumos')
   chk('los títulos dicen SIN CONO y CON CONO', g[0].titulo === 'Producto terminado · SIN CONO' && g[1].titulo === 'Producto terminado · CON CONO')
   const con = g[1].lista
-  chk('CON CONO: una opción por cono con stock (el cono de cada uno)', con.length === 2 && con.some(o => o.marcaId === 'm-lolo' && o.stock === 12) && con.some(o => o.marcaId === null && o.stock === 8))
-  chk('el nombre dice el cono', con.find(o => o.marcaId === 'm-lolo').nombre === 'Cucurucho Mini · Caja x 600 con cono · LOLO' &&
-    con.find(o => o.marcaId === null).nombre === 'Cucurucho Mini · Caja x 600 con cono · Común')
+  chk('CON CONO: una opción por cono CON NOMBRE con stock (10/10/2026: el "Común" con cono ya no se ofrece)', con.length === 1 && con.some(o => o.marcaId === 'm-lolo' && o.stock === 12) && !con.some(o => o.marcaId === null))
+  chk('el nombre dice el cono, y ninguna opción dice "Común"', con.find(o => o.marcaId === 'm-lolo').nombre === 'Cucurucho Mini · Caja x 600 con cono · LOLO' &&
+    !con.some(o => /Común/.test(o.nombre ?? '')))
   chk('un cono sin stock no se ofrece sin buscar', !con.some(o => o.marcaId === 'm-caserato'))
   chk('sin buscar, SIN CONO trae solo lo que tiene stock', g[0].lista.map(o => o.presentacionId).join() === 'pr-mini')
   chk('sin buscar, los insumos sin stock no aparecen', g[2].lista.map(o => o.insumoId).join() === 'i-har')
@@ -80,8 +80,8 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('cada grupo con su encabezado de color', /rt-grupo rt-grupo--sin-cono"><span class="rt-grupo__titulo">Producto terminado · SIN CONO</.test(h) &&
     /rt-grupo rt-grupo--con-cono"><span class="rt-grupo__titulo">Producto terminado · CON CONO</.test(h) && /rt-grupo rt-grupo--insumos"><span class="rt-grupo__titulo">Materia prima e insumos</.test(h))
   chk('cada opción con el color de su grupo', /rt-opcion rt-opcion--sin-cono" data-r-producto/.test(h) && /rt-opcion rt-opcion--con-cono" data-r-producto/.test(h) && /rt-opcion rt-opcion--insumos" data-r-insumo/.test(h))
-  chk('cada opción dice cuánto hay', /hay 42 cajas/.test(h) && /hay 12 cajas/.test(h) && /hay 8 cajas/.test(h) && /hay 250 kg/.test(h))
-  chk('la opción con cono lleva la presentación y el cono', /data-presentacion="pr-mini-cono" data-marca="m-lolo"/.test(h) && /data-presentacion="pr-mini-cono" data-marca=""/.test(h))
+  chk('cada opción dice cuánto hay', /hay 42 cajas/.test(h) && /hay 12 cajas/.test(h) && !/hay 8 cajas/.test(h) && /hay 250 kg/.test(h))
+  chk('la opción con cono lleva la presentación y el cono', /data-presentacion="pr-mini-cono" data-marca="m-lolo"/.test(h) && !/data-presentacion="pr-mini-cono" data-marca=""/.test(h))
   const css = src.slice(src.indexOf('<style>'), src.indexOf('</style>'))
   chk('sin buscar se dice cómo encontrar lo que no tiene stock', /Escribí para buscar también lo que no tiene stock/.test(h))
   const catNull = { ...CAT, presentaciones: [{ ...CAT.presentaciones[2], stock_cajas: null }] }
@@ -122,7 +122,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   const r = f.renglones[0]
   chk('elegir "Mini con cono · LOLO" pone producto, presentación, con cono y el cono', r.productoId === 'p-mini' && r.presentacionId === 'pr-mini-cono' && r.conCono === true && r.marcaId === 'm-lolo')
   S.elegirProductoRenglon(0, 'p-mini', 'pr-mini-cono', 'elegir')
-  chk('"elegir" deja el cono común para cambiarlo', r.conCono === true && r.marcaId === null)
+  chk('"elegir" deja el cono SIN ELEGIR (no hay común): falta elegirlo', r.conCono === true && r.marcaId === null && /elegí el cono/.test(S.faltanRenglon(r) ?? ''))
   S.elegirProductoRenglon(0, 'p-mini', 'pr-mini', '')
   chk('una opción SIN CONO deja sin cono', r.conCono === false && r.marcaId === null && r.presentacionId === 'pr-mini')
   S.elegirProductoRenglon(0, 'p-mini', 'pr-cap', '')
@@ -180,7 +180,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('el catálogo lleva los conos', cat.conos instanceof Map && cat.conos.get('pr-a|m1') === 7)
   const h = S.htmlProductosRenglon(0, cat, '')
   chk('sin pasar nada, las opciones usan los conos del catálogo', /data-presentacion="pr-a" data-marca="m1"/.test(h) && /hay 7 cajas/.test(h) &&
-    /data-presentacion="pr-a" data-marca=""/.test(h) && !/entre todos los conos/.test(h))
+    !/data-presentacion="pr-a" data-marca=""/.test(h) && !/entre todos los conos/.test(h))
   const sinConos = S.catalogoDesdeRpc({ productos: data.productos }, [], [])
   chk('sin conos de la base, la red: entre todos los conos', sinConos.conos === null && /hay 11 cajas entre todos los conos/.test(S.htmlProductosRenglon(0, sinConos, '')))
   chk('ya no se lee stock_terminado_movimientos ni se pide stock:ver', !/stock_terminado_movimientos/.test(src.slice(src.indexOf('<script'))) && !/leerStockConos|puedeVerStockTerminado/.test(src))

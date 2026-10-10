@@ -417,8 +417,9 @@ pendientes.push(async () => {
   S.elegirPresentacionTrp('pp1c')
   const conos = el(S, 'trp-elegir-lista').innerHTML
   const ids = [...conos.matchAll(/data-trp-cono="([^"]*)"/g)].map(m => m[1])
-  chk('cono: los que tienen stock primero (LOLO 4, la apagada con stock 3, el común 2)', ids.slice(0, 3).join() === 'm1,m2,', ids)
-  chk('cono: incluye el común y las marcas activas; no las rechazadas', ids.includes('') && ids.includes('m3') && !ids.includes('m4'))
+  chk('cono: los que tienen stock primero (LOLO 4, la apagada con stock 3)', ids.slice(0, 2).join() === 'm1,m2', ids)
+  chk('cono: las marcas activas, no las rechazadas, y SIN "Común" (10/10/2026: lo común es sin cono)', !ids.includes('') && ids.includes('m3') && !ids.includes('m4') && !/>Común</.test(conos))
+  chk('cono: un cono sin id no agrega un renglón con cono', (S.agregarRenglonTrp('pp1c', ''), S.estado.trp.renglones.length === 0))
   chk('cono: escapa el nombre de la marca', !conMarca(conos))
   chk('cono: no agrega un renglón todavía', S.estado.trp.renglones.length === 0)
   S.agregarRenglonTrp('pp1c', 'm1')

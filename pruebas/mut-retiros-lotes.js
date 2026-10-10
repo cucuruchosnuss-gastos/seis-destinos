@@ -34,7 +34,7 @@ correrMutaciones({
     { nombre: 'sin buscar se ofrece lo que no tiene stock', de: '(q ? true : hayStock(o))', a: '(true)' },
     { nombre: 'al buscar NO se ofrece lo que no tiene stock', de: '(q ? true : hayStock(o))', a: '(hayStock(o))' },
     { nombre: 'un stock desconocido se esconde', de: 'const hayStock = (o) => o.stock === null || o.stock === undefined || o.stock > 0', a: 'const hayStock = (o) => o.stock > 0' },
-    { nombre: 'los conos sin stock se ofrecen sin buscar', de: "k.startsWith(pr.id + '|') && v > 0)", a: "k.startsWith(pr.id + '|'))" },
+    { nombre: 'los conos sin stock se ofrecen sin buscar', de: "k.startsWith(pr.id + '|') && k.length > pr.id.length + 1 && v > 0)", a: "k.startsWith(pr.id + '|') && k.length > pr.id.length + 1)" },
     { nombre: 'el cono no va en el nombre', de: "nombre: `${base.nombre} · ${cono}`,", a: 'nombre: base.nombre,' },
     { nombre: 'sin stock por cono no se dice "entre todos los conos"', de: "con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: stockPres, entreConos: true })", a: "con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: stockPres })" },
     { nombre: '"sin stock" no se marca en bordó', de: '? `<span class="rt-opcion__sin-stock">sin stock</span>`', a: '? `<span>sin stock</span>`' },
@@ -99,5 +99,7 @@ correrMutaciones({
     { nombre: 'el borrador viejo pierde su lote', de: '        if (r.lote && !Object.keys(r.lotes).length && cantidadPedida(r) !== null) r.lotes[r.lote] = cantidadPedida(r)\n', a: '' },
     { nombre: 'el borrador viejo conserva "lote"', de: '        delete r.lote\n        delete r.eligiendoLote\n', a: '' },
     { nombre: 'retomar el borrador no lo reconcilia', de: '      reconciliarRenglones(estado.form, null)\n', a: '' },
+    // Un solo "sin cono" (10/10/2026)
+    { nombre: 'el catálogo vuelve a ofrecer el cono común con cono', de: "k.startsWith(pr.id + '|') && k.length > pr.id.length + 1 && v > 0)", a: "k.startsWith(pr.id + '|') && v > 0)" },
   ],
 })
