@@ -22,7 +22,6 @@ correrMutacionesProduccion({
     { expr: 'esc(a.nro)', motivo: 'el número de la anterior sale de datos_para_masa; el de la cabecera y el de 6d se prueban escapados en htmlCabeceraReceta y htmlFilaMasaTurno, con el mismo esc()' },
     { expr: 'esc(textoDiferencias(difs, 2))', motivo: 'gramos formateados más el nombre del ingrediente, que se prueba escapado en htmlFilaReceta' },
     { expr: 'esc(textoGramos(g))', motivo: 'textoGramos(): signo, dígitos y " g"' },
-    { expr: 'esc(textoCantidad(e.queda))', motivo: 'formatearNumeroAr() + " kg" o " g"' },
     { expr: 'esc(o.etiqueta)', motivo: 'la etiqueta la arma opcionesLote() con el lote, el insumo y su marca; los tres se prueban escapados en htmlFilaReceta' },
     { expr: "esc(ETIQUETA_ORIGEN[clave] ?? clave)", motivo: 'constante del código: Original / Anterior / Modificada' },
     { expr: 'esc(clave)', motivo: 'constante del código: etiquetaBorrador() devuelve original / anterior / modificada y nada más' },
@@ -42,13 +41,22 @@ correrMutacionesProduccion({
     { nombre: '"Modificar" sin decir de dónde parte', de: "como === 'modificar', dePartida(d)) +", a: "como === 'modificar') +" },
     { nombre: 'textoDeHtml no deshace &amp; (el title saldría con &amp;amp;)', de: ".replace(/&#39;/g, \"'\").replace(/&amp;/g, '&')", a: ".replace(/&#39;/g, \"'\")" },
     // ── LA REGLA DEL UUID ────────────────────────────────────────────────
-    { nombre: 'uuid nuevo en cada reintento', de: "        ;({ data, error } = await supabase.rpc('registrar_masa', b.payload))", a: "        ;({ data, error } = await supabase.rpc('registrar_masa', { ...b.payload, p_client_uuid: crypto.randomUUID() }))" },
-    { nombre: 'el reintento manda un payload distinto del que se mandó', de: '      let data = null, error = null', a: '      let data = null, error = null\n      b.payload = { ...b.payload, p_items: [] }' },
+    // Desde SIN INTERNET (06/10/2026) la masa va por la cola de la planta: el
+    // que manda a la base (el primer envío Y cada reintento) es
+    // enviarCargaCola(), con los params que la cola guardó la primera vez.
+    // Ahí se muta: un uuid nuevo en CADA envío, y un payload que cambia desde
+    // el segundo intento (item.intentos sube antes de mandar: el primero es 1).
+    { nombre: 'uuid nuevo en cada reintento', de: "        const r = await supabase.rpc('registrar_masa', params)", a: "        const r = await supabase.rpc('registrar_masa', { ...params, p_client_uuid: crypto.randomUUID() })" },
+    { nombre: 'el reintento manda un payload distinto del que se mandó', de: "        const r = await supabase.rpc('registrar_masa', params)", a: "        const r = await supabase.rpc('registrar_masa', item.intentos > 1 ? { ...params, p_items: [] } : params)" },
     { nombre: 'empezar otra masa pisa la empezada', de: '      const b = estado.masa ?? nuevoBorradorMasa(t)', a: '      const b = nuevoBorradorMasa(t)' },
     { nombre: 'el borrador no se guarda al empezarlo', de: '      estado.masa = b\n      guardarBorradorMasa(b)\n      marcarEnCurso(b)', a: '      estado.masa = b' },
     { nombre: 'no queda pendiente antes de mandar', de: '    async function enviarMasa(b) {\n      b.pendiente = true\n      guardarBorradorMasa(b)', a: '    async function enviarMasa(b) {' },
-    { nombre: 'el borrador se borra aunque no llegue', de: "        if (esErrorDeRed(error)) return { resultado: 'red', error }", a: "        if (esErrorDeRed(error)) { borrarBorradorMasa(b); return { resultado: 'red', error } }" },
-    { nombre: 'el borrador no se borra al llegar', de: "      borrarBorradorMasa(b)\n      return { resultado: 'ok', data }", a: "      return { resultado: 'ok', data }" },
+    { nombre: 'el borrador se borra aunque no llegue', de: "      if (r.resultado !== 'ok') return { resultado: 'red', bloqueada: r.resultado === 'bloqueada' }", a: "      if (r.resultado !== 'ok') { borrarBorradorMasa(b); return { resultado: 'red', bloqueada: r.resultado === 'bloqueada' } }" },
+    // Sacar el borrarBorradorMasa(b) de enviarMasa ya NO alcanza para que el
+    // borrador quede: enviarCargaCola() también lo borra cuando la base
+    // contesta bien (sería una mutación equivalente). Lo que reproduce el bug
+    // es que, después de llegar, el borrador vuelva a quedar guardado.
+    { nombre: 'el borrador no se borra al llegar', de: "      borrarBorradorMasa(b)\n      return { resultado: 'ok', data: r.data }", a: "      guardarBorradorMasa(b)\n      return { resultado: 'ok', data: r.data }" },
     { nombre: 'un rechazo queda pendiente', de: '        b.pendiente = false\n        b.payload = null\n        guardarBorradorMasa(b)', a: '        guardarBorradorMasa(b)' },
     { nombre: 'toda falla se trata como de red', de: "      if (typeof err.code === 'string' && err.code !== '') return false", a: '' },
     { nombre: 'no hay reintento automático', de: '          if (b && b.pendiente && b.payload) out.push(b)', a: '          if (false) out.push(b)' },
@@ -145,11 +153,13 @@ correrMutacionesProduccion({
 
     // ── Registrar, el botón que dice "registrada" y 6d ─────────────────────
     { nombre: 'un rechazo de la base se muestra genérico', de: "        estado.errorReceta = r.error?.message || 'La base no aceptó la masa.'", a: "        estado.errorReceta = 'La base no aceptó la masa.'" },
-    { nombre: "la masa siguiente no relee los datos (la anterior queda vieja)", de: "      try { await cargarDatosMasa(); leida = true } catch", a: "      try { leida = true } catch" },
+    { nombre: "la masa siguiente no relee los datos (la anterior queda vieja)", de: "      try { await cargarDatosMasa(); leida = !sinRed } catch", a: "      try { leida = !sinRed } catch" },
     { nombre: "la masa siguiente no suma el número", de: "      t.nro = (Number(res?.nro ?? prev.nro) || 0) + 1", a: "      t.nro = Number(res?.nro ?? prev.nro) || 0" },
     { nombre: "después de una modificada la siguiente vuelve a Modificar", de: "      const como = prev.como === 'modificar' ? 'anterior' : (prev.como ?? 'original')", a: "      const como = prev.como ?? 'original'" },
     { nombre: "sin señal la anterior no se arma desde la tablet", de: "      if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)\n", a: "" },
-    { nombre: 'un rechazo se lleva la masa puesta', de: "      if (r.resultado === 'rechazo') {", a: '      if (false) {' },
+    // Anclado al de registrarMasa(): desde la planta sin internet hay seis
+    // `if (r.resultado === 'rechazo') {` más en el archivo.
+    { nombre: 'un rechazo se lleva la masa puesta', de: "      estado.enviandoMasa = false\n      if (r.resultado === 'rechazo') {", a: '      estado.enviandoMasa = false\n      if (false) {' },
     { nombre: 'el title de "registrada" muestra el origen del borrador y no el de la base', de: '      if (res.origen) partes.push((ETIQUETA_ORIGEN[res.origen] ?? res.origen).toLowerCase())', a: '      partes.push(etiquetaBorrador(b))' },
     { nombre: 'el verde de "registrada" no se apaga', de: '      estado.exitoMasa = null\n      pintarPieReceta()', a: '      pintarPieReceta()' },
     { nombre: 'la banda de pendientes no dice que no la carguen de nuevo', de: "        return `${cual} quedó guardada en esta tablet. Se manda sola cuando vuelva la señal. No la cargues de nuevo.`", a: '        return `${cual} quedó guardada en esta tablet.`' },

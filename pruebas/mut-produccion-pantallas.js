@@ -14,10 +14,19 @@ correrMutacionesProduccion({
   funciones: ['htmlTagsOperarios', 'htmlFilaLote', 'htmlReloj', 'htmlFilaAbrir', 'htmlOperariosAbrir'],
   equivalentes: [
     { expr: 'esc(textoFechaLote(f.desde))', motivo: 'textoFechaLote() arma DD/MM/AAAA con los dígitos que saca un regex de la fecha: nada de la base llega a la salida' },
-    { expr: 'esc(textoCantidad(f.queda))', motivo: 'textoCantidad() pasa por Number() y formatearNumeroAr(): solo dígitos, puntos, comas y "kg"/"g"' },
+    // Desde el 02/10/2026 (9e5e5d4) "quedan" sale de textoStockLote() y no de
+    // textoCantidad(): la declaración vieja había quedado apuntando a un texto
+    // que ya no existe y esta mutación salía como ESCAPÓ. Es equivalente por
+    // lo que devuelve, y la suite lo EJECUTA (con una unidad maliciosa, en
+    // bultos, kilos y gramos) en vez de creerlo; la mutación de abajo, «la
+    // celda "quedan" suma la unidad del catálogo», comprueba que esa prueba
+    // se pone en rojo si deja de valer.
+    { expr: 'esc(textoStockLote(o.insumo_id, o.lote, f.queda))', motivo: 'textoStockLote() sin conKilos: "N bultos (+ fracción)" de js/cantidades.js o textoCantidad() ("N kg"/"N g"); nada de la base (lo prueba test-produccion-pantallas)' },
   ],
   soloPlanta: ['htmlTagsOperarios', 'htmlFilaLote', 'htmlReloj', 'htmlProducido', 'htmlPasoProducto', 'htmlFilaAbrir', 'htmlOperariosAbrir'],
   manuales: [
+    // La celda "quedan" de la ventana de lotes no lleva nada de la base.
+    { nombre: 'la celda "quedan" suma la unidad del catálogo', de: 'function textoStockLote(insumoId, lote, cantidad, { conKilos = false } = {}) {', a: 'function textoStockLote(insumoId, lote, cantidad, { conKilos = true } = {}) {' },
     // 7. el PIN como ventana
     { nombre: 'el fondo no aparece con el PIN', de: "      document.getElementById('pr-pin-fondo').hidden = !p\n", a: '' },
     // Planta v2: la salida es la ✕ fija de la ventana (sin hidden).

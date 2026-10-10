@@ -271,6 +271,12 @@ esperas.push((async () => {
   const insMalo = [{ id: 'ci', nombre: marca('caja'), marca: marca('cajaMarca') }]
   const it = item({ presentacion_id: 'pr', marca_id: 'mk', unidades_por_caja: 1, caja_insumo_id: 'ci', embolsado: marca('embolsado') })
   chequearMarcas(chk, 'renglón de la planilla', S.htmlProducido(it, catMalo, insMalo), ['producto', 'presentacion', 'cono', 'caja', 'cajaMarca', 'embolsado'])
+  // El sublote sale de la base y va en su celda (y en el aria-label de los
+  // botones): escapado en los dos. (Una carga que espera en la cola, sin
+  // sublote todavía, dice "—": una constante del código.)
+  const itSub = item({ presentacion_id: 'pr', unidades_por_caja: 1, sublote: marca('sublote') })
+  chequearMarcas(chk, 'sublote en la celda de la planilla', S.htmlProducido(itSub, catMalo, insMalo).replace(/ aria-label="[^"]*"/g, ''), ['sublote'])
+  chequearMarcas(chk, 'sublote en el aria-label de los botones', (S.htmlProducido(itSub, catMalo, insMalo).match(/ aria-label="[^"]*"/g) || []).join(''), ['sublote'])
   chequearMarcas(chk, 'renglón del historial', G.htmlSubloteHistorial(it, {
     presentaciones: catMalo.presentaciones, productos: catMalo.productos, marcas: catMalo.marcas, insumosEmpaque: insMalo,
     productosConCono: ['p'], correcciones: [{ produccion_item_id: 'it', tipo: 'cajas', cajas_antes: 1, cajas_despues: 2, motivo: marca('motivoCorr'), hecha_por: 'e', hecha_en: null }], nombres: new Map(),
