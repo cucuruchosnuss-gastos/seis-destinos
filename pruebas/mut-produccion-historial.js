@@ -72,8 +72,9 @@ correrMutaciones({
     { nombre: 'el chip de chocolate se muestra en todas', de: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })", a: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: true })" },
     { nombre: 'un "otro" pierde su nombre', de: "      return it.ingrediente_libre || 'Otro'", a: "      return 'Otro'" },
     { nombre: 'masa_items no trae ingrediente_libre', de: "select('masa_id, ingrediente_id, ingrediente_libre, insumo_id", a: "select('masa_id, ingrediente_id, insumo_id" },
-    { nombre: 'no marca el lote fuera de stock', de: "${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''}", a: '' },
-    { nombre: 'el detalle no muestra la anulada', de: "        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}`\n", a: '        (false ? \'\'\n' },
+    // La lista compacta (08/10/2026): la fórmula y los motivos van en el detalle de la masa.
+    { nombre: 'no marca el lote fuera de stock', de: "${i.lote_fuera_de_stock ? ' · fuera de stock' : ''}", a: '' },
+    { nombre: 'el detalle no muestra la anulada', de: "          (m.anulada ? `<p><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}</p>`\n", a: "          (false ? ''\n" },
     { nombre: 'las paradas no traen hasta_fin_de_turno', de: "select('id, inicio, fin, motivo, hasta_fin_de_turno')", a: "select('id, inicio, fin, motivo')" },
     { nombre: 'la parada que no volvió no se marca', de: "${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}", a: '' },
     { nombre: 'los sublotes no traen anulado', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))" },

@@ -101,12 +101,13 @@ esperas.push((async () => {
   const l = lista(S)
   // Planta v2 (28/09/2026): la más nueva arriba.
   chk('solo las masas de ESE turno, la más nueva arriba', /data-hm-masa="ma3"[\s\S]*data-hm-masa="ma2"[\s\S]*data-hm-masa="ma1"/.test(l) && !/data-hm-masa="mx"/.test(l), l)
-  // El renglón: "Masa 2" y "Doble · 07:40"; el origen va en el title y lo
-  // que no es lo normal (Modificada, Chocolate) en sus pastillas.
-  chk('cada masa: "Masa 2" y "Doble · 07:40", el origen en el title y sus pastillas', /pr-hm__masa-l1">Masa 2</.test(l) && /pr-hm__masa-l2">Doble · 07:40</.test(l) &&
-    /data-hm-masa="ma2" aria-pressed="true" title="Modificada"/.test(l) &&
-    /pr-chip-modificada">Modificada/.test(l) && /pr-chip-choco">Chocolate/.test(l))
-  chk('la anulada lo dice', /pr-hm__masa pr-hm__masa--anulada" data-hm-masa="ma3"/.test(l) && /pr-rm__anulada">Anulada/.test(l))
+  // La lista compacta (08/10/2026): UN renglón por masa con el número, la
+  // hora, Original o Modificada y Simple o Doble; la fórmula no va en la lista.
+  chk('cada masa, un renglón: Masa 2 · 07:40 · Modificada · Doble, y Chocolate', /data-hm-masa="ma2" aria-pressed="true" aria-controls="pr-hm-detalle">/.test(l) &&
+    /<span class="pr-mc__nro"><span class="pr-mc__palabra">Masa <\/span>2<\/span><span class="pr-mc__hora">07:40<\/span><span class="pr-mc__origen pr-mc__origen--modificada">Modificada<\/span><span class="pr-mc__tam">Doble<\/span><span class="pr-mc__marca"><span class="pr-chip-choco">Chocolate/.test(l), l)
+  chk('una "anterior" se dice Original', /pr-mc__nro"><span class="pr-mc__palabra">Masa <\/span>3<\/span><span class="pr-mc__hora">08:10<\/span><span class="pr-mc__origen">Original</.test(l))
+  chk('la lista no lleva la fórmula', !/pr-hm__ing|Harina|Wali|W-9/.test(l))
+  chk('la anulada lo dice', /pr-hm__masa pr-mc pr-hm__masa--anulada" data-hm-masa="ma3"/.test(l) && /pr-rm__anulada">Anulada/.test(l))
   chk('arranca elegida la última que se puede anular (la 2), con borde naranja', /data-hm-masa="ma2" aria-pressed="true"/.test(l) && S.estado.histMaq.elegida === 'ma2')
   chk('"Solo se puede anular la última masa (la 2)."', S.__doc.getElementById('pr-hm-nota').textContent === 'Solo se puede anular la última masa (la 2).' &&
     S.__doc.getElementById('pr-hm-nota').hidden === false)
@@ -116,8 +117,8 @@ esperas.push((async () => {
   // El detalle a la derecha.
   const d = det(S)
   chk('detalle: número y tamaño', /pr-hm__det-titulo">Masa 2 · Doble</.test(d), d.slice(0, 300))
-  chk('… hora y quién la hizo', /pr-hm__det-sub">07:40 · la hizo Agustín Barrera/.test(d))
-  chk('… las pastillas y el motivo', /pr-chip-modificada/.test(d) && /· “Pidieron de chocolate”<\/p>/.test(d))
+  chk('… cuándo (fecha y hora de Argentina) y quién la cargó', /pr-hm__det-sub">28\/09\/2026 · 07:40 · la cargó Agustín Barrera/.test(d), d.slice(0, 400))
+  chk('… Modificada, Chocolate y el motivo', /pr-mc__origen pr-mc__origen--modificada">Modificada/.test(d) && /pr-chip-choco">Chocolate/.test(d) && /· “Pidieron de chocolate”<\/p>/.test(d))
   // Planta v2: las cantidades como SALIERON (una doble, ×2) y "marca · lote".
   chk('… cada ingrediente con su marca, cantidad y lote', /Harina<\/span><span class="pr-hm__ing-cant">50 kg<\/span><span class="pr-hm__ing-marca">Wali · <span class="pr-hm__ing-lote">W-9<\/span>/.test(d), d)
   chk('… lo agregado dice "agregado"', /Cacao <span class="pr-rec__agregado">agregado<\/span>/.test(d))
@@ -135,7 +136,7 @@ esperas.push((async () => {
   // Tocar otra masa.
   await S.elegirMasaHist('ma1')
   const d1 = det(S)
-  chk('tocar otra masa cambia el detalle', /pr-hm__det-titulo">Masa 1 · Simple</.test(d1) && /pr-hm__det-sub">07:05/.test(d1) && /data-hm-masa="ma1" aria-pressed="true"/.test(lista(S)))
+  chk('tocar otra masa cambia el detalle', /pr-hm__det-titulo">Masa 1 · Simple</.test(d1) && /pr-hm__det-sub">28\/09\/2026 · 07:05/.test(d1) && /pr-mc__origen">Original/.test(d1) && /data-hm-masa="ma1" aria-pressed="true"/.test(lista(S)))
   chk('… una simple dice la cantidad de una simple', /Harina<\/span><span class="pr-hm__ing-cant">25 kg</.test(d1))
   chk('… y en una que no es la última no se ofrece anular', !/pr-hm-anular/.test(d1))
   chk('… sin motivo no muestra ningún motivo entre comillas', !/[“”]/.test(d1))
@@ -238,7 +239,8 @@ esperas.push((async () => {
   // HTML malicioso.
   const M = armar()
   const mm = { id: marca('hmId'), nro: marca('hmNro'), hora: null, doble: false, origen: marca('hmOrigen'), anulada: false }
-  chequearMarcas(chk, 'masa del historial', M.htmlMasaHist(mm, false), ['hmId', 'hmNro', 'hmOrigen'])
+  chequearMarcas(chk, 'masa del historial', M.htmlMasaHist(mm, false), ['hmId', 'hmNro'])
+  chk('el origen se dice con un texto del código, nunca el dato', !/hmOrigen/.test(M.htmlMasaHist(mm, false)) && /pr-mc__origen">Original/.test(M.htmlMasaHist(mm, false)))
   const dd = { masaId: 'x', receta: new Map([[marca('ingHm'), 1]]), items: [
     { ingrediente_id: marca('ingHm'), lote: marca('loteHm'), cantidad_simple_kg: 2, ingredientes: { nombre: marca('nomHm'), orden: 1 }, insumos: { nombre: 'x', marca: marca('marcaHm') } },
     { ingrediente_id: null, lote: null, cantidad_simple_kg: 1, ingrediente_libre: marca('libreHm') },

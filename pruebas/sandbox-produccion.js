@@ -84,7 +84,7 @@ const FUNCIONES_BASE = [
   'opcionesEmbolsado', 'consumoPorCaja', 'consumoTotal', 'textoConsumo', 'textoCajaElegida', 'htmlEmbolsado', 'htmlPasoCaja',
   'htmlEmpaqueAgregar', 'soltarCaja', 'elegirCaja', 'elegirEmbolsado', 'seguirConCajas',
   'cargarPermisoStock', 'puedeVerStockEn', 'nombreCajaItem', 'envasePresentacion', 'partesProducido',
-  'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'conoOfrecible', 'conosParaElegir', 'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno',
+  'textoTamanoMasa', 'textoOrigenMasa', 'htmlChipsMasa', 'chipsDeMasa', 'conoOfrecible', 'conosParaElegir', 'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno',
   'leerEmpaqueConfig', 'faltaEmpaque', 'nombreInsumoConfig', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque',
   'sincronizarCantidadesEmpaque', 'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque',
   'cambiarSelectEmpaque', 'cambiarDobleBolsa',
@@ -163,6 +163,8 @@ const EN_AMBOS = [
   'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'sinCajaDescontada', 'textoSinCaja', 'normalizarHora',
   'horaConPaso', 'redondearKg', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'fechaCorta',
   'sumarDias', 'fechaDelDia', 'mapaDeUnidades', 'personalSinPruebas',
+  // La lista de masas compacta (08/10/2026)
+  'textoOrigenMasa',
 ]
 const SOLO_GESTION = [
   'cerrarMenu', 'alternarMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
@@ -253,6 +255,8 @@ const NUEVAS_GESTION = [
   // traídos de ci-prueba/planta-horarios el 05/10/2026)
   'leerHorariosConfig', 'horarioGuardado', 'horarioEnPantalla', 'duracionHorario', 'htmlConfigHorarios', 'tocarHorario',
   'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto', 'finDelTurnoMs', 'htmlNotaNoVolvio',
+  // La lista de masas compacta (08/10/2026): el renglón y su detalle.
+  'htmlFormulaMasa', 'alternarMasaHistorial',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
@@ -334,7 +338,7 @@ const NUEVAS_PLANTA = [
   'cargarMasasReceta', 'ultimaMasaAnulable', 'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima',
   'pintarMasasReceta', 'pedirAnularUltima', 'cancelarAnularUltima', 'confirmarAnularUltima',
   // Tirar una masa (30/09/2026): se hizo y se tiró, el stock no vuelve.
-  'esTirada', 'htmlTirada', 'anteriorFueTirada', 'repintarOpcionesReceta', 'htmlTirarUltima',
+  'esTirada', 'anteriorFueTirada', 'repintarOpcionesReceta', 'htmlTirarUltima',
   'pedirTirarUltima', 'cancelarTirarUltima', 'confirmarTirarUltima',
   'opcionesOtroInsumo', 'htmlPanelOtroInsumo', 'elegirInsumoOtro',
   // Parte 0 (28/09/2026): escribir un lote en la ventana, desde cualquier estado.
@@ -342,6 +346,9 @@ const NUEVAS_PLANTA = [
   // 4h · El historial de una máquina.
   'cargarDetalleHist', 'htmlMasaHist', 'htmlIngredientesHist', 'htmlAnularHist', 'htmlDetalleHist', 'pintarHistMaq',
   'elegirMasaHist', 'pedirAnularHist', 'cancelarAnularHist', 'confirmarAnularHist', 'nuevaMasaDesdeHist',
+  // La lista de masas compacta (08/10/2026): el renglón y la ventana del detalle.
+  'htmlOrigenMasa', 'htmlMarcaMasa', 'htmlRenglonMasa', 'cuandoMasa', 'quienMasa', 'leerDetalleMasa', 'htmlCuerpoMasa',
+  'buscarMasaVista', 'abrirVerMasa', 'pintarVerMasa', 'cerrarVerMasa', 'teclaVerMasa',
   // Producción con dos modos: el inicio y lo que falta para cerrar.
   'textoCajasTablero', 'htmlFaltaCierre',
   // Arreglos en la tablet real (28/09/2026): el personal se asegura en cada camino.

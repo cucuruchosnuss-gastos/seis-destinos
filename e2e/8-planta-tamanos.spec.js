@@ -157,6 +157,74 @@ for (const [ancho, alto] of TAMANOS) {
   });
 }
 
+// LA LISTA DE MASAS COMPACTA (08/10/2026): la columna "Masas del turno" de la
+// receta y el historial de una máquina, un renglón por masa, y su detalle
+// (la ventana, y el panel del historial) entran sin scroll de página en la
+// tablet acostada (1000 × 540) y en un teléfono (390 × 844).
+for (const [ancho, alto] of [[1000, 540], [390, 844]]) {
+  test(`la lista de masas compacta y su detalle entran a ${ancho}×${alto}`, async ({ page }, info) => {
+    test.setTimeout(3 * 60 * 1000);
+    await page.setViewportSize({ width: ancho, height: alto });
+    const errores = vigilarErrores(page);
+    const problemas = [];
+    const medir = async (nombre) => {
+      await page.waitForTimeout(150);
+      const m = await page.evaluate(`(${medirPantalla.toString()})()`);
+      await captura(page, `masas-${nombre}-${ancho}x${alto}`, info);
+      if (m.scroll) problemas.push(`${nombre}: la página mide ${m.altoDoc} px de alto y la pantalla ${m.alto}`);
+      if (m.scrollX) problemas.push(`${nombre}: scroll de costado (${m.anchoDoc} en ${m.ancho})`);
+      const caja = await page.evaluate(() => {
+        const c = document.querySelector('#pr-masa-ventana:not([hidden]) .pr-lp__caja');
+        if (!c) return null;
+        const r = c.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, alto: innerHeight };
+      });
+      if (caja && (caja.top < 0 || caja.bottom > caja.alto + 1)) problemas.push(`${nombre}: la ventana no entra en la pantalla ${JSON.stringify(caja)}`);
+      // A 390 px la planta (hecha para la tablet) ya se salía en la cabecera
+      // y en los segmentos de la receta antes de este cambio: acá se miden
+      // las listas de masas y su detalle, y en la tablet, todo.
+      const deLasMasas = (a) => ancho >= 600 || /pr-masa-ventana|pr-mv|pr-mc|pr-rm|pr-hm|pr-lp/.test(a);
+      for (const a of m.afuera.filter(deLasMasas)) problemas.push(`${nombre}: se sale de su recuadro ${a}`);
+      for (const c of m.cortadas.filter(deLasMasas)) problemas.push(`${nombre}: palabra cortada ${c}`);
+      // Cada renglón y la caja de la ventana, adentro del ancho de la pantalla.
+      const fuera = await page.evaluate(() => [...document.querySelectorAll('[data-masa-ver], [data-hm-masa], #pr-masa-ventana:not([hidden]) .pr-lp__caja, #pr-hm-detalle')]
+        .filter(e => e.offsetParent && e.getBoundingClientRect().right > innerWidth + 1).map(e => e.dataset.masaVer || e.dataset.hmMasa || e.id || e.className));
+      for (const f of fuera) problemas.push(`${nombre}: se sale de la pantalla ${f}`);
+    };
+    await page.goto(`${MAQUETA}/modulos/produccion.html?maqueta=produccion`);
+    const hasta = PASOS_PLANTA.findIndex(([n]) => n === 'receta');
+    for (const [, fn] of PASOS_PLANTA.slice(0, hasta + 1)) await fn(page);
+    // Un renglón por masa, sin la fórmula.
+    const lista = page.locator('#pr-receta-masas');
+    await expect(lista.locator('[data-masa-ver]')).toHaveCount(6);
+    await expect(lista.locator('[data-masa-ver="ma-2"]')).toContainText('Modificada');
+    await expect(lista.locator('[data-masa-ver="ma-3"]')).toContainText('Original');
+    await expect(lista).not.toContainText('Júpiter');
+    // Al tocarlo, el detalle.
+    await lista.locator('[data-masa-ver="ma-2"]').click();
+    const ventana = page.locator('#pr-masa-ventana');
+    await expect(ventana).toBeVisible();
+    await expect(ventana).toHaveAttribute('role', 'dialog');
+    await expect(page.locator('#pr-masa-ventana-titulo')).toHaveText('Masa 2 · Doble');
+    await expect(page.locator('#pr-masa-ventana-cuerpo')).toContainText('la cargó');
+    await expect(page.locator('#pr-masa-ventana-cuerpo')).toContainText('50 kg');
+    await expect(page.locator('#pr-masa-ventana-cuerpo')).toContainText('Júpiter');
+    await medir('ventana');
+    await page.keyboard.press('Escape');
+    await expect(ventana).toBeHidden();
+    await expect(lista.locator('[data-masa-ver="ma-2"]')).toBeFocused();
+    // El historial de la máquina: la lista compacta y el detalle al lado.
+    await page.locator('[data-lateral-turno]').first().click();
+    await expect(page.locator('#pr-hist-maq')).toBeVisible();
+    await page.locator('#pr-hm-lista [data-hm-masa="ma-2"]').click();
+    await expect(page.locator('#pr-hm-detalle')).toContainText('Júpiter');
+    await expect(page.locator('#pr-hm-lista')).not.toContainText('Júpiter');
+    await medir('historial');
+    expect(errores, errores.join('\n')).toEqual([]);
+    expect(problemas, `\n${problemas.join('\n')}`).toEqual([]);
+  });
+}
+
 // El medidor mide de verdad: una página que scrollea y una palabra partida
 // ponen la prueba en rojo (así un cero no es "no miré").
 test('el medidor detecta el scroll, lo que se sale y la palabra cortada', async ({ page }) => {

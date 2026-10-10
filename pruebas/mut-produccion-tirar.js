@@ -12,7 +12,7 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-tirar.js'),
   escape: 'esc',
-  funciones: ['htmlTirada', 'htmlTirarUltima', 'renderTiradas'],
+  funciones: ['htmlTirarUltima', 'renderTiradas'],
   soloGestion: ['renderTiradas'],
   equivalentes: [
     { expr: "esc(horaArgentina(m.hora) || '—')", motivo: 'horaArgentina devuelve "HH:MM" (dígitos y dos puntos) o vacío, y el respaldo es "—": ningún carácter escapable' },
@@ -26,10 +26,12 @@ correrMutacionesProduccion({
     { nombre: 'esTirada acepta cualquier cosa "verdadera"', de: '      return m?.descartada === true\n', a: '      return !!m?.descartada\n' },
     { nombre: 'la última anulable no saltea la tirada', de: 'const vivas = (masas ?? []).filter(m => !m.anulada && !esTirada(m))', a: 'const vivas = (masas ?? []).filter(m => !m.anulada)' },
     // La fila
-    { nombre: 'la fila tirada sin su clase', de: "${tirada ? ' pr-rm__fila--tirada' : ''}\">` +\n        `<span class=\"pr-rm__nro\">", a: "\">` +\n        `<span class=\"pr-rm__nro\">" },
-    { nombre: 'la fila tirada sigue con sus chips y sin "Tirada"', de: "(tirada ? htmlTirada(m) : chipsDeMasa(m))}</span></div>`", a: "chipsDeMasa(m)}</span></div>`" },
+    // La lista compacta (08/10/2026): el renglón es htmlRenglonMasa() y "Tirada" sale de htmlMarcaMasa().
+    { nombre: 'la fila tirada sin su clase', de: "${tirada ? ' pr-rm__fila--tirada' : ''}\" data-masa-ver=", a: "\" data-masa-ver=" },
+    { nombre: 'la fila tirada sigue con sus chips y sin "Tirada"', de: "      if (esTirada(m)) return '<span class=\"pr-tirada\">Tirada</span>'\n", a: '' },
     { nombre: 'la tirada se considera aunque esté anulada', de: '    function htmlMasaReceta(m) {\n      const tirada = !m.anulada && esTirada(m)', a: '    function htmlMasaReceta(m) {\n      const tirada = esTirada(m)' },
-    { nombre: 'htmlTirada sin el motivo', de: "Tirada${m?.descarte_motivo ? `: <span class=\"pr-tirada__motivo\">${esc(m.descarte_motivo)}</span>` : ''}", a: 'Tirada' },
+    { nombre: 'el motivo de la tirada sin escapar', de: "${esc(m.descarte_motivo || 'sin motivo')} · lo que se usó", a: "${m.descarte_motivo || 'sin motivo'} · lo que se usó" },
+    { nombre: 'el detalle de la tirada sin el motivo', de: "${esc(m.descarte_motivo || 'sin motivo')} · lo que se usó", a: '· lo que se usó' },
     { nombre: 'el CSS tacha la fila entera (también "Tirada")', de: '.pr-rm__fila--tirada .pr-rm__nro, .pr-rm__fila--tirada .pr-rm__det { text-decoration: line-through;', a: '.pr-rm__fila--tirada { text-decoration: line-through;' },
     { nombre: 'el botón de tirar no va en bordó', de: '.pr-btn--tirar { background: #fff; border-color: var(--p-mal); color: var(--p-mal-txt);', a: '.pr-btn--tirar { background: #fff;' },
     // La columna
@@ -60,12 +62,12 @@ correrMutacionesProduccion({
     { nombre: 'el motivo tipeado no se guarda', de: "if (ev.target.id === 'pr-rm-tirar-motivo' && estado.tirarUltima) estado.tirarUltima.motivo = ev.target.value", a: '' },
     { nombre: 'mostrar la receta no cierra el panel de tirar', de: '      estado.anularUltima = null\n      estado.tirarUltima = null\n', a: '      estado.anularUltima = null\n' },
     // Masas del turno
-    { nombre: 'masas del turno: la tirada ofrece "Anular"', de: "        : tirada ? htmlTirada(m)\n", a: '' },
+    { nombre: 'masas del turno: la tirada ofrece "Anular"', de: "      const estadoHtml = (m.anulada || tirada) ? ''", a: "      const estadoHtml = m.anulada ? ''" },
     { nombre: 'masas del turno: la tirada sin su clase', de: "${tirada ? ' pr-masa-fila--tirada' : ''}\">` +", a: '">` +' },
     { nombre: 'pedir anular una tirada abre el diálogo', de: '      if (!m || esTirada(m)) return\n      estado.anulando = masaId', a: '      if (!m) return\n      estado.anulando = masaId' },
     // Historial de la máquina
     { nombre: 'historial: la tirada sin su clase', de: "${tirada ? ' pr-hm__masa--tirada' : ''}\" data-hm-masa", a: '" data-hm-masa' },
-    { nombre: 'historial: la tirada con chips y sin "Tirada"', de: "(tirada ? htmlTirada(m) : chipsDeMasa(m))}</span></button>`", a: "chipsDeMasa(m)}</span></button>`" },
+    { nombre: 'historial: la tirada sin tachar', de: "${tirada ? ' pr-hm__masa--tirada' : ''}\" data-hm-masa=", a: "\" data-hm-masa=" },
     { nombre: 'detalle: sin "Se tiró:"', de: "      if (!m.anulada && esTirada(m)) html += `<p class=\"pr-hm__motivo\"><span class=\"pr-hm__rotulo\">Se tiró:</span> ${esc(m.descarte_motivo || 'sin motivo')} · lo que se usó quedó descontado del stock.</p>`\n", a: '' },
     { nombre: 'historial: la cuenta suma las tiradas', de: 'const vivas = (h.masas ?? []).filter(x => !x.anulada && !esTirada(x)).length', a: 'const vivas = (h.masas ?? []).filter(x => !x.anulada).length' },
     // Tablero, sala y planilla
@@ -99,7 +101,7 @@ correrMutacionesProduccion({
     { nombre: 'la falla de las tiradas dice lo de la RPC', de: "t.propia ? 'No se pudieron leer las masas tiradas.' : 'No se pudieron cargar los indicadores.'", a: "'No se pudieron cargar los indicadores.'" },
     { nombre: 'las tiradas no se guardan al llegar', de: '      const tir = await tiradas\n      if (turno !== turnoIndicadores) return\n      estado.tiradas = tir', a: '      const tir = await tiradas\n      if (turno !== turnoIndicadores) return' },
     { nombre: 'no se pone a cargar antes de pedir', de: '      estado.tiradas = { cargando: true }\n      cont.innerHTML = htmlIndicadores(null, null, true)', a: '      cont.innerHTML = htmlIndicadores(null, null, true)' },
-    { nombre: 'historial de la gestión sin "Tirada:"', de: "          : m.descartada === true ? `<br><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock`\n", a: '' },
+    { nombre: 'historial de la gestión sin "Tirada:"', de: "            : tirada ? `<p><strong>Tirada:</strong> ${esc(m.descarte_motivo ?? '')} · lo que se usó quedó descontado del stock</p>`\n", a: '' },
     { nombre: 'historial de la gestión: la cuenta suma las tiradas', de: 'const vivas = d.masas.filter(m => !m.anulada && m.descartada !== true).length', a: 'const vivas = d.masas.filter(m => !m.anulada).length' },
     { nombre: 'historial de la gestión no lee descartada', de: "anulada, anulada_motivo, descartada, descarte_motivo, es_chocolate').eq('turno_id', turnoId)", a: "anulada, anulada_motivo, es_chocolate').eq('turno_id', turnoId)" },
   ],
