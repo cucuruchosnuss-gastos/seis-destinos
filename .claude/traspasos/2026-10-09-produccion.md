@@ -26,6 +26,10 @@ Módulo 10 (Producción), en "DESDE EL 25/09/2026 SON DOS PANTALLAS…", despué
 - Promedio por planilla con el máximo de `planillas` por (fecha, turno, máquina).
 - La pantalla recorta las filas al período aunque la RPC ya lo haga (red, y la maqueta devuelve todo).
 
+## Cambio del mismo día: la gestión ABRE en la tabla (pedido de Facu)
+
+En el párrafo de la tabla en CLAUDE.md, reemplazar "Primera entrada de "Control" en el menú (...); los indicadores siguen siendo lo que se ve al entrar." por: **"La gestión de Producción ABRE en la tabla (`INICIO_GESTION = 'tabla'`; antes abría en los indicadores). En el menú, "Control" empieza con Tabla de producción y sigue Indicadores (`#pr-menu-inicio`, ya no suelto arriba). `?vista=indicadores | pendientes | historial | stock | conos` abre derecho en esa sección (`vistaDeEntrada`; se saca de la dirección); el tablero del dashboard (`js/tablero.js`) lleva la máquina parada y el peor lote a `?vista=indicadores`, las planillas por completar a `?vista=pendientes` y los conos por revisar a `?vista=conos`. "Salir sin guardar", las migas "Producción" de Configuración y una unidad de la barra sin Producción vuelven a la tabla (que con esa unidad abre y lo dice, sin consultar)."** Y en la tarjeta del dashboard / tablero: el link de la tarjeta sigue siendo `modulos/produccion-gestion.html` (abre en la tabla).
+
 ## Qué automatizaría ahora
 
 La maqueta devuelve las rpc sin mirar sus parámetros salvo con `__segun`, que exige igualdad exacta: para pantallas por período convendría que `supabase-falso.js` aceptara una rpc con `"__filtrar": { "fecha": ["p_desde", "p_hasta"] }` para recortar por rango sola, y así ninguna pantalla tiene que meter un recorte "de red" para que la maqueta se vea bien.

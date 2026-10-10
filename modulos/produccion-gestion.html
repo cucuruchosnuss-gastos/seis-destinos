@@ -2468,10 +2468,12 @@
         <span class="pg-menu__titulo">Producción</span>
         <button type="button" class="pg-menu__cerrar" id="pr-menu-cerrar">Cerrar</button>
       </div>
-      <button type="button" class="pg-menu__item pg-menu__item--inicio" data-menu="inicio" id="pr-menu-inicio">Indicadores</button>
+      <!-- La gestión ABRE en la tabla de producción (09/10/2026, pedido de
+           Facu); los indicadores son una entrada más, a continuación. -->
       <div class="pg-menu__bloque" id="pr-menu-bloque-control">
         <p class="pg-menu__grupo">Control</p>
         <button type="button" class="pg-menu__item" data-menu="tabla" id="pr-menu-tabla" hidden><span class="pg-menu__txt">Tabla de producción</span></button>
+        <button type="button" class="pg-menu__item" data-menu="inicio" id="pr-menu-inicio"><span class="pg-menu__txt">Indicadores</span></button>
         <button type="button" class="pg-menu__item" data-ir-pendientes id="pr-btn-ir-pendientes" hidden><span class="pg-menu__txt">Planillas pendientes</span><span class="pg-menu__n pg-menu__n--grave" id="pr-menu-n-pendientes" hidden></span></button>
         <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Historial</span></button>
         <button type="button" class="pg-menu__item" data-menu="stock" id="pr-menu-stock" hidden><span class="pg-menu__txt">Stock terminado</span></button>
@@ -2593,7 +2595,7 @@
            su propio scroll (la página no se mueve). En el celular, ‹ atrás, el
            título, y lista → detalle a pantalla completa. Mientras se está acá,
            el menú de la gestión se esconde en la compu: "Producción" vuelve a
-           los indicadores, donde está. -->
+           la tabla de producción, el inicio de la gestión. -->
       <section id="pr-config" class="pr-cfg pc" hidden>
         <div class="pc-cab">
           <button type="button" class="pc-atras" id="pr-config-volver" aria-label="Atrás">
@@ -3956,8 +3958,10 @@
         pintarSelectorGestion()
         pintarCabecera()
         pintarNumerosMenu()
-        if (estado.vista !== 'pr-inicio') mostrarInicioOficina()
-        else cargarIndicadores()
+        // En los indicadores, ellos lo dicen; en cualquier otra sección, se
+        // vuelve al inicio de la gestión (la tabla), que también lo dice.
+        if (estado.vista === 'pr-inicio') cargarIndicadores()
+        else navegar(INICIO_GESTION)
         return
       }
       if (segun === estado.unidadId) { pintarSelectorGestion(); return }
@@ -5147,12 +5151,12 @@
       if (que === 'conos') return mostrarConfig('marcas')
     }
 
-    // A dónde vuelve "Salir sin guardar" sin otro destino: al inicio.
+    // A dónde vuelve "Salir sin guardar" sin otro destino: al inicio de la
+    // gestión, que desde el 09/10/2026 es la tabla de producción.
     function volverDeOficina() {
-      mostrarInicioOficina()
+      navegar(INICIO_GESTION)
     }
 
-    // El inicio de la gestión: los indicadores de la unidad.
     // ═══════════════════════════════════════════════════════════════════════
     // LA TABLA DE PRODUCCIÓN (09/10/2026)
     // ═══════════════════════════════════════════════════════════════════════
@@ -5181,6 +5185,19 @@
     const DIAS_TABLA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
     const MAX_DIAS_TABLA = 400
     const CLAVE_TABLA = 'produccion.gestion.tabla'
+
+    // LA GESTIÓN ABRE EN LA TABLA (09/10/2026, pedido de Facu). Los
+    // indicadores son una entrada más del menú. `?vista=` abre derecho en una
+    // sección (lo usan los links del tablero del dashboard): lo que no está
+    // en la lista abre en la tabla.
+    const INICIO_GESTION = 'tabla'
+    const VISTAS_DE_ENTRADA = { tabla: 'tabla', indicadores: 'inicio', pendientes: 'pendientes', historial: 'historial', stock: 'stock', conos: 'config:marcas' }
+
+    function vistaDeEntrada(search) {
+      let v = null
+      try { v = new URLSearchParams(search ?? '').get('vista') } catch { v = null }
+      return v && Object.prototype.hasOwnProperty.call(VISTAS_DE_ENTRADA, v) ? VISTAS_DE_ENTRADA[v] : INICIO_GESTION
+    }
 
     function esFechaTabla(v) {
       return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
@@ -5534,7 +5551,15 @@
     }
 
     function mostrarTabla() {
-      if (sinUnidadPorBarra()) { mostrarError(textoSinProduccionEnBarra()); return }
+      // Es la pantalla con la que abre la gestión: con una unidad de la barra
+      // sin Producción, se abre igual y lo dice (como hacían los indicadores),
+      // sin pedir nada a la base.
+      if (sinUnidadPorBarra()) {
+        mostrarVista('pr-tabla')
+        document.getElementById('pr-tabla-tarjetas').innerHTML = ''
+        document.getElementById('pr-tabla-cuerpo').innerHTML = `<div class="pr-aviso">${esc(textoSinProduccionEnBarra())}</div>`
+        return
+      }
       const hoy = hoyArgentina()
       if (!estado.tabla) estado.tabla = estadoInicialTabla(leerPreferencia(CLAVE_TABLA), hoy)
       const t = estado.tabla
@@ -5550,7 +5575,9 @@
 
     function cambiarUnidadTabla(id) {
       const t = estado.tabla
-      if (!t) return
+      // Abierta sin unidad (la barra tenía una sin Producción): recién ahora
+      // se arma.
+      if (!t) return mostrarTabla()
       t.unidadId = id; t.maquina = ''; t.maquinaNombre = ''
       guardarTabla(t)
       cargarTabla()
@@ -8453,8 +8480,9 @@
       // se va de la sección, así que no hay nada que preguntar). Irse lo
       // pregunta irA().
       document.getElementById('pr-config-volver').addEventListener('click', volverEnConfig)
-      // "Producción" de las migas: vuelve a los indicadores, donde está el menú.
-      document.getElementById('pr-config-a-produccion').addEventListener('click', () => irA('inicio'))
+      // "Producción" de las migas: vuelve al inicio de la gestión (la tabla,
+      // desde el 09/10/2026), donde está el menú.
+      document.getElementById('pr-config-a-produccion').addEventListener('click', () => irA(INICIO_GESTION))
       document.getElementById('pr-config-secciones').addEventListener('click', ev => {
         const b = ev.target.closest('[data-config-seccion]'); if (b) cambiarSeccionConfig(b.dataset.configSeccion)
       })
@@ -9502,7 +9530,14 @@
       pintarSelectorGestion()
       pintarAccesosOficina()
       cargarBurbujaConos()
-      mostrarInicioOficina()
+      // Abre en la tabla de producción (09/10/2026), o en la sección que pida
+      // `?vista=`, que se saca de la dirección para que recargar abra la tabla.
+      const entrada = vistaDeEntrada(window.location?.search)
+      if (window.location?.search && window.history?.replaceState) {
+        const url = new URL(window.location.href)
+        if (url.searchParams.has('vista')) { url.searchParams.delete('vista'); window.history.replaceState(null, '', url.pathname + url.search + url.hash) }
+      }
+      navegar(entrada)
     }
 
     init()

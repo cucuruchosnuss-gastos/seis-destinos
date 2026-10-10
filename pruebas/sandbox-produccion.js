@@ -253,8 +253,18 @@ const NUEVAS_GESTION = [
   // traídos de ci-prueba/planta-horarios el 05/10/2026)
   'leerHorariosConfig', 'horarioGuardado', 'horarioEnPantalla', 'duracionHorario', 'htmlConfigHorarios', 'tocarHorario',
   'parametrosHorario', 'guardarHorario', 'esRelanzado', 'finTurnoAbierto', 'finDelTurnoMs', 'htmlNotaNoVolvio',
+  // La tabla de producción (09/10/2026): la pantalla con la que abre la gestión.
+  'esFechaTabla', 'normalizarResumen', 'periodosTarjetasTabla', 'rangoBaseTabla', 'errorPeriodoTabla', 'filtrarResumen',
+  'sumaUnidadesTabla', 'textoDiaTabla', 'textoMesTabla', 'grupoTabla', 'armarTabla', 'promediosTabla', 'cambiarDimensionTabla',
+  'estadoInicialTabla', 'guardarTabla', 'datosDeLaTabla', 'hayFiltrosTabla', 'unidadesTexto', 'rangoCortoTabla',
+  'htmlTarjetasTabla', 'opcionesFiltroTabla', 'htmlOpcionesTabla', 'htmlDimensionesTabla', 'textoDimension', 'celdaTabla',
+  'htmlTablaProduccion', 'htmlPromediosTabla', 'htmlCuerpoTabla', 'pintarTabla', 'leerResumen', 'cargarTabla', 'mostrarTabla',
+  'cambiarUnidadTabla', 'ponerPeriodoTabla', 'elegirPeriodoTabla', 'alCambiarFechasTabla', 'cambiarFiltroTabla',
+  'elegirDimensionTabla', 'vistaDeEntrada',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
+  // La tabla de producción (09/10/2026)
+  'DIMENSIONES_TABLA', 'TURNOS_TABLA', 'MESES_TABLA', 'DIAS_TABLA', 'MAX_DIAS_TABLA', 'CLAVE_TABLA', 'INICIO_GESTION', 'VISTAS_DE_ENTRADA',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
   // El diseño "Producción · Configuración" (29/09/2026)
   'SECCIONES_CONFIG', 'ALIAS_CONFIG', 'CON_LISTA', 'ICONO_BUSCAR', 'ICONO_MAS', 'ICONO_CAJA', 'ICONO_CHEVRON', 'ICONO_ALERTA',
@@ -507,6 +517,7 @@ const PRELUDIO = `
   var relojBotonRegistrada = null
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
+  var turnoTabla = 0
   var turnoIndicadores = 0
   var turnoMaquinas = 0
   var esperaAnchoMaquinas = null

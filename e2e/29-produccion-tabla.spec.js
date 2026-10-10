@@ -28,15 +28,30 @@ async function elegirPeriodo(page, desde, hasta) {
   await expect(panel).toBeHidden();
 }
 
-async function abrirTabla(page, angosta) {
-  if (angosta) await page.locator('#pr-btn-menu').click();
-  const item = page.locator('#pr-menu-tabla');
-  await expect(item).toBeVisible();
-  // Es la primera entrada de Control.
-  const primero = await page.locator('#pr-menu-bloque-control .pg-menu__item').first().getAttribute('id');
-  expect(primero).toBe('pr-menu-tabla');
-  await item.click();
+// La gestión ABRE en la tabla (09/10/2026): sin tocar nada, la tabla está a
+// la vista y los indicadores no.
+async function abreEnLaTabla(page) {
   await expect(page.locator('#pr-tabla')).toBeVisible();
+  await expect(page.locator('#pr-inicio')).toBeHidden();
+}
+
+// En el menú, la tabla es la primera de Control y los indicadores van a
+// continuación.
+async function revisarMenu(page, angosta) {
+  if (angosta) await page.locator('#pr-btn-menu').click();
+  await expect(page.locator('#pr-menu-tabla')).toBeVisible();
+  const ids = await page.locator('#pr-menu-bloque-control .pg-menu__item').evaluateAll(b => b.map(x => x.id));
+  expect(ids.slice(0, 2)).toEqual(['pr-menu-tabla', 'pr-menu-inicio']);
+  await expect(page.locator('#pr-menu-tabla')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#pr-menu-inicio')).toContainText('Indicadores');
+  // Los indicadores, desde el menú.
+  await page.locator('#pr-menu-inicio').click();
+  await expect(page.locator('#pr-inicio')).toBeVisible();
+  await expect(page.locator('#pr-tabla')).toBeHidden();
+  // Y de vuelta a la tabla.
+  if (angosta) await page.locator('#pr-btn-menu').click();
+  await page.locator('#pr-menu-tabla').click();
+  await abreEnLaTabla(page);
 }
 
 for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280', { width: 1280, height: 900 }]]) {
@@ -46,8 +61,8 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
     await page.goto(MAQUETA + '/modulos/produccion-gestion.html?maqueta=produccion-gestion');
     await page.evaluate(() => { try { localStorage.removeItem('produccion.gestion.tabla') } catch {} });
     await page.reload();
-    await expect(page.locator('#pr-inicio')).toBeVisible();
-    await abrirTabla(page, nombre === '390');
+    await abreEnLaTabla(page);
+    await revisarMenu(page, nombre === '390');
 
     const seccion = page.locator('#pr-tabla');
     const tarjetas = seccion.locator('[data-tabla-periodo]');
@@ -101,8 +116,7 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
 
     // Filas y Columnas se recuerdan.
     await page.reload();
-    await expect(page.locator('#pr-inicio')).toBeVisible();
-    await abrirTabla(page, nombre === '390');
+    await abreEnLaTabla(page);
     await expect(page.locator('#pr-tabla-filas')).toHaveValue('maquina');
     await expect(page.locator('#pr-tabla-columnas')).toHaveValue('dia');
 
@@ -111,6 +125,25 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
     await expect(seccion.locator('#pr-tabla-cuerpo')).toContainText('No hubo producción del 01/01/2099 al 31/01/2099.');
     await expect(seccion.locator('.pt-tabla')).toHaveCount(0);
 
+    expect(errores, 'errores de JavaScript').toEqual([]);
+  });
+
+  // Los links del tablero del dashboard: ?vista= abre derecho en esa sección,
+  // y se saca de la dirección (recargar vuelve a la tabla).
+  test(`?vista= abre otra sección a ${nombre} px`, async ({ page }) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize(viewport);
+    await page.goto(MAQUETA + '/modulos/produccion-gestion.html?maqueta=produccion-gestion&vista=indicadores');
+    await expect(page.locator('#pr-inicio')).toBeVisible();
+    await expect(page.locator('#pr-tabla')).toBeHidden();
+    await expect(page.locator('#pr-indicadores')).toContainText('Ahora');
+    expect(new URL(page.url()).searchParams.get('vista')).toBeNull();
+    expect(new URL(page.url()).searchParams.get('maqueta')).toBe('produccion-gestion');
+    await page.reload();
+    await abreEnLaTabla(page);
+    await page.goto(MAQUETA + '/modulos/produccion-gestion.html?maqueta=produccion-gestion&vista=pendientes');
+    await expect(page.locator('#pr-historial')).toBeVisible();
+    await expect(page.locator('#pr-historial-estado')).toHaveValue('pendiente_completar');
     expect(errores, 'errores de JavaScript').toEqual([]);
   });
 }

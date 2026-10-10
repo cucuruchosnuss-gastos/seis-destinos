@@ -36,14 +36,14 @@ const { chk, esperas, fin } = arnes()
 const BASE = '26d4624'
 const antes = execFileSync('git', ['show', `${BASE}:modulos/produccion-gestion.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
 
-const CONSTANTES = ['DIMENSIONES_TABLA', 'TURNOS_TABLA', 'MESES_TABLA', 'DIAS_TABLA', 'MAX_DIAS_TABLA', 'CLAVE_TABLA']
+const CONSTANTES = ['DIMENSIONES_TABLA', 'TURNOS_TABLA', 'MESES_TABLA', 'DIAS_TABLA', 'MAX_DIAS_TABLA', 'CLAVE_TABLA', 'INICIO_GESTION', 'VISTAS_DE_ENTRADA']
 const FUNCIONES = ['esc', 'numeroInd', 'sumarDias', 'lunesDe', 'diasEntreInd', 'fechaCorta', 'fechaDelDia', 'leerPreferencia', 'guardarPreferencia',
   'esFechaTabla', 'normalizarResumen', 'periodosTarjetasTabla', 'rangoBaseTabla', 'errorPeriodoTabla', 'filtrarResumen', 'sumaUnidadesTabla',
   'textoDiaTabla', 'textoMesTabla', 'grupoTabla', 'armarTabla', 'promediosTabla', 'cambiarDimensionTabla', 'estadoInicialTabla', 'guardarTabla',
   'datosDeLaTabla', 'hayFiltrosTabla', 'unidadesTexto', 'rangoCortoTabla', 'htmlTarjetasTabla', 'opcionesFiltroTabla', 'htmlOpcionesTabla',
   'htmlDimensionesTabla', 'textoDimension', 'celdaTabla', 'htmlTablaProduccion', 'htmlPromediosTabla', 'htmlCuerpoTabla', 'pintarTabla',
   'leerResumen', 'cargarTabla', 'mostrarTabla', 'cambiarUnidadTabla', 'ponerPeriodoTabla', 'elegirPeriodoTabla', 'alCambiarFechasTabla',
-  'cambiarFiltroTabla', 'elegirDimensionTabla']
+  'cambiarFiltroTabla', 'elegirDimensionTabla', 'vistaDeEntrada']
 
 function construir() {
   const partes = []
@@ -58,7 +58,8 @@ function construir() {
     var estado = { unidadId: 'u-1', unidadBarra: null, unidades: new Map([['u-1', 'Nuss']]), vista: null }
     var __errores = []
     function mostrarError(t) { __errores.push(t) }
-    function sinUnidadPorBarra() { return false }
+    var __sinUnidad = false
+    function sinUnidadPorBarra() { return __sinUnidad }
     function textoSinProduccionEnBarra() { return 'sin produccion' }
     function mostrarVista(id) { estado.vista = id }
     function abrirMenu() {}
@@ -83,7 +84,7 @@ function construir() {
     ${partes.join('\n')}
     let turnoTabla = 0
     return { ${[...CONSTANTES, ...FUNCIONES].join(', ')}, formatearNumeroAr, estado, __elementos, supabase,
-      get llamadas() { return __llamadas }, set respuesta(v) { __respuesta = v }, set hoy(v) { __hoy = v },
+      get llamadas() { return __llamadas }, set respuesta(v) { __respuesta = v }, set hoy(v) { __hoy = v }, set sinUnidad(v) { __sinUnidad = v },
       get guardado() { return __guardado }, set storageRoto(v) { __storageRoto = v }, get errores() { return __errores } }
   `
   return new Function(codigo)()
@@ -371,6 +372,21 @@ const TOTAL = sumaDe(DATOS)
   chk('la tabla nunca muestra cajas', !/caja/i.test(ok.replace(/Caja x \d+/g, '')))
 }
 
+// ── LA GESTIÓN ABRE EN LA TABLA (09/10/2026) ────────────────────────────
+{
+  chk('el inicio de la gestión es la tabla', S.INICIO_GESTION === 'tabla')
+  chk('sin ?vista= abre en la tabla', S.vistaDeEntrada('') === 'tabla' && S.vistaDeEntrada(undefined) === 'tabla' && S.vistaDeEntrada('?maqueta=x') === 'tabla')
+  chk('?vista=indicadores abre los indicadores', S.vistaDeEntrada('?vista=indicadores') === 'inicio')
+  chk('?vista=pendientes, historial, stock y conos', S.vistaDeEntrada('?vista=pendientes') === 'pendientes' && S.vistaDeEntrada('?vista=historial') === 'historial' &&
+    S.vistaDeEntrada('?maqueta=x&vista=stock') === 'stock' && S.vistaDeEntrada('?vista=conos') === 'config:marcas')
+  chk('una vista desconocida (o de un prototipo) abre en la tabla', S.vistaDeEntrada('?vista=nada') === 'tabla' && S.vistaDeEntrada('?vista=toString') === 'tabla' && S.vistaDeEntrada('?vista=__proto__') === 'tabla')
+  // Los links del tablero del dashboard: cada ?vista= que usa es una que la
+  // gestión entiende (y no la tabla, que es a donde iría sin nada).
+  const tablero = fs.readFileSync(path.join(RAIZ, 'js', 'tablero.js'), 'utf8')
+  const vistas = [...tablero.matchAll(/produccion-gestion\.html\?vista=([a-z_]+)/g)].map(m => m[1])
+  chk('el tablero lleva a secciones que la gestión entiende', vistas.length >= 4 && vistas.every(v => S.vistaDeEntrada(`?vista=${v}`) !== 'tabla'), vistas.join())
+}
+
 // ── La consulta: una por período ────────────────────────────────────────
 const tick = () => new Promise(res => setTimeout(res, 0))
 esperas.push((async () => {
@@ -468,6 +484,24 @@ esperas.push((async () => {
   const semana = sumaDe(DATOS.filter(f => f.fecha >= '2026-10-05' && f.fecha <= '2026-10-09'))
   chk('una tarjeta tocada con la consulta en vuelo termina dibujando la tabla', !c4.includes('Cargando…') && c4.includes(S.formatearNumeroAr(semana, { decimales: 0 })), c4.slice(0, 120))
 
+  // Con una unidad de la barra sin Producción: la tabla abre igual y lo dice,
+  // sin consultar; al elegir una unidad que sí, se arma.
+  S.estado.tabla = null
+  S.estado.unidadId = null
+  S.sinUnidad = true
+  S.estado.vista = null
+  const antesSin = S.llamadas.length
+  S.__elementos['pr-tabla-cuerpo'].innerHTML = ''
+  S.mostrarTabla()
+  await tick(); await tick()
+  chk('sin Producción en la unidad de la barra: abre la tabla y lo dice, sin consultar', S.estado.vista === 'pr-tabla' &&
+    S.__elementos['pr-tabla-cuerpo'].innerHTML.includes('sin produccion') && S.llamadas.length === antesSin && S.__elementos['pr-tabla-tarjetas'].innerHTML === '')
+  S.sinUnidad = false
+  S.estado.unidadId = 'u-1'
+  S.cambiarUnidadTabla('u-1')
+  await tick(); await tick()
+  chk('… y al elegir una unidad con Producción, se arma y consulta', !!S.estado.tabla && S.llamadas.length > antesSin && S.__elementos['pr-tabla-cuerpo'].innerHTML.includes('pt-tabla'))
+
   // Cambiar de unidad: se vuelve a pedir y la máquina elegida se suelta.
   S.estado.tabla.maquina = 'm1'
   S.estado.unidadId = 'u-2'
@@ -483,6 +517,16 @@ esperas.push((async () => {
   const control = sinComent.slice(sinComent.indexOf('id="pr-menu-bloque-control"'), sinComent.indexOf('id="pr-menu-bloque-catalogo"'))
   const primero = control.match(/<button[^>]*class="pg-menu__item"[^>]*>/)
   chk('"Tabla de producción" es la PRIMERA entrada de Control', primero && /data-menu="tabla"/.test(primero[0]) && /id="pr-menu-tabla"/.test(primero[0]), primero && primero[0])
+  const items = [...control.matchAll(/<button[^>]*class="pg-menu__item"[^>]*>/g)].map(m => (m[0].match(/id="([^"]+)"/) || [])[1])
+  chk('"Indicadores" va a continuación, en Control', items[1] === 'pr-menu-inicio' && /data-menu="inicio"[^>]*>\s*<span class="pg-menu__txt">Indicadores<\/span>/.test(control), items.join())
+  const menu = sinComent.slice(sinComent.indexOf('<nav class="pg-menu"'), sinComent.indexOf('id="pr-menu-bloque-control"'))
+  chk('arriba del bloque Control no queda ningún renglón suelto', !/pg-menu__item/.test(menu))
+  const init = extraerFn(src, 'init')
+  chk('al entrar abre lo que dice vistaDeEntrada (la tabla), no los indicadores', /const entrada = vistaDeEntrada\(window\.location\?\.search\)/.test(init) && /\n\s*navegar\(entrada\)\n\s*\}$/.test(init) && !/mostrarInicioOficina\(\)/.test(init))
+  chk('?vista= se saca de la dirección', /url\.searchParams\.delete\('vista'\)/.test(init))
+  chk('"Salir sin guardar" vuelve al inicio de la gestión', /function volverDeOficina\(\) \{\s*navegar\(INICIO_GESTION\)\s*\}/.test(src))
+  chk('"Producción" de las migas de Configuración vuelve al inicio de la gestión', /getElementById\('pr-config-a-produccion'\)\.addEventListener\('click', \(\) => irA\(INICIO_GESTION\)\)/.test(src))
+  chk('una unidad de la barra sin Producción: los indicadores lo dicen, lo demás vuelve a la tabla', /if \(estado\.vista === 'pr-inicio'\) cargarIndicadores\(\)\s*else navegar\(INICIO_GESTION\)/.test(extraerFn(src, 'alCambiarLaBarra')))
   chk('la vista está en VISTAS', /const VISTAS = \[[^\]]*'pr-tabla'/.test(src))
   chk('el menú la muestra con ver o configurar', /for \(const id of \['pr-menu-tabla'[^\]]*\]\) document\.getElementById\(id\)\.hidden = !ver/.test(src))
   chk('navegar("tabla") abre la tabla', /if \(destino === 'tabla'\) return mostrarTabla\(\)/.test(src))

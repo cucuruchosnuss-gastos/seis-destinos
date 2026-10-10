@@ -71,7 +71,11 @@ correrMutaciones({
     // Producción
     { nombre: 'producción: las paradas no van primero', de: '  maquinas.sort((a, b) => orden[a.tipo] - orden[b.tipo])\n', a: '' },
     { nombre: 'producción: el peor lote con 10 % justo', de: 'dif !== null && dif < -10 &&', a: 'dif !== null && dif <= -10 &&' },
-    { nombre: 'producción: máquina parada no es urgente', de: "url: 'modulos/produccion-gestion.html', urgente: true, origen: 'produccion:paradas'", a: "url: 'modulos/produccion-gestion.html', urgente: false, origen: 'produccion:paradas'" },
+    { nombre: 'producción: la máquina parada abre en la tabla', de: "url: 'modulos/produccion-gestion.html?vista=indicadores', urgente: true", a: "url: 'modulos/produccion-gestion.html', urgente: true" },
+    { nombre: 'producción: las planillas abren en la tabla', de: "url: 'modulos/produccion-gestion.html?vista=pendientes', origen", a: "url: 'modulos/produccion-gestion.html', origen" },
+    { nombre: 'producción: el peor lote abre en la tabla', de: "t: 'de harina es el que peor rinde', url: 'modulos/produccion-gestion.html?vista=indicadores'", a: "t: 'de harina es el que peor rinde', url: 'modulos/produccion-gestion.html'" },
+    { nombre: 'producción: los conos abren en la tabla', de: "url: 'modulos/produccion-gestion.html?vista=conos' }", a: "url: 'modulos/produccion-gestion.html' }" },
+    { nombre: 'producción: máquina parada no es urgente', de: "url: 'modulos/produccion-gestion.html?vista=indicadores', urgente: true, origen: 'produccion:paradas'", a: "url: 'modulos/produccion-gestion.html?vista=indicadores', urgente: false, origen: 'produccion:paradas'" },
     { nombre: 'producción: una planilla por completar cuenta como andando', de: "tipo: 'neutro' }); continue }", a: "tipo: 'neutro' }) }" },
     { nombre: 'producción: el scrap con masa 0 da "0 %"', de: "masaKg > 0 ? `${formatearNumeroAr(scrap / masaKg * 100, { decimales: 1, minimos: 1 })} %` : '—'", a: "`${formatearNumeroAr(masaKg ? scrap / masaKg * 100 : 0, { decimales: 1, minimos: 1 })} %`" },
     { nombre: 'producción: la tendencia al revés', de: 'sube: dif > 0, igual: dif === 0', a: 'sube: dif >= 0, igual: false' },
