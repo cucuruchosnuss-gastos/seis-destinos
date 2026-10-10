@@ -5665,9 +5665,9 @@
       }
       const grupo = (titulo, gente) => gente.length
         ? `<div class="pr-op-grupo">${esc(titulo)}</div><div class="pr-op-grilla">${gente.map(tag).join('')}</div>` : ''
-      if (!hace.length) return grupo(q ? 'OPERARIOS' : 'OPERARIOS · EN GRIS, LOS QUE YA ESTÁN EN OTRA MÁQUINA HOY', resto)
+      if (!hace.length) return grupo(q ? 'OPERARIOS' : 'OPERARIOS · EN GRIS, LOS QUE ESTÁN AHORA EN OTRA MÁQUINA', resto)
       return grupo(`TRABAJARON HACE POCO EN ${String(f.nombre).toLocaleUpperCase('es')}`, hace) +
-        grupo('EL RESTO · EN GRIS, LOS QUE YA ESTÁN EN OTRA MÁQUINA HOY', resto)
+        grupo('EL RESTO · EN GRIS, LOS QUE ESTÁN AHORA EN OTRA MÁQUINA', resto)
     }
 
     // Qué falta para poder abrir. Lista vacía = se puede.
@@ -5730,28 +5730,46 @@
       pintarAbrir()
       mostrarVista('pr-abrir')
       const form = estado.abrir
-      const r = await leerOcupadosYRecientes(estado.unidadId, (estado.tablero ?? []).filter(e => e.turno && !esDeAyer(e, hoy)), form.filas.map(f => f.maquinaId))
+      const nombresMaquina = new Map((estado.tablero ?? []).map(e => [e.maquina?.id, e.maquina?.nombre]))
+      const r = await leerOcupadosYRecientes(estado.unidadId, form.filas.map(f => f.maquinaId), nombresMaquina)
       if (estado.abrir !== form) return
       form.ocupados = r.ocupados
       form.recientes = r.recientes
       pintarAbrir()
     }
 
-    // Quién ya está en otra máquina HOY (los operarios de los turnos abiertos,
-    // sin hora de salida) y quiénes trabajaron hace poco en cada máquina (los
-    // de sus 3 últimos turnos cerrados). Si algo falla no se dice nada: los
-    // grupos no se inventan.
-    async function leerOcupadosYRecientes(unidadId, abiertas, maquinaIds) {
+    // Quién está AHORA en otra máquina y quiénes trabajaron hace poco en cada
+    // máquina (los de sus 3 últimos turnos cerrados). Si algo falla no se dice
+    // nada: los grupos no se inventan.
+    //
+    // OCUPADO = su fila de turno_operarios sigue sin `hasta` Y su planilla está
+    // 'abierto' (08/10/2026). No es "trabajó hoy": la base le pone `hasta` a
+    // todos cuando la planilla sale de 'abierto' (trigger
+    // trg_turno_cierra_operarios sobre turnos_produccion, verificado con
+    // pg_get_functiondef el 08/10/2026), así que el operario de la planilla de
+    // la mañana, ya cerrada, se puede elegir en el turno siguiente. Los turnos
+    // abiertos se leen de la BASE en el momento (no del tablero, que puede
+    // estar viejo), también el que quedó abierto de un día anterior: sigue
+    // abierto y su gente sigue sin salida. Las dos condiciones se piden en la
+    // consulta y se vuelven a mirar acá (un dato viejo con `hasta` vacío en
+    // una planilla cerrada no ocupa a nadie).
+    async function leerOcupadosYRecientes(unidadId, maquinaIds, nombresMaquina = new Map()) {
       const ocupados = new Map(), recientes = new Map()
       try {
-        const ids = abiertas.map(e => e.turno.id)
+        const { data: abiertos, error: e0 } = await supabase.from('turnos_produccion')
+          .select('id, maquina_id, estado, unidad_negocio_id').eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')
+        if (e0) throw e0
+        const porTurno = new Map((abiertos ?? []).filter(t => t?.estado === 'abierto' && t.unidad_negocio_id === unidadId).map(t => [t.id, t]))
+        const ids = [...porTurno.keys()]
         if (ids.length) {
-          const { data, error } = await supabase.from('turno_operarios').select('turno_id, empleado_id, hasta').in('turno_id', ids)
+          const { data, error } = await supabase.from('turno_operarios').select('turno_id, empleado_id, hasta')
+            .in('turno_id', ids).is('hasta', null)
           if (error) throw error
           for (const o of data ?? []) {
             if (o.hasta) continue
-            const e = abiertas.find(x => x.turno.id === o.turno_id)
-            if (e) ocupados.set(o.empleado_id, `en ${e.maquina.nombre}`)
+            const t = porTurno.get(o.turno_id)
+            if (!t) continue
+            ocupados.set(o.empleado_id, `en ${nombresMaquina.get(t.maquina_id) ?? 'otra máquina'}`)
           }
         }
         if (maquinaIds.length) {
@@ -6222,11 +6240,20 @@
       return n === '—' ? '' : n.split(/\s+/)[0]
     }
 
+    // Los que están trabajando AHORA en una planilla: sin hora de salida y con
+    // la planilla 'abierto' (08/10/2026). En una planilla que ya no está
+    // abierta no hay nadie adentro (la base les pone `hasta` al cerrarla). Un
+    // turno sin estado leído se toma como abierto: es la planilla en pantalla.
+    function operarioAdentro(o, turno) {
+      if (!o || o.hasta) return false
+      return (turno?.estado ?? 'abierto') === 'abierto'
+    }
+
     // 4a · Operarios: el encargado primero, con su marca, y los que están
     // adentro. Se toca para sumar o sacar.
     function htmlOpsResumen(p) {
       const encargado = p?.turno?.encargado_id ?? null
-      const adentro = (p?.operarios ?? []).filter(o => !o.hasta).map(o => o.empleado_id).filter(id => id !== encargado)
+      const adentro = (p?.operarios ?? []).filter(o => operarioAdentro(o, p?.turno)).map(o => o.empleado_id).filter(id => id !== encargado)
       const gente = [...(encargado ? [{ id: encargado, enc: true }] : []), ...adentro.map(id => ({ id, enc: false }))]
       const vistos = gente.length > 3 ? gente.slice(0, 2) : gente
       const filas = vistos.map(g => `<span class="pr-res__persona">${esc(nombrePersona(g.id))}${g.enc ? '<span class="pr-res__enc">ENCARGADO</span>' : ''}</span>`).join('') +
@@ -6372,11 +6399,11 @@
     // justo lo que la planilla tiene que poder contar después.
     function htmlOperariosPlanilla(p, ops, personas) {
       const filas = Array.isArray(p?.operarios) ? p.operarios : []
-      const adentro = filas.filter(o => !o.hasta)
+      const adentro = filas.filter(o => operarioAdentro(o, p?.turno))
       const chipsHtml = adentro.map(o =>
         htmlChipOperario(nombrePersona(o.empleado_id), CTX_PLANILLA, o.empleado_id)).join('') +
-        filas.filter(o => o.hasta).map(o =>
-          `<span class="pr-chip-op pr-chip-op--fuera">${esc(nombrePersona(o.empleado_id))} · salió ${esc(horaArgentina(o.hasta) || '—')}</span>`).join('')
+        filas.filter(o => !operarioAdentro(o, p?.turno)).map(o =>
+          `<span class="pr-chip-op pr-chip-op--fuera">${esc(nombrePersona(o.empleado_id))} · ${o.hasta ? `salió ${esc(horaArgentina(o.hasta) || '—')}` : 'sin hora de salida'}</span>`).join('')
       const vacioHtml = filas.length ? '' : '<span class="pr-texto-suave">Todavía no hay operarios en esta máquina.</span>'
       const sumarHtml = ops.buscando ? '' : `<button type="button" class="pr-btn pr-btn--secundario" data-mas-operario="${CTX_PLANILLA}">+ Sumar</button>`
       const buscadorHtml = ops.buscando
@@ -6411,7 +6438,7 @@
     function pintarResultadosPlanillaOp() {
       const cont = document.querySelector(`[data-res-op="${CTX_PLANILLA}"]`)
       if (!cont || !estado.planilla) return
-      const adentro = (estado.planilla.operarios ?? []).filter(o => !o.hasta).map(o => o.empleado_id)
+      const adentro = (estado.planilla.operarios ?? []).filter(o => operarioAdentro(o, estado.planilla.turno)).map(o => o.empleado_id)
       const texto = estado.opsPlanilla.busqueda
       cont.innerHTML = htmlResultadosOperario(candidatosOperario(estado.operarios ?? [], texto, adentro), texto, CTX_PLANILLA)
     }
