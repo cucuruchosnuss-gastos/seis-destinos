@@ -143,7 +143,8 @@ for (const [nombre, viewport] of [['390', { width: 390, height: 844 }], ['1280',
     await abreEnLaTabla(page);
     await page.goto(MAQUETA + '/modulos/produccion-gestion.html?maqueta=produccion-gestion&vista=pendientes');
     await expect(page.locator('#pr-historial')).toBeVisible();
-    await expect(page.locator('#pr-historial-estado')).toHaveValue('pendiente_completar');
+    // El filtro de estado del historial es un segmentado desde planillas-cerradas (08/10/2026).
+    await expect(page.locator('#pr-historial-estados [data-historial-estado="pendiente_completar"]')).toHaveAttribute('aria-pressed', 'true');
     expect(errores, 'errores de JavaScript').toEqual([]);
   });
 }
