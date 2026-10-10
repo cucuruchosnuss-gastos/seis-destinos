@@ -1751,6 +1751,13 @@
       .pg-per__pie-lado { flex: 1 1 100%; }
       .pg-per__pie-lado .pr-btn { flex: 1 1 auto; }
     }
+    /* En el celular el pie queda ARRIBA de la barra de abajo de la app (68 px):
+       pegado al borde, "Guardar los cambios" quedaba DEBAJO de la barra. Y va
+       al ras de la tarjeta (el -1rem lo sacaba 4 px de la pantalla). Revisión
+       en el celular, 10/10/2026, e2e/30-revision-celular.spec.js. */
+    @media (max-width: 1023.98px) {
+      body.con-barra-lateral .pg-per__pie { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; margin-left: 0; margin-right: 0; }
+    }
 
     /* Marcas / Conos (5): por revisar arriba, segmentado, tabla con interruptor. */
     .pg-conos-rev { background: var(--naranja-suave); border-radius: var(--radio-tarjeta); padding: 4px 14px 10px; margin-bottom: 14px; }
@@ -2381,6 +2388,18 @@
       .pc-per__aviso { grid-column: 3; justify-self: end; }
       .pc-personal__pie { position: sticky; bottom: 0; background: var(--color-fondo); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-radius: 0 0 14px 14px; }
       .pc-personal__pie .pc-btn { flex: 1 1 100%; }
+    }
+    /* Conos en un celular angosto (revisión en el celular, 10/10/2026,
+       e2e/30-revision-celular.spec.js): los cuatro filtros bajan de renglón en
+       vez de salirse de la tarjeta ("Por revisar" quedaba cortado a 360), el
+       texto de "Doble bolsa" va en su renglón (apretado al lado de "Cono nuevo"
+       se partía palabra por palabra) y "ACTIVO" entra en su columna. */
+    @media (max-width: 520px) {
+      .pc-seg { flex-wrap: wrap; }
+      .pc-conos__pie > .pc-esp { flex: 1 1 100%; }
+      .pc-cono__cab { letter-spacing: 0; }
+      /* El título de la sección baja de renglón ("Personal y PI…" a 360). */
+      .pc-cab__titulo { white-space: normal; padding: 4px 0; }
     }
     /* LAS MÁQUINAS (04/10/2026): tarjetas grandes por máquina y gráficos. */
     .mq { margin-bottom: 16px; }
