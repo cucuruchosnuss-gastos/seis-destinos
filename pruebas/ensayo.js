@@ -154,7 +154,10 @@ async function main() {
   console.log('Traigo lo último de GitHub (git fetch)…')
   git(['fetch', '--quiet', '--prune', 'origin'])
   const refs = ramas.map(r => {
-    for (const ref of [`origin/${r.replace(/^origin\//, '')}`, r]) {
+    const remota = `origin/${r.replace(/^origin\//, '')}`
+    const sha = (ref) => { const x = gitOk(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]); return x.status === 0 ? x.stdout.trim() : null }
+    if (sha(remota) && sha(r) && sha(remota) !== sha(r)) console.log(`AVISO: ${r} de esta compu no es igual a la de GitHub: se ensaya la de GitHub (${sha(remota).slice(0, 7)}). ¿Falta un push?`)
+    for (const ref of [remota, r]) {
       if (gitOk(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).status === 0) return ref
     }
     console.log(`No existe la rama ${r} (ni en GitHub ni acá).`); process.exit(2)
