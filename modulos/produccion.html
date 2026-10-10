@@ -1870,6 +1870,10 @@
              que ya están en otra máquina hoy. -->
         <div class="pr-abrir__cuerpo" id="pr-abrir-maquinas"></div>
         <p class="pr-error-pegado" id="pr-abrir-error" hidden></p>
+        <!-- Si la base rechaza el pedido y hay planillas pendientes de
+             completar en la fábrica, se ofrecen acá para completarlas sin
+             volver al tablero (09/10/2026). -->
+        <div id="pr-abrir-pendientes"></div>
         <button type="button" class="pr-prim" id="pr-abrir-confirmar">Abrir turno</button>
       </section>
 
@@ -5558,6 +5562,7 @@
       estado.operarios = personas
       document.getElementById('pr-abrir-aviso-operarios').innerHTML = htmlAvisoPuestos(sinConfigurar, 'operario')
       document.getElementById('pr-abrir-error').hidden = true
+      document.getElementById('pr-abrir-pendientes').innerHTML = ''
       pintarAbrir()
       mostrarVista('pr-abrir')
       const form = estado.abrir
@@ -5714,6 +5719,7 @@
       estado.abriendo = true
       pintarBotonAbrir()
       err.hidden = true
+      document.getElementById('pr-abrir-pendientes').innerHTML = ''
       try {
         // Por ejecutar_tablet, con la clave de ESTE pedido: un reintento del
         // mismo formulario (se cortó la red a la mitad) no abre dos veces.
@@ -5737,12 +5743,46 @@
         // El mensaje de la base TAL CUAL: ya viene redactado para una persona
         // ("Esa persona no figura como encargado de esta unidad.", "La Máquina
         // 1 ya tiene un turno abierto…").
-        err.textContent = esErrorDeRedCarga(e) ? MENSAJE_ABRIR_SIN_RED : (e?.message || 'No se pudo abrir el turno.')
+        const deRed = esErrorDeRedCarga(e)
+        err.textContent = deRed ? MENSAJE_ABRIR_SIN_RED : (e?.message || 'No se pudo abrir el turno.')
         err.hidden = false
+        if (!deRed) mostrarPendientesAlAbrir(form)
       } finally {
         estado.abriendo = false
         pintarBotonAbrir()
       }
+    }
+
+    // LAS PLANILLAS PENDIENTES DE COMPLETAR, AL LADO DEL ERROR (09/10/2026).
+    // Una planilla 'pendiente_completar' NO ocupa la máquina: la pantalla la
+    // ofrece para abrir igual (el tablero lee solo los turnos 'abierto').
+    // Pero si la base rechaza el pedido y en la fábrica hay planillas
+    // pendientes, se ofrecen acá para completarlas sin volver al tablero. No
+    // se lee el mensaje de la base ni se repite su regla: se muestran las que
+    // hay, sea cual sea el error. Si la lectura falla no se dice nada.
+    async function mostrarPendientesAlAbrir(form) {
+      const cont = document.getElementById('pr-abrir-pendientes')
+      let lista
+      try {
+        lista = await leerPendientesCompletar(estado.unidadId)
+      } catch (err) {
+        console.warn('pendientes de completar (abrir):', err)
+        return
+      }
+      if (estado.abrir !== form) return
+      cont.innerHTML = htmlPendientesAbrir(lista, (estado.tablero ?? []).map(e => e.maquina))
+    }
+
+    function htmlPendientesAbrir(pendientes, maquinas) {
+      const lista = pendientes ?? []
+      if (!lista.length) return ''
+      const nombre = id => (maquinas ?? []).find(m => m.id === id)?.nombre ?? 'Máquina'
+      const uno = lista.length === 1
+      const titulo = uno ? 'Hay 1 planilla pendiente de completar en esta fábrica' : `Hay ${lista.length} planillas pendientes de completar en esta fábrica`
+      return `<div class="pr-aviso"><strong>${esc(titulo)}.</strong> ${uno ? 'Completala' : 'Completalas'} desde acá:` +
+        '<div class="pr-chips">' + lista.map(t =>
+          `<button type="button" class="pr-btn pr-btn--peligro" data-planilla="${esc(t.id)}">Completar ${esc(nombre(t.maquina_id))} · lote ${esc(t.lote)}</button>`).join('') +
+        '</div></div>'
     }
 
     // El lote a 124px: se copia a la planilla de papel sin acercarse a la
@@ -5803,6 +5843,10 @@
           if (!f) return
           return f.operarios.includes(tag.dataset.opId) ? quitarOperarioFila(i, tag.dataset.opId) : agregarOperarioFila(i, tag.dataset.opId)
         }
+      })
+      // Las pendientes de completar que se ofrecen al lado del error de Abrir.
+      document.getElementById('pr-abrir-pendientes').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-planilla]'); if (b) { tocar(); abrirPlanilla(b.dataset.planilla) }
       })
       for (const id of ['pr-tablero', 'pr-tablero-aviso']) {
         document.getElementById(id).addEventListener('click', ev => {

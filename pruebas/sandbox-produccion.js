@@ -400,6 +400,8 @@ const NUEVAS_PLANTA = [
   'etiquetaMasa',
   // La calculadora de cajas (06/10/2026)
   'sumarCajas', 'recordarCajas', 'sumarCajasAgregar', 'deshacerCajasAgregar', 'borrarCajasAgregar',
+  // Abrir con una planilla pendiente de completar (09/10/2026)
+  'mostrarPendientesAlAbrir', 'htmlPendientesAbrir',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']

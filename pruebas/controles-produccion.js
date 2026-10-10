@@ -287,10 +287,6 @@ const RETIRADOS = [
 // clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
 // la declaración sobra y se dice.
 const MENOS_COPIAS = [
-  ['control:button[data-planilla][type=button]', 2,
-    'La planta con dos modos (28/09/2026): la tarjeta de una máquina andando o parada ya no lleva a su planilla sino a ' +
-    'Lo producido (decisión 3 del handoff: "tocar una máquina lleva a Lo producido"), con data-producido. data-planilla ' +
-    'sigue en la tarjeta de la abierta de AYER ("Cerrar planilla de ayer") y en el aviso de planillas pendientes.'],
   ['control:button[data-borrar][type=button]', 1,
     'Rediseño parte 3: htmlProducido() tenía DOS ramas con su propio botón "Borrar" —la del renglón normal y la del ' +
     'producto que ya no está en el catálogo— y ahora las dos comparten los mismos botones, así que el control está ' +
