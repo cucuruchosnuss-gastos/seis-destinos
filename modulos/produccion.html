@@ -1586,6 +1586,55 @@
       background: var(--p-tarjeta); color: var(--p-tinta-2); font: 700 15px var(--p-texto); cursor: pointer;
     }
     .pr-ag__calc button:disabled { opacity: 0.45; cursor: default; }
+
+    /* ════ LA PLANTA EN UN CELULAR (09/10/2026) ════
+       A 390 px la planta se salía de costado: la banda de "¿Quién sos?" medía
+       520 px (el reloj y "Ir a Sala de masa"), la cabecera con "Máquina 3 ·
+       turno nuevo" o "Lote 7033 · Máquina 1" 500 px, y Simple / Doble +
+       Original / Anterior / Modificar 405 px. Como .pr-app recorta (overflow
+       hidden), no aparecía la barra de scroll pero la pantalla quedaba corrida
+       15 px al tocar "Modificar" y lo de la derecha, cortado. Solo debajo de
+       520 px: ninguna tablet (1000 × 540, 600 × 940, 1280 × 800) entra acá, así
+       que la tablet se ve exactamente igual (lo mide e2e/8-planta-tamanos). */
+    @media (max-width: 520px) {
+      /* ¿Quién sos?: sin el reloj (el teléfono ya tiene la hora). */
+      .pr-banda-modo { gap: 8px; padding: 0 12px; }
+      .pr-banda-modo__reloj { display: none; }
+      .pr-banda-modo__nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      /* La cabecera: el contexto más chico y, si no entra, con "…". */
+      .pr-cab { gap: 8px; }
+      .pr-cab__ctx { font-size: 20px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      .pr-cab__sep { display: none; }
+      .pr-cab__titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      /* Abrir turno: el buscador de operarios baja a su renglón. */
+      .pr-abrir-ops__cab { flex-wrap: wrap; }
+      .pr-abrir-ops__buscar { width: 100%; max-width: none; }
+      /* El tablero: "Máquina 1" en un renglón, el estado abajo, y el lote más chico. */
+      .pr-tablero { --p-lote: 40px; }
+      .pr-maquina__cab { flex-wrap: wrap; row-gap: 4px; }
+      .pr-maquina__nombre { white-space: nowrap; }
+      /* Agregar producto: los pasos de a dos y los tamaños que entren. */
+      .pr-ag { --p-prod-fs: 30px; --p-choco-fs: 20px; }
+      .pr-ag__producto--choco { padding: 6px 8px; }
+      .pr-ag__lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pr-paso__l, .pr-paso__v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pr-contador { gap: 10px; }
+      .pr-contador__paso { width: 64px; height: 64px; }
+      .pr-contador__valor { width: 130px; }
+      /* La receta: Simple / Doble arriba y de dónde sale la masa abajo, a lo ancho. */
+      .pr-receta__opciones { flex-wrap: wrap; row-gap: 6px; }
+      .pr-receta__comos { flex: 1 1 100%; }
+      .pr-receta__comos .pr-como { flex: 1 1 0; min-width: 0; justify-content: center; padding: 0 8px; }
+      .pr-receta__comos .pr-como--apilado { flex-grow: 1.4; }
+      /* Los renglones de la receta: la cantidad toma lo que necesita (con
+         Modificar, − / número / + no se pisaban con el número escondido). */
+      .pr-rec, .pr-rec--cab { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 52px; gap: 6px; padding: 0 8px; }
+      .pr-rec__nombre { font-size: 16px; }
+      .pr-rec__cant { gap: 4px; }
+      .pr-rec__otro, .pr-rec__quitar { width: 52px; }
+      .pr-receta__tabla--modificar .pr-rec__paso { width: 28px; height: 28px; }
+      .pr-receta__tabla--modificar .pr-rec__num { width: 48px; font-size: 20px; }
+    }
   </style>
 </head>
 

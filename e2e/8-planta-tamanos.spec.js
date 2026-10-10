@@ -21,7 +21,7 @@ const { vigilarErrores, captura } = require('./ayuda');
 const { medirPantalla } = require('./medir-pantalla');
 const { PASOS_PLANTA } = require('./pasos-planta');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const TAMANOS = [[1000, 540], [600, 940], [1280, 800]];
 
 for (const [ancho, alto] of TAMANOS) {
