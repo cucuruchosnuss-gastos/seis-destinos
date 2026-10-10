@@ -1668,6 +1668,48 @@
       .pr-rec__otro, .pr-rec__quitar { width: 52px; }
       .pr-receta__tabla--modificar .pr-rec__paso { width: 28px; height: 28px; }
       .pr-receta__tabla--modificar .pr-rec__num { width: 48px; font-size: 20px; }
+      /* (10/10/2026) Abrir turno: el encargado en su propio renglón (al lado
+         de la fecha quedaba en "Fe…", ya a 390 px). */
+      .pr-abrir__caja--encargado { flex: 1 1 100%; }
+      /* (10/10/2026) Con las pestañas de las máquinas, "‹ Inicio" queda solo
+         con la flecha (el nombre sigue para el lector de pantalla): si no,
+         "M1 · 7033" se cortaba por los costados. */
+      .pr-cab--maquinas .pr-cab__volver { width: 44px; padding: 0; position: relative; }
+      .pr-cab--maquinas #pr-cab-volver-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      /* (10/10/2026) Sala de masa: cada tarjeta mide lo que necesita (la
+         lista scrollea si son muchas máquinas) y el número de masas es más
+         chico. Repartiendo el alto de la pantalla, el número quedaba tapado
+         por arriba y "Parada · se puede hacer masa igual" por abajo. */
+      .pr-sala__maquinas { --p-masa-num: 64px; grid-auto-rows: auto; align-content: start; overflow-y: auto; }
+      /* "clip" y no "hidden": recorta igual las esquinas, pero no la vuelve
+         una caja con scroll, así la grilla le da el alto de lo que tiene
+         adentro (con "hidden" la achicaba y se tapaba). */
+      .pr-sala-card { overflow: clip; min-height: auto; }
+      .pr-sala-card__cuerpo { flex: 1 0 auto; }
+    }
+    /* ════ LA PLANTA A 360 PX (10/10/2026) ════
+       Los celulares más angostos (360 px): lo que a 390 entra justo, acá se
+       cortaba POR DENTRO (sin scroll de costado, pero tapado). Solo debajo de
+       380 px: ni la tablet ni un celular de 390 cambian (medido: las cajas a
+       1000 × 540, 600 × 940 y 1280 × 800 quedan idénticas). Lo mide
+       e2e/30-planta-360.spec.js (medirCortesPlanta de e2e/medir-pantalla.js). */
+    @media (max-width: 380px) {
+      /* El tablero: el lote ("Lote 7033") entra en la tarjeta. */
+      .pr-tablero { --p-lote: 34px; }
+      .pr-maquina { padding: 12px; }
+      .pr-maquina__lote { gap: 6px; }
+      /* Paradas: "Andando" entero; "N paradas en el turno · Ver" baja de
+         renglón si no entra al lado. */
+      .pr-pa-estado > .pr-parada-andando { flex: 0 0 auto; }
+      /* Sala de masa: "Máquina 2" y "Turno mañana" en un renglón cada uno, y
+         "Primera masa · cargá los lotes" baja de renglón a la derecha (la
+         tarjeta crece: ver el bloque de arriba). */
+      .pr-sala-card__cuerpo { padding: 12px; }
+      .pr-sala-card__izq { flex: 1 1 auto; min-width: min-content; }
+      .pr-sala-maq__nombre { white-space: nowrap; }
+      .pr-sala-card__turno { white-space: nowrap; }
+      .pr-sala-card__der { flex: 0 1 auto; min-width: 0; }
+      .pr-sala-maq__ultima { text-align: right; }
     }
   </style>
 </head>
