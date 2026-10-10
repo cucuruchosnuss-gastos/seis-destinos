@@ -6,7 +6,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 
 // Cambia la cantidad de la lecitina (Nuss) en la "base" de la maqueta. Con una
 // fila NUEVA: la maqueta devuelve los mismos objetos, y tocar el de adentro

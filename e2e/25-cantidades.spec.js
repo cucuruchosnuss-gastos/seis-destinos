@@ -10,7 +10,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const nb = s => String(s ?? '').replace(/ /g, ' ');
 
 // Lo que la pantalla le manda a la base: la maqueta lo escribe en la consola.

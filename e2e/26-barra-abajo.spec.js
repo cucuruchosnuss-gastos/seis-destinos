@@ -11,7 +11,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 // Lo que la cuenta tiene guardado de la pantalla principal (no se puede perder).
 const TABLERO = { orden: ['caja', 'gastos', 'cobranzas'], tamanos: { caja: 'ancha' }, ocultas: ['stock'] };
 const CUENTA = { v: 1, barra: { orden: 'mano', manual: [], fijados: ['gastos'] }, tablero: TABLERO, uso: {} };

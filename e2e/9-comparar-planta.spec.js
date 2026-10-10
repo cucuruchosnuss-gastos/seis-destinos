@@ -21,7 +21,7 @@ const { comparar } = require('./comparar');
 const { vigilarErrores } = require('./ayuda');
 const { PASOS_COMPARAR_PLANTA, prepararPlanta } = require('./pasos-comparar-planta');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const AVISO = 0.12;
 const FALLA = 0.30;
 const SALIDA = path.join(__dirname, 'resultados', 'comparar');

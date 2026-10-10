@@ -3,7 +3,10 @@
 // Las credenciales del robot vienen de variables de entorno; sin ellas, los
 // recorridos se saltean con un aviso y solo corre el humo.
 const { defineConfig } = require('@playwright/test');
-const PUERTO = 4173;
+// Los puertos se pueden cambiar (el ensayo de integración usa otros, libres,
+// para no chocar con un servidor que ya esté corriendo en 4173 / 4180).
+const PUERTO = Number(process.env.E2E_PUERTO || 4173);
+const PUERTO_MAQUETA = Number(process.env.E2E_PUERTO_MAQUETA || 4180);
 
 module.exports = defineConfig({
   testDir: __dirname,
@@ -39,8 +42,8 @@ module.exports = defineConfig({
     },
     // La maqueta (Supabase falso con datos fijos) para 5-maqueta.spec.js.
     {
-      command: `node ${__dirname}/maqueta/servir.js 4180`,
-      url: 'http://localhost:4180/login.html',
+      command: `node ${__dirname}/maqueta/servir.js ${PUERTO_MAQUETA}`,
+      url: `http://localhost:${PUERTO_MAQUETA}/login.html`,
       reuseExistingServer: !process.env.CI,
     },
   ],

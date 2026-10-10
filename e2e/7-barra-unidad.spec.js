@@ -5,7 +5,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const PANTALLAS = [
   ['modulos/administracion.html', 'administracion'],
   ['modulos/pedidos.html', 'pedidos'],
