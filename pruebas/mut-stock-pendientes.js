@@ -91,8 +91,10 @@ correrMutaciones({
       de: "      if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()",
       a: "      aplicarFiltroDesdeUrl()" },
     { nombre: 'init no pide los pendientes',
-      de: '      cargarPendientesStock()\n    }\n',
-      a: '    }\n' },
+      // (09/10/2026: el ancla no existía desde que se sumó
+      // iniciarActualizacionSola(); puesta al día, misma mutación.)
+      de: '      cargarPendientesStock()\n      iniciarActualizacionSola()\n    }\n',
+      a: '      iniciarActualizacionSola()\n    }\n' },
     { nombre: 'visibilitychange sin esperar a init',
       de: "      if (document.visibilityState === 'visible' && estado.miEmpleadoId) cargarPendientesStock()",
       a: "      if (document.visibilityState === 'visible') cargarPendientesStock()" },

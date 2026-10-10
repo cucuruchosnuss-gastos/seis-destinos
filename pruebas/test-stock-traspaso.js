@@ -131,6 +131,8 @@ const PRELUDIO = `
   var __vista = null
   function mostrarVista(id) { __vista = id }
   function renderizarStock() {}
+  // El stock valorizado (09/10/2026) lo prueba test-stock-costos.js.
+  async function cargarValorizado() {}
   var window = { scrollTo() {} }
   var __Date = globalThis.Date
   var Date = function (...a) {

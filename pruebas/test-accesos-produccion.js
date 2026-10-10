@@ -28,7 +28,9 @@ const CHECK_24_09_2026 = [
   'cuentas_corrientes:registrar_pago', 'cuentas_corrientes:aplicar_credito', 'cuentas_corrientes:anular_factura',
   'cuentas_corrientes:asignar_proveedor_legado', 'facturas_pendientes:editar_interes', 'materia_prima:cargar',
   'materia_prima:ver_todo', 'materia_prima:editar_anular', 'stock:ver', 'stock:gestionar_catalogo', 'stock:dar_baja',
-  'stock:enviar_transferencia', 'stock:recibir_transferencia', 'stock:ajustar_inventario', 'cobranzas:cargar',
+  'stock:enviar_transferencia', 'stock:recibir_transferencia', 'stock:ajustar_inventario',
+  // Releído el 09/10/2026: 53 claves, con las dos de costos de insumos.
+  'stock:ver_costos', 'stock:cargar_costos', 'cobranzas:cargar',
   'cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:editar_anular',
   'produccion:cargar', 'produccion:ver', 'produccion:configurar',
   'pedidos:ver', 'pedidos:cargar', 'pedidos:configurar',
@@ -40,9 +42,9 @@ const CATALOGO = new Function(extraerConst(src, 'CATALOGO_TAREAS') + '\nreturn C
 const tareas = CATALOGO.flatMap(g => g.tareas || [])
 const claves = tareas.map(t => `${t.modulo}:${t.tarea}`)
 
-chk('el catálogo tiene las 51 claves del CHECK', CHECK_24_09_2026.every(k => claves.includes(k)),
+chk('el catálogo tiene las 53 claves del CHECK', CHECK_24_09_2026.every(k => claves.includes(k)),
   `faltan ${CHECK_24_09_2026.filter(k => !claves.includes(k)).join(', ')}`)
-chk('ninguna clave fuera del CHECK', claves.length === 51 && claves.every(k => CHECK_24_09_2026.includes(k)),
+chk('ninguna clave fuera del CHECK', claves.length === 53 && claves.every(k => CHECK_24_09_2026.includes(k)),
   claves.filter(k => !CHECK_24_09_2026.includes(k)).join(', '))
 chk('ninguna clave repetida', new Set(claves).size === claves.length)
 

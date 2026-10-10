@@ -73,6 +73,8 @@ const PRELUDIO = `
     },
   }
   function renderizarStock() {}
+  // El stock valorizado (09/10/2026) lo prueba test-stock-costos.js.
+  async function cargarValorizado() {}
   function renderizarHistorial() {}
   function renderizarChipsOrigenMerma() {}
   function renderizarMermas() {}
