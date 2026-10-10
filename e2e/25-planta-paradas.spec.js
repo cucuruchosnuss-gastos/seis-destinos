@@ -21,7 +21,7 @@ const { vigilarErrores, captura } = require('./ayuda');
 const { medirPantalla } = require('./medir-pantalla');
 const { marcarPin } = require('./pasos-planta');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const TAMANOS = [[1000, 540], [390, 844]];
 const AHORA = new Date('2099-12-31T20:00:00Z'); // 17:00 de Argentina
 
