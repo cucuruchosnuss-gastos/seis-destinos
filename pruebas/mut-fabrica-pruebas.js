@@ -45,8 +45,8 @@ const escapadas = []
 try {
   for (const [nombre, de, a] of MUTACIONES) {
     const primera = src.indexOf(de)
-    if (primera === -1) { console.log(`ABORTADO: «${nombre}» NO EXISTE`); process.exit(2) }
-    if (src.indexOf(de, primera + 1) !== -1) { console.log(`ABORTADO: «${nombre}» AMBIGUA`); process.exit(2) }
+    if (primera === -1) { console.log(`ABORTADO: «${nombre}» NO EXISTE\n${require('./parecido').pistaDeAncla(src, de)}`); process.exit(2) }
+    if (src.indexOf(de, primera + 1) !== -1) { console.log(`ABORTADO: «${nombre}» AMBIGUA\n${require('./parecido').pistaDeAncla(src, de)}`); process.exit(2) }
     const mutado = src.slice(0, primera) + a + src.slice(primera + de.length)
     if (mutado === src) { console.log(`ABORTADO: «${nombre}» no cambia nada`); process.exit(2) }
     fs.writeFileSync(TMP, mutado)

@@ -15,6 +15,7 @@
 const fs = require('fs')
 const path = require('path')
 const { correrMutacionesEnVarios } = require('./mutar')
+const { pistaDeAncla, parteQueFalta, lineaMasParecida } = require('./parecido')
 
 const PLANTA = process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html')
 const GESTION = process.env.ARCHIVO_BASE_GESTION || path.join(__dirname, '..', 'modulos/produccion-gestion.html')
@@ -39,7 +40,14 @@ function correrMutacionesProduccion({ suite, funciones = [], manuales = [], equi
   const mP = [], mG = []
   for (const m of manuales) {
     const enP = P.includes(m.de), enG = G.includes(m.de)
-    if (!enP && !enG) { faltan.push(`«${m.nombre}»`); continue }
+    if (!enP && !enG) {
+      // Lo más parecido, en el archivo donde se parece más (planta o gestión).
+      const falta = parteQueFalta(P, m.de)
+      const pg = G ? lineaMasParecida(G, falta) : null, pp = lineaMasParecida(P, falta)
+      const enGestion = pg && (!pp || pg.parecido > pp.parecido)
+      faltan.push(`«${m.nombre}» (${enGestion ? 'gestión' : 'planta'})\n${pistaDeAncla(enGestion ? G : P, m.de)}`)
+      continue
+    }
     const dest = m.archivo ?? (enP ? 'planta' : 'gestion')
     if ((dest === 'planta' || dest === 'ambos') && enP) mP.push(m)
     if ((dest === 'gestion' || dest === 'ambos') && enG) mG.push({ ...m, nombre: m.nombre + (dest === 'ambos' ? ' (gestión)' : '') })
