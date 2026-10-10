@@ -8,7 +8,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const TAMANOS = [[1000, 540], [390, 844]];
 
 for (const [ancho, alto] of TAMANOS) {

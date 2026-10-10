@@ -15,7 +15,7 @@ const { test, expect } = require('@playwright/test');
 const { vigilarErrores } = require('./ayuda');
 const { marcarPin } = require('./pasos-planta');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const VISTAS = ['pr-inicio', 'pr-quien', 'pr-acceso', 'pr-asignar', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla',
   'pr-agregar-prod', 'pr-paradas', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-hist-maq', 'pr-masas'];
 

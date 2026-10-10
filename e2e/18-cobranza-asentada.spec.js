@@ -6,7 +6,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 
 for (const ancho of [390, 1280]) {
   test(`cobranza ya asentada: empresa y después sus clientes, a ${ancho} px`, async ({ page }, info) => {

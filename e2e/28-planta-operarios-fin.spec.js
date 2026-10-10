@@ -14,7 +14,7 @@ const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 const { PASOS_PLANTA } = require('./pasos-planta');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const paso = (nombre) => PASOS_PLANTA.find(([n]) => n === nombre)[1];
 
 for (const [ancho, alto] of [[1000, 540], [390, 844]]) {

@@ -78,7 +78,7 @@ async function contarCopias(page) {
 for (const tam of [{ ancho: 1000, alto: 540 }, { ancho: 390, alto: 844 }]) {
   test(`sin internet: carga, recarga desde la copia y manda sola al volver (${tam.ancho} px)`, async ({ browser }) => {
     test.setTimeout(180000);
-    const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: tam.ancho, height: tam.alto }, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires', baseURL: 'http://localhost:4173' });
+    const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: tam.ancho, height: tam.alto }, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires', baseURL: process.env.E2E_BASE || 'http://localhost:4173' });
     const page = await context.newPage();
     const errores = [];
     page.on('pageerror', e => errores.push(e.message));
@@ -173,7 +173,7 @@ for (const tam of [{ ancho: 1000, alto: 540 }, { ancho: 390, alto: 844 }]) {
 }
 
 test('abrir una planilla nueva sin internet: el mensaje claro', async ({ browser }) => {
-  const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1000, height: 540 }, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires', baseURL: 'http://localhost:4173' });
+  const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1000, height: 540 }, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires', baseURL: process.env.E2E_BASE || 'http://localhost:4173' });
   const page = await context.newPage();
   const ejecuciones = [];
   const d = datos(ejecuciones);

@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const DATOS = JSON.parse(fs.readFileSync(path.join(__dirname, 'maqueta/datos/taller-diseno.json'), 'utf8'));
 const UN_PROYECTO = DATOS.rpc.proyectos_taller[0].id;
 

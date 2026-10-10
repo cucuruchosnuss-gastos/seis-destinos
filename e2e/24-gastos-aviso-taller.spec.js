@@ -7,7 +7,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const TEXTO = '¿Es de un proyecto del Taller? Elegí Taller.';
 
 async function hastaElDestino(page) {

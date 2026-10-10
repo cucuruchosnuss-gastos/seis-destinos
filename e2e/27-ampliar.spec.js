@@ -14,7 +14,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
 const ADM = '/modulos/administracion.html?maqueta=administracion';
 const COB_CHEQUE = 'd4444444-4444-4444-8444-444444444444';
 
