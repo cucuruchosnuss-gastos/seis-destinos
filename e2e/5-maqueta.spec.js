@@ -329,7 +329,17 @@ const PANTALLAS = [
     ['diagrama', async (page) => { await page.locator('[data-pestana="diagrama"]').click(); await expect(page.locator('#tl-diagrama')).toBeVisible() }],
   ]],
   ['modulos/produccion-gestion.html', 'produccion-gestion', [
-    ['indicadores', async (page) => { await expect(page.locator('body')).toContainText('lote 7021') }],
+    // Abre en la tabla de producción (09/10/2026); los indicadores, desde el menú.
+    ['tabla', async (page) => {
+      await expect(page.locator('#pr-tabla')).toBeVisible()
+      await expect(page.locator('#pr-inicio')).toBeHidden()
+      await expect(page.locator('#pr-tabla-tarjetas [data-tabla-periodo]')).toHaveCount(4)
+    }],
+    ['indicadores', async (page) => {
+      if (await page.locator('#pr-btn-menu').isVisible()) await page.locator('#pr-btn-menu').click()
+      await page.locator('#pr-menu-inicio').click()
+      await expect(page.locator('body')).toContainText('lote 7021')
+    }],
     // El stock terminado con un producto de reventa y los traspasos entre
     // fábricas (30/09/2026).
     ['stock', async (page) => {
