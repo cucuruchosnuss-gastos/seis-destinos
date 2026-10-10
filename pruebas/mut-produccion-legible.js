@@ -28,7 +28,6 @@ correrMutacionesProduccion({
     { expr: "esc(b.maquinaNombre ?? '')", motivo: 'la masa pendiente la cubre test-produccion-masa' },
     { expr: "esc(b.lote ?? '')", motivo: 'la masa pendiente la cubre test-produccion-masa' },
     { expr: 'esc(it.id)', motivo: 'el id del renglón lo cubre test-produccion-cierre' },
-    { expr: 'esc(it.sublote)', motivo: 'el sublote lo cubre test-produccion-cierre' },
     { expr: 'esc(p.sublote)', motivo: 'el sublote lo cubre test-produccion-historial' },
     { expr: 'esc(anterior.sublote)', motivo: 'el sublote anterior lo cubre test-produccion-cierre' },
     { expr: 'esc(texto)', motivo: 'lo tipeado en el buscador: lo cubre test-produccion-cierre' },

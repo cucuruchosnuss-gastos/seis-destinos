@@ -349,6 +349,26 @@ esperas.push((async () => {
   // Un renglón de lote.
   const fila = { o: { insumo_id: 'x', lote: marca('lote'), sinLote: false, stock: 5 }, i: 0, marca: marca('marca'), desde: '2026-09-01', queda: 5 }
   chequearMarcas(chk, 'renglón de lote', X.htmlFilaLote(fila, true, true), ['lote', 'marca'])
+  // Lo que "quedan" del lote (textoStockLote, desde el 02/10/2026 en bultos o
+  // en kilos como en Stock) NO lleva nada de la base: ni la unidad del
+  // catálogo (insumos.unidad_medida no tiene CHECK) ni el lote. Es lo que hace
+  // equivalente sacarle el esc() en htmlFilaLote; si algún día suma la unidad
+  // (el `conKilos`, por ejemplo), esto se pone en rojo y esa celda pasa a ser
+  // un sink. Se EJECUTA con una unidad maliciosa, en bultos y en kilos.
+  const quedan = (html) => (html.match(/<span class="pr-lp__fila-queda"><strong>([^<]*)<\/strong>/) || [])[1]
+  const GRAMATICA_QUEDA = /^−?[\d.]+(,\d+)? (bultos?( \+ [¼⅓½⅔¾])?|kg|g)$/
+  const antes = { stockMasa: X.estado.stockMasa, presMasa: X.estado.presMasa }
+  X.estado.stockMasa = new Map([['x', { unidad_medida: marca('unidad'), lotes: [] }]])
+  X.estado.presMasa = { vista: new Map([['x', 'bulto']]), contenido: new Map([['x|L-1', 25]]) }
+  const enBultos = quedan(X.htmlFilaLote({ o: { insumo_id: 'x', lote: 'L-1', sinLote: false }, i: 0, marca: 'M', desde: null, queda: 60 }, false, false))
+  chk('quedan, en bultos: solo el número y "bultos" (nada de la base)', enBultos === '2 bultos + ⅓' && GRAMATICA_QUEDA.test(enBultos), enBultos)
+  X.estado.presMasa = { vista: new Map([['x', 'base']]), contenido: new Map([['x|L-1', 25]]) }
+  const enKilos = quedan(X.htmlFilaLote({ o: { insumo_id: 'x', lote: 'L-1', sinLote: false }, i: 0, marca: 'M', desde: null, queda: 60 }, false, false))
+  chk('quedan, en kilos: el número y "kg", sin la unidad del catálogo', GRAMATICA_QUEDA.test(enKilos ?? '') && !/data-xss|unidad/i.test(enKilos ?? ''), enKilos)
+  const enGramos = quedan(X.htmlFilaLote({ o: { insumo_id: 'x', lote: 'L-1', sinLote: false }, i: 0, marca: 'M', desde: null, queda: 0.25 }, false, false))
+  chk('quedan, abajo de un kilo: en gramos', enGramos === '250 g', enGramos)
+  X.estado.stockMasa = antes.stockMasa
+  X.estado.presMasa = antes.presMasa
   // El producto partido en familia y tamaño.
   chequearMarcas(chk, 'producto (familia y tamaño)', X.htmlPasoProducto({ ...CAT, productos: [{ id: 'p', nombre: `Fam ${marca('tam')}`, tipo_masa: 'Común' }] }), ['tam'])
   // El renglón de lo producido (con el title).
