@@ -123,7 +123,7 @@ correrMutacionesProduccion({
     { nombre: 'la unidad elegida no se recuerda', de: '      guardarPreferencia(CLAVE_UNIDAD_GESTION, id)\n', a: '' },
     { nombre: 'se elige una unidad ajena', de: '      if (!unidadesDeGestion().includes(id)) return false\n', a: '' },
     { nombre: 'la guardada no se valida', de: '      if (guardada && unidades.includes(guardada)) return guardada', a: '      if (guardada) return guardada' },
-    { nombre: 'cambiar de unidad no recarga los indicadores', de: "      if (estado.vista === 'pr-inicio') cargarIndicadores()\n      else if (estado.vista === 'pr-historial')", a: "      if (false) cargarIndicadores()\n      else if (estado.vista === 'pr-historial')" },
+    { nombre: 'cambiar de unidad no recarga los indicadores', de: "      if (estado.vista === 'pr-inicio') cargarIndicadores()\n", a: '' },
     { nombre: 'el historial no sigue a la unidad', de: '      if (estado.historial) estado.historial.unidadId = id\n', a: '' },
     { nombre: 'el arranque no lee la guardada', de: 'leerPreferencia(CLAVE_UNIDAD_GESTION))', a: 'null)' },
     { nombre: 'la fábrica de pruebas aparece', de: '      return new Map(sinUnidadesDePrueba(filas ?? [], fabrica).map(u => [u.id, u.nombre]))', a: '      return new Map((filas ?? []).map(u => [u.id, u.nombre]))', archivo: 'gestion' },

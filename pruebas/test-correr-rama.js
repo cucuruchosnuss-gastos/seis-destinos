@@ -57,8 +57,6 @@ const PRUEBAN_OTRA = {
   'controles-cheques.js': 'la cartera vive en administracion.html desde el 26/09/2026',
   'test-produccion-maquinas.js': 'los gráficos de las máquinas son de produccion-gestion.html',
   'mut-produccion-maquinas.js': 'muta produccion-gestion.html',
-  'test-produccion-tabla.js': 'la tabla de producción es de produccion-gestion.html (09/10/2026)',
-  'mut-produccion-tabla.js': 'muta produccion-gestion.html',
 }
 const suites = fs.readdirSync(__dirname).filter(f => /^(test|mut|controles)-.*\.js$/.test(f))
 const escapadas = []

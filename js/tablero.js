@@ -212,7 +212,7 @@ export const RESOLVER_PENDIENTES = {
   'caja:solicitudes_mi_caja': { tarjetas: ['caja'], uno: 'movimiento por aceptar en tu caja', varios: 'movimientos por aceptar en tu caja', url: 'modulos/caja.html' },
   'caja:solicitudes_empresa': { tarjetas: ['caja'], uno: 'movimiento por aceptar en la caja de la empresa', varios: 'movimientos por aceptar en la caja de la empresa', url: 'modulos/caja.html' },
   'cobranzas:por_controlar': { tarjetas: ['administracion'], uno: 'cobranza por asentar', varios: 'cobranzas por asentar', url: 'modulos/administracion.html?seccion=cobranzas', urgente: true, franja: 'cobranzas por asentar' },
-  'produccion:conos_por_revisar': { tarjetas: ['produccion'], uno: 'cono nuevo por revisar', varios: 'conos nuevos por revisar', url: 'modulos/produccion-gestion.html?vista=conos' },
+  'produccion:conos_por_revisar': { tarjetas: ['produccion'], uno: 'cono nuevo por revisar', varios: 'conos nuevos por revisar', url: 'modulos/produccion-gestion.html' },
   'accesos:solicitudes': { tarjetas: ['accesos'], uno: 'solicitud de acceso', varios: 'solicitudes de acceso', url: 'modulos/accesos.html' },
   'materia_prima:facturas_por_ingresar': { tarjetas: ['materia-prima'], uno: 'factura por ingresar', varios: 'facturas por ingresar', url: 'modulos/materia-prima.html' },
   'materia_prima:pagado_sin_ingresar': { tarjetas: ['materia-prima'], uno: 'pagado sin ingresar', varios: 'pagados sin ingresar', url: 'modulos/materia-prima.html' },
@@ -552,11 +552,9 @@ export async function cargarProduccion(ctx) {
     ? { texto: dif === 0 ? `Igual que el ${dia} pasado (${entero(antes)})` : `${entero(Math.abs(dif))} ${dif > 0 ? 'más' : 'menos'} que el ${dia} pasado (${entero(antes)})`, sube: dif > 0, igual: dif === 0 }
     : null
   const resolver = []
-  // La gestión de Producción abre en la tabla (09/10/2026): lo que se resuelve
-  // en otra sección va con ?vista= (lo entiende vistaDeEntrada de la gestión).
-  if (paradas.length) resolver.push({ n: paradas.length, t: paradas.length === 1 ? `máquina parada · ${paradas[0].nombre}` : 'máquinas paradas', url: 'modulos/produccion-gestion.html?vista=indicadores', urgente: true, origen: 'produccion:paradas', franja: plural(paradas.length, 'máquina parada', 'máquinas paradas') })
-  if (planillas > 0) resolver.push({ n: planillas, t: plural(planillas, 'planilla por completar', 'planillas por completar'), url: 'modulos/produccion-gestion.html?vista=pendientes', origen: 'produccion:planillas' })
-  if (peor) resolver.push({ n: `Lote ${peor.lote ?? '—'}`, t: 'de harina es el que peor rinde', url: 'modulos/produccion-gestion.html?vista=indicadores', origen: 'produccion:peor_lote' })
+  if (paradas.length) resolver.push({ n: paradas.length, t: paradas.length === 1 ? `máquina parada · ${paradas[0].nombre}` : 'máquinas paradas', url: 'modulos/produccion-gestion.html', urgente: true, origen: 'produccion:paradas', franja: plural(paradas.length, 'máquina parada', 'máquinas paradas') })
+  if (planillas > 0) resolver.push({ n: planillas, t: plural(planillas, 'planilla por completar', 'planillas por completar'), url: 'modulos/produccion-gestion.html', origen: 'produccion:planillas' })
+  if (peor) resolver.push({ n: `Lote ${peor.lote ?? '—'}`, t: 'de harina es el que peor rinde', url: 'modulos/produccion-gestion.html', origen: 'produccion:peor_lote' })
   return {
     estado: hoyCajas > 0 || maquinas.length ? 'ok' : 'vacio', etiqueta: 'Cajas producidas hoy', valor: entero(hoyCajas), unidad: plural(hoyCajas, 'caja', 'cajas'),
     vacioMsg: 'Hoy no se produjo', tendencia,

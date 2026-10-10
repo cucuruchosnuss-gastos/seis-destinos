@@ -25,18 +25,11 @@ test.describe('gestión', () => {
 
       await test.step('entra a la gestión sin PIN', async () => {
         await page.goto('/modulos/produccion-gestion.html');
-        // Abre en la tabla de producción (09/10/2026).
-        await expect(page.locator('#pr-tabla')).toBeVisible();
-        await expect(page.locator('#pr-inicio')).toBeHidden();
-        await expect(page.locator('#pr-tabla-cuerpo')).not.toContainText('Cargando…', { timeout: 30000 });
-        await expect(page.locator('#pr-tabla-cuerpo .pr-ind__error')).toHaveCount(0);
+        await expect(page.locator('#pr-indicadores')).toBeVisible();
         await expect(page.locator('#pr-pin-teclado')).toHaveCount(0);
       });
 
       await test.step('los indicadores cargan con la unidad de pruebas', async () => {
-        if (ancho < 900) await page.locator('#pr-btn-menu').click();
-        await page.locator('#pr-menu-inicio').click();
-        await expect(page.locator('#pr-indicadores')).toBeVisible();
         const ind = page.locator('#pr-indicadores');
         await expect(ind).toContainText('Ahora');
         await expect(ind.locator('.pr-ind__vacio', { hasText: 'Cargando…' })).toHaveCount(0, { timeout: 30000 });

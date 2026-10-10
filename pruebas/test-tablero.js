@@ -310,12 +310,6 @@ esperas.push((async () => {
     chk('producción: máquina parada URGENTE, con su nombre', m.resolver[0].urgente && m.resolver[0].t === 'máquina parada · Máquina 4' && m.resolver[0].franja === 'máquina parada')
     chk('producción: planillas por completar', m.resolver.some(r => r.n === 2 && r.t === 'planillas por completar'))
     chk('producción: el lote que peor rinde (más de 10 % debajo, estricto)', m.resolver.some(r => r.n === 'Lote 7031' && !r.urgente) && !m.resolver.some(r => r.n === 'Lote 7040'))
-    // La gestión abre en la tabla de producción (09/10/2026): cada renglón
-    // lleva a la sección donde se resuelve, con ?vista=.
-    chk('producción: la máquina parada lleva a los indicadores', m.resolver[0].url === 'modulos/produccion-gestion.html?vista=indicadores', m.resolver[0].url)
-    chk('producción: las planillas por completar, a las pendientes', m.resolver.find(r => r.origen === 'produccion:planillas')?.url === 'modulos/produccion-gestion.html?vista=pendientes')
-    chk('producción: el lote que peor rinde, a los indicadores', m.resolver.find(r => r.origen === 'produccion:peor_lote')?.url === 'modulos/produccion-gestion.html?vista=indicadores')
-    chk('producción: los conos por revisar, a Marcas / Conos', S.RESOLVER_PENDIENTES['produccion:conos_por_revisar'].url === 'modulos/produccion-gestion.html?vista=conos')
     chk('producción: pide una vez por fábrica donde ve Producción', sb.llamadas.filter(l => l[1] === 'indicadores_produccion').length === 2)
     chk('producción: se refresca cada 30 s', m.refresco === 30)
     const sin = await S.cargarProduccion(ctxFalso(S, { sb, elegida: 'u-n' }))
