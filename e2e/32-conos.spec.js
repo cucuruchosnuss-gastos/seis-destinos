@@ -102,6 +102,19 @@ for (const ancho of [1280, 390]) {
     expect(errores).toEqual([]);
   });
 
+  test(`"Asignado X de Y" queda fijo arriba al bajar por una lista larga, a ${ancho}`, async ({ page }) => {
+    await page.setViewportSize({ width: ancho, height: alto });
+    await page.goto(URL('conos', '&pliego=pl-322'));
+    await expect(page.locator('#cn-asignado')).toBeVisible();
+    // Un pliego con muchos conos: se alarga la lista debajo del contador.
+    await page.evaluate(() => { const d = document.createElement('div'); d.style.height = '2000px'; document.getElementById('cn-asignado').after(d); });
+    await page.mouse.wheel(0, 1500);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+    const top = await page.evaluate(() => document.getElementById('cn-asignado').getBoundingClientRect().top);
+    expect(top, 'el contador se fue de la pantalla').toBeGreaterThanOrEqual(0);
+    expect(top).toBeLessThan(120);
+  });
+
   test(`Pedido: no se edita; Modificar, Recibir parcial y Corregir, a ${ancho}`, async ({ page }) => {
     await page.setViewportSize({ width: ancho, height: alto });
     const ll = anotarRpc(page);
