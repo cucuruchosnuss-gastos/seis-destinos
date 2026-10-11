@@ -1851,6 +1851,16 @@
       /* Cada renglón de lo producido pasa a dos líneas. */
       .pg-sub__fila { grid-template-columns: minmax(0, 1fr) auto; }
       .pg-sub__que { grid-column: 1 / -1; }
+      /* "40 cajas = 24.000 unidades" baja de renglón (10/10/2026,
+         e2e/31-vistas-faltantes): en una sola línea quedaba DEBAJO de
+         Corregir / Anular, y en un sublote anulado "· anulado, no suma" se
+         salía de la pantalla a 360 px. */
+      .pg-sub__cajas { white-space: normal; min-width: 0; overflow-wrap: normal; word-break: normal; }
+    }
+    @media (max-width: 520px) {
+      /* En un celular no entran las cajas y los dos botones en un renglón:
+         Corregir / Anular bajan a su propio renglón. */
+      .pg-sub-acc { grid-column: 1 / -1; }
     }
 
     /* La hoja de PINes (3c) */
@@ -2490,6 +2500,13 @@
     @media (max-width: 700px) {
       .pt-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .pt-tabla th[scope="row"], .pt-tabla .pt-esquina { max-width: 9rem; }
+    }
+    /* En el celular (10/10/2026, e2e/31-vistas-faltantes): el selector de
+       unidad (arriba y en Configuración) y el buscador de las listas de
+       Configuración, con letra de 16 px (con menos, el celular agranda la
+       pantalla al tocarlos). */
+    @media (max-width: 1023.98px) {
+      body .pr-gestion-unidad .pr-select, body .pc-unidad__select, body .pc-buscar__input { font-size: 16px; }
     }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
