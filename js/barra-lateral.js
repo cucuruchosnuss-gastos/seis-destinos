@@ -29,7 +29,7 @@
 // - Los íconos son los trazos del diseño (sin depender de Lucide).
 
 import { supabase } from './supabase.js'
-import { MODULOS, moduloVisible, agruparPendientes, escDash, colorDeModulo, enOrdenDeBarra } from './modulos.js'
+import { MODULOS, moduloVisible, urlDeModulo, agruparPendientes, escDash, colorDeModulo, enOrdenDeBarra } from './modulos.js'
 import { cargarPrefs, leerPrefs, guardarPrefs, ordenarBarra, anotarUso, modulosDeAbajo, guardarBarraInferior } from './preferencias.js'
 import { abrirPanelSesiones } from './sesiones.js'
 
@@ -96,6 +96,7 @@ export function debeMostrarse({ pathname, esDispositivo }) {
 // en el orden del diseño, más Seguridad para un super_admin.
 export function modulosDeBarra(ctx) {
   const lista = enOrdenDeBarra(MODULOS.filter(m => !m.proximamente && moduloVisible(m, ctx)))
+    .map(m => { const url = urlDeModulo(m, ctx ?? {}); return url === m.url ? m : { ...m, url } })
   return ctx?.esSuperAdmin ? [...lista, SEGURIDAD] : lista
 }
 

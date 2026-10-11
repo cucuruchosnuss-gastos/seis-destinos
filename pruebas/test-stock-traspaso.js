@@ -144,13 +144,16 @@ const PRELUDIO = `
     fabrica: FABRICA_SIN_DATOS, unidadBarra: null, unidadesBarra: [], unidadesStock: [],
     unidadesAjuste: [], unidadesBaja: [], unidadesEnvio: [], destinos: [],
     cargados: new Set(), barraLista: Promise.resolve(), stock: [],
-    miRolApp: 'usuario', misTareas: new Set(['stock:ver']),
+    // retiros:precios en todas: el precio de la lista se pide (B8, 11/10/2026;
+    // sin ese permiso no se pide: lo prueba test-permisos-pantallas-stock.js).
+    miRolApp: 'usuario', misTareas: new Set(['stock:ver', 'retiros:precios']),
+    alcancesTareas: new Map([['retiros:precios', { todas: true }]]),
     trp: null, trpCatalogo: null,
   }
 `
 
 const FUNCIONES = [
-  'esc', 'normalizar', 'hoyLocal', 'tieneTarea', 'nombreDeUnidadBarra', 'cargarStock', 'mapaCobertura',
+  'esc', 'normalizar', 'hoyLocal', 'tieneTarea', 'puedeTareaEn', 'nombreDeUnidadBarra', 'cargarStock', 'mapaCobertura',
   'unidadesTraspaso', 'puedeTraspasar', 'nuevoUuidTrp', 'nuevoTraspaso','destinoPorDefectoTrp',
   'cargarCatalogoTrp', 'cargarStockTrp', 'agruparStockTrp', 'listaInternaDe', 'cargarListaInternaTrp',
   'proponerPrecioTrp', 'presentacionTrp', 'presentacionesOrigenTrp', 'presentacionEnDestinoTrp',
@@ -165,7 +168,7 @@ const FUNCIONES = [
   'elegirPresentacionTrp', 'agregarRenglonTrp', 'quitarRenglonTrp', 'anotarPedidoTrp', 'anotarLoteTrp',
   'anotarPrecioTrp', 'completarRenglonTrp', 'alTipearTrp', 'textoExitoTrp', 'confirmarTraspaso',
 ]
-const CONSTANTES = ['puedeVerStock', 'FILAS_POR_PAGINA_TRP', 'TOPE_PAGINAS_TRP', 'TEXTO_SIN_LISTA_TRP',
+const CONSTANTES = ['puedeVerStock', 'FILAS_POR_PAGINA_TRP', 'TOPE_PAGINAS_TRP', 'TEXTO_SIN_LISTA_TRP', 'TEXTO_SIN_PERMISO_PRECIO_TRP',
   'esChocolateTrp', 'nombreLoteTrp', 'renglonTrp']
 
 function sandbox() {

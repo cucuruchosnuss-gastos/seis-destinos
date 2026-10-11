@@ -2494,6 +2494,9 @@
       <button type="button" class="pestana-stock" data-vista="stock">Stock</button>
       <button type="button" class="pestana-stock" data-vista="catalogo">Catálogo<span id="burbuja-catalogo"></span></button>
       <button type="button" class="pestana-stock" data-vista="recuento">Recuento</button>
+      <!-- 11/10/2026 (M8): quien ve costos sin stock:ver no tiene la vista de
+           stock (donde vive el botón Costos): llega por esta pestaña. -->
+      <button type="button" class="pestana-stock" data-vista="costos" hidden>Costos</button>
     </div>
 
     <!-- ══ VISTA: STOCK ACTUAL ═══════════════════════════════════════════ -->
@@ -8126,6 +8129,20 @@
     const FILAS_POR_PAGINA_TRP = 1000
     const TOPE_PAGINAS_TRP = 20
     const TEXTO_SIN_LISTA_TRP = 'Sin lista interna (se marca en Administración → Listas de precios), o tu usuario no la puede ver: escribí el precio por caja (vacío = sin deuda entre fábricas)'
+    // 11/10/2026 (B8): precio_venta() exige retiros:precios en la fábrica de la
+    // lista (la de origen). Sin ese permiso no se llama: el precio se escribe.
+    const TEXTO_SIN_PERMISO_PRECIO_TRP = 'Sin el permiso de precios de Órdenes de retiro en esta fábrica no se busca el precio de la lista interna: escribí el precio por caja (vacío = sin deuda entre fábricas)'
+
+    // La MISMA regla que tiene_tarea_alcance(): super_admin, o la tarea con
+    // alcance {"todas": true} o con la unidad en {"unidades": [...]}.
+    function puedeTareaEn(clave, unidadId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      if (!estado.misTareas.has(clave)) return false
+      const alcance = estado.alcancesTareas?.get(clave)
+      if (alcance && alcance.todas === true) return true
+      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
 
     // Las fábricas entre las que se puede pasar: las de v_mis_unidades_stock,
     // que ya vienen SIN la fábrica de pruebas (cargarStock las pasa por
@@ -8245,7 +8262,14 @@
     async function cargarListaInternaTrp(t) {
       const origen = t.origenId
       t.lista = undefined
+      t.sinPermisoPrecio = false
       if (!origen) return
+      if (!puedeTareaEn('retiros:precios', origen)) {
+        t.lista = null
+        t.sinPermisoPrecio = true
+        for (const r of t.renglones) if (!r.precioTocado && r.precio === null) proponerPrecioTrp(t, r)
+        return
+      }
       let lista = null
       try {
         const { data, error } = await supabase.from('listas_precios')
@@ -8269,6 +8293,7 @@
     // campo queda vacío y se dice. Un precio que la persona ya tocó no se pisa.
     async function proponerPrecioTrp(t, r) {
       if (t.lista === undefined) return
+      if (t.sinPermisoPrecio || !puedeTareaEn('retiros:precios', t.origenId)) { r.precioEstado = 'sin_permiso'; pintarPrecioTrp(r); return }
       if (!t.lista) { r.precioEstado = 'sin_lista'; pintarPrecioTrp(r); return }
       r.precioEstado = 'buscando'
       pintarPrecioTrp(r)
@@ -8526,6 +8551,7 @@
     function textoPrecioTrp(t, r) {
       if (r.precioTocado) return r.precio === null ? 'Sin precio: este renglón no deja deuda.' : ''
       if (r.propuesta) return `Propuesto de la lista «${r.propuesta}»: podés cambiarlo.`
+      if (t.sinPermisoPrecio || r.precioEstado === 'sin_permiso') return TEXTO_SIN_PERMISO_PRECIO_TRP
       if (t.lista === undefined || r.precioEstado === 'buscando') return 'Buscando el precio…'
       if (!t.lista) return TEXTO_SIN_LISTA_TRP
       if (r.precioEstado === 'error') return `No se pudo leer el precio de la lista interna «${t.lista.nombre}»: ${r.errorPrecio} Escribí el precio por caja (vacío = sin deuda entre fábricas)`
@@ -9644,7 +9670,7 @@
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
         btn.classList.toggle('pestana-stock--activa',
-          btn.dataset.vista === (PESTANA_DE_VISTA[id] ?? id))
+          btn.dataset.vista === id || btn.dataset.vista === PESTANA_DE_VISTA[id])
       })
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
@@ -11067,7 +11093,7 @@
       renderizarStock()
     })
     document.querySelectorAll('.pestana-stock').forEach(btn =>
-      btn.addEventListener('click', () => mostrarVista(btn.dataset.vista)))
+      btn.addEventListener('click', () => btn.dataset.vista === 'costos' ? abrirCostos() : mostrarVista(btn.dataset.vista)))
 
     document.querySelectorAll('[data-cerrar-detalle]').forEach(el =>
       el.addEventListener('click', cerrarDetalleInsumo))
@@ -11535,7 +11561,7 @@
     // contra las vistas que esta persona tiene (sin gestionar_catalogo, se
     // ignora). El parámetro se limpia SIEMPRE, sea válido o no, para que
     // recargar no vuelva a forzar la vista.
-    const VISTAS_DESDE_URL = ['catalogo']
+    const VISTAS_DESDE_URL = ['catalogo', 'costos']
     function vistaDesdeUrl(vistas) {
       let pedida = null
       try {
@@ -11607,7 +11633,8 @@
         .from('empleado_tareas')
         .select('modulo, tarea, alcance')
         .eq('empleado_id', emp.id)
-        .in('modulo', ['stock'])
+        // retiros: el precio del traspaso (B8, retiros:precios por fábrica).
+        .in('modulo', ['stock', 'retiros'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
       estado.alcancesTareas = new Map((tareas ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? null]))
@@ -11629,7 +11656,10 @@
       const verStock = puedeVerStock()
       const ajusta   = puedeAjustar()
 
-      if (!verStock && !gestiona && !ajusta) {
+      // 11/10/2026 (M8): con stock:ver_costos (aunque no tenga stock:ver) se
+      // entra, y si no tiene otra vista abre derecho en Costos.
+      const veCostos = estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:ver_costos')
+      if (!verStock && !gestiona && !ajusta && !veCostos) {
         document.getElementById('sin-acceso').hidden = false
         return
       }
@@ -11649,15 +11679,23 @@
 
       // Las pestañas solo si hay DOS o más: una pestaña sola no es una
       // elección, es ruido. Y las que no correspondan no se dibujan.
-      document.getElementById('pestanas-stock').hidden = vistas.length < 2
+      // Costos va como pestaña solo sin stock:ver y con otra vista (con stock:ver
+      // está el botón adentro de Stock; sola, no hace falta pestaña).
+      const pestanaCostos = veCostos && !verStock && vistas.length > 0
+      const conPestanas = pestanaCostos ? [...vistas, 'costos'] : vistas
+      document.getElementById('pestanas-stock').hidden = conPestanas.length < 2
       document.querySelectorAll('.pestana-stock').forEach(btn => {
-        btn.hidden = !vistas.includes(btn.dataset.vista)
+        btn.hidden = !conPestanas.includes(btn.dataset.vista)
       })
 
       estado.fabrica = await fabricaP
 
-      const desdeUrl = vistaDesdeUrl(vistas)
-      mostrarVista(desdeUrl ?? vistas[0])
+      const soloCostos = vistas.length === 0
+      // Sin la vista de stock no hay a dónde "volver".
+      document.getElementById('btn-volver-de-costos').hidden = !verStock
+      const desdeUrl = vistaDesdeUrl(veCostos ? [...vistas, 'costos'] : vistas)
+      const inicial = desdeUrl ?? (soloCostos ? 'costos' : vistas[0])
+      mostrarVista(inicial)
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
       // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.
@@ -11703,6 +11741,7 @@
       // porque vive en la vista de stock). La barra ya sabe sus unidades.
       await estado.barraLista
       document.getElementById('btn-ver-costos').hidden = !(verStock && puedeVerCostosAlgo())
+      if (inicial === 'costos') await cargarCostos()
 
       if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()
       cargarPendientesStock()

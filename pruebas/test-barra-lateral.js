@@ -37,7 +37,7 @@ const { chk, esperas, fin } = arnes()
 const FUNCIONES = ['htmlIcono', 'debeMostrarse', 'modulosDeBarra', 'claveActual', 'leerColapsada', 'htmlBurbujaBarra', 'htmlItem',
   'htmlBarra', 'capacidadBarraAbajo', 'htmlBarraAbajo', 'htmlHojaMas', 'htmlEditarAbajo', 'cambiarListaAbajo',
   'pintarBurbujasBarra', 'pintarBurbujasAbajo', 'leerGuardado', 'guardar', 'instalarBarraLateral']
-const DE_MODULOS = ['moduloVisible', 'escDash', 'textoPendiente', 'agruparPendientes', 'colorDeModulo', 'enOrdenDeBarra']
+const DE_MODULOS = ['moduloVisible', 'urlDeModulo', 'escDash', 'textoPendiente', 'agruparPendientes', 'colorDeModulo', 'enOrdenDeBarra']
 const DE_PREFS = ['clavePrefs', 'prefsVacias', 'normalizarPrefs', 'leerCopia', 'escribirCopia', 'sonDeFabrica', 'leerPrefs', 'guardarPrefs', 'subirPrefs',
   'cargarPrefs', 'dondeSeGuardanPrefs', 'anotarUso', 'vecesUsado', 'ordenarBarra', 'modulosDeAbajo', 'guardarBarraInferior']
 
@@ -166,7 +166,8 @@ const claves = (html) => [...String(html).matchAll(/class="barra-lateral__item[^
   cl = S.modulosDeBarra(ctx({ misModulos: ['cobranzas'] })).map(m => m.clave)
   chk('Cheques pide además una tarea (la regla del dashboard)', cl.join() === 'cobranzas', cl.join())
   cl = S.modulosDeBarra(ctx({ misModulos: ['cobranzas', 'gastos', 'caja'], misTareas: new Set(['cobranzas:procesar']) })).map(m => m.clave)
-  chk('en el orden del diseño (Cobranzas, Caja, Gastos, Cheques…)', cl.join() === 'cobranzas,caja,gastos,cheques', cl.join())
+  // 11/10/2026 (M3): con cobranzas:procesar también Administración (ahí se asientan).
+  chk('en el orden del diseño (Cobranzas, Caja, Gastos, Cheques…)', cl.join() === 'cobranzas,caja,gastos,cheques,administracion', cl.join())
   chk('Accesos no aparece para un usuario común', !S.modulosDeBarra(ctx({ misModulos: ['accesos'] })).some(m => m.clave === 'accesos'))
   const todos = S.modulosDeBarra(ctx({ esAdmin: true, esSuperAdmin: true })).map(m => m.clave)
   chk('un super_admin ve todos los del catálogo y Seguridad al final', todos.length === S.MODULOS.filter(m => !m.proximamente).length + 1 && todos.includes('accesos') && todos[todos.length - 1] === 'seguridad', todos.join())

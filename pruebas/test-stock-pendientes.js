@@ -279,7 +279,8 @@ const FILAS = [
 
   // ── 8. El cableado (init, HTML) — sobre el fuente, anclado a lo único ──
   chk('init abre la vista pedida por URL antes que la primera',
-    /const desdeUrl = vistaDesdeUrl\(vistas\)\n\s*mostrarVista\(desdeUrl \?\? vistas\[0\]\)/.test(SCRIPT))
+    // 11/10/2026: con Costos (M8) la lista que se valida suma 'costos'.
+    /const desdeUrl = vistaDesdeUrl\(veCostos \? \[\.\.\.vistas, 'costos'\] : vistas\)\n\s*const inicial = desdeUrl \?\? \(soloCostos \? 'costos' : vistas\[0\]\)\n\s*mostrarVista\(inicial\)/.test(SCRIPT))
   chk('init aplica el filtro solo si vino por el link al catálogo',
     /if \(desdeUrl === 'catalogo'\) aplicarFiltroDesdeUrl\(\)/.test(SCRIPT))
   const iInit = SCRIPT.indexOf('async function init()')
