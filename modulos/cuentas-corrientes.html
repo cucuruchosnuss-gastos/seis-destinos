@@ -104,6 +104,8 @@
       margin: 1.25rem 0 1.25rem;
       gap: 0.75rem;
     }
+    /* "Descargar resumen de cuenta" (11/10/2026), arriba del saldo. */
+    .cc-ficha-resumen { display: flex; justify-content: flex-end; margin: -0.5rem 0 1rem; }
     .cc-header-ficha__nombre {
       font-size: 1.125rem;
       font-weight: 700;
@@ -1351,6 +1353,11 @@
         <span class="cc-header-ficha__nombre" id="ficha-titulo"></span>
       </header>
 
+      <!-- El resumen de cuenta en PDF (11/10/2026, js/resumen-cuenta.js). -->
+      <div class="cc-ficha-resumen">
+        <button type="button" class="rc-abrir" id="btn-resumen-cuenta-ficha">Descargar resumen de cuenta</button>
+      </div>
+
       <div id="ficha-banner"></div>
 
       <!-- La unidad de esta cuenta (28/09/2026). La que se MIRA la decide la
@@ -1859,6 +1866,8 @@
       estadoCuentaUnica, cargarCuentaUnica, pintarCuentaUnica, alTocarCuentaUnica, alCambiarCuentaUnica,
       htmlClasificacion, textoVinculado,
     } from '../js/cuenta-unica.js'
+    // "Descargar resumen de cuenta" (11/10/2026): la misma hoja que el cliente.
+    import { abrirResumenCuenta, cuentasProveedor } from '../js/resumen-cuenta.js'
 
     mostrarBannerVersion()
 
@@ -3735,6 +3744,63 @@
         return (m.tipo === 'factura' && observaciones?.get(m.factura_pendiente_id)) || 'Saldo inicial'
       }
       return (m?.tipo === 'pago' && etiquetas?.get(m.gasto_id)) || m?.referencia || ''
+    }
+
+    // ── EL RESUMEN DE CUENTA (11/10/2026, js/resumen-cuenta.js) ────────────
+    // TODOS los movimientos del proveedor (sin filtro de fechas: el saldo
+    // anterior sale del último antes de "desde"), de a 1000 (PostgREST corta
+    // ahí). La vista lleva el saldo por proveedor + empresa + moneda, en orden
+    // de fecha y orden_desempate: el mismo saldo que muestra la ficha.
+    const TOPE_PAGINAS_RESUMEN = 20
+    async function leerMovimientosResumen(proveedorId) {
+      const filas = []
+      for (let p = 0; p < TOPE_PAGINAS_RESUMEN; p++) {
+        const { data, error } = await supabase.from('v_cuenta_corriente_movimientos')
+          .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado, orden_desempate')
+          .eq('proveedor_id', proveedorId)
+          .order('fecha', { ascending: true })
+          .order('orden_desempate', { ascending: true })
+          .range(p * 1000, p * 1000 + 999)
+        if (error) throw error
+        filas.push(...(data ?? []))
+        if ((data ?? []).length < 1000) return filas
+      }
+      throw new Error('La cuenta tiene demasiados movimientos para un resumen.')
+    }
+
+    // Cómo se llama cada movimiento en el resumen: el comprobante (tipo y
+    // número) y el detalle (la etiqueta del pago, la observación del saldo
+    // inicial, la factura a la que se aplicó un crédito o un interés).
+    function describirParaResumen(m, etiquetas, observaciones) {
+      if (m?.tipo === 'factura') {
+        if (esSaldoInicial(m)) return { comprobante: 'Saldo inicial', detalle: observaciones?.get(m.factura_pendiente_id) || '' }
+        return { comprobante: nombreFactura(m.referencia), detalle: '' }
+      }
+      if (m?.tipo === 'pago') return { comprobante: 'Pago', detalle: etiquetas?.get(m.gasto_id) || '' }
+      if (m?.tipo === 'credito_aplicado') return { comprobante: 'Crédito aplicado', detalle: 'A ' + numeroParaMostrar(m.referencia) }
+      if (m?.tipo === 'interes') return { comprobante: 'Interés', detalle: 'Sobre ' + numeroParaMostrar(m.referencia) }
+      return { comprobante: TIPO_MOVIMIENTO_LABEL[m?.tipo] || m?.tipo || '', detalle: m?.referencia || '' }
+    }
+
+    function abrirResumenProveedor(boton) {
+      const ficha = estado.ficha
+      if (!ficha) return
+      const prov = estado.maestros.proveedores.find(p => p.id === ficha.proveedorId)
+      abrirResumenCuenta({
+        sb: supabase, tipo: 'proveedor', abridor: boton,
+        titular: { nombre: prov?.razon_social || ficha.nombre, cuit: prov?.cuit || '' },
+        unidadBarra: estado.unidadElegida || null,
+        nombreUnidad: etiquetaUnidad,
+        cargar: async () => {
+          const filas = await leerMovimientosResumen(ficha.proveedorId)
+          const [etiquetas, observaciones] = await Promise.all([cargarEtiquetasDePagos(filas), cargarObservacionesSaldoInicial(filas)])
+          // La fábrica de pruebas nunca aparece para una cuenta real.
+          const visibles = new Set(unidadesParaElegir(estado.maestros.unidades).map(u => u.id))
+          return cuentasProveedor(filas, m => describirParaResumen(m, etiquetas, observaciones), {
+            unidadVisible: id => !id || visibles.has(id),
+          })
+        },
+      })
     }
 
     // El historial con la búsqueda y la unidad de la barra, sobre lo cargado.
@@ -6039,6 +6105,7 @@
     // viven dentro del banner (#ficha-banner) y se generan en cada
     // renderizarFichaBanner(), que ya les adjunta su propio listener.
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
+    document.getElementById('btn-resumen-cuenta-ficha').addEventListener('click', (e) => abrirResumenProveedor(e.currentTarget))
     // Cliente y proveedor (06/10/2026): la clasificación y la cuenta juntas.
     document.getElementById('ficha-clasificacion').addEventListener('click', (ev) => alTocarClasificacionCC(ev))
     const unicaCC = document.getElementById('ficha-cuenta-unica')

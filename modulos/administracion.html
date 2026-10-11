@@ -669,6 +669,7 @@
         <span class="ad-bloqueado-todas" id="ad-ficha-bloqueada" hidden>Elegí una fábrica arriba para cambiarlo</span>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-saldo-inicial" hidden>Saldo inicial</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-ajuste" hidden>Ajuste</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-resumen">Descargar resumen de cuenta</button>
       </div>
       <div class="ad-panel" id="ad-panel-saldo" hidden>
         <p class="ad-texto-suave" id="ad-saldo-explica">Lo que el cliente debía antes de empezar a cargar las órdenes acá. Se carga UNA sola vez; después, se corrige con un ajuste.</p>
@@ -1043,6 +1044,8 @@
       estadoCuentaUnica, cargarCuentaUnica, pintarCuentaUnica, alTocarCuentaUnica, alCambiarCuentaUnica,
       htmlClasificacion, textoVinculado,
     } from '../js/cuenta-unica.js'
+    // "Descargar resumen de cuenta" (11/10/2026): la misma hoja que el proveedor.
+    import { abrirResumenCuenta, cuentaCliente } from '../js/resumen-cuenta.js'
 
     mostrarBannerVersion()
 
@@ -4033,6 +4036,8 @@
       document.getElementById('ad-ficha-bloqueada').hidden = !fichaBloqueada
       document.getElementById('ad-btn-saldo-inicial').hidden = !(precios && c.cuenta && !tieneSaldoInicial(c.cuenta))
       document.getElementById('ad-btn-ajuste').hidden = !precios
+      // El resumen sale de la cuenta ya leída: hasta que llega, no se ofrece.
+      document.getElementById('ad-btn-resumen').disabled = !c.cuenta
       document.getElementById('ad-panel-saldo').hidden = c.panel !== 'saldo'
       document.getElementById('ad-panel-ajuste').hidden = c.panel !== 'ajuste'
       for (const [id, panel] of [['ad-saldo-error', 'saldo'], ['ad-ajuste-error', 'ajuste']]) {
@@ -4115,6 +4120,47 @@
         estado.cliente.otras = { filas: [], error: 'No se pudo ver si también es cliente de otras fábricas.' }
       }
       pintarCliente()
+    }
+
+    // ── EL RESUMEN DE CUENTA (11/10/2026, js/resumen-cuenta.js) ────────────
+    // La cuenta de ESTE cliente y, si ya se leyeron, las del mismo cliente en
+    // las otras fábricas (las de "También es cliente de…": cada una es una
+    // cuenta aparte, por eso "Todas, separadas"). La cuenta de cliente y
+    // proveedor (cuenta_unificada) NO va: el resumen es de la cuenta de
+    // cliente, y las compensaciones ya figuran en ella como un movimiento.
+    const ETIQUETA_RESUMEN_CLIENTE = { ...ETIQUETA_MOVIMIENTO, proyecto: 'Proyecto', compensacion: 'Compensación' }
+    function describirClienteResumen(m, codigos) {
+      const tipo = ETIQUETA_RESUMEN_CLIENTE[m?.tipo] ?? m?.tipo ?? ''
+      const codigo = m?.orden_retiro_id ? codigos?.get(m.orden_retiro_id) : null
+      return { comprobante: codigo ? `${tipo} ${codigo}` : tipo, detalle: detalleMovimiento(m, codigos) }
+    }
+
+    function abrirResumenCliente(boton) {
+      const c = estado.cliente
+      if (!c || !c.cuenta) return
+      const cli = clienteDe(c.id)
+      const titularDe = (x) => ({ nombre: limpio(x?.razon_social) || limpio(x?.nombre) || 'Cliente', cuit: limpio(x?.cuit) })
+      const propia = { unidadId: estado.empresaId, clienteId: c.id, titular: titularDe(cli), cuenta: c.cuenta, codigos: c.codigos }
+      const otras = (c.otras?.filas ?? []).map(f => ({ unidadId: f.unidad_negocio_id, clienteId: f.cliente_id, titular: titularDe(f), empresa: f.empresa }))
+      const nombreDeEmpresa = (id) => (estado.empresas ?? []).find(e => e.id === id)?.nombre ?? otras.find(o => o.unidadId === id)?.empresa ?? 'Otra fábrica'
+      abrirResumenCuenta({
+        sb: supabase, tipo: 'cliente', abridor: boton, titular: propia.titular,
+        unidadBarra: estado.unidadBarra || null, nombreUnidad: nombreDeEmpresa,
+        cargar: async () => {
+          const avisos = []
+          const leidas = await Promise.all(otras.map(async (o) => {
+            try { return { ...o, ...(await leerCuenta(o.clienteId)) } } catch (err) {
+              console.error('Resumen: no se pudo leer la cuenta en ' + o.empresa + ':', err)
+              avisos.push('No se pudo leer su cuenta en ' + nombreDeEmpresa(o.unidadId) + ': no va en el resumen.')
+              return null
+            }
+          }))
+          const cuentas = [propia, ...leidas.filter(Boolean)].map(p => cuentaCliente(p.cuenta, {
+            unidadId: p.unidadId, titular: p.titular, describir: m => describirClienteResumen(m, p.codigos),
+          }))
+          return { cuentas, avisos }
+        },
+      })
     }
 
     // ── Saldo inicial (una sola vez) y ajuste (con motivo) ──────────────────
@@ -7768,6 +7814,7 @@
       document.getElementById('ad-btn-ficha').addEventListener('click', () => { if (estado.cliente) abrirFicha(estado.cliente.id) })
       document.getElementById('ad-btn-saldo-inicial').addEventListener('click', () => abrirPanelCliente('saldo'))
       document.getElementById('ad-btn-ajuste').addEventListener('click', () => abrirPanelCliente('ajuste'))
+      document.getElementById('ad-btn-resumen').addEventListener('click', (e) => abrirResumenCliente(e.currentTarget))
       document.getElementById('ad-saldo-guardar').addEventListener('click', () => guardarPanelCliente())
       document.getElementById('ad-ajuste-guardar').addEventListener('click', () => guardarPanelCliente())
       document.getElementById('ad-saldo-cancelar').addEventListener('click', () => cerrarPanelCliente())
