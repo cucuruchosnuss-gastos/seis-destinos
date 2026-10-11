@@ -392,7 +392,9 @@ async function main() {
     S.__els.get('campo-interes-monto').escribirCrudo('2.000.000')
     const txt = S.__els.get('interes-tasa-info').textContent
     const dias = S.diasEntre('2026-08-01', new Date().toISOString().slice(0, 10))
-    const esperado = `≈ ${((2000000 / 100000) / (dias / 365) * 100).toFixed(2)}% anual`
+    // Con coma decimal y punto de miles (11/10/2026; antes "10281.69% anual").
+    const [ent, dec] = ((2000000 / 100000) / (dias / 365) * 100).toFixed(2).split('.')
+    const esperado = `≈ ${ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec} % anual`
     chk('interés: la tasa anual informada sale del monto 2.000.000', txt === esperado, [txt, esperado])
   }
   for (const [texto, tasa] of [['3,5', 3.5], ['12,25', 12.25], ['1.250,5', 1250.5]]) {
@@ -419,7 +421,9 @@ async function main() {
       for (const moneda of ['ARS', 'USD']) {
         chk(`formatearImporte(${JSON.stringify(v)}, ${moneda}) igual que antes`, S.formatearImporte(v, moneda) === viejo(v, moneda), [S.formatearImporte(v, moneda), viejo(v, moneda)])
       }
-      chk(`formatearImporteDuplicado(${JSON.stringify(v)}) igual que antes`, S.formatearImporteDuplicado(v) === viejoDup(v), [S.formatearImporteDuplicado(v), viejoDup(v)])
+      // Desde el 11/10/2026 la plata va SIEMPRE con dos decimales ("$387.300,50",
+      // nunca "$387.300,5"): el mismo número que formatearImporte, sin el espacio.
+      chk(`formatearImporteDuplicado(${JSON.stringify(v)}) = formatearImporte sin el espacio`, S.formatearImporteDuplicado(v) === S.formatearImporte(v, 'ARS').replace('$ ', '$'), [S.formatearImporteDuplicado(v), viejoDup(v)])
     }
     for (const v of [null, undefined, '', NaN, 'abc']) {
       chk(`formatearImporte(${String(v)}) = "—"`, S.formatearImporte(v) === '—', S.formatearImporte(v))

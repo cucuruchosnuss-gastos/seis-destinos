@@ -567,20 +567,20 @@ const SEGURAS = {
     'URL.createObjectURL(estado.wizard.fotoArchivo)': BLOB,
     'iconoCategoriaHtml(catObj.nombre)': ICONO,
     "filaHtml('Categoría', catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${esc(catObj.nombre)}` : null)": 'filaHtml() con el ícono (constante) y esc() del nombre, armado en el call site',
-    'vehObj.nombre': EN_FILA, 'vehObj.patente': EN_FILA, 'g.kilometraje': EN_FILA,
+    'vehObj.nombre': EN_FILA, 'vehObj.patente': EN_FILA,
   },
   renderizarResumenPendiente: {
     html: FILA_HTML,
     'URL.createObjectURL(estado.wizard.fotoArchivo)': BLOB,
     'iconoCategoriaHtml(catObj.nombre)': ICONO,
     "filaHtml('Categoría', catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${esc(catObj.nombre)}` : null)": 'filaHtml() con el ícono (constante) y esc() del nombre, armado en el call site',
-    'vehObj.nombre': EN_FILA, 'vehObj.patente': EN_FILA, 'g.kilometraje': EN_FILA,
+    'vehObj.nombre': EN_FILA, 'vehObj.patente': EN_FILA,
   },
   mostrarDetalleGasto: {
     html: FILA_HTML,
     'iconoCategoriaHtml(g.categorias.nombre)': ICONO,
     "filaHtml('Categoría', g.categorias ? `${iconoCategoriaHtml(g.categorias.nombre)} ${esc(g.categorias.nombre)}` : null)": 'filaHtml() con el ícono (constante) y esc() del nombre, armado en el call site',
-    'g.vehiculos.nombre': EN_FILA, 'g.vehiculos.patente': EN_FILA, 'g.kilometraje': EN_FILA,
+    'g.vehiculos.nombre': EN_FILA, 'g.vehiculos.patente': EN_FILA,
     'htmlSeccionComprobante(g.foto_url)': 'HTML de htmlSeccionComprobante(), que escapa la ruta (ejecutada con marcas)',
     "[ puedeEditar ? '<button type=\"button\" class=\"btn btn--icono\" id=\"btn-editar-gasto\" title=\"Editar\">✏️ Editar</button>' : '', puedeAnular ? '<button type=\"button\" class=\"btn btn--icono btn--icono--peligro\" id=\"btn-anular-gasto\" title=\"Anular\">🚫 Anular</button>' : '', ].join('')":
       'dos botones literales del código',

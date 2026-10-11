@@ -5525,7 +5525,10 @@
       if (v === null || v === undefined || v === '') return null
       const num = Number(v)
       if (!Number.isFinite(num)) return null
-      return '$' + num.toLocaleString('es-AR', { maximumFractionDigits: 2 })
+      // La plata, siempre con sus dos decimales: "$387.300,50" y nunca
+      // "$387.300,5" (11/10/2026). Con formatearNumeroAr, el mismo formato de
+      // toda la app, y no con toLocaleString, que depende del navegador.
+      return '$' + formatearNumeroAr(num, { decimales: 2 })
     }
 
     // Se consulta al SALIR del paso de datos, que es el primer momento en que ya
@@ -8630,7 +8633,7 @@
       return numeroDesdeOcr(c?.importe_ocr)
     }
 
-    // "$1.234,5" o "USD 1.234,5"; null si no hay importe. Reusa
+    // "$1.234,50" o "USD 1.234,50"; null si no hay importe. Reusa
     // formatearImporteDuplicado(), que ya rechaza el null antes de convertir.
     function importeConMoneda(v, moneda) {
       const base = formatearImporteDuplicado(v)
