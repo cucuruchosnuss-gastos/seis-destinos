@@ -2453,6 +2453,11 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     estado.sesion = await verificarSesion()
+    // Sin sesión, verificarSesion() ya mandó al login: no se sigue (si no, se
+    // lee estado.sesion.user de un null mientras la página se va y queda un
+    // error de JavaScript). Este código es del nivel de arriba del módulo, así
+    // que en vez de un return se espera para siempre (11/10/2026).
+    if (!estado.sesion) await new Promise(() => {})
 
     // En paralelo con el resto del arranque: no lo frena, y nunca tira.
     // Se espera recién antes de dibujar la primera lista.
