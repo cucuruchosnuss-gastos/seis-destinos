@@ -56,7 +56,7 @@ function construir() {
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
   for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA', 'TOPE_USO', 'VERSION_PREFS', 'ESTADO_PREFS']) codigo += extraerConst(pref, c)
   for (const f of DE_PREFS) codigo += extraerFn(pref, f) + '\n'
-  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
+  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'NOMBRE_CORTO_ABAJO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += `return { ${FUNCIONES.join(', ')}, ${DE_PREFS.join(', ')}, MODULOS, ESTADO_PREFS, __ls, __errores }`
   return new Function(codigo)()
@@ -205,6 +205,18 @@ const SEIS = ['gastos', 'caja', 'stock', 'cobranzas', 'pedidos', 'materia-prima'
   chk('"Más" tiene "Editar la barra de abajo"', /id="hoja-mas-editar"[^>]*>Editar la barra de abajo</.test(hm))
   const anchos = [...S.htmlBarraAbajo({ abajo: mods.slice(0, 2), actual: null, raiz: new URL('https://ejemplo.test/x/') }).matchAll(/<svg width="(\d+)"/g)].map(m => m[1])
   chk('los íconos de la barra de abajo, TODOS un poco más grandes (23)', anchos.length === 4 && anchos.every(a => a === '23'), anchos.join())
+
+  // "Administración" no entra en la barra de abajo (10/10/2026): ahí dice
+  // "Admin" (con el nombre entero en el title); en la compu y en "Más", entero.
+  const adm = S.MODULOS.find(m => m.clave === 'administracion')
+  const gas = S.MODULOS.find(m => m.clave === 'gastos')
+  const hAdm = S.htmlBarraAbajo({ abajo: [adm, gas], actual: null, raiz: new URL('https://ejemplo.test/x/') })
+  const tabAdm = (hAdm.match(/<a [^>]*data-clave="administracion"[\s\S]*?<\/a>/) || [''])[0]
+  chk('barra de abajo: Administración dice "Admin"', /<span class="barra-abajo__nombre">Admin<\/span>/.test(tabAdm), tabAdm)
+  chk('barra de abajo: con "Administración" entero en el title', / title="Administración"/.test(tabAdm))
+  chk('barra de abajo: los demás con su nombre entero y sin title', /data-clave="gastos"(?![^>]* title=)[\s\S]*?<span class="barra-abajo__nombre">Gastos<\/span>/.test(hAdm))
+  chk('la hoja "Más" sigue diciendo "Administración"', /Administración/.test(S.htmlHojaMas({ modulos: [adm], raiz: new URL('https://ejemplo.test/x/') })))
+  chk('la barra de la compu sigue diciendo "Administración"', /<span class="barra-lateral__nombre">Administración<\/span>/.test(S.htmlBarra({ modulos: [adm], actual: null, colapsada: false, pendientes: new Map(), raiz: new URL('https://ejemplo.test/x/') })))
 
   // Las preferencias: barra_inferior y las claves que no se conocen.
   const n = S.normalizarPrefs({ barra_inferior: ['caja', 'caja', 3, '', 'stock'], otra: { a: 1 }, v: 1 })

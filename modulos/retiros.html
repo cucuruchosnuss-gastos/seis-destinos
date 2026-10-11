@@ -517,6 +517,19 @@
       .rt-carga[data-paso="orden"] .rt-col-agregar { display: none; }
       .rt-carga[data-paso="orden"] .rt-bloque-cliente--buscar { display: none; }
       .rt-vista-form--editando .rt-pestanas { display: none; }
+      /* La acción del renglón que se está armando ("Agregar igual · 50 cajas"
+         / "Quitar de la orden") va FIJA abajo, siempre a la vista
+         (10/10/2026). El sticky de .rt-accion no se pegaba a la pantalla (el
+         body es un contenedor de scroll: html y body tienen overflow-x
+         hidden), así que a mitad de scroll el botón pasaba por debajo de la
+         barra de abajo de la app. Con la barra va ARRIBA de ella; el renglón
+         deja abajo el lugar de la acción, así no tapa su último pedazo. */
+      .rt-editor .rt-accion {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0;
+        box-shadow: 0 -4px 14px rgba(28, 26, 23, 0.08);
+      }
+      body.con-barra-lateral .rt-editor .rt-accion { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+      .rt-editor:has(> .rt-accion) { padding-bottom: 136px; }
     }
 
     /* ── Compu (2a, 2b), desde 1024 px ────────────────────────────────── */
