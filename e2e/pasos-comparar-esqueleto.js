@@ -32,6 +32,8 @@ async function abrir(page, base, { datos: nombre, prefs = null, empleado = 'emp-
   await page.evaluate(() => document.fonts?.ready);
 }
 
+// Desde el 10/10/2026 el dueño ve 15 tarjetas: Conos de papel va última,
+// después de Seguridad (el diseño 1a tiene 14).
 async function tableroListo(page, n) {
   await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(n);
   await expect(page.locator('.tb-tarjeta--cargando')).toHaveCount(0);
@@ -40,7 +42,7 @@ async function tableroListo(page, n) {
 const PASOS_1366 = [
   ['1a', async (page, base) => {
     await abrir(page, base, { datos: 'tablero', prefs: PREFS_DUENO });
-    await tableroListo(page, 14);
+    await tableroListo(page, 15);
     await expect(page.locator('#dashboard-titulo')).toContainText('Buen día, Pablo');
     await expect(page.locator('#tb-franja')).toContainText('máquina parada');
   }],
@@ -61,13 +63,13 @@ const PASOS_1366 = [
   }],
   ['4a', async (page, base) => {
     await abrir(page, base, { datos: 'tablero', prefs: PREFS_DUENO, colapsada: '1' });
-    await tableroListo(page, 14);
+    await tableroListo(page, 15);
     await expect(page.locator('body')).toHaveClass(/barra-lateral-colapsada/);
     await page.locator('nav.barra-lateral [data-clave="cobranzas"]').hover();
   }],
   ['4b', async (page, base) => {
     await abrir(page, base, { datos: 'tablero', prefs: PREFS_DUENO });
-    await tableroListo(page, 14);
+    await tableroListo(page, 15);
     await page.locator('#barra-arriba-usuario').click();
     await expect(page.locator('#barra-arriba-menu')).toBeVisible();
   }],
@@ -75,7 +77,7 @@ const PASOS_1366 = [
     await abrir(page, base, { datos: 'tablero', vista: 'personalizar', prefs: { ...PREFS_DUENO, tablero: { orden: [], tamanos: {}, ocultas: ['seguridad'] } } });
     await page.locator('#pz-acomodar').click();
     await expect(page.locator('#tb-acomodar-barra')).toBeVisible();
-    await tableroListo(page, 13);
+    await tableroListo(page, 14);
     await expect(page.locator('#tb-escondidas')).toContainText('Seguridad');
     await page.evaluate(() => window.scrollTo(0, 0));
   }],
@@ -89,14 +91,14 @@ const PASOS_1366 = [
 const PASOS_1920 = [
   ['1b', async (page, base) => {
     await abrir(page, base, { datos: 'tablero', prefs: PREFS_DUENO });
-    await tableroListo(page, 14);
+    await tableroListo(page, 15);
   }],
 ];
 
 const PASOS_390 = [
   ['7a', async (page, base) => {
     await abrir(page, base, { datos: 'tablero', prefs: { barra: { orden: 'mano', manual: [], fijados: [] } } });
-    await tableroListo(page, 14);
+    await tableroListo(page, 15);
   }],
   ['7b', async (page) => {
     await page.locator('#barra-abajo-mas').click();
