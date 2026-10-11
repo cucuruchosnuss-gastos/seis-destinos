@@ -5,6 +5,7 @@
 // de antes, produccion:cargar/ver/configurar y pedidos:ver/cargar/configurar.
 // Releído el 26/09/2026: 47 claves, más retiros:ver/cargar/anular/precios.
 // Releído el 28/09/2026: 51 claves, más taller:ver/cargar/gestionar/precios.
+// Releído el 10/10/2026: 57 claves, más conos:ver/pedir/precios/recibir.
 // Si el CHECK cambia, esta lista se actualiza leyendo el constraint real.
 //
 //   node pruebas/test-accesos-produccion.js
@@ -36,15 +37,16 @@ const CHECK_24_09_2026 = [
   'pedidos:ver', 'pedidos:cargar', 'pedidos:configurar',
   'retiros:ver', 'retiros:cargar', 'retiros:anular', 'retiros:precios',
   'taller:ver', 'taller:cargar', 'taller:gestionar', 'taller:precios',
+  'conos:ver', 'conos:pedir', 'conos:precios', 'conos:recibir',
 ]
 
 const CATALOGO = new Function(extraerConst(src, 'CATALOGO_TAREAS') + '\nreturn CATALOGO_TAREAS')()
 const tareas = CATALOGO.flatMap(g => g.tareas || [])
 const claves = tareas.map(t => `${t.modulo}:${t.tarea}`)
 
-chk('el catálogo tiene las 53 claves del CHECK', CHECK_24_09_2026.every(k => claves.includes(k)),
+chk('el catálogo tiene las 57 claves del CHECK', CHECK_24_09_2026.every(k => claves.includes(k)),
   `faltan ${CHECK_24_09_2026.filter(k => !claves.includes(k)).join(', ')}`)
-chk('ninguna clave fuera del CHECK', claves.length === 53 && claves.every(k => CHECK_24_09_2026.includes(k)),
+chk('ninguna clave fuera del CHECK', claves.length === 57 && claves.every(k => CHECK_24_09_2026.includes(k)),
   claves.filter(k => !CHECK_24_09_2026.includes(k)).join(', '))
 chk('ninguna clave repetida', new Set(claves).size === claves.length)
 

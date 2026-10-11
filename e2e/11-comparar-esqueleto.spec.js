@@ -25,7 +25,7 @@ const SALIDA = path.join(__dirname, 'resultados', 'comparar');
 // Diferencias que explica un DESVÍO DECLARADO del diseño (con su tope).
 const DESVIOS = {
   '7a': { tope: 0.40, motivo: 'el diseño dibuja la barra de estado del teléfono (44 px con "12:42") arriba de todo: la app no la tiene (es del sistema), así que todo queda 44 px más arriba.' },
-  '7b': { tope: 0.65, motivo: 'el lienzo del diseño dibuja la hoja "Más" SIN la grilla de módulos (support.js no pinta su lista), aunque el README la pide ("todos los módulos en grilla de 3, con burbujas"): la app la tiene, así que la hoja es más alta. Más la barra de estado del teléfono de 7a. La hoja es de la Parte 1 (js/barra-lateral.js).' },
+  '7b': { tope: 0.75, motivo: 'el lienzo del diseño dibuja la hoja "Más" SIN la grilla de módulos (support.js no pinta su lista), aunque el README la pide ("todos los módulos en grilla de 3, con burbujas"): la app la tiene, así que la hoja es más alta. Más la barra de estado del teléfono de 7a. La hoja es de la Parte 1 (js/barra-lateral.js). Desde el 10/10/2026 la grilla suma Conos de papel (un renglón más): pasó de 0,65 a 0,75 (medido 70,4 %).' },
 };
 
 for (const [ancho, alto, pasos] of [[1366, 768, PASOS_1366], [1920, 1080, PASOS_1920], [390, 844, PASOS_390]]) {

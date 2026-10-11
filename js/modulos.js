@@ -175,6 +175,21 @@ export const MODULOS = [
     url: 'modulos/taller.html',
     proximamente: false,
     color: 'grafito'
+  },
+  {
+    // Conos de papel (10/10/2026): los papelitos con el logo de cada cliente
+    // que se piden por pliego a la gráfica. La base NO tiene una fila 'conos'
+    // en la tabla modulos (ni en empleado_modulos), así que la tarjeta se ve
+    // por tener alguna de las cuatro tareas conos:* (sinFilaModulo).
+    clave: 'conos',
+    nombre: 'Conos de papel',
+    icono: 'ice-cream-cone',
+    descripcion: 'Stock, pedidos de pliegos y recepción',
+    url: 'modulos/conos.html',
+    proximamente: false,
+    color: 'marron',
+    sinFilaModulo: true,
+    requiereTareas: ['conos:ver', 'conos:pedir', 'conos:precios', 'conos:recibir'],
   }
 ]
 
@@ -186,10 +201,12 @@ export const MODULOS = [
 //    cobranzas, que es el que se otorga en Accesos.
 //  - requiereTareas: además, alguna de esas tareas (super_admin las tiene
 //    todas, como en tiene_tarea()).
+//  - sinFilaModulo: el módulo no tiene fila en la tabla modulos (Conos de
+//    papel): no se mira empleado_modulos, alcanza con una de requiereTareas.
 export function moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTareas }) {
   if (modulo.soloSuperAdmin) return esSuperAdmin
   if (modulo.soloAdmin) return esAdmin
-  const habilitado = esAdmin || misModulos.includes(modulo.requiereModulo ?? modulo.clave)
+  const habilitado = esAdmin || modulo.sinFilaModulo === true || misModulos.includes(modulo.requiereModulo ?? modulo.clave)
   if (!habilitado) return false
   if (!modulo.requiereTareas) return true
   return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))
@@ -324,6 +341,7 @@ export const PALETA_MODULO = {
   retiros: [0.55, 0.11, 108],
   administracion: [0.45, 0.14, 305],
   taller: [0.42, 0.07, 150],
+  conos: [0.55, 0.12, 45],
   accesos: [0.50, 0.07, 205],
   empleados: [0.60, 0.13, 340],
   seguridad: [0.40, 0.012, 60],
@@ -341,7 +359,7 @@ export function colorDeModulo(clave) {
 // El orden de la barra por defecto (el del diseño, 1a): lo que más se mira
 // arriba. Un módulo que no está acá va al final, en el orden del catálogo.
 export const ORDEN_BARRA = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'cuentas-corrientes', 'materia-prima',
-  'stock', 'pedidos', 'retiros', 'administracion', 'taller', 'accesos', 'empleados']
+  'stock', 'conos', 'pedidos', 'retiros', 'administracion', 'taller', 'accesos', 'empleados']
 
 export function enOrdenDeBarra(modulos) {
   const pos = c => { const i = ORDEN_BARRA.indexOf(c); return i === -1 ? 100 : i }

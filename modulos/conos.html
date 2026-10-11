@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Conos de papel — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#FFFFFF">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- CONOS DE PAPEL (10/10/2026). Los papelitos impresos con el logo de cada
+       cliente que van alrededor del cucurucho. Se piden por PLIEGO a la gráfica
+       Musumeci (120.000 o 240.000 conos por pliego, en papel Ilustración, Obra
+       blanco u Obra nature), llegan, y la producción los consume.
+
+       Toda la lógica vive en la base (conos_stock, crear_pliego, poner_cono_pliego,
+       confirmar_pliego, recibir_pliego, …): la pantalla llama y dice el resultado.
+       Los errores de la base se muestran TAL CUAL.
+
+       Permisos (empleado_tareas, módulo 'conos'; la base NO tiene una fila
+       'conos' en la tabla modulos, así que la pantalla se abre por tener alguna
+       de las cuatro tareas):
+       - conos:ver     → Stock y "Pendientes de entrega".
+       - conos:pedir   → Por pedir, Pliegos (armar, confirmar, modificar,
+                         recibir, corregir, anular), conteo y ajuste de stock.
+       - conos:precios → ver y cargar el precio del papel. Sin esta tarea no se
+                         ve NINGÚN precio en ninguna parte (tampoco en la O.C.).
+       - conos:recibir → recibir un pliego pedido.
+       Mauricio Silva tiene ver + recibir: ve Stock y Pendientes de entrega. -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    /* main.css pone overflow-x: hidden en html y body, y eso vuelve al body
+       un contenedor de scroll que no scrollea: un position: sticky NO se pega
+       a la pantalla. "clip" corta igual lo que se sale de costado sin ser un
+       contenedor de scroll, así "Asignado X de Y" queda fijo arriba. */
+    html, body { overflow-x: clip; }
+
+    body {
+      --cn-borde: rgba(28, 26, 23, 0.08);
+      --cn-sombra: 0 1px 2px rgba(28, 26, 23, 0.05);
+      --cn-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+      --cn-logo-nuevo: #C81E1E;
+    }
+
+    .cn-app { max-width: 1120px; margin: 0 auto; padding: 0 1rem 6rem; }
+
+    .cn-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.875rem 0 0.5rem;
+    }
+    .cn-header__volver { color: var(--color-texto-2, #6B645A); text-decoration: none; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+    .cn-header__marca { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; color: var(--color-texto-suave); text-transform: uppercase; }
+    .cn-header__titulo { font-family: var(--fuente-titulo); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; color: var(--color-texto); }
+
+    .cn-tabs { display: flex; gap: 0.375rem; overflow-x: auto; padding: 0.25rem 0 0.75rem; }
+    .cn-tab {
+      flex: 0 0 auto; min-height: 44px; padding: 0 1rem; border-radius: 999px;
+      border: 1px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto);
+      font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .cn-tab[aria-pressed="true"] { background: var(--color-acento); border-color: var(--color-acento); color: #fff; }
+
+    .cn-tarjeta { background: var(--color-fondo); border: 1px solid var(--cn-borde); box-shadow: var(--cn-sombra); border-radius: 16px; padding: 1rem; margin-bottom: 0.75rem; }
+    .cn-tarjeta h2, .cn-tarjeta h3 { margin: 0 0 0.5rem; font-family: var(--fuente-titulo); letter-spacing: -0.02em; }
+    .cn-tarjeta h2 { font-size: 1.125rem; }
+    .cn-tarjeta h3 { font-size: 1rem; }
+
+    .cn-fila { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .cn-campo { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; min-width: 0; }
+    .cn-campo label, .cn-campo .cn-rotulo { font-size: 0.8125rem; font-weight: 600; color: var(--color-texto-2, #6B645A); }
+    .cn-campo input, .cn-campo select, .cn-campo textarea {
+      min-height: 44px; padding: 0.5rem 0.75rem; border: 1px solid var(--color-borde-fuerte);
+      border-radius: 12px; font: inherit; font-size: 16px; background: #fff; color: var(--color-texto); width: 100%; box-sizing: border-box;
+    }
+    .cn-campo textarea { min-height: 72px; resize: vertical; }
+
+    .cn-btn {
+      min-height: 44px; padding: 0 1rem; border-radius: 12px; border: 1px solid var(--color-acento);
+      background: var(--color-acento); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .cn-btn:disabled { opacity: 0.55; cursor: default; }
+    .cn-btn--suave { background: #fff; color: var(--color-texto); border-color: var(--color-borde-boton); font-weight: 600; }
+    .cn-btn--peligro { background: #fff; color: var(--bordo); border-color: var(--bordo); }
+    .cn-btn--chico { min-height: 36px; padding: 0 0.75rem; font-size: 0.875rem; }
+    .cn-sumar { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+    .cn-sumar .cn-btn { min-width: 64px; }
+
+    .cn-cantidad-grande { font-family: var(--fuente-titulo); font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .cn-error { color: var(--bordo); font-weight: 600; margin: 0.375rem 0; }
+    .cn-aviso { background: var(--color-superficie); border-left: 3px solid var(--color-borde-fuerte); padding: 0.5rem 0.75rem; border-radius: 8px; margin: 0.5rem 0; color: var(--color-texto-menu, #3D3831); }
+    .cn-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+    .cn-vacio { padding: 1.5rem 0.5rem; color: var(--color-texto-2, #6B645A); text-align: center; }
+
+    .cn-resultados { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+    .cn-resultado { text-align: left; min-height: 44px; padding: 0.375rem 0.75rem; border: 1px solid var(--color-borde); border-radius: 10px; background: #fff; font: inherit; cursor: pointer; }
+    .cn-resultado:hover { background: var(--color-fila-hover); }
+    .cn-elegido { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.75rem; border-radius: 999px; background: var(--color-acento-suave); color: var(--naranja-oscuro); font-weight: 700; }
+
+    .cn-chip { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--color-pista); color: var(--color-texto-menu, #3D3831); white-space: nowrap; }
+    .cn-chip--ilus { background: var(--marron-suave); color: var(--marron-oscuro); }
+    .cn-chip--logo { background: #FDECEC; color: var(--cn-logo-nuevo); letter-spacing: 0.04em; }
+    .cn-chip--armando { background: var(--color-acento-suave); color: var(--naranja-oscuro); }
+    .cn-chip--pedido { background: var(--celeste-suave); color: var(--celeste-oscuro); }
+    .cn-chip--recibido_parcial { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    .cn-chip--recibido { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .cn-chip--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+
+    /* Stock: un renglón por cono. */
+    .cn-stock-fila { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr)); gap: 0.5rem; align-items: center; padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--color-divisor); }
+    .cn-stock-fila--cab { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-2, #6B645A); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--color-borde); }
+    .cn-stock-fila .cn-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cn-stock-fila .cn-num small { display: none; }
+    .cn-stock-nombre { font-weight: 700; overflow-wrap: anywhere; }
+    .cn-stock-acciones { grid-column: 1 / -1; display: flex; gap: 0.375rem; flex-wrap: wrap; }
+    .cn-negativo { color: var(--bordo); font-weight: 700; }
+    @media (max-width: 720px) {
+      .cn-stock-fila { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .cn-stock-fila--cab { display: none; }
+      .cn-stock-nombre { grid-column: 1 / -1; }
+      .cn-stock-fila .cn-num { text-align: left; }
+      .cn-stock-fila .cn-num small { display: block; font-size: 0.6875rem; color: var(--color-texto-2, #6B645A); font-weight: 600; }
+    }
+
+    /* Por pedir: grupos por papel. */
+    .cn-grupo__cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .cn-grupo__total { font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.0625rem; }
+    .cn-pend { padding: 0.5rem 0; border-top: 1px solid var(--color-divisor); }
+    .cn-pend__nombre { font-weight: 700; }
+    .cn-pend__anotado { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.9375rem; }
+
+    /* Pliego en armado */
+    .cn-asignado {
+      position: sticky; top: calc(var(--alto-barra-arriba, 52px) + 0px); z-index: 5;
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px;
+      padding: 0.625rem 0.875rem; margin-bottom: 0.75rem; font-weight: 700; box-shadow: var(--cn-sombra);
+    }
+    .cn-asignado--falta { border-color: var(--amarillo); }
+    .cn-asignado--completo { border-color: var(--verde); color: var(--verde-oscuro); }
+    .cn-item { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.625rem 0; border-top: 1px solid var(--color-divisor); }
+    .cn-item__nombre { flex: 1 1 10rem; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+    .cn-item__cant { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 5.5rem; text-align: right; }
+    .cn-item--logo .cn-item__nombre { color: var(--cn-logo-nuevo); }
+    .cn-tilde { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 44px; cursor: pointer; }
+    .cn-tilde input { width: 20px; height: 20px; }
+
+    /* Pliegos */
+    .cn-pliego { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; gap: 0.25rem 0.75rem; align-items: center; width: 100%; text-align: left; padding: 0.75rem; border: 1px solid var(--color-borde); border-radius: 12px; background: #fff; font: inherit; cursor: pointer; margin-bottom: 0.5rem; }
+    .cn-pliego:hover { background: var(--color-fila-hover); }
+    .cn-pliego__num { font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.125rem; }
+    .cn-pliego__datos { color: var(--color-texto-2, #6B645A); font-size: 0.9375rem; min-width: 0; overflow-wrap: anywhere; }
+    .cn-pliego__plata { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .cn-pliego-entrega { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid var(--color-borde); border-radius: 12px; background: #fff; margin-bottom: 0.5rem; }
+    .cn-pliego-entrega > div { flex: 1 1 12rem; min-width: 0; }
+
+    .cn-tabla { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .cn-tabla th, .cn-tabla td { padding: 0.5rem 0.375rem; border-bottom: 1px solid var(--color-divisor); text-align: left; }
+    .cn-tabla th { font-size: 0.75rem; text-transform: uppercase; color: var(--color-texto-2, #6B645A); }
+    .cn-tabla td.n, .cn-tabla th.n { text-align: right; }
+    .cn-tabla-scroll { overflow-x: auto; }
+
+    .cn-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.5rem 1rem; margin-bottom: 0.75rem; }
+    .cn-datos dt { font-size: 0.75rem; color: var(--color-texto-2, #6B645A); font-weight: 600; }
+    .cn-datos dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+
+    .cn-historial li { padding: 0.375rem 0; border-bottom: 1px solid var(--color-divisor); }
+    .cn-historial { list-style: none; padding: 0; margin: 0; }
+
+    /* Precios */
+    .cn-precios { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.75rem; }
+    .cn-precio__valor { font-family: var(--fuente-titulo); font-size: 1.375rem; font-weight: 700; }
+    .cn-precio__sin { color: var(--bordo); font-weight: 700; }
+    .cn-precio__hist { font-size: 0.875rem; color: var(--color-texto-2, #6B645A); margin: 0.5rem 0 0; padding-left: 1rem; }
+
+    /* La ventana (modal) de cada acción */
+    .cn-modal-fondo { position: fixed; inset: 0; background: rgba(28, 26, 23, 0.45); z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+    .cn-modal { background: #fff; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+    @media (min-width: 640px) { .cn-modal-fondo { align-items: center; } .cn-modal { border-radius: 16px; } }
+    .cn-modal h2 { margin: 0 0 0.75rem; font-family: var(--fuente-titulo); font-size: 1.25rem; }
+    .cn-modal__acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem; }
+    .cn-segmento { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.75rem; }
+    .cn-segmento button { min-height: 44px; padding: 0 0.875rem; border-radius: 999px; border: 1px solid var(--color-borde); background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    .cn-segmento button[aria-pressed="true"] { background: var(--cn-segmento-fondo); border-color: var(--color-acento); color: var(--naranja-oscuro); }
+    .cn-cuentas { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-variant-numeric: tabular-nums; }
+    .cn-cuentas td { padding: 0.25rem 0; }
+    .cn-cuentas td.n { text-align: right; font-weight: 700; }
+    .cn-cuentas tr.total td { border-top: 1px solid var(--color-borde); font-size: 1.125rem; }
+
+    /* La orden de compra: una hoja A4 como las de Musumeci. */
+    .cn-oc-barra { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .cn-oc-marco { overflow-x: auto; background: var(--color-superficie); padding: 0.5rem; border-radius: 12px; }
+    .cn-oc-hoja {
+      width: 190mm; min-height: 270mm; margin: 0 auto; background: #fff; color: #000; box-sizing: border-box;
+      border: 2px solid #000; padding: 6mm 4mm; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.25;
+    }
+    .cn-oc-hoja * { box-sizing: border-box; }
+    .oc-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 6mm; }
+    .oc-cab img { height: 24mm; width: auto; display: block; margin-bottom: 2mm; }
+    .oc-titulo { font-size: 26pt; font-weight: 800; letter-spacing: 0.01em; text-align: right; margin-top: 8mm; }
+    .oc-num { display: grid; grid-template-columns: auto 30mm; gap: 1mm 2mm; justify-content: end; margin-top: 2mm; font-size: 10pt; }
+    .oc-num span:nth-child(odd) { text-align: right; }
+    .oc-num span:nth-child(even) { border: 1px solid #888; text-align: center; padding: 0 1mm; }
+    .oc-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18mm; margin-top: 5mm; }
+    .oc-barra-verde { background: #3F8A1D; color: #fff; font-weight: 700; padding: 1mm 4mm; margin-bottom: 2mm; }
+    .oc-dos p { margin: 0 0 1mm; }
+    .oc-tres { display: grid; grid-template-columns: 30mm 1fr 1fr; margin-top: 2mm; border-top: 2px solid #2F4F8F; }
+    .oc-tres > div { border-right: 1px solid #000; }
+    .oc-tres .oc-barra-verde { margin: 0; text-align: center; }
+    .oc-tres .oc-valor { text-align: center; padding: 1mm; border-top: 1px solid #000; border-bottom: 1px solid #000; min-height: 6mm; }
+    .oc-tabla { width: 100%; border-collapse: collapse; margin-top: 4mm; font-size: 9.5pt; }
+    .oc-tabla th { background: #3F8A1D; color: #fff; padding: 1.2mm 1mm; font-weight: 700; }
+    .oc-tabla td { border-bottom: 1px solid #ccc; border-right: 1px solid #000; padding: 0.6mm 1.2mm; height: 5mm; }
+    .oc-tabla td:first-child { border-left: 1px solid #000; background: #F2F2F2; }
+    .oc-tabla td.n { text-align: right; }
+    .oc-tabla td.c { text-align: center; }
+    .oc-tabla td.gris { background: #F2F2F2; }
+    .oc-tabla tr.oc-logo td:not(:first-child) { color: #D00000; font-weight: 700; }
+    .oc-tabla tr.oc-final td { border-bottom: 2px solid #000; }
+    .oc-pie { display: grid; grid-template-columns: 1fr 75mm; gap: 6mm; margin-top: 2mm; }
+    .oc-coment { border: 1px solid #999; align-self: start; }
+    .oc-coment__cab { background: #92D050; color: #fff; font-weight: 700; padding: 1mm 1.5mm; }
+    .oc-coment p { margin: 1.5mm 1.5mm; }
+    .oc-rojo { color: #D00000; }
+    .oc-totales { width: 100%; border-collapse: collapse; }
+    .oc-totales td { padding: 1mm 1.5mm; }
+    .oc-totales td.n { text-align: right; background: #F2F2F2; }
+    .oc-totales tr.oc-total td { font-weight: 800; border-top: 2px solid #000; }
+    .oc-totales tr.oc-total td.n { background: #92D050; }
+
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+      body * { visibility: hidden !important; }
+      .cn-oc-hoja, .cn-oc-hoja * { visibility: visible !important; }
+      .cn-oc-hoja { position: absolute; left: 0; top: 0; border: 2px solid #000; }
+      .cn-oc-marco { padding: 0; background: none; overflow: visible; }
+    }
+
+    /* En el celular, un botón fijo abajo va arriba de la barra de abajo de la
+       app (regla de CLAUDE.md, "Revisión en el celular"). */
+    @media (max-width: 1023.98px) {
+      body.con-barra-lateral .cn-modal { padding-bottom: calc(1rem + 68px + env(safe-area-inset-bottom, 0px)); }
+    }
+  </style>
+  <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. -->
+  <script type="module" src="../js/barra-lateral.js"></script>
+  <!-- La barra de arriba (js/barra-unidad.js). Los conos no son de una fábrica:
+       esta pantalla no filtra por unidad, y la barra lo dice en chico. -->
+  <script type="module" src="../js/barra-unidad.js"></script>
+  <meta name="sd-unidad" content="no-filtra">
+</head>
+<body class="pagina-modulo">
+  <div class="cn-app" id="cn-app">
+
+    <header class="cn-header">
+      <a href="../dashboard.html" class="cn-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div>
+        <div class="cn-header__marca">Seis Destinos</div>
+        <div class="cn-header__titulo">Conos de papel</div>
+      </div>
+    </header>
+
+    <div class="cn-vacio" id="cn-cargando">Cargando…</div>
+    <div class="cn-vacio" id="cn-sin-acceso" hidden></div>
+
+    <nav class="cn-tabs" id="cn-tabs" aria-label="Secciones de conos de papel" hidden></nav>
+
+    <!-- ══ POR PEDIR ════════════════════════════════════════════════════════ -->
+    <section id="cn-vista-porpedir" hidden>
+      <div class="cn-tarjeta">
+        <h2>Anotar un cono para el próximo pedido</h2>
+        <div class="cn-campo">
+          <label for="cn-anotar-buscar">Cono</label>
+          <div id="cn-anotar-elegido" hidden></div>
+          <input type="text" id="cn-anotar-buscar" placeholder="Buscar el cono…" autocomplete="off">
+          <div class="cn-resultados" id="cn-anotar-resultados"></div>
+        </div>
+        <div class="cn-campo">
+          <span class="cn-rotulo">Cantidad (los botones suman)</span>
+          <div class="cn-fila">
+            <input type="text" id="cn-anotar-cantidad" inputmode="numeric" placeholder="0" style="max-width: 11rem;" aria-label="Cantidad de conos">
+            <div class="cn-sumar" id="cn-anotar-sumar"></div>
+          </div>
+        </div>
+        <div class="cn-fila">
+          <div class="cn-campo" style="flex: 1 1 12rem;">
+            <label for="cn-anotar-papel">Papel</label>
+            <select id="cn-anotar-papel"></select>
+            <span id="cn-anotar-sugerido" class="cn-rotulo" hidden>Sugerido por el último pedido de este cono</span>
+          </div>
+          <div class="cn-campo" style="flex: 2 1 14rem;">
+            <label for="cn-anotar-nota">Nota (opcional)</label>
+            <input type="text" id="cn-anotar-nota" maxlength="200" autocomplete="off">
+          </div>
+        </div>
+        <div class="cn-error" id="cn-anotar-error" hidden></div>
+        <button type="button" class="cn-btn" id="cn-btn-anotar">Anotar</button>
+      </div>
+      <div id="cn-pendientes"></div>
+    </section>
+
+    <!-- ══ STOCK ════════════════════════════════════════════════════════════ -->
+    <section id="cn-vista-stock" hidden>
+      <div id="cn-stock-alertas"></div>
+      <div class="cn-fila" style="margin-bottom: 0.5rem;">
+        <div class="cn-campo" style="flex: 1 1 14rem; margin: 0;">
+          <label for="cn-stock-buscar">Buscar</label>
+          <input type="text" id="cn-stock-buscar" placeholder="Nombre del cono…" autocomplete="off">
+        </div>
+        <label class="cn-tilde"><input type="checkbox" id="cn-stock-todos"> Mostrar también los que no se usan</label>
+      </div>
+      <div class="cn-tarjeta" style="padding: 0;" id="cn-stock-lista"></div>
+    </section>
+
+    <!-- ══ PLIEGOS (lista) / PENDIENTES DE ENTREGA ═══════════════════════════ -->
+    <section id="cn-vista-pliegos" hidden>
+      <div id="cn-pliegos-filtros">
+        <div class="cn-segmento" id="cn-pliegos-estados"></div>
+        <div class="cn-fila">
+          <div class="cn-campo" style="flex: 1 1 10rem;">
+            <label for="cn-pliegos-papel">Papel</label>
+            <select id="cn-pliegos-papel"></select>
+          </div>
+          <div class="cn-campo" style="flex: 2 1 14rem;">
+            <label for="cn-pliegos-buscar">¿En qué pliego está…?</label>
+            <input type="text" id="cn-pliegos-buscar" placeholder="Nombre del cono o número de pliego" autocomplete="off">
+          </div>
+        </div>
+        <div class="cn-fila" style="margin-bottom: 0.75rem;">
+          <button type="button" class="cn-btn cn-btn--suave" id="cn-btn-pliego-nuevo">+ Pliego nuevo vacío</button>
+        </div>
+      </div>
+      <div id="cn-pliegos-lista"></div>
+    </section>
+
+    <!-- ══ PLIEGO EN ARMADO ═════════════════════════════════════════════════ -->
+    <section id="cn-vista-armado" hidden>
+      <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-volver-pliegos>&lsaquo; Pliegos</button>
+      <div id="cn-armado"></div>
+    </section>
+
+    <!-- ══ DETALLE DE UN PLIEGO ═════════════════════════════════════════════ -->
+    <section id="cn-vista-detalle" hidden>
+      <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-volver-pliegos>&lsaquo; Volver</button>
+      <div id="cn-detalle"></div>
+    </section>
+
+    <!-- ══ ORDEN DE COMPRA ══════════════════════════════════════════════════ -->
+    <section id="cn-vista-oc" hidden>
+      <div class="cn-oc-barra">
+        <button type="button" class="cn-btn cn-btn--suave" id="cn-oc-volver">&lsaquo; Volver al pliego</button>
+        <button type="button" class="cn-btn" id="cn-oc-whatsapp">Compartir por WhatsApp</button>
+        <button type="button" class="cn-btn cn-btn--suave" id="cn-oc-pdf">Descargar PDF</button>
+        <button type="button" class="cn-btn cn-btn--suave" id="cn-oc-imprimir">Imprimir</button>
+      </div>
+      <div class="cn-aviso" id="cn-oc-sin-precios" hidden>Sin permiso de precios: la orden sale sin precios.</div>
+      <div class="cn-oc-marco"><div class="cn-oc-hoja" id="cn-oc-hoja"></div></div>
+    </section>
+
+    <!-- ══ PRECIOS DEL PAPEL ════════════════════════════════════════════════ -->
+    <section id="cn-vista-precios" hidden>
+      <p class="cn-aviso">Precio POR CONO, sin IVA, según el papel y el tamaño del pliego.</p>
+      <div class="cn-precios" id="cn-precios"></div>
+    </section>
+  </div>
+
+  <div class="cn-modal-fondo" id="cn-modal-fondo" hidden>
+    <div class="cn-modal" id="cn-modal" role="dialog" aria-modal="true" aria-labelledby="cn-modal-titulo"></div>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTANTES Y FUNCIONES PURAS (las ejecuta pruebas/test-conos.js)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Los tres papeles, con el nombre que se dice en la fábrica.
+    const NOMBRE_PAPEL = { ilustracion: 'Ilustración', obra: 'Obra blanco', obra_nature: 'Obra nature' }
+    const ORDEN_PAPELES = ['obra', 'obra_nature', 'ilustracion']
+    // Los dos tamaños de pliego que se piden.
+    const TAMANOS_PLIEGO = [120000, 240000]
+    // Por pedir: ×½ = 5.000, ×1 = 10.000 … y SUMAN a lo que ya está.
+    const BOTONES_ANOTAR = [
+      { texto: '×½', n: 5000 }, { texto: '×1', n: 10000 }, { texto: '×2', n: 20000 },
+      { texto: '×3', n: 30000 }, { texto: '×4', n: 40000 },
+    ]
+    // En el pliego en armado: 5.000 y 10.000, que también suman.
+    const BOTONES_PLIEGO = [5000, 10000]
+    const IVA_PCT = 21
+    // Un cono que alcanza para menos de esto se avisa arriba del stock.
+    const DIAS_AVISO = 30
+    // La O.C. tiene al menos esta cantidad de renglones de conos (como las de
+    // Musumeci: los que sobran van con "-  X  -").
+    const RENGLONES_MINIMOS_OC = 15
+    const ETIQUETA_ESTADO = {
+      armando: 'En armado', pedido: 'Pedido · en camino', recibido_parcial: 'Recibido en parte',
+      recibido: 'Recibido', anulado: 'Anulado',
+    }
+    const FILTROS_ESTADO = [
+      { v: '', t: 'Todos' }, { v: 'armando', t: 'En armado' }, { v: 'en_camino', t: 'En camino' },
+      { v: 'recibido', t: 'Recibidos' }, { v: 'anulado', t: 'Anulados' },
+    ]
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+
+    function esc(texto) {
+      return String(texto ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    function nombrePapel(p) {
+      return NOMBRE_PAPEL[p] ?? String(p ?? '—')
+    }
+
+    // Una cantidad de conos: "20.000". Un dato ausente es "—", nunca "0".
+    function miles(n) {
+      if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+      return formatearNumeroAr(Number(n), { decimales: 0 })
+    }
+    // Plata: "$ 2.160.000,00". Ausente: "—".
+    function plata(n) {
+      if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+      return '$ ' + formatearNumeroAr(Number(n), { decimales: 2 })
+    }
+    // El precio por cono, con 3 decimales como en la O.C.: "9,000".
+    function precio3(n) {
+      if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+      return formatearNumeroAr(Number(n), { decimales: 3 })
+    }
+
+    function hoyAr(ahora = new Date()) {
+      const p = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(ahora)
+      const v = t => p.find(x => x.type === t)?.value
+      return `${v('year')}-${v('month')}-${v('day')}`
+    }
+    function fechaCorta(iso) {
+      if (!iso) return '—'
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso))
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'
+    }
+    function fechaHora(ts) {
+      if (!ts) return '—'
+      const d = new Date(ts)
+      if (Number.isNaN(d.getTime())) return '—'
+      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d)
+    }
+
+    // Sumar con un botón: lo que ya había más n. Lo vacío cuenta como cero.
+    function sumarCantidad(actual, n) {
+      const a = Number.isFinite(Number(actual)) && actual !== null && actual !== '' ? Number(actual) : 0
+      return a + n
+    }
+
+    // Los permisos de la persona: ver, pedir, precios, recibir. Un super_admin
+    // los tiene todos (como tiene_tarea() en la base).
+    function permisosDe(tareas, esSuper) {
+      const t = new Set(tareas ?? [])
+      const tiene = x => !!esSuper || t.has(x)
+      return { ver: tiene('ver'), pedir: tiene('pedir'), precios: tiene('precios'), recibir: tiene('recibir') }
+    }
+
+    // Las pestañas que ve cada uno, en orden. "Por pedir" primero (es lo que más
+    // se usa). Sin pedir, la lista de pliegos es solo "Pendientes de entrega".
+    function vistasDe(p) {
+      const v = []
+      if (p.pedir) v.push({ clave: 'porpedir', texto: 'Por pedir' })
+      if (p.ver || p.pedir) v.push({ clave: 'stock', texto: 'Stock' })
+      if (p.pedir) v.push({ clave: 'pliegos', texto: 'Pliegos' })
+      else if (p.ver) v.push({ clave: 'entregas', texto: 'Pendientes de entrega' })
+      if (p.precios) v.push({ clave: 'precios', texto: 'Precios del papel' })
+      return v
+    }
+
+    // Para cuántos días alcanza: stock ÷ (consumo de 30 días ÷ 30). Sin
+    // consumo, null (no se sabe: no es "infinito"). Con stock 0 o negativo, 0.
+    function diasAlcanza(stock, consumo30) {
+      const c = Number(consumo30)
+      if (!Number.isFinite(c) || c <= 0) return null
+      const s = Number(stock)
+      if (!Number.isFinite(s) || s <= 0) return 0
+      return Math.floor(s / (c / 30))
+    }
+    function textoAlcanza(dias) {
+      if (dias === null) return 'sin consumo'
+      if (dias === 0) return 'no alcanza'
+      return `~${miles(dias)} ${dias === 1 ? 'día' : 'días'}`
+    }
+
+    // Los que hay que mirar: stock negativo, y los que alcanzan para menos de
+    // DIAS_AVISO (los sin consumo no se avisan).
+    function alertasStock(filas) {
+      const negativos = [], pocos = []
+      for (const f of filas ?? []) {
+        if (Number(f.stock) < 0) { negativos.push(f); continue }
+        const d = diasAlcanza(f.stock, f.consumo_30d)
+        if (d !== null && d < DIAS_AVISO) pocos.push(f)
+      }
+      return { negativos, pocos }
+    }
+
+    // Un cono se lista en Stock si está activo o tiene algún número distinto de cero.
+    function conoEnUso(f) {
+      return f.activa !== false || [f.stock, f.en_camino, f.en_armado, f.consumo_30d].some(x => Number(x) !== 0)
+    }
+
+    function normalizarBusqueda(t) {
+      return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+    }
+
+    // Por pedir agrupado por papel (el orden de ORDEN_PAPELES), con el total.
+    function agruparPorPapel(filas) {
+      const grupos = new Map()
+      for (const f of filas ?? []) {
+        if (!grupos.has(f.papel)) grupos.set(f.papel, { papel: f.papel, total: 0, conos: [] })
+        const g = grupos.get(f.papel)
+        g.total += Number(f.cantidad) || 0
+        g.conos.push(f)
+      }
+      const orden = p => { const i = ORDEN_PAPELES.indexOf(p); return i === -1 ? 99 : i }
+      return [...grupos.values()].sort((a, b) => orden(a.papel) - orden(b.papel))
+    }
+
+    // El precio por cono vigente para un pliego: la MISMA regla que
+    // confirmar_pliego() en la base (el del papel, con la cantidad más
+    // parecida al total del pliego, vigente hasta hoy, el más nuevo).
+    function precioVigente(precios, papel, cantidadTotal, hoy) {
+      const cands = (precios ?? []).filter(p => p.papel === papel && String(p.vigente_desde) <= hoy)
+      cands.sort((a, b) =>
+        Math.abs(a.cantidad - cantidadTotal) - Math.abs(b.cantidad - cantidadTotal)
+        || String(b.vigente_desde).localeCompare(String(a.vigente_desde))
+        || String(b.cargado_en ?? '').localeCompare(String(a.cargado_en ?? '')))
+      return cands.length ? Number(cands[0].precio_unitario) : null
+    }
+
+    // El precio de una celda de la tabla de precios (papel × cantidad exacta).
+    function precioDeCelda(precios, papel, cantidad, hoy) {
+      const c = (precios ?? []).filter(p => p.papel === papel && Number(p.cantidad) === cantidad)
+        .sort((a, b) => String(b.vigente_desde).localeCompare(String(a.vigente_desde)) || String(b.cargado_en ?? '').localeCompare(String(a.cargado_en ?? '')))
+      const vigente = c.find(p => String(p.vigente_desde) <= hoy) ?? null
+      const futuro = c.filter(p => String(p.vigente_desde) > hoy).at(-1) ?? null
+      return { vigente, futuro, historial: c }
+    }
+
+    // Las cuentas del pliego: cantidad × precio, IVA y total, EN CENTAVOS.
+    function cuentasPliego(cantidad, precio, ivaPct = IVA_PCT) {
+      const cant = Number(cantidad) || 0
+      if (precio === null || precio === undefined || !Number.isFinite(Number(precio))) {
+        return { cantidad: cant, subtotal: null, impuesto: null, total: null }
+      }
+      const sub = Math.round(cant * Number(precio) * 100)
+      const imp = Math.round(sub * Number(ivaPct) / 100)
+      return { cantidad: cant, subtotal: sub / 100, impuesto: imp / 100, total: (sub + imp) / 100 }
+    }
+
+    function asignadoDe(items) {
+      return (items ?? []).reduce((a, i) => a + (Number(i.cantidad) || 0), 0)
+    }
+
+    // ¿Entra en el pliego? Lo mismo que poner_cono_pliego(): lo de los otros
+    // conos más la cantidad nueva de este no puede pasar el total.
+    function chequeoAsignar(items, total, marcaId, cantidadNueva) {
+      const otros = (items ?? []).filter(i => i.marca_id !== marcaId).reduce((a, i) => a + (Number(i.cantidad) || 0), 0)
+      if (!Number.isFinite(cantidadNueva) || cantidadNueva < 0) return { ok: false, error: 'La cantidad no puede ser negativa.' }
+      if (otros + cantidadNueva > total) return { ok: false, error: `No entra: quedan ${miles(total - otros)} por asignar en este pliego.` }
+      return { ok: true, asignado: otros + cantidadNueva, falta: total - otros - cantidadNueva }
+    }
+
+    function textoAsignado(asignado, total) {
+      const falta = total - asignado
+      return `Asignado ${miles(asignado)} de ${miles(total)} · ${falta > 0 ? 'faltan ' + miles(falta) : (falta === 0 ? 'completo' : 'sobran ' + miles(-falta))}`
+    }
+
+    // El número de la O.C.: el del pliego, y la versión si se modificó.
+    function numeroOC(pliego) {
+      return String(pliego.numero) + (Number(pliego.version) > 1 ? ` · v${pliego.version}` : '')
+    }
+    function nombreArchivoOC(pliego) {
+      return `Pliego-${pliego.numero}${Number(pliego.version) > 1 ? '-v' + pliego.version : ''}-Musumeci.pdf`
+    }
+
+    // Los textos de conos_config vienen con " · " entre renglón y renglón.
+    function renglones(texto) {
+      return String(texto ?? '').split(/\s+·\s+/).map(s => s.trim()).filter(Boolean)
+    }
+
+    // Los ítems de la O.C., en orden alfabético (la base no guarda el orden de carga).
+    function itemsOrdenados(items, nombreDe) {
+      return [...(items ?? [])].sort((a, b) => String(nombreDe(a.marca_id)).localeCompare(String(nombreDe(b.marca_id)), 'es'))
+    }
+
+    // LA ORDEN DE COMPRA (A4), como las de Musumeci. conPrecios = false (sin
+    // conos:precios) deja los precios y los totales en "-".
+    function htmlOrdenCompra({ pliego, items, papel, config, nuss, nombreDe, precio, conPrecios }) {
+      const cfg = config ?? {}
+      const lista = itemsOrdenados(items, nombreDe)
+      const cuentas = cuentasPliego(asignadoDe(lista), conPrecios ? precio : null, pliego.iva_pct ?? IVA_PCT)
+      const precioTxt = conPrecios ? precio3(precio) : '-'
+      const fila = (cod, desc, cant, pu, iva, tot, clase = '') =>
+        `<tr${clase ? ` class="${clase}"` : ''}><td>${cod}</td><td>${desc}</td><td class="n">${cant}</td><td class="n">${pu}</td><td class="c">${iva}</td><td class="n">${tot}</td></tr>`
+      const conos = lista.map(i => fila('', esc(nombreDe(i.marca_id)), esc(miles(i.cantidad)), esc(precioTxt), 'X',
+        conPrecios ? esc(cuentasPliego(i.cantidad, precio).subtotal === null ? '-' : formatearNumeroAr(cuentasPliego(i.cantidad, precio).subtotal, { decimales: 2 })) : '-',
+        i.logo_nuevo ? 'oc-logo' : ''))
+      while (conos.length < RENGLONES_MINIMOS_OC) conos.push(fila('', '', '', '-', 'X', '-'))
+      const nuevos = lista.filter(i => i.logo_nuevo).map(i => nombreDe(i.marca_id))
+      const prov = renglones(cfg.oc_proveedor_texto)
+      const dom = renglones(cfg.oc_domicilio)
+      const nussDom = renglones(nuss?.domicilio)
+      const plataOC = n => conPrecios && n !== null ? esc(formatearNumeroAr(n, { decimales: 2 })) : '-'
+      return `
+        <div class="oc-cab">
+          <div>
+            <img src="../logo-cucuruchos-nuss.png" alt="Nuss">
+            ${nussDom.map(r => `<div>${esc(r)}</div>`).join('')}
+            ${nuss?.telefono ? `<div>Tel: ${esc(nuss.telefono)}</div>` : ''}
+          </div>
+          <div>
+            <div class="oc-titulo">ORDEN DE COMPRA</div>
+            <div class="oc-num"><span>FECHA</span><span>${esc(fechaCorta(pliego.fecha_pedido))}</span><span>O.C. Nº</span><span>${esc(numeroOC(pliego))}</span></div>
+          </div>
+        </div>
+        <div class="oc-dos">
+          <div>
+            <div class="oc-barra-verde">PROVEEDOR</div>
+            ${prov.map(r => `<p>${esc(r)}</p>`).join('') || '<p>—</p>'}
+          </div>
+          <div>
+            <div class="oc-barra-verde">RAZÓN SOCIAL</div>
+            <p>${esc(cfg.oc_razon_social ?? '—')}</p>
+            <p>C.U.I.T: ${esc(cfg.oc_cuit ?? '—')}</p>
+            ${dom.map(r => `<p>${esc(r)}</p>`).join('')}
+            ${cfg.oc_telefono ? `<p>Teléfono: ${esc(cfg.oc_telefono)}</p>` : ''}
+          </div>
+        </div>
+        <div class="oc-tres">
+          <div><div class="oc-barra-verde">SOLICITANTE</div><div class="oc-valor">${esc(cfg.oc_solicitante ?? '')}</div></div>
+          <div><div class="oc-barra-verde">ENVIAR VÍA</div><div class="oc-valor">${esc(cfg.oc_envio ?? '')}</div></div>
+          <div><div class="oc-barra-verde">CONDICIONES DE ENVÍO</div><div class="oc-valor"></div></div>
+        </div>
+        <table class="oc-tabla">
+          <thead><tr><th style="width:24mm">CÓDIGO</th><th>DESCRIPCIÓN</th><th style="width:20mm">CANT.</th><th style="width:24mm">PRECIO UNIT.</th><th style="width:9mm">IVA</th><th style="width:26mm">TOTAL</th></tr></thead>
+          <tbody>
+            ${fila('0', esc(papel?.descripcion_oc ?? nombrePapel(pliego.papel)), '-', '-', '', '-')}
+            ${fila('', '', '', '-', 'X', '-')}
+            ${conos.join('')}
+            ${fila('0', '', esc(miles(cuentas.cantidad)), '', '', '', 'oc-final')}
+          </tbody>
+        </table>
+        <div class="oc-pie">
+          <div class="oc-coment">
+            <div class="oc-coment__cab">Comentarios o instrucciones especiales</div>
+            <p><b>FECHA DE ENTREGA</b>: ${esc(fechaCorta(pliego.fecha_entrega_estimada))}</p>
+            <p>Se adjunta Logos Nuevos:${nuevos.length ? '' : ' —'}</p>
+            ${nuevos.length ? `<p class="oc-rojo">${esc(nuevos.join(', '))}</p>` : ''}
+            ${renglones(pliego.comentarios).map(r => `<p><b>${esc(r)}</b></p>`).join('')}
+          </div>
+          <table class="oc-totales">
+            <tr><td>SUBTOTAL</td><td class="n">${plataOC(cuentas.subtotal)}</td></tr>
+            <tr><td>IMPONIBLE</td><td class="n">${plataOC(cuentas.subtotal)}</td></tr>
+            <tr><td>% DE IMPUESTO</td><td class="n">${esc(formatearNumeroAr(Number(pliego.iva_pct ?? IVA_PCT), { decimales: 3 }))}%</td></tr>
+            <tr><td>IMPUESTO</td><td class="n">${plataOC(cuentas.impuesto)}</td></tr>
+            <tr><td>ENVÍO</td><td class="n">-</td></tr>
+            <tr><td>OTROS</td><td class="n">-</td></tr>
+            <tr class="oc-total"><td>TOTAL</td><td class="n">${conPrecios && cuentas.total !== null ? '$' + esc(formatearNumeroAr(cuentas.total, { decimales: 2 })) : '-'}</td></tr>
+          </table>
+        </div>`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      yo: null,
+      perm: { ver: false, pedir: false, precios: false, recibir: false },
+      vistas: [],
+      vista: null,
+      conos: [],
+      conoPorId: new Map(),
+      papeles: new Map(),
+      config: {},
+      nuss: null,
+      pliegos: [],
+      items: [],
+      pendientes: [],
+      precios: [],
+      nombres: new Map(),
+      pliegoId: null,
+      volverA: null,
+      filtroEstado: '',
+      filtroPapel: '',
+      buscarPliego: '',
+      buscarStock: '',
+      stockTodos: false,
+      anotar: { marcaId: null, sugerido: false },
+      agregar: { abierto: false, marcaId: null, buscar: '' },
+      enviando: false,
+    }
+
+    function nombreCono(id) {
+      return estado.conoPorId.get(id)?.cono ?? estado.nombres.get(id) ?? 'Cono'
+    }
+    function pliegoPorId(id) {
+      return estado.pliegos.find(p => p.id === id) ?? null
+    }
+    function itemsDe(pliegoId) {
+      return estado.items.filter(i => i.pliego_id === pliegoId)
+    }
+
+    // Los mensajes de la base van TAL CUAL (ya vienen escritos para una persona).
+    function mensajeDe(err) {
+      return String(err?.message || err || 'No se pudo hacer. Revisá la conexión y probá de nuevo.')
+    }
+
+    async function rpc(nombre, params) {
+      const { data, error } = await supabase.rpc(nombre, params)
+      if (error) throw error
+      return data
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase.from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      estado.yo = emp
+      const { data: tareas, error: e2 } = await supabase.from('empleado_tareas').select('tarea')
+        .eq('empleado_id', emp.id).eq('modulo', 'conos').eq('habilitado', true)
+      if (e2) throw e2
+      estado.perm = permisosDe((tareas ?? []).map(t => t.tarea), emp.rol_app === 'super_admin')
+    }
+
+    async function cargarStock() {
+      const filas = await rpc('conos_stock')
+      estado.conos = (filas ?? []).map(f => ({ ...f }))
+      estado.conoPorId = new Map(estado.conos.map(f => [f.marca_id, f]))
+    }
+
+    async function cargarPliegos() {
+      const [pl, it] = await Promise.all([
+        supabase.from('cono_pliegos').select('*').order('numero', { ascending: false }),
+        supabase.from('cono_pliego_items').select('id, pliego_id, marca_id, cantidad, recibido, logo_nuevo'),
+      ])
+      if (pl.error) throw pl.error
+      if (it.error) throw it.error
+      estado.pliegos = pl.data ?? []
+      estado.items = it.data ?? []
+    }
+
+    async function cargarPendientes() {
+      if (!estado.perm.pedir) { estado.pendientes = []; return }
+      estado.pendientes = (await rpc('conos_por_pedir')) ?? []
+    }
+
+    async function cargarPrecios() {
+      if (!estado.perm.precios) { estado.precios = []; return }
+      const { data, error } = await supabase.from('cono_papel_precios').select('*')
+      if (error) throw error
+      estado.precios = data ?? []
+    }
+
+    async function cargarConfig() {
+      const [pa, cf, un] = await Promise.all([
+        supabase.from('cono_papeles').select('papel, nombre, descripcion_oc, gramaje'),
+        supabase.from('conos_config').select('clave, valor'),
+        supabase.from('unidades_negocio').select('id, nombre, domicilio, telefono').ilike('nombre', '%nuss%'),
+      ])
+      estado.papeles = new Map((pa.data ?? []).map(p => [p.papel, p]))
+      estado.config = Object.fromEntries((cf.data ?? []).map(c => [c.clave, c.valor]))
+      estado.nuss = (un.data ?? [])[0] ?? null
+    }
+
+    async function recargar() {
+      const tareas = [cargarStock(), cargarPendientes(), cargarPrecios()]
+      if (estado.perm.ver || estado.perm.pedir) tareas.push(cargarPliegos())
+      const r = await Promise.allSettled(tareas)
+      const fallo = r.find(x => x.status === 'rejected')
+      if (fallo) mostrarError('No se pudo leer todo: ' + mensajeDe(fallo.reason))
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NAVEGACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const SECCIONES = ['porpedir', 'stock', 'pliegos', 'armado', 'detalle', 'oc', 'precios']
+
+    function pintarTabs() {
+      const nav = document.getElementById('cn-tabs')
+      nav.innerHTML = estado.vistas.map(v =>
+        `<button type="button" class="cn-tab" data-vista="${esc(v.clave)}" aria-pressed="${pestanaActiva() === v.clave}">${esc(v.texto)}</button>`).join('')
+      nav.hidden = estado.vistas.length < 2
+    }
+    function pestanaActiva() {
+      if (['armado', 'detalle', 'oc'].includes(estado.vista)) return estado.perm.pedir ? 'pliegos' : 'entregas'
+      return estado.vista
+    }
+
+    function mostrar(vista) {
+      estado.vista = vista
+      const seccion = vista === 'entregas' ? 'pliegos' : vista
+      for (const s of SECCIONES) document.getElementById('cn-vista-' + s).hidden = s !== seccion
+      pintarTabs()
+      if (vista === 'porpedir') pintarPorPedir()
+      if (vista === 'stock') pintarStock()
+      if (vista === 'pliegos' || vista === 'entregas') pintarPliegos()
+      if (vista === 'armado') pintarArmado()
+      if (vista === 'detalle') pintarDetalle()
+      if (vista === 'oc') pintarOC()
+      if (vista === 'precios') pintarPrecios()
+      if (window.lucide) window.lucide.createIcons()
+    }
+
+    function abrirPliego(id) {
+      estado.pliegoId = id
+      const p = pliegoPorId(id)
+      mostrar(p && p.estado === 'armando' && estado.perm.pedir ? 'armado' : 'detalle')
+      window.scrollTo(0, 0)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // POR PEDIR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function opcionesPapel(elegido) {
+      return ORDEN_PAPELES.map(p => `<option value="${esc(p)}"${p === elegido ? ' selected' : ''}>${esc(nombrePapel(p))}</option>`).join('')
+    }
+
+    function buscarConos(texto, tope = 8) {
+      const q = normalizarBusqueda(texto)
+      if (!q) return []
+      return estado.conos
+        .filter(c => normalizarBusqueda(c.cono).includes(q))
+        .sort((a, b) => (b.activa === true) - (a.activa === true) || String(a.cono).localeCompare(String(b.cono), 'es'))
+        .slice(0, tope)
+    }
+
+    function htmlResultados(lista, atributo, textoNuevo) {
+      const filas = lista.map(c => `<button type="button" class="cn-resultado" ${atributo}="${esc(c.marca_id)}">${esc(c.cono)}${c.papel_ilustracion ? ' <span class="cn-chip cn-chip--ilus">Ilustración</span>' : ''}</button>`)
+      if (textoNuevo) filas.push(`<button type="button" class="cn-resultado" data-cono-nuevo="${esc(textoNuevo)}">+ Cono nuevo: «${esc(textoNuevo.toUpperCase())}»</button>`)
+      return filas.join('')
+    }
+
+    function pintarAnotar() {
+      const a = estado.anotar
+      const elegido = document.getElementById('cn-anotar-elegido')
+      const buscar = document.getElementById('cn-anotar-buscar')
+      if (a.marcaId) {
+        elegido.innerHTML = `<span class="cn-elegido">${esc(nombreCono(a.marcaId))} <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-anotar-cambiar>Cambiar</button></span>`
+        elegido.hidden = false
+        buscar.hidden = true
+        document.getElementById('cn-anotar-resultados').innerHTML = ''
+      } else {
+        elegido.innerHTML = ''
+        elegido.hidden = true
+        buscar.hidden = false
+      }
+      document.getElementById('cn-anotar-sugerido').hidden = !a.sugerido
+    }
+
+    function pintarPorPedir() {
+      const sumar = document.getElementById('cn-anotar-sumar')
+      if (!sumar.dataset.listo) {
+        sumar.innerHTML = BOTONES_ANOTAR.map(b => `<button type="button" class="cn-btn cn-btn--suave" data-sumar-anotar="${b.n}" title="Suma ${esc(miles(b.n))}">${esc(b.texto)}</button>`).join('')
+          + '<button type="button" class="cn-btn cn-btn--suave" data-sumar-anotar="0">Borrar</button>'
+        sumar.dataset.listo = '1'
+        document.getElementById('cn-anotar-papel').innerHTML = opcionesPapel('obra')
+      }
+      pintarAnotar()
+      pintarPendientes()
+    }
+
+    function anotadosDe(c) {
+      return Array.isArray(c?.anotados) ? c.anotados : []
+    }
+
+    function pintarPendientes() {
+      const cont = document.getElementById('cn-pendientes')
+      const grupos = agruparPorPapel(estado.pendientes)
+      if (!grupos.length) {
+        cont.innerHTML = '<div class="cn-tarjeta cn-vacio">No hay nada anotado para pedir.</div>'
+        return
+      }
+      cont.innerHTML = grupos.map(g => `
+        <div class="cn-tarjeta" data-grupo-papel="${esc(g.papel)}">
+          <div class="cn-grupo__cab">
+            <div class="cn-grupo__total">${esc(nombrePapel(g.papel))}: ${esc(miles(g.total))} anotados</div>
+            <button type="button" class="cn-btn" data-iniciar="${esc(g.papel)}">Iniciar pedido con esto</button>
+          </div>
+          ${g.conos.map(c => `
+            <div class="cn-pend">
+              <div class="cn-pend__nombre">${esc(c.cono)} · ${esc(miles(c.cantidad))}</div>
+              ${anotadosDe(c).map(an => `
+                <div class="cn-pend__anotado">
+                  <span>${esc(miles(an.cantidad))}${an.nota ? ' · ' + esc(an.nota) : ''} · ${esc(fechaCorta(String(an.creado_en ?? '').slice(0, 10)))}</span>
+                  <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-editar-pend="${esc(an.id)}" data-pend-marca="${esc(c.marca_id)}">Editar</button>
+                  <button type="button" class="cn-btn cn-btn--peligro cn-btn--chico" data-borrar-pend="${esc(an.id)}">Borrar</button>
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>`).join('')
+    }
+
+    async function elegirConoAnotar(id) {
+      estado.anotar.marcaId = id
+      estado.anotar.sugerido = false
+      document.getElementById('cn-anotar-buscar').value = ''
+      pintarAnotar()
+      try {
+        const papel = await rpc('cono_papel_sugerido', { p_marca_id: id })
+        if (estado.anotar.marcaId !== id) return
+        if (papel && NOMBRE_PAPEL[papel]) {
+          document.getElementById('cn-anotar-papel').value = papel
+          estado.anotar.sugerido = true
+          pintarAnotar()
+        }
+      } catch (err) { console.error('cono_papel_sugerido', err) }
+    }
+
+    async function anotar() {
+      const err = document.getElementById('cn-anotar-error')
+      const cant = leerCampoNumero(document.getElementById('cn-anotar-cantidad'))
+      const faltas = []
+      if (!estado.anotar.marcaId) faltas.push('Elegí el cono.')
+      if (!(cant > 0)) faltas.push('Poné la cantidad.')
+      if (faltas.length) { err.textContent = faltas.join(' '); err.hidden = false; return }
+      if (estado.enviando) return
+      estado.enviando = true
+      const btn = document.getElementById('cn-btn-anotar')
+      btn.disabled = true
+      try {
+        await rpc('anotar_cono_pendiente', {
+          p_marca_id: estado.anotar.marcaId, p_cantidad: cant,
+          p_papel: document.getElementById('cn-anotar-papel').value,
+          p_nota: document.getElementById('cn-anotar-nota').value.trim() || null,
+        })
+        mostrarExito(`Anotado: ${nombreCono(estado.anotar.marcaId)} · ${miles(cant)}`)
+        estado.anotar = { marcaId: null, sugerido: false }
+        ponerNumero(document.getElementById('cn-anotar-cantidad'), null)
+        document.getElementById('cn-anotar-nota').value = ''
+        err.hidden = true
+        await cargarPendientes()
+        pintarPorPedir()
+      } catch (e) {
+        err.textContent = mensajeDe(e); err.hidden = false
+      } finally {
+        estado.enviando = false
+        btn.disabled = false
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STOCK
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function pintarStock() {
+      const q = normalizarBusqueda(estado.buscarStock)
+      const filas = estado.conos
+        .filter(f => estado.stockTodos || conoEnUso(f))
+        .filter(f => !q || normalizarBusqueda(f.cono).includes(q))
+      const { negativos, pocos } = alertasStock(estado.conos.filter(conoEnUso))
+      const alertas = []
+      if (negativos.length) alertas.push(`<div class="cn-aviso cn-aviso--grave">Stock negativo: ${negativos.map(f => esc(f.cono) + ' (' + esc(miles(f.stock)) + ')').join(', ')}</div>`)
+      if (pocos.length) alertas.push(`<div class="cn-aviso cn-aviso--grave">Alcanzan para menos de ${DIAS_AVISO} días: ${pocos.map(f => esc(f.cono) + ' (' + esc(textoAlcanza(diasAlcanza(f.stock, f.consumo_30d))) + ')').join(', ')}</div>`)
+      document.getElementById('cn-stock-alertas').innerHTML = alertas.join('')
+      const cont = document.getElementById('cn-stock-lista')
+      if (!filas.length) { cont.innerHTML = '<div class="cn-vacio">No hay conos para mostrar.</div>'; return }
+      const cab = `<div class="cn-stock-fila cn-stock-fila--cab"><span>Cono</span><span class="cn-num">Stock</span><span class="cn-num">En camino</span><span class="cn-num">En armado</span><span class="cn-num">Consumo 30 días</span><span class="cn-num">Alcanza</span></div>`
+      cont.innerHTML = cab + filas.map(f => {
+        const dias = diasAlcanza(f.stock, f.consumo_30d)
+        const bajo = Number(f.stock) < 0 || (dias !== null && dias < DIAS_AVISO)
+        return `<div class="cn-stock-fila" data-stock-cono="${esc(f.marca_id)}">
+          <span class="cn-stock-nombre">${esc(f.cono)}${f.papel_ilustracion ? ' <span class="cn-chip cn-chip--ilus">Ilustración</span>' : ''}${f.activa === false ? ' <span class="cn-chip">Apagado</span>' : ''}</span>
+          <span class="cn-num${Number(f.stock) < 0 ? ' cn-negativo' : ''}"><small>Stock</small>${esc(miles(f.stock))}</span>
+          <span class="cn-num"><small>En camino</small>${esc(miles(f.en_camino))}</span>
+          <span class="cn-num"><small>En armado</small>${esc(miles(f.en_armado))}</span>
+          <span class="cn-num"><small>Consumo 30 días</small>${esc(miles(f.consumo_30d))}</span>
+          <span class="cn-num${bajo ? ' cn-negativo' : ''}"><small>Alcanza</small>${esc(textoAlcanza(dias))}</span>
+          ${estado.perm.pedir ? `<span class="cn-stock-acciones">
+            <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-conteo="${esc(f.marca_id)}">Conteo</button>
+            <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-ajuste="${esc(f.marca_id)}">Ajuste</button>
+          </span>` : ''}
+        </div>`
+      }).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PLIEGOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function precioDePliego(p) {
+      if (p.precio_unitario !== null && p.precio_unitario !== undefined) return Number(p.precio_unitario)
+      return precioVigente(estado.precios, p.papel, p.cantidad_total, hoyAr())
+    }
+
+    function pasaFiltroEstado(p, filtro) {
+      if (!filtro) return true
+      if (filtro === 'en_camino') return p.estado === 'pedido' || p.estado === 'recibido_parcial'
+      return p.estado === filtro
+    }
+
+    function pliegosVisibles() {
+      if (estado.vista === 'entregas') return estado.pliegos.filter(p => p.estado === 'pedido' || p.estado === 'recibido_parcial')
+      const q = normalizarBusqueda(estado.buscarPliego)
+      return estado.pliegos
+        .filter(p => pasaFiltroEstado(p, estado.filtroEstado))
+        .filter(p => !estado.filtroPapel || p.papel === estado.filtroPapel)
+        .filter(p => !q || String(p.numero).includes(q)
+          || itemsDe(p.id).some(i => normalizarBusqueda(nombreCono(i.marca_id)).includes(q)))
+    }
+
+    function htmlChipEstado(e) {
+      return `<span class="cn-chip cn-chip--${esc(e)}">${esc(ETIQUETA_ESTADO[e] ?? e)}</span>`
+    }
+
+    function pintarPliegos() {
+      const entregas = estado.vista === 'entregas'
+      document.getElementById('cn-pliegos-filtros').hidden = entregas
+      if (!entregas) {
+        document.getElementById('cn-pliegos-estados').innerHTML = FILTROS_ESTADO.map(f =>
+          `<button type="button" data-filtro-estado="${esc(f.v)}" aria-pressed="${estado.filtroEstado === f.v}">${esc(f.t)}</button>`).join('')
+        const sel = document.getElementById('cn-pliegos-papel')
+        sel.innerHTML = `<option value="">Todos los papeles</option>` + opcionesPapel(estado.filtroPapel)
+      }
+      const lista = pliegosVisibles()
+      const cont = document.getElementById('cn-pliegos-lista')
+      if (!lista.length) {
+        cont.innerHTML = `<div class="cn-tarjeta cn-vacio">${entregas ? 'No hay pliegos pendientes de entrega.' : 'No hay pliegos con esos filtros.'}</div>`
+        return
+      }
+      const q = normalizarBusqueda(estado.buscarPliego)
+      cont.innerHTML = lista.map(p => {
+        const its = itemsDe(p.id)
+        const asignado = asignadoDe(its)
+        const coincide = !entregas && q ? its.filter(i => normalizarBusqueda(nombreCono(i.marca_id)).includes(q)) : []
+        const totalIva = estado.perm.precios ? cuentasPliego(asignado, precioDePliego(p), p.iva_pct).total : null
+        if (entregas) {
+          const pendiente = its.reduce((a, i) => a + Math.max(0, i.cantidad - i.recibido), 0)
+          return `<div class="cn-pliego-entrega">
+            <div>
+              <div class="cn-pliego__num">N° ${esc(numeroOC(p))} · ${esc(nombrePapel(p.papel))}</div>
+              <div class="cn-pliego__datos">Entrega estimada ${esc(fechaCorta(p.fecha_entrega_estimada))} · faltan recibir ${esc(miles(pendiente))} de ${esc(miles(asignado))} · ${htmlChipEstado(p.estado)}</div>
+            </div>
+            <button type="button" class="cn-btn cn-btn--suave" data-pliego="${esc(p.id)}">Ver</button>
+            ${estado.perm.recibir || estado.perm.pedir ? `<button type="button" class="cn-btn" data-recibir="${esc(p.id)}">Recibir</button>` : ''}
+          </div>`
+        }
+        return `<button type="button" class="cn-pliego" data-pliego="${esc(p.id)}">
+          <span class="cn-pliego__num">N° ${esc(numeroOC(p))}</span>
+          <span class="cn-pliego__datos">${esc(fechaCorta(p.fecha_pedido))} · ${esc(nombrePapel(p.papel))} · ${esc(miles(p.cantidad_total))} · ${htmlChipEstado(p.estado)}<br>
+            Entrega estimada ${esc(fechaCorta(p.fecha_entrega_estimada))}${coincide.length ? ' · ' + coincide.map(i => esc(nombreCono(i.marca_id)) + ' ' + esc(miles(i.cantidad))).join(', ') : ''}</span>
+          <span class="cn-pliego__plata">${estado.perm.precios ? esc(plata(totalIva)) + '<br><small>con IVA</small>' : ''}</span>
+        </button>`
+      }).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PLIEGO EN ARMADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function pintarArmado() {
+      const p = pliegoPorId(estado.pliegoId)
+      const cont = document.getElementById('cn-armado')
+      if (!p) { cont.innerHTML = '<div class="cn-vacio">No se encontró el pliego.</div>'; return }
+      const its = itemsOrdenados(itemsDe(p.id), nombreCono)
+      const asignado = asignadoDe(its)
+      const falta = p.cantidad_total - asignado
+      const total = Number(p.cantidad_total)
+      const otraCant = !TAMANOS_PLIEGO.includes(total)
+      cont.innerHTML = `
+        <div class="cn-tarjeta">
+          <h2>Pliego N° ${esc(numeroOC(p))} · ${htmlChipEstado(p.estado)}</h2>
+          <div class="cn-fila">
+            <div class="cn-campo" style="flex: 1 1 10rem;"><label for="cn-arm-papel">Papel</label><select id="cn-arm-papel">${opcionesPapel(p.papel)}</select></div>
+            <div class="cn-campo" style="flex: 1 1 10rem;"><label for="cn-arm-total">Total del pliego</label>
+              <select id="cn-arm-total">${TAMANOS_PLIEGO.map(t => `<option value="${t}"${t === total ? ' selected' : ''}>${esc(miles(t))}</option>`).join('')}<option value="otra"${otraCant ? ' selected' : ''}>Otra</option></select>
+              <input type="text" id="cn-arm-total-otra" inputmode="numeric" aria-label="Otra cantidad"${otraCant ? '' : ' hidden'}>
+            </div>
+            <div class="cn-campo" style="flex: 1 1 10rem;"><label for="cn-arm-fecha">Entrega estimada</label><input type="date" id="cn-arm-fecha" value="${esc(p.fecha_entrega_estimada ?? '')}"></div>
+          </div>
+          <button type="button" class="cn-btn cn-btn--suave" id="cn-arm-guardar">Guardar papel, total y fecha</button>
+          <div class="cn-campo" style="margin-top: 0.75rem;"><label for="cn-arm-coment">Comentarios (van en la orden de compra)</label><textarea id="cn-arm-coment" maxlength="500">${esc(p.comentarios ?? '')}</textarea></div>
+          <button type="button" class="cn-btn cn-btn--suave" id="cn-arm-guardar-coment">Guardar comentarios</button>
+          <div class="cn-error" id="cn-arm-error" hidden></div>
+        </div>
+        <div class="cn-asignado ${falta > 0 ? 'cn-asignado--falta' : 'cn-asignado--completo'}" id="cn-asignado">${esc(textoAsignado(asignado, total))}</div>
+        <div class="cn-tarjeta">
+          <div class="cn-fila" style="justify-content: space-between;">
+            <h3>Conos del pliego</h3>
+            <button type="button" class="cn-btn cn-btn--suave" id="cn-arm-agregar-abrir">+ Agregar cono</button>
+          </div>
+          <div id="cn-arm-agregar" hidden></div>
+          ${its.length ? its.map(i => `
+            <div class="cn-item${i.logo_nuevo ? ' cn-item--logo' : ''}" data-item-marca="${esc(i.marca_id)}">
+              <span class="cn-item__nombre">${esc(nombreCono(i.marca_id))}${i.logo_nuevo ? ' <span class="cn-chip cn-chip--logo">LOGO NUEVO</span>' : ''}</span>
+              <span class="cn-item__cant">${esc(miles(i.cantidad))}</span>
+              <label class="cn-tilde"><input type="checkbox" data-logo-nuevo="${esc(i.marca_id)}"${i.logo_nuevo ? ' checked' : ''}> Logo nuevo</label>
+              <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-editar-item="${esc(i.marca_id)}">Editar</button>
+              <button type="button" class="cn-btn cn-btn--peligro cn-btn--chico" data-quitar-item="${esc(i.marca_id)}">Quitar</button>
+            </div>`).join('') : '<div class="cn-vacio">Todavía no tiene conos.</div>'}
+        </div>
+        <div class="cn-fila">
+          <button type="button" class="cn-btn" id="cn-arm-confirmar">Confirmar pedido</button>
+          <button type="button" class="cn-btn cn-btn--suave" data-ver-oc="${esc(p.id)}">Ver la orden de compra</button>
+          <button type="button" class="cn-btn cn-btn--peligro" data-anular="${esc(p.id)}">Anular</button>
+        </div>`
+      const otra = document.getElementById('cn-arm-total-otra')
+      enlazarCampoNumero(otra, { decimales: 0 })
+      if (otraCant) ponerNumero(otra, total)
+      pintarAgregar()
+    }
+
+    function pintarAgregar() {
+      const cont = document.getElementById('cn-arm-agregar')
+      if (!cont) return
+      const a = estado.agregar
+      cont.hidden = !a.abierto
+      if (!a.abierto) { cont.innerHTML = ''; return }
+      cont.innerHTML = `
+        <div class="cn-tarjeta" style="background: var(--color-superficie);">
+          <div class="cn-campo">
+            <label for="cn-agr-buscar">Cono</label>
+            ${a.marcaId ? `<span class="cn-elegido">${esc(nombreCono(a.marcaId))} <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-agregar-cambiar>Cambiar</button></span>`
+              : `<input type="text" id="cn-agr-buscar" placeholder="Buscar el cono…" autocomplete="off" value="${esc(a.buscar)}"><div class="cn-resultados" id="cn-agr-resultados"></div>`}
+          </div>
+          <div class="cn-campo">
+            <span class="cn-rotulo">Cantidad (los botones suman)</span>
+            <div class="cn-fila">
+              <input type="text" id="cn-agr-cantidad" inputmode="numeric" placeholder="0" style="max-width: 11rem;" aria-label="Cantidad a agregar">
+              ${BOTONES_PLIEGO.map(n => `<button type="button" class="cn-btn cn-btn--suave" data-sumar-agregar="${n}">+${esc(miles(n))}</button>`).join('')}
+              <button type="button" class="cn-btn cn-btn--suave" data-sumar-agregar="0">Borrar</button>
+            </div>
+          </div>
+          <div class="cn-error" id="cn-agr-error" hidden></div>
+          <div class="cn-fila">
+            <button type="button" class="cn-btn" id="cn-agr-confirmar">Agregar al pliego</button>
+            <button type="button" class="cn-btn cn-btn--suave" id="cn-agr-cerrar">Cerrar</button>
+          </div>
+        </div>`
+      enlazarCampoNumero(document.getElementById('cn-agr-cantidad'), { decimales: 0 })
+      pintarResultadosAgregar()
+    }
+
+    function pintarResultadosAgregar() {
+      const res = document.getElementById('cn-agr-resultados')
+      if (!res) return
+      const texto = estado.agregar.buscar.trim()
+      const lista = buscarConos(texto)
+      const exacto = lista.some(c => normalizarBusqueda(c.cono) === normalizarBusqueda(texto))
+      res.innerHTML = htmlResultados(lista, 'data-agregar-cono', texto.length >= 2 && !exacto ? texto : null)
+    }
+
+    async function confirmarAgregar() {
+      const p = pliegoPorId(estado.pliegoId)
+      const err = document.getElementById('cn-agr-error')
+      const cant = leerCampoNumero(document.getElementById('cn-agr-cantidad'))
+      if (!estado.agregar.marcaId) { err.textContent = 'Elegí el cono.'; err.hidden = false; return }
+      if (!(cant > 0)) { err.textContent = 'Poné la cantidad.'; err.hidden = false; return }
+      const ya = itemsDe(p.id).find(i => i.marca_id === estado.agregar.marcaId)
+      const nueva = (ya ? Number(ya.cantidad) : 0) + cant
+      const ch = chequeoAsignar(itemsDe(p.id), Number(p.cantidad_total), estado.agregar.marcaId, nueva)
+      if (!ch.ok) { err.textContent = ch.error; err.hidden = false; return }
+      await ponerCono(p, estado.agregar.marcaId, nueva, err, () => { estado.agregar = { abierto: true, marcaId: null, buscar: '' } })
+    }
+
+    async function ponerCono(p, marcaId, cantidad, errEl, despues) {
+      if (estado.enviando) return
+      estado.enviando = true
+      try {
+        await rpc('poner_cono_pliego', { p_pliego_id: p.id, p_marca_id: marcaId, p_cantidad: cantidad })
+        if (despues) despues()
+        await Promise.all([cargarPliegos(), cargarStock()])
+        pintarArmado()
+        return true
+      } catch (e) {
+        if (errEl) { errEl.textContent = mensajeDe(e); errEl.hidden = false } else mostrarError(mensajeDe(e))
+        return false
+      } finally {
+        estado.enviando = false
+      }
+    }
+
+    async function proponerCono(nombre) {
+      try {
+        const r = await rpc('proponer_marca', { p_nombre: nombre })
+        const id = r?.marca_id
+        if (!id) throw new Error('La base no devolvió el cono.')
+        if (!estado.conoPorId.has(id)) {
+          const fila = { marca_id: id, cono: String(nombre).trim().toUpperCase(), activa: true, papel_ilustracion: false, stock: 0, en_camino: 0, en_armado: 0, consumo_30d: 0 }
+          estado.conos.push(fila)
+          estado.conoPorId.set(id, fila)
+        }
+        estado.agregar.marcaId = id
+        pintarAgregar()
+        if (r.ya_existia) mostrarExito('Ese cono ya existía: quedó elegido.')
+      } catch (e) {
+        const err = document.getElementById('cn-agr-error')
+        err.textContent = mensajeDe(e); err.hidden = false
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DETALLE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarCambios(id) {
+      const { data, error } = await supabase.from('cono_pliego_cambios').select('*').eq('pliego_id', id).order('hecho_en')
+      if (error) throw error
+      const ids = [...new Set((data ?? []).map(c => c.hecho_por).filter(Boolean))].filter(x => !estado.nombres.has('emp:' + x))
+      if (ids.length) {
+        const { data: emps } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)
+        for (const e of emps ?? []) estado.nombres.set('emp:' + e.id, e.nombre)
+      }
+      return data ?? []
+    }
+
+    function textoCambio(c) {
+      const quien = estado.nombres.get('emp:' + c.hecho_por) ?? ''
+      const cuando = fechaHora(c.hecho_en)
+      let que = c.tipo
+      if (c.tipo === 'reabierto') que = 'Se modificó el pedido (volvió a armado)'
+      if (c.tipo === 'correccion_recepcion') {
+        const lista = (Array.isArray(c.detalle) ? c.detalle : []).map(d => `${nombreCono(d.marca_id)} ${Number(d.cantidad) > 0 ? '+' : ''}${miles(d.cantidad)}`)
+        que = 'Corrección de lo recibido' + (lista.length ? ': ' + lista.join(', ') : '')
+      }
+      return { que, motivo: c.motivo, quien, cuando }
+    }
+
+    function pintarDetalle() {
+      const p = pliegoPorId(estado.pliegoId)
+      const cont = document.getElementById('cn-detalle')
+      if (!p) { cont.innerHTML = '<div class="cn-vacio">No se encontró el pliego.</div>'; return }
+      const its = itemsOrdenados(itemsDe(p.id), nombreCono)
+      const asignado = asignadoDe(its)
+      const precio = precioDePliego(p)
+      const cuentas = cuentasPliego(asignado, precio, p.iva_pct)
+      const pp = estado.perm
+      const acciones = []
+      if (p.estado === 'armando' && pp.pedir) acciones.push(`<button type="button" class="cn-btn" data-abrir-armado="${esc(p.id)}">Seguir armando</button>`)
+      if (p.estado === 'pedido' && pp.pedir) acciones.push(`<button type="button" class="cn-btn cn-btn--suave" data-modificar="${esc(p.id)}">Modificar pedido</button>`)
+      if ((p.estado === 'pedido' || p.estado === 'recibido_parcial') && (pp.recibir || pp.pedir)) acciones.push(`<button type="button" class="cn-btn" data-recibir="${esc(p.id)}">Recibir</button>`)
+      if ((p.estado === 'recibido' || p.estado === 'recibido_parcial') && pp.pedir) acciones.push(`<button type="button" class="cn-btn cn-btn--suave" data-corregir="${esc(p.id)}">Corregir lo recibido</button>`)
+      if (['armando', 'pedido', 'recibido_parcial'].includes(p.estado) && pp.pedir) acciones.push(`<button type="button" class="cn-btn cn-btn--suave" data-cambiar-fecha="${esc(p.id)}">Cambiar fecha</button>`)
+      if (['armando', 'pedido'].includes(p.estado) && pp.pedir) acciones.push(`<button type="button" class="cn-btn cn-btn--peligro" data-anular="${esc(p.id)}">Anular</button>`)
+      if (p.estado !== 'anulado' && pp.pedir) acciones.push(`<button type="button" class="cn-btn cn-btn--suave" data-ver-oc="${esc(p.id)}">ORDEN DE COMPRA</button>`)
+      cont.innerHTML = `
+        <div class="cn-tarjeta">
+          <h2>Pliego N° ${esc(numeroOC(p))} · ${htmlChipEstado(p.estado)}</h2>
+          <dl class="cn-datos">
+            <div><dt>Papel</dt><dd>${esc(nombrePapel(p.papel))}</dd></div>
+            <div><dt>Total del pliego</dt><dd>${esc(miles(p.cantidad_total))}</dd></div>
+            <div><dt>Asignado</dt><dd>${esc(miles(asignado))}</dd></div>
+            <div><dt>Fecha del pedido</dt><dd>${esc(fechaCorta(p.fecha_pedido))}</dd></div>
+            <div><dt>Entrega estimada</dt><dd>${esc(fechaCorta(p.fecha_entrega_estimada))}</dd></div>
+            ${pp.precios ? `<div><dt>Precio por cono (sin IVA)</dt><dd>${esc(precio === null ? 'sin cargar' : '$ ' + precio3(precio))}</dd></div>
+            <div><dt>Total con IVA</dt><dd>${esc(plata(cuentas.total))}</dd></div>` : ''}
+          </dl>
+          ${p.estado === 'anulado' ? `<div class="cn-aviso cn-aviso--grave">Anulado: ${esc(p.anulado_motivo ?? '')}</div>` : ''}
+          ${p.comentarios ? `<p><b>Comentarios:</b> ${esc(p.comentarios)}</p>` : ''}
+          <div class="cn-fila">${acciones.join('')}</div>
+        </div>
+        <div class="cn-tarjeta">
+          <h3>Conos</h3>
+          <div class="cn-tabla-scroll"><table class="cn-tabla">
+            <thead><tr><th>Cono</th><th class="n">Pedido</th><th class="n">Recibido</th><th class="n">Falta</th></tr></thead>
+            <tbody>${its.map(i => `<tr${i.logo_nuevo ? ' class="cn-item--logo"' : ''}>
+              <td><b>${esc(nombreCono(i.marca_id))}</b>${i.logo_nuevo ? ' <span class="cn-chip cn-chip--logo">LOGO NUEVO</span>' : ''}</td>
+              <td class="n">${esc(miles(i.cantidad))}</td><td class="n">${esc(miles(i.recibido))}</td><td class="n">${esc(miles(Math.max(0, i.cantidad - i.recibido)))}</td></tr>`).join('')}</tbody>
+          </table></div>
+        </div>
+        <div class="cn-tarjeta"><h3>Historial</h3><ul class="cn-historial" id="cn-historial"><li>Cargando…</li></ul></div>`
+      pintarHistorial(p)
+    }
+
+    async function pintarHistorial(p) {
+      const ul = document.getElementById('cn-historial')
+      const base = []
+      if (p.creado_en) base.push({ cuando: p.creado_en, texto: 'Se armó el pliego' })
+      if (p.pedido_en) base.push({ cuando: p.pedido_en, texto: 'Se confirmó el pedido' })
+      if (p.recibido_en) base.push({ cuando: p.recibido_en, texto: 'Última recepción' })
+      if (p.anulado_en) base.push({ cuando: p.anulado_en, texto: 'Se anuló' })
+      let cambios = []
+      try { cambios = await cargarCambios(p.id) } catch (e) {
+        if (estado.pliegoId === p.id && ul.isConnected) ul.innerHTML = `<li class="cn-error">No se pudo leer el historial: ${esc(mensajeDe(e))}</li>`
+        return
+      }
+      if (estado.pliegoId !== p.id || !ul.isConnected) return
+      const filas = [
+        ...base.map(b => ({ t: b.cuando, html: `${esc(fechaHora(b.cuando))} · ${esc(b.texto)}` })),
+        ...cambios.map(c => { const x = textoCambio(c); return { t: c.hecho_en, html: `${esc(x.cuando)} · ${esc(x.que)}${x.motivo ? ' · Motivo: ' + esc(x.motivo) : ''}${x.quien ? ' · ' + esc(x.quien) : ''}` } }),
+      ].sort((a, b) => String(a.t).localeCompare(String(b.t)))
+      ul.innerHTML = filas.map(f => `<li>${f.html}</li>`).join('') || '<li>Sin cambios.</li>'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ORDEN DE COMPRA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function datosOC(p) {
+      return {
+        pliego: p, items: itemsDe(p.id), papel: estado.papeles.get(p.papel), config: estado.config,
+        nuss: estado.nuss, nombreDe: nombreCono, precio: precioDePliego(p), conPrecios: estado.perm.precios,
+      }
+    }
+
+    function pintarOC() {
+      const p = pliegoPorId(estado.pliegoId)
+      if (!p) return
+      document.getElementById('cn-oc-hoja').innerHTML = htmlOrdenCompra(datosOC(p))
+      document.getElementById('cn-oc-sin-precios').hidden = estado.perm.precios
+    }
+
+    const LIBRERIAS_PDF = [
+      'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    ]
+    function cargarScript(url) {
+      return new Promise((ok, mal) => {
+        if (document.querySelector(`script[src="${url}"]`)) return ok()
+        const s = document.createElement('script')
+        s.src = url; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + url))
+        document.head.appendChild(s)
+      })
+    }
+
+    async function generarPdfOC(p) {
+      for (const url of LIBRERIAS_PDF) await cargarScript(url)
+      const cont = document.createElement('div')
+      cont.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff'
+      const hoja = document.createElement('div')
+      hoja.className = 'cn-oc-hoja'
+      hoja.innerHTML = htmlOrdenCompra(datosOC(p))
+      cont.appendChild(hoja)
+      document.body.appendChild(cont)
+      try {
+        const imgs = [...hoja.querySelectorAll('img')]
+        await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r })))
+        const canvas = await window.html2canvas(hoja, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
+        const ancho = 190, alto = Math.min(canvas.height * ancho / canvas.width, 277)
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, ancho, alto)
+        return pdf.output('blob')
+      } finally {
+        cont.remove()
+      }
+    }
+
+    function descargar(blob, nombre) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = nombre
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    }
+
+    async function compartirOC(p) {
+      const texto = `Pliego N° ${numeroOC(p)}`
+      let blob
+      try { blob = await generarPdfOC(p) } catch (e) { mostrarError('No se pudo armar el PDF: ' + mensajeDe(e)); return }
+      const nombre = nombreArchivoOC(p)
+      const archivo = typeof File === 'function' ? new File([blob], nombre, { type: 'application/pdf' }) : null
+      if (archivo && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+        try { await navigator.share({ files: [archivo], title: texto, text: texto }); return } catch (err) {
+          if (err && err.name === 'AbortError') return
+        }
+      }
+      descargar(blob, nombre)
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener')
+      mostrarExito('Se descargó el PDF: adjuntalo en WhatsApp.')
+    }
+
+    async function descargarOC(p) {
+      try { descargar(await generarPdfOC(p), nombreArchivoOC(p)) } catch (e) { mostrarError('No se pudo armar el PDF: ' + mensajeDe(e)) }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRECIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function pintarPrecios() {
+      const hoy = hoyAr()
+      const celdas = []
+      for (const papel of ORDEN_PAPELES) for (const cant of TAMANOS_PLIEGO) {
+        const { vigente, futuro, historial } = precioDeCelda(estado.precios, papel, cant, hoy)
+        celdas.push(`<div class="cn-tarjeta" data-precio-celda="${esc(papel)}-${cant}">
+          <h3>${esc(nombrePapel(papel))} · pliego de ${esc(miles(cant))}</h3>
+          ${vigente ? `<div class="cn-precio__valor">$ ${esc(precio3(vigente.precio_unitario))} <small>por cono</small></div>
+            <div class="cn-rotulo">desde ${esc(fechaCorta(vigente.vigente_desde))}</div>` : '<div class="cn-precio__sin">sin cargar</div>'}
+          ${futuro ? `<div class="cn-rotulo">Desde ${esc(fechaCorta(futuro.vigente_desde))}: $ ${esc(precio3(futuro.precio_unitario))}</div>` : ''}
+          <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" style="margin-top: 0.5rem;" data-cargar-precio="${esc(papel)}" data-precio-cant="${cant}">Cargar precio</button>
+          ${historial.length ? `<ul class="cn-precio__hist">${historial.map(h => `<li>${esc(fechaCorta(h.vigente_desde))}: $ ${esc(precio3(h.precio_unitario))}${h.nota ? ' · ' + esc(h.nota) : ''}</li>`).join('')}</ul>` : ''}
+        </div>`)
+      }
+      document.getElementById('cn-precios').innerHTML = celdas.join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA VENTANA DE CADA ACCIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let accionModal = null
+    let focoAntes = null
+
+    function abrirModal(titulo, cuerpo, { textoBoton = 'Confirmar', peligro = false, alAbrir = null, accion }) {
+      focoAntes = document.activeElement
+      accionModal = accion
+      const m = document.getElementById('cn-modal')
+      m.innerHTML = `<h2 id="cn-modal-titulo">${esc(titulo)}</h2>${cuerpo}
+        <div class="cn-error" id="cn-modal-error" hidden></div>
+        <div class="cn-modal__acciones">
+          <button type="button" class="cn-btn cn-btn--suave" data-modal-cerrar>Cancelar</button>
+          ${accion ? `<button type="button" class="cn-btn${peligro ? ' cn-btn--peligro' : ''}" id="cn-modal-ok">${esc(textoBoton)}</button>` : ''}
+        </div>`
+      document.getElementById('cn-modal-fondo').hidden = false
+      if (alAbrir) alAbrir(m)
+      const primero = m.querySelector('input, select, textarea, button')
+      if (primero) primero.focus()
+    }
+    function cerrarModal() {
+      document.getElementById('cn-modal-fondo').hidden = true
+      document.getElementById('cn-modal').innerHTML = ''
+      accionModal = null
+      if (focoAntes && focoAntes.isConnected) focoAntes.focus()
+    }
+    function errorModal(texto) {
+      const e = document.getElementById('cn-modal-error')
+      if (!e) return
+      e.textContent = texto; e.hidden = false
+    }
+    async function ejecutarModal() {
+      if (!accionModal || estado.enviando) return
+      const ok = document.getElementById('cn-modal-ok')
+      estado.enviando = true
+      if (ok) ok.disabled = true
+      try {
+        const r = await accionModal()
+        if (r !== false) cerrarModal()
+      } catch (e) {
+        errorModal(mensajeDe(e))
+      } finally {
+        estado.enviando = false
+        if (ok && ok.isConnected) ok.disabled = false
+      }
+    }
+
+    // Iniciar un pedido con lo anotado de un papel.
+    function abrirIniciar(papel) {
+      const g = agruparPorPapel(estado.pendientes).find(x => x.papel === papel)
+      const cuerpo = `
+        <p>${esc(nombrePapel(papel))}: ${esc(miles(g?.total ?? 0))} anotados.</p>
+        <div class="cn-segmento" id="cn-ini-tam">${TAMANOS_PLIEGO.map(t => `<button type="button" data-tam="${t}" aria-pressed="false">${esc(miles(t))}</button>`).join('')}<button type="button" data-tam="otra" aria-pressed="false">Otra</button></div>
+        <div class="cn-campo" id="cn-ini-otra-campo" hidden><label for="cn-ini-otra">Cantidad del pliego</label><input type="text" id="cn-ini-otra" inputmode="numeric"></div>
+        <div class="cn-campo"><label for="cn-ini-fecha">Entrega estimada</label><input type="date" id="cn-ini-fecha" min="${esc(hoyAr())}"></div>
+        <div class="cn-campo"><label for="cn-ini-coment">Comentarios (van en la orden de compra)</label><textarea id="cn-ini-coment" maxlength="500"></textarea></div>`
+      let tam = null
+      abrirModal('Iniciar pedido', cuerpo, {
+        textoBoton: 'Armar el pliego',
+        alAbrir: m => {
+          enlazarCampoNumero(m.querySelector('#cn-ini-otra'), { decimales: 0 })
+          m.querySelector('#cn-ini-tam').addEventListener('click', ev => {
+            const b = ev.target.closest('[data-tam]')
+            if (!b) return
+            tam = b.dataset.tam
+            m.querySelectorAll('[data-tam]').forEach(x => x.setAttribute('aria-pressed', String(x === b)))
+            m.querySelector('#cn-ini-otra-campo').hidden = tam !== 'otra'
+          })
+        },
+        accion: async () => {
+          const total = tam === 'otra' ? leerCampoNumero(document.getElementById('cn-ini-otra')) : Number(tam)
+          if (!(total > 0)) { errorModal('Elegí el tamaño del pliego.'); return false }
+          const r = await rpc('crear_pliego_desde_pendientes', {
+            p_papel: papel, p_cantidad_total: total,
+            p_fecha_entrega_estimada: document.getElementById('cn-ini-fecha').value || null,
+            p_comentarios: document.getElementById('cn-ini-coment').value.trim() || null,
+          })
+          await recargar()
+          const avisos = [`Pliego N° ${r.numero} armado con ${miles(r.cargado)}.`]
+          if (Number(r.quedaron_anotados) > 0) avisos.push(`Quedaron anotados ${miles(r.quedaron_anotados)} que no entraron.`)
+          if (Number(r.falta) > 0) avisos.push(`Faltan asignar ${miles(r.falta)}.`)
+          mostrarExito(avisos.join(' '))
+          estado.agregar = { abierto: false, marcaId: null, buscar: '' }
+          abrirPliego(r.id)
+        },
+      })
+    }
+
+    function abrirEditarPendiente(id, marcaId) {
+      const fila = estado.pendientes.find(f => f.marca_id === marcaId)
+      const an = (fila?.anotados ?? []).find(a => a.id === id)
+      if (!an) return
+      abrirModal(`Editar · ${nombreCono(marcaId)}`, `
+        <div class="cn-campo"><label for="cn-ep-cant">Cantidad</label><input type="text" id="cn-ep-cant" inputmode="numeric"></div>
+        <div class="cn-campo"><label for="cn-ep-papel">Papel</label><select id="cn-ep-papel">${opcionesPapel(fila.papel)}</select></div>
+        <div class="cn-campo"><label for="cn-ep-nota">Nota</label><input type="text" id="cn-ep-nota" maxlength="200" value="${esc(an.nota ?? '')}"></div>`, {
+        textoBoton: 'Guardar',
+        alAbrir: m => { const c = m.querySelector('#cn-ep-cant'); enlazarCampoNumero(c, { decimales: 0 }); ponerNumero(c, Number(an.cantidad)) },
+        accion: async () => {
+          const cant = leerCampoNumero(document.getElementById('cn-ep-cant'))
+          if (!(cant > 0)) { errorModal('Poné la cantidad (para sacarlo, usá "Borrar").'); return false }
+          await rpc('editar_cono_pendiente', { p_id: id, p_cantidad: cant, p_papel: document.getElementById('cn-ep-papel').value, p_nota: document.getElementById('cn-ep-nota').value.trim() || null })
+          await cargarPendientes(); pintarPendientes()
+        },
+      })
+    }
+
+    function abrirBorrarPendiente(id) {
+      abrirModal('Borrar lo anotado', '<p>Se saca de la lista de "Por pedir".</p>', {
+        textoBoton: 'Borrar', peligro: true,
+        accion: async () => {
+          await rpc('editar_cono_pendiente', { p_id: id, p_cantidad: 0, p_papel: null, p_nota: null })
+          await cargarPendientes(); pintarPendientes()
+        },
+      })
+    }
+
+    function abrirConteoAjuste(marcaId, tipo) {
+      const f = estado.conoPorId.get(marcaId)
+      const conteo = tipo === 'conteo'
+      abrirModal(`${conteo ? 'Conteo' : 'Ajuste'} · ${nombreCono(marcaId)}`, `
+        <p>Stock según el sistema: <b>${esc(miles(f?.stock))}</b></p>
+        <div class="cn-campo"><label for="cn-aj-cant">${conteo ? 'Cuántos hay contados' : 'Cuánto sumar (o restar con −)'}</label><input type="text" id="cn-aj-cant" inputmode="${conteo ? 'numeric' : 'text'}"></div>
+        <div class="cn-campo"><label for="cn-aj-motivo">Motivo</label><input type="text" id="cn-aj-motivo" maxlength="200"></div>`, {
+        textoBoton: conteo ? 'Guardar el conteo' : 'Guardar el ajuste',
+        alAbrir: m => enlazarCampoNumero(m.querySelector('#cn-aj-cant'), { decimales: 0, negativos: !conteo }),
+        accion: async () => {
+          const cant = leerCampoNumero(document.getElementById('cn-aj-cant'))
+          const motivo = document.getElementById('cn-aj-motivo').value.trim()
+          if (cant === null || (!conteo && cant === 0) || (conteo && cant < 0)) { errorModal(conteo ? 'Poné cuántos hay.' : 'Poné cuánto sumar o restar.'); return false }
+          if (motivo.length < 3) { errorModal('El motivo es obligatorio.'); return false }
+          await rpc('ajustar_stock_cono', { p_marca_id: marcaId, p_tipo: tipo, p_cantidad: cant, p_motivo: motivo })
+          await cargarStock(); pintarStock()
+          mostrarExito(conteo ? 'Conteo guardado.' : 'Ajuste guardado.')
+        },
+      })
+    }
+
+    function abrirPliegoNuevo() {
+      let tam = null
+      abrirModal('Pliego nuevo vacío', `
+        <div class="cn-campo"><label for="cn-pn-papel">Papel</label><select id="cn-pn-papel">${opcionesPapel('obra')}</select></div>
+        <div class="cn-segmento" id="cn-pn-tam">${TAMANOS_PLIEGO.map(t => `<button type="button" data-tam="${t}" aria-pressed="false">${esc(miles(t))}</button>`).join('')}<button type="button" data-tam="otra" aria-pressed="false">Otra</button></div>
+        <div class="cn-campo" id="cn-pn-otra-campo" hidden><label for="cn-pn-otra">Cantidad del pliego</label><input type="text" id="cn-pn-otra" inputmode="numeric"></div>
+        <div class="cn-campo"><label for="cn-pn-fecha">Entrega estimada</label><input type="date" id="cn-pn-fecha" min="${esc(hoyAr())}"></div>`, {
+        textoBoton: 'Crear',
+        alAbrir: m => {
+          enlazarCampoNumero(m.querySelector('#cn-pn-otra'), { decimales: 0 })
+          m.querySelector('#cn-pn-tam').addEventListener('click', ev => {
+            const b = ev.target.closest('[data-tam]')
+            if (!b) return
+            tam = b.dataset.tam
+            m.querySelectorAll('[data-tam]').forEach(x => x.setAttribute('aria-pressed', String(x === b)))
+            m.querySelector('#cn-pn-otra-campo').hidden = tam !== 'otra'
+          })
+        },
+        accion: async () => {
+          const total = tam === 'otra' ? leerCampoNumero(document.getElementById('cn-pn-otra')) : Number(tam)
+          if (!(total > 0)) { errorModal('Elegí el tamaño del pliego.'); return false }
+          const r = await rpc('crear_pliego', { p_papel: document.getElementById('cn-pn-papel').value, p_cantidad_total: total, p_fecha_entrega_estimada: document.getElementById('cn-pn-fecha').value || null, p_nota: null })
+          await cargarPliegos()
+          abrirPliego(r.id)
+        },
+      })
+    }
+
+    function abrirEditarItem(marcaId) {
+      const p = pliegoPorId(estado.pliegoId)
+      const it = itemsDe(p.id).find(i => i.marca_id === marcaId)
+      abrirModal(`Cantidad · ${nombreCono(marcaId)}`, `
+        <div class="cn-campo"><label for="cn-ei-cant">Cantidad en este pliego</label>
+          <div class="cn-fila"><input type="text" id="cn-ei-cant" inputmode="numeric" style="max-width: 11rem;">
+          ${BOTONES_PLIEGO.map(n => `<button type="button" class="cn-btn cn-btn--suave" data-sumar-item="${n}">+${esc(miles(n))}</button>`).join('')}</div>
+        </div>`, {
+        textoBoton: 'Guardar',
+        alAbrir: m => {
+          const c = m.querySelector('#cn-ei-cant')
+          enlazarCampoNumero(c, { decimales: 0 }); ponerNumero(c, Number(it?.cantidad ?? 0))
+          m.addEventListener('click', ev => {
+            const b = ev.target.closest('[data-sumar-item]')
+            if (b) ponerNumero(c, sumarCantidad(leerCampoNumero(c), Number(b.dataset.sumarItem)))
+          })
+        },
+        accion: async () => {
+          const cant = leerCampoNumero(document.getElementById('cn-ei-cant'))
+          if (!(cant > 0)) { errorModal('Poné la cantidad (para sacarlo, usá "Quitar").'); return false }
+          const ch = chequeoAsignar(itemsDe(p.id), Number(p.cantidad_total), marcaId, cant)
+          if (!ch.ok) { errorModal(ch.error); return false }
+          await rpc('poner_cono_pliego', { p_pliego_id: p.id, p_marca_id: marcaId, p_cantidad: cant })
+          await Promise.all([cargarPliegos(), cargarStock()]); pintarArmado()
+        },
+      })
+    }
+
+    function abrirQuitarItem(marcaId) {
+      const p = pliegoPorId(estado.pliegoId)
+      abrirModal('Quitar del pliego', `<p>Se saca <b>${esc(nombreCono(marcaId))}</b> del pliego N° ${esc(numeroOC(p))}.</p>`, {
+        textoBoton: 'Quitar', peligro: true,
+        accion: async () => {
+          await rpc('poner_cono_pliego', { p_pliego_id: p.id, p_marca_id: marcaId, p_cantidad: 0 })
+          await Promise.all([cargarPliegos(), cargarStock()]); pintarArmado()
+        },
+      })
+    }
+
+    function htmlCuentasConfirmar(p) {
+      const its = itemsDe(p.id)
+      const asignado = asignadoDe(its)
+      const falta = Number(p.cantidad_total) - asignado
+      const precio = precioDePliego(p)
+      const c = cuentasPliego(asignado, precio, p.iva_pct)
+      return `
+        ${falta > 0 ? `<div class="cn-aviso cn-aviso--grave">Faltan asignar ${esc(miles(falta))} de ${esc(miles(p.cantidad_total))}: el pedido sale igual con ${esc(miles(asignado))}.</div>` : ''}
+        <p>${esc(nombrePapel(p.papel))} · ${esc(miles(asignado))} conos · ${its.length} ${its.length === 1 ? 'logo' : 'logos'}</p>
+        ${estado.perm.precios ? `<table class="cn-cuentas" id="cn-cuentas">
+          <tr><td>Precio por cono (sin IVA)</td><td class="n">${esc(precio === null ? 'sin cargar' : '$ ' + precio3(precio))}</td></tr>
+          <tr><td>Subtotal</td><td class="n">${esc(plata(c.subtotal))}</td></tr>
+          <tr><td>IVA ${esc(formatearNumeroAr(Number(p.iva_pct ?? IVA_PCT), { decimales: 0 }))} %</td><td class="n">${esc(plata(c.impuesto))}</td></tr>
+          <tr class="total"><td>Total</td><td class="n">${esc(plata(c.total))}</td></tr>
+        </table>` : '<p class="cn-aviso">Los precios los ve quien tiene permiso de precios.</p>'}`
+    }
+
+    function abrirConfirmar() {
+      const p = pliegoPorId(estado.pliegoId)
+      if (!asignadoDe(itemsDe(p.id))) { mostrarError('El pliego no tiene conos.'); return }
+      abrirModal(`Confirmar el pedido N° ${numeroOC(p)}`, htmlCuentasConfirmar(p), {
+        textoBoton: 'Confirmar pedido',
+        accion: async () => {
+          await rpc('confirmar_pliego', { p_pliego_id: p.id })
+          await recargar()
+          estado.pliegoId = p.id
+          mostrar('detalle')
+          ofrecerCompartir(p.id)
+        },
+      })
+    }
+
+    // Al confirmar (o volver a confirmar después de modificar) se ofrece
+    // mandar la orden de compra enseguida.
+    function ofrecerCompartir(id) {
+      const p = pliegoPorId(id)
+      if (!p) return
+      setTimeout(() => abrirModal(`Pedido N° ${numeroOC(p)} confirmado`, '<p>¿Mandás la orden de compra a Musumeci ahora?</p>', {
+        textoBoton: 'Compartir por WhatsApp',
+        alAbrir: m => {
+          const ver = document.createElement('button')
+          ver.type = 'button'; ver.className = 'cn-btn cn-btn--suave'; ver.textContent = 'Ver la orden'; ver.dataset.verOc = id
+          m.querySelector('.cn-modal__acciones').prepend(ver)
+          m.querySelector('[data-modal-cerrar]').textContent = 'Después'
+        },
+        accion: async () => { await compartirOC(p) },
+      }), 0)
+    }
+
+    function abrirModificar(id) {
+      const p = pliegoPorId(id)
+      abrirModal(`Modificar el pedido N° ${numeroOC(p)}`, `
+        <p>El pliego vuelve a "En armado" y pasa a la versión ${Number(p.version) + 1}. Después lo confirmás de nuevo y mandás la orden otra vez.</p>
+        <div class="cn-campo"><label for="cn-mod-motivo">Motivo (opcional)</label><input type="text" id="cn-mod-motivo" maxlength="200"></div>`, {
+        textoBoton: 'Modificar',
+        accion: async () => {
+          await rpc('reabrir_pliego', { p_pliego_id: id, p_motivo: document.getElementById('cn-mod-motivo').value.trim() || null })
+          await recargar()
+          abrirPliego(id)
+        },
+      })
+    }
+
+    function abrirRecibir(id) {
+      const p = pliegoPorId(id)
+      const its = itemsOrdenados(itemsDe(id), nombreCono).filter(i => i.cantidad > i.recibido)
+      let modo = 'todo'
+      abrirModal(`Recibir el pliego N° ${numeroOC(p)}`, `
+        <div class="cn-segmento" id="cn-rec-modo">
+          <button type="button" data-rec-modo="todo" aria-pressed="true">Llegó todo</button>
+          <button type="button" data-rec-modo="parte" aria-pressed="false">Llegó una parte</button>
+        </div>
+        <div id="cn-rec-todo"><p>Se recibe lo que falta de cada cono: ${esc(miles(its.reduce((a, i) => a + i.cantidad - i.recibido, 0)))} en total.</p></div>
+        <div id="cn-rec-parte" hidden>
+          ${its.map(i => `<div class="cn-campo"><label for="cn-rec-${esc(i.marca_id)}">${esc(nombreCono(i.marca_id))} · faltan ${esc(miles(i.cantidad - i.recibido))}</label><input type="text" inputmode="numeric" id="cn-rec-${esc(i.marca_id)}" data-rec-cant="${esc(i.marca_id)}"></div>`).join('')}
+        </div>
+        <div class="cn-campo"><label for="cn-rec-fecha">Fecha de llegada</label><input type="date" id="cn-rec-fecha" value="${esc(hoyAr())}" max="${esc(hoyAr())}"></div>`, {
+        textoBoton: 'Recibir',
+        alAbrir: m => {
+          m.querySelectorAll('[data-rec-cant]').forEach(inp => enlazarCampoNumero(inp, { decimales: 0 }))
+          m.querySelector('#cn-rec-modo').addEventListener('click', ev => {
+            const b = ev.target.closest('[data-rec-modo]')
+            if (!b) return
+            modo = b.dataset.recModo
+            m.querySelectorAll('[data-rec-modo]').forEach(x => x.setAttribute('aria-pressed', String(x === b)))
+            m.querySelector('#cn-rec-todo').hidden = modo !== 'todo'
+            m.querySelector('#cn-rec-parte').hidden = modo !== 'parte'
+          })
+        },
+        accion: async () => {
+          let items = null
+          if (modo === 'parte') {
+            items = [...document.querySelectorAll('[data-rec-cant]')]
+              .map(inp => ({ marca_id: inp.dataset.recCant, cantidad: leerCampoNumero(inp) }))
+              .filter(x => x.cantidad !== null && x.cantidad > 0)
+            if (!items.length) { errorModal('Poné cuánto llegó de al menos un cono.'); return false }
+            const mal = items.find(x => { const i = its.find(y => y.marca_id === x.marca_id); return i && x.cantidad > i.cantidad - i.recibido })
+            if (mal) { errorModal(`De ${nombreCono(mal.marca_id)} llegó más de lo que faltaba: si vino de más, usá "Corregir lo recibido".`); return false }
+          }
+          const r = await rpc('recibir_pliego', { p_pliego_id: id, p_items: items, p_fecha: document.getElementById('cn-rec-fecha').value || null })
+          await recargar()
+          mostrarExito(`Recibidos ${miles(r?.recibido)} conos del pliego N° ${p.numero}.`)
+          estado.pliegoId = id
+          mostrar(estado.vista === 'entregas' ? 'entregas' : 'detalle')
+        },
+      })
+    }
+
+    function abrirCorregir(id) {
+      const p = pliegoPorId(id)
+      const its = itemsOrdenados(itemsDe(id), nombreCono)
+      abrirModal(`Corregir lo recibido · N° ${numeroOC(p)}`, `
+        <p>Por cono, cuánto sumar (vino de más) o restar con − (vino de menos o se contó mal). Mueve el stock.</p>
+        ${its.map(i => `<div class="cn-campo"><label for="cn-cor-${esc(i.marca_id)}">${esc(nombreCono(i.marca_id))} · recibido ${esc(miles(i.recibido))}</label><input type="text" id="cn-cor-${esc(i.marca_id)}" data-cor-cant="${esc(i.marca_id)}" inputmode="text"></div>`).join('')}
+        <div class="cn-campo"><label for="cn-cor-motivo">Motivo</label><input type="text" id="cn-cor-motivo" maxlength="200"></div>`, {
+        textoBoton: 'Corregir',
+        alAbrir: m => m.querySelectorAll('[data-cor-cant]').forEach(inp => enlazarCampoNumero(inp, { decimales: 0, negativos: true })),
+        accion: async () => {
+          const cambios = [...document.querySelectorAll('[data-cor-cant]')]
+            .map(inp => ({ marca_id: inp.dataset.corCant, cantidad: leerCampoNumero(inp) }))
+            .filter(x => x.cantidad !== null && x.cantidad !== 0)
+          const motivo = document.getElementById('cn-cor-motivo').value.trim()
+          if (!cambios.length) { errorModal('Poné cuánto sumar o restar de al menos un cono.'); return false }
+          const mal = cambios.find(x => { const i = its.find(y => y.marca_id === x.marca_id); return i && i.recibido + x.cantidad < 0 })
+          if (mal) { errorModal(`De ${nombreCono(mal.marca_id)} no se puede restar más de lo recibido.`); return false }
+          if (motivo.length < 3) { errorModal('El motivo es obligatorio.'); return false }
+          await rpc('corregir_recepcion_pliego', { p_pliego_id: id, p_cambios: cambios, p_motivo: motivo })
+          await recargar(); mostrar('detalle')
+          mostrarExito('Corrección guardada: el stock se movió.')
+        },
+      })
+    }
+
+    function abrirCambiarFecha(id) {
+      const p = pliegoPorId(id)
+      abrirModal(`Cambiar la fecha · N° ${numeroOC(p)}`, `
+        <div class="cn-campo"><label for="cn-cf-fecha">Entrega estimada</label><input type="date" id="cn-cf-fecha" value="${esc(p.fecha_entrega_estimada ?? '')}"></div>
+        <div class="cn-campo"><label for="cn-cf-nota">Nota (opcional)</label><input type="text" id="cn-cf-nota" maxlength="200"></div>`, {
+        textoBoton: 'Guardar',
+        accion: async () => {
+          const f = document.getElementById('cn-cf-fecha').value
+          if (!f) { errorModal('Elegí la fecha.'); return false }
+          await rpc('cambiar_fecha_pliego', { p_pliego_id: id, p_fecha_entrega_estimada: f, p_nota: document.getElementById('cn-cf-nota').value.trim() || null })
+          await cargarPliegos(); mostrar(estado.vista)
+        },
+      })
+    }
+
+    function abrirAnular(id) {
+      const p = pliegoPorId(id)
+      abrirModal(`Anular el pliego N° ${numeroOC(p)}`, `
+        <div class="cn-campo"><label for="cn-an-motivo">Motivo</label><input type="text" id="cn-an-motivo" maxlength="200"></div>`, {
+        textoBoton: 'Anular', peligro: true,
+        accion: async () => {
+          const motivo = document.getElementById('cn-an-motivo').value.trim()
+          if (motivo.length < 3) { errorModal('El motivo es obligatorio.'); return false }
+          await rpc('anular_pliego', { p_pliego_id: id, p_motivo: motivo })
+          await recargar(); estado.pliegoId = id; mostrar('detalle')
+        },
+      })
+    }
+
+    function abrirCargarPrecio(papel, cant) {
+      abrirModal(`Precio · ${nombrePapel(papel)} · pliego de ${miles(cant)}`, `
+        <div class="cn-campo"><label for="cn-pr-precio">Precio por cono, sin IVA</label><input type="text" id="cn-pr-precio" inputmode="decimal"></div>
+        <div class="cn-campo"><label for="cn-pr-desde">Vigente desde</label><input type="date" id="cn-pr-desde" value="${esc(hoyAr())}"></div>
+        <div class="cn-campo"><label for="cn-pr-nota">Nota (opcional)</label><input type="text" id="cn-pr-nota" maxlength="200"></div>`, {
+        textoBoton: 'Guardar el precio',
+        alAbrir: m => enlazarCampoNumero(m.querySelector('#cn-pr-precio'), { decimales: 3 }),
+        accion: async () => {
+          const precio = leerCampoNumero(document.getElementById('cn-pr-precio'))
+          if (precio === null || precio < 0) { errorModal('Poné el precio por cono, sin IVA.'); return false }
+          await rpc('guardar_precio_cono_papel', { p_papel: papel, p_cantidad: cant, p_precio_unitario: precio, p_vigente_desde: document.getElementById('cn-pr-desde').value || null, p_nota: document.getElementById('cn-pr-nota').value.trim() || null })
+          await cargarPrecios(); pintarPrecios()
+          mostrarExito('Precio guardado.')
+        },
+      })
+    }
+
+    async function guardarDatosArmado() {
+      const p = pliegoPorId(estado.pliegoId)
+      const err = document.getElementById('cn-arm-error')
+      const sel = document.getElementById('cn-arm-total').value
+      const total = sel === 'otra' ? leerCampoNumero(document.getElementById('cn-arm-total-otra')) : Number(sel)
+      if (!(total > 0)) { err.textContent = 'Poné el total del pliego.'; err.hidden = false; return }
+      if (total < asignadoDe(itemsDe(p.id))) { err.textContent = `Ya hay ${miles(asignadoDe(itemsDe(p.id)))} conos asignados: el total no puede ser menor.`; err.hidden = false; return }
+      try {
+        await rpc('editar_pliego', { p_pliego_id: p.id, p_papel: document.getElementById('cn-arm-papel').value, p_cantidad_total: total, p_fecha_entrega_estimada: document.getElementById('cn-arm-fecha').value || null, p_nota: p.nota ?? null })
+        await cargarPliegos(); pintarArmado(); mostrarExito('Pliego guardado.')
+      } catch (e) { err.textContent = mensajeDe(e); err.hidden = false }
+    }
+
+    async function guardarComentariosArmado() {
+      const p = pliegoPorId(estado.pliegoId)
+      const err = document.getElementById('cn-arm-error')
+      try {
+        await rpc('guardar_comentarios_pliego', { p_pliego_id: p.id, p_comentarios: document.getElementById('cn-arm-coment').value.trim() || null })
+        await cargarPliegos(); mostrarExito('Comentarios guardados.')
+      } catch (e) { err.textContent = mensajeDe(e); err.hidden = false }
+    }
+
+    async function marcarLogo(marcaId, nuevo, input) {
+      const p = pliegoPorId(estado.pliegoId)
+      try {
+        await rpc('marcar_logo_nuevo', { p_pliego_id: p.id, p_marca_id: marcaId, p_nuevo: nuevo })
+        await cargarPliegos(); pintarArmado()
+      } catch (e) {
+        input.checked = !nuevo
+        mostrarError(mensajeDe(e))
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function conectarTodo() {
+      document.getElementById('cn-tabs').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-vista]')
+        if (b) mostrar(b.dataset.vista)
+      })
+      const cantAnotar = document.getElementById('cn-anotar-cantidad')
+      enlazarCampoNumero(cantAnotar, { decimales: 0 })
+      document.getElementById('cn-anotar-buscar').addEventListener('input', ev => {
+        document.getElementById('cn-anotar-resultados').innerHTML = htmlResultados(buscarConos(ev.target.value), 'data-anotar-cono', null)
+      })
+      document.getElementById('cn-btn-anotar').addEventListener('click', anotar)
+      document.getElementById('cn-anotar-papel').addEventListener('change', () => { estado.anotar.sugerido = false; pintarAnotar() })
+      document.getElementById('cn-stock-buscar').addEventListener('input', ev => { estado.buscarStock = ev.target.value; pintarStock() })
+      document.getElementById('cn-stock-todos').addEventListener('change', ev => { estado.stockTodos = ev.target.checked; pintarStock() })
+      document.getElementById('cn-pliegos-papel').addEventListener('change', ev => { estado.filtroPapel = ev.target.value; pintarPliegos() })
+      document.getElementById('cn-pliegos-buscar').addEventListener('input', ev => { estado.buscarPliego = ev.target.value; pintarPliegos() })
+      document.getElementById('cn-btn-pliego-nuevo').addEventListener('click', abrirPliegoNuevo)
+      document.getElementById('cn-oc-volver').addEventListener('click', () => mostrar(pliegoPorId(estado.pliegoId)?.estado === 'armando' && estado.perm.pedir ? 'armado' : 'detalle'))
+      document.getElementById('cn-oc-imprimir').addEventListener('click', () => window.print())
+      document.getElementById('cn-oc-pdf').addEventListener('click', () => descargarOC(pliegoPorId(estado.pliegoId)))
+      document.getElementById('cn-oc-whatsapp').addEventListener('click', () => compartirOC(pliegoPorId(estado.pliegoId)))
+
+      document.getElementById('cn-modal-fondo').addEventListener('click', ev => {
+        if (ev.target.id === 'cn-modal-fondo' || ev.target.closest('[data-modal-cerrar]')) { cerrarModal(); return }
+        if (ev.target.closest('#cn-modal-ok')) ejecutarModal()
+      })
+      document.addEventListener('keydown', ev => {
+        if (ev.key === 'Escape' && !document.getElementById('cn-modal-fondo').hidden && !estado.enviando) cerrarModal()
+      })
+
+      document.getElementById('cn-app').addEventListener('input', ev => {
+        if (ev.target.id === 'cn-agr-buscar') { estado.agregar.buscar = ev.target.value; pintarResultadosAgregar() }
+        if (ev.target.id === 'cn-arm-total' ) return
+      })
+      document.getElementById('cn-app').addEventListener('change', ev => {
+        if (ev.target.id === 'cn-arm-total') document.getElementById('cn-arm-total-otra').hidden = ev.target.value !== 'otra'
+        const logo = ev.target.closest('[data-logo-nuevo]')
+        if (logo) marcarLogo(logo.dataset.logoNuevo, logo.checked, logo)
+      })
+
+      document.body.addEventListener('click', ev => {
+        const t = ev.target
+        const b = sel => t.closest(sel)
+        let el
+        if ((el = b('[data-sumar-anotar]'))) {
+          const n = Number(el.dataset.sumarAnotar)
+          ponerNumero(cantAnotar, n === 0 ? null : sumarCantidad(leerCampoNumero(cantAnotar), n))
+          return
+        }
+        if ((el = b('[data-anotar-cono]'))) { elegirConoAnotar(el.dataset.anotarCono); return }
+        if (b('[data-anotar-cambiar]')) { estado.anotar = { marcaId: null, sugerido: false }; pintarAnotar(); document.getElementById('cn-anotar-buscar').focus(); return }
+        if ((el = b('[data-iniciar]'))) { abrirIniciar(el.dataset.iniciar); return }
+        if ((el = b('[data-editar-pend]'))) { abrirEditarPendiente(el.dataset.editarPend, el.dataset.pendMarca); return }
+        if ((el = b('[data-borrar-pend]'))) { abrirBorrarPendiente(el.dataset.borrarPend); return }
+        if ((el = b('[data-conteo]'))) { abrirConteoAjuste(el.dataset.conteo, 'conteo'); return }
+        if ((el = b('[data-ajuste]'))) { abrirConteoAjuste(el.dataset.ajuste, 'ajuste'); return }
+        if ((el = b('[data-filtro-estado]'))) { estado.filtroEstado = el.dataset.filtroEstado; pintarPliegos(); return }
+        if ((el = b('[data-recibir]'))) { abrirRecibir(el.dataset.recibir); return }
+        if ((el = b('[data-pliego]'))) { abrirPliego(el.dataset.pliego); return }
+        if (b('[data-volver-pliegos]')) { mostrar(estado.perm.pedir ? 'pliegos' : 'entregas'); return }
+        if ((el = b('[data-abrir-armado]'))) { abrirPliego(el.dataset.abrirArmado); return }
+        if ((el = b('[data-modificar]'))) { abrirModificar(el.dataset.modificar); return }
+        if ((el = b('[data-corregir]'))) { abrirCorregir(el.dataset.corregir); return }
+        if ((el = b('[data-cambiar-fecha]'))) { abrirCambiarFecha(el.dataset.cambiarFecha); return }
+        if ((el = b('[data-anular]'))) { abrirAnular(el.dataset.anular); return }
+        if ((el = b('[data-ver-oc]'))) { if (!document.getElementById('cn-modal-fondo').hidden) cerrarModal(); estado.pliegoId = el.dataset.verOc; mostrar('oc'); window.scrollTo(0, 0); return }
+        if ((el = b('[data-cargar-precio]'))) { abrirCargarPrecio(el.dataset.cargarPrecio, Number(el.dataset.precioCant)); return }
+        if (b('#cn-arm-guardar')) { guardarDatosArmado(); return }
+        if (b('#cn-arm-guardar-coment')) { guardarComentariosArmado(); return }
+        if (b('#cn-arm-confirmar')) { abrirConfirmar(); return }
+        if (b('#cn-arm-agregar-abrir')) { estado.agregar = { abierto: true, marcaId: null, buscar: '' }; pintarAgregar(); document.getElementById('cn-agr-buscar')?.focus(); return }
+        if (b('#cn-agr-cerrar')) { estado.agregar = { abierto: false, marcaId: null, buscar: '' }; pintarAgregar(); return }
+        if (b('#cn-agr-confirmar')) { confirmarAgregar(); return }
+        if ((el = b('[data-agregar-cono]'))) { estado.agregar.marcaId = el.dataset.agregarCono; pintarAgregar(); return }
+        if (b('[data-agregar-cambiar]')) { estado.agregar.marcaId = null; pintarAgregar(); return }
+        if ((el = b('[data-cono-nuevo]'))) { proponerCono(el.dataset.conoNuevo); return }
+        if ((el = b('[data-sumar-agregar]'))) {
+          const c = document.getElementById('cn-agr-cantidad')
+          const n = Number(el.dataset.sumarAgregar)
+          ponerNumero(c, n === 0 ? null : sumarCantidad(leerCampoNumero(c), n))
+          return
+        }
+        if ((el = b('[data-editar-item]'))) { abrirEditarItem(el.dataset.editarItem); return }
+        if ((el = b('[data-quitar-item]'))) { abrirQuitarItem(el.dataset.quitarItem); return }
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function sinAcceso(texto) {
+      document.getElementById('cn-cargando').hidden = true
+      const el = document.getElementById('cn-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      try {
+        await cargarPermisos()
+      } catch (err) {
+        console.error('permisos', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+      estado.vistas = vistasDe(estado.perm)
+      if (!estado.vistas.length) { sinAcceso('No tenés acceso a Conos de papel. Te llevamos al inicio…'); return }
+      try { await cargarConfig() } catch (err) { console.error('config', err) }
+      await recargar()
+      document.getElementById('cn-cargando').hidden = true
+      conectarTodo()
+      const params = new URLSearchParams(location.search)
+      const pedida = params.get('vista')
+      const pliego = params.get('pliego')
+      if (pedida || pliego) history.replaceState(null, '', location.pathname)
+      if (pliego && pliegoPorId(pliego)) { abrirPliego(pliego); return }
+      const vista = estado.vistas.find(v => v.clave === pedida)?.clave ?? estado.vistas[0].clave
+      mostrar(vista)
+    }
+
+    init()
+  </script>
+</body>
+</html>

@@ -37,7 +37,7 @@ import { TAMANOS, normalizarPrefs, leerPrefs, guardarPrefs, ordenarBarra, cargar
 // Administración, Cuentas corrientes, Stock y Proyectos Taller medianas; el
 // resto chicas.
 export const ORDEN_TABLERO = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'pedidos', 'administracion',
-  'cuentas-corrientes', 'stock', 'materia-prima', 'retiros', 'taller', 'accesos', 'empleados', 'seguridad']
+  'cuentas-corrientes', 'stock', 'materia-prima', 'retiros', 'taller', 'accesos', 'empleados', 'seguridad', 'conos']
 
 export const TAMANOS_POR_DEFECTO = {
   produccion: 'ancha', cobranzas: 'mediana', caja: 'mediana', gastos: 'mediana', administracion: 'mediana',
@@ -682,11 +682,32 @@ export async function cargarSeguridad(ctx) {
   }
 }
 
+// Conos de papel: los que alcanzan para menos de 30 días (o están en
+// negativo), con conos_stock(). Los pliegos en camino, de cono_pliegos.
+export async function cargarConos(ctx) {
+  const filas = await consulta(ctx.sb.rpc('conos_stock'))
+  if (!Array.isArray(filas)) throw new Error('conos_stock devolvió null')
+  const usados = filas.filter(f => f.activa !== false || [f.stock, f.en_camino, f.en_armado, f.consumo_30d].some(x => Number(x) !== 0))
+  const negativos = usados.filter(f => Number(f.stock) < 0)
+  const pocos = usados.filter(f => {
+    const c = Number(f.consumo_30d), s = Number(f.stock)
+    return s >= 0 && c > 0 && Math.floor(s / (c / 30)) < 30
+  })
+  const enCamino = usados.reduce((a, f) => a + (Number(f.en_camino) || 0), 0)
+  const resolver = []
+  if (negativos.length) resolver.push({ n: negativos.length, t: plural(negativos.length, 'cono con stock negativo', 'conos con stock negativo'), url: 'modulos/conos.html?vista=stock', urgente: true, origen: 'conos:negativos' })
+  if (pocos.length) resolver.push({ n: pocos.length, t: plural(pocos.length, 'alcanza para menos de 30 días', 'alcanzan para menos de 30 días'), url: 'modulos/conos.html?vista=stock', origen: 'conos:pocos' })
+  return {
+    estado: 'ok', etiqueta: 'Conos que alcanzan para menos de 30 días', valor: entero(negativos.length + pocos.length),
+    ctx: [{ k: 'En camino', v: entero(enCamino) }], resolver, nota: '',
+  }
+}
+
 export const CARGADORES = {
   gastos: cargarGastos, caja: cargarCaja, cobranzas: cargarCobranzas, cheques: cargarCheques,
   'cuentas-corrientes': cargarCuentasCorrientes, 'materia-prima': cargarIngreso, stock: cargarStock,
   produccion: cargarProduccion, pedidos: cargarPedidos, retiros: cargarRetiros, administracion: cargarAdministracion,
-  taller: cargarTaller, accesos: cargarAccesos, empleados: cargarEmpleados, seguridad: cargarSeguridad,
+  taller: cargarTaller, conos: cargarConos, accesos: cargarAccesos, empleados: cargarEmpleados, seguridad: cargarSeguridad,
 }
 
 // Carga UNA tarjeta: su cargador + los renglones de mis_pendientes. Nunca

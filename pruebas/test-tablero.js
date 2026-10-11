@@ -54,7 +54,7 @@ const usuario = (misModulos, tareas = []) => ({ esAdmin: false, esSuperAdmin: fa
 {
   const t = S.tarjetasPosibles(SUPER)
   const claves = t.map(x => x.clave)
-  chk('el dueño ve todas, en el orden del diseño (1a)', claves.join() === 'produccion,cobranzas,caja,gastos,cheques,pedidos,administracion,cuentas-corrientes,stock,materia-prima,retiros,taller,accesos,seguridad', claves.join())
+  chk('el dueño ve todas, en el orden del diseño (1a)', claves.join() === 'produccion,cobranzas,caja,gastos,cheques,pedidos,administracion,cuentas-corrientes,stock,materia-prima,retiros,taller,accesos,seguridad,conos', claves.join())
   chk('Seguridad, solo un super_admin', claves.includes('seguridad') && !S.tarjetasPosibles(usuario(['gastos'])).some(x => x.clave === 'seguridad'))
   chk('con Accesos, la tarjeta se llama "Accesos y empleados" y no hay otra de Empleados', t.find(x => x.clave === 'accesos')?.nombre === 'Accesos y empleados' && !claves.includes('empleados'))
   const l = S.tarjetasPosibles(usuario(['gastos', 'caja']))
