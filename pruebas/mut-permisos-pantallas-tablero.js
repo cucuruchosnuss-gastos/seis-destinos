@@ -18,6 +18,7 @@ correrMutaciones({
     { nombre: 'M3: Administración sin cobranzas:procesar', de: "    tambienConTareas: ['retiros:precios', 'cobranzas:procesar', 'cobranzas:ver_todo',", a: "    tambienConTareas: ['retiros:precios', 'cobranzas:ver_todo'," },
     { nombre: 'M3: Administración sin cobranzas:ver_todo', de: "    tambienConTareas: ['retiros:precios', 'cobranzas:procesar', 'cobranzas:ver_todo',", a: "    tambienConTareas: ['retiros:precios', 'cobranzas:procesar'," },
     { nombre: 'M2: Administración sin pedidos:configurar', de: "      'pedidos:configurar', 'cuentas_corrientes:alta_proveedor'],", a: "      'cuentas_corrientes:alta_proveedor']," },
+    { nombre: 'M2: Administración sin retiros:precios (sin el módulo)', de: "    tambienConTareas: ['retiros:precios', 'cobranzas:procesar', 'cobranzas:ver_todo',", a: "    tambienConTareas: ['cobranzas:procesar', 'cobranzas:ver_todo'," },
     { nombre: 'M2: Administración sin alta_proveedor', de: "      'pedidos:configurar', 'cuentas_corrientes:alta_proveedor'],", a: "      'pedidos:configurar']," },
     { nombre: 'moduloVisible ignora tambienConTareas sin el módulo', de: '  if (!habilitado) return porTarea', a: '  if (!habilitado) return false' },
     { nombre: 'tambienConTareas para cualquiera', de: '  if (!habilitado) return porTarea', a: '  if (!habilitado) return true' },

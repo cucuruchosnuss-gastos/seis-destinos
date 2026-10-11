@@ -56,7 +56,10 @@ correrMutaciones({
     { nombre: 'repintar no redibuja "Pagado sin ingresar"', de: '      renderizarListaIngresos()\n      renderizarPagadoSinIngresar()\n      renderizarAccesoPorIngresar()', a: '      renderizarListaIngresos()\n      renderizarAccesoPorIngresar()' },
     { nombre: 'la elección se guarda sin normalizar', de: '        elegida: e?.elegida || null,', a: '        elegida: e?.elegida,' },
     // ── El wizard ──
-    { nombre: 'el wizard no mira si puede cargar ahí', de: ' && puedeCargarEn(deLaBarra)) {', a: ') {' },
+    // 'el wizard no mira si puede cargar ahí' (sacar && puedeCargarEn(deLaBarra))
+    // se fue el 11/10/2026: desde M1 unidadesParaElegir() ya filtra con
+    // puedeCargarEn, así que esa condición repite lo mismo y la mutación no
+    // cambia nada. El filtro lo cubre mut-permisos-pantallas-ingreso.js.
     { nombre: 'el wizard no mira si la unidad se ofrece', de: 'elegibles.some(u => u.id === deLaBarra) && ', a: '' },
     { nombre: 'el wizard ignora la barra', de: '          estado.wizard.encabezado.unidadId = deLaBarra\n', a: '' },
     { nombre: 'puedeCargarEn ignora {todas: true}', de: '      return a.todas === true || (Array.isArray(a.unidades) && a.unidades.includes(unidadId))', a: '      return Array.isArray(a.unidades) && a.unidades.includes(unidadId)' },

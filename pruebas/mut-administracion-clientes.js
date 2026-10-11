@@ -36,7 +36,7 @@ correrMutaciones({
     { expr: "esc('No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.')", motivo: 'el aviso lo prueba test-administracion-clientes-todas.js (marca «fallo»)' },
   ],
   manuales: [
-    { nombre: 'la sección Clientes sin permiso', de: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },", a: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'cargar'] }," },
+    { nombre: 'la sección Clientes sin permiso', de: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'], tambien: (u) => puedeGestionarCliente(u) },", a: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'cargar'] }," },
     // El límite
     { nombre: 'igual al límite lo pasa', de: '      return Number(saldo) > Number(limite)\n    }', a: '      return Number(saldo) >= Number(limite)\n    }' },
     { nombre: 'sin límite cuenta como que lo pasa', de: "      if (saldo === null || saldo === undefined || limite === null || limite === undefined || limite === '') return false\n      return Number(saldo) > Number(limite)", a: '      return Number(saldo) > Number(limite)' },
@@ -78,8 +78,8 @@ correrMutaciones({
     { nombre: 'el proveedor no busca por CUIT', de: "        (digitos.length >= 3 && String(p.cuit ?? '').includes(digitos))).slice(0, 8)", a: '        false).slice(0, 8)' },
     // El alta
     { nombre: 'el alta sin permiso', de: "      if (!puedeDarAlta()) return\n      estado.alta = { error: null }", a: '      estado.alta = { error: null }' },
-    { nombre: 'el alta solo con pedidos:configurar', de: "      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)", a: "      return puedeEn('pedidos', 'configurar', unidadId)" },
-    { nombre: 'el alta sin alcance', de: "      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)", a: "      return tieneTarea('pedidos', 'configurar') || tieneTarea('retiros', 'precios')" },
+    { nombre: 'el alta solo con pedidos:configurar', de: "      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)\n    }", a: "      return puedeEn('pedidos', 'configurar', unidadId)\n    }" },
+    { nombre: 'el alta sin alcance', de: "      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)\n    }", a: "      return tieneTarea('pedidos', 'configurar') || tieneTarea('retiros', 'precios')\n    }" },
     { nombre: 'el aviso viejo del alta se muestra', de: "      document.getElementById('ad-clientes-alta-aviso').hidden = true", a: "      document.getElementById('ad-clientes-alta-aviso').hidden = false" },
     { nombre: 'el alta sin nombre se manda', de: "      if (p.p_nombre.length < 2) { estado.alta.error = 'Poné el nombre del cliente.'; pintarClientes(); return }\n", a: '' },
     { nombre: 'el alta no abre la ficha', de: '        if (data) await abrirFicha(data)', a: '' },

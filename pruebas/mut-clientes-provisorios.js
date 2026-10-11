@@ -21,6 +21,7 @@ correrMutaciones({
     { expr: 'esc(c.cliente_id)', motivo: 'el id de un cliente va a un data-* entre comillas (uuid de la base)' },
     { expr: 'esc(c.id)', motivo: 'el id de un cliente va a un data-unir-destino entre comillas (uuid de la base)' },
     { expr: "esc('Cliente provisorio · ' + TEXTO_ELEGI_FABRICA + ' para completarlo o unirlo')", motivo: 'texto constante del código' },
+    { expr: "esc('Completar su ficha (lista de precios, CUIT…) lo hace quien tiene el permiso de precios.')", motivo: 'texto constante del código' },
   ],
   manuales: [
     // La lista
@@ -57,7 +58,7 @@ correrMutaciones({
     { nombre: 'el buscador ofrece apagados', de: '        .filter(c => c && c.id !== origenId && c.activo !== false)', a: '        .filter(c => c && c.id !== origenId)' },
     { nombre: 'el buscador no mira apodos', de: "          (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)) ||\n", a: '' },
     { nombre: 'el buscador no mira el CUIT', de: "          (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)))", a: '          false)' },
-    { nombre: 'Unir sin permiso abre', de: '      if (clientesEnTodas() || !puedeDarAlta(estado.empresaId)) return\n      const o = clienteDe(origenId)', a: '      const o = clienteDe(origenId)' },
+    { nombre: 'Unir sin permiso abre', de: '      if (clientesEnTodas() || !puedeGestionarCliente(estado.empresaId)) return\n      const o = clienteDe(origenId)', a: '      const o = clienteDe(origenId)' },
     // Unir: la vista previa
     { nombre: 'sin permiso de cobranzas cuenta igual', de: "        tieneTarea('cobranzas', 'ver_todo') ? intento(() => contar('cobranzas')) : { sinPermiso: true },", a: "        intento(() => contar('cobranzas'))," },
     { nombre: 'sin permiso de pedidos cuenta igual', de: "        puedeEn('pedidos', 'ver', unidadId) ? intento(() => contar('pedidos')) : { sinPermiso: true },", a: "        intento(() => contar('pedidos'))," },
@@ -73,7 +74,7 @@ correrMutaciones({
     { nombre: 'unir con los ids al revés', de: "{ p_origen_id: u.origenId, p_destino_id: u.destinoId }", a: "{ p_origen_id: u.destinoId, p_destino_id: u.origenId }" },
     { nombre: 'el error de unir se tapa', de: "        u.error = err?.message || 'No se pudieron unir los clientes. Probá de nuevo.'", a: "        u.error = 'No se pudieron unir los clientes. Probá de nuevo.'" },
     { nombre: 'después de un error no se puede reintentar', de: "        console.error('No se pudieron unir los clientes:', err)\n", a: "        console.error('No se pudieron unir los clientes:', err)\n        return\n" },
-    { nombre: 'después de unir no se relee la lista', de: '        estado.clientes = null\n        await mostrarClientes()\n', a: '        estado.clientes = null\n' },
+    { nombre: 'después de unir no se relee la lista', de: '        estado.unir = null\n        estado.clientes = null\n        await mostrarClientes()\n', a: '        estado.unir = null\n        estado.clientes = null\n' },
     { nombre: '"Elegir otro" no suelta el destino', de: '      u.turno++\n      u.destinoId = null\n', a: '      u.turno++\n' },
     // Valorizar
     { nombre: 'valorizar no avisa la lista', de: '      if (avisarFaltaLista(d, cli, listaId)) return\n', a: '' },

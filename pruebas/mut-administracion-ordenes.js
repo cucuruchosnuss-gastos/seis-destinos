@@ -54,7 +54,7 @@ correrMutaciones({
     // Permisos
     { nombre: 'la sección Órdenes sin permiso', de: "      { id: 'ordenes', titulo: 'Órdenes de retiro', permiso: ['retiros', 'ver'] },", a: "      { id: 'ordenes', titulo: 'Órdenes de retiro', permiso: ['retiros', 'cargar'] }," },
     { nombre: 'el alcance no se mira', de: "      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))\n    }\n\n    // Las secciones", a: "      return true\n    }\n\n    // Las secciones" },
-    { nombre: 'cargar abre Administración', de: "        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id))", a: "        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'cargar', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id))" },
+    { nombre: 'cargar abre Administración', de: "        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id) ||", a: "        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'cargar', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id) ||" },
     { nombre: 'la fábrica de pruebas se ve', de: '      return sinUnidadesDePrueba(lista, estado.fabrica)', a: '      return lista' },
     // La fila de accesos directos (27/09/2026)
     { nombre: 'los accesos sin mirar el permiso', de: '      return LINKS.filter(m => moduloVisible(m, ctx))', a: '      return LINKS' },
@@ -71,7 +71,7 @@ correrMutaciones({
     { nombre: 'la portada no cuenta las sin valorizar', de: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')\n      if (error) throw error\n      return (data ?? []).length", a: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada')\n      if (error) throw error\n      return (data ?? []).length" },
     { nombre: 'la portada inventa un cero', de: "p.error = 'No se pudo contar.' })", a: 'p.sinValorizar = 0 })' },
     { nombre: 'el número sin valorizar no se marca', de: "const clase = c.urgente ? ' ad-seccion__numero--atencion'", a: "const clase = false ? ' ad-seccion__numero--atencion'" },
-    { nombre: 'sin ver se cuenta igual', de: "      if (!puedeEn('retiros', 'ver', unidad)) return\n      await Promise.all([", a: '      await Promise.all([' },
+    { nombre: 'sin ver se cuenta igual', de: "      if (!puedeEn('retiros', 'ver', unidad)) {\n        // Quien solo gestiona", a: "      if (false) {\n        // Quien solo gestiona" },
     // Lista y filtros
     { nombre: 'no filtra por fecha desde', de: "      if (esFechaIso(filtros.desde)) q = q.gte('fecha', filtros.desde)\n", a: '' },
     { nombre: 'no filtra por cliente', de: "      if (filtros.clienteId) q = q.eq('cliente_id', filtros.clienteId)\n", a: '' },

@@ -3333,6 +3333,9 @@
     function pintarClientes() {
       document.getElementById('ad-clientes-lista').innerHTML = htmlListaClientes()
       document.getElementById('ad-clientes-apagados').checked = !!estado.mostrarApagados
+      // Solo los provisorios (M2): los apagados no se leen (piden retiros:ver).
+      const rotuloApagados = document.getElementById('ad-clientes-apagados').closest?.('label')
+      if (rotuloApagados) rotuloApagados.hidden = !!estado.soloProvisorios
       const n = estado.saldos ? clientesFiltrados(clientesDeLaLista(), estado.busquedaClientes).length : null
       const enTodas = clientesEnTodas()
       const nFabricas = enTodas ? new Set(clientesDeLaLista().map(c => c.unidad_negocio_id)).size : 0
