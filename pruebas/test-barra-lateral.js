@@ -55,7 +55,7 @@ function construir() {
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
   for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA', 'TOPE_USO', 'VERSION_PREFS', 'ESTADO_PREFS']) codigo += extraerConst(pref, c)
   for (const f of DE_PREFS) codigo += extraerFn(pref, f) + '\n'
-  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
+  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'NOMBRE_CORTO_ABAJO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += `return { ${FUNCIONES.join(', ')}, ${DE_PREFS.join(', ')}, MODULOS, __ls, __paneles }`
   return new Function(codigo)()

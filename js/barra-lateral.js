@@ -46,6 +46,11 @@ const MIN_ABAJO = 4
 const MAX_ABAJO = 6
 // Un toque largo sobre la barra abre el editor.
 const MS_TOQUE_LARGO = 600
+// Un nombre que no entra en la barra de abajo del celular (10/10/2026):
+// "Administración" se cortaba con "…" a 360 y 390 px. SOLO ahí va corto (con
+// el nombre entero en el title); la barra de la compu, la hoja "Más", el
+// tablero y los títulos siguen diciendo el nombre entero.
+const NOMBRE_CORTO_ABAJO = { administracion: 'Admin' }
 
 // Los trazos de cada ícono, copiados del diseño (viewBox 24 × 24).
 export const ICONOS = {
@@ -178,9 +183,11 @@ export function htmlBarraAbajo({ abajo, actual, raiz }) {
   const tab = (m) => {
     const esActual = m.clave === actual
     const col = colorDeModulo(m.clave)
+    const corto = Object.hasOwn(NOMBRE_CORTO_ABAJO, m.clave) ? NOMBRE_CORTO_ABAJO[m.clave] : null
     return `<a class="barra-abajo__tab${esActual ? ' barra-abajo__tab--actual' : ''}" href="${escDash(new URL(m.url, raiz).href)}" data-clave="${escDash(m.clave)}"${esActual ? ' aria-current="page"' : ''}` +
+      (corto ? ` title="${escDash(m.nombre)}"` : '') +
       ` style="--tab-color: ${esActual ? 'var(--color-acento)' : col.c}">` +
-      `<span class="barra-abajo__icono">${htmlIcono(m.clave, 23)}</span><span class="barra-abajo__nombre">${escDash(m.nombre)}</span></a>`
+      `<span class="barra-abajo__icono">${htmlIcono(m.clave, 23)}</span><span class="barra-abajo__nombre">${escDash(corto ?? m.nombre)}</span></a>`
   }
   return tab(INICIO) + abajo.map(tab).join('') +
     '<button type="button" class="barra-abajo__tab barra-abajo__mas" id="barra-abajo-mas" aria-haspopup="dialog" data-clave="mas" style="--tab-color: var(--color-texto-2)">' +
