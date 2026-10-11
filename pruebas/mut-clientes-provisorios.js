@@ -30,8 +30,8 @@ correrMutaciones({
     { nombre: 'un apagado cuenta como provisorio', de: '      if (!c || c.apagado || c.activo === false) return false', a: '      if (!c) return false' },
     // (07/10/2026: al apilar, el select quedó con proveedor_id y comision_habitual en el medio.)
     { nombre: 'la columna provisorio no se lee', de: 'comision_habitual, apodos, provisorio\')', a: 'comision_habitual, apodos\')' },
-    { nombre: 'Completar sin precios', de: "      if (puedeConfirmar(unidad)) botones.push(", a: '      if (true) botones.push(' },
-    { nombre: 'Unir sin permiso', de: '      if (puedeDarAlta(unidad)) botones.push(', a: '      if (true) botones.push(' },
+    { nombre: 'Completar sin precios', de: "      if (puedeCompletarFicha(unidad)) botones.push(", a: '      if (true) botones.push(' },
+    { nombre: 'Unir sin permiso', de: '      if (puedeGestionarCliente(unidad)) botones.push(', a: '      if (true) botones.push(' },
     { nombre: 'con Todas se ofrecen las acciones', de: "      if (clientesEnTodas()) return `<div class=\"ad-provisorio\"><span class=\"ad-bloqueado-todas\">", a: "      if (false) return `<div class=\"ad-provisorio\"><span class=\"ad-bloqueado-todas\">" },
     // La burbuja y la portada
     { nombre: 'la pestaña Clientes sin burbuja', de: ": id === 'clientes' ? p?.provisorios : null", a: ': null' },

@@ -18,6 +18,8 @@ const { arnes } = require('./circuito-comun')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos', 'materia-prima.html')
 const HTML = fs.readFileSync(ARCHIVO, 'utf8')
+// El runner de mutaciones confirma con esta línea que se leyó la copia mutada.
+console.log(`ARCHIVO ${ARCHIVO} (${HTML.length} bytes)`)
 const SCRIPT = HTML.slice(HTML.indexOf('<script type="module">'))
 const { chk, esperas, fin } = arnes()
 

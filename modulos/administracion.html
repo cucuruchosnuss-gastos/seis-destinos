@@ -1181,7 +1181,9 @@
     // cada una cambia su permiso acá.
     const SECCIONES = [
       { id: 'ordenes', titulo: 'Órdenes de retiro', permiso: ['retiros', 'ver'] },
-      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },
+      // Clientes: con retiros:ver (todo), o con lo que la base acepta para
+      // gestionar un cliente (11/10/2026, M2): ahí se ven solo los provisorios.
+      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'], tambien: (u) => puedeGestionarCliente(u) },
       { id: 'listas', titulo: 'Listas de precios', permiso: ['retiros', 'precios'] },
       { id: 'importar', titulo: 'Importar', permiso: ['retiros', 'precios'] },
       // Los renglones de retiros que salieron sin stock (28/09/2026): los
@@ -1208,7 +1210,22 @@
     function seccionVisible(s, unidadId = estado.empresaId) {
       if (s.soloSuperAdmin) return estado.miRolApp === 'super_admin'
       if (s.global) return estado.miRolApp === 'super_admin' || s.tareas.some(t => estado.misTareas.has(t))
-      return puedeEn(s.permiso[0], s.permiso[1], unidadId)
+      return puedeEn(s.permiso[0], s.permiso[1], unidadId) || (typeof s.tambien === 'function' && s.tambien(unidadId) === true)
+    }
+
+    // _puede_gestionar_cliente(unidad) de la base (11/10/2026, M2): la piden
+    // confirmar_cliente, unir_clientes y vincular_*. pedidos:configurar o
+    // retiros:precios con alcance en esa empresa, o cuentas_corrientes:
+    // alta_proveedor (sin alcance).
+    function puedeGestionarCliente(unidadId = estado.empresaId) {
+      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId) ||
+        (!!unidadId && tieneTarea('cuentas_corrientes', 'alta_proveedor'))
+    }
+
+    // ¿Puede leer la tabla clientes de esa empresa? (su policy: pedidos:ver /
+    // cargar o retiros:ver / cargar, con alcance).
+    function puedeLeerClientes(unidadId = estado.empresaId) {
+      return ['pedidos:ver', 'pedidos:cargar', 'retiros:ver', 'retiros:cargar'].some(k => { const [m, t] = k.split(':'); return puedeEn(m, t, unidadId) })
     }
 
     function seccionesVisibles(unidadId = estado.empresaId) {
@@ -1224,7 +1241,8 @@
     // cuenta real.
     function empresasDeAdministracion() {
       const lista = (estado.empresas ?? []).filter(e =>
-        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id))
+        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id) ||
+        puedeGestionarCliente(e.id))
       return sinUnidadesDePrueba(lista, estado.fabrica)
     }
 
@@ -1233,10 +1251,13 @@
     }
 
     // Los lotes de cada renglón salen de stock_terminado_movimientos, que se
-    // lee con Producción o stock:ver. Sin eso, las filas no llegan y la
-    // pantalla lo dice.
-    function puedeVerLotes() {
-      return tieneTarea('stock', 'ver') || ['cargar', 'ver', 'configurar'].some(t => tieneTarea('produccion', t))
+    // lee con Producción o stock:ver EN ESA FÁBRICA (su policy:
+    // _ve_produccion_en(unidad) o tiene_tarea_alcance('stock','ver', unidad)).
+    // Sin eso, las filas no llegan y la pantalla lo dice (11/10/2026, B2:
+    // antes miraba la tarea sin alcance y, con la tarea en otra fábrica, la
+    // lista salía vacía sin aviso).
+    function puedeVerLotes(unidadId) {
+      return puedeEn('stock', 'ver', unidadId) || ['cargar', 'ver', 'configurar'].some(t => puedeEn('produccion', t, unidadId))
     }
 
     // Los accesos directos (27/09/2026): una fila arriba de la portada con
@@ -1655,6 +1676,14 @@
           carga: p?.porRevisar == null && !p?.errorRevisar, error: p?.errorRevisar,
           lineas: [...filas.slice(0, 2).map(f => [f?.cliente, [cantidadRevisar(f?.faltante, f?.unidad), f?.que].filter(Boolean).join(' de ')].filter(Boolean).join(': ')), { ir: 'Revisar ›' }] }
       }
+      if (s.id === 'clientes' && !puedeEn('retiros', 'ver')) {
+        // Solo los provisorios (11/10/2026, M2).
+        const sp = p?.soloProvisorios
+        return { numero: sp && !sp.sinLeer ? sp.provisorios.length : (sp?.sinLeer ? '—' : null),
+          unidad: sp?.sinLeer ? 'no se pueden leer' : n(sp?.provisorios?.length ?? 0, 'cliente provisorio por confirmar', 'clientes provisorios por confirmar'),
+          urgente: (sp?.provisorios?.length ?? 0) > 0, carga: sp === undefined && !p?.errorClientes, error: p?.errorClientes,
+          lineas: [sp?.sinLeer ? TEXTO_SIN_LEER_CLIENTES : 'Los saldos se ven con otro permiso'] }
+      }
       if (s.id === 'clientes') {
         const emp = empresaActual()
         return { numero: p?.activos ?? null, unidad: 'activos' + (emp ? ' en ' + emp.nombre : ''),
@@ -1847,7 +1876,14 @@
         contarErrores().then(n => { p.errores7 = n }).catch(err => { console.error('No se pudieron contar los errores:', err); p.errorErrores = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
-      if (!puedeEn('retiros', 'ver', unidad)) return
+      if (!puedeEn('retiros', 'ver', unidad)) {
+        // Quien solo gestiona clientes: cuántos provisorios hay (11/10/2026, M2).
+        if (puedeGestionarCliente(unidad)) {
+          await leerSoloProvisorios(unidad).then(r => { p.soloProvisorios = r; p.provisorios = r.sinLeer ? null : r.provisorios.length }).catch(err => { console.error('No se pudieron contar los provisorios:', err); p.errorClientes = 'No se pudo contar.' })
+          if (turno === turnoPortada) pintarPortada()
+        }
+        return
+      }
       await Promise.all([
         contarSinValorizar(unidad).then(n => { p.sinValorizar = n }).catch(err => { console.error('No se pudo contar la portada:', err); p.error = 'No se pudo contar.' }),
         leerResumenClientes(unidad).then(r => { p.sobreLimite = r.sobreLimite; p.activos = r.activos; p.deuda = r.deuda; p.provisorios = r.provisorios }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
@@ -2244,7 +2280,7 @@
         .eq('orden_id', id).order('orden')
       if (e2) throw e2
       let lotes = null
-      if (puedeVerLotes()) {
+      if (puedeVerLotes(o.unidad_negocio_id)) {
         const r = await supabase.from('stock_terminado_movimientos')
           .select('presentacion_id, marca_id, lote, cajas').eq('orden_retiro_id', id).eq('tipo', 'despacho')
         if (!r.error) lotes = r.data ?? []
@@ -3227,8 +3263,55 @@
       return !!estado.agruparClientes && clientesEnTodas()
     }
 
+    // ── Solo los provisorios (11/10/2026, M2) ──────────────────────────────
+    // Para quien gestiona clientes (_puede_gestionar_cliente) sin retiros:ver.
+    // La tabla clientes se lee con pedidos:ver/cargar o retiros:ver/cargar; si
+    // no, buscar_clientes() (cobranzas:procesar, retiros:ver o pedidos:ver),
+    // que devuelve hasta 60 por nombre. Sin ninguna, se dice.
+    const TOPE_BUSCAR_CLIENTES = 60
+    const TEXTO_SOLO_PROVISORIOS = 'Ves solo los clientes provisorios de esta empresa, para completarlos, confirmarlos o unirlos. La lista completa y los saldos se ven con el permiso «Ver todas las órdenes y las cuentas de los clientes».'
+    const TEXTO_SIN_LEER_CLIENTES = 'Con tu usuario no se pueden leer los clientes de esta empresa: hace falta ver Pedidos, Órdenes de retiro o asentar cobranzas.'
+
+    async function leerSoloProvisorios(unidadId) {
+      let filas = null
+      let incompleta = false
+      if (puedeLeerClientes(unidadId)) {
+        filas = await leerClientes(unidadId)
+      } else if (['cobranzas:procesar', 'retiros:ver', 'pedidos:ver'].some(k => { const [m, t] = k.split(':'); return tieneTarea(m, t) })) {
+        const { data, error } = await supabase.rpc('buscar_clientes', { p_busqueda: null, p_unidad_negocio_id: unidadId })
+        if (error) throw error
+        const lista = Array.isArray(data) ? data : []
+        incompleta = lista.length >= TOPE_BUSCAR_CLIENTES
+        filas = lista.map(x => ({ id: x.cliente_id, nombre: x.nombre, razon_social: x.razon_social, cuit: x.cuit, localidad: x.localidad,
+          activo: x.activo !== false, provisorio: x.provisorio === true, apodos: Array.isArray(x.apodos) ? x.apodos : [], proveedor_id: x.proveedor_id ?? null }))
+      }
+      const provisorios = (filas ?? []).filter(c => c?.provisorio === true && c.activo !== false)
+        .map(c => ({ cliente_id: c.id, nombre: c.nombre, razon_social: c.razon_social, cuit: c.cuit, localidad: c.localidad,
+          telefono: c.telefono ?? null, unidad_negocio_id: unidadId, saldo: null, activo: true }))
+      return { filas, provisorios, sinLeer: filas === null, incompleta }
+    }
+
+    function htmlFilaSoloProvisorio(c) {
+      const meta = [c.localidad, c.telefono].map(limpio).filter(Boolean).join(' · ')
+      return `<div class="ad-fila-cliente"><div class="ad-fila"><span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
+        `<span class="ad-sello ad-sello--provisorio">Provisorio</span></span>` +
+        `${meta ? `<span class="ad-fila__meta">${esc(meta)}</span>` : ''}</div></div>${htmlAccionesProvisorio(c)}`
+    }
+
+    function htmlSoloProvisorios() {
+      const r = estado.soloProvisorios
+      let html = `<div class="ad-aviso">${esc(TEXTO_SOLO_PROVISORIOS)}</div>`
+      if (r.sinLeer) return html + `<div class="ad-aviso ad-aviso--grave">${esc(TEXTO_SIN_LEER_CLIENTES)}</div>`
+      if (r.incompleta) html += `<div class="ad-aviso">${esc('Puede estar incompleta: se leyeron los primeros ' + TOPE_BUSCAR_CLIENTES + ' clientes de la empresa.')}</div>`
+      const lista = clientesFiltrados(r.provisorios, estado.busquedaClientes)
+      if (!r.provisorios.length) return html + '<div class="ad-vacio">No hay clientes provisorios en esta empresa.</div>'
+      if (!lista.length) return html + `<div class="ad-vacio">${esc('Ningún cliente provisorio coincide con «' + limpio(estado.busquedaClientes) + '».')}</div>`
+      return html + lista.map(htmlFilaSoloProvisorio).join('')
+    }
+
     function htmlListaClientes() {
       if (estado.errorSaldos) return `<div class="ad-aviso ad-aviso--grave">${esc(estado.errorSaldos)}</div>`
+      if (estado.soloProvisorios) return htmlSoloProvisorios()
       if (estado.saldos === null) return '<div class="ad-vacio">Cargando los clientes…</div>'
       let aviso = ''
       if (estado.mostrarApagados) {
@@ -3278,12 +3361,31 @@
 
     async function mostrarClientes() {
       const enTodas = clientesEnTodas()
-      if (enTodas ? !empresasDeClientes().length : !puedeEn('retiros', 'ver')) { mostrarInicio(); return }
+      if (enTodas ? !empresasDeClientes().length : !(puedeEn('retiros', 'ver') || puedeGestionarCliente())) { mostrarInicio(); return }
       mostrarVista('ad-vista-clientes')
       const turno = ++turnoClientes
       estado.saldos = null
       estado.errorSaldos = null
       estado.todasFallaron = []
+      estado.soloProvisorios = null
+      // Sin retiros:ver (11/10/2026, M2): solo los provisorios, para quien los
+      // gestiona (los saldos salen de clientes_con_saldo, que pide retiros:ver).
+      if (!enTodas && !puedeEn('retiros', 'ver')) {
+        pintarClientes()
+        try {
+          const r = await leerSoloProvisorios(estado.empresaId)
+          if (turno !== turnoClientes) return
+          estado.clientes = r.filas ?? []
+          estado.soloProvisorios = r
+          estado.saldos = r.provisorios
+        } catch (err) {
+          if (turno !== turnoClientes) return
+          console.error('No se pudieron leer los clientes provisorios:', err)
+          estado.errorSaldos = 'No se pudieron leer los clientes provisorios. Revisá la conexión y volvé a entrar.'
+        }
+        pintarClientes()
+        return
+      }
       // Los apagados se vuelven a leer (pueden ser de otra empresa, o haber
       // cambiado con el interruptor).
       estado.apagados = null
@@ -3474,10 +3576,35 @@
       pintarPestanas()
     }
 
-    // La ficha la abre quien pone precios (abrirFicha); confirmar lo acepta
-    // la base con esa misma tarea.
+    // Confirmar y unir los acepta la base con _puede_gestionar_cliente
+    // (11/10/2026, M2). La ficha (Completar y confirmar) la abre solo quien
+    // pone precios (abrirFicha); quien gestiona sin ese permiso, confirma
+    // directo.
     function puedeConfirmar(unidadId) {
+      return puedeGestionarCliente(unidadId)
+    }
+    function puedeCompletarFicha(unidadId) {
       return puedeEn('retiros', 'precios', unidadId)
+    }
+
+    // Confirmar sin pasar por la ficha (quien gestiona sin retiros:precios).
+    async function confirmarProvisorio(id) {
+      if (!id || estado.provConfirmar?.enviando || clientesEnTodas() || !puedeConfirmar(estado.empresaId)) return
+      estado.provConfirmar = { id, enviando: true, error: null }
+      pintarClientes()
+      try {
+        const { error } = await supabase.rpc('confirmar_cliente', { p_cliente_id: id })
+        if (error) throw error
+        estado.provConfirmar = null
+        mostrarExito('Cliente confirmado: ya no es provisorio.')
+        estado.clientes = null
+        await mostrarClientes()
+      } catch (err) {
+        console.error('No se pudo confirmar el cliente:', err)
+        // El mensaje de la base TAL CUAL, pegado a la fila.
+        estado.provConfirmar = { id, enviando: false, error: err?.message || 'No se pudo confirmar el cliente. Probá de nuevo.' }
+        pintarClientes()
+      }
     }
 
     function htmlAccionesProvisorio(c) {
@@ -3485,16 +3612,21 @@
       const unidad = c.unidad_negocio_id ?? estado.empresaId
       if (clientesEnTodas()) return `<div class="ad-provisorio"><span class="ad-bloqueado-todas">${esc('Cliente provisorio · ' + TEXTO_ELEGI_FABRICA + ' para completarlo o unirlo')}</span></div>`
       const botones = []
-      if (puedeConfirmar(unidad)) botones.push(`<button type="button" class="ad-btn" data-provisorio-completar="${esc(c.cliente_id)}">Completar y confirmar</button>`)
-      if (puedeDarAlta(unidad)) botones.push(`<button type="button" class="ad-btn ad-btn--secundario" data-provisorio-unir="${esc(c.cliente_id)}">Unir con un cliente existente</button>`)
+      const pc = estado.provConfirmar?.id === c.cliente_id ? estado.provConfirmar : null
+      if (puedeCompletarFicha(unidad)) botones.push(`<button type="button" class="ad-btn" data-provisorio-completar="${esc(c.cliente_id)}">Completar y confirmar</button>`)
+      else if (puedeConfirmar(unidad)) botones.push(`<button type="button" class="ad-btn" data-provisorio-confirmar="${esc(c.cliente_id)}"${pc?.enviando ? ' disabled' : ''}>${pc?.enviando ? 'Confirmando…' : 'Confirmar'}</button>`)
+      if (puedeGestionarCliente(unidad)) botones.push(`<button type="button" class="ad-btn ad-btn--secundario" data-provisorio-unir="${esc(c.cliente_id)}">Unir con un cliente existente</button>`)
       if (!botones.length) return ''
-      return `<div class="ad-provisorio">${botones.join('')}</div>`
+      const conNota = !puedeCompletarFicha(unidad) && puedeConfirmar(unidad)
+      return `<div class="ad-provisorio">${botones.join('')}` +
+        `${conNota ? `<span class="ad-texto-suave">${esc('Completar su ficha (lista de precios, CUIT…) lo hace quien tiene el permiso de precios.')}</span>` : ''}` +
+        `${pc?.error ? `<span class="ad-error-pegado">${esc(pc.error)}</span>` : ''}</div>`
     }
 
     // ── Completar y confirmar: la ficha de siempre, y al guardar, confirmar ──
 
     async function abrirCompletar(id) {
-      if (!puedeConfirmar(estado.empresaId) || clientesEnTodas()) return
+      if (!puedeCompletarFicha(estado.empresaId) || clientesEnTodas()) return
       const abriendo = abrirFicha(id)
       if (estado.ficha?.id === id) estado.ficha.confirmar = true
       pintarConfirmarFicha()
@@ -3572,7 +3704,7 @@
     }
 
     function abrirUnir(origenId) {
-      if (clientesEnTodas() || !puedeDarAlta(estado.empresaId)) return
+      if (clientesEnTodas() || !puedeGestionarCliente(estado.empresaId)) return
       const o = clienteDe(origenId)
       if (!o) return
       estado.unir = { origenId, origenNombre: o.nombre, unidadId: estado.empresaId, busqueda: '', destinoId: null,
@@ -7593,6 +7725,8 @@
         // Las acciones de un provisorio (06/10/2026) van debajo de la fila.
         const pc = e.target.closest('[data-provisorio-completar]')
         if (pc) { abrirCompletar(pc.dataset.provisorioCompletar); return }
+        const pf = e.target.closest('[data-provisorio-confirmar]')
+        if (pf) { confirmarProvisorio(pf.dataset.provisorioConfirmar); return }
         const pu = e.target.closest('[data-provisorio-unir]')
         if (pu) { abrirUnir(pu.dataset.provisorioUnir); return }
         const s = e.target.closest('[data-cliente-activo]')

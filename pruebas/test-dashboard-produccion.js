@@ -57,7 +57,8 @@ chk('redirige a modulos/produccion.html con replace (no deja el dashboard en el 
 chk('corta el dibujado después de redirigir', src.includes('await new Promise(() => {})'))
 // Desde el 29/09/2026 la tarjeta la arma el tablero (js/tablero.js).
 chk('la tarjeta usa la url de la planta solo para una tablet',
-  src.includes('url: (esDispositivo && m.urlDispositivo) || m.url'))
+  // 11/10/2026: la de siempre sale de urlDeModulo() (Stock con solo ver_costos abre Costos).
+  src.includes('url: (esDispositivo && m.urlDispositivo) || urlDeModulo(m, ctx ?? {})'))
 chk('el dashboard le pasa al tablero si la cuenta es una tablet', /crearTablero\(\{[\s\S]{0,400}esDispositivo,/.test(src))
 
 const css = fs.readFileSync(path.join(__dirname, '..', 'css/main.css'), 'utf8')

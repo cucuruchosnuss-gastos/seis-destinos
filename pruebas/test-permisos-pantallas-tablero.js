@@ -31,6 +31,7 @@ const yanina = usuario(['gastos', 'caja', 'empleados', 'cuentas-corrientes', 'ma
 chk('M3: Yanina (cobranzas:procesar, sin el módulo retiros) ve la tarjeta Administración', S.moduloVisible(admin, yanina) === true)
 chk('M3: y está en sus tarjetas del tablero', S.tarjetasPosibles(yanina).some(t => t.clave === 'administracion'))
 chk('M3: y en su barra lateral', S.modulosDeBarra(yanina).some(m => m.clave === 'administracion'))
+chk('M3: con solo cobranzas:procesar (sin el módulo retiros) la ve', S.moduloVisible(admin, usuario(['cobranzas'], ['cobranzas:procesar'])) === true)
 chk('M3: con solo cobranzas:ver_todo también', S.moduloVisible(admin, usuario(['cobranzas'], ['cobranzas:ver_todo'])) === true)
 chk('M3: un chofer (solo cobranzas:cargar) NO la ve', S.moduloVisible(admin, usuario(['cobranzas'], ['cobranzas:cargar'])) === false)
 chk('M3: el depósito (retiros:cargar) sigue sin verla', S.moduloVisible(admin, usuario(['retiros'], ['retiros:cargar'])) === false)

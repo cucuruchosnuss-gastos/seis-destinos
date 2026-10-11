@@ -15,7 +15,10 @@ const { chk, fin } = arnes()
 
 const fs = require('fs')
 const path = require('path')
-const HTML = fs.readFileSync(process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos', 'taller.html'), 'utf8')
+const RUTA = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos', 'taller.html')
+const HTML = fs.readFileSync(RUTA, 'utf8')
+// El runner de mutaciones confirma con esta línea que se leyó la copia mutada.
+console.log(`ARCHIVO ${RUTA} (${HTML.length} bytes)`)
 // Los elementos del HTML estático, para que init() los encuentre.
 const IDS = [...HTML.slice(0, HTML.indexOf('<script type="module">')).matchAll(/ id="([^"$]+)"/g)].map(m => m[1])
 

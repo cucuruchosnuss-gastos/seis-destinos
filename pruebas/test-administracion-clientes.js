@@ -51,8 +51,11 @@ function preparar(S) {
 {
   const S = nuevo()
   chk('con retiros:ver se ve la sección Clientes', S.seccionesVisibles().some(s => s.id === 'clientes'))
+  // 11/10/2026 (M2): con retiros:precios (gestiona clientes) se ve, con solo los provisorios.
   S.estado.misTareas = new Map([['retiros:precios', { unidades: ['u-n'] }]])
-  chk('sin retiros:ver no', !S.seccionesVisibles().some(s => s.id === 'clientes'))
+  chk('sin retiros:ver pero gestionando clientes, sí (solo los provisorios)', S.seccionesVisibles().some(s => s.id === 'clientes'))
+  S.estado.misTareas = new Map([['retiros:anular', { unidades: ['u-n'] }]])
+  chk('sin retiros:ver ni gestionar clientes, no', !S.seccionesVisibles().some(s => s.id === 'clientes'))
 }
 
 // ── La portada: los que pasan su límite ─────────────────────────────────────

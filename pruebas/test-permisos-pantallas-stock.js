@@ -176,6 +176,17 @@ const esperar = () => new Promise(r => setTimeout(r, 0))
     chk('B8: y lo dice en chico: el precio se escribe a mano', n === S.TEXTO_SIN_PERMISO_PRECIO_TRP && /escribí el precio por caja/.test(n), n)
   }
   {
+    // Aunque la lista ya esté (otro camino la dejó puesta), sin permiso en el
+    // origen proponerPrecioTrp no llama a la base.
+    const S = sandboxB8()
+    S.estado.misTareas = new Set(['stock:ver'])
+    const r = { id: 'r1', presentacionId: 'p1', marcaId: null, precio: null, precioTocado: false }
+    const t = { origenId: 'u-n', fecha: '2026-10-11', lista: { id: 'l1', nombre: 'Interna Nuss' }, renglones: [r] }
+    S.estado.trp = t
+    await S.proponerPrecioTrp(t, r)
+    chk('B8: proponerPrecioTrp sin permiso en el origen no llama a precio_venta', !S.__rpc.some(x => x[0] === 'precio_venta') && r.precioEstado === 'sin_permiso', r.precioEstado)
+  }
+  {
     const S = sandboxB8()
     S.estado.misTareas = new Set(['stock:ver', 'retiros:precios'])
     S.estado.alcancesTareas = new Map([['retiros:precios', { unidades: ['u-d'] }]])

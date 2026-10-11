@@ -207,7 +207,8 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     items: [...ITEMS, { id: 'i3', orden: 3, presentacion_id: 'pr2', marca_id: null, cajas: 2, unidades: 200, precio_caja: null, subtotal: null, lote: null }],
     lotes: [{ presentacion_id: 'pr1', marca_id: null, lote: '7030-1', cajas: -6 }, { presentacion_id: 'pr1', marca_id: null, lote: '7031-2', cajas: -4 },
       { presentacion_id: 'pr2', marca_id: 'm1', lote: '7032-1', cajas: -4 }, { presentacion_id: 'pr2', marca_id: null, lote: '7039-9', cajas: -2 }] })
-  S.estado.misTareas.set('stock:ver', null)
+  // Con alcance (11/10/2026, B2): la policy de stock_terminado_movimientos es por fábrica.
+  S.estado.misTareas.set('stock:ver', { todas: true })
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = S.__els.get('ad-orden-cuerpo').innerHTML
     chk('el detalle muestra cada renglón con cono y presentación', /10 cajas · Cucurucho grande · Caja x 100 · Sin cono/.test(h) && /4 cajas · Cucurucho grande · Caja x 100 con cono · LOLO/.test(h))

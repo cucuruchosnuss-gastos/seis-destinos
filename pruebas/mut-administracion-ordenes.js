@@ -80,7 +80,7 @@ correrMutaciones({
     { nombre: 'la lista muestra el número pelado', de: "`<span class=\"ad-fila__linea\"><span class=\"ad-fila__codigo\">${esc(o.codigo || '—')}</span>", a: "`<span class=\"ad-fila__linea\"><span class=\"ad-fila__codigo\">${esc(o.numero)}</span>" },
     { nombre: 'sin valorizar no va en bordó', de: "${pendiente ? ' ad-fila__importe--pendiente' : ''}", a: '' },
     // Detalle y lotes
-    { nombre: 'sin permiso se consultan los lotes', de: '      let lotes = null\n      if (puedeVerLotes()) {', a: '      let lotes = null\n      if (true) {' },
+    { nombre: 'sin permiso se consultan los lotes', de: '      let lotes = null\n      if (puedeVerLotes(o.unidad_negocio_id)) {', a: '      let lotes = null\n      if (true) {' },
     { nombre: 'los lotes de otro cono', de: "      return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))", a: '      return lotes.filter(l => l.presentacion_id === it.presentacion_id)' },
     // Valorizar
     // (09/10/2026: se fue preciosVigentes(); el precio vigente a la fecha del
