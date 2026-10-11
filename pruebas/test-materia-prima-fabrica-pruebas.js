@@ -55,7 +55,10 @@ const PRELUDIO = HELPERS + `
   var __tablas = {}
   var supabase = { from(t) { const r = { select() { return r }, order() { return r }, eq() { return r },
     then(res, rej) { return Promise.resolve({ data: __tablas[t] ?? [], error: null }).then(res, rej) } }; return r } }
-  var estado = { unidades: [], fabrica: FABRICA_SIN_DATOS, filtros: { ingresos: { unidadId: '' } },
+  // super_admin (11/10/2026, M1): el selector ofrece solo donde puede cargar;
+  // esta suite mira la fábrica de pruebas, no el alcance.
+  function mostrarError() {}
+  var estado = { miRolApp: 'super_admin', misTareas: new Set(), alcances: new Map(), unidades: [], fabrica: FABRICA_SIN_DATOS, filtros: { ingresos: { unidadId: '' } },
     unidadesStockVisibles: [], unidadesRecepcion: [], listaIngresos: [], transito: [], wizard: null }
   function renderizarListaIngresos() {}
   function wizardVacio() { return { encabezado: { unidadId: '' } } }
@@ -65,7 +68,7 @@ const PRELUDIO = HELPERS + `
   function abrirDetalleInterno() {}
 `
 
-const FUNCIONES = ['esc', 'unidadesParaElegir', 'nombreUnidad', 'poblarSelectUnidades',
+const FUNCIONES = ['esc', 'puedeCargarEn', 'unidadesParaElegir', 'puedeCargarAlguna', 'nombreUnidad', 'poblarSelectUnidades',
   'abrirWizard', 'cargarUnidadesStockVisibles', 'cargarUnidadesRecepcion', 'cargarTransferenciasRecibidas',
   'renderizarAvisoSinStock', 'renderizarInternos']
 

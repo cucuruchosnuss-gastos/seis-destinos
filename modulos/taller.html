@@ -810,6 +810,11 @@
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(tarea)
     }
     const puedeEntrar = () => ['ver', 'cargar', 'gestionar', 'precios'].some(tieneTarea)
+    // 11/10/2026 (B4): proyectos_taller, resumen_proyecto, tareas_taller y las
+    // policies de proyecto_* / taller_* piden taller:ver (o precios). Con solo
+    // cargar o gestionar todo saldría vacío: se dice por qué.
+    const puedeVer = () => tieneTarea('ver') || tieneTarea('precios')
+    const TEXTO_FALTA_VER = 'Para ver los proyectos hace falta el permiso «Ver los proyectos del Taller». Tenés permiso para cargar o gestionar, pero sin ese no se puede leer ningún proyecto: pedíselo a quien reparte los permisos (Accesos).'
     const puedeCargar = () => tieneTarea('cargar')
     const puedeGestionar = () => tieneTarea('gestionar')
     const puedePrecios = () => tieneTarea('precios')
@@ -3078,6 +3083,14 @@
       estado.tallerId = [...estado.unidades.values()].find(u => u.nombre === 'Taller')?.id ?? null
     }
 
+    // Sin redirigir: tiene el módulo, le falta un permiso; que lo lea.
+    function avisoFaltaVer() {
+      document.getElementById('tl-cargando').hidden = true
+      const el = document.getElementById('tl-sin-acceso')
+      el.textContent = TEXTO_FALTA_VER
+      el.hidden = false
+    }
+
     function sinAcceso(texto) {
       document.getElementById('tl-cargando').hidden = true
       const el = document.getElementById('tl-sin-acceso')
@@ -3111,6 +3124,7 @@
         return
       }
       if (!puedeEntrar()) { sinAcceso('No tenés acceso a Proyectos Taller. Te llevamos al inicio…'); return }
+      if (!puedeVer()) { avisoFaltaVer(); return }
       document.getElementById('tl-cargando').hidden = true
       conectarTodo()
       alCambiarUnidad(({ elegida }) => {

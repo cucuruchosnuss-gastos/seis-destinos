@@ -3432,8 +3432,18 @@
     // unidad de la fábrica de pruebas, salvo para una cuenta de prueba. Los
     // chips de unidad del listado se retiraron: los reemplaza la barra de
     // unidad de arriba, que hace su propio filtro de la fábrica de pruebas.
+    //
+    // 11/10/2026 (M1): y solo las fábricas donde puede CARGAR
+    // (puedeCargarEn, la regla de tiene_tarea_alcance): las policies INSERT de
+    // materia_prima_ingresos/_items la exigen, y ofrecer otra era un wizard
+    // entero que fallaba al confirmar con un error de RLS crudo.
     function unidadesParaElegir() {
-      return sinUnidadesDePrueba(estado.unidades, estado.fabrica)
+      return sinUnidadesDePrueba(estado.unidades, estado.fabrica).filter(u => puedeCargarEn(u.id))
+    }
+
+    // ¿Puede cargar un ingreso en alguna fábrica? (M1: el botón "Cargar ingreso").
+    function puedeCargarAlguna() {
+      return unidadesParaElegir().length > 0
     }
 
     function nombreUnidad(id) {
@@ -3964,6 +3974,10 @@
       await Promise.race([barraPrometida.catch(() => null), new Promise(r => setTimeout(r, 3000))])
 
       renderizarChipsVinculoIngresos()
+
+      // M1 (11/10/2026): "Cargar ingreso" solo con materia_prima:cargar en
+      // alguna fábrica (Tomás y Yanina tienen el módulo sin esa tarea).
+      document.getElementById('btn-abrir-wizard').hidden = !puedeCargarAlguna()
 
       // El botón de ingresos internos solo si puede recibir en algún lado. Se
       // piden las unidades ANTES de mostrarlo: con la tarea pero sin alcance en
@@ -4880,6 +4894,11 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function abrirWizard() {
+      // M1: sin materia_prima:cargar en ninguna fábrica, no hay wizard que sirva.
+      if (!puedeCargarAlguna()) {
+        mostrarError('Para cargar un ingreso hace falta el permiso de registrar ingresos de materia prima en alguna fábrica.')
+        return false
+      }
       estado.wizard = wizardVacio()
       // Una sola unidad: se preselecciona, no tiene sentido preguntar.
       const elegibles = unidadesParaElegir()
@@ -9019,7 +9038,7 @@
     }
 
     async function ingresarDesdeGasto(fila) {
-      await abrirWizard()
+      if (await abrirWizard() === false) return
       const w = estado.wizard
       w.desdeGasto = fila
       if (fila.unidad_negocio_id) {

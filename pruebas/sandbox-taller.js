@@ -88,8 +88,10 @@ const PRELUDIO = `
   function setTimeout(f) { return 0 } function clearTimeout() {}
   function mostrarExito(m) { __llamadas.exitos.push(m) }
   function mostrarError(m) { __llamadas.errores.push(m) }
-  async function verificarSesion() { return null }
-  function unidadesDeLaBarra() { return null }
+  // __setSesion (11/10/2026): para ejecutar init() entero (B4).
+  var __sesion = null
+  async function verificarSesion() { return __sesion }
+  async function unidadesDeLaBarra() { return null }
   function alCambiarUnidad() {}
   var __rpc = async () => ({ data: null, error: null })
   var __tablas = {}
@@ -132,7 +134,7 @@ function construirTaller({ archivo } = {}) {
   const importados = extraerFn(html, 'inicialesDe') + '\n' + extraerConst(html, 'TONOS_PERSONA') + '\n' + extraerFn(html, 'colorPersona') + '\n'
   const codigo = PRELUDIO + importados + cuerpo +
     `\nreturn { ${nombres.join(', ')}, __els, __el, __llamadas, __tablas, document, window,
-      __setRpc(f) { __rpc = f }, __setMovil(v) { __movil = v } }`
+      __setRpc(f) { __rpc = f }, __setMovil(v) { __movil = v }, __setSesion(s) { __sesion = s } }`
   return new Function(codigo)()
 }
 
