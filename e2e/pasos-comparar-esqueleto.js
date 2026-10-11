@@ -54,7 +54,9 @@ const PASOS_1366 = [
   }],
   ['3a', async (page, base) => {
     await abrir(page, base, { datos: 'tablero-estados', empleado: 'emp-facundo', elegida: 'u-d',
-      prefs: { tablero: { orden: ['cobranzas', 'caja', 'cheques', 'pedidos', 'gastos', 'stock', 'empleados'] } } });
+      // Administración, escondida: desde el 11/10/2026 (M3) se ve también con
+      // cobranzas:procesar, y el diseño 3a es de antes (7 tarjetas).
+      prefs: { tablero: { orden: ['cobranzas', 'caja', 'cheques', 'pedidos', 'gastos', 'stock', 'empleados'], ocultas: ['administracion'] } } });
     await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(7);
     await expect(page.locator('[data-tarjeta="caja"]')).toContainText('No se pudo cargar');
     await expect(page.locator('[data-tarjeta="cobranzas"]')).toContainText('Hoy no hubo cobranzas');
