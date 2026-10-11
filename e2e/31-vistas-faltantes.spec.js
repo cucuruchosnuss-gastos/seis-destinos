@@ -137,6 +137,20 @@ for (const ancho of [360, 390]) {
       expect(icono.right, 'el ícono a la izquierda del nombre').toBeLessThanOrEqual(texto.left + 0.5);
     });
 
+    // Los números (11/10/2026, ci-prueba/numeros): el kilometraje con punto de
+    // miles y la plata de "Pagado sin ingresar" con sus dos decimales.
+    test('el detalle de un gasto: el kilometraje con punto de miles', async ({ page }) => {
+      await abrir(page, ancho, VISTAS.gasto);
+      await expect(page.locator('.resumen-fila__valor', { hasText: ' km' })).toHaveText('184.350 km');
+    });
+
+    test('"Pagado sin ingresar": la plata con sus dos decimales', async ({ page }) => {
+      await abrir(page, ancho, VISTAS.pagado);
+      const meta = (await page.locator('#seccion-pagado-sin-ingresar .pendiente-mp__meta').allTextContents()).join(' | ');
+      expect(meta).toContain('$1.234.567,89');
+      expect(meta, 'ningún importe con un solo decimal').not.toMatch(/\$[\d.]+,\d(?!\d)/);
+    });
+
     test('los campos donde se escribe, con letra de 16 px (el celular no agranda la pantalla)', async ({ page }) => {
       // Primero la gestión de Producción: los selectores de unidad se ven con
       // "Todas" en la barra de arriba (Stock elige Nuss, y queda recordado).
