@@ -19,6 +19,7 @@ const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
 const { arnes, marca, chequearMarcas, estaticoAcotado, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
+const { fuenteNumeros } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/materia-prima.html')
@@ -28,7 +29,9 @@ const { chk, esperas, fin } = arnes()
 
 const AVISO = 'Estas son facturas de insumos que todavía no tienen ingreso. Si la mercadería ya está contada en el inventario, no la cargues: quedaría contada dos veces.'
 
+// formatearNumeroAr real (importeConMoneda lo usa desde el 11/10/2026).
 const PRELUDIO = `
+  ${fuenteNumeros()}
   function nuevoEl(id) {
     return {
       id, innerHTML: '', textContent: '', value: '', hidden: true, disabled: false, dataset: {},

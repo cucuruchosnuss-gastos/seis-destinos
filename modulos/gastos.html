@@ -2274,6 +2274,15 @@
       return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
+    // El kilometraje con punto de miles: "85.000 km" (11/10/2026; antes salía
+    // "85000 km"). Sin dato, o en cero, null: la fila no se dibuja, como antes.
+    function textoKilometraje(km) {
+      if (km === null || km === undefined || km === '') return null
+      const n = Number(km)
+      if (!Number.isFinite(n) || n === 0) return null
+      return `${formatearNumeroAr(n, { decimales: 0 })} km`
+    }
+
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
     // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos a los de
     // gastos.medio_pago ('efectivo'/'transferencia'/'cheque') — no son intercambiables.
@@ -3783,7 +3792,8 @@
       if (v === null || v === undefined || v === '') return null
       const num = Number(v)
       if (!Number.isFinite(num)) return null
-      return '$' + formatearNumeroAr(num, { decimales: 2, minimos: 0 })
+      // La plata, siempre con sus dos decimales: "$387.300,50" (11/10/2026).
+      return '$' + formatearNumeroAr(num, { decimales: 2 })
     }
 
     // Se consulta al SALIR del paso Datos, desde las DOS salidas —"Siguiente" y
@@ -5487,7 +5497,7 @@
           <div class="resumen-seccion__titulo">Destino y clasificación</div>
           ${fila('Empresa',      unidObj?.nombre)}
           ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
-          ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Kilometraje',  textoKilometraje(g.kilometraje))}
           ${filaHtml('Categoría', catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${esc(catObj.nombre)}` : null)}
         </div>
 
@@ -5551,7 +5561,7 @@
           <div class="resumen-seccion__titulo">Destino y clasificación</div>
           ${fila('Empresa',      unidObj?.nombre)}
           ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
-          ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Kilometraje',  textoKilometraje(g.kilometraje))}
           ${filaHtml('Categoría', catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${esc(catObj.nombre)}` : null)}
         </div>
 
@@ -5680,7 +5690,7 @@
           <div class="resumen-seccion__titulo">Destino y clasificación</div>
           ${fila('Empresa',     g.unidades_negocio?.nombre)}
           ${fila('Vehículo',    g.vehiculos ? `${g.vehiculos.nombre} (${g.vehiculos.patente})` : null)}
-          ${fila('Kilometraje', g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Kilometraje', textoKilometraje(g.kilometraje))}
           ${filaHtml('Categoría', g.categorias ? `${iconoCategoriaHtml(g.categorias.nombre)} ${esc(g.categorias.nombre)}` : null)}
         </div>
 
@@ -6321,7 +6331,8 @@
         const base = obtenerBase()
         if (!monto || monto <= 0 || !dias || dias <= 0 || base <= 0) { info.textContent = ''; return }
         const tasaAnual = (monto / base) / (dias / 365) * 100
-        info.textContent = `≈ ${tasaAnual.toFixed(2)}% anual`
+        // Coma decimal, como todo número de la app (antes toFixed: "12.50%").
+        info.textContent = `≈ ${formatearNumeroAr(tasaAnual, { decimales: 2 })} % anual`
       }
 
       function actualizarMontoModoB() {
