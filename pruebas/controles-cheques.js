@@ -47,6 +47,37 @@ const RETIRADOS_IDS_CHEQUES = [
   { id: 'chq-campo-unidad', motivo: 'la cajita del filtro "Unidad" (label + select): lo decide la barra de unidad de arriba' },
 ]
 
+// TERCER BASELINE (11/10/2026): la región en el último commit con la pestaña
+// "Emitidos" (los cheques propios). Todo lo de ahí sigue en la región, salvo lo
+// retirado con su motivo. Commit FIJO, nunca HEAD.
+const BASE_EMITIDOS = 'e4293f5'
+const SIN_PROPIO = 'la empresa no emite cheques propios, 11/10/2026'
+const RETIRADOS_EMITIDOS = [
+  ['control:button[data-chq-vista][type=button]', `el segmentado Cartera | Emitidos: ${SIN_PROPIO}`],
+  ['control:button[data-emi-estado][type=button]', `Pendientes / Debitados / Todos de los emitidos: ${SIN_PROPIO}`],
+  ['control:input#chq-emi-desde[type=date]', `la fecha de pago desde de los emitidos: ${SIN_PROPIO}`],
+  ['control:input#chq-emi-hasta[type=date]', `la fecha de pago hasta de los emitidos: ${SIN_PROPIO}`],
+  ['control:select#chq-emi-cuenta', `la cuenta de los emitidos: ${SIN_PROPIO}`],
+  ['data:data-chq-vista', `el segmentado Cartera | Emitidos: ${SIN_PROPIO}`],
+  ['data:data-emi-estado', `el filtro de estado de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-vistas', `el segmentado Cartera | Emitidos: ${SIN_PROPIO}`],
+  ['id:chq-panel-cartera', `la caja de la cartera dentro del segmentado: sin segmentado la cartera va como antes, sin envolver (${SIN_PROPIO})`],
+  ['id:chq-panel-emitidos', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-aviso', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-cuenta', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-desde', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-estado', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-hasta', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-lista', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-sin-permiso', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-totales', `el panel de los emitidos: ${SIN_PROPIO}`],
+  ['id:chq-emi-vacio', `el panel de los emitidos: ${SIN_PROPIO}`],
+]
+// Lo que sigue pero aparece MENOS veces: [clave, cuántas ahora, motivo].
+const MENOS_COPIAS_EMITIDOS = [
+  ['control:a{Ver el pago}', 1, `queda el de la cartera; el de los emitidos se fue: ${SIN_PROPIO}`],
+]
+
 // RENOMBRADOS: controles que además de mudarse cambiaron de TEXTO o de LUGAR a
 // propósito. Se listan en la salida y se verifica el texto y el lugar nuevos
 // sobre el código real: un cambio que nadie declaró no pasa como mudanza.
@@ -128,6 +159,27 @@ try {
   for (const d of V.datas) chk(`el data-${d} de cheques.html está en la región`, A.datas.has(d))
   for (const r of RETIRADOS_CHEQUES) chk(`la declaración de ${r.clave} apunta a un control que existía`, veces(V, r.clave) > 0)
   chk('la región tiene el "‹ Portada" que reemplaza al encabezado', A.ids.has('ad-cheques-volver'))
+
+  // El tercer baseline: la región con la pestaña "Emitidos" (11/10/2026).
+  const conEmitidos = process.env.ARCHIVO_BASE_EMITIDOS
+    ? fs.readFileSync(process.env.ARCHIVO_BASE_EMITIDOS, 'utf8')
+    : execFileSync('git', ['show', `${BASE_EMITIDOS}:modulos/administracion.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  const E = inventario(regionCheques(conEmitidos))
+  const retEmi = new Map(RETIRADOS_EMITIDOS)
+  const copiasEmi = new Map(MENOS_COPIAS_EMITIDOS.map(([k, n, m]) => { console.log(`MENOS COPIAS: ${k} × ${n} (${m})`); return [k, n] }))
+  chk(`la región en ${BASE_EMITIDOS} tiene controles (si da cero, no se está leyendo)`, [...E.cuenta.keys()].filter(k => k.startsWith('control:')).length > 20)
+  for (const [k, m] of RETIRADOS_EMITIDOS) {
+    console.log(`RETIRADO: ${k} (${m})`)
+    chk(`${k}: estaba en ${BASE_EMITIDOS} (si no, la declaración sobra)`, veces(E, k) > 0)
+    chk(`${k}: declarado retirado y de verdad no está (si volvió, sacá la declaración)`, veces(A, k) === 0)
+  }
+  for (const [k, n] of MENOS_COPIAS_EMITIDOS) chk(`${k} aparece las ${n} veces declaradas`, veces(A, k) === n, `aparece ${veces(A, k)}`)
+  for (const [k, n] of [...E.cuenta.entries()].sort()) {
+    if (retEmi.has(k)) continue
+    const hay = veces(A, k)
+    const pide = copiasEmi.has(k) ? Math.min(n, copiasEmi.get(k)) : n
+    chk(`${BASE_EMITIDOS}: ${k} sigue en la región`, hay >= pide && hay > 0, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
+  }
 
   for (const r of referenciasDelJs(A.referencias)) {
     const existe = r.tipo === 'id' ? A.ids.has(r.valor) : A.datas.has(r.valor)

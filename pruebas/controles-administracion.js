@@ -27,7 +27,9 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/administrac
 const BASES = [
   'e8c0905', // Parte 1: la portada y las órdenes de retiro
   'ab577fc', // Parte 2: clientes, su cuenta, su ficha, saldo inicial, ajuste y alta
+  'e4293f5', // 11/10/2026: el último con la pestaña "Emitidos" de Cheques
 ]
+const SIN_PROPIO = 'la empresa no emite cheques propios, 11/10/2026'
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
 const RENOMBRADOS = [
@@ -41,6 +43,11 @@ const RENOMBRADOS = [
 // la gracia de este chequeo. Un control que se fue sin explicación es
 // indistinguible de uno que se perdió al mover código.
 const RETIRADOS = [
+  ['control:button[data-chq-vista][type=button]', `el segmentado Cartera | Emitidos de Cheques: ${SIN_PROPIO}`],
+  ['control:button[data-emi-estado][type=button]', `Pendientes / Debitados / Todos de los cheques emitidos: ${SIN_PROPIO}`],
+  ['control:input#chq-emi-desde[type=date]', `la fecha de pago desde de los cheques emitidos: ${SIN_PROPIO}`],
+  ['control:input#chq-emi-hasta[type=date]', `la fecha de pago hasta de los cheques emitidos: ${SIN_PROPIO}`],
+  ['control:select#chq-emi-cuenta', `la cuenta de los cheques emitidos: ${SIN_PROPIO}`],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
@@ -48,6 +55,7 @@ const RETIRADOS = [
 // clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
 // la declaración sobra y se dice.
 const MENOS_COPIAS = [
+  ['control:a{Ver el pago}', 1, `queda el de la cartera (un cheque que pagó la cuenta de un proveedor); el de los cheques emitidos se fue: ${SIN_PROPIO}`],
 ]
 
 let ok = 0

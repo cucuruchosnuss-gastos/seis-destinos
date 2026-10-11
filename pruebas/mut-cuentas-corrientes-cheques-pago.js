@@ -1,5 +1,6 @@
 // Mutaciones de test-cuentas-corrientes-cheques-pago.js (Clientes y los
-// cheques en un pago a proveedor, 05/10/2026). Ver mutar.js.
+// cheques en un pago a proveedor, 05/10/2026; sin el cheque propio desde el
+// 11/10/2026). Ver mutar.js.
 //
 //   node pruebas/mut-cuentas-corrientes-cheques-pago.js
 'use strict'
@@ -27,7 +28,14 @@ correrMutacionesEnVarios([
       { nombre: 'la dirección no recuerda la pestaña', de: "location.pathname + (s === 'clientes' ? '?pestana=clientes' : '')", a: 'location.pathname' },
       { nombre: '?pestana=clientes no abre la pestaña', de: "      if (params.get('pestana') === 'clientes') mostrarSeccionCC('clientes')\n", a: '' },
       // ── Los medios ────────────────────────────────────────────────────────
-      { nombre: 'vuelve el "Cheque" que no movía nada', de: '<button type="button" class="btn-tipo-doc" data-valor="propio">', a: '<button type="button" class="btn-tipo-doc" data-valor="cheque">Cheque</button>\n            <button type="button" class="btn-tipo-doc" data-valor="propio">' },
+      { nombre: 'vuelve el "Cheque" que no movía nada', de: 'id="btn-medio-cartera" hidden>Cheques de la cartera</button>\n', a: 'id="btn-medio-cartera" hidden>Cheques de la cartera</button>\n            <button type="button" class="btn-tipo-doc" data-valor="cheque">Cheque</button>\n' },
+      // ── 11/10/2026: el cheque propio NO vuelve ────────────────────────────
+      { nombre: 'vuelve el medio "Cheque / e-cheque propio"', de: 'id="btn-medio-cartera" hidden>Cheques de la cartera</button>\n', a: 'id="btn-medio-cartera" hidden>Cheques de la cartera</button>\n            <button type="button" class="btn-tipo-doc" data-valor="propio">Cheque / e-cheque propio</button>\n' },
+      { nombre: 'vuelve la llamada a pagar_proveedor_con_cheque_propio', de: "          : await supabase.rpc('registrar_pago_proveedor', {", a: "          : medio === 'propio' ? await supabase.rpc('pagar_proveedor_con_cheque_propio', {})\n          : await supabase.rpc('registrar_pago_proveedor', {" },
+      { nombre: 'vuelve el formulario del cheque propio', de: '        <div class="grupo-campo" id="grupo-cuenta-pago-cc"', a: '        <div id="grupo-propio-pago" hidden><select id="campo-cuenta-propio"></select></div>\n        <div class="grupo-campo" id="grupo-cuenta-pago-cc"' },
+      { nombre: 'vuelve la validación del cheque propio', de: '    function parametrosPagoCartera(', a: '    function validarChequePropio() { return null }\n    function parametrosPagoCartera(' },
+      { nombre: 'MEDIOS_CHEQUE vuelve a tener "propio"', de: "    const MEDIOS_CHEQUE = ['cartera']", a: "    const MEDIOS_CHEQUE = ['cartera', 'propio']" },
+      { nombre: 'la cartera deja un hueco en la grilla', de: '    #grilla-medio-pago-cc [data-valor="cartera"] { grid-column: 1 / -1; }\n', a: '' },
       { nombre: 'la cartera sin cobranzas:procesar', de: "      return tieneTarea('cobranzas', 'procesar')", a: '      return true' },
       { nombre: 'la cartera nace visible', de: 'data-valor="cartera" id="btn-medio-cartera" hidden>', a: 'data-valor="cartera" id="btn-medio-cartera">' },
       // ── Los cheques de la cartera ─────────────────────────────────────────
@@ -48,27 +56,12 @@ correrMutacionesEnVarios([
       { nombre: 'la cartera con fecha futura igual llama', de: "        if (fecha > hoy) return mostrarError('La fecha del pago no puede ser futura.')\n", a: '' },
       { nombre: 'los cheques en dólares pasan', de: "      if (esMedioCheque(medio) && moneda !== 'ARS') return mostrarError('Los cheques son solo en pesos: elegí ARS.')\n", a: '' },
       { nombre: 'la cartera manda todos los cheques, no los tildados', de: '      const chequeIds = carteraPago.filter(c => c.tildado).map(c => c.id)', a: '      const chequeIds = carteraPago.map(c => c.id)' },
-      // ── El cheque propio: NO SE DEBITA ANTES DE SU FECHA ──────────────────
-      { nombre: 'el propio manda la emisión como fecha de pago (se debitaría antes)', de: 'p_fecha_emision: emision, p_fecha_pago: pago,', a: 'p_fecha_emision: emision, p_fecha_pago: emision,' },
-      { nombre: 'el aviso dice la emisión en vez del día de pago', de: "      const texto = textoDebitoPropio(document.getElementById('campo-fechapago-propio').value, hoyCC())", a: "      const texto = textoDebitoPropio(document.getElementById('campo-emision-propio').value, hoyCC())" },
-      { nombre: 'el aviso de éxito no dice cuándo se debita', de: "medio === 'propio' ? `¡Pago registrado! ${textoDebitoPropio(propio.pago, hoy)}`", a: "medio === 'propio' ? '¡Pago registrado!'" },
-      { nombre: 'un cheque con fecha futura dice que se debita ya', de: '      return fechaPago <= hoy\n', a: '      return true\n' },
-      { nombre: 'el pago antes de la emisión pasa', de: '      if (pago < emision || pago > sumarDiasIso(emision, 360))', a: '      if (pago > sumarDiasIso(emision, 360))' },
-      { nombre: 'el pago a más de 360 días pasa', de: '      if (pago < emision || pago > sumarDiasIso(emision, 360))', a: '      if (pago < emision)' },
-      { nombre: 'la emisión futura pasa', de: "      if (emision > hoy) return 'La fecha de emisión no puede ser futura.'\n", a: '' },
-      { nombre: 'sin cuenta pasa', de: "      if (!cuentaId) return 'Elegí la cuenta de banco de donde sale el cheque.'\n", a: '' },
-      { nombre: 'el número con espacios', de: "p_numero: String(numero ?? '').trim(),", a: "p_numero: String(numero ?? '')," },
-      { nombre: 'el propio ignora el tipo', de: "p_tipo: tipo === 'echeque' ? 'echeque' : 'cheque',", a: "p_tipo: 'cheque'," },
-      { nombre: 'el propio va por registrar_pago_proveedor', de: "          ? await supabase.rpc('pagar_proveedor_con_cheque_propio', parametrosPagoPropio({ ...base, ...propio }))", a: "          ? await supabase.rpc('registrar_pago_proveedor', parametrosPagoPropio({ ...base, ...propio }))" },
-      { nombre: 'cuentas de otra empresa', de: '.filter(c => c.unidad_negocio_id === unidadId && c.medio', a: '.filter(c => c.medio' },
-      { nombre: 'cuentas en dólares', de: " && (c.moneda ?? 'ARS') === 'ARS' && c.activa !== false)", a: ' && c.activa !== false)' },
-      { nombre: 'cuentas de efectivo', de: "c.unidad_negocio_id === unidadId && c.medio === 'banco' &&", a: 'c.unidad_negocio_id === unidadId &&' },
       // ── Pesos ─────────────────────────────────────────────────────────────
       { nombre: 'la moneda no pasa a ARS', de: "      if (sel.value !== 'ARS') { sel.value = 'ARS'; actualizarSelectorCuentaPago(); programarActualizarSugerenciasPago() }", a: '' },
       { nombre: 'sin el aviso de pesos', de: "      const mal = esMedioCheque(medioPagoSeleccionado) && document.getElementById('campo-moneda-pago').value !== 'ARS'", a: '      const mal = false' },
       // ── La etiqueta en la cuenta ──────────────────────────────────────────
       { nombre: 'sin la etiqueta de la cartera', de: '      if (t) return `Cheques de la cartera ${t[1]}`\n', a: '' },
-      { nombre: 'sin la etiqueta del propio', de: "      if (p) return `${p[1] === 'e-cheque' ? 'E-cheque' : 'Cheque'} propio N° ${p[2]}`\n", a: '' },
+      { nombre: 'vuelve la etiqueta del propio', de: '      if (t) return `Cheques de la cartera ${t[1]}`\n', a: '      if (t) return `Cheques de la cartera ${t[1]}`\n      const p = /^Pago con (e-cheque|cheque) propio N° (\\S+)/.exec(d)\n      if (p) return `Cheque propio N° ${p[2]}`\n' },
     ],
   },
   {

@@ -1142,8 +1142,13 @@
       background: var(--color-superficie);
     }
 
-    /* ── Registrar pago: los cuatro medios ─────────────────────────────── */
+    /* ── Registrar pago: los tres medios ──────────────────────────────── */
+    /* Efectivo y Transferencia / QR en una fila; "Cheques de la cartera"
+       (solo con cobranzas:procesar) abajo, a todo el ancho: así con dos o
+       con tres botones no queda un hueco. Desde el 11/10/2026 no hay
+       "Cheque / e-cheque propio": la empresa no emite cheques propios. */
     #grilla-medio-pago-cc { grid-template-columns: repeat(2, 1fr); }
+    #grilla-medio-pago-cc [data-valor="cartera"] { grid-column: 1 / -1; }
     #grilla-medio-pago-cc .btn-tipo-doc { min-height: 44px; font-size: 0.8125rem; }
     .cartera-pago { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-borde); border-radius: 10px; }
     .cartera-pago:empty { display: none; }
@@ -1165,10 +1170,9 @@
     .cartera-pago__importe { flex-shrink: 0; font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); font-variant-numeric: tabular-nums; }
     .cartera-pago__total { margin-top: 0.5rem; font-size: 0.875rem; font-weight: 700; color: var(--color-texto); }
     .cartera-pago__total[hidden] { display: none; }
-    #grupo-propio-pago[hidden] { display: none; }
-    /* Los <select> del modal de pago (la cuenta de caja y la de banco del
-       cheque propio) con el mismo aspecto que los campos de texto: sin esto
-       quedaban con el control chico del sistema. */
+    /* Los <select> del modal de pago (la cuenta de caja) con el mismo
+       aspecto que los campos de texto: sin esto quedaban con el control chico
+       del sistema. */
     #modal-pago .grupo-campo select {
       width: 100%;
       min-height: 44px;
@@ -1180,13 +1184,6 @@
       font-size: 0.9375rem;
       color: var(--color-texto);
     }
-    .cc-segmento-propio { display: flex; gap: 0.25rem; padding: 0.25rem; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 10px; }
-    .cc-segmento-propio__opcion { flex: 1 1 0; min-height: 40px; border: none; border-radius: 7px; background: transparent; font-family: var(--fuente); font-size: 0.875rem; font-weight: 600; color: var(--color-texto-2); cursor: pointer; }
-    .cc-segmento-propio__opcion[aria-pressed="true"] { background: var(--color-acento); color: #fff; }
-    .cc-fechas-propio { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
-    .cc-fechas-propio > * { min-width: 0; }
-    .aviso-debito-propio { margin: 0.25rem 0 0.75rem; padding: 0.625rem 0.75rem; border-radius: 10px; background: var(--color-superficie); font-size: 0.875rem; font-weight: 600; color: var(--color-texto); }
-    .aviso-debito-propio[hidden] { display: none; }
     /* Revisión en el celular (10/10/2026, e2e/30-revision-celular.spec.js): en
        un celular angosto el nombre del proveedor y su subtítulo bajan de renglón en vez
        de cortarse con "…" (a 360 se leía "Cartonera del S…"). */
@@ -1471,17 +1468,16 @@
           <p class="etiqueta-opcional" id="nota-monto-pago" hidden></p>
         </div>
 
-        <!-- Cuatro medios (05/10/2026). "Cheque" ya no va por
-             registrar_pago_proveedor (no movía ni la caja ni la cartera): los
-             cheques de la cartera van por pagar_proveedor_con_cheques_cartera
-             y uno propio por pagar_proveedor_con_cheque_propio. -->
+        <!-- Tres medios. "Cheque" ya no va por registrar_pago_proveedor (no
+             movía ni la caja ni la cartera): los cheques de la cartera van por
+             pagar_proveedor_con_cheques_cartera. El cheque / e-cheque propio
+             se sacó el 11/10/2026: la empresa no emite cheques propios. -->
         <div class="grupo-campo">
           <label>Medio de pago</label>
           <div class="grilla-medio-pago" id="grilla-medio-pago-cc">
             <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
             <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia / QR</button>
             <button type="button" class="btn-tipo-doc" data-valor="cartera" id="btn-medio-cartera" hidden>Cheques de la cartera</button>
-            <button type="button" class="btn-tipo-doc" data-valor="propio">Cheque / e-cheque propio</button>
           </div>
           <p class="etiqueta-opcional" id="aviso-medio-pesos" hidden></p>
         </div>
@@ -1493,38 +1489,6 @@
           <p class="etiqueta-opcional" id="nota-cartera-pago" hidden></p>
           <div class="cartera-pago" id="lista-cartera-pago"></div>
           <div class="cartera-pago__total" id="total-cartera-pago" hidden></div>
-        </div>
-
-        <!-- Cheque / e-cheque propio: sale de una cuenta de banco de ESTA
-             empresa. El banco se debita recién el día de pago. -->
-        <div id="grupo-propio-pago" hidden>
-          <div class="grupo-campo">
-            <label for="campo-cuenta-propio">Cuenta de banco</label>
-            <select id="campo-cuenta-propio"><option value="">— Seleccioná —</option></select>
-            <p class="etiqueta-opcional" id="aviso-sin-cuentas-propio" hidden></p>
-          </div>
-          <div class="grupo-campo">
-            <label>Tipo</label>
-            <div class="cc-segmento-propio" id="tipo-propio">
-              <button type="button" class="cc-segmento-propio__opcion" data-tipo-propio="cheque" aria-pressed="true">Cheque</button>
-              <button type="button" class="cc-segmento-propio__opcion" data-tipo-propio="echeque" aria-pressed="false">E-cheque</button>
-            </div>
-          </div>
-          <div class="grupo-campo">
-            <label for="campo-numero-propio">Número del cheque</label>
-            <input type="text" id="campo-numero-propio" inputmode="numeric" autocomplete="off" maxlength="30">
-          </div>
-          <div class="cc-fechas-propio">
-            <div class="grupo-campo">
-              <label for="campo-emision-propio">Fecha de emisión</label>
-              <input type="date" id="campo-emision-propio">
-            </div>
-            <div class="grupo-campo">
-              <label for="campo-fechapago-propio">Fecha de pago</label>
-              <input type="date" id="campo-fechapago-propio">
-            </div>
-          </div>
-          <p class="aviso-debito-propio" id="aviso-debito-propio" hidden></p>
         </div>
 
         <div class="grupo-campo" id="grupo-cuenta-pago-cc" style="display:none;">
@@ -3645,13 +3609,14 @@
     // Solo se toman del texto el banco (3 dígitos) y el número (8), los mismos
     // largos que exigen los CHECK de cobranza_cheques; si la descripción no
     // tiene esa forma, el pago queda como "Pago a proveedor".
-    // Desde el 05/10/2026, también los dos pagos con cheque nuevos (las
-    // descripciones las escriben pagar_proveedor_con_cheques_cartera y
-    // pagar_proveedor_con_cheque_propio, verificado con pg_get_functiondef):
+    // Desde el 05/10/2026, también el pago con cheques de la cartera (la
+    // descripción la escribe pagar_proveedor_con_cheques_cartera, verificado
+    // con pg_get_functiondef):
     //   'Pago con cheques de terceros (N° 1, N° 2) — X'  → "Cheques de la cartera N° 1, N° 2"
-    //   'Pago con e-cheque propio N° 55 (Macro, …) — X'  → "E-cheque propio N° 55"
-    // El texto que se toma lo escapa quien lo dibuja (el número de un cheque
-    // propio lo tipea una persona).
+    // El texto que se toma lo escapa quien lo dibuja.
+    // El "Cheque propio N° X" se sacó el 11/10/2026: la empresa no emite
+    // cheques propios y nunca se registró ninguno (0 en cheques_emitidos y
+    // 0 gastos "Pago con … cheque propio", medido ese día).
     function etiquetaPagoDeGasto(gasto) {
       // Una compensación con su cuenta de cliente (compensar_cuentas, 06/10/2026):
       // no salió plata, se cancelaron las dos deudas.
@@ -3662,8 +3627,6 @@
       if (m) return `Cheque endosado ${m[1]}-${m[2]}`
       const t = /^Pago con cheques de terceros \(([^)]*)\)/.exec(d)
       if (t) return `Cheques de la cartera ${t[1]}`
-      const p = /^Pago con (e-cheque|cheque) propio N° (\S+)/.exec(d)
-      if (p) return `${p[1] === 'e-cheque' ? 'E-cheque' : 'Cheque'} propio N° ${p[2]}`
       return null
     }
 
@@ -5185,24 +5148,19 @@
     }
 
     // ═══ LOS CHEQUES EN UN PAGO A PROVEEDOR (05/10/2026) ═════════════════
-    // Dos medios con su propia función de la base (verificadas con
+    // Un medio con su propia función de la base (verificada con
     // pg_get_functiondef el 05/10/2026):
     //  - 'cartera': cheques EN CARTERA de esta empresa, de cobranzas
     //    asentadas y en pesos. pagar_proveedor_con_cheques_cartera los deja
     //    endosados a este proveedor y el monto es la SUMA de los cheques. NO
     //    mueve caja (la plata no sale de ninguna cuenta: sale el papel). Pide
     //    cuentas_corrientes:registrar_pago y cobranzas:procesar.
-    //  - 'propio': un cheque o e-cheque NUESTRO, de una cuenta de banco de
-    //    esta empresa. pagar_proveedor_con_cheque_propio crea el gasto con la
-    //    fecha de emisión y lo anota en cheques_emitidos; el banco se debita
-    //    recién EL DÍA DE PAGO (debitar_cheques_emitidos, todos los días a las
-    //    06:00 y al cargar el pago).
-    // Los dos son SOLO en pesos. "Cheque" ya no va por registrar_pago_proveedor:
-    // ahí no movía ni la caja ni la cartera.
-    const MEDIOS_CHEQUE = ['cartera', 'propio']
+    // Es SOLO en pesos. "Cheque" ya no va por registrar_pago_proveedor: ahí no
+    // movía ni la caja ni la cartera. El cheque / e-cheque PROPIO
+    // (pagar_proveedor_con_cheque_propio) se sacó el 11/10/2026: la empresa
+    // no emite cheques propios.
+    const MEDIOS_CHEQUE = ['cartera']
     let carteraPago = []     // [{id, numero, banco, librador, cobra, comun, importe, tildado}]
-    let cuentasPropio = []
-    let tipoPropio = 'cheque'
     let turnoCartera = 0
     let bancosBcra = null
 
@@ -5233,14 +5191,6 @@
 
     function hoyCC() {
       return fechaISO(new Date())
-    }
-    function sumarDiasIso(iso, n) {
-      const d = new Date(iso + 'T12:00:00Z')
-      d.setUTCDate(d.getUTCDate() + n)
-      return d.toISOString().slice(0, 10)
-    }
-    function esFechaIsoCC(v) {
-      return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
     }
 
     // Puro: los cheques que se pueden ofrecer para pagar, con las MISMAS
@@ -5356,75 +5306,9 @@
       pintarTotalCartera()
     }
 
-    // Las cuentas de banco de ESTA empresa en pesos (la base exige las tres
-    // cosas). cuentas_caja se lee abierta (ver Seguridad en CLAUDE.md).
-    function cuentasDeBancoDeLaEmpresa(lista, unidadId) {
-      return (lista ?? [])
-        .filter(c => c.unidad_negocio_id === unidadId && c.medio === 'banco' && (c.moneda ?? 'ARS') === 'ARS' && c.activa !== false)
-        .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es'))
-    }
-
-    async function cargarCuentasPropio(unidadId) {
-      const sel = document.getElementById('campo-cuenta-propio')
-      const aviso = document.getElementById('aviso-sin-cuentas-propio')
-      const { data, error } = await supabase.from('cuentas_caja')
-        .select('id, nombre, medio, moneda, unidad_negocio_id, activa')
-        .eq('unidad_negocio_id', unidadId).eq('medio', 'banco').eq('activa', true)
-      if (error) console.error(error)
-      cuentasPropio = cuentasDeBancoDeLaEmpresa(data, unidadId)
-      sel.innerHTML = '<option value="">— Seleccioná —</option>' +
-        cuentasPropio.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')
-      if (cuentasPropio.length === 1) sel.value = cuentasPropio[0].id
-      aviso.hidden = !error && cuentasPropio.length > 0
-      aviso.textContent = error
-        ? 'No se pudieron leer las cuentas de banco. Cerrá y probá de nuevo.'
-        : 'Esta empresa no tiene ninguna cuenta de banco en pesos.'
-    }
-
-    function elegirTipoPropio(tipo) {
-      tipoPropio = tipo === 'echeque' ? 'echeque' : 'cheque'
-      document.querySelectorAll('[data-tipo-propio]').forEach(b =>
-        b.setAttribute('aria-pressed', String(b.dataset.tipoPropio === tipoPropio)))
-    }
-
-    // "El banco se debita el DD/MM": el día de pago del cheque.
-    function textoDebitoPropio(fechaPago, hoy) {
-      if (!esFechaIsoCC(fechaPago)) return null
-      const [, m, d] = fechaPago.split('-')
-      return fechaPago <= hoy
-        ? `La fecha de pago ya llegó: el banco se debita el ${d}/${m}, al registrar el pago.`
-        : `El banco se debita el ${d}/${m}.`
-    }
-    function pintarAvisoDebito() {
-      const el = document.getElementById('aviso-debito-propio')
-      const texto = textoDebitoPropio(document.getElementById('campo-fechapago-propio').value, hoyCC())
-      el.hidden = !texto
-      el.textContent = texto ?? ''
-    }
-
-    // Lo que falta en el cheque propio, con las MISMAS reglas (y los mismos
-    // textos) que pagar_proveedor_con_cheque_propio. null = está todo.
-    function validarChequePropio({ cuentaId, numero, emision, pago, importe }, hoy) {
-      if (!cuentaId) return 'Elegí la cuenta de banco de donde sale el cheque.'
-      if (!String(numero ?? '').trim()) return 'Falta el número del cheque.'
-      if (!esFechaIsoCC(emision) || !esFechaIsoCC(pago)) return 'Faltan las fechas del cheque.'
-      if (emision > hoy) return 'La fecha de emisión no puede ser futura.'
-      if (pago < emision || pago > sumarDiasIso(emision, 360)) return 'La fecha de pago tiene que estar entre la emisión y 360 días después.'
-      if (!(Number.isFinite(importe) && importe > 0)) return 'El importe tiene que ser mayor a cero.'
-      return null
-    }
-
     function parametrosPagoCartera({ proveedorId, unidadId, chequeIds, fecha, aplicaciones }) {
       return { p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cheque_ids: chequeIds, p_fecha: fecha, p_aplicaciones: aplicaciones }
     }
-    function parametrosPagoPropio({ proveedorId, unidadId, cuentaId, tipo, numero, emision, pago, importe, aplicaciones }) {
-      return {
-        p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cuenta_id: cuentaId,
-        p_tipo: tipo === 'echeque' ? 'echeque' : 'cheque', p_numero: String(numero ?? '').trim(),
-        p_fecha_emision: emision, p_fecha_pago: pago, p_importe: importe, p_aplicaciones: aplicaciones,
-      }
-    }
-
     // Los cheques son solo en pesos: al elegirlos, la moneda pasa a ARS.
     function asegurarMonedaPesos() {
       const sel = document.getElementById('campo-moneda-pago')
@@ -5446,17 +5330,14 @@
     function pintarMedioCheque() {
       const m = medioPagoSeleccionado
       document.getElementById('grupo-cartera-pago').hidden = m !== 'cartera'
-      document.getElementById('grupo-propio-pago').hidden = m !== 'propio'
-      document.getElementById('grupo-fecha-pago-cc').hidden = m === 'propio'
       const monto = document.getElementById('campo-monto-pago')
       monto.readOnly = m === 'cartera'
       document.getElementById('etiqueta-monto-pago').textContent =
-        m === 'cartera' ? 'Monto (la suma de los cheques tildados)' : m === 'propio' ? 'Importe del cheque' : 'Monto a pagar'
+        m === 'cartera' ? 'Monto (la suma de los cheques tildados)' : 'Monto a pagar'
       if (esMedioCheque(m)) asegurarMonedaPesos()
       pintarAvisoPesos()
       if (!estado.ficha?.unidadId) return
       if (m === 'cartera') { ponerNumero(monto, null); cargarCarteraParaPago(estado.ficha.unidadId) }
-      if (m === 'propio') { cargarCuentasPropio(estado.ficha.unidadId); pintarAvisoDebito() }
     }
 
     function actualizarSelectorCuentaPago() {
@@ -5523,10 +5404,6 @@
       // Los cheques de la cartera, solo con cobranzas:procesar (la base lo exige).
       document.getElementById('btn-medio-cartera').hidden = !puedeUsarCartera()
       carteraPago = []
-      document.getElementById('campo-numero-propio').value = ''
-      document.getElementById('campo-emision-propio').value = hoyCC()
-      document.getElementById('campo-fechapago-propio').value = hoyCC()
-      elegirTipoPropio('cheque')
       seleccionarMedioPagoCC(null)
       facturasParaPago = []
       renderizarFilasFifo()
@@ -5679,20 +5556,7 @@
       if (esMedioCheque(medio) && moneda !== 'ARS') return mostrarError('Los cheques son solo en pesos: elegí ARS.')
 
       const hoy = hoyCC()
-      const propio = medio === 'propio' ? {
-        cuentaId: document.getElementById('campo-cuenta-propio').value || null,
-        tipo: tipoPropio,
-        numero: document.getElementById('campo-numero-propio').value,
-        emision: document.getElementById('campo-emision-propio').value,
-        pago: document.getElementById('campo-fechapago-propio').value,
-        importe: monto,
-      } : null
-      if (propio) {
-        const falta = validarChequePropio(propio, hoy)
-        if (falta) return mostrarError(falta)
-      }
-      // El pago con cheque propio lleva la fecha de EMISIÓN (la pone la base).
-      const fecha = propio ? propio.emision : document.getElementById('campo-fecha-pago-cc').value
+      const fecha = document.getElementById('campo-fecha-pago-cc').value
       if (!fecha) return mostrarError('Completá la fecha de pago.')
       const chequeIds = carteraPago.filter(c => c.tildado).map(c => c.id)
       if (medio === 'cartera') {
@@ -5728,8 +5592,6 @@
         const base = { proveedorId: estado.ficha.proveedorId, unidadId: estado.ficha.unidadId, aplicaciones }
         const { error } = medio === 'cartera'
           ? await supabase.rpc('pagar_proveedor_con_cheques_cartera', parametrosPagoCartera({ ...base, chequeIds, fecha }))
-          : medio === 'propio'
-          ? await supabase.rpc('pagar_proveedor_con_cheque_propio', parametrosPagoPropio({ ...base, ...propio }))
           : await supabase.rpc('registrar_pago_proveedor', {
           p_proveedor_id: estado.ficha.proveedorId,
           p_unidad_negocio_id: estado.ficha.unidadId,
@@ -5751,7 +5613,7 @@
 
         mostrarExito(medio === 'cartera'
           ? `¡Pago registrado! ${chequeIds.length === 1 ? 'El cheque quedó endosado' : 'Los cheques quedaron endosados'} a ${String(estado.ficha.nombre ?? 'este proveedor').replace(/\.$/, '')}.`
-          : medio === 'propio' ? `¡Pago registrado! ${textoDebitoPropio(propio.pago, hoy)}` : '¡Pago registrado!')
+          : '¡Pago registrado!')
         cerrarModalPago()
         await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
         renderizarFichaBanner()
@@ -6065,12 +5927,6 @@
       chk.closest('.cartera-pago__fila')?.classList.toggle('cartera-pago__fila--tildada', chk.checked)
       tildarChequeCartera(Number(chk.dataset.chequeCartera), chk.checked)
     })
-    document.getElementById('tipo-propio').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-tipo-propio]')
-      if (b) elegirTipoPropio(b.dataset.tipoPropio)
-    })
-    document.getElementById('campo-fechapago-propio').addEventListener('change', pintarAvisoDebito)
-    document.getElementById('campo-fechapago-propio').addEventListener('input', pintarAvisoDebito)
     document.getElementById('cc-primer').addEventListener('click', (e) => {
       const b = e.target.closest('[data-cc-seccion]')
       if (b) mostrarSeccionCC(b.dataset.ccSeccion)

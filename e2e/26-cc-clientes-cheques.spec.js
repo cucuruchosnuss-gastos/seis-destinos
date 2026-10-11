@@ -6,10 +6,11 @@
 //  - "Registrar pago" con cheques de la cartera: la suma de los tildados es
 //    el monto y se llama a pagar_proveedor_con_cheques_cartera (sin cuenta de
 //    caja).
-//  - Con un cheque propio: "El banco se debita el DD/MM" con la FECHA DE PAGO,
-//    y se llama a pagar_proveedor_con_cheque_propio.
-//  - Cheques → Emitidos: lo pendiente por cuenta y la lista; en la cartera, el
-//    cheque usado en un pago tiene "Ver el pago".
+//  - Tres medios (Efectivo, Transferencia / QR y Cheques de la cartera), sin
+//    huecos en la grilla. El "Cheque / e-cheque propio" y la pestaña
+//    "Emitidos" de Cheques se SACARON el 11/10/2026: la empresa no emite
+//    cheques propios.
+//  - En la cartera, el cheque usado en un pago tiene "Ver el pago".
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
@@ -54,7 +55,7 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`${ancho} px: pagar con cheques de la cartera y con un cheque propio`, async ({ page }, info) => {
+  test(`${ancho} px: tres medios y pagar con cheques de la cartera`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
@@ -63,6 +64,21 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     await page.goto(`${MAQUETA}/modulos/cuentas-corrientes.html?proveedor=pv1&unidad=u-n`);
     await page.locator('#btn-registrar-pago').click();
     await expect(page.locator('#modal-pago')).toBeVisible();
+
+    // Tres medios, sin el cheque propio (11/10/2026), y sin hueco: Efectivo y
+    // Transferencia en una fila, la cartera abajo a todo el ancho.
+    const medios = page.locator('#grilla-medio-pago-cc [data-valor]');
+    await expect(medios).toHaveCount(3);
+    expect(await medios.evaluateAll(bs => bs.map(b => b.dataset.valor))).toEqual(['efectivo', 'transferencia', 'cartera']);
+    await expect(page.locator('#grilla-medio-pago-cc [data-valor="propio"]')).toHaveCount(0);
+    await expect(page.locator('#grupo-propio-pago')).toHaveCount(0);
+    const grilla = await page.locator('#grilla-medio-pago-cc').boundingBox();
+    const [bEf, bTr, bCa] = await Promise.all(['efectivo', 'transferencia', 'cartera'].map(v => page.locator(`#grilla-medio-pago-cc [data-valor="${v}"]`).boundingBox()));
+    expect(Math.abs(bEf.y - bTr.y), 'Efectivo y Transferencia en la misma fila').toBeLessThan(2);
+    expect(bCa.y, 'la cartera abajo').toBeGreaterThan(bEf.y + bEf.height - 1);
+    expect(Math.abs(bCa.width - grilla.width), 'la cartera ocupa la fila entera').toBeLessThan(2);
+    expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
+    await captura(page, `cc-pago-medios-${ancho}`, info);
 
     // Cheques de la cartera: la suma de los tildados es el monto.
     await page.locator('#grilla-medio-pago-cc [data-valor="cartera"]').click();
@@ -83,38 +99,10 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     expect(pc, 'no mueve caja: sin cuenta').not.toHaveProperty('p_cuenta_id');
     expect(rpc.some(r => r.nombre === 'registrar_pago_proveedor')).toBe(false);
 
-    // Cheque propio: el banco se debita el día de pago.
-    await page.locator('#btn-registrar-pago').click();
-    await page.locator('#grilla-medio-pago-cc [data-valor="propio"]').click();
-    await expect(page.locator('#grupo-propio-pago')).toBeVisible();
-    await expect(page.locator('#grupo-fecha-pago-cc')).toBeHidden();
-    await expect(page.locator('#campo-cuenta-propio option')).toHaveText(['— Seleccioná —', 'Banco Macro · Nuss', 'Banco Nación · Nuss']);
-    await page.locator('#campo-cuenta-propio').selectOption('cta-nacion-nuss');
-    await page.locator('[data-tipo-propio="echeque"]').click();
-    await page.locator('#campo-numero-propio').fill('987');
-    await page.locator('#campo-monto-pago').fill('120000');
-    const hoy = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
-    const pago = await page.evaluate((h) => { const d = new Date(h + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 40); return d.toISOString().slice(0, 10); }, hoy);
-    await page.locator('#campo-fechapago-propio').fill(pago);
-    const [, mm, dd] = pago.split('-');
-    await expect(page.locator('#aviso-debito-propio')).toHaveText(`El banco se debita el ${dd}/${mm}.`);
-    const fechas = page.locator('.cc-fechas-propio');
-    const caja = await fechas.boundingBox();
-    for (const id of ['#campo-emision-propio', '#campo-fechapago-propio']) {
-      const b = await page.locator(id).boundingBox();
-      expect(b.x + b.width, `${id} no se sale de su recuadro`).toBeLessThanOrEqual(caja.x + caja.width + 1);
-    }
-    expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
-    await captura(page, `cc-pago-propio-${ancho}`, info);
-    await confirmar.scrollIntoViewIfNeeded();
-    await confirmar.click();
-    await expect.poll(() => rpc.find(r => r.nombre === 'pagar_proveedor_con_cheque_propio')).toBeTruthy();
-    const pp = rpc.find(r => r.nombre === 'pagar_proveedor_con_cheque_propio').params;
-    expect(pp).toMatchObject({ p_cuenta_id: 'cta-nacion-nuss', p_tipo: 'echeque', p_numero: '987', p_fecha_emision: hoy, p_fecha_pago: pago, p_importe: 120000 });
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`${ancho} px: Cheques → Emitidos y el link al pago en la cartera`, async ({ page }, info) => {
+  test(`${ancho} px: Cheques es solo la cartera, con el link al pago`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await page.goto(`${MAQUETA}/modulos/administracion.html?seccion=cheques&maqueta=cc-cheques`);
@@ -125,24 +113,13 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     await page.locator('[data-estado-cheque="todos"]').click();
     const link = page.locator('a.chq-link-pago[href="cuentas-corrientes.html?pago=g-pago-0"]').first();
     await expect(link).toBeAttached();
-    // Emitidos.
-    await page.locator('[data-chq-vista="emitidos"]').click();
-    await expect(page.locator('#chq-panel-emitidos')).toBeVisible();
-    await expect(page.locator('#chq-panel-cartera')).toBeHidden();
-    const totales = page.locator('#chq-emi-totales');
-    await expect(totales).toContainText('Banco Macro · Nuss');
-    await expect(totales).toContainText('Banco Nación · Nuss');
-    await expect(totales).not.toContainText('Macro · Dolce');
-    await expect(page.locator('#chq-emi-lista .chq-emi')).toHaveCount(2);
-    await expect(page.locator('#chq-emi-lista')).toContainText('E-cheque N° 987654 · FERPLAST S.R.L.');
-    await page.locator('[data-emi-estado="debitado"]').click();
-    await expect(page.locator('#chq-emi-lista .chq-emi')).toHaveCount(1);
-    await expect(page.locator('#chq-emi-lista')).toContainText('Debitado el 20/09/2026');
-    await page.locator('[data-emi-estado="todos"]').click();
-    await page.locator('#chq-emi-cuenta').selectOption('cta-nacion-nuss');
-    await expect(page.locator('#chq-emi-lista .chq-emi')).toHaveCount(1);
+    // Sin la pestaña "Emitidos" (11/10/2026): la cartera es la única vista.
+    await expect(page.locator('#chq-vistas')).toHaveCount(0);
+    await expect(page.locator('[data-chq-vista]')).toHaveCount(0);
+    await expect(page.locator('#chq-panel-emitidos')).toHaveCount(0);
+    await expect(page.locator(ancho < 900 ? '#chq-lista' : '#chq-tabla')).toBeVisible();
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
-    await captura(page, `cheques-emitidos-${ancho}`, info);
+    await captura(page, `cheques-cartera-${ancho}`, info);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 }
