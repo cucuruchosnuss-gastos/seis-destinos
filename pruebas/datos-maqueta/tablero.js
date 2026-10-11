@@ -155,6 +155,8 @@ module.exports = {
     ],
   },
   rpc: {
+    // La tarjeta de Conos de papel (10/10/2026): el stock de la maqueta de conos.
+    conos_stock: require('./conos').rpc.conos_stock,
     // La tarjeta de Seguridad cuenta con errores_resumen (30/09/2026): los
     // mismos 3 de 7 días de errores_app de arriba, y algo informativo que no cuenta.
     errores_resumen: [

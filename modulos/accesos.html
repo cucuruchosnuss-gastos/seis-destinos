@@ -1014,6 +1014,27 @@
         ],
       },
       {
+        grupo: 'Conos de papel',
+        // Conos de papel (10/10/2026, modulos/conos.html). La base NO tiene una
+        // fila 'conos' en la tabla modulos: el grupo se ve SIEMPRE
+        // (siempreVisible) y la tarjeta del dashboard se abre por tener alguna
+        // de estas cuatro tareas (js/modulos.js, sinFilaModulo). SIN alcance y
+        // CON bypass: las RPCs gatean con tiene_tarea('conos', …) (leídas con
+        // pg_get_functiondef el 10/10/2026). Las cuatro están en el CHECK.
+        modulos: [],
+        siempreVisible: true,
+        tareas: [
+          { modulo: 'conos', tarea: 'ver',     label: 'Ver conos de papel',
+            descripcion: 'Ver el stock de conos de papel (cuánto hay, en camino y para cuántos días alcanza) y los pliegos pendientes de entrega. Sin la tarea de pedir, no ve "Por pedir" ni arma pliegos.' },
+          { modulo: 'conos', tarea: 'pedir',   label: 'Armar pedidos de conos',
+            descripcion: 'Anotar conos para pedir, armar y confirmar los pliegos para la gráfica, modificarlos, anularlos, recibirlos y corregir lo recibido, compartir la orden de compra y hacer el conteo y los ajustes del stock de conos.' },
+          { modulo: 'conos', tarea: 'precios', label: 'Ver y cargar precios del papel',
+            descripcion: 'Ver y cargar el precio por cono (sin IVA) de cada papel y tamaño de pliego, y ver los precios y totales de los pliegos y de la orden de compra. Quien no la tiene no ve ningún precio de conos.' },
+          { modulo: 'conos', tarea: 'recibir', label: 'Recibir pliegos de conos',
+            descripcion: 'Recibir un pliego pedido cuando llega de la gráfica (todo o una parte, por cono). Con "Ver conos de papel" alcanza para el depósito: ve el stock y los pendientes de entrega con el botón Recibir.' },
+        ],
+      },
+      {
         grupo: 'Facturas pendientes',
         // Los DOS módulos, con semántica "any": es la misma tarea operada
         // desde dos pantallas, así que con cualquiera de los dos habilitado
@@ -1057,6 +1078,8 @@
     // Semántica "any": alcanza con UNO de los módulos del grupo. Ver el
     // comentario de CATALOGO_TAREAS.
     function grupoEsVisible(grupo) {
+      // siempreVisible: un grupo sin fila en la tabla modulos (Conos de papel).
+      if (grupo.siempreVisible) return true
       return (grupo.modulos ?? []).some(m => estado.modal.modulosElegidos.has(m))
     }
 
