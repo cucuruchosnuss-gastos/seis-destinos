@@ -159,12 +159,33 @@ function argsNavegador(cli, specs, topeMin) {
   return [cli, 'test', '--config', 'e2e/playwright.config.js', `--global-timeout=${globalTimeoutMs(topeMin)}`, ...specs.map(s => `e2e/${s}`)]
 }
 
+// Los descendientes de un proceso (hijos, nietos…), en Linux / Mac, con `ps`.
+// Hace falta porque un proceso lanzado "separado" (como el navegador de
+// Playwright) arma su propio grupo y el corte por grupo no lo alcanza.
+function descendientes(pid) {
+  const r = spawnSync('ps', ['-A', '-o', 'pid=,ppid='], { encoding: 'utf8' })
+  const hijos = new Map()
+  for (const l of (r.stdout || '').split('\n')) {
+    const [p, pp] = l.trim().split(/\s+/).map(Number)
+    if (!p) continue
+    if (!hijos.has(pp)) hijos.set(pp, [])
+    hijos.get(pp).push(p)
+  }
+  const todos = []
+  const pendientes = [pid]
+  while (pendientes.length) for (const h of hijos.get(pendientes.pop()) || []) { todos.push(h); pendientes.push(h) }
+  return todos
+}
+
 // Corta el proceso y TODO lo que lanzó.
 function matarArbol(hijo) {
-  try {
-    if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(hijo.pid), '/T', '/F'], { stdio: 'ignore' })
-    else process.kill(-hijo.pid, 'SIGKILL')
-  } catch { try { hijo.kill('SIGKILL') } catch {} }
+  if (process.platform === 'win32') {
+    try { spawnSync('taskkill', ['/PID', String(hijo.pid), '/T', '/F'], { stdio: 'ignore' }) } catch {}
+    return
+  }
+  for (const p of descendientes(hijo.pid)) try { process.kill(p, 'SIGKILL') } catch {}
+  try { process.kill(-hijo.pid, 'SIGKILL') } catch {}
+  try { hijo.kill('SIGKILL') } catch {}
 }
 
 // Corre un paso con su tope. Devuelve una promesa de { ok, colgado }.
