@@ -100,5 +100,44 @@ chk('la config toma el puerto de E2E_PUERTO', /process\.env\.E2E_PUERTO\b/.test(
 chk('… y el de la maqueta de E2E_PUERTO_MAQUETA', /process\.env\.E2E_PUERTO_MAQUETA/.test(cfg) && /servir\.js \$\{PUERTO_MAQUETA\}/.test(cfg))
 chk('.ensayo/ está en .gitignore', /^\.ensayo\/$/m.test(fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8')))
 
-console.log(`\n${ok}/${ok + fallas.length} verificaciones OK`)
-if (fallas.length) process.exit(1)
+// ── el tope (11/10/2026): un paso colgado se corta, con todo lo que lanzó ──
+const M = require(ARCHIVO)
+chk('el navegador tiene tope de 45 min por defecto', M.TOPE_NAVEGADOR_MIN === 45, M.TOPE_NAVEGADOR_MIN)
+chk('las suites tienen tope de 20 min por defecto', M.TOPE_PRUEBAS_MIN === 20, M.TOPE_PRUEBAS_MIN)
+chk('--global-timeout de Playwright: 3 min antes del tope', M.globalTimeoutMs(45) === 42 * 60000, M.globalTimeoutMs(45))
+chk('… con un tope corto, a la mitad', M.globalTimeoutMs(2) === 60000, M.globalTimeoutMs(2))
+const an = M.argsNavegador('cli.js', ['0-humo.spec.js'], 45)
+chk('Playwright corre con --global-timeout', an.includes(`--global-timeout=${42 * 60000}`), an.join(' '))
+chk('… y con los specs elegidos', an.includes('e2e/0-humo.spec.js') && an[1] === 'test', an.join(' '))
+
+;(async () => {
+  const os = require('os')
+  // Un paso que termina bien: ok, sin colgarse.
+  let r = await M.correr('prueba que termina', process.execPath, ['-e', 'process.exit(0)'], __dirname, {}, 0.5)
+  chk('un paso que termina en 0 da ok', r.ok === true && r.colgado === false, JSON.stringify(r))
+  r = await M.correr('prueba que falla', process.execPath, ['-e', 'process.exit(3)'], __dirname, {}, 0.5)
+  chk('un paso que falla no da ok y no se colgó', r.ok === false && r.colgado === false, JSON.stringify(r))
+  // Un paso colgado que además lanzó un NIETO colgado (como Playwright con el
+  // navegador): al pasar el tope se cortan los dos.
+  const marca = path.join(os.tmpdir(), `ensayo-nieto-${process.pid}.txt`)
+  try { fs.unlinkSync(marca) } catch {}
+  const hijo = `const { spawn } = require('child_process');` +
+    `const n = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 90000)'], { stdio: 'ignore', detached: true });` +
+    `require('fs').writeFileSync(${JSON.stringify(marca)}, String(n.pid)); setTimeout(() => {}, 60000)`
+  const t0 = Date.now()
+  r = await M.correr('prueba colgada', process.execPath, ['-e', hijo], __dirname, {}, 0.05)
+  const seg = (Date.now() - t0) / 1000
+  chk('un paso colgado se corta al pasar el tope (no espera para siempre)', r.colgado === true && r.ok === false && seg < 20, `${JSON.stringify(r)} en ${seg}s`)
+  let nietoVivo = null
+  try {
+    const pid = Number(fs.readFileSync(marca, 'utf8'))
+    await new Promise(res => setTimeout(res, 1500))
+    try { process.kill(pid, 0); nietoVivo = true } catch { nietoVivo = false }
+    if (nietoVivo) try { process.kill(pid) } catch {}
+  } catch (e) { nietoVivo = 'sin marca: ' + e.message }
+  chk('… y se corta también lo que lanzó (el nieto, como el navegador)', nietoVivo === false, String(nietoVivo))
+  try { fs.unlinkSync(marca) } catch {}
+
+  console.log(`\n${ok}/${ok + fallas.length} verificaciones OK`)
+  process.exit(fallas.length ? 1 : 0)
+})()
