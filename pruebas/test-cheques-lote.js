@@ -1,4 +1,7 @@
 // Parte 8 del módulo Cheques (22/09/2026): dar salida a los seleccionados.
+// DESDE EL 13/10/2026 el depósito va por depositar_cheques (mete la plata en
+// un banco de la Empresa, todo o nada, en una sola llamada): ver
+// test-cheques-banco.js. Acá queda lo del lote (botones, tope, diálogo).
 //
 // marcar_salida_cheques(p_cheque_ids uuid[], p_tipo, p_fecha, p_destino) es
 // TODO O NADA (verificado con pg_get_functiondef el 22/09/2026): si uno no
@@ -22,6 +25,8 @@ const CSS = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
 let ok = 0
 const fallas = []
 const esperas = []
+// Los espacios no separables de Intl, como espacios comunes.
+const N = (t) => String(t ?? '').replace(/\s/g, ' ')
 function chk(nombre, cond, detalle) { if (cond) ok++; else fallas.push(nombre + (detalle !== undefined ? ` — ${detalle}` : '')) }
 
 // El mensaje EXACTO que arma la base cuando uno no puede salir (el formato de
@@ -44,6 +49,7 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
     { ...base, id: 'd', cobranza_id: 'asentada', numero: '44444444', importe: 7, estado: 'depositado', salida_fecha: '2026-09-10' },
   ]
   S.estado.seleccion = { activa: true, ids: new Set(), ultimo: null, noPueden: new Set() }
+  S.estado.cuentasBanco = { porId: new Map(), ofrecidas: [{ id: 'k1', nombre: 'Macro', medio: 'banco', moneda: 'ARS', activa: true, unidad_negocio_id: null }] }
   return S
 }
 
@@ -56,7 +62,8 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk('sin nada elegido: no hay botón', btn.hidden === true)
   S.estado.seleccion.ids = new Set(['a', 'b'])
   S.pintarSalidaLote()
-  chk('dos en cartera y asentadas: "Dar salida a 2", habilitado', btn.hidden === false && btn.disabled === false && btn.textContent === 'Dar salida a 2', btn.textContent)
+  chk('dos en cartera y asentadas: Depositar, Vender al banco y Endosar, habilitados',
+    ['chq-sel-depositar', 'chq-sel-vender', 'chq-sel-dar-salida'].every(id => S.__doc.getElementById(id).hidden === false && S.__doc.getElementById(id).disabled === false))
   chk('… sin aviso', aviso.hidden === true)
   S.estado.seleccion.ids = new Set(['a', 'c'])
   S.pintarSalidaLote()
@@ -104,6 +111,7 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk('la fecha arranca en hoy', doc.getElementById('chq-salida-fecha').value === S.hoyArgentina())
   // Un endoso a otra cobranza anterior a la más nueva: no sigue.
   S.estado.salida.tipo = 'depositado'
+  S.estado.salida.cuentaId = 'k1'
   doc.getElementById('chq-salida-fecha').value = '2026-09-05'
   const llamadas = []
   S.__setRpc(async (...a) => { llamadas.push(a); return { data: 2, error: null } })
@@ -121,21 +129,20 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
     // Sale bien: el payload exacto, limpia, recarga y avisa.
     const antes = S.__llamadas.refrescar
     llamadas.length = 0
-    S.__setRpc(async (...a) => { llamadas.push(a); return { data: 2, error: null } })
-    // El endoso a un proveedor va por su propio camino (test-cheques-endoso.js):
-    // el lote de marcar_salida_cheques queda para el depósito.
+    S.__setRpc(async (...a) => { llamadas.push(a); return { data: { cheques: 2, bruto: 4100000, neto: 4100000, descuento: 0 }, error: null } })
+    // El endoso a un proveedor va por su propio camino (test-cheques-endoso.js).
     S.estado.salida.tipo = 'depositado'
-    doc.getElementById('chq-salida-destino').value = '  Banco Nación cta 123  '
     await S.confirmarSalida()
     const ult = llamadas[0]
-    chk('llama a marcar_salida_cheques con el payload EXACTO', ult && ult[0] === 'marcar_salida_cheques' &&
-      JSON.stringify(ult[1]) === JSON.stringify({ p_cheque_ids: ['a', 'b'], p_tipo: 'depositado', p_fecha: S.hoyArgentina(), p_destino: 'Banco Nación cta 123' }),
+    chk('llama a depositar_cheques con el payload EXACTO', ult && ult[0] === 'depositar_cheques' &&
+      JSON.stringify(ult[1]) === JSON.stringify({ p_cheque_ids: ['a', 'b'], p_cuenta_id: 'k1', p_fecha: S.hoyArgentina() }),
       JSON.stringify(ult))
     chk('una sola llamada (no una por cheque)', llamadas.length === 1)
     chk('al salir bien: cierra el diálogo', doc.getElementById('chq-modal-salida').hidden === true && S.estado.salida === null)
     chk('… limpia la selección', S.estado.seleccion.activa === false && S.estado.seleccion.ids.size === 0)
     chk('… recarga lista, total, bancos y vencimientos (refrescarTodo)', S.__llamadas.refrescar === antes + 1)
-    chk('… y dice "Salieron 2 cheques."', S.__llamadas.exitos[S.__llamadas.exitos.length - 1] === 'Salieron 2 cheques.')
+    chk('… y dice "Se depositaron 2 cheques en Macro: entraron $ 4.100.000,00."', N(S.__llamadas.exitos[S.__llamadas.exitos.length - 1]) === 'Se depositaron 2 cheques en Macro: entraron $ 4.100.000,00.',
+      S.__llamadas.exitos[S.__llamadas.exitos.length - 1])
   })())
 }
 {
@@ -155,8 +162,8 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   muchos.abrirModalSalidaLote()
   const t = muchos.__doc.getElementById('chq-salida-cheques').textContent.split('\n')
   chk('la lista es CORTA: 6 cheques y "y 3 más"', t.length === 7 && t[6] === 'y 3 más', t.join(' | '))
-  const p = S.parametrosSalidaLote(['x', 'y'], { tipo: 'depositado', fecha: '2026-09-20', destino: '   ' })
-  chk('parámetros: un destino vacío viaja como null', p.p_destino === null && JSON.stringify(p.p_cheque_ids) === '["x","y"]')
+  const p = S.parametrosBanco(['x', 'y'], { tipo: 'depositado', cuentaId: 'k1', fecha: '2026-09-20' })
+  chk('parámetros: los ids en orden, la cuenta y la fecha', JSON.stringify(p) === JSON.stringify({ p_cheque_ids: ['x', 'y'], p_cuenta_id: 'k1', p_fecha: '2026-09-20' }), JSON.stringify(p))
   chk('el tope es 100, como la base', S.TOPE_SALIDA_LOTE === 100)
 }
 {
@@ -164,9 +171,11 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   S.estado.seleccion.ids = new Set(['a', 'b'])
   S.abrirModalSalidaLote()
   S.estado.salida.tipo = 'depositado'
-  S.__setRpc(async () => ({ data: 1, error: null }))
+  S.estado.salida.cuentaId = 'k1'
+  S.__setRpc(async () => ({ data: { cheques: 1, bruto: 100000, neto: 100000, descuento: 0 }, error: null }))
   esperas.push(S.confirmarSalida().then(() => {
-    chk('dice lo que devolvió la base (1): "Salió 1 cheque."', S.__llamadas.exitos[S.__llamadas.exitos.length - 1] === 'Salió 1 cheque.')
+    chk('dice lo que devolvió la base (1): "Se depositó 1 cheque en Macro…"', N(S.__llamadas.exitos[S.__llamadas.exitos.length - 1]) === 'Se depositó 1 cheque en Macro: entraron $ 100.000,00.',
+      S.__llamadas.exitos[S.__llamadas.exitos.length - 1])
   }))
 }
 {

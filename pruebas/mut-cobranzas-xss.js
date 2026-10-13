@@ -182,7 +182,7 @@ const COMPORTAMIENTO = [
   ['3.3: el detalle pone la cuenta arriba y no al pie',
     '<div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · cuenta', '<div class="cob-cheque__sub">${escCob(nombreBanco(ch.banco_codigo))} · cuenta'],
   ['detalle: un depositado no muestra su salida',
-    "const salido = ch.estado === 'depositado' || ch.estado === 'endosado'\n      const porQuien", "const salido = ch.estado === 'endosado'\n      const porQuien"],
+    "const salido = ESTADOS_SALIDOS.includes(ch.estado)\n      const porQuien", "const salido = ch.estado === 'endosado'\n      const porQuien"],
   ['3.2: el total de la fila vuelve al color del módulo',
     'Tinta neutra. */\n    .cob-fila__total {\n      font-size: 1.125rem;\n      font-weight: 700;\n      color: var(--color-texto);',
     'Tinta neutra. */\n    .cob-fila__total {\n      font-size: 1.125rem;\n      font-weight: 700;\n      color: var(--naranja-oscuro);'],

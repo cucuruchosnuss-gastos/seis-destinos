@@ -27,6 +27,10 @@ const SEGURAS_CHEQUES = [
   ['htmlResultadosEndoso(estado.salida)', 'HTML armado por htmlResultadosEndoso(), que escapa adentro'],
   ['htmlPreviaEndoso(estado.salida)', 'HTML armado por htmlPreviaEndoso(), que escapa adentro'],
   ['htmlOpcionesUnidadEndoso(s)', 'HTML armado por htmlOpcionesUnidadEndoso(), que escapa adentro'],
+  // Depositar y vender al banco (13/10/2026)
+  ['htmlLinkGastoVenta(ch)', 'HTML armado por htmlLinkGastoVenta(): el id con encodeURIComponent, entre comillas dobles, o vacío'],
+  ['htmlOpcionesCuentas(cuentasOfrecidas(), estado.nombresUnidades)', 'HTML armado por htmlOpcionesCuentas(), que escapa adentro'],
+  ['html', 'HTML armado arriba en pintarBanco: cada valor con esc() (la fila, la cuenta, los importes)'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [
@@ -37,6 +41,7 @@ const SEGURAS_REGEX_CHEQUES = [
   [/^codigos\.map\(c =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^unidades\.map\(u =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^ESTADOS_FILTRO_CHEQUES\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^g\.cuentas\.map\(c =>/s, 'HTML de una plantilla anidada (htmlOpcionesCuentas), verificada aparte'],
 ]
 
 module.exports = { SEGURAS_CHEQUES, SEGURAS_REGEX_CHEQUES }

@@ -26,10 +26,10 @@ const FUNCIONES = [
   'cancelarSeleccion', 'tocarParaElegir', 'marcarElegidosEnPantalla', 'pintarSeleccion', 'soltarSeleccionPorFiltro',
   'htmlCasillaElegir', 'htmlAriaElegido',
   // salida de los elegidos (Parte 8)
-  'puedeSalir', 'validarSalidaLote', 'pintarSalidaLote', 'marcarNoSalen', 'parametrosSalidaLote', 'fechaMinimaLote', 'abrirModalSalidaLote',
+  'puedeSalir', 'validarSalidaLote', 'pintarSalidaLote', 'marcarNoSalen', 'fechaMinimaLote', 'abrirModalSalidaLote',
   'accionSalida', 'htmlAccionSalida', 'textoSalidaCorto', 'fechaCorta', 'htmlTarjetaCheque', 'htmlListaCheques', 'conectarFilas',
   // salida y vuelta a cartera
-  'erroresSalida', 'parametrosSalida', 'abrirModalSalida', 'cerrarModalSalida',
+  'erroresSalida', 'abrirModalSalida', 'cerrarModalSalida',
   'pintarModalSalida', 'confirmarSalida', 'abrirModalMotivo', 'cerrarModalMotivo',
   'abrirVolverACartera',
   // preferencias
@@ -39,8 +39,8 @@ const FUNCIONES = [
 ]
 
 const CONSTANTES = [
-  'ZONA_AR', 'ETIQUETA_ESTADO_CHEQUE', 'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO',
-  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS', 'DIAS_PLAZO_PRESENTACION', 'DIAS_AVISO_VENCIMIENTO', 'TOPE_SALIDA_LOTE',
+  'ZONA_AR', 'ETIQUETA_ESTADO_CHEQUE', 'ESTADOS_SALIDOS', 'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO',
+  'ESTADOS_FILTRO_CHEQUES', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS', 'DIAS_PLAZO_PRESENTACION', 'DIAS_AVISO_VENCIMIENTO', 'TOPE_SALIDA_LOTE',
   'puedeProcesar', 'puedeVerCartera',
 ]
 
@@ -67,10 +67,17 @@ const OPCIONALES = [
   // un pago con cheques de la cartera (05/10/2026). La pestaña "Emitidos"
   // se sacó el 11/10/2026: la empresa no emite cheques propios.
   'pagoAProveedor', 'gastoDelPago', 'htmlLinkPago',
+  // depositar y vender al banco (13/10/2026)
+  'esSalido', 'nombreCuentaSalida', 'textoSalidaBanco', 'htmlLinkGastoVenta', 'centavosDe', 'cuentasOfrecidas',
+  'gruposDeCuentas', 'htmlOpcionesCuentas', 'cuentaDefecto', 'textoEntreEmpresasBanco', 'calcularVenta',
+  'parametrosBanco', 'textoResultadoBanco', 'prepararBanco', 'pintarBanco', 'alEscribirVenta', 'cargarCuentasBanco',
+  'textoVolverACartera',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
-  'puedeRegistrarPago', 'puedeVerFacturas', 'TEXTO_SIN_PERMISO_ENDOSO', 'TEXTO_SIN_FACTURAS', 'LARGO_MINIMO_BUSQUEDA']
+  'puedeRegistrarPago', 'puedeVerFacturas', 'TEXTO_SIN_PERMISO_ENDOSO', 'TEXTO_SIN_FACTURAS', 'LARGO_MINIMO_BUSQUEDA',
+  // depositar y vender al banco (13/10/2026)
+  'TIPOS_BANCO', 'BOTONES_LOTE']
 
 const PRELUDIO = `
   ${fuenteNumeros()}

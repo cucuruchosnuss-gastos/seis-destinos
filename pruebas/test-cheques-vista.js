@@ -98,8 +98,10 @@ if (SOLO !== 'estatico') {
     chk('filtro: "en cartera" pide estado = en_cartera',
       correr({}).llamadas.some(x => x[0] === 'eq' && x[1] === 'estado' && x[2] === 'en_cartera'))
     const sal = correr({ estado: 'salidos' }).llamadas.find(x => x[1] === 'estado')
-    chk('filtro: "salidos" pide depositado y endosado, y nada más',
-      sal && sal[0] === 'in' && JSON.stringify(sal[2]) === JSON.stringify(['depositado', 'endosado']))
+    chk('filtro: "salidos" pide depositado, endosado y vendido, y nada más',
+      sal && sal[0] === 'in' && JSON.stringify(sal[2]) === JSON.stringify(['depositado', 'endosado', 'vendido']))
+    const ven = correr({ estado: 'vendidos' }).llamadas.find(x => x[1] === 'estado')
+    chk('filtro: "vendidos" (13/10/2026) pide estado = vendido', ven && ven[0] === 'eq' && ven[2] === 'vendido')
     chk('filtro: "todos" no filtra por estado (es el único que trae anulados)',
       !correr({ estado: 'todos' }).llamadas.some(x => x[1] === 'estado'))
     chk('filtro: el banco va por eq sobre banco_codigo',
@@ -267,7 +269,7 @@ if (SOLO !== 'estatico') {
     S.pintarFiltrosCheques()
     chk('limpiar: el botón aparece con filtros puestos', S.__doc.getElementById('chq-btn-limpiar').hidden === false)
     chequearMarcas('pintarFiltrosCheques', S.__doc.getElementById('chq-chips-estado').innerHTML, [])
-    chk('segmentado: tres opciones y "Todos" marcada', (S.__doc.getElementById('chq-chips-estado').innerHTML.match(/data-estado-cheque=/g) || []).length === 3 &&
+    chk('segmentado: cuatro opciones (con "Vendidos") y "Todos" marcada', (S.__doc.getElementById('chq-chips-estado').innerHTML.match(/data-estado-cheque=/g) || []).length === 4 &&
       /aria-pressed="true" data-estado-cheque="todos"/.test(S.__doc.getElementById('chq-chips-estado').innerHTML))
     const antes = S.__llamadas.cargarCheques
     S.limpiarFiltrosCheques()
@@ -356,25 +358,32 @@ if (SOLO !== 'estatico') {
     }))
   }
 
-  // ── Reglas del diálogo de salida ─────────────────────────────────────────
+  // ── Reglas del diálogo de salida (13/10/2026: depositar y vender al banco) ──
   {
     const S = construirCheques(ARCHIVO)
     const hoy = '2026-09-21'
-    const e = (d, fc = '2026-09-01') => S.erroresSalida(d, fc, hoy)
-    chk('diálogo: sin elegir depositado/endosado no sigue', e({ tipo: null, fecha: hoy, destino: '' }).length === 1)
-    chk('diálogo: endosado SIN destino no sigue', e({ tipo: 'endosado', fecha: hoy, destino: '   ' }).some(x => /a quién/.test(x)))
-    chk('diálogo: depositado sin destino SÍ sigue', e({ tipo: 'depositado', fecha: hoy, destino: '' }).length === 0)
-    chk('diálogo: una fecha futura no sigue', e({ tipo: 'depositado', fecha: '2026-09-22', destino: '' }).some(x => /posterior/.test(x)))
+    const e = (d, fc = '2026-09-01') => S.erroresSalida({ brutoCent: 10000, ...d }, fc, hoy)
+    chk('diálogo: sin elegir qué hacer no sigue', e({ tipo: null, fecha: hoy, cuentaId: 'k' }).some(x => /Elegí qué hacés/.test(x)))
+    chk('diálogo: depositar SIN cuenta no sigue (el mismo texto de la base)', e({ tipo: 'depositado', fecha: hoy, cuentaId: null }).includes('Elegí la cuenta del banco.'))
+    chk('diálogo: depositar con cuenta sigue', e({ tipo: 'depositado', fecha: hoy, cuentaId: 'k' }).length === 0)
+    chk('diálogo: una fecha futura no sigue', e({ tipo: 'depositado', fecha: '2026-09-22', cuentaId: 'k' }).some(x => /posterior/.test(x)))
     chk('diálogo: anterior a la cobranza no sigue (igual que la RPC)',
-      e({ tipo: 'depositado', fecha: '2026-08-31', destino: '' }).some(x => /anterior a la cobranza/.test(x)))
-    chk('diálogo: el mismo día de la cobranza sí', e({ tipo: 'depositado', fecha: '2026-09-01', destino: '' }).length === 0)
-    chk('diálogo: 150 caracteres de destino entran', e({ tipo: 'endosado', fecha: hoy, destino: 'x'.repeat(150) }).length === 0)
-    chk('diálogo: 151 no', e({ tipo: 'endosado', fecha: hoy, destino: 'x'.repeat(151) }).some(x => /150/.test(x)))
-    chk('diálogo: sin fecha no sigue', e({ tipo: 'depositado', fecha: '', destino: '' }).some(x => /fecha/.test(x)))
-    const p1 = S.parametrosSalida('ch1', { tipo: 'depositado', fecha: hoy, destino: '   ' })
-    chk('parámetros: un destino vacío viaja como null', p1.p_destino === null && p1.p_cheque_id === 'ch1' && p1.p_tipo === 'depositado' && p1.p_fecha === hoy)
-    chk('parámetros: el destino viaja sin espacios en los bordes',
-      S.parametrosSalida('ch1', { tipo: 'endosado', fecha: hoy, destino: '  Molino SA ' }).p_destino === 'Molino SA')
+      e({ tipo: 'depositado', fecha: '2026-08-31', cuentaId: 'k' }).some(x => /anterior a la cobranza/.test(x)))
+    chk('diálogo: el mismo día de la cobranza sí', e({ tipo: 'depositado', fecha: '2026-09-01', cuentaId: 'k' }).length === 0)
+    chk('diálogo: sin fecha no sigue', e({ tipo: 'depositado', fecha: '', cuentaId: 'k' }).some(x => /fecha/.test(x)))
+    chk('diálogo: vender sin lo acreditado no sigue (el texto de la base)', e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k', venta: null }).includes('Poné lo que acreditó el banco.'))
+    chk('diálogo: vender con más acreditado que el total no sigue',
+      e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k', venta: { netoCent: 10001, descCent: -1, tasa: -0.01 } }).some(x => /no puede ser más que el total de los cheques \(\$\s100,00\)/.test(x)))
+    chk('diálogo: vender por el total (sin interés) sí', e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k', venta: { netoCent: 10000, descCent: 0, tasa: 0 } }).length === 0)
+    chk('diálogo: endosar no pide cuenta (va por erroresEndoso)', e({ tipo: 'endosado', fecha: hoy }).length === 0)
+    chk('parámetros de depositar: ids, cuenta y fecha, nada más',
+      JSON.stringify(S.parametrosBanco(['a', 'b'], { tipo: 'depositado', cuentaId: 'k', fecha: hoy, venta: null, detalle: 'x' })) ===
+      JSON.stringify({ p_cheque_ids: ['a', 'b'], p_cuenta_id: 'k', p_fecha: hoy }))
+    chk('parámetros de vender: lo acreditado en pesos y un detalle vacío como null',
+      JSON.stringify(S.parametrosBanco(['a'], { tipo: 'vendido', cuentaId: 'k', fecha: hoy, venta: { netoCent: 95050 }, detalle: '   ' })) ===
+      JSON.stringify({ p_cheque_ids: ['a'], p_cuenta_id: 'k', p_fecha: hoy, p_neto: 950.5, p_detalle: null }))
+    chk('parámetros de vender: el detalle sin espacios en los bordes',
+      S.parametrosBanco(['a'], { tipo: 'vendido', cuentaId: 'k', fecha: hoy, venta: { netoCent: 1 }, detalle: '  op 12 ' }).p_detalle === 'op 12')
   }
 
   // ── El diálogo abierto ───────────────────────────────────────────────────
@@ -388,22 +397,26 @@ if (SOLO !== 'estatico') {
     chk('diálogo: la fecha arranca en hoy (Argentina)', doc.getElementById('chq-salida-fecha').value === hoy)
     chk('diálogo: la fecha no puede ser futura (max = hoy)', doc.getElementById('chq-salida-fecha').max === hoy)
     chk('diálogo: ni anterior a la cobranza (min)', doc.getElementById('chq-salida-fecha').min === '2026-09-01')
-    chk('diálogo: arranca sin tipo y sin la pregunta del destino',
-      S.estado.salida.tipo === null && doc.getElementById('chq-salida-campo-destino').hidden === true)
+    chk('diálogo: arranca sin tipo, sin la cuenta y sin la venta',
+      S.estado.salida.tipo === null && doc.getElementById('chq-salida-campo-cuenta').hidden === true && doc.getElementById('chq-venta').hidden === true)
     chk('diálogo: el cheque se describe por textContent (no es HTML)',
       doc.getElementById('chq-salida-cheques').textContent.includes(marca('dlg_cliente')) && doc.getElementById('chq-salida-cheques').innerHTML === '')
     // Desde el 29/09/2026 el endoso ya no guarda un texto libre: elige al
     // proveedor y paga su cuenta (test-cheques-endoso.js). Sin
     // «Registrar pagos a proveedores» no se ofrece y se dice por qué.
     S.estado.salida.tipo = 'endosado'; S.pintarModalSalida()
-    chk('diálogo: endosado ya no pide el destino como texto', doc.getElementById('chq-salida-campo-destino').hidden === true)
+    chk('diálogo: endosar no pide la cuenta de banco', doc.getElementById('chq-salida-campo-cuenta').hidden === true)
     chk('diálogo: sin registrar_pago el endoso no se ofrece y lo dice', doc.getElementById('chq-salida-nota-endoso').hidden === false &&
       /Registrar pagos a proveedores/.test(doc.getElementById('chq-salida-nota-endoso').textContent) && doc.getElementById('chq-endoso').hidden === true)
     S.estado.misTareas.add('cuentas_corrientes:registrar_pago'); S.pintarModalSalida()
     chk('diálogo: con registrar_pago, endosado abre el buscador de proveedores', doc.getElementById('chq-endoso').hidden === false &&
       doc.getElementById('chq-salida-nota-endoso').hidden === true)
     S.estado.salida.tipo = 'depositado'; S.pintarModalSalida()
-    chk('diálogo: depositado pregunta en qué banco o cuenta, opcional', /banco o cuenta\? \(opcional\)/.test(doc.getElementById('chq-salida-label-destino').textContent))
+    chk('diálogo: depositar pide la cuenta de banco, sin la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === true)
+    chk('diálogo: el botón dice "Depositar"', doc.getElementById('chq-salida-confirmar').textContent === 'Depositar')
+    S.estado.salida.tipo = 'vendido'; S.pintarModalSalida()
+    chk('diálogo: vender pide la cuenta y los tres campos de la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === false)
+    chk('diálogo: el botón dice "Vender"', doc.getElementById('chq-salida-confirmar').textContent === 'Vender')
   }
 
   // ── Confirmar: validación local, error TAL CUAL y éxito ──────────────────
@@ -413,32 +426,31 @@ if (SOLO !== 'estatico') {
     const llamadas = []
     S.estado.filas = [{ id: 'z2', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'en_cartera' }]
     S.estado.cobranzas = new Map([['c', { id: 'c', cliente: 'A', estado: 'procesada', fecha: '2026-09-01' }]])
+    S.estado.cuentasBanco = { porId: new Map(), ofrecidas: [{ id: 'k1', nombre: 'Macro', medio: 'banco', moneda: 'ARS', activa: true, unidad_negocio_id: null }] }
     esperas.push((async () => {
       S.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
       S.abrirModalSalida('z2')
       // El endoso va por su propio camino (test-cheques-endoso.js): acá, el depósito.
       S.estado.salida.tipo = 'depositado'
-      doc.getElementById('chq-salida-destino').value = ''
+      S.estado.salida.cuentaId = 'k1'
       doc.getElementById('chq-salida-fecha').value = '2999-01-01'
       await S.confirmarSalida()
       chk('confirmar: una fecha futura NO llama a la base', llamadas.length === 0)
       chk('confirmar: y lo dice en el diálogo', doc.getElementById('chq-salida-error').hidden === false &&
         /posterior/.test(doc.getElementById('chq-salida-error').textContent))
       doc.getElementById('chq-salida-fecha').value = S.hoyArgentina()
-      const MSG = 'Solo se puede marcar la salida de un cheque de una cobranza asentada.'
+      const MSG = 'Algún cheque ya no está en cartera (o es de una cobranza sin asentar). Actualizá la lista.'
       S.__setRpc(async () => ({ data: null, error: { message: MSG } }))
-      doc.getElementById('chq-salida-destino').value = 'Molino'
       await S.confirmarSalida()
       chk('confirmar: el error de la base se muestra TAL CUAL', doc.getElementById('chq-salida-error').textContent === MSG)
       chk('confirmar: con error el diálogo NO se cierra', S.estado.salida !== null && doc.getElementById('chq-modal-salida').hidden === false)
       const antes = S.__llamadas.refrescar
-      S.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
-      doc.getElementById('chq-salida-destino').value = '  Molino del Centro  '
+      S.__setRpc(async (...a) => { llamadas.push(a); return { data: { cheques: 1, bruto: 50, neto: 50, descuento: 0 }, error: null } })
       await S.confirmarSalida()
       const ult = llamadas[llamadas.length - 1]
-      chk('confirmar: llama a marcar_salida_cheque con los parámetros exactos',
-        ult && ult[0] === 'marcar_salida_cheque' && JSON.stringify(ult[1]) === JSON.stringify({
-          p_cheque_id: 'z2', p_tipo: 'depositado', p_fecha: S.hoyArgentina(), p_destino: 'Molino del Centro' }), JSON.stringify(ult))
+      chk('confirmar: llama a depositar_cheques con los parámetros exactos',
+        ult && ult[0] === 'depositar_cheques' && JSON.stringify(ult[1]) === JSON.stringify({
+          p_cheque_ids: ['z2'], p_cuenta_id: 'k1', p_fecha: S.hoyArgentina() }), JSON.stringify(ult))
       chk('confirmar: al salir bien cierra el diálogo', S.estado.salida === null && doc.getElementById('chq-modal-salida').hidden === true)
       chk('confirmar: y recarga la lista, el total y los bancos', S.__llamadas.refrescar === antes + 1)
     })())
@@ -516,10 +528,11 @@ if (SOLO !== 'render') {
     if (dentroDeAtributo) {
       const nombreAttr = (tramo.match(/([\w-]+)\s*=\s*"[^"]*$/) || [])[1] || ''
       if (/^on/i.test(nombreAttr)) enEvento.push(`${x.linea} (${nombreAttr})`)
-      // La ÚNICA URL armada con un dato (05/10/2026): "Ver el pago", a una
-      // página fija de este sitio, con el id del gasto por
-      // encodeURIComponent y el atributo entre comillas DOBLES.
-      const linkPago = /^href$/i.test(nombreAttr) && /href="cuentas-corrientes\.html\?pago=$/.test(tramo) && /^encodeURIComponent\([\w.]+\)$/.test(String(x.expr).trim())
+      // Las ÚNICAS URLs armadas con un dato: "Ver el pago" (05/10/2026) y
+      // "Ver el gasto" de una venta (13/10/2026), a una página fija de este
+      // sitio, con el id del gasto por encodeURIComponent y el atributo entre
+      // comillas DOBLES.
+      const linkPago = /^href$/i.test(nombreAttr) && /href="(cuentas-corrientes\.html\?pago|gastos\.html\?gasto)=$/.test(tramo) && /^encodeURIComponent\([\w.]+\)$/.test(String(x.expr).trim())
       if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr) && !linkPago) enUrl.push(`${x.linea} (${nombreAttr})`)
     }
   }

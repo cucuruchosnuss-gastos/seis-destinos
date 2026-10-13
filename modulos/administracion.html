@@ -8798,6 +8798,22 @@
     /* Dos botones en la columna Salida (Vincular + Volver): uno debajo del otro en la tarjeta. */
     .chq-tarjeta__lado { flex-direction: column; justify-content: center; align-items: flex-end; gap: 0.375rem; }
 
+    /* DEPOSITAR Y VENDER AL BANCO (13/10/2026). Tres maneras de sacar un
+       cheque de la cartera: entran parejas en una fila mientras quepan. */
+    .chq-salida-tipos { grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
+    .chq-estado--vendido { background: var(--color-fondo); color: var(--verde-oscuro); }
+    .chq-venta-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.5rem; min-width: 0; }
+    .chq-venta-campos .chq-campo { margin-bottom: 0; }
+    .chq-venta-resumen {
+      border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px);
+      padding: 0.75rem; margin: 0.875rem 0; font-size: 0.875rem; min-width: 0; overflow-wrap: anywhere;
+    }
+    .chq-venta-resumen div { display: flex; justify-content: space-between; gap: 0.75rem; }
+    .chq-venta-resumen div + div { margin-top: 0.25rem; }
+    .chq-venta-resumen strong { font-variant-numeric: tabular-nums; }
+    .chq-venta-resumen__total { font-weight: 700; }
+    .chq-link-gasto { font-size: 0.8125rem; font-weight: 600; color: var(--naranja-oscuro); white-space: nowrap; }
+
     @media (min-width: 640px) {
       .chq-modal { align-items: center; }
     }
@@ -8887,8 +8903,12 @@
       </div>
       <div class="chq-barra__acciones" id="chq-sel-acciones">
         <!-- Parte 8: dar salida a todos los elegidos de una vez (todo o nada).
-             Solo con cobranzas:procesar; se habilita desde JS. -->
-        <button type="button" class="chq-btn chq-btn--chico chq-btn--primario" id="chq-sel-dar-salida" hidden>Dar salida</button>
+             Solo con cobranzas:procesar; se habilitan desde JS. Depositar y
+             Vender al banco (13/10/2026) meten la plata en un banco de la
+             Empresa; "Endosar" abre el endoso a un proveedor. -->
+        <button type="button" class="chq-btn chq-btn--chico chq-btn--primario" id="chq-sel-depositar" hidden>Depositar</button>
+        <button type="button" class="chq-btn chq-btn--chico chq-btn--primario" id="chq-sel-vender" hidden>Vender al banco</button>
+        <button type="button" class="chq-btn chq-btn--chico" id="chq-sel-dar-salida" hidden>Endosar</button>
         <button type="button" class="chq-btn chq-btn--chico" id="chq-sel-cancelar">Cancelar</button>
       </div>
       <div class="chq-barra__no-salen" id="chq-sel-no-salen" hidden></div>
@@ -8905,8 +8925,12 @@
       <div class="chq-campo" id="chq-salida-campo-tipo">
         <label>¿Qué pasó con el cheque?</label>
         <div class="chq-salida-tipos">
-          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="depositado">Depositado</button>
-          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="endosado">Endosado</button>
+          <!-- Depositar y Vender al banco (13/10/2026) meten la plata en una
+               cuenta de banco de la Empresa (depositar_cheques / vender_cheques).
+               Reemplazan al "Depositado" de antes, que solo marcaba el estado. -->
+          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="depositado">Depositar</button>
+          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="vendido">Vender al banco</button>
+          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="endosado">Endosar a un proveedor</button>
         </div>
         <!-- Sin «Registrar pagos a proveedores» el endoso no se ofrece: lo dice acá. -->
         <div class="chq-campo__ayuda" id="chq-salida-nota-endoso" hidden></div>
@@ -8917,11 +8941,40 @@
       </div>
       <!-- Vincular un endoso viejo: se conserva su fecha de salida. -->
       <div class="chq-campo__ayuda" id="chq-salida-nota-fecha" style="margin:-.25rem 0 .875rem" hidden></div>
-      <div class="chq-campo" id="chq-salida-campo-destino" hidden>
-        <label for="chq-salida-destino" id="chq-salida-label-destino">¿A quién se lo pasaste?</label>
-        <input type="text" id="chq-salida-destino" maxlength="150" autocomplete="off">
-        <div class="chq-campo__ayuda" id="chq-salida-ayuda-destino"></div>
+      <!-- La cuenta de banco donde entra la plata: cualquier banco de la
+           Empresa en pesos, agrupados por empresa (un cheque de una fábrica se
+           puede depositar en el banco de otra: queda entre empresas). -->
+      <div class="chq-campo" id="chq-salida-campo-cuenta" hidden>
+        <label for="chq-salida-cuenta">¿En qué cuenta entra la plata?</label>
+        <select id="chq-salida-cuenta"></select>
+        <div class="chq-campo__ayuda" id="chq-salida-ayuda-cuenta" hidden></div>
+        <div class="chq-endoso-aviso" id="chq-salida-aviso-empresas" hidden></div>
       </div>
+      <!-- VENDER AL BANCO: el descuento se carga de UNA de tres maneras, y las
+           otras dos se calculan solas. -->
+      <div id="chq-venta" hidden>
+        <div class="chq-venta-campos">
+          <div class="chq-campo">
+            <label for="chq-venta-neto">Acreditó $</label>
+            <input type="text" id="chq-venta-neto" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="chq-campo">
+            <label for="chq-venta-descuento">Descuento $</label>
+            <input type="text" id="chq-venta-descuento" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="chq-campo">
+            <label for="chq-venta-tasa">Tasa %</label>
+            <input type="text" id="chq-venta-tasa" inputmode="decimal" autocomplete="off">
+          </div>
+        </div>
+        <div class="chq-campo__ayuda">Escribí una de las tres: las otras dos se calculan solas.</div>
+        <div class="chq-campo" style="margin-top:.875rem">
+          <label for="chq-venta-detalle">Detalle (opcional)</label>
+          <input type="text" id="chq-venta-detalle" maxlength="120" autocomplete="off" placeholder="Por ejemplo: operación 1234">
+        </div>
+      </div>
+      <!-- Lo que va a pasar, antes de confirmar (depositar y vender). -->
+      <div class="chq-venta-resumen" id="chq-salida-resumen" hidden></div>
       <!-- ENDOSAR A UN PROVEEDOR (29/09/2026): el endoso paga su cuenta corriente
            (endosar_cheque_a_proveedor). Buscador → fábrica de la deuda → qué se paga. -->
       <div id="chq-endoso" hidden>
@@ -8969,11 +9022,11 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
+    import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import {
       dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
-      ETIQUETA_ESTADO_CHEQUE, nombreBancoDe,
+      ETIQUETA_ESTADO_CHEQUE, ESTADOS_SALIDOS, nombreBancoDe,
     } from '../js/cobranzas-comun.js'
     // La barra de unidad de negocio de arriba (28/09/2026): la MISMA elección
     // para toda la app. Acá solo se lee y se escucha; la barra la dibuja sola.
@@ -9041,6 +9094,14 @@
       // Las fábricas para elegir de cuál es la deuda que paga un endoso:
       // [{ id, nombre }], o null mientras no se leyeron (o si no se pudo).
       unidadesEndoso: null,
+      // DEPOSITAR Y VENDER (13/10/2026). Las cuentas de banco de la Empresa:
+      // todas, para nombrar la cuenta de un cheque que ya salió ({ id → cuenta
+      // }), y las que se ofrecen (activas, en pesos, sin la fábrica de
+      // pruebas). null = todavía no se leyeron; cuentasBancoError = no se pudo.
+      cuentasBanco: null,
+      cuentasBancoError: false,
+      // Los nombres de las fábricas (id → nombre), para agrupar las cuentas.
+      nombresUnidades: new Map(),
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -9133,6 +9194,8 @@
     const ESTADOS_FILTRO_CHEQUES = [
       { id: 'en_cartera', nombre: 'En cartera' },
       { id: 'salidos', nombre: 'Salidos' },
+      // Los vendidos al banco (13/10/2026), aparte: el interés es un gasto.
+      { id: 'vendidos', nombre: 'Vendidos' },
       // "Todos" es el ÚNICO que muestra los anulados.
       { id: 'todos', nombre: 'Todos' },
     ]
@@ -9188,7 +9251,8 @@
     // qué se le pidió. Devuelve sinResultados cuando no hay que consultar.
     function aplicarFiltrosCheques(q, f) {
       if (f.estado === 'en_cartera') q = q.eq('estado', 'en_cartera')
-      else if (f.estado === 'salidos') q = q.in('estado', ['depositado', 'endosado'])
+      else if (f.estado === 'salidos') q = q.in('estado', ESTADOS_SALIDOS)
+      else if (f.estado === 'vendidos') q = q.eq('estado', 'vendido')
       // 'todos': sin filtro de estado, que es lo que trae también los anulados.
       if (f.banco) q = q.eq('banco_codigo', f.banco)
       const fn = filtroNumeroCheque(f.numero)
@@ -9566,11 +9630,12 @@
     }
 
     // ── Dar salida a los elegidos (Parte 8) ──────────────────────────────
-    // marcar_salida_cheques(p_cheque_ids, p_tipo, p_fecha, p_destino) es TODO
-    // O NADA: si uno no puede salir, no sale ninguno y el mensaje de la base
-    // dice cuál y por qué. Tope: 100 por vez. La pantalla habilita el botón
-    // solo si TODOS pueden salir (en cartera y de una cobranza asentada); la
-    // base igual lo vuelve a controlar.
+    // Depositar y vender (depositar_cheques / vender_cheques, 13/10/2026) son
+    // TODO O NADA para todos los elegidos en una sola llamada: si uno no puede
+    // salir, no sale ninguno y el mensaje de la base dice por qué. Endosar va
+    // de a uno, en orden (endosarEnOrden). Tope: 100 por vez. La pantalla
+    // habilita los botones solo si TODOS pueden salir (en cartera y de una
+    // cobranza asentada); la base igual lo vuelve a controlar.
     const TOPE_SALIDA_LOTE = 100
 
     // Si un cheque, por lo que se ve acá, puede salir.
@@ -9593,23 +9658,26 @@
       return { puede: true, noPueden, motivo: '' }
     }
 
-    // El botón "Dar salida a N" y lo que no puede salir, marcado.
+    // Los botones Depositar / Vender al banco / Endosar y lo que no puede
+    // salir, marcado. Los tres se habilitan juntos (las mismas reglas).
+    const BOTONES_LOTE = ['chq-sel-depositar', 'chq-sel-vender', 'chq-sel-dar-salida']
     function pintarSalidaLote() {
-      const btn = document.getElementById('chq-sel-dar-salida')
+      const botones = BOTONES_LOTE.map(id => document.getElementById(id))
       const aviso = document.getElementById('chq-sel-no-salen')
       const elegidos = chequesElegidos()
-      // Sin la tarea no hay botón (la RPC lo rechazaría) ni aviso.
+      // Sin la tarea no hay botones (la RPC lo rechazaría) ni aviso.
       if (!puedeProcesar() || !elegidos.length) {
-        btn.hidden = true
+        for (const b of botones) b.hidden = true
         aviso.hidden = true
         estado.seleccion.noPueden = new Set()
         marcarNoSalen()
         return
       }
       const v = validarSalidaLote(elegidos)
-      btn.hidden = false
-      btn.disabled = !v.puede
-      btn.textContent = `Dar salida a ${elegidos.length}`
+      for (const b of botones) {
+        b.hidden = false
+        b.disabled = !v.puede
+      }
       aviso.textContent = v.motivo
       aviso.hidden = !v.motivo
       estado.seleccion.noPueden = new Set(v.noPueden)
@@ -9624,11 +9692,6 @@
       })
     }
 
-    // Los parámetros tal cual viajan, en el orden de la lista.
-    function parametrosSalidaLote(ids, { tipo, fecha, destino }) {
-      return { p_cheque_ids: [...ids], p_tipo: tipo, p_fecha: fecha, p_destino: textoOpcional(destino) }
-    }
-
     // La fecha más nueva de las cobranzas de los elegidos: la salida no puede
     // ser anterior a NINGUNA (la base valida cheque por cheque).
     function fechaMinimaLote(cheques) {
@@ -9641,14 +9704,15 @@
     }
 
     // El MISMO diálogo de salida, con el título "Dar salida a N cheques ·
-    // $ TOTAL" y la lista corta de los cheques.
-    function abrirModalSalidaLote() {
+    // $ TOTAL" y la lista corta de los cheques. tipo: el que viene elegido
+    // (Depositar, Vender al banco o Endosar, según el botón).
+    function abrirModalSalidaLote(tipo = null) {
       const elegidos = chequesElegidos()
       const v = validarSalidaLote(elegidos)
       if (!v.puede) return
       const total = resumenSeleccion(elegidos, hoyArgentina()).total
       const minima = fechaMinimaLote(elegidos)
-      estado.salida = { lote: true, cheques: elegidos, cobranza: minima ? { fecha: minima } : null, tipo: null }
+      estado.salida = { lote: true, cheques: elegidos, cobranza: minima ? { fecha: minima } : null, tipo }
       document.getElementById('chq-salida-titulo').textContent =
         `Dar salida a ${elegidos.length} ${elegidos.length === 1 ? 'cheque' : 'cheques'} · ${formatearImporte(total)}`
       // textContent (el cliente va crudo acá): una línea por cheque, hasta 6.
@@ -9663,10 +9727,11 @@
       fecha.value = hoyArgentina()
       fecha.max = hoyArgentina()
       fecha.min = minima ?? ''
-      document.getElementById('chq-salida-destino').value = ''
+      prepararBanco()
       reiniciarEndoso()
       pintarModalSalida()
       document.getElementById('chq-modal-salida').hidden = false
+      if (tipo === 'endosado') prepararEndoso()
     }
 
     // Cambiar un filtro LIMPIA la selección (lo elegido podría quedar
@@ -9976,7 +10041,7 @@
       pintarFiltrosCheques()
       const { q, sinResultados } = aplicarFiltrosCheques(
         supabase.from('cobranza_cheques').select(
-          'id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id, salida_gasto_id, pago_gasto_id'),
+          'id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id, salida_gasto_id, pago_gasto_id, salida_cuenta_id, venta_neto, venta_gasto_id'),
         estado.filtros)
       if (sinResultados) {
         estado.filas = []; estado.error = null; estado.tope = false
@@ -10116,6 +10181,11 @@
     // cartera, pero no puede salir hasta que alguien la asiente.
     // MIRA LA COBRANZA, NO EL PERMISO: es el estado del cheque y no una acción
     // — accionSalida() decide aparte qué se puede hacer, y con qué tarea.
+    // Ya salió de la cartera: depositado, endosado o vendido al banco.
+    function esSalido(ch) {
+      return ESTADOS_SALIDOS.includes(ch?.estado)
+    }
+
     function esPorControlar(ch, cob) {
       return ch.estado === 'en_cartera' && cob?.estado === 'registrada'
     }
@@ -10134,7 +10204,7 @@
     // de "por controlar" y el fondo del plazo son dos canales distintos sobre
     // la misma fila.
     function clavesEstadoCheque(ch, cob, hoy) {
-      if (ch.estado === 'depositado' || ch.estado === 'endosado') return ['salido']
+      if (esSalido(ch)) return ['salido']
       if (ch.estado === 'anulado') return ['anulado']
       const claves = esPorControlar(ch, cob) ? ['por_controlar'] : []
       const venc = estadoVencimiento(ch, hoy)
@@ -10255,7 +10325,7 @@
     }
 
     function htmlFilaCheque(ch, cob) {
-      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const salido = esSalido(ch)
       // Un cheque común no tiene fecha de pago: es "a la vista".
       const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'A la vista'
       const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
@@ -10336,7 +10406,7 @@
     }
 
     function accionSalida(ch, cob) {
-      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const salido = esSalido(ch)
       if (pagoAProveedor(ch)) return puedeProcesar() ? 'pagado' : null
       if (ch.estado === 'endosado' && puedeProcesar() && puedeRegistrarPago()) return 'vincular'
       if (salido) return puedeProcesar() ? 'volver' : null
@@ -10375,7 +10445,44 @@
       return g ? `<a class="chq-link-pago" href="cuentas-corrientes.html?pago=${encodeURIComponent(g)}">Ver el pago</a>` : ''
     }
 
+    // El nombre de la cuenta de banco por donde salió (salida_cuenta_id); si
+    // no se pudo leer, el destino que guardó la base (que empieza con ese
+    // nombre). Texto plano.
+    function nombreCuentaSalida(ch) {
+      const c = estado.cuentasBanco?.porId?.get(ch?.salida_cuenta_id)
+      if (c?.nombre) return String(c.nombre)
+      return String(ch?.salida_destino ?? '').trim()
+    }
+
+    // DEPOSITADO O VENDIDO AL BANCO (13/10/2026), con su cuenta:
+    //   "Depositado el 12/10 · Macro Paz Mirta"
+    //   "Vendido el 12/10 · Macro Paz Mirta · acreditó $ 950.000,00 ($ 50.000,00 de interés)"
+    // null si no fue al banco por depositar_cheques / vender_cheques.
+    function textoSalidaBanco(ch) {
+      if (!ch?.salida_cuenta_id || (ch.estado !== 'depositado' && ch.estado !== 'vendido')) return null
+      const cuando = esFechaIso(ch.salida_fecha) ? ` el ${ch.salida_fecha.slice(8, 10)}/${ch.salida_fecha.slice(5, 7)}` : ''
+      const cuenta = nombreCuentaSalida(ch)
+      if (ch.estado === 'depositado') return `Depositado${cuando}${cuenta ? ` · ${cuenta}` : ''}`
+      const neto = Number(ch.venta_neto)
+      const imp = Number(ch.importe)
+      let acredito = ''
+      if (ch.venta_neto != null && Number.isFinite(neto)) {
+        const interes = Number.isFinite(imp) ? Math.round(imp * 100) - Math.round(neto * 100) : null
+        acredito = ` · acreditó ${formatearImporte(neto)}${interes != null ? ` (${formatearImporte(interes / 100)} de interés)` : ''}`
+      }
+      return `Vendido${cuando}${cuenta ? ` · ${cuenta}` : ''}${acredito}`
+    }
+
+    // "Ver el gasto": el gasto del interés de una venta (gastos.html?gasto=).
+    // El id va con encodeURIComponent y el atributo entre comillas DOBLES.
+    function htmlLinkGastoVenta(ch) {
+      return ch?.estado === 'vendido' && ch.venta_gasto_id
+        ? `<a class="chq-link-gasto" href="gastos.html?gasto=${encodeURIComponent(ch.venta_gasto_id)}">Ver el gasto</a>` : ''
+    }
+
     function textoSalidaCorto(ch) {
+      const banco = textoSalidaBanco(ch)
+      if (banco) return banco
       if (pagoAProveedor(ch)) {
         return [formatearFechaCob(ch.salida_fecha), textoChequeEndosado(ch), String(ch.salida_destino ?? '').trim()].filter(Boolean).join(' · ')
       }
@@ -10383,11 +10490,11 @@
     }
 
     function htmlSalidaCheque(ch, cob) {
-      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const salido = esSalido(ch)
       const accion = accionSalida(ch, cob)
       if (salido) {
         const texto = textoSalidaCorto(ch)
-        return `<div class="chq-salida"><span class="chq-salida__texto" title="${esc(texto)}">${esc(texto)}</span>${htmlAccionSalida(ch, accion)}</div>`
+        return `<div class="chq-salida"><span class="chq-salida__texto" title="${esc(texto)}">${esc(texto)}</span>${htmlLinkGastoVenta(ch)}${htmlAccionSalida(ch, accion)}</div>`
       }
       return htmlAccionSalida(ch, accion) || '—'
     }
@@ -10426,7 +10533,7 @@
     }
 
     function htmlTarjetaCheque(ch, cob) {
-      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const salido = esSalido(ch)
       // La fecha corta (dd/mm/aa): con el año entero no entraba al lado de un
       // importe de millones y se cortaba a la mitad del año.
       const pago = ch.tipo === 'diferido' ? `paga ${fechaCorta(ch.fecha_pago)}` : 'a la vista'
@@ -10476,20 +10583,116 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SALIDA DE UN CHEQUE
-    // Depositado o endosado. SOLO EL ENDOSADO va a descontar la cuenta
-    // corriente de un proveedor el día que se conecte con Cuentas Corrientes:
-    // por eso el destino es obligatorio ahí y opcional en un depósito.
+    // SALIDA DE UN CHEQUE: DEPOSITAR, VENDER AL BANCO O ENDOSAR
+    // DESDE EL 13/10/2026 depositar y vender MUEVEN LA PLATA (antes
+    // "Depositado" solo marcaba el estado y la plata no entraba a ninguna
+    // cuenta). Las dos van por la base en UNA llamada, todo o nada, para uno o
+    // para varios cheques (verificado con pg_get_functiondef el 13/10/2026,
+    // _cheques_salida_banco; las dos piden cobranzas:procesar):
+    //   depositar_cheques(p_cheque_ids, p_cuenta_id, p_fecha)
+    //   vender_cheques(p_cheque_ids, p_cuenta_id, p_fecha, p_neto, p_detalle)
+    //     → { cheques, bruto, neto, descuento, caja_movimiento_id, gasto_id }
+    // Las dos meten UN ingreso por el total en la cuenta; vender además carga
+    // un GASTO "Intereses-Venta de cheques" por (total − acreditado) pagado
+    // desde esa cuenta, y deja el cheque 'vendido' con su venta_neto. La cuenta:
+    // cualquier banco de la Empresa en pesos (un cheque de Dolce se puede
+    // depositar en un banco de Nuss: queda entre empresas). El endoso a un
+    // proveedor sigue por su camino (ver "ENDOSAR A UN PROVEEDOR").
     // ═══════════════════════════════════════════════════════════════════════
 
-    const LARGO_MAXIMO_DESTINO = 150
+    const TIPOS_BANCO = ['depositado', 'vendido']
 
-    // Lo que se valida ANTES de llamar, con las MISMAS reglas que
-    // marcar_salida_cheque: una validación más permisiva deja pasar lo que el
-    // servidor rechaza, y una más estricta bloquea lo que sí entra.
-    function erroresSalida({ tipo, fecha, destino }, fechaCobranza, hoy) {
+    // Cuántos centavos suman los cheques (enteros: sin el error del punto
+    // flotante, como numeric en la base).
+    function centavosDe(cheques) {
+      return (cheques ?? []).reduce((t, ch) => t + aCentavos(ch?.importe), 0)
+    }
+
+    // Las cuentas que se pueden elegir (activas, de banco, en pesos, de la
+    // Empresa, sin la fábrica de pruebas). [] mientras no se leyeron.
+    function cuentasOfrecidas() {
+      return estado.cuentasBanco?.ofrecidas ?? []
+    }
+
+    // Agrupadas por fábrica: [{ unidadId, nombre, cuentas }], las fábricas y
+    // las cuentas en orden alfabético; las cuentas sin fábrica, al final.
+    function gruposDeCuentas(cuentas, nombres) {
+      const grupos = new Map()
+      for (const c of cuentas ?? []) {
+        const k = c?.unidad_negocio_id ?? ''
+        if (!grupos.has(k)) grupos.set(k, { unidadId: k || null, nombre: k ? (nombres?.get?.(k) || 'Sin nombre') : 'Sin fábrica', cuentas: [] })
+        grupos.get(k).cuentas.push(c)
+      }
+      const porNombre = (x, y) => String(x ?? '').localeCompare(String(y ?? ''), 'es')
+      return [...grupos.values()]
+        .sort((x, y) => (x.unidadId ? 0 : 1) - (y.unidadId ? 0 : 1) || porNombre(x.nombre, y.nombre))
+        .map(g => ({ ...g, cuentas: [...g.cuentas].sort((x, y) => porNombre(x.nombre, y.nombre)) }))
+    }
+
+    // Las opciones del selector, con un <optgroup> por fábrica. Los nombres
+    // vienen de la base: escapados.
+    function htmlOpcionesCuentas(cuentas, nombres) {
+      return '<option value="">Elegí la cuenta</option>' + gruposDeCuentas(cuentas, nombres).map(g =>
+        `<optgroup label="${esc(g.nombre)}">${g.cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')}</optgroup>`).join('')
+    }
+
+    // La cuenta que viene elegida: la primera (por nombre) de la fábrica de
+    // los cheques, si todos los que tienen fábrica son de la MISMA; si no (o si
+    // esa fábrica no tiene banco), ninguna: se elige.
+    function cuentaDefecto(cheques, cobranzas, cuentas) {
+      const u = unidadDefectoEndoso(cheques, cobranzas)
+      if (!u) return null
+      return gruposDeCuentas((cuentas ?? []).filter(c => c?.unidad_negocio_id === u), new Map())[0]?.cuentas[0]?.id ?? null
+    }
+
+    // "Queda como movimiento entre empresas": cheques de una fábrica que
+    // entran en el banco de OTRA. La base lo muestra en "Entre empresas"
+    // (movimientos_entre_empresas). '' si no hay nada que avisar (un cheque
+    // sin fábrica no avisa: no se sabe de quién es).
+    function textoEntreEmpresasBanco(cheques, cobranzas, cuenta, nombres) {
+      const destino = cuenta?.unidad_negocio_id
+      if (!destino) return ''
+      const otras = new Map()
+      for (const ch of cheques ?? []) {
+        const cob = cobranzas?.get?.(ch.cobranza_id)
+        const u = cob?.unidad_negocio_id
+        if (!u || u === destino) continue
+        const p = otras.get(u) ?? { nombre: cob.unidad_negocio_nombre || nombres?.get?.(u) || 'otra fábrica', centavos: 0 }
+        p.centavos += aCentavos(ch.importe)
+        otras.set(u, p)
+      }
+      if (!otras.size) return ''
+      const deLaCuenta = nombres?.get?.(destino) || 'otra fábrica'
+      const partes = [...otras.values()].map(o => `${formatearImporte(o.centavos / 100)} de ${o.nombre}`)
+      const uno = (cheques ?? []).length === 1
+      return `${uno ? 'El cheque es' : 'Hay cheques'} de otra fábrica (${partes.join(' y ')}) y la cuenta es de ${deLaCuenta}: queda como movimiento entre empresas.`
+    }
+
+    // VENDER AL BANCO: el descuento se carga de UNA de tres maneras y las otras
+    // dos salen de esa. Todo en centavos; la tasa es sobre el TOTAL de los
+    // cheques (no anual), con 2 decimales: la misma cuenta que escribe la base
+    // en la descripción del gasto (round(descuento * 100 / total, 2)).
+    //   desde: 'neto' (Acreditó $) | 'descuento' (Descuento $) | 'tasa' (Tasa %)
+    // → { netoCent, descCent, tasa } o null si no hay un número para calcular.
+    function calcularVenta(brutoCent, desde, valor) {
+      if (!(brutoCent > 0) || valor === null || valor === undefined || valor === '') return null
+      const v = Number(valor)
+      if (!Number.isFinite(v)) return null
+      let descCent
+      if (desde === 'neto') descCent = brutoCent - Math.round(v * 100)
+      else if (desde === 'descuento') descCent = Math.round(v * 100)
+      else if (desde === 'tasa') descCent = Math.round(brutoCent * v / 100)
+      else return null
+      return { netoCent: brutoCent - descCent, descCent, tasa: Math.round(descCent * 10000 / brutoCent) / 100 }
+    }
+
+    // Lo que se valida ANTES de llamar, con las MISMAS reglas que la base
+    // (_cheques_salida_banco): una validación más permisiva deja pasar lo que
+    // el servidor rechaza, y una más estricta bloquea lo que sí entra. El
+    // endoso valida aparte (erroresEndoso).
+    function erroresSalida({ tipo, fecha, cuentaId, venta, brutoCent }, fechaCobranza, hoy) {
       const e = []
-      if (tipo !== 'depositado' && tipo !== 'endosado') e.push('Elegí si se depositó o se endosó.')
+      if (!TIPOS_BANCO.includes(tipo) && tipo !== 'endosado') e.push('Elegí qué hacés con el cheque: depositarlo, venderlo o endosarlo.')
       if (!esFechaIso(fecha)) e.push('Falta la fecha.')
       else {
         if (diasEntre(hoy, fecha) > 0) e.push('La fecha no puede ser posterior a hoy.')
@@ -10497,22 +10700,46 @@
           e.push(`La fecha no puede ser anterior a la cobranza (${formatearFechaCob(fechaCobranza)}).`)
         }
       }
-      const d = String(destino ?? '').trim()
-      if (tipo === 'endosado' && !d) e.push('Escribí a quién se lo pasaste.')
-      if (d.length > LARGO_MAXIMO_DESTINO) e.push(`El destino no puede tener más de ${LARGO_MAXIMO_DESTINO} caracteres.`)
+      if (TIPOS_BANCO.includes(tipo) && !cuentaId) e.push('Elegí la cuenta del banco.')
+      if (tipo === 'vendido') {
+        if (!venta || !(venta.netoCent > 0)) e.push('Poné lo que acreditó el banco.')
+        else if (venta.netoCent > brutoCent) e.push(`Lo acreditado no puede ser más que el total de los cheques (${formatearImporte(brutoCent / 100)}).`)
+      }
       return e
     }
 
-    // Los parámetros tal cual viajan. Un destino vacío va como null.
-    function parametrosSalida(chequeId, { tipo, fecha, destino }) {
-      return { p_cheque_id: chequeId, p_tipo: tipo, p_fecha: fecha, p_destino: textoOpcional(destino) }
+    // Los parámetros tal cual viajan. Lo acreditado, en pesos (centavos / 100);
+    // un detalle vacío va como null.
+    function parametrosBanco(ids, { tipo, cuentaId, fecha, venta, detalle }) {
+      const p = { p_cheque_ids: [...ids], p_cuenta_id: cuentaId, p_fecha: fecha }
+      if (tipo === 'vendido') {
+        p.p_neto = venta.netoCent / 100
+        p.p_detalle = textoOpcional(detalle)
+      }
+      return p
     }
 
-    function abrirModalSalida(chequeId) {
+    // Lo que se dice al terminar, con lo que DEVOLVIÓ la base. Texto plano.
+    function textoResultadoBanco(res, tipo, cuentaNombre) {
+      const n = Number(res?.cheques) || 0
+      const bruto = Number(res?.bruto)
+      const desc = Number(res?.descuento) || 0
+      const cuenta = cuentaNombre || 'la cuenta'
+      const entraron = Number.isFinite(bruto) ? formatearImporte(bruto) : 'la plata'
+      if (tipo === 'vendido') {
+        const que = n === 1 ? 'Se vendió 1 cheque' : `Se vendieron ${n} cheques`
+        return `${que}: entraron ${entraron} en ${cuenta}${desc > 0 ? ` y se cargó un gasto de ${formatearImporte(desc)} de interés` : ''}.`
+      }
+      const que = n === 1 ? 'Se depositó 1 cheque' : `Se depositaron ${n} cheques`
+      return `${que} en ${cuenta}: entraron ${entraron}.`
+    }
+
+    // El diálogo de UN cheque. tipo: el que viene elegido (o null).
+    function abrirModalSalida(chequeId, tipo = null) {
       const ch = estado.filas.find(x => x.id === chequeId)
       if (!ch) return
       const cob = estado.cobranzas.get(ch.cobranza_id) ?? null
-      estado.salida = { cheque: ch, cobranza: cob, tipo: null }
+      estado.salida = { cheque: ch, cobranza: cob, tipo }
       document.getElementById('chq-salida-titulo').textContent = 'Salida del cheque'
       // textContent: el cliente va crudo acá, no es HTML.
       document.getElementById('chq-salida-cheques').textContent =
@@ -10521,10 +10748,11 @@
       fecha.value = hoyArgentina()
       fecha.max = hoyArgentina()
       fecha.min = esFechaIso(cob?.fecha) ? cob.fecha : ''
-      document.getElementById('chq-salida-destino').value = ''
+      prepararBanco()
       reiniciarEndoso()
       pintarModalSalida()
       document.getElementById('chq-modal-salida').hidden = false
+      if (tipo === 'endosado') prepararEndoso()
     }
 
     function cerrarModalSalida() {
@@ -10532,8 +10760,24 @@
       estado.salida = null
     }
 
-    // Lo que cambia según el tipo elegido: el botón marcado, la pregunta del
-    // destino y si es obligatorio. El error se limpia: era sobre otro estado.
+    // Al abrir el diálogo: las cuentas en el selector (con la de la fábrica de
+    // los cheques elegida), y la venta y el detalle vacíos.
+    function prepararBanco() {
+      const s = estado.salida
+      if (!s) return
+      const cheques = chequesDelEndoso(s)
+      s.cuentaId = cuentaDefecto(cheques, estado.cobranzas, cuentasOfrecidas())
+      s.venta = null
+      s.enviando = false
+      const sel = document.getElementById('chq-salida-cuenta')
+      sel.innerHTML = htmlOpcionesCuentas(cuentasOfrecidas(), estado.nombresUnidades)
+      sel.value = s.cuentaId ?? ''
+      for (const id of ['chq-venta-neto', 'chq-venta-descuento', 'chq-venta-tasa']) ponerNumero(document.getElementById(id), null)
+      document.getElementById('chq-venta-detalle').value = ''
+    }
+
+    // Lo que cambia según el tipo elegido: el botón marcado, la cuenta, la
+    // venta y el endoso. El error se limpia: era sobre otro estado.
     function pintarModalSalida() {
       const s = estado.salida
       if (!s) return
@@ -10542,6 +10786,7 @@
       const sinPermisoEndoso = !puedeRegistrarPago()
       document.querySelectorAll('[data-salida-tipo]').forEach(b => {
         b.classList.toggle('chq-btn--elegido', b.dataset.salidaTipo === s.tipo)
+        b.setAttribute('aria-pressed', b.dataset.salidaTipo === s.tipo ? 'true' : 'false')
         if (b.dataset.salidaTipo === 'endosado') b.disabled = sinPermisoEndoso
       })
       const notaEndoso = document.getElementById('chq-salida-nota-endoso')
@@ -10555,14 +10800,75 @@
       const notaFecha = document.getElementById('chq-salida-nota-fecha')
       notaFecha.textContent = vincular ? `Se conserva la fecha de salida: ${formatearFechaCob(s.cheque?.salida_fecha)}.` : ''
       notaFecha.hidden = !vincular
-      // EL DESTINO COMO TEXTO QUEDA SOLO PARA EL DEPÓSITO (el banco o la
-      // cuenta, opcional). El endoso ya no guarda un texto libre: elige al
-      // proveedor y paga su cuenta (ver "ENDOSAR A UN PROVEEDOR").
-      document.getElementById('chq-salida-campo-destino').hidden = s.tipo !== 'depositado'
-      document.getElementById('chq-salida-label-destino').textContent = '¿En qué banco o cuenta? (opcional)'
-      document.getElementById('chq-salida-ayuda-destino').textContent = 'Si no lo sabés, dejalo vacío.'
+      const banco = !vincular && TIPOS_BANCO.includes(s.tipo)
+      document.getElementById('chq-salida-campo-cuenta').hidden = !banco
+      document.getElementById('chq-venta').hidden = !(banco && s.tipo === 'vendido')
+      const confirmar = document.getElementById('chq-salida-confirmar')
+      confirmar.textContent = s.tipo === 'depositado' ? 'Depositar' : s.tipo === 'vendido' ? 'Vender' : 'Confirmar'
       document.getElementById('chq-salida-error').hidden = true
+      pintarBanco()
       pintarEndoso()
+    }
+
+    // La cuenta (avisos) y el resumen de lo que va a pasar.
+    function pintarBanco() {
+      const s = estado.salida
+      const ayuda = document.getElementById('chq-salida-ayuda-cuenta')
+      const aviso = document.getElementById('chq-salida-aviso-empresas')
+      const resumen = document.getElementById('chq-salida-resumen')
+      if (!s || s.modo === 'vincular' || !TIPOS_BANCO.includes(s.tipo)) {
+        resumen.hidden = true; aviso.hidden = true; ayuda.hidden = true
+        return
+      }
+      const cheques = chequesDelEndoso(s)
+      const brutoCent = centavosDe(cheques)
+      // Por qué no hay cuentas para elegir, si no hay.
+      let textoAyuda = ''
+      if (estado.cuentasBanco === null) textoAyuda = 'Cargando las cuentas…'
+      else if (estado.cuentasBancoError) textoAyuda = 'No se pudieron leer las cuentas de banco: cerrá y volvé a abrir para reintentar.'
+      else if (!cuentasOfrecidas().length) textoAyuda = 'No hay ninguna cuenta de banco de la Empresa en pesos.'
+      ayuda.textContent = textoAyuda
+      ayuda.hidden = !textoAyuda
+      const cuenta = cuentasOfrecidas().find(c => c.id === s.cuentaId) ?? null
+      const entre = textoEntreEmpresasBanco(cheques, estado.cobranzas, cuenta, estado.nombresUnidades)
+      aviso.textContent = entre
+      aviso.hidden = !entre
+      // El resumen (HTML: los nombres van escapados).
+      const n = cheques.length
+      const fila = (k, v, clase = '') => `<div class="${esc(clase)}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`
+      let html = fila(n === 1 ? 'Total del cheque' : `Total de los ${n} cheques`, formatearImporte(brutoCent / 100))
+      if (s.tipo === 'vendido') {
+        const v = s.venta
+        if (v && v.netoCent > 0 && v.netoCent <= brutoCent) {
+          html += fila('Descuento', `${formatearImporte(v.descCent / 100)} (${formatearNumeroAr(v.tasa, { decimales: 2 })} %)`)
+          html += fila('Acreditado', formatearImporte(v.netoCent / 100), 'chq-venta-resumen__total')
+          html += `<div><span>Entran ${esc(formatearImporte(brutoCent / 100))} a ${esc(cuenta?.nombre ?? 'la cuenta elegida')}${v.descCent > 0 ? ` y se carga un gasto de ${esc(formatearImporte(v.descCent / 100))} de interés (Intereses-Venta de cheques)` : ''}.</span></div>`
+        } else {
+          html += `<div><span>Escribí cuánto acreditó el banco, el descuento o la tasa.</span></div>`
+        }
+      } else {
+        html += `<div><span>Entran ${esc(formatearImporte(brutoCent / 100))} a ${esc(cuenta?.nombre ?? 'la cuenta elegida')}.</span></div>`
+      }
+      resumen.innerHTML = html
+      resumen.hidden = false
+    }
+
+    // Se escribió en uno de los tres campos de la venta: se recalculan los
+    // otros dos (nunca el que se está escribiendo).
+    function alEscribirVenta(desdeCampo) {
+      const s = estado.salida
+      if (!s || s.tipo !== 'vendido') return
+      const ids = { neto: 'chq-venta-neto', descuento: 'chq-venta-descuento', tasa: 'chq-venta-tasa' }
+      const brutoCent = centavosDe(chequesDelEndoso(s))
+      const v = calcularVenta(brutoCent, desdeCampo, leerCampoNumero(document.getElementById(ids[desdeCampo])))
+      s.venta = v
+      for (const [k, id] of Object.entries(ids)) {
+        if (k === desdeCampo) continue
+        const valor = !v ? null : k === 'neto' ? v.netoCent / 100 : k === 'descuento' ? v.descCent / 100 : v.tasa
+        ponerNumero(document.getElementById(id), valor)
+      }
+      document.getElementById('chq-salida-error').hidden = true
+      pintarBanco()
     }
 
     async function confirmarSalida() {
@@ -10571,10 +10877,16 @@
       // El endoso (y vincular uno viejo) va por su propio camino: paga la
       // cuenta del proveedor con endosar_cheque_a_proveedor.
       if (s.tipo === 'endosado' || s.modo === 'vincular') return confirmarEndoso()
+      // Un doble toque manda UNA sola vez.
+      if (s.enviando) return
+      const cheques = chequesDelEndoso(s)
       const datos = {
         tipo: s.tipo,
         fecha: document.getElementById('chq-salida-fecha').value,
-        destino: document.getElementById('chq-salida-destino').value,
+        cuentaId: s.cuentaId,
+        venta: s.venta,
+        detalle: document.getElementById('chq-venta-detalle').value,
+        brutoCent: centavosDe(cheques),
       }
       const err = document.getElementById('chq-salida-error')
       const errores = erroresSalida(datos, s.cobranza?.fecha, hoyArgentina())
@@ -10584,34 +10896,64 @@
         return
       }
       const btn = document.getElementById('chq-salida-confirmar')
+      s.enviando = true
       btn.disabled = true
+      const cuentaNombre = cuentasOfrecidas().find(c => c.id === datos.cuentaId)?.nombre ?? ''
       try {
-        if (s.lote) {
-          // TODO O NADA: si la base rechaza, no salió ninguno y el mensaje dice
-          // cuál y por qué ("No salió ninguno. El cheque 007 Nº … no puede
-          // salir: …"). Se muestra ENTERO.
-          const ids = s.cheques.map(ch => ch.id)
-          const { data, error } = await supabase.rpc('marcar_salida_cheques', parametrosSalidaLote(ids, datos))
-          if (error) throw error
-          const n = Number.isInteger(data) ? data : ids.length
-          cerrarModalSalida()
-          cancelarSeleccion()
-          mostrarExito(n === 1 ? 'Salió 1 cheque.' : `Salieron ${n} cheques.`)
-          await refrescarTodo()
-          return
-        }
-        const { error } = await supabase.rpc('marcar_salida_cheque', parametrosSalida(s.cheque.id, datos))
+        // TODO O NADA: si la base rechaza, no salió ninguno y su mensaje se
+        // muestra ENTERO (ya viene en castellano).
+        const rpc = datos.tipo === 'vendido' ? 'vender_cheques' : 'depositar_cheques'
+        const { data, error } = await supabase.rpc(rpc, parametrosBanco(cheques.map(ch => ch.id), datos))
         if (error) throw error
         cerrarModalSalida()
-        mostrarExito(datos.tipo === 'endosado' ? 'Cheque marcado como endosado.' : 'Cheque marcado como depositado.')
+        if (s.lote) cancelarSeleccion()
+        mostrarExito(textoResultadoBanco(data, datos.tipo, cuentaNombre))
         await refrescarTodo()
       } catch (e) {
-        console.error(s.lote ? 'Falló marcar_salida_cheques:' : 'Falló marcar_salida_cheque:', e)
-        // El mensaje del servidor ya viene en castellano: se muestra TAL CUAL.
-        err.textContent = e?.message || 'No se pudo marcar la salida.'
+        console.error(`Falló ${datos.tipo === 'vendido' ? 'vender_cheques' : 'depositar_cheques'}:`, e)
+        err.textContent = e?.message || 'No se pudo registrar la salida.'
         err.hidden = false
       } finally {
+        s.enviando = false
         btn.disabled = false
+      }
+    }
+
+    // ── Las cuentas de banco de la Empresa ───────────────────────────────
+    // La Empresa es la persona ficticia tipo 'empresa' (v_empleados_publico).
+    // Se leen TODAS sus cuentas de banco (también las inactivas y en dólares)
+    // para nombrar la de un cheque que ya salió; se OFRECEN solo las activas
+    // en pesos, sin la fábrica de pruebas. Y los nombres de las fábricas, para
+    // agruparlas. NUNCA tira: si falla, el diálogo lo dice.
+    async function cargarCuentasBanco() {
+      try {
+        const [emp, cuentas, unidades] = await Promise.all([
+          supabase.from('v_empleados_publico').select('id').eq('tipo', 'empresa'),
+          supabase.from('cuentas_caja').select('id, nombre, medio, moneda, unidad_negocio_id, empleado_id, activa').eq('medio', 'banco').order('nombre'),
+          supabase.from('unidades_negocio').select('id, nombre'),
+        ])
+        if (emp.error) throw emp.error
+        if (cuentas.error) throw cuentas.error
+        const empresa = new Set((emp.data ?? []).map(e => e.id))
+        const todas = (cuentas.data ?? []).filter(c => empresa.has(c.empleado_id))
+        const ofrecidas = sinUnidadesDePrueba(
+          todas.filter(c => c.moneda === 'ARS' && c.activa !== false && c.medio === 'banco'),
+          estado.fabrica, c => c.unidad_negocio_id)
+        estado.nombresUnidades = new Map((unidades.data ?? []).map(u => [u.id, u.nombre]))
+        estado.cuentasBanco = { porId: new Map(todas.map(c => [c.id, c])), ofrecidas }
+        estado.cuentasBancoError = false
+      } catch (err) {
+        console.error('No se pudieron leer las cuentas de banco:', err)
+        estado.cuentasBanco = { porId: new Map(), ofrecidas: [] }
+        estado.cuentasBancoError = true
+      }
+      // Si el diálogo ya estaba abierto, se completan las cuentas.
+      if (estado.salida) {
+        const sel = document.getElementById('chq-salida-cuenta')
+        if (!estado.salida.cuentaId) estado.salida.cuentaId = cuentaDefecto(chequesDelEndoso(estado.salida), estado.cobranzas, cuentasOfrecidas())
+        sel.innerHTML = htmlOpcionesCuentas(cuentasOfrecidas(), estado.nombresUnidades)
+        sel.value = estado.salida.cuentaId ?? ''
+        pintarBanco()
       }
     }
 
@@ -10777,7 +11119,7 @@
       if (!proveedor?.id) e.push('Elegí el proveedor.')
       if (!unidadId) e.push('Elegí de qué fábrica es la deuda que se paga.')
       // La fecha, con las MISMAS reglas que la salida (una sola copia).
-      if (!vincular) e.push(...erroresSalida({ tipo: 'depositado', fecha, destino: '' }, fechaCobranza, hoy))
+      if (!vincular) e.push(...erroresSalida({ tipo: 'endosado', fecha }, fechaCobranza, hoy))
       return e
     }
 
@@ -11157,6 +11499,18 @@
       accionDelMotivo = null
     }
 
+    // La etiqueta del motivo. Un cheque depositado o vendido con
+    // depositar_cheques / vender_cheques entró a una cuenta: volver a cartera
+    // SACA esa plata (y en una venta devuelve el interés que le tocó).
+    function textoVolverACartera(ch) {
+      if (!ch?.salida_cuenta_id || (ch.estado !== 'depositado' && ch.estado !== 'vendido')) return 'Por qué vuelve a cartera'
+      const cuenta = nombreCuentaSalida(ch) || 'la cuenta'
+      const neto = Number(ch.venta_neto)
+      const interes = ch.estado === 'vendido' && ch.venta_neto != null && Number.isFinite(neto)
+        ? aCentavos(ch.importe) - aCentavos(neto) : 0
+      return `Por qué vuelve a cartera (se sacan ${formatearImporte(ch.importe)} de ${cuenta}${interes > 0 ? ` y vuelve el interés de ${formatearImporte(interes / 100)}` : ''})`
+    }
+
     function abrirVolverACartera(chequeId) {
       const ch = estado.filas.find(x => x.id === chequeId)
       if (!ch) return
@@ -11165,7 +11519,7 @@
       if (pagoAProveedor(ch)) return
       abrirModalMotivo({
         titulo: `Volver a cartera el cheque N° ${ch.numero ?? '—'}`,
-        etiqueta: 'Por qué vuelve a cartera',
+        etiqueta: textoVolverACartera(ch),
         alConfirmar: async (motivo) => {
           try {
             const { error } = await supabase.rpc('volver_cheque_a_cartera', { p_cheque_id: ch.id, p_motivo: motivo })
@@ -11257,9 +11611,21 @@
         estado.salida.tipo = b.dataset.salidaTipo
         pintarModalSalida()
         prepararEndoso()
-        if (!document.getElementById('chq-salida-campo-destino').hidden) document.getElementById('chq-salida-destino').focus()
-        else if (!document.getElementById('chq-endoso').hidden && !estado.salida?.proveedor) document.getElementById('chq-endoso-buscar').focus()
+        if (!document.getElementById('chq-endoso').hidden && !estado.salida?.proveedor) document.getElementById('chq-endoso-buscar').focus()
       }))
+      // ── Depositar / Vender al banco ──
+      document.getElementById('chq-salida-cuenta').addEventListener('change', (ev) => {
+        if (!estado.salida) return
+        estado.salida.cuentaId = ev.target.value || null
+        document.getElementById('chq-salida-error').hidden = true
+        pintarBanco()
+      })
+      enlazarCampoNumero(document.getElementById('chq-venta-neto'), { decimales: 2 })
+      enlazarCampoNumero(document.getElementById('chq-venta-descuento'), { decimales: 2 })
+      enlazarCampoNumero(document.getElementById('chq-venta-tasa'), { decimales: 2, max: 100 })
+      document.getElementById('chq-venta-neto').addEventListener('input', () => alEscribirVenta('neto'))
+      document.getElementById('chq-venta-descuento').addEventListener('input', () => alEscribirVenta('descuento'))
+      document.getElementById('chq-venta-tasa').addEventListener('input', () => alEscribirVenta('tasa'))
       // ── Endosar a un proveedor ──
       document.getElementById('chq-endoso-buscar').addEventListener('input', (ev) => {
         const texto = ev.target.value
@@ -11295,7 +11661,9 @@
         else activarSeleccion()
       })
       document.getElementById('chq-sel-cancelar').addEventListener('click', cancelarSeleccion)
-      document.getElementById('chq-sel-dar-salida').addEventListener('click', abrirModalSalidaLote)
+      document.getElementById('chq-sel-depositar').addEventListener('click', () => abrirModalSalidaLote('depositado'))
+      document.getElementById('chq-sel-vender').addEventListener('click', () => abrirModalSalidaLote('vendido'))
+      document.getElementById('chq-sel-dar-salida').addEventListener('click', () => abrirModalSalidaLote('endosado'))
 
       // Escape cierra el diálogo que esté abierto; si no hay ninguno, limpia
       // la selección.
@@ -11389,6 +11757,10 @@
       const [eleccion, fabrica] = await Promise.all([unidadesDeLaBarra().catch(() => null), cargarFabricaDePruebas(supabase), cargarBancos()])
       estado.fabrica = fabrica ?? FABRICA_SIN_DATOS
       aplicarEleccionBarra(eleccion)
+      // Las cuentas de banco (depositar / vender, y el nombre de la cuenta de
+      // un cheque que ya salió): después de la fábrica de pruebas, que las
+      // filtra. No frena la lista.
+      cargarCuentasBanco().then(() => { if (estado.filas.length) renderizarCheques() })
       await refrescarTodo()
     }
 

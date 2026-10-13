@@ -1080,6 +1080,8 @@
     /* Endosado es un ESTADO, no un aviso: el cheque salió de cartera igual que
        uno depositado, y lleva el mismo tratamiento gris. El texto dice cuál. */
     .cob-estado--endosado { background: var(--color-superficie); color: var(--color-texto-suave); }
+    /* Vendido al banco (13/10/2026): salió de cartera, mismo tratamiento. */
+    .cob-estado--vendido { background: var(--color-superficie); color: var(--color-texto-suave); }
     .cob-estado--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
     @media (min-width: 640px) {
@@ -1645,7 +1647,7 @@
     // una sola copia, en js/cobranzas-comun.js (22/09/2026).
     import {
       dvBcra, formatearImporte, ZONA_AR, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
-      ETIQUETA_ESTADO_CHEQUE, nombreBancoDe, textoSalidaCheque,
+      ETIQUETA_ESTADO_CHEQUE, ESTADOS_SALIDOS, nombreBancoDe, textoSalidaCheque,
     } from '../js/cobranzas-comun.js'
     // La barra de unidad de negocio de arriba (js/barra-unidad.js, 28/09/2026):
     // la elección de la fábrica y el aviso cuando cambia. Es el mismo módulo que
@@ -4620,7 +4622,7 @@
       // Con un cheque afuera, la base NO deja editar ni anular la cobranza
       // (un trigger protege al cheque). Se dice antes de que lo intenten; el
       // mensaje de la base igual llega tal cual si lo intentan.
-      const haySalidos = !anulada && d.cheques.some(ch => ch.estado === 'depositado' || ch.estado === 'endosado')
+      const haySalidos = !anulada && d.cheques.some(ch => ESTADOS_SALIDOS.includes(ch.estado))
       const avisoSalidos = haySalidos
         ? '<div class="cob-aviso">Hay cheques que ya salieron de cartera: para editar o anular esta cobranza, primero hay que volverlos a cartera (desde Cheques).</div>'
         : ''
@@ -4702,7 +4704,7 @@
 
     function htmlChequeDetalle(ch, nombres) {
       const titulares = Array.isArray(ch.titulares) ? ch.titulares : []
-      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const salido = ESTADOS_SALIDOS.includes(ch.estado)
       const porQuien = salido && ch.salida_por ? (nombres?.get(ch.salida_por) ?? null) : null
       // El beneficiario importa por una razón concreta: si el cheque no está a
       // nombre nuestro, hay que endosarlo o no se puede depositar. Se compara
