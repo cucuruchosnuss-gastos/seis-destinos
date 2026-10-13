@@ -258,6 +258,18 @@ const FILAS = [
     S.__setUrl('')
     chk('sin parámetro → null y sin tocar el historial', S.vistaDesdeUrl(['stock', 'catalogo']) === null && S.__reemplazos.length === 0)
   }
+  // 13/10/2026: ?vista=traspaso (el link del cartel del faltante de un retiro).
+  {
+    const S = nuevo()
+    S.__setUrl('?vista=traspaso')
+    chk('?vista=traspaso con la vista de stock → traspaso', S.vistaDesdeUrl(['stock']) === 'traspaso')
+    chk('?vista=traspaso se limpia', S.__reemplazos.length === 1)
+  }
+  {
+    const S = nuevo()
+    S.__setUrl('?vista=traspaso')
+    chk('?vista=traspaso sin la vista de stock se ignora', S.vistaDesdeUrl(['catalogo', 'recuento']) === null)
+  }
 
   // El filtro "Sin revisar" al llegar por el link.
   {
@@ -280,7 +292,10 @@ const FILAS = [
   // ── 8. El cableado (init, HTML) — sobre el fuente, anclado a lo único ──
   chk('init abre la vista pedida por URL antes que la primera',
     // 11/10/2026: con Costos (M8) la lista que se valida suma 'costos'.
-    /const desdeUrl = vistaDesdeUrl\(veCostos \? \[\.\.\.vistas, 'costos'\] : vistas\)\n\s*const inicial = desdeUrl \?\? \(soloCostos \? 'costos' : vistas\[0\]\)\n\s*mostrarVista\(inicial\)/.test(SCRIPT))
+    // 13/10/2026: ?vista=traspaso abre el stock y adentro el traspaso.
+    /const desdeUrl = vistaDesdeUrl\(veCostos \? \[\.\.\.vistas, 'costos'\] : vistas\)\n\s*const inicial = desdeUrl === 'traspaso' \? 'stock' : \(desdeUrl \?\? \(soloCostos \? 'costos' : vistas\[0\]\)\)\n\s*mostrarVista\(inicial\)/.test(SCRIPT))
+  chk('?vista=traspaso abre el traspaso solo si puede traspasar',
+    /if \(desdeUrl === 'traspaso' && puedeTraspasar\(\)\) abrirTraspaso\(\)/.test(SCRIPT) && /if \(pedida === 'traspaso'\) return vistas\.includes\('stock'\) \? 'traspaso' : null/.test(SCRIPT))
   chk('init aplica el filtro solo si vino por el link al catálogo',
     /if \(desdeUrl === 'catalogo'\) aplicarFiltroDesdeUrl\(\)/.test(SCRIPT))
   const iInit = SCRIPT.indexOf('async function init()')

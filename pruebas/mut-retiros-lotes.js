@@ -89,7 +89,7 @@ correrMutaciones({
     { nombre: 'el faltante bloquea', de: '    function faltaEnLotes(r) {\n      const a = asignacion(r, listaLotesDe(r))', a: '    function faltaEnLotes(r) {\n      const a = asignacion(r, listaLotesDe(r))\n      if (a.faltante > 0) return \'no hay stock\'' },
     { nombre: 'el resumen no avisa el faltante', de: '${htmlAvisoFaltante(r, a)}</span>`', a: '</span>`' },
     { nombre: 'el lote excedido no se dice', de: ".map(l => `<br><span class=\"rt-lotes__falta\">${esc(nombreLote(l.lote))}: pusiste", a: ".filter(() => false).map(l => `<br><span class=\"rt-lotes__falta\">${esc(nombreLote(l.lote))}: pusiste" },
-    { nombre: 'el hecho no dice que quedó pendiente en Administración', de: 'y lo que faltó quedó pendiente de revisión en Administración.', a: 'avisale a Producción.' },
+    { nombre: 'el hecho no dice que quedó pendiente en Administración', de: "      return { texto: 'Pendiente: queda para revisar en Administración', clase: ' rt-falt-estado__como--pend' }", a: "      return { texto: 'Pendiente: avisale a Producción', clase: ' rt-falt-estado__como--pend' }" },
     // Los lotes se leen solos
     { nombre: 'tocar un renglón no lee sus lotes', de: '      guardarBorrador()\n      asegurarLotesDeRenglones()\n    }', a: '      guardarBorrador()\n    }' },
     { nombre: 'tipear en un lote redibuja el renglón', de: '      else delete r.lotes[lote]\n      pintarResumenLotes(i)', a: '      else delete r.lotes[lote]\n      pintarRenglones()' },
