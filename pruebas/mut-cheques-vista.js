@@ -53,7 +53,7 @@ correrMutaciones({
     { nombre: 'solo con cargar se ve la cartera',
       de: "const puedeVerCartera = () => tieneTarea('ver_todo') || tieneTarea('procesar')", a: "const puedeVerCartera = () => tieneTarea('ver_todo') || tieneTarea('procesar') || tieneTarea('cargar')" },
     { nombre: 'una fecha futura pasa',
-      de: "if (diasEntre(hoy, fecha) > 0) e.push('La fecha no puede ser posterior a hoy.')", a: '' },
+      de: "        if (diasEntre(hoy, fecha) > 0) e.push('La fecha no puede ser posterior a hoy.')\n        if (esFechaIso(fechaCobranza)", a: '        if (esFechaIso(fechaCobranza)' },
     { nombre: 'el error de la base se tapa con un genérico',
       de: "err.textContent = e?.message || 'No se pudo registrar la salida.'", a: "err.textContent = 'No se pudo registrar la salida.'" },
     { nombre: 'el diálogo describe el cheque con innerHTML',

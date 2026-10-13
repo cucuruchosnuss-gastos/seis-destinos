@@ -269,7 +269,7 @@ if (SOLO !== 'estatico') {
     S.pintarFiltrosCheques()
     chk('limpiar: el botón aparece con filtros puestos', S.__doc.getElementById('chq-btn-limpiar').hidden === false)
     chequearMarcas('pintarFiltrosCheques', S.__doc.getElementById('chq-chips-estado').innerHTML, [])
-    chk('segmentado: cuatro opciones (con "Vendidos") y "Todos" marcada', (S.__doc.getElementById('chq-chips-estado').innerHTML.match(/data-estado-cheque=/g) || []).length === 4 &&
+    chk('segmentado: cinco opciones (con "En el banco" y "Vendidos") y "Todos" marcada', (S.__doc.getElementById('chq-chips-estado').innerHTML.match(/data-estado-cheque=/g) || []).length === 5 &&
       /aria-pressed="true" data-estado-cheque="todos"/.test(S.__doc.getElementById('chq-chips-estado').innerHTML))
     const antes = S.__llamadas.cargarCheques
     S.limpiarFiltrosCheques()
@@ -413,10 +413,16 @@ if (SOLO !== 'estatico') {
       doc.getElementById('chq-salida-nota-endoso').hidden === true)
     S.estado.salida.tipo = 'depositado'; S.pintarModalSalida()
     chk('diálogo: depositar pide la cuenta de banco, sin la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === true)
-    chk('diálogo: el botón dice "Depositar"', doc.getElementById('chq-salida-confirmar').textContent === 'Depositar')
+    // EN DOS PASOS (13/10/2026): sin "Ya se acreditó" se MANDA al banco.
+    chk('diálogo: sin "Ya se acreditó" el botón dice "Mandar al banco"', doc.getElementById('chq-salida-confirmar').textContent === 'Mandar al banco')
+    S.estado.salida.ya = true; S.pintarModalSalida()
+    chk('diálogo: con "Ya se acreditó" el botón dice "Depositar"', doc.getElementById('chq-salida-confirmar').textContent === 'Depositar')
     S.estado.salida.tipo = 'vendido'; S.pintarModalSalida()
-    chk('diálogo: vender pide la cuenta y los tres campos de la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === false)
+    chk('diálogo: vender ya acreditado pide la cuenta y los tres campos de la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === false)
     chk('diálogo: el botón dice "Vender"', doc.getElementById('chq-salida-confirmar').textContent === 'Vender')
+    S.estado.salida.ya = false; S.pintarModalSalida()
+    chk('diálogo: vender sin acreditar NO pide lo acreditado', doc.getElementById('chq-venta').hidden === true &&
+      doc.getElementById('chq-salida-confirmar').textContent === 'Mandar al banco')
   }
 
   // ── Confirmar: validación local, error TAL CUAL y éxito ──────────────────
@@ -432,6 +438,7 @@ if (SOLO !== 'estatico') {
       S.abrirModalSalida('z2')
       // El endoso va por su propio camino (test-cheques-endoso.js): acá, el depósito.
       S.estado.salida.tipo = 'depositado'
+      S.estado.salida.ya = true
       S.estado.salida.cuentaId = 'k1'
       doc.getElementById('chq-salida-fecha').value = '2999-01-01'
       await S.confirmarSalida()

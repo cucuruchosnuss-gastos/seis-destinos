@@ -70,14 +70,22 @@ const OPCIONALES = [
   // depositar y vender al banco (13/10/2026)
   'esSalido', 'nombreCuentaSalida', 'textoSalidaBanco', 'htmlLinkGastoVenta', 'centavosDe', 'cuentasOfrecidas',
   'gruposDeCuentas', 'htmlOpcionesCuentas', 'cuentaDefecto', 'textoEntreEmpresasBanco', 'calcularVenta',
-  'parametrosBanco', 'textoResultadoBanco', 'prepararBanco', 'pintarBanco', 'alEscribirVenta', 'cargarCuentasBanco',
+  'parametrosBanco', 'textoResultadoBanco', 'parametrosEnvio', 'textoResultadoEnvio',
+  // En el banco (13/10/2026, en dos pasos).
+  'filasEnBanco', 'chequesBancoElegidos', 'cantidadEnBanco', 'htmlCuentaEnBanco', 'diasEsperando', 'textoEsperando', 'textoModoEnvio',
+  'textoEnBanco', 'gruposEnBanco', 'htmlGruposEnBanco', 'htmlChequeEnBanco', 'objetivoReparto', 'repartoPorTotal', 'repartoPorTasa',
+  'resumenAcreditar', 'erroresAcreditar', 'parametrosAcreditar', 'htmlResultadoAcreditar', 'pintarEnBanco', 'pintarAccionesBanco',
+  'elegirEnBanco', 'elegirGrupoEnBanco', 'abrirAcreditar', 'armarFilasAcreditar', 'alRepartir', 'pintarResumenAcreditar',
+  'confirmarAcreditar', 'abrirNoTomo', 'confirmarNoTomo', 'conectarEnBanco', 'prepararBanco', 'pintarBanco', 'alEscribirVenta', 'cargarCuentasBanco',
   'textoVolverACartera',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
   'puedeRegistrarPago', 'puedeVerFacturas', 'TEXTO_SIN_PERMISO_ENDOSO', 'TEXTO_SIN_FACTURAS', 'LARGO_MINIMO_BUSQUEDA',
   // depositar y vender al banco (13/10/2026)
-  'TIPOS_BANCO', 'BOTONES_LOTE']
+  'TIPOS_BANCO', 'BOTONES_LOTE',
+  // En el banco (13/10/2026)
+  'TEXTO_MOTIVO_NO_TOMO', 'bancoUI']
 
 const PRELUDIO = `
   ${fuenteNumeros()}

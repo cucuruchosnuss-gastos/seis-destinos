@@ -143,7 +143,7 @@ const FUNCIONES = [
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA', 'PAGINA',
-  'ETIQUETA_ESTADO_CHEQUE', 'ESTADOS_SALIDOS', 'DIAS_MAXIMO_DIFERIDO', 'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
+  'ETIQUETA_ESTADO_CHEQUE', 'ESTADOS_SALIDOS', 'ESTADOS_FUERA_DE_CARTERA', 'DIAS_MAXIMO_DIFERIDO', 'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
   'puedeVerCartera', 'UUID_COB', ...CONSTANTES_PAGO,
 ]
 

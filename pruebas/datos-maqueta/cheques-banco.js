@@ -1,4 +1,5 @@
-// Datos de la maqueta: depositar y vender cheques al banco (13/10/2026).
+// Datos de la maqueta: depositar y vender cheques al banco (13/10/2026), EN
+// DOS PASOS: mandar al banco (en_banco) y cargar lo acreditado.
 // Ver pruebas/datos-maqueta/README.md.
 //
 // Parte de los datos de Administración (administracion.js) sin cambiarlos y
@@ -9,7 +10,11 @@
 //  - un cheque en cartera de Dolce Pasta (para el aviso "entre empresas");
 //  - un cheque VENDIDO (acreditó $ 95.000 de $ 100.000, con su gasto) y el
 //    depositado de siempre con la cuenta donde entró;
-//  - las respuestas de depositar_cheques y vender_cheques.
+//  - tres cheques EN EL BANCO esperando que acrediten: dos ventas de Nuss
+//    ($ 300.000 y $ 200.000, mandados el 10/10) y un depósito de Dolce Pasta
+//    ($ 50.000, mandado el 12/10) en el Macro de Nuss (para "Entre empresas");
+//  - las respuestas de enviar_cheques_al_banco, acreditar_cheques,
+//    cancelar_envio_cheques, depositar_cheques y vender_cheques.
 //
 //   http://localhost:4180/modulos/administracion.html?seccion=cheques&maqueta=cheques-banco
 'use strict';
@@ -42,7 +47,7 @@ t.cuentas_caja = (t.cuentas_caja ?? []).filter(c => !['cta-banco-nuss'].includes
 const cheque = (extra) => Object.assign({
   sucursal_codigo: '123', codigo_postal: '5000', dv_ruta: 0, dv_numero: 0, cuenta: '00012345678', dv_cuenta: 0,
   salida_fecha: null, salida_destino: null, salida_por: null, salida_registrada_en: null, salida_proveedor_id: null,
-  salida_cuenta_id: null, venta_neto: null, venta_gasto_id: null, tipo: 'comun', fecha_pago: null,
+  salida_cuenta_id: null, venta_neto: null, venta_gasto_id: null, salida_modo: null, envio_fecha: null, envio_detalle: null, tipo: 'comun', fecha_pago: null,
 }, extra);
 
 // El depositado de siempre (chq-4) ahora dice en qué cuenta entró.
@@ -50,6 +55,12 @@ const depositado = t.cobranza_cheques.find(c => c.id === 'chq-4');
 if (depositado) Object.assign(depositado, { salida_cuenta_id: 'cta-dolce', salida_destino: 'Macro · Dolce' });
 
 t.cobranza_cheques.push(
+  cheque({ id: 'chq-b1', cobranza_id: 'cob-1', banco_codigo: '007', numero: '90000001', estado: 'en_banco', importe: 300000, fecha_emision: '2026-09-15',
+    salida_por: 'emp-1', salida_destino: 'Banco Macro · Nuss', salida_cuenta_id: 'cta-banco-nuss', salida_modo: 'venta', envio_fecha: '2026-10-10' }),
+  cheque({ id: 'chq-b2', cobranza_id: 'cob-1', banco_codigo: '011', numero: '90000002', estado: 'en_banco', importe: 200000, fecha_emision: '2026-09-15',
+    salida_por: 'emp-1', salida_destino: 'Banco Macro · Nuss', salida_cuenta_id: 'cta-banco-nuss', salida_modo: 'venta', envio_fecha: '2026-10-10' }),
+  cheque({ id: 'chq-b3', cobranza_id: 'cob-3', banco_codigo: '285', numero: '90000003', estado: 'en_banco', importe: 50000, fecha_emision: '2026-09-20',
+    salida_por: 'emp-1', salida_destino: 'Banco Macro · Nuss', salida_cuenta_id: 'cta-banco-nuss', salida_modo: 'deposito', envio_fecha: '2026-10-12' }),
   cheque({ id: 'chq-dolce', cobranza_id: 'cob-3', banco_codigo: '011', numero: '44445555', estado: 'en_cartera', importe: 80000, fecha_emision: '2026-08-25' }),
   cheque({
     id: 'chq-vendido', cobranza_id: 'cob-1', banco_codigo: '285', numero: '55556666', estado: 'vendido', importe: 100000,
@@ -60,6 +71,9 @@ t.cobranza_cheques.push(
 );
 
 base.rpc = Object.assign(base.rpc ?? {}, {
+  enviar_cheques_al_banco: { cheques: 2, total: 537300.5 },
+  acreditar_cheques: [{ cuenta: 'Banco Macro · Nuss', cheques: 3, bruto: 550000, acreditado: 525000, descuento: 25000, caja_movimiento_id: 'cm-acr', gasto_id: 'g-venta-3' }],
+  cancelar_envio_cheques: 2,
   depositar_cheques: { cheques: 2, bruto: 537300.5, neto: 537300.5, descuento: 0, caja_movimiento_id: 'cm-dep', gasto_id: null },
   vender_cheques: { cheques: 1, bruto: 387300.5, neto: 370000, descuento: 17300.5, caja_movimiento_id: 'cm-ven', gasto_id: 'g-venta-2' },
 });

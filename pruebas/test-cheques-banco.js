@@ -1,4 +1,8 @@
 // Cheques: DEPOSITAR Y VENDER AL BANCO (13/10/2026, pedido 3 del 13/10).
+// EN DOS PASOS desde la tarde del 13/10: "Mandar al banco" no mueve plata
+// (enviar_cheques_al_banco) y lo acreditado se carga en «En el banco»
+// (acreditar_cheques) o vuelve a la cartera (cancelar_envio_cheques). Lo de
+// abajo es el camino de UN paso, que queda para "Ya se acreditó".
 //
 // Antes "Depositado" solo marcaba el estado del cheque: la plata no entraba a
 // ninguna cuenta. Ahora "Depositar" y "Vender al banco" van por la base en UNA
@@ -145,6 +149,9 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   const S = armar()
   const doc = S.__doc
   S.abrirModalSalida('d1', 'depositado')
+  // "Ya se acreditó": el camino de un solo paso (mandar al banco, más abajo).
+  S.estado.salida.ya = true
+  S.pintarModalSalida()
   chk('abrir con "Depositar": la cuenta a la vista y viene la de su fábrica', doc.getElementById('chq-salida-campo-cuenta').hidden === false && S.estado.salida.cuentaId === 'k-dolce')
   chk('… el selector con las cuentas', /Macro Dolce/.test(doc.getElementById('chq-salida-cuenta').innerHTML) && doc.getElementById('chq-salida-cuenta').value === 'k-dolce')
   chk('… el botón marcado y con aria-pressed', doc.querySelectorAll('[data-salida-tipo]')[0].__clases.has('chq-btn--elegido') && doc.querySelectorAll('[data-salida-tipo]')[0].getAttribute('aria-pressed') === 'true')
@@ -174,6 +181,8 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   const doc = S.__doc
   S.estado.seleccion.ids = new Set(['n1', 'n2'])
   S.abrirModalSalidaLote('vendido')
+  S.estado.salida.ya = true
+  S.pintarModalSalida()
   chk('"Vender al banco" desde la selección: el diálogo del lote, con la venta a la vista', S.estado.salida.lote === true && doc.getElementById('chq-venta').hidden === false)
   chk('… viene elegida la cuenta de Nuss (los dos son de Nuss)', S.estado.salida.cuentaId === 'k-macro')
   chk('… el título con la cantidad y el total', N(doc.getElementById('chq-salida-titulo').textContent) === 'Dar salida a 2 cheques · $ 1.000.000,00')
@@ -260,10 +269,15 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   const h = S2.__doc.getElementById('chq-salida-resumen').innerHTML
   chk('el nombre de la cuenta va escapado en el resumen', !h.includes(cruda('cta')) && h.includes(escapada('cta')))
   S2.estado.salida.tipo = 'vendido'
+  S2.estado.salida.ya = true
   S2.__doc.getElementById('chq-venta-neto').value = '500.000'
   S2.alEscribirVenta('neto')
   const h2 = S2.__doc.getElementById('chq-salida-resumen').innerHTML
   chk('… también en el de la venta', !h2.includes(cruda('cta')) && h2.includes(escapada('cta')))
+  S2.estado.salida.tipo = 'depositado'
+  S2.pintarBanco()
+  const h3 = S2.__doc.getElementById('chq-salida-resumen').innerHTML
+  chk('… y en el del depósito ya acreditado', /Entran/.test(h3) && !h3.includes(cruda('cta')) && h3.includes(escapada('cta')))
 }
 {
   // Sin cuentas leídas / sin cuentas / error al leer: se dice.
@@ -349,24 +363,24 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk('la etiqueta de "vendido" es "Vendido"', S.ETIQUETA_ESTADO_CHEQUE.vendido === 'Vendido')
   chk('salidos = depositado, endosado y vendido', JSON.stringify(S.ESTADOS_SALIDOS) === JSON.stringify(['depositado', 'endosado', 'vendido']))
   chk('el común: textoSalidaCheque de un vendido', /if \(estadoCheque === 'vendido'\) return `Vendido\$\{cuando\}/.test(COMUN))
-  chk('cobranzas.html: un vendido cuenta como salido (no deja editar la cobranza)', /d\.cheques\.some\(ch => ESTADOS_SALIDOS\.includes\(ch\.estado\)\)/.test(COBRANZAS) &&
-    /const salido = ESTADOS_SALIDOS\.includes\(ch\.estado\)/.test(COBRANZAS))
+  chk('cobranzas.html: un vendido cuenta como salido (no deja editar la cobranza)', /d\.cheques\.some\(ch => ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)\)/.test(COBRANZAS) &&
+    /const salido = ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)/.test(COBRANZAS) && /export const ESTADOS_FUERA_DE_CARTERA = \['en_banco', \.\.\.ESTADOS_SALIDOS\]/.test(COMUN))
   chk('cobranzas.html: el chip de un vendido tiene su estilo', /\.cob-estado--vendido \{/.test(COBRANZAS))
-  chk('la lista trae la cuenta, lo acreditado y el gasto de la venta', /salida_cuenta_id, venta_neto, venta_gasto_id'/.test(JS))
+  chk('la lista trae la cuenta, lo acreditado y el gasto de la venta', /salida_cuenta_id, venta_neto, venta_gasto_id, /.test(JS))
 }
 
-// ── La barra de la selección: Depositar, Vender al banco, Endosar ────────
+// ── La barra de la selección: Mandar al banco y Endosar ─────────────────
 {
   const S = armar()
   S.pintarSalidaLote()
-  chk('sin nada elegido: los tres botones escondidos', ['chq-sel-depositar', 'chq-sel-vender', 'chq-sel-dar-salida'].every(id => S.__doc.getElementById(id).hidden === true))
+  chk('sin nada elegido: los dos botones escondidos', ['chq-sel-banco', 'chq-sel-dar-salida'].every(id => S.__doc.getElementById(id).hidden === true))
   S.estado.seleccion.ids = new Set(['n1', 'n2'])
   S.pintarSalidaLote()
-  chk('con dos elegidos: los tres botones a la vista', ['chq-sel-depositar', 'chq-sel-vender', 'chq-sel-dar-salida'].every(id => S.__doc.getElementById(id).hidden === false))
-  chk('el HTML: "Depositar", "Vender al banco" y "Endosar", escondidos hasta que el JS los habilite',
-    /id="chq-sel-depositar" hidden>Depositar</.test(FUENTE) && /id="chq-sel-vender" hidden>Vender al banco</.test(FUENTE) && /id="chq-sel-dar-salida" hidden>Endosar</.test(FUENTE))
-  chk('cada botón abre el diálogo con su tipo', /'chq-sel-depositar'\)\.addEventListener\('click', \(\) => abrirModalSalidaLote\('depositado'\)\)/.test(JS) &&
-    /'chq-sel-vender'\)\.addEventListener\('click', \(\) => abrirModalSalidaLote\('vendido'\)\)/.test(JS) &&
+  chk('con dos elegidos: los dos botones a la vista', ['chq-sel-banco', 'chq-sel-dar-salida'].every(id => S.__doc.getElementById(id).hidden === false))
+  chk('el HTML: "Mandar al banco" y "Endosar", escondidos hasta que el JS los habilite',
+    /id="chq-sel-banco" hidden>Mandar al banco</.test(FUENTE) && /id="chq-sel-dar-salida" hidden>Endosar</.test(FUENTE))
+  chk('ya no están "Depositar" y "Vender al banco" sueltos en la barra', !/id="chq-sel-depositar"/.test(FUENTE) && !/id="chq-sel-vender"/.test(FUENTE))
+  chk('cada botón abre el diálogo: mandar al banco sin tipo (se elige) y endosar', /'chq-sel-banco'\)\.addEventListener\('click', \(\) => abrirModalSalidaLote\(null, \{ banco: true \}\)\)/.test(JS) &&
     /'chq-sel-dar-salida'\)\.addEventListener\('click', \(\) => abrirModalSalidaLote\('endosado'\)\)/.test(JS))
   chk('el diálogo: Depositar, Vender al banco, Endosar a un proveedor',
     /data-salida-tipo="depositado">Depositar</.test(FUENTE) && /data-salida-tipo="vendido">Vender al banco</.test(FUENTE) && /data-salida-tipo="endosado">Endosar a un proveedor</.test(FUENTE))
@@ -374,6 +388,8 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk('los tres campos de la venta con el formato argentino (la tasa hasta 100)',
     /enlazarCampoNumero\(document\.getElementById\('chq-venta-tasa'\), \{ decimales: 2, max: 100 \}\)/.test(JS) &&
     /enlazarCampoNumero\(document\.getElementById\('chq-venta-neto'\), \{ decimales: 2 \}\)/.test(JS))
+  chk('lo acreditado de "En el banco" también (el total y la tasa hasta 100)', /enlazarCampoNumero\(document\.getElementById\('chq-acr-total'\), \{ decimales: 2 \}\)/.test(JS) &&
+    /enlazarCampoNumero\(document\.getElementById\('chq-acr-tasa'\), \{ decimales: 2, max: 100 \}\)/.test(JS) && /enlazarCampoNumero\(inp, \{ decimales: 2 \}\)/.test(JS))
 }
 
 // ── Gastos: los íconos de las categorías nuevas ──────────────────────────
@@ -381,6 +397,316 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk("Gastos: 'Intereses-Venta de cheques' con el ícono percent", /'Intereses-Venta de cheques':\s*'percent'/.test(GASTOS))
   chk("Gastos: 'Librería-Impresiones' con printer", /'Librería-Impresiones':\s*'printer'/.test(GASTOS))
   chk("Gastos: 'Comisiones' con handshake", /'Comisiones':\s*'handshake'/.test(GASTOS))
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// EN DOS PASOS (13/10/2026): mandar al banco NO mueve plata
+// (enviar_cheques_al_banco); los cheques quedan 'en_banco' y se ven en «En el
+// banco». Ahí se carga lo acreditado (acreditar_cheques) o se vuelven a la
+// cartera si el banco no los tomó (cancelar_envio_cheques). "Ya se acreditó"
+// en el diálogo usa el camino de un solo paso (depositar_ / vender_cheques).
+// Verificado con pg_get_functiondef el 13/10/2026.
+// ═════════════════════════════════════════════════════════════════════════
+
+// ── "Mandar al banco" desde la selección ─────────────────────────────────
+{
+  const S = armar()
+  const doc = S.__doc
+  S.estado.seleccion.ids = new Set(['n1', 'n2'])
+  S.abrirModalSalidaLote(null, { banco: true })
+  chk('mandar al banco: el título dice "Mandar al banco 2 cheques · $ 1.000.000,00"', N(doc.getElementById('chq-salida-titulo').textContent) === 'Mandar al banco 2 cheques · $ 1.000.000,00', N(doc.getElementById('chq-salida-titulo').textContent))
+  chk('… no ofrece endosar (solo depositar o vender)', doc.querySelectorAll('[data-salida-tipo]')[2].hidden === true &&
+    doc.querySelectorAll('[data-salida-tipo]')[0].hidden !== true && doc.querySelectorAll('[data-salida-tipo]')[1].hidden !== true)
+  const llamadas = []
+  esperas.push((async () => {
+    S.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
+    await S.confirmarSalida()
+    chk('… sin elegir depositar o vender: no llama y lo pide', llamadas.length === 0 && /Elegí qué hacés con el cheque/.test(doc.getElementById('chq-salida-error').textContent))
+    S.estado.salida.tipo = 'vendido'
+    S.pintarModalSalida()
+    chk('vender sin "Ya se acreditó": la cuenta, el detalle y "Ya se acreditó" a la vista, SIN lo acreditado',
+      doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-salida-campo-detalle').hidden === false &&
+      doc.getElementById('chq-salida-campo-ya').hidden === false && doc.getElementById('chq-venta').hidden === true)
+    chk('… el botón dice "Mandar al banco"', doc.getElementById('chq-salida-confirmar').textContent === 'Mandar al banco')
+    const r = N(doc.getElementById('chq-salida-resumen').innerHTML)
+    chk('… el resumen dice que la plata no se mueve todavía', /Se mandan a Macro Paz Mirta para vender\. La plata no se mueve todavía: cuando el banco acredite, se carga en «En el banco»\./.test(r), r)
+    doc.getElementById('chq-venta-detalle').value = '  boleta ' + marca('det') + ' '
+    const soltar = []
+    S.__setRpc(async (...a) => { llamadas.push(a); await new Promise(res => { soltar.push(res) }); return { data: { cheques: 2, total: 1000000 }, error: null } })
+    const p1 = S.confirmarSalida()
+    const p2 = S.confirmarSalida()
+    await new Promise(res => setTimeout(res, 0))
+    for (const x of soltar) x()
+    await Promise.all([p1, p2])
+    chk('mandar: un doble toque manda UNA sola vez', llamadas.length === 1, llamadas.length)
+    chk('mandar: UNA llamada a enviar_cheques_al_banco con el payload exacto (modo venta, el detalle limpio)', llamadas[0] && llamadas[0][0] === 'enviar_cheques_al_banco' &&
+      JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_cheque_ids: ['n1', 'n2'], p_cuenta_id: 'k-macro', p_fecha: S.hoyArgentina(), p_modo: 'venta', p_detalle: 'boleta ' + marca('det') }),
+      JSON.stringify(llamadas[0]))
+    chk('… NO llama a vender_cheques ni a depositar_cheques (no se mueve plata)', !llamadas.some(l => l[0] === 'vender_cheques' || l[0] === 'depositar_cheques'))
+    chk('… dice que quedan en «En el banco»', N(S.__llamadas.exitos.at(-1)) === 'Se mandaron 2 cheques ($ 1.000.000,00) a Macro Paz Mirta para vender. Quedan en «En el banco» hasta que se acrediten.', S.__llamadas.exitos.at(-1))
+    chk('… cierra, limpia la selección y recarga', S.estado.salida === null && S.estado.seleccion.activa === false && S.__llamadas.refrescar === 1)
+  })())
+}
+{
+  // Depositar uno, sin acreditar: p_modo 'deposito', detalle vacío = null.
+  const S = armar()
+  S.abrirModalSalida('d1', 'depositado')
+  const llamadas = []
+  esperas.push((async () => {
+    S.__setRpc(async (...a) => { llamadas.push(a); return { data: { cheques: 1, total: 250000.5 }, error: null } })
+    await S.confirmarSalida()
+    chk('depositar sin acreditar: enviar_cheques_al_banco con modo deposito y el detalle null', llamadas[0] && llamadas[0][0] === 'enviar_cheques_al_banco' &&
+      JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_cheque_ids: ['d1'], p_cuenta_id: 'k-dolce', p_fecha: S.hoyArgentina(), p_modo: 'deposito', p_detalle: null }), JSON.stringify(llamadas))
+    chk('… "Se mandó 1 cheque (…) a Macro Dolce para depositar…"', N(S.__llamadas.exitos.at(-1)) === 'Se mandó 1 cheque ($ 250.000,50) a Macro Dolce para depositar. Quedan en «En el banco» hasta que se acrediten.', S.__llamadas.exitos.at(-1))
+  })())
+}
+{
+  // "Ya se acreditó": vuelve el camino de un solo paso.
+  const S = armar()
+  const doc = S.__doc
+  S.abrirModalSalida('d1', 'vendido')
+  chk('sin tildar "Ya se acreditó", vender no pide lo acreditado', doc.getElementById('chq-venta').hidden === true)
+  S.estado.salida.ya = true
+  S.pintarModalSalida()
+  chk('tildado: aparecen Acreditó / Descuento / Tasa y el botón dice "Vender"', doc.getElementById('chq-venta').hidden === false && doc.getElementById('chq-salida-confirmar').textContent === 'Vender')
+  S.estado.salida.tipo = 'depositado'
+  S.pintarModalSalida()
+  chk('depositar ya acreditado: sin el detalle (depositar_cheques no lo recibe) y el botón "Depositar"', doc.getElementById('chq-salida-campo-detalle').hidden === true && doc.getElementById('chq-salida-confirmar').textContent === 'Depositar')
+  chk('el JS: "Ya se acreditó" cambia el diálogo (y se guarda)', /getElementById\('chq-salida-ya'\)\.addEventListener\('change', \(ev\) => \{\n\s+if \(!estado\.salida\) return\n\s+estado\.salida\.ya = ev\.target\.checked\n\s+pintarModalSalida\(\)/.test(JS))
+  chk('el JS: escribir un cheque a mano vacía el total y la tasa de arriba', /bancoUI\.valores\.set\(id, x == null \? null : Math\.round\(x \* 100\)\)\n(\s*\/\/[^\n]*\n)*\s+ponerNumero\(document\.getElementById\('chq-acr-total'\), null\)\n\s+ponerNumero\(document\.getElementById\('chq-acr-tasa'\), null\)/.test(JS))
+  chk('parametrosEnvio: los ids, la cuenta, la fecha, el modo y el detalle', JSON.stringify(S.parametrosEnvio(['a'], { tipo: 'depositado', cuentaId: 'k', fecha: '2026-10-13', detalle: '  ' })) ===
+    JSON.stringify({ p_cheque_ids: ['a'], p_cuenta_id: 'k', p_fecha: '2026-10-13', p_modo: 'deposito', p_detalle: null }))
+  chk('erroresSalida: sin "Ya se acreditó" la venta NO pide lo acreditado', S.erroresSalida({ tipo: 'vendido', fecha: '2026-10-13', cuentaId: 'k', venta: null, brutoCent: 100, ya: false }, null, '2026-10-13').length === 0)
+}
+
+// ── La vista «En el banco» ───────────────────────────────────────────────
+function armarBanco() {
+  const S = armar()
+  const base = { banco_codigo: '072', tipo: 'comun', fecha_emision: '2026-09-01', fecha_pago: null, estado: 'en_banco' }
+  S.estado.filas = [
+    { ...base, id: 'b1', cobranza_id: 'cn', numero: '00000002', importe: 600000, salida_cuenta_id: 'k-macro', salida_modo: 'venta', envio_fecha: '2026-10-10', salida_destino: 'Macro Paz Mirta' },
+    { ...base, id: 'b2', cobranza_id: 'cn', numero: '00000001', importe: 400000, salida_cuenta_id: 'k-macro', salida_modo: 'venta', envio_fecha: '2026-10-10', salida_destino: 'Macro Paz Mirta' },
+    { ...base, id: 'b3', cobranza_id: 'cd', numero: '00000003', importe: 250000.5, salida_cuenta_id: 'k-macro', salida_modo: 'deposito', envio_fecha: '2026-10-12', salida_destino: 'Macro Paz Mirta' },
+    { ...base, id: 'b4', cobranza_id: 'cd', numero: '00000004', importe: 1000, salida_cuenta_id: 'k-dolce', salida_modo: 'deposito', envio_fecha: '2026-10-08', salida_destino: 'Macro Dolce' },
+  ]
+  S.estado.filtros.estado = 'en_banco'
+  S.estado.seleccion = { activa: false, ids: new Set(), ultimo: null, noPueden: new Set() }
+  S.bancoUI.ids = new Set()
+  S.bancoUI.panel = null
+  S.bancoUI.resultado = ''
+  return S
+}
+{
+  const S = armarBanco()
+  const grupos = S.gruposEnBanco(S.estado.filas, S.estado.cuentasBanco.porId)
+  chk('agrupados por cuenta y fecha de envío, los más viejos primero', grupos.map(g => `${g.cuenta}|${g.fecha}|${g.cheques.length}`).join(' / ') ===
+    'Macro Dolce|2026-10-08|1 / Macro Paz Mirta|2026-10-10|2 / Macro Paz Mirta|2026-10-12|1', grupos.map(g => `${g.cuenta}|${g.fecha}|${g.cheques.length}`).join(' / '))
+  chk('… adentro, por número', grupos[1].cheques.map(c => c.id).join() === 'b2,b1')
+  const conOtro = S.gruposEnBanco([...S.estado.filas, { ...S.estado.filas[3], id: 'b5', envio_fecha: '2026-10-11' }], S.estado.cuentasBanco.porId)
+  chk('… primero por FECHA (no por cuenta): Dolce 08, Paz 10, Dolce 11, Paz 12', conOtro.map(g => g.fecha).join() === '2026-10-08,2026-10-10,2026-10-11,2026-10-12', conOtro.map(g => g.fecha).join())
+  chk('… el total del grupo en centavos', grupos[1].centavos === 100000000)
+  chk('días esperando: 3 desde el 10/10 al 13/10', S.diasEsperando('2026-10-10', '2026-10-13') === 3 && S.textoEsperando(3) === 'hace 3 días')
+  chk('… "mandado hoy", "hace 1 día", y nunca negativo', S.textoEsperando(S.diasEsperando('2026-10-13', '2026-10-13')) === 'mandado hoy' && S.textoEsperando(1) === 'hace 1 día' && S.diasEsperando('2026-10-14', '2026-10-13') === 0)
+  chk('… sin fecha: nada (no inventa)', S.diasEsperando(null, '2026-10-13') === null && S.textoEsperando(null) === '')
+  const html = S.htmlGruposEnBanco(grupos, new Set(['b1']), true, S.estado.cobranzas, '2026-10-13')
+  chk('el grupo dice la cuenta y "mandados el 10/10/2026"', /<strong>Macro Paz Mirta<\/strong> · mandados el 10\/10\/2026/.test(html))
+  chk('… cada cheque: importe, número, banco, cliente, Venta/Depósito y los días', /Nº 00000001/.test(html) && /Molino/.test(html) && />Venta</.test(html) && />Depósito</.test(html) && /hace 3 días/.test(html))
+  chk('… el elegido marcado y con su casilla tildada', /chq-banco-cheque--elegido/.test(html) && /data-banco-cheque="b1"[^>]*checked/.test(html))
+  chk('… sin permiso: sin casillas ni "Elegir"', !/data-banco-cheque/.test(S.htmlGruposEnBanco(grupos, new Set(), false, S.estado.cobranzas, '2026-10-13')) &&
+    !/data-banco-grupo/.test(S.htmlGruposEnBanco(grupos, new Set(), false, S.estado.cobranzas, '2026-10-13')))
+  S.estado.bancos = new Map([['072', marca('banco')]])
+  const malo = S.htmlGruposEnBanco(S.gruposEnBanco([{ id: marca('id'), cobranza_id: 'cx', numero: marca('num'), banco_codigo: '072', importe: 5, salida_cuenta_id: marca('kid'), salida_destino: marca('cuenta'), envio_fecha: '2026-10-10', salida_modo: marca('modo') }], new Map()),
+    new Set(), true, new Map([['cx', { cliente: marca('cliente') }]]), '2026-10-13')
+  chk('todo lo de la base va escapado (cuenta, número, banco, cliente, id, la clave del grupo)', !['id', 'num', 'cuenta', 'cliente', 'modo', 'banco', 'kid'].some(k => malo.includes(cruda(k))) &&
+    ['cliente', 'cuenta', 'banco', 'kid', 'num', 'id'].every(k => malo.includes(escapada(k))), malo)
+  S.estado.bancos = new Map()
+  // La vista
+  S.renderizarCheques()
+  chk('el filtro "En el banco": se ve la vista agrupada y no la tabla', S.__doc.getElementById('chq-banco').hidden === false && S.__doc.getElementById('chq-tabla-caja').hidden === true && S.__doc.getElementById('chq-lista').hidden === true)
+  chk('… sin "Seleccionar" de la cartera (tiene su propia elección)', S.__doc.getElementById('chq-btn-seleccionar').hidden === true)
+  chk('… con procesar: las acciones a la vista, apagadas sin nada elegido', S.__doc.getElementById('chq-banco-acciones').hidden === false && S.__doc.getElementById('chq-banco-acreditar').disabled === true && S.__doc.getElementById('chq-banco-no-tomo').disabled === true)
+  S.elegirEnBanco('b1', true)
+  S.elegirEnBanco('b2', true)
+  chk('elegir dos: "2 cheques elegidos · $ 1.000.000,00" y los botones prendidos', N(S.__doc.getElementById('chq-banco-elegidos').textContent) === '2 cheques elegidos · $ 1.000.000,00' && S.__doc.getElementById('chq-banco-acreditar').disabled === false)
+  S.elegirGrupoEnBanco(S.gruposEnBanco(S.estado.filas, S.estado.cuentasBanco.porId)[1].clave)
+  chk('"Soltar" el grupo entero (los dos estaban elegidos)', S.bancoUI.ids.size === 0)
+  S.elegirGrupoEnBanco(S.gruposEnBanco(S.estado.filas, S.estado.cuentasBanco.porId)[1].clave)
+  chk('"Elegir los 2" del grupo', S.bancoUI.ids.size === 2 && S.bancoUI.ids.has('b1') && S.bancoUI.ids.has('b2'))
+  S.estado.filas = []
+  S.renderizarCheques()
+  chk('sin nada en el banco: lo dice', /No hay cheques esperando en el banco\./.test(S.__doc.getElementById('chq-banco-lista').innerHTML) && S.__doc.getElementById('chq-banco-acciones').hidden === true)
+  chk('… y se sueltan los elegidos que ya no están', S.bancoUI.ids.size === 0)
+  S.estado.filtros.estado = 'en_cartera'
+  S.renderizarCheques()
+  chk('otro filtro: la vista del banco se esconde', S.__doc.getElementById('chq-banco').hidden === true && S.__doc.getElementById('chq-btn-seleccionar').hidden === false)
+}
+{
+  const S = armarBanco()
+  chk('el filtro "En el banco" existe y la consulta pide estado = en_banco', S.ESTADOS_FILTRO_CHEQUES.some(e => e.id === 'en_banco' && e.nombre === 'En el banco') &&
+    /else if \(f\.estado === 'en_banco'\) q = q\.eq\('estado', 'en_banco'\)/.test(JS))
+  S.estado.filasResumen = [{ estado: 'en_banco' }, { estado: 'en_banco' }, { estado: 'en_cartera' }]
+  S.pintarFiltrosCheques()
+  chk('la pestaña "En el banco" lleva el contador (2)', /data-estado-cheque="en_banco">En el banco <span class="chq-segmento__cuenta">2<\/span>/.test(S.__doc.getElementById('chq-chips-estado').innerHTML), S.__doc.getElementById('chq-chips-estado').innerHTML)
+  S.estado.filasResumen = [{ estado: 'en_cartera' }]
+  S.pintarFiltrosCheques()
+  chk('… sin ninguno, sin contador', /data-estado-cheque="en_banco">En el banco<\/button>/.test(S.__doc.getElementById('chq-chips-estado').innerHTML))
+  S.estado.filasResumen = null
+  chk('… si no se sabe, sin contador (no inventa un cero)', S.cantidadEnBanco() === null && S.htmlCuentaEnBanco() === '')
+  chk('la lista trae el modo, la fecha y el detalle del envío', /salida_modo, envio_fecha, envio_detalle'/.test(JS))
+  const ch = S.estado.filas[0]
+  chk('en "Todos": "En el banco desde el 10/10 · Macro Paz Mirta · para vender", sin botones', S.textoEnBanco(ch) === 'En el banco desde el 10/10 · Macro Paz Mirta · para vender' &&
+    !/data-volver-cartera|data-dar-salida/.test(S.htmlSalidaCheque(ch, S.estado.cobranzas.get('cn'))) && /En el banco desde el 10\/10/.test(S.htmlSalidaCheque(ch, S.estado.cobranzas.get('cn'))))
+  chk('… su fondo y su entrada en la leyenda', S.clavesEstadoCheque(ch, null, '2026-10-13').join() === 'en_banco' && /chq-tabla__fila--en-banco/.test(S.htmlFilaCheque(ch, S.estado.cobranzas.get('cn'))))
+  chk('… NO se puede elegir para salir (no está en cartera)', S.puedeSalir(ch) === false)
+  chk('la etiqueta: "En el banco"', S.ETIQUETA_ESTADO_CHEQUE.en_banco === 'En el banco')
+}
+
+// ── Repartir lo acreditado ───────────────────────────────────────────────
+{
+  const S = armarBanco()
+  const [b1, b2, b3] = S.estado.filas
+  const r = S.repartoPorTotal([b1, b2], 95000000)
+  chk('total $ 950.000 de $ 1.000.000: proporcional (570.000 y 380.000)', r && r.get('b1') === 57000000 && r.get('b2') === 38000000, r && JSON.stringify([...r]))
+  const r2 = S.repartoPorTotal([b1, b2, b3], 95000000 + 25000050)
+  chk('con un depósito: el depósito entra entero y el total se reparte entre las ventas', r2 && r2.get('b3') === 25000050 && r2.get('b1') + r2.get('b2') === 95000000)
+  const r3 = S.repartoPorTotal([{ id: 'x', importe: 1, salida_modo: 'venta' }, { id: 'y', importe: 2, salida_modo: 'venta' }], 200)
+  chk('los centavos del redondeo van al más grande y la suma da EXACTO el total', r3 && r3.get('x') + r3.get('y') === 200 && r3.get('y') >= r3.get('x'), r3 && JSON.stringify([...r3]))
+  chk('un total más grande que los cheques: no se reparte', S.repartoPorTotal([b1, b2], 100000001) === null)
+  chk('un total cero o vacío: no se reparte', S.repartoPorTotal([b1, b2], 0) === null && S.repartoPorTotal([b1, b2], NaN) === null)
+  const sinVentas = S.repartoPorTotal([b3, S.estado.filas[3]], 25000050)
+  chk('sin ninguna venta: se reparte entre todos', sinVentas && sinVentas.get('b3') + sinVentas.get('b4') === 25000050)
+  const t = S.repartoPorTasa([b1, b2, b3], 5)
+  chk('tasa 5 %: cada venta pierde el 5 % (570.000 y 380.000) y el depósito entra entero', t.get('b1') === 57000000 && t.get('b2') === 38000000 && t.get('b3') === 25000050)
+  chk('una tasa de 100 o más, o negativa: no', S.repartoPorTasa([b1], 100) === null && S.repartoPorTasa([b1], -1) === null)
+  const res = S.resumenAcreditar([b1, b2], new Map([['b1', 57000000], ['b2', 38000000]]))
+  chk('el resumen: total, acreditado, interés y el %', res.brutoCent === 100000000 && res.netoCent === 95000000 && res.descCent === 5000000 && res.tasa === 5 && res.completo === true)
+  chk('… con uno sin escribir: incompleto', S.resumenAcreditar([b1, b2], new Map([['b1', 57000000], ['b2', null]])).completo === false)
+  const e = S.erroresAcreditar([b1, b2], new Map([['b1', 0], ['b2', 40000001]]), '2026-10-09', '2026-10-13')
+  chk('errores: antes del envío, cero y más que su importe', e.some(x => /anterior al envío al banco \(10\/10\/2026\)/.test(x)) &&
+    e.some(x => /Nº 00000002: poné cuánto acreditó/.test(x)) && e.some(x => /Nº 00000001: lo acreditado no puede ser más que su importe/.test(x)), e.join(' | '))
+  chk('… una fecha futura', S.erroresAcreditar([b1], new Map([['b1', 1]]), '2026-10-14', '2026-10-13').some(x => /posterior a hoy/.test(x)))
+  chk('… sin cheques', S.erroresAcreditar([], new Map(), '2026-10-13', '2026-10-13')[0] === 'Elegí al menos un cheque.')
+  chk('parametrosAcreditar: lo acreditado en PESOS por cheque, y la fecha', JSON.stringify(S.parametrosAcreditar([b1, b2], new Map([['b1', 57000000], ['b2', 38000050]]), '2026-10-13')) ===
+    JSON.stringify({ p_items: [{ cheque_id: 'b1', acreditado: 570000 }, { cheque_id: 'b2', acreditado: 380000.5 }], p_fecha: '2026-10-13' }))
+}
+
+// ── Cargar lo acreditado ─────────────────────────────────────────────────
+{
+  const S = armarBanco()
+  const doc = S.__doc
+  S.renderizarCheques()
+  S.elegirEnBanco('b1', true)
+  S.elegirEnBanco('b2', true)
+  S.elegirEnBanco('b3', true)
+  S.abrirAcreditar()
+  chk('"Cargar lo acreditado": el panel a la vista, con la fecha de hoy', doc.getElementById('chq-acreditar').hidden === false && doc.getElementById('chq-acr-fecha').value === S.hoyArgentina())
+  chk('… cada cheque prellenado con su importe', S.bancoUI.valores.get('b1') === 60000000 && S.bancoUI.valores.get('b3') === 25000050)
+  chk('… la fecha no puede ser antes del envío más nuevo', doc.getElementById('chq-acr-fecha').min === '2026-10-12')
+  chk('… hay ventas: la ayuda para repartir a la vista', doc.getElementById('chq-acr-reparto').hidden === false)
+  chk('… un campo "Acreditó $" por cheque', (doc.getElementById('chq-acr-lista').innerHTML.match(/data-acr-cheque=/g) || []).length === 3 && /Acreditó \$/.test(doc.getElementById('chq-acr-lista').innerHTML))
+  // El total del resumen del banco es el de TODOS los elegidos: el depósito
+  // entra entero y el resto se reparte entre las ventas.
+  doc.getElementById('chq-acr-total').value = '1.200.000,50'
+  S.alRepartir('total')
+  chk('escribir el total del banco: se reparte entre las ventas y el depósito entra entero', S.bancoUI.valores.get('b1') === 57000000 && S.bancoUI.valores.get('b2') === 38000000 && S.bancoUI.valores.get('b3') === 25000050,
+    JSON.stringify([...S.bancoUI.valores]))
+  const res = N(doc.getElementById('chq-acr-resumen').innerHTML)
+  chk('… el resumen: total, acreditado e interés con el %', /Total de los 3 cheques/.test(res) && /\$ 1\.250\.000,50/.test(res) && /\$ 1\.200\.000,50/.test(res) && /\$ 50\.000,00 \(4,00 %\)/.test(res), res)
+  doc.getElementById('chq-acr-tasa').value = '10'
+  S.alRepartir('tasa')
+  chk('escribir la tasa: vacía el total y reparte por tasa', doc.getElementById('chq-acr-total').value === '' && S.bancoUI.valores.get('b1') === 54000000)
+  doc.getElementById('chq-acr-total').value = '5.000.000'
+  S.alRepartir('total')
+  chk('un total imposible: lo dice y no toca lo que había', doc.getElementById('chq-acr-ayuda-reparto').hidden === false && S.bancoUI.valores.get('b1') === 54000000)
+  doc.getElementById('chq-acr-total').value = '1.200.000,50'
+  S.alRepartir('total')
+  const llamadas = []
+  esperas.push((async () => {
+    const soltar = []
+    S.__setRpc(async (...a) => { llamadas.push(a); await new Promise(res => { soltar.push(res) }); return { data: [
+      { cuenta: 'Macro Paz Mirta', cheques: 3, bruto: 1200000.5, acreditado: 1150000.5, descuento: 50000, caja_movimiento_id: 'm', gasto_id: 'g"1' },
+    ], error: null } })
+    const p1 = S.confirmarAcreditar()
+    const p2 = S.confirmarAcreditar()
+    await new Promise(res => setTimeout(res, 0))
+    for (const x of soltar) x()
+    await Promise.all([p1, p2])
+    chk('acreditar: un doble toque manda UNA sola vez', llamadas.length === 1, llamadas.length)
+    chk('acreditar: llama a acreditar_cheques con el payload exacto (en pesos)', llamadas[0] && llamadas[0][0] === 'acreditar_cheques' &&
+      JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_items: [
+        { cheque_id: 'b1', acreditado: 570000 }, { cheque_id: 'b2', acreditado: 380000 }, { cheque_id: 'b3', acreditado: 250000.5 },
+      ], p_fecha: S.hoyArgentina() }), JSON.stringify(llamadas[0]))
+    const html = N(doc.getElementById('chq-banco-resultado-texto').innerHTML)
+    chk('el resultado: "Entró $ X en la cuenta · gasto de intereses $ Y" con "Ver el gasto"', /Entró \$ 1\.150\.000,50 en Macro Paz Mirta · gasto de intereses \$ 50\.000,00/.test(html) &&
+      /href="gastos\.html\?gasto=g%221">Ver el gasto<\/a>/.test(html), html)
+    chk('… el cheque de Dolce en un banco de Nuss: "queda en Entre empresas"', /Los cheques de Dolce Pasta \(\$ 250\.000,50\) entraron en un banco de otra fábrica: quedan en «Entre empresas»\./.test(html), html)
+    chk('… el resultado a la vista, y se cierran el panel y la elección', doc.getElementById('chq-banco-resultado').hidden === false && S.bancoUI.ids.size === 0 && S.bancoUI.panel === null)
+    chk('… avisa y recarga', N(S.__llamadas.exitos.at(-1)) === 'Se acreditaron 3 cheques.' && S.__llamadas.refrescar === 1)
+  })())
+}
+{
+  const S = armarBanco()
+  const doc = S.__doc
+  S.renderizarCheques()
+  S.elegirEnBanco('b4', true)
+  S.abrirAcreditar()
+  chk('un solo depósito: sin la ayuda para repartir', doc.getElementById('chq-acr-reparto').hidden === true)
+  const MSG = 'El cheque 00000004 no está en el banco esperando acreditación (está depositado).'
+  esperas.push((async () => {
+    S.__setRpc(async () => ({ data: null, error: { message: MSG } }))
+    await S.confirmarAcreditar()
+    chk('acreditar: el error de la base TAL CUAL y el panel sigue abierto', doc.getElementById('chq-acr-error').textContent === MSG && doc.getElementById('chq-acr-error').hidden === false && S.bancoUI.panel === 'acreditar')
+    S.bancoUI.valores.set('b4', null)
+    const llamadas = []
+    S.__setRpc(async (...a) => { llamadas.push(a); return { data: [], error: null } })
+    await S.confirmarAcreditar()
+    chk('acreditar sin lo acreditado: no llama y lo dice', llamadas.length === 0 && /poné cuánto acreditó/.test(doc.getElementById('chq-acr-error').textContent))
+  })())
+  // El resultado, escapado.
+  const h = S.htmlResultadoAcreditar([{ cuenta: marca('cuenta'), acreditado: 1, descuento: 1, gasto_id: 'g' }],
+    [{ cobranza_id: 'cx', salida_cuenta_id: 'k-macro', importe: 5 }], new Map([['cx', { unidad_negocio_id: U_DOLCE, unidad_negocio_nombre: marca('fab') }]]), S.estado.cuentasBanco.porId, NOMBRES)
+  chk('el nombre de la cuenta y de la fábrica del resultado van escapados', !h.includes(cruda('cuenta')) && h.includes(escapada('cuenta')) && !h.includes(cruda('fab')) && h.includes(escapada('fab')), h)
+  chk('sin interés: no habla de gasto', !/gasto/.test(S.htmlResultadoAcreditar([{ cuenta: 'X', acreditado: 1, descuento: 0, gasto_id: null }], [], new Map(), new Map(), new Map())))
+}
+
+// ── No lo tomó el banco ──────────────────────────────────────────────────
+{
+  const S = armarBanco()
+  const doc = S.__doc
+  S.renderizarCheques()
+  S.elegirEnBanco('b1', true)
+  S.elegirEnBanco('b2', true)
+  S.abrirNoTomo()
+  chk('"No lo tomó el banco": el panel dice que vuelven a la cartera sin mover plata', doc.getElementById('chq-no-tomo').hidden === false &&
+    N(doc.getElementById('chq-no-tomo-texto').textContent) === 'Vuelven 2 cheques ($ 1.000.000,00) a la cartera. No se mueve plata.')
+  const llamadas = []
+  esperas.push((async () => {
+    S.__setRpc(async (...a) => { llamadas.push(a); return { data: 2, error: null } })
+    doc.getElementById('chq-no-tomo-motivo').value = ' x '
+    await S.confirmarNoTomo()
+    chk('sin motivo (menos de 3 letras): no llama y lo pide con el texto de la base', llamadas.length === 0 && doc.getElementById('chq-no-tomo-error').textContent === S.TEXTO_MOTIVO_NO_TOMO)
+    doc.getElementById('chq-no-tomo-motivo').value = '  el banco no lo aceptó '
+    await S.confirmarNoTomo()
+    chk('con motivo: cancelar_envio_cheques con los ids y el motivo limpio', llamadas[0] && llamadas[0][0] === 'cancelar_envio_cheques' &&
+      JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_cheque_ids: ['b1', 'b2'], p_motivo: 'el banco no lo aceptó' }), JSON.stringify(llamadas[0]))
+    chk('… "Volvieron 2 cheques a la cartera." y recarga', S.__llamadas.exitos.at(-1) === 'Volvieron 2 cheques a la cartera.' && S.__llamadas.refrescar === 1 && S.bancoUI.ids.size === 0)
+    const MSG = 'Ninguno de esos cheques está en el banco esperando acreditación.'
+    S.elegirEnBanco('b1', true)
+    S.abrirNoTomo()
+    doc.getElementById('chq-no-tomo-motivo').value = 'no lo tomó'
+    S.__setRpc(async () => ({ data: null, error: { message: MSG } }))
+    await S.confirmarNoTomo()
+    chk('… el error de la base TAL CUAL', doc.getElementById('chq-no-tomo-error').textContent === MSG)
+  })())
+}
+
+// ── Cobranzas: un cheque en el banco tampoco deja editar la cobranza ─────
+{
+  chk('el común: en el banco está fuera de la cartera', /export const ESTADOS_FUERA_DE_CARTERA = \['en_banco', \.\.\.ESTADOS_SALIDOS\]/.test(COMUN) &&
+    /en_banco: 'En el banco'/.test(COMUN) && /if \(estadoCheque === 'en_banco'\) return `En el banco/.test(COMUN))
+  chk('cobranzas.html usa ESTADOS_FUERA_DE_CARTERA (no deja editar con un cheque en el banco) y tiene su chip',
+    /d\.cheques\.some\(ch => ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)\)/.test(COBRANZAS) && /const salido = ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)/.test(COBRANZAS) &&
+    /\.cob-estado--en_banco \{/.test(COBRANZAS))
 }
 
 Promise.all(esperas.map(p => p.catch(err => chk('rama async sin excepción', false, String(err && err.stack || err))))).then(() => {

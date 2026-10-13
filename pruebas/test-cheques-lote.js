@@ -132,6 +132,8 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
     S.__setRpc(async (...a) => { llamadas.push(a); return { data: { cheques: 2, bruto: 4100000, neto: 4100000, descuento: 0 }, error: null } })
     // El endoso a un proveedor va por su propio camino (test-cheques-endoso.js).
     S.estado.salida.tipo = 'depositado'
+    // "Ya se acreditó": un solo paso (mandar al banco, en test-cheques-banco.js).
+    S.estado.salida.ya = true
     await S.confirmarSalida()
     const ult = llamadas[0]
     chk('llama a depositar_cheques con el payload EXACTO', ult && ult[0] === 'depositar_cheques' &&
@@ -171,6 +173,7 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   S.estado.seleccion.ids = new Set(['a', 'b'])
   S.abrirModalSalidaLote()
   S.estado.salida.tipo = 'depositado'
+  S.estado.salida.ya = true
   S.estado.salida.cuentaId = 'k1'
   S.__setRpc(async () => ({ data: { cheques: 1, bruto: 100000, neto: 100000, descuento: 0 }, error: null }))
   esperas.push(S.confirmarSalida().then(() => {
