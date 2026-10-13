@@ -263,11 +263,12 @@ esperas.push((async () => {
         { proveedor_id: 'd', unidad_negocio_id: 'u-n', moneda: 'ARS', deuda_pendiente: null }],
       proveedores: [{ id: 'a', razon_social: 'MOLINO', nombre_fantasia: 'Molino Cañuelas' }, { id: 'b', razon_social: 'LEDESMA SAAI', nombre_fantasia: null }],
     } })
-    const m = await S.cargarCuentasCorrientes(ctxFalso(S, { sb }))
+    const verTodo = new Set(['cuentas_corrientes:ver_todo'])   // 11/10/2026: sin ver_todo, "sin permiso"
+    const m = await S.cargarCuentasCorrientes(ctxFalso(S, { sb, tareas: verTodo }))
     chk('cuentas corrientes: le debemos (pesos, todas las fábricas)', m.valor === '$ 5.615.000', m.valor)
     chk('cuentas corrientes: los más grandes, con su nombre', m.lista.map(x => x.nombre).join() === 'Molino Cañuelas,LEDESMA SAAI')
     chk('cuentas corrientes: "vencido" es Pronto (la base no tiene vencimiento)', m.ctx.some(x => x.k === 'Vencido' && x.v === 'Pronto'))
-    const d = await S.cargarCuentasCorrientes(ctxFalso(S, { sb, elegida: 'u-d' }))
+    const d = await S.cargarCuentasCorrientes(ctxFalso(S, { sb, elegida: 'u-d', tareas: verTodo }))
     chk('cuentas corrientes: con una fábrica, la deuda de esa', d.valor === '$ 2.135.000', d.valor)
   }
   // Ingreso
@@ -275,7 +276,7 @@ esperas.push((async () => {
     const sb = sbFalso({ tablas: { materia_prima_ingresos: [{ fecha: HOY, unidad_negocio_id: 'u-n' }, { fecha: HOY, unidad_negocio_id: 'u-d' }, { fecha: '2026-09-23', unidad_negocio_id: 'u-n' }, { fecha: '2026-09-20', unidad_negocio_id: 'u-n' }] } })
     const m = await S.cargarIngreso(ctxFalso(S, { sb, tareas: new Set(['materia_prima:ver_todo']) }))
     chk('ingreso: hoy y últimos 7 días', m.valor === '2' && m.unidad === 'ingresos' && m.ctx[0].v === '3', JSON.stringify([m.valor, m.ctx]))
-    chk('ingreso: sin ver_todo lo dice', /solo los que cargaste/.test((await S.cargarIngreso(ctxFalso(S, { sb }))).nota))
+    chk('ingreso: sin ver_todo lo dice', /solo los que cargaste/.test((await S.cargarIngreso(ctxFalso(S, { sb, tareas: new Set(['materia_prima:cargar']) }))).nota))
     const uno = await S.cargarIngreso(ctxFalso(S, { sb, elegida: 'u-d', tareas: new Set(['materia_prima:ver_todo']) }))
     chk('ingreso: "1 ingreso" en singular', uno.valor === '1' && uno.unidad === 'ingreso')
   }

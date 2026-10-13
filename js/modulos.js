@@ -73,7 +73,12 @@ export const MODULOS = [
     descripcion: 'Catálogo de insumos y existencias',
     url: 'modulos/stock.html',
     proximamente: false,
-    color: 'verde'
+    color: 'verde',
+    // 11/10/2026 (M8): quien tiene solo stock:ver_costos (Yanina) ve la
+    // tarjeta aunque no tenga el módulo, y entra derecho a Costos: la lista
+    // de stock no la podría leer (pide stock:ver).
+    tambienConTareas: ['stock:ver_costos'],
+    urlSoloCon: { tareas: ['stock:ver_costos'], salvo: ['stock:ver', 'stock:gestionar_catalogo'], url: 'modulos/stock.html?vista=costos' },
   },
   {
     clave: 'cobranzas',
@@ -161,6 +166,14 @@ export const MODULOS = [
     color: 'naranja',
     requiereModulo: 'retiros',
     requiereTareas: ['retiros:ver', 'retiros:precios'],
+    // 11/10/2026 (M2 y M3): también la ve, aunque no tenga el módulo retiros,
+    // quien asienta cobranzas (cobranzas:procesar / ver_todo: Cobranzas por
+    // asentar y Cheques) y quien gestiona clientes como la base lo deja
+    // (_puede_gestionar_cliente: pedidos:configurar, retiros:precios o
+    // cuentas_corrientes:alta_proveedor), para resolver los clientes
+    // provisorios que le cuenta mis_pendientes().
+    tambienConTareas: ['retiros:precios', 'cobranzas:procesar', 'cobranzas:ver_todo',
+      'pedidos:configurar', 'cuentas_corrientes:alta_proveedor'],
   },
   {
     // Proyectos Taller (28/09/2026): lo que el Taller vende a clientes de
@@ -203,13 +216,30 @@ export const MODULOS = [
 //    todas, como en tiene_tarea()).
 //  - sinFilaModulo: el módulo no tiene fila en la tabla modulos (Conos de
 //    papel): no se mira empleado_modulos, alcanza con una de requiereTareas.
+//  - tambienConTareas (11/10/2026): alcanza con una de esas tareas aunque
+//    no tenga el módulo (Administración para quien asienta cobranzas o
+//    gestiona clientes; Stock para quien solo ve costos).
 export function moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTareas }) {
   if (modulo.soloSuperAdmin) return esSuperAdmin
   if (modulo.soloAdmin) return esAdmin
-  const habilitado = esAdmin || modulo.sinFilaModulo === true || misModulos.includes(modulo.requiereModulo ?? modulo.clave)
-  if (!habilitado) return false
+  const tareas = misTareas ?? new Set()
+  const porTarea = Array.isArray(modulo.tambienConTareas) && modulo.tambienConTareas.some(t => tareas.has(t))
+  const habilitado = esAdmin || modulo.sinFilaModulo === true || (misModulos ?? []).includes(modulo.requiereModulo ?? modulo.clave)
+  if (!habilitado) return porTarea
   if (!modulo.requiereTareas) return true
-  return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))
+  return esSuperAdmin || porTarea || modulo.requiereTareas.some(t => tareas.has(t))
+}
+
+// La dirección de la tarjeta o del ítem de la barra para esta persona
+// (11/10/2026): un módulo con urlSoloCon abre otra vista cuando la persona
+// tiene alguna de esas tareas y ninguna de las de "salvo" (Stock con solo
+// ver_costos abre Costos). super_admin, siempre la de siempre.
+export function urlDeModulo(modulo, { esSuperAdmin, misTareas } = {}) {
+  const u = modulo?.urlSoloCon
+  if (!u || esSuperAdmin) return modulo?.url
+  const tareas = misTareas ?? new Set()
+  if (u.tareas.some(t => tareas.has(t)) && !u.salvo.some(t => tareas.has(t))) return u.url
+  return modulo.url
 }
 
 // La cuenta de una TABLET de la fábrica (empleados.es_dispositivo) entra

@@ -60,6 +60,9 @@ const FUNCIONES_BASE = [
   'agregarApodoFicha', 'quitarApodoFicha',
   // Los clientes provisorios (06/10/2026)
   'esProvisorio', 'contarProvisorios', 'provisoriosPrimero', 'actualizarProvisoriosPortada', 'puedeConfirmar', 'htmlAccionesProvisorio',
+  // Permisos en pantalla (11/10/2026, M2): solo los provisorios para quien gestiona clientes
+  'puedeGestionarCliente', 'puedeLeerClientes', 'puedeCompletarFicha', 'confirmarProvisorio', 'leerSoloProvisorios',
+  'htmlFilaSoloProvisorio', 'htmlSoloProvisorios',
   'abrirCompletar', 'pintarConfirmarFicha', 'guardarYConfirmarFicha', 'destinosUnir', 'abrirUnir', 'cerrarUnir', 'leerPreviaUnir',
   'textoCantidad', 'textosPreviaUnir', 'elegirDestinoUnir', 'cambiarDestinoUnir', 'pedirConfirmarUnir', 'noConfirmarUnir', 'unirClientes',
   'htmlDestinoUnir', 'htmlUnir', 'pintarUnir', 'avisarFaltaLista', 'htmlFaltaLista', 'cerrarFaltaLista', 'irAFichaDesdeOrden',
@@ -146,7 +149,7 @@ const CONSTANTES_BASE = [
   // Cliente y proveedor (06/10/2026)
   ...CONSTANTES_CU,
   // Los clientes provisorios (06/10/2026)
-  'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR',
+  'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR', 'TOPE_BUSCAR_CLIENTES', 'TEXTO_SOLO_PROVISORIOS', 'TEXTO_SIN_LEER_CLIENTES',
 ]
 
 const PRELUDIO = `
@@ -253,13 +256,33 @@ const PRELUDIO = `
   }
 `
 
+// Lo que entró el 11/10/2026 (permisos en pantalla) puede no estar en una
+// copia vieja del archivo: se reemplaza por algo que no da permiso / no hace
+// nada, así esa copia corre y las suites dan ROJO por lo que afirman, no por
+// una excepción al extraer. Solo estos; todo lo demás tiene que existir.
+const OPCIONALES_FN = {
+  puedeGestionarCliente: 'function puedeGestionarCliente() { return false }',
+  puedeLeerClientes: 'function puedeLeerClientes() { return false }',
+  puedeCompletarFicha: "function puedeCompletarFicha(u) { return puedeEn('retiros', 'precios', u) }",
+  confirmarProvisorio: 'async function confirmarProvisorio() {}',
+  leerSoloProvisorios: 'async function leerSoloProvisorios() { return { filas: [], provisorios: [], sinLeer: true, incompleta: false } }',
+  htmlFilaSoloProvisorio: "function htmlFilaSoloProvisorio() { return '' }",
+  htmlSoloProvisorios: "function htmlSoloProvisorios() { return '' }",
+}
+const OPCIONALES_CONST = { TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'" }
+
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
-  const todasConst = [...CONSTANTES_BASE, ...constantes]
+  const texto = require('fs').readFileSync(ruta, 'utf8')
+  const falta = (n, re) => !re.test(texto)
+  const fnFaltan = Object.keys(OPCIONALES_FN).filter(n => falta(n, new RegExp('function ' + n + '\\(')))
+  const constFaltan = Object.keys(OPCIONALES_CONST).filter(n => falta(n, new RegExp('const ' + n + ' =')))
+  const stubs = [...fnFaltan.map(n => OPCIONALES_FN[n]), ...constFaltan.map(n => OPCIONALES_CONST[n])].join('\n')
+  const todasConst = [...CONSTANTES_BASE, ...constantes].filter(c => !constFaltan.includes(c))
   return construirCon(ruta, {
-    preludio: PRELUDIO + preludioEstado + preludioExtra,
-    funciones: [...FUNCIONES_BASE, ...funciones],
+    preludio: PRELUDIO + preludioEstado + preludioExtra + (stubs ? '\n' + stubs + '\n' : ''),
+    funciones: [...FUNCIONES_BASE, ...funciones].filter(f => !fnFaltan.includes(f)),
     constantes: todasConst,
-    retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __llamadas, __ls, __tablas, __win: window,
+    retorno: `${[...todasConst, ...constFaltan].join(', ')}, ${fnFaltan.map(f => f + ', ').join('')}estado, __els, __doc: document, __llamadas, __ls, __tablas, __win: window,
       __setRpc(f){ __rpc = f }, __impresiones(){ return __impresiones }, __setNav(n){ navigator = n }, __urlsFirmadas(){ return __urlsFirmadas },
       ponerNumero, leerCampoNumero, enlazarCampoNumero, leerNumeroAr, formatearNumeroAr`,
   })

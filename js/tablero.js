@@ -25,7 +25,7 @@
 // - Las preferencias (orden, tamaño, escondidas) son las de js/preferencias.js:
 //   se guardan en este dispositivo hasta que la base tenga dónde.
 
-import { MODULOS, moduloVisible, colorDeModulo } from './modulos.js'
+import { MODULOS, moduloVisible, urlDeModulo, colorDeModulo } from './modulos.js'
 import { formatearNumeroAr, sinPersonasDePrueba, cargarFabricaDePruebas, FABRICA_SIN_DATOS } from './utils.js'
 import { pasaFiltroUnidad, nombreDePila, unidadesDeLaBarra, alCambiarUnidad } from './barra-unidad.js'
 import { htmlIcono, modulosDeBarra } from './barra-lateral.js'
@@ -64,10 +64,10 @@ export function tarjetasPosibles(ctx, esDispositivo = false) {
     if (!claves.has(c)) continue
     if (c === 'empleados' && claves.has('accesos')) continue
     const m = vis.find(x => x.clave === c)
-    out.push({ clave: c, nombre: NOMBRE_TARJETA[c] ?? m.nombre, url: (esDispositivo && m.urlDispositivo) || m.url })
+    out.push({ clave: c, nombre: NOMBRE_TARJETA[c] ?? m.nombre, url: (esDispositivo && m.urlDispositivo) || urlDeModulo(m, ctx ?? {}) })
   }
   // Un módulo nuevo que no está en ORDEN_TABLERO va al final (no desaparece).
-  for (const m of vis) if (!ORDEN_TABLERO.includes(m.clave)) out.push({ clave: m.clave, nombre: m.nombre, url: m.url })
+  for (const m of vis) if (!ORDEN_TABLERO.includes(m.clave)) out.push({ clave: m.clave, nombre: m.nombre, url: urlDeModulo(m, ctx ?? {}) })
   return out
 }
 
@@ -418,7 +418,10 @@ export async function cargarCobranzas(ctx) {
   const totalHoy = num(rHoy?.total)
   const nCtrl = num(rCtrl?.por_controlar)
   const resolver = []
-  if (nCtrl > 0) resolver.push({ n: nCtrl, t: `por controlar · ${plata(rCtrl?.total)}`, url: 'modulos/administracion.html?seccion=cobranzas', origen: 'cobranzas:por_controlar' })
+  // 11/10/2026 (M7): se asientan en Administración, que pide cobranzas:procesar;
+  // un chofer (solo cargar) va a sus cobranzas.
+  const urlCtrl = ctx.tieneTarea('cobranzas:procesar') ? 'modulos/administracion.html?seccion=cobranzas' : 'modulos/cobranzas.html'
+  if (nCtrl > 0) resolver.push({ n: nCtrl, t: `por controlar · ${plata(rCtrl?.total)}`, url: urlCtrl, origen: 'cobranzas:por_controlar' })
   return {
     estado: totalHoy === 0 ? 'vacio' : 'ok', etiqueta: 'Cobrado hoy', valor: plata(totalHoy), vacioMsg: 'Hoy no hubo cobranzas',
     ctx: [{ k: 'Últimos 7 días', v: plata(r7?.total) }],
@@ -463,8 +466,15 @@ export async function cargarCheques(ctx) {
   }
 }
 
+// 11/10/2026 (M4): v_saldo_proveedor hereda el RLS de facturas_pendientes y
+// creditos_proveedor (propias o cuentas_corrientes:ver_todo): sin ver_todo la
+// suma saldría de menos (o cero) y diría "no le debemos", que es falso.
+export const TEXTO_SIN_PERMISO = 'Sin permiso para ver esto.'
 export async function cargarCuentasCorrientes(ctx) {
   const { sb, elegida } = ctx
+  if (!ctx.tieneTarea('cuentas_corrientes:ver_todo')) {
+    return { estado: 'pronto', etiqueta: 'Le debemos a proveedores', prontoMsg: TEXTO_SIN_PERMISO + ' La deuda con los proveedores se ve con el permiso de ver toda la empresa.', resolver: [], pendientes: true }
+  }
   const filas = await consulta(sb.from('v_saldo_proveedor').select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente'))
   const porProv = new Map()
   let total = 0
@@ -490,6 +500,11 @@ export async function cargarCuentasCorrientes(ctx) {
 
 export async function cargarIngreso(ctx) {
   const { sb, hoy, elegida } = ctx
+  // 11/10/2026 (B9): sin ninguna tarea de materia_prima la tabla no devuelve
+  // nada (RLS) y diría "Hoy no hubo ingresos".
+  if (!['materia_prima:cargar', 'materia_prima:ver_todo', 'materia_prima:editar_anular'].some(t => ctx.tieneTarea(t))) {
+    return { estado: 'pronto', etiqueta: 'Ingresos de materia prima hoy', prontoMsg: TEXTO_SIN_PERMISO + ' Los ingresos se ven con el permiso de cargar o ver los ingresos.', resolver: [], pendientes: true }
+  }
   const hace7 = sumarDias(hoy, -6)
   const filas = (await consulta(sb.from('materia_prima_ingresos').select('fecha, unidad_negocio_id').gte('fecha', hace7).lte('fecha', hoy).limit(TOPE_FILAS)) ?? [])
     .filter(i => pasaFiltroUnidad(i.unidad_negocio_id, elegida))

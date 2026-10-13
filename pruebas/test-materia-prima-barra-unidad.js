@@ -56,6 +56,7 @@ const PRELUDIO = `
   var __els = new Map()
   var document = { getElementById(id) { if (!__els.has(id)) __els.set(id, nuevoEl(id)); return __els.get(id) } }
   var window = { scrollTo(){} }
+  function mostrarError() {}
   var console = { error() {}, log() {}, warn() {} }
   var __pintadas = 0
   function formatearFecha(fecha) { const [anio, mes, dia] = fecha.split('-'); return dia + '/' + mes + '/' + anio }
@@ -77,7 +78,7 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'esc', 'tieneTarea', 'puedeCargarEn', 'aplicarBarraUnidad', 'repintarPorUnidad', 'textoOtrasUnidades',
-  'unidadesParaElegir', 'nombreUnidad', 'inicialesEmpresa',
+  'unidadesParaElegir', 'puedeCargarAlguna', 'nombreUnidad', 'inicialesEmpresa',
   'renderizarBannerIngresos', 'renderizarAvisoSinStock', 'renderizarListaIngresos',
   'entregaPasaVinculo', 'entregaCoincide', 'ordenarEntregasParaFiltro', 'textoAntiguedad', 'diasDesde',
   'chipTipoDoc', 'faltanRenglones', 'htmlFaltanRenglones',
@@ -451,14 +452,15 @@ esperas.push((async () => {
     conAlcance(S, { unidades: [NUSS] })
     conBarra(S, MENGUI)
     await S.abrirWizard()
-    chk('barra en Mengui sin poder cargar ahí: no viene puesta', S.estado.wizard.encabezado.unidadId === '')
+    // 11/10/2026 (M1): solo se ofrece donde puede cargar; con una sola, viene esa.
+    chk('barra en Mengui sin poder cargar ahí: no viene Mengui (viene Nuss, la única donde carga)', S.estado.wizard.encabezado.unidadId === NUSS)
   }
-  // Sin la tarea de cargar (alcance null): no viene puesta.
+  // Sin la tarea de cargar (alcance null): no hay wizard (M1, 11/10/2026).
   {
     const S = nuevo()
     conBarra(S, NUSS)
-    await S.abrirWizard()
-    chk('sin alcance de cargar: no viene puesta', S.estado.wizard.encabezado.unidadId === '')
+    const r = await S.abrirWizard()
+    chk('sin alcance de cargar: no se abre el wizard', r === false && S.estado.wizard === null)
     chk('puedeCargarEn con alcance null es false', S.puedeCargarEn(NUSS) === false)
   }
   // super_admin: viene puesta sin alcance.
@@ -482,6 +484,7 @@ esperas.push((async () => {
   // Una sola unidad elegible: se preselecciona igual que antes, sin mirar la barra.
   {
     const S = nuevo()
+    conAlcance(S, { todas: true })
     S.estado.unidades = [UNIDADES[0]]
     conBarra(S, null, false)
     await S.abrirWizard()

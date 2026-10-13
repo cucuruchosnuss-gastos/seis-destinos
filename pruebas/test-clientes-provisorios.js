@@ -400,6 +400,17 @@ async function pruebas() {
     const S = await conOrden('cp', MALOS)
     chequearMarcas(chk, 'el aviso de la lista', html(S, 'ad-orden-cuerpo'), ['falta'])
   }
+  // "Confirmar" directo (11/10/2026, M2): el error de la base va escapado.
+  {
+    const S = nuevo({ tareas: CONFIG, rpc: async (n) => {
+      if (n === 'clientes_con_saldo') return { data: copia(SALDOS), error: null }
+      if (n === 'confirmar_cliente') return { data: null, error: { message: 'No ' + marca('confirmar') } }
+      return { data: null, error: null }
+    } })
+    await S.mostrarClientes()
+    await S.confirmarProvisorio('cp')
+    chequearMarcas(chk, 'el error de Confirmar', html(S, 'ad-clientes-lista'), ['confirmar'])
+  }
 }
 
 esperas.push(pruebas())

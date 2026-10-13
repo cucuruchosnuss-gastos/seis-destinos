@@ -240,7 +240,8 @@ async function cargarTodo(sb) {
   const iFab = init.indexOf('const fabricaP = cargarFabricaDePruebas(supabase)')
   const iAsig = init.indexOf('estado.fabrica = await fabricaP')
   const iEmp = init.indexOf(".from('empleados')")
-  const iVista = init.indexOf('mostrarVista(desdeUrl ?? vistas[0])')
+  // 11/10/2026: la vista inicial puede ser Costos (M8): mostrarVista(inicial).
+  const iVista = init.indexOf('mostrarVista(inicial)')
   const iCargas = init.indexOf('await Promise.all([')
   chk('init carga la fábrica', iFab !== -1)
   chk('init la carga ANTES de consultar empleados (en paralelo)', iFab !== -1 && iEmp !== -1 && iFab < iEmp)

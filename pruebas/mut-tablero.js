@@ -29,7 +29,7 @@ correrMutaciones({
     // Qué tarjetas
     { nombre: 'Seguridad para cualquiera', de: "if (c === 'seguridad') { if (ctx?.esSuperAdmin) out.push({ ...SEGURIDAD_TABLERO }); continue }", a: "if (c === 'seguridad') { out.push({ ...SEGURIDAD_TABLERO }); continue }" },
     { nombre: 'Empleados repetida al lado de Accesos', de: "    if (c === 'empleados' && claves.has('accesos')) continue\n", a: '' },
-    { nombre: 'una tablet va a la gestión', de: 'url: (esDispositivo && m.urlDispositivo) || m.url', a: 'url: m.url' },
+    { nombre: 'una tablet va a la gestión', de: 'url: (esDispositivo && m.urlDispositivo) || urlDeModulo(m, ctx ?? {})', a: 'url: urlDeModulo(m, ctx ?? {})' },
     { nombre: 'Producción mediana por defecto', de: "  produccion: 'ancha', cobranzas: 'mediana',", a: "  produccion: 'mediana', cobranzas: 'mediana'," },
     { nombre: 'un tamaño inventado se acepta', de: "  return TAMANOS.includes(t) ? t : (TAMANOS_POR_DEFECTO[clave] ?? 'chica')", a: "  return t || (TAMANOS_POR_DEFECTO[clave] ?? 'chica')" },
     { nombre: 'mover se sale de la lista', de: 'const j = Math.max(0, Math.min(lista.length - 1, i + delta))', a: 'const j = i + delta' },

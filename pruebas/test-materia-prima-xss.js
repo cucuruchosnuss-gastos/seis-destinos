@@ -137,7 +137,8 @@ const PRELUDIO = `
   var contadorUid = 0
   function nuevoUid() { return 'it' + (++contadorUid) }
   var estado = {
-    miRolApp: 'usuario', misTareas: new Set(['materia_prima:cargar']),
+    // alcance (11/10/2026, M1): el selector del wizard ofrece solo donde carga.
+    miRolApp: 'usuario', misTareas: new Set(['materia_prima:cargar']), alcances: new Map([['materia_prima:cargar', { todas: true }]]),
     unidades: [], proveedores: [], empleados: [], entregas: [], catalogoInsumos: [],
     filtros: { ingresos: { busqueda: '', unidadId: '', vinculo: '' } },
     remitosFacturados: new Set(), fechaInicioCircuito: '2026-10-01', resultadoCircuito: null,

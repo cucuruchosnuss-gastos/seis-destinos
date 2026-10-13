@@ -18,12 +18,12 @@ const RUTA = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'dashboard.h
 
 // De los módulos que importa el tablero.
 const IMPORTADAS_CONST = ['MODULOS', 'PALETA_MODULO', 'ICONOS', 'TAMANOS', 'ORDENES_BARRA', 'DIAS_USO']
-const IMPORTADAS_FN = ['moduloVisible', 'colorDeModulo', 'htmlIcono', 'formatearNumeroAr', 'sinPersonasDePrueba', 'pasaFiltroUnidad',
+const IMPORTADAS_FN = ['moduloVisible', 'urlDeModulo', 'colorDeModulo', 'htmlIcono', 'formatearNumeroAr', 'sinPersonasDePrueba', 'pasaFiltroUnidad',
   'nombreDePila', 'prefsVacias', 'normalizarPrefs', 'ordenarBarra', 'vecesUsado', 'enOrdenDeBarra', 'modulosDeBarra']
 // Del tablero.
 const CONSTANTES = ['ORDEN_TABLERO', 'TAMANOS_POR_DEFECTO', 'SEGURIDAD_TABLERO', 'NOMBRE_TARJETA', 'MS_DIA', 'DIAS_SEMANA', 'MESES_TABLERO',
   'RESOLVER_PENDIENTES', 'PRIORIDAD_FRANJA', 'TOPE_FILAS', 'FLECHA_DER', 'MANIJA', 'OJO_TACHADO', 'VOLVER', 'NOMBRE_TAMANO',
-  'NOMBRE_ORDEN_BARRA', 'ORDEN_BARRA', 'SEGURIDAD']
+  'NOMBRE_ORDEN_BARRA', 'ORDEN_BARRA', 'SEGURIDAD', 'TEXTO_SIN_PERMISO']
 const FUNCIONES = ['escTab', 'tarjetasPosibles', 'tamanoDe', 'tarjetasOrdenadas', 'conTamano', 'conOculta', 'conOrden', 'moverClave',
   'prefsDeFabrica', 'relojAr', 'hoyAr', 'horaAr', 'sumarDias', 'diaSemana', 'lunesDe', 'primeroDelMes', 'diasEntre', 'nombreMes', 'saludo',
   'esNumero', 'num', 'plata', 'haceCuanto', 'entero', 'plural', 'mapaPendientes', 'resolverDePendientes', 'usaPendientes', 'itemsFranja', 'avisoParcial',
@@ -35,13 +35,22 @@ const FUNCIONES = ['escTab', 'tarjetasPosibles', 'tamanoDe', 'tarjetasOrdenadas'
 
 function fuente() { return fs.readFileSync(RUTA, 'utf8') }
 
+// Lo que entró el 11/10/2026 (permisos en pantalla) puede no estar en una copia
+// vieja: así esa copia corre y las suites dan ROJO por lo que afirman, no por
+// una excepción al extraer. Solo esas dos; todo lo demás tiene que existir.
+const OPCIONALES = new Set(['TEXTO_SIN_PERMISO', 'urlDeModulo'])
+function opcional(nombre, leer, reemplazo) {
+  if (!OPCIONALES.has(nombre)) return leer()
+  try { return leer() } catch { return reemplazo }
+}
+
 // Todas las funciones del tablero, vivas. `consola` junta lo que se loguea.
 function construir() {
   const src = fuente()
   let codigo = 'var __log = []\nvar console = { error: (...a) => __log.push(a.map(String).join(" ")), warn() {}, log() {} }\n'
   for (const c of IMPORTADAS_CONST) codigo += extraerConst(src, c) + '\n'
-  for (const f of IMPORTADAS_FN) codigo += extraerFn(src, f) + '\n'
-  for (const c of CONSTANTES) codigo += extraerConst(src, c) + '\n'
+  for (const f of IMPORTADAS_FN) codigo += opcional(f, () => extraerFn(src, f), `function ${f}(m) { return m?.url }`) + '\n'
+  for (const c of CONSTANTES) codigo += opcional(c, () => extraerConst(src, c), `var ${c} = undefined`) + '\n'
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += extraerConst(src, 'CARGADORES') + '\n'
   codigo += `return { ${[...IMPORTADAS_CONST, ...CONSTANTES, 'CARGADORES', ...IMPORTADAS_FN, ...FUNCIONES].join(', ')}, __log }`
