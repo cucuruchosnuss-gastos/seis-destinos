@@ -31,7 +31,7 @@
 // Si algo falla, la carpeta queda (para mirar e2e/resultados/) y se dice cómo
 // borrarla. Si todo pasa, se borra sola.
 'use strict'
-const { execFileSync, spawnSync } = require('child_process')
+const { execFileSync, spawnSync, spawn } = require('child_process')
 const fs = require('fs')
 const net = require('net')
 const path = require('path')
@@ -135,10 +135,73 @@ function limpiar() {
   gitOk(['worktree', 'prune'])
 }
 
-function correr(titulo, cmd, args, cwd, env) {
-  console.log(`\n══ ${titulo} ══`)
-  const r = spawnSync(cmd, args, { cwd, stdio: 'inherit', env: { ...process.env, ...env } })
-  return r.status === 0
+// EL TOPE (11/10/2026). Un ensayo quedó colgado horas: una prueba de navegador
+// se trabó TRES HORAS "preparando la página" (el navegador no respondía), y el
+// tope de 5 minutos por prueba de Playwright no la cortó porque la traba fue al
+// preparar/limpiar el navegador, no adentro de la prueba. Ahora cada paso tiene
+// un tope en minutos: si se pasa, se corta TODO el árbol de procesos (en
+// Windows `taskkill /T /F`: el navegador y los servidores son nietos) y el paso
+// da ROJO diciendo que se colgó. Además Playwright corre con --global-timeout
+// un poco antes del tope, así casi siempre termina él solo y deja su informe.
+// Los topes se cambian con ENSAYO_TOPE_PRUEBAS_MIN y ENSAYO_TOPE_NAVEGADOR_MIN.
+const TOPE_PRUEBAS_MIN = Number(process.env.ENSAYO_TOPE_PRUEBAS_MIN || 20)
+const TOPE_NAVEGADOR_MIN = Number(process.env.ENSAYO_TOPE_NAVEGADOR_MIN || 45)
+
+// El --global-timeout de Playwright, en ms: 3 minutos antes del tope (o la
+// mitad del tope si es muy corto), para que Playwright corte primero.
+function globalTimeoutMs(topeMin) {
+  const margen = Math.min(3, topeMin / 2)
+  return Math.round((topeMin - margen) * 60000)
+}
+
+// Los argumentos de Playwright para el ensayo, con su --global-timeout.
+function argsNavegador(cli, specs, topeMin) {
+  return [cli, 'test', '--config', 'e2e/playwright.config.js', `--global-timeout=${globalTimeoutMs(topeMin)}`, ...specs.map(s => `e2e/${s}`)]
+}
+
+// Los descendientes de un proceso (hijos, nietos…), en Linux / Mac, con `ps`.
+// Hace falta porque un proceso lanzado "separado" (como el navegador de
+// Playwright) arma su propio grupo y el corte por grupo no lo alcanza.
+function descendientes(pid) {
+  const r = spawnSync('ps', ['-A', '-o', 'pid=,ppid='], { encoding: 'utf8' })
+  const hijos = new Map()
+  for (const l of (r.stdout || '').split('\n')) {
+    const [p, pp] = l.trim().split(/\s+/).map(Number)
+    if (!p) continue
+    if (!hijos.has(pp)) hijos.set(pp, [])
+    hijos.get(pp).push(p)
+  }
+  const todos = []
+  const pendientes = [pid]
+  while (pendientes.length) for (const h of hijos.get(pendientes.pop()) || []) { todos.push(h); pendientes.push(h) }
+  return todos
+}
+
+// Corta el proceso y TODO lo que lanzó.
+function matarArbol(hijo) {
+  if (process.platform === 'win32') {
+    try { spawnSync('taskkill', ['/PID', String(hijo.pid), '/T', '/F'], { stdio: 'ignore' }) } catch {}
+    return
+  }
+  for (const p of descendientes(hijo.pid)) try { process.kill(p, 'SIGKILL') } catch {}
+  try { process.kill(-hijo.pid, 'SIGKILL') } catch {}
+  try { hijo.kill('SIGKILL') } catch {}
+}
+
+// Corre un paso con su tope. Devuelve una promesa de { ok, colgado }.
+function correr(titulo, cmd, args, cwd, env, topeMin = TOPE_PRUEBAS_MIN) {
+  console.log(`\n══ ${titulo} (tope ${topeMin} min) ══`)
+  return new Promise((resolver) => {
+    const hijo = spawn(cmd, args, { cwd, stdio: 'inherit', env: { ...process.env, ...env }, detached: process.platform !== 'win32' })
+    let colgado = false
+    const reloj = setTimeout(() => {
+      colgado = true
+      console.log(`\n### ${titulo}: pasaron ${topeMin} minutos y no terminó: SE COLGÓ. Corto todo lo que lanzó.`)
+      matarArbol(hijo)
+    }, topeMin * 60000)
+    hijo.on('exit', (codigo) => { clearTimeout(reloj); resolver({ ok: !colgado && codigo === 0, colgado }) })
+    hijo.on('error', () => { clearTimeout(reloj); resolver({ ok: false, colgado }) })
+  })
 }
 
 async function main() {
@@ -201,25 +264,31 @@ async function main() {
   for (const [s, m] of specs) console.log(`  ${s.padEnd(40)} ${m}`)
   if (soloLista) { if (!dejar) borrarEnsayo(dir); return }
 
-  const pruebasOk = correr('npm run pruebas', process.execPath, ['pruebas/check-bytes.js'], dir) &&
-    correr('suites (correr-todo)', process.execPath, ['pruebas/correr-todo.js'], dir)
+  const bytes = await correr('check-bytes', process.execPath, ['pruebas/check-bytes.js'], dir)
+  const suites = bytes.ok ? await correr('suites (correr-todo)', process.execPath, ['pruebas/correr-todo.js'], dir) : { ok: false, colgado: false }
+  const pruebasOk = bytes.ok && suites.ok
+  const pruebasColgadas = bytes.colgado || suites.colgado
 
   let navegadorOk = null
+  let navegadorColgado = false
   if (!sinNavegador) {
     const cli = path.join(RAIZ, 'node_modules', '@playwright', 'test', 'cli.js')
     if (!fs.existsSync(cli)) { console.log('\nFalta Playwright: corré `npm ci` en la carpeta del repo.'); navegadorOk = false }
     else {
       const [p1, p2] = [await puertoLibre(), await puertoLibre()]
-      navegadorOk = correr(`navegador (${specs.size} specs, puertos ${p1} y ${p2})`, process.execPath,
-        [cli, 'test', '--config', 'e2e/playwright.config.js', ...[...specs.keys()].map(s => `e2e/${s}`)], dir,
-        { E2E_PUERTO: String(p1), E2E_PUERTO_MAQUETA: String(p2), MAQUETA_URL: `http://localhost:${p2}`, E2E_BASE: `http://localhost:${p1}`, CI: '' })
+      const r = await correr(`navegador (${specs.size} specs, puertos ${p1} y ${p2})`, process.execPath,
+        argsNavegador(cli, [...specs.keys()], TOPE_NAVEGADOR_MIN), dir,
+        { E2E_PUERTO: String(p1), E2E_PUERTO_MAQUETA: String(p2), MAQUETA_URL: `http://localhost:${p2}`, E2E_BASE: `http://localhost:${p1}`, CI: '' },
+        TOPE_NAVEGADOR_MIN)
+      navegadorOk = r.ok
+      navegadorColgado = r.colgado
     }
   }
 
   console.log('\n══ RESUMEN DEL ENSAYO ══')
   console.log(resumen.join('\n'))
-  console.log(`  npm run pruebas: ${pruebasOk ? 'VERDE' : 'ROJO'}`)
-  console.log(`  navegador: ${navegadorOk === null ? 'no se corrió (--sin-navegador)' : navegadorOk ? 'VERDE' : 'ROJO'}`)
+  console.log(`  npm run pruebas: ${pruebasOk ? 'VERDE' : pruebasColgadas ? `ROJO: SE COLGÓ (cortado a los ${TOPE_PRUEBAS_MIN} min)` : 'ROJO'}`)
+  console.log(`  navegador: ${navegadorOk === null ? 'no se corrió (--sin-navegador)' : navegadorOk ? 'VERDE' : navegadorColgado ? `ROJO: SE COLGÓ (cortado a los ${TOPE_NAVEGADOR_MIN} min)` : 'ROJO'}`)
   const ok = pruebasOk && navegadorOk !== false
   if (ok && !dejar) { borrarEnsayo(dir); console.log('  Todo en verde: la carpeta de descarte se borró.') }
   else console.log(`  La carpeta queda en ${rel} (mirá e2e/resultados/). Para borrarla: npm run ensayo -- --limpiar`)
@@ -228,4 +297,5 @@ async function main() {
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1) })
 
-module.exports = { navegadorAlcanzado, abrePantalla, nombraDatos, requiresLocales, ayudasDe, SIEMPRE_NAVEGADOR, DE_TODOS }
+module.exports = { navegadorAlcanzado, abrePantalla, nombraDatos, requiresLocales, ayudasDe, SIEMPRE_NAVEGADOR, DE_TODOS,
+  correr, globalTimeoutMs, argsNavegador, TOPE_PRUEBAS_MIN, TOPE_NAVEGADOR_MIN }
