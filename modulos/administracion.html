@@ -963,7 +963,7 @@
         <h1 class="ad-titulo">Retiros por revisar</h1>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-revisar-actualizar">Actualizar</button>
       </div>
-      <p class="ad-texto-suave">Mercadería que salió en una orden de retiro sin estar en el stock del sistema. Revisá qué pasó (se compró y no se cargó el ingreso, se produjo y no se cargó la planilla…) y aceptala con el motivo: el stock de esos lotes vuelve a cero.</p>
+      <p class="ad-texto-suave">Mercadería que salió en una orden de retiro sin estar en el stock del sistema. Contestá de dónde salió: si se está produciendo, sale del lote de esa planilla al cerrarla; si entró de otro lado, cargá el traspaso o el ingreso y elegí el lote; si no, «Otro / ajustar» con el motivo deja el stock de esos lotes en cero.</p>
       <p class="ad-cuenta" id="ad-revisar-cuenta"></p>
       <div class="ad-lista" id="ad-revisar-lista"></div>
     </section>
@@ -1046,6 +1046,12 @@
     } from '../js/cuenta-unica.js'
     // "Descargar resumen de cuenta" (11/10/2026): la misma hoja que el proveedor.
     import { abrirResumenCuenta, cuentaCliente } from '../js/resumen-cuenta.js'
+    // El faltante de un retiro: "¿de dónde salen?" (13/10/2026). El mismo
+    // cartel que la Carga (modulos/retiros.html).
+    import {
+      nuevoFaltante, htmlFaltante, accionFaltante, escribirMotivoFaltante, asegurarEstilosFaltante,
+      textoEsperando, textoCajasFr,
+    } from '../js/faltante-retiro.js'
 
     mostrarBannerVersion()
 
@@ -1116,7 +1122,7 @@
       seguridad: { filas: null, error: null },
       // Retiros por revisar (28/09/2026): lo que devolvió retiros_por_revisar()
       // y el renglón que se está aceptando: { itemId, motivo, error, enviando }.
-      revisar: { filas: null, error: null, aceptando: null, hechos: [] },
+      revisar: { filas: null, error: null, aceptando: null, falt: null, hechos: [] },
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2279,7 +2285,7 @@
       if (error) throw error
       if (!o) return null
       const { data: items, error: e2 } = await supabase.from('orden_retiro_items')
-        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote')
+        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id')
         .eq('orden_id', id).order('orden')
       if (e2) throw e2
       let lotes = null
@@ -2296,7 +2302,8 @@
           .select('insumo_id, lote, cantidad').eq('orden_retiro_id', id).eq('tipo', 'despacho')
         if (!r.error) lotesInsumos = r.data ?? []
       }
-      return { orden: o, items: items ?? [], lotes, lotesInsumos }
+      const planillas = await leerPlanillasDeOrden(o, items)
+      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas }
     }
 
     // Los lotes de un renglón: los movimientos 'despacho' de esa presentación
@@ -2349,7 +2356,42 @@
       } else if (d.orden.estado_valorizacion === 'valorizada') {
         plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
       }
-      return `<div class="ad-renglon"><div><div class="ad-renglon__desc">${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div></div>${plata}</div>`
+      return `<div class="ad-renglon"><div><div class="ad-renglon__desc">${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div>${htmlFaltanteRenglon(it, d)}</div>${plata}</div>`
+    }
+
+    // Lo que no estaba en stock de un renglón (13/10/2026): "Esperando la
+    // planilla de Máquina 2 (lote 6237)" no es un error (sale de lo que se está
+    // produciendo); "pendiente" sí está por revisar. La máquina y el lote salen
+    // de planillas_en_curso() (d.planillas): mientras espera, la planilla está
+    // en curso.
+    function htmlFaltanteRenglon(it, d) {
+      if (it?.insumo_id || d?.orden?.estado === 'anulada') return ''
+      if (it?.revision === 'en_produccion') {
+        const p = (d.planillas ?? []).find(x => String(x.turno_id) === String(it.turno_produccion_id))
+        return `<div class="ad-renglon__lotes">${esc(textoEsperando(p ? { maquina: p.maquina, lote: p.lote } : null))}</div>`
+      }
+      if (it?.revision === 'pendiente' && Number(it.faltante) > 0) {
+        const motivo = limpio(it.revision_motivo)
+        return `<div class="ad-error-pegado">${esc('Faltaban ' + textoCajasFr(it.faltante) + ' en stock: por revisar' + (motivo ? ' · ' + motivo : ''))}</div>`
+      }
+      if (it?.revision === 'aceptada' && limpio(it.revision_motivo)) {
+        return `<div class="ad-renglon__lotes">${esc(limpio(it.revision_motivo))}</div>`
+      }
+      return ''
+    }
+
+    // Las planillas en curso de la fábrica de la orden, si algún renglón
+    // espera una. No es fatal: sin ellas dice "una planilla en curso".
+    async function leerPlanillasDeOrden(o, items) {
+      if (!(items ?? []).some(it => it.revision === 'en_produccion')) return null
+      try {
+        const { data, error } = await supabase.rpc('planillas_en_curso', { p_unidad_negocio_id: o.unidad_negocio_id })
+        if (error) throw error
+        return Array.isArray(data) ? data : []
+      } catch (err) {
+        console.error('No se pudieron leer las planillas en curso:', err)
+        return null
+      }
     }
 
     function htmlDetalleOrden(d, cat) {
@@ -7607,23 +7649,103 @@
       return !unidad || unidad === 'cajas' ? `${enteroHoja(n)} cajas` : cantidadInsumoHoja(n, unidad)
     }
 
+    // Un renglón de PRODUCTO TERMINADO (13/10/2026): la base lo dice con
+    // unidad 'cajas'. Esos tienen las dos respuestas de "¿de dónde salen?".
+    function esProductoRevisar(f) {
+      return !f?.unidad || f.unidad === 'cajas'
+    }
+
+    function htmlBotonesRevisar(f) {
+      if (!esProductoRevisar(f)) {
+        return `<div class="ad-barra-acciones"><button type="button" class="ad-btn ad-btn--secundario" data-revisar-aceptar="${esc(f.item_id)}">Aceptar</button></div>`
+      }
+      const sinPresentacion = !f.presentacion_id
+      return `<p class="ad-texto-suave ad-revisar-pregunta">¿De dónde salen?</p>` +
+        `<div class="ad-barra-acciones">` +
+        `<button type="button" class="ad-btn" data-revisar-produccion="${esc(f.item_id)}">Se están produciendo</button>` +
+        `<button type="button" class="ad-btn" data-revisar-otro="${esc(f.item_id)}"${sinPresentacion ? ' disabled title="No se pudo leer qué producto es: aceptalo con «Otro / ajustar»"' : ''}>Entró de otro lado</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-revisar-aceptar="${esc(f.item_id)}">Otro / ajustar</button></div>`
+    }
+
     function htmlFilaRevisar(f, rv) {
       const abierto = rv.aceptando?.itemId === f.item_id ? rv.aceptando : null
+      const falt = rv.falt?.itemId === f.item_id ? rv.falt : null
       const meta = [fechaCorta(f.fecha), f.cliente, f.cargada_por ? 'cargó ' + f.cargada_por : null].filter(Boolean).join(' · ')
       const cuanto = `Se llevó ${cantidadRevisar(f.pedidas, f.unidad)} · faltaban ${cantidadRevisar(f.faltante, f.unidad)} en stock`
-      const acciones = abierto
+      const motivoBase = limpio(f.revision_motivo)
+      const acciones = falt
+        ? `<div class="ad-panel ad-falt">${htmlFaltante(falt.f, { puedeAjustar: false, linkTraspaso: LINK_TRASPASO_AD, hoy: hoyArgentina(), idTitulo: 'fr-titulo' })}</div>`
+        : abierto
         ? `<div class="ad-panel"><div class="ad-campo"><label for="ad-revisar-motivo">¿Qué pasó? (obligatorio)</label>` +
           `<textarea class="ad-textarea" id="ad-revisar-motivo" maxlength="300" placeholder="Por ejemplo: se compró y no se cargó el ingreso">${esc(abierto.motivo)}</textarea>` +
           `<span class="ad-campo__ayuda">Al aceptar, el stock de los lotes que quedaron en negativo vuelve a cero con un ajuste.</span></div>` +
           `${abierto.error ? `<p class="ad-error-pegado">${esc(abierto.error)}</p>` : ''}` +
           `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-revisar-si"${abierto.enviando ? ' disabled' : ''}>Aceptar con este motivo</button>` +
           `<button type="button" class="ad-btn ad-btn--suave" id="ad-revisar-no">Cancelar</button></div></div>`
-        : `<div class="ad-barra-acciones"><button type="button" class="ad-btn ad-btn--secundario" data-revisar-aceptar="${esc(f.item_id)}">Aceptar</button></div>`
+        : htmlBotonesRevisar(f)
       return `<div class="ad-tarjeta ad-fila--atencion" data-revisar="${esc(f.item_id)}">` +
         `<div class="ad-fila__linea"><span class="ad-fila__codigo">${esc(f.codigo || '—')}</span><span class="ad-sello ad-sello--anulada">Sin stock</span></div>` +
         `<div class="ad-fila__meta">${esc(meta)}</div>` +
         `<div class="ad-error-app__mensaje">${esc(f.que || '—')}</div>` +
-        `<p class="ad-error-pegado">${esc(cuanto)}</p>${acciones}</div>`
+        `<p class="ad-error-pegado">${esc(cuanto)}</p>` +
+        `${motivoBase ? `<p class="ad-texto-suave">${esc(motivoBase)}</p>` : ''}${acciones}</div>`
+    }
+
+    const LINK_TRASPASO_AD = 'stock.html?vista=traspaso'
+
+    // retiros_por_revisar() todavía no dice la presentación ni el cono de cada
+    // renglón (hace falta para buscar los lotes): mientras no los traiga, se
+    // leen de orden_retiro_items (la tabla que esta pantalla ya lee con
+    // retiros:ver). Si no se puede, "Entró de otro lado" queda apagado.
+    async function completarRenglonesRevisar(filas) {
+      const faltan = (filas ?? []).filter(f => esProductoRevisar(f) && f.presentacion_id === undefined).map(f => f.item_id)
+      if (!faltan.length) return
+      const { data, error } = await supabase.from('orden_retiro_items').select('id, presentacion_id, marca_id').in('id', faltan)
+      if (error) { console.error('No se pudieron leer los renglones por revisar:', error); return }
+      for (const r of data ?? []) {
+        const f = filas.find(x => x.item_id === r.id)
+        if (f) { f.presentacion_id = r.presentacion_id ?? null; f.marca_id = r.marca_id ?? null }
+      }
+    }
+
+    // El panel de "¿de dónde salen?" adentro de la tarjeta (js/faltante-retiro.js).
+    function ctxFaltanteRevisar() {
+      return {
+        sb: supabase,
+        get f() { return estado.revisar?.falt?.f ?? null },
+        repintar: pintarRevisar,
+        puedeAjustar: false,
+        alVolverAlPrincipio: () => { estado.revisar.falt = null; pintarRevisar() },
+        alResolver: (res, item) => resolverFilaRevisar(res, item),
+      }
+    }
+
+    function abrirFaltanteRevisar(itemId, accion) {
+      const rv = estado.revisar
+      const fila = rv?.filas?.find(x => x.item_id === itemId)
+      if (!fila || !esProductoRevisar(fila)) return
+      if (accion === 'otro' && !fila.presentacion_id) return
+      rv.aceptando = null
+      rv.falt = {
+        itemId,
+        f: nuevoFaltante({
+          itemId, unidadId: estado.empresaId, presentacionId: fila.presentacion_id ?? null, marcaId: fila.marca_id ?? null,
+          texto: fila.que, faltan: fila.faltante, codigo: fila.codigo,
+        }),
+      }
+      accionFaltante(ctxFaltanteRevisar(), accion)
+    }
+
+    function resolverFilaRevisar(res, item) {
+      const rv = estado.revisar
+      if (!rv?.filas || !item?.itemId) return
+      const f = rv.filas.find(x => x.item_id === item.itemId)
+      rv.filas = rv.filas.filter(x => x.item_id !== item.itemId)
+      if (rv.falt?.itemId === item.itemId) rv.falt = null
+      rv.hechos = [`${f?.codigo ?? 'La orden'} · ${f?.que ?? ''}: ${res?.mensaje ?? 'listo.'}`]
+      mostrarExito('Renglón resuelto.')
+      if (estado.portada) estado.portada.porRevisar = rv.filas.length
+      pintarRevisar()
     }
 
     function pintarRevisar() {
@@ -7645,10 +7767,11 @@
       mostrarVista('ad-vista-revisar')
       const turno = ++turnoRevisar
       const unidad = estado.empresaId
-      estado.revisar = { filas: null, error: null, aceptando: null, hechos: estado.revisar?.hechos ?? [] }
+      estado.revisar = { filas: null, error: null, aceptando: null, falt: null, hechos: estado.revisar?.hechos ?? [] }
       pintarRevisar()
       try {
         const filas = await leerPorRevisar(unidad)
+        await completarRenglonesRevisar(filas)
         if (turno !== turnoRevisar) return
         estado.revisar.filas = filas
       } catch (err) {
@@ -7662,6 +7785,8 @@
     function abrirAceptarRevisar(itemId) {
       const rv = estado.revisar
       if (!rv.filas?.some(f => f.item_id === itemId)) return
+      if (rv.falt?.f?.enviando) return
+      rv.falt = null
       rv.aceptando = { itemId, motivo: '', error: null, enviando: false }
       pintarRevisar()
       document.getElementById('ad-revisar-motivo')?.focus()
@@ -7937,12 +8062,16 @@
       revisar.addEventListener('click', (e) => {
         let b
         if ((b = e.target.closest('[data-revisar-aceptar]'))) abrirAceptarRevisar(b.dataset.revisarAceptar)
+        else if ((b = e.target.closest('[data-revisar-produccion]'))) abrirFaltanteRevisar(b.dataset.revisarProduccion, 'produccion')
+        else if ((b = e.target.closest('[data-revisar-otro]'))) { if (!b.disabled) abrirFaltanteRevisar(b.dataset.revisarOtro, 'otro') }
+        else if ((b = e.target.closest('[data-fr]'))) { if (!b.disabled) accionFaltante(ctxFaltanteRevisar(), b.dataset.fr, b.dataset.frValor) }
         else if (e.target.closest('#ad-revisar-si')) confirmarAceptarRevisar()
         else if (e.target.closest('#ad-revisar-no')) cancelarAceptarRevisar()
       })
       // El motivo se guarda al tipear, sin redibujar (no se pierde el foco).
       revisar.addEventListener('input', (e) => {
         if (e.target.id === 'ad-revisar-motivo' && estado.revisar.aceptando) estado.revisar.aceptando.motivo = e.target.value
+        else if (e.target.matches?.('[data-fr-motivo]')) escribirMotivoFaltante(ctxFaltanteRevisar(), e.target.value)
       })
       document.getElementById('ad-errores-info').addEventListener('change', (e) => cambiarInfoErrores(e.target.checked))
       const errores = document.getElementById('ad-errores-lista')
@@ -8034,6 +8163,7 @@
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+      asegurarEstilosFaltante()
       const fabrica = cargarFabricaDePruebas(supabase)
       const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       try {

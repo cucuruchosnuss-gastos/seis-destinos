@@ -11561,7 +11561,11 @@
     // contra las vistas que esta persona tiene (sin gestionar_catalogo, se
     // ignora). El parámetro se limpia SIEMPRE, sea válido o no, para que
     // recargar no vuelva a forzar la vista.
-    const VISTAS_DESDE_URL = ['catalogo', 'costos']
+    // 'traspaso' (13/10/2026): el cartel del faltante de un retiro (la Carga y
+    // Administración) manda acá a cargar el traspaso de producto terminado.
+    // No es una pestaña: vive adentro de Stock, así que pide la vista de stock
+    // (y después, que pueda traspasar).
+    const VISTAS_DESDE_URL = ['catalogo', 'costos', 'traspaso']
     function vistaDesdeUrl(vistas) {
       let pedida = null
       try {
@@ -11575,6 +11579,7 @@
         console.error(err)
         return null
       }
+      if (pedida === 'traspaso') return vistas.includes('stock') ? 'traspaso' : null
       return VISTAS_DESDE_URL.includes(pedida) && vistas.includes(pedida) ? pedida : null
     }
 
@@ -11694,7 +11699,7 @@
       // Sin la vista de stock no hay a dónde "volver".
       document.getElementById('btn-volver-de-costos').hidden = !verStock
       const desdeUrl = vistaDesdeUrl(veCostos ? [...vistas, 'costos'] : vistas)
-      const inicial = desdeUrl ?? (soloCostos ? 'costos' : vistas[0])
+      const inicial = desdeUrl === 'traspaso' ? 'stock' : (desdeUrl ?? (soloCostos ? 'costos' : vistas[0]))
       mostrarVista(inicial)
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
@@ -11737,6 +11742,9 @@
       // sin dos unidades reales (la de pruebas ya salió en cargarStock) no hay
       // entre qué pasar.
       document.getElementById('btn-ver-traspaso').hidden = !puedeTraspasar()
+      // ?vista=traspaso: derecho al traspaso, si puede traspasar (si no, queda
+      // en el stock, como cualquier link a una vista que no tiene).
+      if (desdeUrl === 'traspaso' && puedeTraspasar()) abrirTraspaso()
       // Costos: solo con stock:ver_costos en alguna fábrica (y stock:ver,
       // porque vive en la vista de stock). La barra ya sabe sus unidades.
       await estado.barraLista

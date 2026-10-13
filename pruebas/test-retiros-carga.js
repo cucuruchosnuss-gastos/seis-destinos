@@ -391,8 +391,8 @@ function cargarRenglon(S, i = 0, cajas = 10) {
 {
   // Lo que faltó de un insumo.
   const S = nuevo()
-  const h = S.htmlFaltantes([{ renglon: 2, insumo: 'Harina 000', pedidas: 30, faltaron: 5, unidad: 'kg' }])
-  chk('lo que faltó de un insumo se dice en su unidad', /Renglón 2: Harina 000 — faltaron 5 kg de 30 kg/.test(h))
+  const h = S.htmlEstadoFaltantes({ faltantes: [{ renglon: 2, insumo: 'Harina 000', pedidas: 30, faltaron: 5, unidad: 'kg' }], renglones: [], resueltos: {} })
+  chk('lo que faltó de un insumo se dice en su unidad', /Harina 000 · faltaban 5 kg/.test(h) && /queda para revisar en Administración/.test(h))
 }
 {
   // La hoja con insumos: desde el 27/09/2026 mis_ordenes_retiro() trae TODOS los
@@ -524,12 +524,14 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   esperas.push(S.confirmar().then(() => {
     const h = S.__els.get('rt-hecho').innerHTML
     chk('con stock insuficiente la orden SALE IGUAL (vista de hecho, con código)', S.estado.vista === 'rt-vista-hecho' && /N-0013/.test(h))
-    chk('lo que faltó se dice en bordó', /rt-aviso--grave/.test(h) && /faltaron 3 de 10 cajas/.test(h) && /salió igual/.test(h))
+    // 13/10/2026: ya no hay leyenda en bordó abajo: lo que faltó se lista,
+    // neutro, con su estado (y el cartel pregunta de dónde salió).
+    chk('lo que faltó se lista sin la leyenda vieja', /Lo que no estaba en stock/.test(h) && /faltaban 3 cajas/.test(h) && !/rt-aviso--grave/.test(h) && !/salió igual/.test(h))
   }))
 }
 {
   const S = nuevo()
-  chk('sin faltantes no hay aviso', S.htmlFaltantes([]) === '' && S.htmlFaltantes(null) === '')
+  chk('sin faltantes no hay aviso', S.htmlEstadoFaltantes({ faltantes: [] }) === '' && S.htmlEstadoFaltantes({ faltantes: null }) === '' && S.htmlEstadoFaltantes(null) === '')
   const o = { renglones: [{ producto: 'A', presentacion: 'B', cajas: 5, lotes: [{ lote: '7001-1', cajas: 2 }, { lote: 'SIN STOCK', cajas: 3 }] }] }
   chk('en un reintento lo que faltó se deduce del lote "SIN STOCK"', JSON.stringify(S.faltantesDeLotes(o)) === JSON.stringify([{ renglon: 1, producto: 'A', presentacion: 'B', pedidas: 5, faltaron: 3 }]))
 }
@@ -663,7 +665,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('en el celular el pie de la orden deja ver "Ver resumen"', /\.rt-pie-orden \{ display: contents; \}/.test(cssBase) && !/\.rt-pie-orden \{ display: none; \}/.test(cssBase))
   chk('en el celular el encabezado de columnas de la compu no se ve', /\.rt-orden-cab \{ display: none; \}/.test(cssBase))
   chk('las iniciales del cliente van escapadas', /rt-resultado__ini" aria-hidden="true">&lt;&lt;</.test(S.htmlResultadoCliente({ id: 'x', nombre: '<b <i', apodos: [] }, 'E', '')))
-  chequearMarcas(chk, 'faltantes de insumo', S.htmlFaltantes([{ renglon: 2, insumo: marca('f-insumo'), pedidas: 3, faltaron: 1, unidad: 'kg' }]), ['f-insumo'])
+  chequearMarcas(chk, 'faltantes de insumo', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 2, insumo: marca('f-insumo'), pedidas: 3, faltaron: 1, unidad: 'kg' }], renglones: [], resueltos: {} }), ['f-insumo'])
   r.productoId = 'p1'; r.conCono = true; r.presentacionId = 'pr1'; r.marcaElegir = true; r.marcaBusqueda = marca('cono-buscado')
   chequearMarcas(chk, 'renglón con cono', S.htmlRenglon(r, 0, cat, true), ['producto', 'presentacion', 'cono-buscado'])
   r.marcaBusqueda = ''
@@ -676,7 +678,10 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   r.marcaId = 'm1'
   S.estado.lotes.set(S.claveLotes('pr1', 'm1'), S.estado.lotes.get(S.claveLotes('pr1', null)))
   chequearMarcas(chk, 'resumen', S.htmlResumen(S.estado.form, cat), ['empresa', 'cliente', 'transporte', 'obs', 'producto', 'presentacion', 'cono', 'lote-elegido'])
-  chequearMarcas(chk, 'faltantes', S.htmlFaltantes([{ renglon: 1, producto: marca('f-prod'), presentacion: marca('f-pres'), pedidas: 3, faltaron: 1 }]), ['f-prod', 'f-pres'])
+  chequearMarcas(chk, 'faltantes', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 1, item_id: marca('f-item'), producto: marca('f-prod'), presentacion: marca('f-pres'), pedidas: 3, faltaron: 1 }], renglones: [], resueltos: {} }), ['f-prod', 'f-pres', 'f-item'])
+  // 13/10/2026: el estado de lo que faltó (la máquina viene de la base) y la unidad del insumo.
+  chequearMarcas(chk, 'faltante esperando', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 1, item_id: 'it-1', producto: 'P', presentacion: 'Q', faltaron: 1 }], renglones: [], resueltos: { 'it-1': { revision: 'en_produccion', planilla: { maquina: marca('maquina'), lote: marca('lote') } } } }), ['maquina', 'lote'])
+  chequearMarcas(chk, 'faltante de insumo con su unidad', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 2, insumo: 'Harina', pedidas: 3, faltaron: 1, unidad: marca('unidad-insumo') }], renglones: [], resueltos: {} }), ['unidad-insumo'])
   chequearMarcas(chk, 'hecho', S.htmlHecho({ codigo: marca('codigo'), cliente: { nombre: marca('h-cliente') }, faltantes: [] }), ['codigo', 'h-cliente'])
   S.estado.errorClientes = marca('error-clientes')
   chequearMarcas(chk, 'error de clientes', S.htmlResultadosClientes(''), ['error-clientes'])

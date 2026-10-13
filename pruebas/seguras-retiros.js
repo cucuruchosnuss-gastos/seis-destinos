@@ -17,7 +17,11 @@ const SEGURAS_RETIROS = [
   ['pie', 'HTML armado en htmlRenglon() con el índice numérico y htmlLoteRenglon(), que escapa adentro'],
   ['error', 'HTML ya escapado: htmlRenglon() lo arma con esc() de lo que falta, o vacío'],
   ['filas', 'HTML ya escapado: htmlResumen() arma cada fila con esc() de la descripción, el lote y las cajas'],
-  ['renglones', 'HTML ya escapado: htmlFaltantes() / htmlDetalleMio() arman cada renglón con esc()'],
+  ['renglones', 'HTML ya escapado: htmlDetalleMio() arma cada renglón con esc()'],
+  // 13/10/2026: el faltante, "¿de dónde salen?".
+  ['est.clase', 'texto constante del código: textoEstadoFaltante() devuelve una de tres clases fijas'],
+  ['boton', 'HTML ya escapado: el botón "¿De dónde salen?" con esc() del id del renglón, o vacío'],
+  ['htmlFaltanteMio(o.renglones?.[i], o)', 'HTML armado por htmlFaltanteMio(), que escapa el estado, el motivo y el id del renglón'],
   // 28/09/2026: los tres grupos del catálogo y varios lotes por renglón.
   ['clase', 'texto constante del código: "rt-opcion rt-opcion--" + CLASE_GRUPO[grupo] (un mapa fijo)'],
   ['CLASE_GRUPO[g.tipo]', 'texto constante del código: CLASE_GRUPO es un mapa fijo de tres clases'],

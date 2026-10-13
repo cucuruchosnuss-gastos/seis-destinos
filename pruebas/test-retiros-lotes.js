@@ -307,7 +307,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   esperas.push(S.confirmar().then(() => {
     chk('confirmar con faltante LLAMA a la base (no bloquea)', !!p && p.p_items[0].lotes.length === 4)
     const h = S.__els.get('rt-hecho').innerHTML
-    chk('la orden sale y dice que quedó pendiente de revisión en Administración', S.estado.vista === 'rt-vista-hecho' && /quedó pendiente de revisión en Administración/.test(h) && /faltaron 5 de 50 cajas/.test(h))
+    chk('la orden sale y dice que quedó pendiente de revisión en Administración', S.estado.vista === 'rt-vista-hecho' && /queda para revisar en Administración/.test(h) && /faltaban 5 cajas/.test(h))
   }))
 }
 

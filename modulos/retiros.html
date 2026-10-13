@@ -609,6 +609,26 @@
       .rt-fila__meta { width: 240px; flex-shrink: 0; }
     }
 
+    /* ── El faltante: el cartel "¿De dónde salen?" (13/10/2026) ───────── */
+    .rt-falt-fondo { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(28, 26, 23, 0.45); }
+    .rt-falt { width: 100%; max-width: 560px; max-height: calc(100dvh - 32px); overflow-y: auto; background: var(--color-fondo); border-radius: 16px; padding: 16px 18px 18px; box-shadow: 0 12px 40px rgba(28, 26, 23, 0.25); }
+    .rt-falt__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .rt-falt__paso { font-size: 13px; font-weight: 600; color: var(--color-texto-2); letter-spacing: 0.02em; }
+    .rt-falt__pie { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; border-top: 1px solid var(--color-divisor); padding-top: 12px; }
+    .rt-falt__pie .rt-btn { min-height: 48px; }
+    /* Lo que no estaba en stock, en la orden confirmada: neutro, no un error. */
+    .rt-falt-estado { margin: 14px 0 0; padding: 12px 14px; border: 1px solid var(--color-borde); border-radius: 12px; background: var(--color-fondo); text-align: left; }
+    .rt-falt-estado__titulo { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+    .rt-falt-estado ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .rt-falt-estado li { display: flex; flex-direction: column; gap: 4px; font-size: 14.5px; overflow-wrap: anywhere; }
+    .rt-falt-estado__que { font-weight: 600; }
+    .rt-falt-estado__como { color: var(--color-texto-2); }
+    .rt-falt-estado__como--ok { color: var(--verde-oscuro); }
+    .rt-falt-estado__como--pend { color: var(--bordo); }
+    .rt-falt-estado .rt-btn { align-self: flex-start; min-height: 44px; }
+    .rt-item-mio__estado { margin-top: 4px; font-size: 14px; color: var(--color-texto-2); }
+    .rt-item-mio__estado--pend { color: var(--bordo); }
+
     /* ── Imprimir: solo la hoja de js/retiros-comun.js ─────────────────── */
     .rt-impresion { display: none; }
     @media print {
@@ -776,6 +796,21 @@
 
   </div>
 
+  <!-- ══ EL FALTANTE: "¿DE DÓNDE SALEN?" (13/10/2026) ══════════════════════
+       Al confirmar una orden con cajas de producto terminado que no estaban
+       en stock, un cartel por renglón pregunta de dónde salieron. Lo arma
+       js/faltante-retiro.js (el mismo de Administración). -->
+  <div class="rt-falt-fondo" id="rt-falt" hidden>
+    <div class="rt-falt" role="dialog" aria-modal="true" aria-labelledby="fr-titulo">
+      <div class="rt-falt__cabeza">
+        <span class="rt-falt__paso" id="rt-falt-paso"></span>
+        <button type="button" class="rt-icono-btn" id="rt-falt-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div id="rt-falt-cuerpo"></div>
+      <div class="rt-falt__pie" id="rt-falt-pie"></div>
+    </div>
+  </div>
+
   <!-- La hoja para imprimir: la arma htmlHoja() justo antes de imprimir. -->
   <div class="rt-impresion" id="rt-impresion"></div>
 
@@ -793,6 +828,12 @@
     // La unidad al lado de un campo de cantidad ("kg", "L", "u"), la misma
     // regla que Stock e Ingreso (05/10/2026).
     import { unidadCorta } from '../js/cantidades.js'
+    // El faltante de un renglón: "¿de dónde salen?" (13/10/2026). El mismo
+    // cartel que Administración → Retiros por revisar.
+    import {
+      nuevoFaltante, htmlFaltante, accionFaltante, escribirMotivoFaltante, asegurarEstilosFaltante,
+      textoEsperando, textoCajasFr,
+    } from '../js/faltante-retiro.js'
     import { supabase } from '../js/supabase.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -841,7 +882,9 @@
       lotes: new Map(),
       form: null,
       confirmando: false,
-      hecho: null,       // { ordenId, codigo, faltantes, reintento, orden, error, aviso }
+      hecho: null,       // { ordenId, codigo, faltantes, reintento, orden, error, aviso, unidadId, renglones, resueltos }
+      falt: null,        // el cartel del faltante abierto: { cola, idx, f, alResolver, foco }
+      planillasMio: null, // planillas_en_curso de la fábrica, para nombrar la de un renglón que espera
       mis: null,         // lo que devolvió mis_ordenes_retiro (null = todavía no)
       errorMis: null,
       mio: null,         // { orden, error, aviso }
@@ -3055,12 +3098,19 @@
         if (error) throw error
         estado.confirmando = false
         estado.hecho = { ordenId: data?.orden_id ?? null, codigo: data?.codigo ?? null, faltantes: Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : null,
-          reintento: data?.reintento === true, orden: null, error: null, aviso: null, cliente: clienteDe(f.clienteId), cajas: totalCajasForm(f), total: textoTotalForm(f) }
+          reintento: data?.reintento === true, orden: null, error: null, aviso: null, cliente: clienteDe(f.clienteId), cajas: totalCajasForm(f), total: textoTotalForm(f),
+          // Para el cartel del faltante: la fábrica y, por número de renglón,
+          // la presentación y el cono que se mandaron (la base numera los
+          // renglones en el orden de p_items, desde 1).
+          unidadId: estado.empresaId, renglones: renglonesMandados(f), resueltos: {} }
         estado.form = null
         estado.mis = null
         guardarBorrador()
         mostrarExito(data?.codigo ? `Orden ${data.codigo} confirmada.` : 'Orden confirmada.')
         mostrarHecho()
+        // Lo que no estaba en stock: un cartel por renglón pregunta de dónde
+        // salió (no en un reintento: ahí la base no dice qué faltó).
+        abrirFaltantesDeHecho()
         await cargarOrdenHecha()
       } catch (err) {
         console.error('No se pudo confirmar la orden:', err)
@@ -3076,21 +3126,204 @@
     // HECHO: el código, lo que faltó, imprimir, enviar y compartir
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Lo que faltó de stock, en bordó. La orden salió igual.
-    function htmlFaltantes(lista) {
-      if (!Array.isArray(lista) || !lista.length) return ''
-      const renglones = lista.map(x => {
-        // Un insumo que faltó viene con 'insumo' y 'unidad' en vez de producto.
-        const texto = x.insumo
-          ? 'Renglón ' + x.renglon + ': ' + x.insumo + ' — faltaron ' + cantidadInsumoHoja(x.faltaron, x.unidad) + ' de ' + cantidadInsumoHoja(x.pedidas, x.unidad)
-          : 'Renglón ' + x.renglon + ': ' + [x.producto, x.presentacion].filter(Boolean).join(' · ') +
-            ' — faltaron ' + enteroHoja(x.faltaron) + ' de ' + enteroHoja(x.pedidas) + ' cajas'
-        return `<li>${esc(texto)}</li>`
-      }).join('')
-      // La base deja esos renglones 'pendiente': los revisa Administración
-      // (Retiros por revisar), no hace falta avisarle a nadie más.
-      return `<div class="rt-aviso rt-aviso--grave"><strong>No había stock de todo.</strong> La orden salió igual ` +
-        `y lo que faltó quedó pendiente de revisión en Administración.<ul>${renglones}</ul></div>`
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL FALTANTE: "¿DE DÓNDE SALEN?" (13/10/2026)
+    //
+    // Lo que no estaba en stock sale igual (registrar_orden_retiro lo saca del
+    // lote 'SIN STOCK' y deja el renglón 'pendiente'). Antes se decía con una
+    // leyenda en bordó abajo de la orden; ahora, al confirmar, un cartel por
+    // renglón de PRODUCTO TERMINADO pregunta de dónde salieron esas cajas (lo
+    // arma js/faltante-retiro.js, el mismo de Administración). Si se cierra
+    // sin elegir, queda como antes: pendiente, en "Por revisar".
+    //
+    // Para resolverlo desde acá hace falta el id del renglón
+    // (stock_insuficiente[].item_id). Sin él, el renglón se muestra
+    // pendiente y sin el botón: lo resuelve Administración.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const LINK_TRASPASO = 'stock.html?vista=traspaso'
+
+    // La presentación y el cono de cada renglón que se mandó, en el orden de
+    // p_items (el número de renglón de la base menos 1).
+    function renglonesMandados(f) {
+      return (f?.renglones ?? []).map(r => r.insumoId ? { insumo: true }
+        : { presentacionId: r.presentacionId ?? null, marcaId: r.conCono ? (r.marcaId ?? null) : null })
+    }
+
+    // Los faltantes de producto terminado de lo que devolvió la base, listos
+    // para el cartel. Si la base trae presentacion_id y marca_id se usan esos;
+    // si no, los del renglón que se mandó.
+    function faltantesDeProducto(lista, renglones, unidadId, codigo) {
+      return (Array.isArray(lista) ? lista : []).filter(x => x && !x.insumo).map(x => {
+        const r = Array.isArray(renglones) ? renglones[Number(x.renglon) - 1] : null
+        const deLaBase = x.presentacion_id !== undefined && x.presentacion_id !== null
+        return {
+          itemId: x.item_id ?? null,
+          unidadId: unidadId ?? null,
+          presentacionId: deLaBase ? x.presentacion_id : (r?.presentacionId ?? null),
+          marcaId: deLaBase ? (x.marca_id ?? null) : (r?.marcaId ?? null),
+          texto: [x.producto, x.presentacion].map(limpio).filter(Boolean).join(' · '),
+          faltan: Number(x.faltaron) || 0,
+          renglon: x.renglon ?? null,
+          codigo: codigo ?? null,
+        }
+      })
+    }
+
+    function faltantesDeHecho(h) {
+      return h ? faltantesDeProducto(h.faltantes, h.renglones, h.unidadId, h.codigo) : []
+    }
+
+    // Lo que dice la orden de un faltante ya contestado o todavía pendiente.
+    // Esperar una planilla NO es un error: va en gris.
+    function textoEstadoFaltante(res) {
+      if (res?.revision === 'en_produccion') return { texto: textoEsperando(res.planilla), clase: '' }
+      if (res?.revision === 'aceptada') {
+        const t = res.lote ? `Salieron del lote ${res.lote}` : res.ajuste ? 'Ajustado a mano' : 'Salieron de la producción en curso'
+        return { texto: t, clase: ' rt-falt-estado__como--ok' }
+      }
+      return { texto: 'Pendiente: queda para revisar en Administración', clase: ' rt-falt-estado__como--pend' }
+    }
+
+    // La orden confirmada: lo que no estaba en stock, renglón por renglón,
+    // con su estado y (si se puede) el botón para contestar.
+    function htmlEstadoFaltantes(h) {
+      const prod = faltantesDeHecho(h)
+      const ins = (h?.faltantes ?? []).filter(x => x?.insumo)
+      if (!prod.length && !ins.length) return ''
+      const filas = prod.map(d => {
+        const res = d.itemId ? h.resueltos?.[d.itemId] : null
+        const est = textoEstadoFaltante(res)
+        const boton = d.itemId && !res
+          ? `<button type="button" class="rt-btn rt-btn--secundario" data-falt-abrir="${esc(d.itemId)}">¿De dónde salen?</button>` : ''
+        return `<li><span class="rt-falt-estado__que">${esc(d.texto || 'Producto')} · faltaban ${esc(textoCajasFr(d.faltan))}</span>` +
+          `<span class="rt-falt-estado__como${est.clase}">${esc(est.texto)}</span>${boton}</li>`
+      }).concat(ins.map(x =>
+        `<li><span class="rt-falt-estado__que">${esc(x.insumo)} · faltaban ${esc(cantidadInsumoHoja(x.faltaron, x.unidad))}</span>` +
+        `<span class="rt-falt-estado__como rt-falt-estado__como--pend">Pendiente: queda para revisar en Administración</span></li>`)).join('')
+      return `<div class="rt-falt-estado"><p class="rt-falt-estado__titulo">Lo que no estaba en stock</p><ul>${filas}</ul></div>`
+    }
+
+    // ── El cartel ───────────────────────────────────────────────────────────
+
+    // retiros:cargar o retiros:precios en la fábrica (la regla de los dos RPC);
+    // el ajuste a mano, solo retiros:precios (resolver_faltante_retiro).
+    function puedeRetirosEn(tarea, unidadId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      if (!estado.misTareas.has('retiros:' + tarea)) return false
+      const alcance = estado.misTareas.get('retiros:' + tarea)
+      if (alcance && alcance.todas === true) return true
+      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
+
+    // El contexto que se le pasa a js/faltante-retiro.js. `f` con getter: el
+    // cartel abierto AHORA (una respuesta vieja no pisa uno nuevo).
+    function ctxFaltante() {
+      return {
+        sb: supabase,
+        get f() { return estado.falt?.f ?? null },
+        repintar: pintarCartelFaltante,
+        get puedeAjustar() { return puedeRetirosEn('precios', estado.falt?.f?.item?.unidadId) },
+        alResolver: (res, item) => { estado.falt?.alResolver?.(res, item) },
+      }
+    }
+
+    // Abre el cartel con una cola de faltantes (los que tienen id y no están
+    // contestados), empezando por `desde` (un itemId) o el primero.
+    function abrirCartelFaltante(cola, desde, alResolver) {
+      const lista = (cola ?? []).filter(d => d?.itemId)
+      if (!lista.length) return false
+      const idx = Math.max(0, desde ? lista.findIndex(d => d.itemId === desde) : 0)
+      estado.falt = { cola: lista, idx, f: nuevoFaltante(lista[idx]), alResolver, foco: document.activeElement }
+      document.getElementById('rt-falt').hidden = false
+      pintarCartelFaltante()
+      document.querySelector('#rt-falt-cuerpo button, #rt-falt-cuerpo a')?.focus()
+      return true
+    }
+
+    function pendientesDeHecho(h) {
+      return faltantesDeHecho(h).filter(d => d.itemId && !h.resueltos?.[d.itemId])
+    }
+
+    function alResolverHecho(res, item) {
+      const h = estado.hecho
+      if (!h || !item?.itemId) return
+      h.resueltos = { ...(h.resueltos ?? {}), [item.itemId]: res }
+      pintarHecho()
+    }
+
+    function abrirFaltantesDeHecho(desde = null) {
+      const h = estado.hecho
+      if (!h || h.reintento) return false
+      return abrirCartelFaltante(pendientesDeHecho(h), desde, alResolverHecho)
+    }
+
+    function pintarCartelFaltante() {
+      const c = estado.falt
+      if (!c) return
+      const f = c.f
+      document.getElementById('rt-falt-paso').textContent = c.cola.length > 1
+        ? `Faltante ${c.idx + 1} de ${c.cola.length}${f.item.codigo ? ' · ' + f.item.codigo : ''}`
+        : `Faltante${f.item.codigo ? ' · ' + f.item.codigo : ''}`
+      document.getElementById('rt-falt-cuerpo').innerHTML = htmlFaltante(f, {
+        puedeAjustar: puedeRetirosEn('precios', f.item.unidadId), linkTraspaso: LINK_TRASPASO, hoy: hoyArgentina(), idTitulo: 'fr-titulo',
+      })
+      const hay = siguienteFaltante(c) !== null
+      document.getElementById('rt-falt-pie').innerHTML = f.paso === 'listo'
+        ? `<button type="button" class="rt-btn" data-falt-pie="${hay ? 'siguiente' : 'cerrar'}">${hay ? 'Siguiente faltante' : 'Listo'}</button>`
+        : `<button type="button" class="rt-btn rt-btn--secundario" data-falt-pie="cerrar"${f.enviando ? ' disabled' : ''}>Dejarlo pendiente</button>`
+    }
+
+    // El próximo de la cola que todavía no se contestó (o null).
+    function siguienteFaltante(c) {
+      return c.idx + 1 < c.cola.length ? c.idx + 1 : null
+    }
+
+    function pasarAlSiguienteFaltante() {
+      const c = estado.falt
+      const i = c ? siguienteFaltante(c) : null
+      if (i === null) { cerrarCartelFaltante(); return }
+      c.idx = i
+      c.f = nuevoFaltante(c.cola[i])
+      pintarCartelFaltante()
+      document.querySelector('#rt-falt-cuerpo button')?.focus()
+    }
+
+    function cerrarCartelFaltante() {
+      const c = estado.falt
+      if (!c || c.f?.enviando) return
+      estado.falt = null
+      document.getElementById('rt-falt').hidden = true
+      document.getElementById('rt-falt-cuerpo').innerHTML = ''
+      const foco = c.foco
+      if (foco && document.contains?.(foco)) foco.focus?.()
+    }
+
+    function conectarCartelFaltante() {
+      const fondo = document.getElementById('rt-falt')
+      fondo.addEventListener('click', (e) => {
+        if (e.target === fondo) { cerrarCartelFaltante(); return }
+        if (e.target.closest('#rt-falt-cerrar')) { cerrarCartelFaltante(); return }
+        const pie = e.target.closest('[data-falt-pie]')
+        if (pie) { pie.dataset.faltPie === 'siguiente' ? pasarAlSiguienteFaltante() : cerrarCartelFaltante(); return }
+        const b = e.target.closest('[data-fr]')
+        if (b && !b.disabled) accionFaltante(ctxFaltante(), b.dataset.fr, b.dataset.frValor)
+      })
+      fondo.addEventListener('input', (e) => {
+        if (e.target.matches?.('[data-fr-motivo]')) escribirMotivoFaltante(ctxFaltante(), e.target.value)
+      })
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && estado.falt) { e.preventDefault(); cerrarCartelFaltante() }
+      })
+      document.getElementById('rt-hecho').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-falt-abrir]')
+        if (b) abrirFaltantesDeHecho(b.dataset.faltAbrir)
+      })
+      document.getElementById('rt-mio-cuerpo').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-falt-mio]')
+        if (b) abrirFaltanteMio(b.dataset.faltMio)
+      })
     }
 
     // 1h · Confirmado: el ✓ verde, el código bien grande, el cliente, las
@@ -3103,7 +3336,7 @@
       return `<span class="rt-hecho__ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>` +
         `<span class="rt-hecho__rotulo">Retiro confirmado</span>` +
         `<div class="rt-codigo-grande">${esc(h.codigo || '—')}</div>` +
-        `${detalle.length ? `<p class="rt-hecho__detalle">${detalle.map(esc).join('<br>')}</p>` : ''}${aviso}${htmlFaltantes(h.faltantes)}`
+        `${detalle.length ? `<p class="rt-hecho__detalle">${detalle.map(esc).join('<br>')}</p>` : ''}${aviso}${htmlEstadoFaltantes(h)}`
     }
 
     function pintarHecho() {
@@ -3353,7 +3586,9 @@
     }
 
     function htmlDetalleMio(o) {
-      const renglones = renglonesParaHoja(o).map(r => {
+      // renglonesParaHoja() arma objetos nuevos (sin la revisión): el faltante
+      // de cada renglón se lee del renglón de la base, en la misma posición.
+      const renglones = renglonesParaHoja(o).map((r, i) => {
         if (r.esInsumo) {
           const desc = cantidadInsumoHoja(r.cantidad, r.unidad) + ' · ' + [r.producto, r.marca].map(limpio).filter(Boolean).join(' · ')
           const lotes = 'Insumo · ' + (r.lotes.length ? 'lote ' + textoLotes(r.lotes, r.unidad) : 'de los lotes más viejos')
@@ -3361,13 +3596,82 @@
         }
         const desc = enteroHoja(r.cajas) + ' cajas · ' + [r.producto, r.presentacion, r.cono].filter(Boolean).join(' · ')
         const lotes = enteroHoja(r.unidades) + ' unidades · lotes ' + textoLotes(r.lotes)
-        return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div></div>`
+        return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div>${htmlFaltanteMio(o.renglones?.[i], o)}</div>`
       }).join('')
       return `<div class="rt-resumen">${o.estado === 'anulada' ? '<div class="rt-aviso rt-aviso--grave">Anulada.</div>' : ''}` +
         htmlDatoRt('Fecha', fechaHoraHoja(o.cargada_en)) + htmlDatoRt('Cliente', o.cliente ?? '—') +
         htmlDatoRt('Transporte', limpio(o.transporte) || '—') +
         (String(o.observaciones ?? '').trim() ? htmlDatoRt('Observaciones', String(o.observaciones).trim()) : '') +
         `</div><div class="rt-lista">${renglones}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span><span class="rt-total__valor">${esc(enteroHoja(cajasDeOrden(o)))} cajas</span></p>`
+    }
+
+    // ── El faltante en una de mis órdenes ───────────────────────────────────
+    //
+    // Si mis_ordenes_retiro() trae, por renglón, item_id, revision, faltante,
+    // turno_produccion_id (y presentacion_id / marca_id), se ve en qué quedó lo
+    // que no estaba en stock: "Esperando la planilla de Máquina 2 (lote 6237)"
+    // (no es un error) o "Pendiente" con el botón para contestar. Si no los
+    // trae, no se dice nada (no se inventa).
+
+    // El nombre de la planilla de un renglón que espera: lo que mande la base
+    // (planilla_maquina / planilla_lote) o, si no, planillas_en_curso().
+    function planillaDeRenglon(r) {
+      if (r?.planilla_maquina || r?.planilla_lote) return { maquina: r.planilla_maquina ?? null, lote: r.planilla_lote ?? null }
+      const p = (estado.planillasMio ?? []).find(x => String(x.turno_id) === String(r?.turno_produccion_id))
+      return p ? { maquina: p.maquina ?? null, lote: p.lote ?? null } : null
+    }
+
+    function htmlFaltanteMio(r, o) {
+      if (o?.estado === 'anulada') return ''
+      if (r?.revision === 'en_produccion') {
+        return `<div class="rt-item-mio__estado">${esc(textoEsperando(planillaDeRenglon(r)))}</div>`
+      }
+      if (r?.revision === 'pendiente' && Number(r.faltante) > 0) {
+        const motivo = limpio(r.revision_motivo)
+        const boton = r.item_id && r.presentacion_id
+          ? `<button type="button" class="rt-btn rt-btn--secundario" data-falt-mio="${esc(r.item_id)}">¿De dónde salen?</button>` : ''
+        return `<div class="rt-item-mio__estado rt-item-mio__estado--pend">Faltaban ${esc(textoCajasFr(r.faltante))}: queda para revisar en Administración` +
+          `${motivo ? ' · ' + esc(motivo) : ''}</div>${boton}`
+      }
+      return ''
+    }
+
+    function faltantesDeMia(o) {
+      return (o?.renglones ?? []).filter(r => r?.tipo !== 'insumo' && r?.revision === 'pendiente' && r?.item_id && r?.presentacion_id && Number(r.faltante) > 0)
+        .map(r => ({
+          itemId: r.item_id, unidadId: estado.empresaId, presentacionId: r.presentacion_id, marcaId: r.marca_id ?? null,
+          texto: [r.producto, r.presentacion, r.marca].map(limpio).filter(Boolean).join(' · '),
+          faltan: Number(r.faltante) || 0, codigo: o.codigo ?? null,
+        }))
+    }
+
+    function abrirFaltanteMio(itemId) {
+      const o = estado.mio?.orden
+      if (!o) return
+      abrirCartelFaltante(faltantesDeMia(o), itemId, (res, item) => {
+        const r = (o.renglones ?? []).find(x => x.item_id === item?.itemId)
+        if (r) {
+          r.revision = res.revision
+          if (res.planilla) { r.planilla_maquina = res.planilla.maquina; r.planilla_lote = res.planilla.lote }
+        }
+        if (estado.mio?.orden === o) document.getElementById('rt-mio-cuerpo').innerHTML = htmlDetalleMio(o)
+      })
+    }
+
+    // Si algún renglón espera una planilla y la base no dijo cuál, se leen
+    // las planillas en curso de la fábrica para nombrarla.
+    async function asegurarPlanillasMio(o) {
+      const falta = (o?.renglones ?? []).some(r => r?.revision === 'en_produccion' && !r.planilla_maquina && !r.planilla_lote && r.turno_produccion_id)
+      if (!falta || estado.planillasMio) return
+      try {
+        const { data, error } = await supabase.rpc('planillas_en_curso', { p_unidad_negocio_id: estado.empresaId })
+        if (error) throw error
+        estado.planillasMio = Array.isArray(data) ? data : []
+      } catch (err) {
+        console.error('No se pudieron leer las planillas en curso:', err)
+        return
+      }
+      if (estado.mio?.orden === o) document.getElementById('rt-mio-cuerpo').innerHTML = htmlDetalleMio(o)
     }
 
     function abrirMia(id) {
@@ -3379,6 +3683,7 @@
       document.getElementById('rt-mio-cuerpo').innerHTML = htmlDetalleMio(o)
       document.getElementById('rt-mio-empresa-aviso').innerHTML = htmlAvisoEmpresa()
       pintarAccionesHoja('mio', estado.mio)
+      asegurarPlanillasMio(o)
     }
 
     // Deja lista la orden para imprimirla o mandarla (también desde la fila de
@@ -3406,6 +3711,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function conectarTodo() {
+      conectarCartelFaltante()
       document.getElementById('rt-empresas').addEventListener('click', (e) => {
         const b = e.target.closest('[data-empresa]')
         if (b) elegirEmpresa(b.dataset.empresa)
@@ -3569,6 +3875,7 @@
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+      asegurarEstilosFaltante()
       const fabrica = cargarFabricaDePruebas(supabase)
       const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       try {

@@ -104,7 +104,19 @@ try {
 
   const refs = referenciasDelJs(A.referencias)
   chk('el JS apunta a algún id (si da cero, no se están leyendo las referencias)', refs.length > 0)
+  // Lo que escribe un archivo de js/ que la pantalla importa (13/10/2026):
+  // el cartel del faltante lo arma js/faltante-retiro.js.
+  const EN_JS = {
+    'data-fr': ['js/faltante-retiro.js', /data-fr="(produccion|otro|lote|ajuste|volver|planilla|elegir-lote|confirmar-lote|confirmar-ajuste)"/, 'htmlFaltante(): las respuestas y los pasos del cartel'],
+    'data-fr-valor': ['js/faltante-retiro.js', /data-fr-valor="\$\{escFr\(/, 'htmlFaltante(): la planilla o el lote de cada botón'],
+    'data-fr-motivo': ['js/faltante-retiro.js', /data-fr-motivo/, 'htmlFaltante(): el motivo del lote o del ajuste'],
+  }
   for (const r of refs) {
+    if (EN_JS[r.valor]) {
+      const [archivo, re, motivo] = EN_JS[r.valor]
+      chk(`${r.valor}: lo escribe ${archivo} (${motivo})`, re.test(fs.readFileSync(path.join(RAIZ, archivo), 'utf8')))
+      continue
+    }
     const existe = r.tipo === 'id' ? A.ids.has(r.valor) : A.datas.has(r.valor)
     chk(`el JS apunta a ${r.tipo === 'id' ? '#' : ''}${r.valor} y existe`, existe, `referencia sin destino: ${r.como}`)
   }

@@ -14,8 +14,9 @@ correrMutaciones({
   escape: 'esc',
   funciones: ['htmlEmpresas', 'htmlEmpresaActual', 'htmlClienteElegido', 'htmlResultadosClientes', 'htmlProductosRenglon',
     'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon', 'htmlRenglon',
-    'htmlResumen', 'htmlDatoRt', 'htmlFaltantes', 'htmlHecho', 'htmlEleccionRenglon'],
+    'htmlResumen', 'htmlDatoRt', 'htmlEstadoFaltantes', 'htmlHecho', 'htmlEleccionRenglon'],
   equivalentes: [
+    { expr: 'esc(textoCajasFr(d.faltan))', motivo: '"N cajas" (un número formateado), del código' },
     { expr: 'esc(total.slice(0, k))', motivo: 'lo de antes del primer " + " es siempre "N cajas" (enteroHoja), del código' },
     { expr: 'esc(estado.errorClientes)', motivo: 'texto constante del código: lo pone asegurarDatosEmpresa()' },
     { expr: 'esc(i)', motivo: 'el índice del renglón (un número) o "nuevo", del código' },
@@ -92,7 +93,8 @@ correrMutaciones({
     { nombre: 'lo que faltó de un insumo se dice como producto', de: "        if (insumo) out.push({ renglon: i + 1, insumo: r.insumo,", a: "        if (false) out.push({ renglon: i + 1, insumo: r.insumo," },
     { nombre: 'vuelve la memoria vieja en el celular', de: "    guardarPreferencia('retiros.insumos', null)\n", a: '' },
     { nombre: 'un borrador viejo no se reconcilia', de: '        if (pr) r.productoId = pr.producto_id', a: '' },
-    { nombre: 'lo que faltó de un insumo se dice en cajas', de: "        const texto = x.insumo\n", a: "        const texto = false\n" },
+    // 13/10/2026: la leyenda vieja (htmlFaltantes) pasó a htmlEstadoFaltantes.
+    { nombre: 'lo que faltó de un insumo se dice en cajas', de: "faltaban ${esc(cantidadInsumoHoja(x.faltaron, x.unidad))}</span>", a: "faltaban ${esc(enteroHoja(x.faltaron) + ' cajas')}</span>" },
     // Los lotes
     { nombre: '"SIN STOCK" se ofrece como lote', de: "        .filter(l => l?.lote && l.lote !== 'SIN STOCK' && Number(l.cajas) > 0)", a: '        .filter(l => l?.lote && Number(l.cajas) > 0)' },
     { nombre: 'los lotes de insumo más nuevos primero', de: "        .sort((a, b) => String(a.desde ?? '').localeCompare(String(b.desde ?? '')) || a.lote.localeCompare(b.lote))", a: "        .sort((a, b) => String(b.desde ?? '').localeCompare(String(a.desde ?? '')) || a.lote.localeCompare(b.lote))" },
@@ -121,7 +123,7 @@ correrMutaciones({
     { nombre: 'el botón queda trabado después del error', de: "        console.error('No se pudo confirmar la orden:', err)\n        estado.confirmando = false", a: "        console.error('No se pudo confirmar la orden:', err)" },
     { nombre: 'la orden no se limpia al confirmar', de: '        estado.form = null\n        estado.mis = null\n        guardarBorrador()', a: '        estado.mis = null' },
     // Lo que faltó
-    { nombre: 'lo que faltó no se muestra', de: "      if (!Array.isArray(lista) || !lista.length) return ''\n      const renglones = lista.map(x => {", a: "      return ''\n      const renglones = lista.map(x => {" },
+    { nombre: 'lo que faltó no se muestra', de: "      if (!prod.length && !ins.length) return ''\n      const filas", a: "      return ''\n      const filas" },
     { nombre: 'lo que faltó no se toma de la base', de: "faltantes: Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : null,", a: 'faltantes: null,' },
     { nombre: 'en un reintento no se deduce del lote SIN STOCK', de: "        const falta = (r.lotes ?? []).filter(l => l.lote === 'SIN STOCK')", a: "        const falta = (r.lotes ?? []).filter(l => l.lote === 'X')" },
     // El borrador
