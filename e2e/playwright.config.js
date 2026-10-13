@@ -8,9 +8,13 @@ const { defineConfig } = require('@playwright/test');
 const PUERTO = Number(process.env.E2E_PUERTO || 4173);
 const PUERTO_MAQUETA = Number(process.env.E2E_PUERTO_MAQUETA || 4180);
 
+// En GitHub el navegador corre en DOS trabajos a la vez (13/10/2026): cada uno
+// con E2E_MITAD=1 o 2 corre su mitad (e2e/mitades.js). Sin E2E_MITAD, todos.
+const { filtroDeMitad } = require('./mitades');
+
 module.exports = defineConfig({
   testDir: __dirname,
-  testMatch: /.*\.spec\.js$/,
+  ...filtroDeMitad(process.env.E2E_MITAD),
   outputDir: `${__dirname}/resultados`,
   // Los recorridos comparten la fábrica de pruebas: nunca en paralelo.
   workers: 1,

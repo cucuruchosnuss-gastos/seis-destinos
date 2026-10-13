@@ -3,6 +3,14 @@
 # una rama ci-prueba/** y todas las noches a las 5 de la mañana de Argentina
 # (08:00 UTC). La concurrency "navegador" las pone en fila: nunca dos a la vez.
 #
+# EN DOS TRABAJOS A LA VEZ (13/10/2026): un solo trabajo tardaba ~22 de sus 30
+# minutos y cualquier traba lo cortaba. La matriz corre la mitad 1 y la mitad 2
+# en paralelo, cada una con su tope; qué spec va en cada mitad lo dice
+# e2e/mitades.js (la 1 es una lista; la 2, todo lo demás, así un spec nuevo
+# nunca queda afuera). Los recorridos del robot van todos en la mitad 1: comparten
+# la fábrica de pruebas y no pueden correr a la vez. Cada mitad sube sus capturas
+# como "capturas-1" / "capturas-2". pruebas/test-navegador-en-dos.js lo exige.
+#
 # Los recorridos de la planta, la gestión y Accesos necesitan los secretos
 # E2E_PLANTA_EMAIL, E2E_GESTION_EMAIL y E2E_SERVICE_ROLE_KEY (Settings →
 # Secrets and variables → Actions). Sin ellos se saltean con un aviso y corre
@@ -18,14 +26,22 @@ on:
 
 concurrency:
   # La fábrica de pruebas es UNA: dos corridas a la vez se pisarían los turnos.
+  # (Las dos mitades de UNA corrida sí van a la vez: el robot está en una sola.)
   group: navegador
   cancel-in-progress: false
 
 jobs:
   navegador:
+    name: Navegador (mitad ${{ matrix.mitad }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      # Una mitad que falla no corta la otra: se ven las dos.
+      fail-fast: false
+      matrix:
+        mitad: [1, 2]
     env:
+      E2E_MITAD: ${{ matrix.mitad }}
       E2E_PLANTA_EMAIL: ${{ secrets.E2E_PLANTA_EMAIL }}
       E2E_GESTION_EMAIL: ${{ secrets.E2E_GESTION_EMAIL }}
       E2E_RETIROS_EMAIL: ${{ secrets.E2E_RETIROS_EMAIL }}
@@ -43,6 +59,8 @@ jobs:
       # de e2e/detalles-dispositivos.spec.js (05/10/2026).
       - run: npx playwright install --with-deps chromium webkit
       - name: ¿Están las credenciales del robot?
+        # Solo en la mitad del robot (e2e/mitades.js).
+        if: matrix.mitad == 1
         run: |
           faltan=""
           for v in E2E_PLANTA_EMAIL E2E_GESTION_EMAIL E2E_SERVICE_ROLE_KEY; do
@@ -52,17 +70,17 @@ jobs:
             echo "::warning::Faltan los secretos:$faltan. Los recorridos de planta, gestión y Accesos se saltean; corre solo el humo."
             echo "### ⚠️ Faltan los secretos:$faltan — corrió solo el humo" >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Playwright
+      - name: Playwright (mitad ${{ matrix.mitad }})
         run: npm run e2e
       - name: Resumen
         if: always()
         run: |
           n=$(ls e2e/resultados/capturas 2>/dev/null | wc -l)
-          echo "### Capturas del recorrido: $n (artefacto \"capturas\")" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Mitad ${{ matrix.mitad }} · capturas del recorrido: $n (artefacto \"capturas-${{ matrix.mitad }}\")" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: capturas
+          name: capturas-${{ matrix.mitad }}
           path: |
             e2e/resultados/
             e2e/informe/
