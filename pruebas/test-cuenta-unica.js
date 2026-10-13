@@ -530,7 +530,7 @@ esperas.push((async () => {
   chk('admin: el clic de la ficha va a la clasificación', /closest\('\[data-clasificacion\]'\)\)\) elegirClasificacionFicha\(b\.dataset\.clasificacion\)/.test(FUENTE))
   chk('admin: "No es proveedor" abre la confirmación de separar (no borra a ciegas)', /closest\('#ad-f-proveedor-quitar'\)\) elegirClasificacionFicha\('cliente'\)/.test(FUENTE))
   chk('admin: la cuenta escucha toques y cambios', /unica\.addEventListener\('click'/.test(FUENTE) && /for \(const tipo of \['input', 'change'\]\) unica\.addEventListener/.test(FUENTE))
-  chk('admin: lee las tareas de cuentas_corrientes (registrar_pago)', /'cobranzas', 'cuentas_corrientes'\]\)\.eq\('habilitado', true\)/.test(FUENTE))
+  chk('admin: lee las tareas de cuentas_corrientes (registrar_pago)', /'cobranzas', 'cuentas_corrientes'(, '[a-z_]+')*\]\)\.eq\('habilitado', true\)/.test(FUENTE))
   // (06/10/2026: con las ramas apiladas el select suma más columnas después;
   // lo que importa es que proveedor_id esté, no en qué lugar.)
   chk('admin: la lista de clientes trae proveedor_id', /\.select\('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior,[^']*\bproveedor_id\b[^']*'\)/.test(FUENTE))

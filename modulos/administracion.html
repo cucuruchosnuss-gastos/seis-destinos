@@ -185,6 +185,31 @@
     }
 
     .ad-campo { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.875rem; min-width: 0; }
+
+    /* Préstamos (13/10/2026) */
+    .ad-prestamo-cuota { display: grid; gap: 0.375rem; padding: 0.625rem 0; border-bottom: 1px solid var(--color-divisor); min-width: 0; }
+    .ad-prestamo-cuota:last-child, .ad-prestamo-pago:last-child { border-bottom: 0; }
+    .ad-prestamo-barra { height: 8px; border-radius: 999px; background: var(--color-pista); overflow: hidden; }
+    .ad-prestamo-barra > span { display: block; height: 100%; background: var(--naranja); border-radius: 999px; }
+    .ad-prestamo-barra--completa > span { background: var(--verde); }
+    /* Con .ad-fila__meta delante: esa regla viene MÁS ABAJO en el archivo y, con
+       la misma especificidad, le ganaría el color. */
+    .ad-prestamo-vencida, .ad-fila__meta.ad-prestamo-vencida { color: var(--bordo-oscuro); font-weight: 600; }
+    .ad-prestamo-pago { display: grid; gap: 0.375rem; padding: 0.625rem 0; border-bottom: 1px solid var(--color-divisor); min-width: 0; overflow-wrap: anywhere; }
+    .ad-prestamo-pago > .ad-btn { justify-self: start; }
+    .ad-prestamo-pago--anulado .ad-prestamo-pago__monto, .ad-prestamo-pago--anulado .ad-prestamo-pago__detalle { text-decoration: line-through; }
+    .ad-prestamo-cuotas-editor { display: grid; gap: 0.5rem; margin: 0 0 0.5rem; }
+    .ad-prestamo-cuota-fila { display: grid; grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; align-items: center; min-width: 0; }
+    .ad-prestamo-cuota-fila > .ad-fila__meta { grid-column: 2 / -1; }
+    .ad-prestamo-cuota-fila__n { font-weight: 700; color: var(--ad-texto-secundario); text-align: right; }
+    /* En el celular el vencimiento y el importe van uno abajo del otro: lado a
+       lado, a 360 px la fecha no entraba entera. */
+    @media (max-width: 520px) {
+      .ad-prestamo-cuota-fila { grid-template-columns: 1.75rem minmax(0, 1fr); }
+      .ad-prestamo-cuota-fila > [data-cuota-importe] { grid-column: 2; }
+    }
+    .ad-prestamo-suma { font-weight: 600; margin: 0 0 0.75rem; }
+    .ad-prestamo-suma--mal { color: var(--bordo-oscuro); }
     .ad-campo > label, .ad-campo__rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto); }
     .ad-campo__ayuda { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
     .ad-input, .ad-textarea, .ad-select {
@@ -998,6 +1023,34 @@
       <div class="ad-lista" id="ad-seguridad-lista"></div>
     </section>
 
+    <!-- ══ PRÉSTAMOS (13/10/2026, con gastos:gastos_empresa) ═════════════════
+         Los préstamos de la empresa: la lista (Activos / Cancelados), "Nuevo
+         préstamo" y el detalle con las cuotas y los pagos. Las cuotas se pagan
+         en Gastos (categoría «Préstamos»). -->
+    <section id="ad-vista-prestamos" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-prestamos-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Préstamos</h1>
+        <button type="button" class="ad-btn" id="ad-prestamo-nuevo">Nuevo préstamo</button>
+      </div>
+      <div class="ad-segmento" role="group" aria-label="Qué préstamos ver" id="ad-prestamos-filtro">
+        <button type="button" class="ad-segmento__opcion" data-prestamos-filtro="activo" aria-pressed="true">Activos</button>
+        <button type="button" class="ad-segmento__opcion" data-prestamos-filtro="cancelado" aria-pressed="false">Cancelados</button>
+      </div>
+      <div id="ad-prestamo-alta"></div>
+      <p class="ad-cuenta" id="ad-prestamos-cuenta"></p>
+      <div class="ad-lista" id="ad-prestamos-lista"></div>
+    </section>
+
+    <section id="ad-vista-prestamo" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-prestamo-volver">&lsaquo; Préstamos</button>
+        <h1 class="ad-titulo" id="ad-prestamo-titulo">Préstamo</h1>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-prestamo-editar" hidden>Editar</button>
+      </div>
+      <div id="ad-prestamo-cuerpo"></div>
+    </section>
+
     <!-- ══ UNA COBRANZA (desde la cuenta de un cliente o un link) ══════════ -->
     <section id="ad-vista-cobranza" hidden>
       <div class="ad-cabecera-vista">
@@ -1208,6 +1261,10 @@
       // El registro de seguridad (27/09/2026): solo un super_admin, que es el
       // único que la base deja leer (policy de registro_seguridad).
       { id: 'seguridad', titulo: 'Seguridad', global: true, soloSuperAdmin: true, tareas: [] },
+      // Los préstamos de la empresa (13/10/2026): la misma tarea que piden
+      // todas sus RPCs, gastos:gastos_empresa (con bypass de super_admin). No
+      // es de una empresa: sigue a la barra de arriba (null = todas).
+      { id: 'prestamos', titulo: 'Préstamos', global: true, tareas: ['gastos:gastos_empresa'] },
     ]
 
     function seccionVisible(s, unidadId = estado.empresaId) {
@@ -1298,9 +1355,9 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar', 'ad-vista-prestamos', 'ad-vista-prestamo']
     // Las vistas que no son de una empresa: el selector de empresa se esconde.
-    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
+    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-prestamos', 'ad-vista-prestamo']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -1317,6 +1374,8 @@
       'ad-vista-errores': 'Errores de la app',
       'ad-vista-seguridad': 'Seguridad',
       'ad-vista-revisar': 'Retiros por revisar',
+      'ad-vista-prestamos': 'Préstamos',
+      'ad-vista-prestamo': 'Préstamo',
     }
 
     function mostrarVista(id) {
@@ -1586,6 +1645,7 @@
       precios: 'M20 12l-8 8-9-9V3h8zM7.5 7.5v.01',
       importar: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3',
       errores: 'M8 6V4h8v2M5 8h14l-1 12H6zM10 12v4M14 12v4',
+      prestamos: 'M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17M7 21l1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9M2 16l6 6M16 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
     }
     // De cada sección: su ícono y el color (el de su módulo; Por revisar va en
     // bordó, Importar y Errores en gris, como el diseño).
@@ -1599,6 +1659,7 @@
       cheques: { trazo: 'cheques', modulo: 'cheques' },
       seguridad: { trazo: 'seguridad', modulo: 'seguridad' },
       errores: { trazo: 'errores', c: 'var(--color-texto-menu)', t: '#F1EEE9' },
+      prestamos: { trazo: 'prestamos', modulo: 'gastos' },
     }
 
     function htmlTrazo(clave, tam = 18) {
@@ -1719,6 +1780,15 @@
           carga: p?.errores7 == null && !p?.errorErrores, error: p?.errorErrores,
           lineas: ['Errores y avisos sin arreglar', 'Solo lo ven los super_admin'] }
       }
+      if (s.id === 'prestamos') {
+        const r = p?.prestamos ? resumenPrestamos(p.prestamos) : null
+        return { numero: r ? r.activos : null, unidad: n(r?.activos, 'préstamo activo', 'préstamos activos'), urgente: Number(r?.vencidos) > 0,
+          carga: !r && !p?.errorPrestamos, error: p?.errorPrestamos,
+          lineas: r ? [textoSaldosPrestamos(r.saldos),
+            r.vencidos > 0 ? { t: n(r.vencidos, '1 con la cuota vencida', r.vencidos + ' con la cuota vencida'), tono: 'mal' } : null,
+            r.proxima ? 'Próxima: ' + r.proxima.nombre + ', vence ' + fechaCorta(r.proxima.proxima.vencimiento) : null,
+            { ir: 'Ver préstamos ›' }] : [] }
+      }
       return { numero: null, unidad: '', lineas: [] }
     }
 
@@ -1749,7 +1819,7 @@
     // que la persona puede ver; Inicio siempre.
     const PESTANAS = [
       ['inicio', 'Inicio'], ['cobranzas', 'Cobranzas'], ['ordenes', 'Órdenes'], ['revisar', 'Por revisar'], ['clientes', 'Clientes'],
-      ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
+      ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['prestamos', 'Préstamos'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
     ]
     // De qué pestaña es cada vista (una orden es de Órdenes, un cliente de Clientes…).
     const PESTANA_DE_VISTA = {
@@ -1757,6 +1827,7 @@
       'ad-vista-cliente': 'clientes', 'ad-vista-ficha': 'clientes', 'ad-vista-listas': 'listas', 'ad-vista-lista': 'listas',
       'ad-vista-importar': 'importar', 'ad-vista-cheques': 'cheques', 'ad-vista-cobranzas': 'cobranzas', 'ad-vista-cobranza': 'cobranzas',
       'ad-vista-errores': 'errores', 'ad-vista-seguridad': 'seguridad', 'ad-vista-revisar': 'revisar',
+      'ad-vista-prestamos': 'prestamos', 'ad-vista-prestamo': 'prestamos',
     }
 
     // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
@@ -1848,7 +1919,7 @@
     // pestañas tienen su número aunque no se haya pasado por la portada.
     async function contarPortada() {
       estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null, porAsentar: null, errorCobranzas: null, porRevisar: null, errorRevisar: null,
-        cobranzasLista: null, revisarFilas: null, activos: null, deuda: null, listasNombres: null, cheques: null, errorCheques: null, cierres: null, errorSeguridad: null, errores7: null, errorErrores: null }
+        cobranzasLista: null, revisarFilas: null, activos: null, deuda: null, listasNombres: null, cheques: null, errorCheques: null, cierres: null, errorSeguridad: null, errores7: null, errorErrores: null, prestamos: null, errorPrestamos: null }
       pintarPortada()
       const turno = ++turnoPortada
       const unidad = estado.empresaId
@@ -1871,6 +1942,7 @@
         leerChequesPortada().then(r => { p.cheques = r }).catch(err => { console.error('No se pudo contar la cartera:', err); p.errorCheques = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
+      if (SECCIONES.some(s => s.id === 'prestamos' && seccionVisible(s))) contarPrestamosPortada(p, turno)
       if (SECCIONES.some(s => s.id === 'seguridad' && seccionVisible(s))) {
         contarDesde('registro_seguridad', 'hecho_en').then(n => { p.cierres = n }).catch(err => { console.error('No se pudo contar el registro de seguridad:', err); p.errorSeguridad = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
@@ -1907,6 +1979,7 @@
       else if (id === 'errores') mostrarErrores()
       else if (id === 'seguridad') mostrarSeguridad()
       else if (id === 'revisar') mostrarRevisar()
+      else if (id === 'prestamos') mostrarPrestamos()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -7705,6 +7778,743 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // PRÉSTAMOS — con gastos:gastos_empresa (13/10/2026)
+    //
+    // Los préstamos de la empresa y sus cuotas. La lista sale de
+    // prestamos_activos(p_unidad_negocio_id, p_incluir_cancelados: true), con
+    // la unidad de la barra de arriba (null = todas), y se separa en Activos /
+    // Cancelados en la pantalla. "Nuevo préstamo" → crear_prestamo (con cuotas
+    // iguales se arman los vencimientos mensuales desde el primero y el
+    // importe = total / cuotas en centavos; la última absorbe el redondeo; la
+    // suma TIENE que dar el total). El detalle (prestamo_detalle) muestra cada
+    // cuota con su barra de % pagado y los pagos; "Anular pago" pide el motivo
+    // en un panel propio → anular_pago_prestamo (la plata vuelve a la caja).
+    // "Editar" → editar_prestamo (nombre, acreedor, observaciones y cuotas;
+    // solo se agrega o se saca la ÚLTIMA cuota: la base reescribe por número).
+    // Todas piden gastos:gastos_empresa (con bypass de super_admin) y sus
+    // errores van TAL CUAL, pegados al botón. Pagar una cuota es de Gastos.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MONEDAS_PRESTAMO_AD = ['ARS', 'USD']
+    const NOMBRE_MONEDA_AD = { ARS: 'Pesos', USD: 'Dólares' }
+    const NOMBRE_MEDIO_PRESTAMO = { efectivo: 'Efectivo', transferencia: 'Transferencia' }
+    const MAX_CUOTAS_PRESTAMO = 360
+    const LARGO_MINIMO_MOTIVO_PAGO = 3
+
+    function prestamosVacio() {
+      return { filas: null, error: null, filtro: 'activo', alta: null }
+    }
+
+    function estadoPrestamos() {
+      return (estado.prestamos ??= prestamosVacio())
+    }
+
+    function centavosAd(n) {
+      if (n === null || n === undefined || n === '') return null
+      const v = Number(n)
+      if (!Number.isFinite(v)) return null
+      return Math.round(Number(v + 'e2'))
+    }
+
+    async function leerPrestamos() {
+      const { data, error } = await supabase.rpc('prestamos_activos', { p_unidad_negocio_id: estado.unidadBarra ?? null, p_incluir_cancelados: true })
+      if (error) throw error
+      return sinUnidadesDePrueba(Array.isArray(data) ? data : [], estado.fabrica, f => f?.unidad_negocio_id)
+    }
+
+    // Lo de la tarjeta de la portada: cuántos activos, cuánto se debe (por
+    // moneda, en centavos), cuántos tienen la próxima cuota vencida y cuál vence
+    // primero.
+    function resumenPrestamos(filas, hoy = hoyArgentina()) {
+      const activos = (filas ?? []).filter(f => f?.estado === 'activo')
+      const saldos = {}
+      let vencidos = 0, proxima = null
+      for (const f of activos) {
+        const c = centavosAd(f.saldo)
+        if (c !== null && MONEDAS_PRESTAMO_AD.includes(f.moneda)) saldos[f.moneda] = (saldos[f.moneda] ?? 0) + c
+        const v = f.proxima?.vencimiento
+        if (esFechaIso(v)) {
+          if (v < hoy) vencidos++
+          if (!proxima || v < proxima.proxima.vencimiento) proxima = f
+        }
+      }
+      return { activos: activos.length, saldos, vencidos, proxima }
+    }
+
+    function textoSaldosPrestamos(saldos) {
+      const partes = MONEDAS_PRESTAMO_AD.filter(m => (saldos?.[m] ?? 0) > 0).map(m => importeHoja(saldos[m] / 100, m))
+      return partes.length ? 'Se deben ' + partes.join(' y ') : 'Nada por pagar'
+    }
+
+    async function contarPrestamosPortada(p, turno) {
+      try { p.prestamos = await leerPrestamos() } catch (err) { console.error('No se pudieron contar los préstamos:', err); p.errorPrestamos = 'No se pudo contar.' }
+      if (turno === turnoPortada) pintarPortada()
+    }
+
+    // ── La lista ──────────────────────────────────────────────────────────
+    function textoProximaCuota(f, hoy = hoyArgentina()) {
+      const px = f?.proxima
+      if (!px) return f?.estado === 'cancelado' ? 'Todas las cuotas pagas' : 'Sin cuotas por pagar'
+      const vencida = esFechaIso(px.vencimiento) && px.vencimiento < hoy
+      return `Próxima: cuota ${px.numero} · vence ${fechaCorta(px.vencimiento)}${vencida ? ' (vencida)' : ''} · falta ${importeHoja(px.falta, f.moneda)}`
+    }
+
+    function htmlFilaPrestamoAd(f, hoy = hoyArgentina()) {
+      const vencida = esFechaIso(f?.proxima?.vencimiento) && f.proxima.vencimiento < hoy
+      return `<button type="button" class="ad-fila${vencida ? ' ad-fila--atencion' : ''}" data-prestamo-abrir="${esc(f.id)}">` +
+        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(f.nombre)}</span>` + htmlSelloEmpresa(f.unidad_negocio_id, f.unidad) +
+        (f.estado === 'cancelado' ? '<span class="ad-sello ad-sello--valorizada">Cancelado</span>' : '') + '</span>' +
+        `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc((f.acreedor || 'Sin acreedor cargado') + ' · ' + (f.cuotas_pagas ?? 0) + ' de ' + (f.cuotas ?? 0) + ' cuotas pagas')}</span>` +
+        `<span class="ad-fila__importe">${esc('Saldo ' + importeHoja(f.saldo, f.moneda))}</span></span>` +
+        `<span class="ad-fila__meta${vencida ? ' ad-prestamo-vencida' : ''}">${esc(textoProximaCuota(f, hoy))}</span></button>`
+    }
+
+    function prestamosDelFiltro(ps) {
+      return (ps?.filas ?? []).filter(f => (ps.filtro === 'cancelado') === (f?.estado === 'cancelado'))
+    }
+
+    function pintarPrestamosAd() {
+      const ps = estadoPrestamos()
+      for (const b of document.querySelectorAll('#ad-prestamos-filtro [data-prestamos-filtro]')) b.setAttribute('aria-pressed', String(b.dataset.prestamosFiltro === ps.filtro))
+      const lista = document.getElementById('ad-prestamos-lista')
+      const cuenta = document.getElementById('ad-prestamos-cuenta')
+      pintarAltaPrestamo()
+      if (ps.error) { lista.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(ps.error)}</div>`; cuenta.textContent = ''; return }
+      if (ps.filas === null) { lista.innerHTML = '<div class="ad-vacio">Cargando los préstamos…</div>'; cuenta.textContent = ''; return }
+      const filas = prestamosDelFiltro(ps)
+      cuenta.textContent = filas.length === 1 ? '1 préstamo' : `${filas.length} préstamos`
+      lista.innerHTML = filas.length ? filas.map(f => htmlFilaPrestamoAd(f)).join('')
+        : `<div class="ad-vacio">${esc(ps.filtro === 'cancelado' ? 'No hay préstamos cancelados.' : 'No hay préstamos activos. Cargá uno con «Nuevo préstamo».')}</div>`
+    }
+
+    let turnoPrestamos = 0
+
+    function puedePrestamos() {
+      return SECCIONES.some(s => s.id === 'prestamos' && seccionVisible(s))
+    }
+
+    async function mostrarPrestamos() {
+      if (!puedePrestamos()) { mostrarInicio(); return }
+      mostrarVista('ad-vista-prestamos')
+      const ps = estadoPrestamos()
+      ps.filas = null
+      ps.error = null
+      pintarPrestamosAd()
+      const turno = ++turnoPrestamos
+      try {
+        const filas = await leerPrestamos()
+        if (turno !== turnoPrestamos) return
+        ps.filas = filas
+      } catch (err) {
+        if (turno !== turnoPrestamos) return
+        console.error('No se pudieron leer los préstamos:', err)
+        ps.error = 'No se pudieron leer los préstamos. Revisá la conexión y volvé a entrar.'
+      }
+      pintarPrestamosAd()
+    }
+
+    function elegirFiltroPrestamos(filtro) {
+      const ps = estadoPrestamos()
+      ps.filtro = filtro === 'cancelado' ? 'cancelado' : 'activo'
+      pintarPrestamosAd()
+    }
+
+    // ── Las cuotas: armar, sumar, validar ─────────────────────────────────
+    // "aaaa-mm-dd" + k meses; el día que no existe en ese mes cae al último
+    // (31/01 + 1 mes = 28/02).
+    function sumarMesesIso(iso, k) {
+      if (!esFechaIso(iso)) return null
+      const [a, m, d] = iso.split('-').map(Number)
+      const total = (m - 1) + Number(k)
+      const anio = a + Math.floor(total / 12), mes = ((total % 12) + 12) % 12
+      const ultimo = new Date(Date.UTC(anio, mes + 1, 0)).getUTCDate()
+      return `${anio}-${String(mes + 1).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`
+    }
+
+    // Cuotas iguales: el total en centavos repartido; la última absorbe el
+    // redondeo, así la suma da EXACTO el total. null si falta un dato.
+    function cuotasIguales(total, cantidad, primerVenc) {
+      const t = centavosAd(total), n = Number(cantidad)
+      if (t === null || t <= 0 || !Number.isInteger(n) || n < 1 || n > MAX_CUOTAS_PRESTAMO || !esFechaIso(primerVenc)) return null
+      const base = Math.floor(t / n), ultima = t - base * (n - 1)
+      return Array.from({ length: n }, (_, i) => ({ vencimiento: sumarMesesIso(primerVenc, i), importe: (i === n - 1 ? ultima : base) / 100 }))
+    }
+
+    // Cuotas distintas: los mismos vencimientos, cada importe a mano.
+    function cuotasDistintas(cantidad, primerVenc) {
+      const n = Number(cantidad)
+      if (!Number.isInteger(n) || n < 1 || n > MAX_CUOTAS_PRESTAMO || !esFechaIso(primerVenc)) return null
+      return Array.from({ length: n }, (_, i) => ({ vencimiento: sumarMesesIso(primerVenc, i), importe: null }))
+    }
+
+    function sumaCuotasCentavos(cuotas) {
+      return (cuotas ?? []).reduce((s, c) => s + (centavosAd(c?.importe) ?? 0), 0)
+    }
+
+    // Los textos de _prestamo_validar_cuotas.
+    function validarCuotasPrestamo(cuotas) {
+      if (!(cuotas ?? []).length) return 'Cargá al menos una cuota.'
+      let i = 0
+      for (const c of cuotas) {
+        i++
+        if (!esFechaIso(c?.vencimiento)) return `La cuota ${i} no tiene vencimiento.`
+        const v = centavosAd(c?.importe)
+        if (v === null || v <= 0) return `La cuota ${i} tiene que tener un importe mayor a cero.`
+      }
+      return null
+    }
+
+    // Las mismas reglas (y textos) que crear_prestamo, más que la suma dé el total.
+    function validarAltaPrestamo(a) {
+      if (!a?.unidad) return 'Elegí la empresa.'
+      if (!MONEDAS_PRESTAMO_AD.includes(a.moneda)) return 'La moneda tiene que ser pesos o dólares.'
+      if (limpio(a.nombre).length < 2) return 'Poné un nombre al préstamo.'
+      if (!esFechaIso(a.fecha)) return 'Falta la fecha del préstamo.'
+      const t = centavosAd(a.total)
+      if (t === null || t <= 0) return 'Poné el total del préstamo.'
+      const cuotas = validarCuotasPrestamo(a.cuotas)
+      if (cuotas) return cuotas
+      const suma = sumaCuotasCentavos(a.cuotas)
+      if (suma !== t) return `Las cuotas suman ${importeHoja(suma / 100, a.moneda)} y el total es ${importeHoja(t / 100, a.moneda)}: tienen que dar lo mismo.`
+      return null
+    }
+
+    function parametrosCuotas(cuotas) {
+      return cuotas.map(c => ({ vencimiento: c.vencimiento, importe: centavosAd(c.importe) / 100 }))
+    }
+
+    function parametrosAltaPrestamo(a) {
+      return {
+        p_unidad_negocio_id: a.unidad, p_nombre: limpio(a.nombre), p_acreedor: limpio(a.acreedor) || null,
+        p_moneda: a.moneda, p_fecha_inicio: a.fecha, p_cuotas: parametrosCuotas(a.cuotas),
+        p_observaciones: String(a.observaciones ?? '').trim() || null,
+      }
+    }
+
+    // ── Nuevo préstamo ────────────────────────────────────────────────────
+    function empresasParaPrestamo() {
+      return sinUnidadesDePrueba(estado.empresas ?? [], estado.fabrica)
+    }
+
+    function abrirAltaPrestamo() {
+      const ps = estadoPrestamos()
+      const empresas = empresasParaPrestamo()
+      const unidad = empresas.some(e => e.id === estado.unidadBarra) ? estado.unidadBarra : (empresas.length === 1 ? empresas[0].id : null)
+      ps.alta = { nombre: '', acreedor: '', unidad, moneda: 'ARS', fecha: hoyArgentina(), total: null, cantidad: null, primerVenc: null,
+        modo: 'iguales', cuotas: [], observaciones: '', error: null, enviando: false }
+      pintarAltaPrestamo()
+    }
+
+    function cancelarAltaPrestamo() {
+      const ps = estadoPrestamos()
+      if (ps.alta?.enviando) return
+      ps.alta = null
+      pintarAltaPrestamo()
+    }
+
+    // Vuelve a armar las cuotas con el total, la cantidad y el primer
+    // vencimiento (con "distintas", los importes quedan para escribir).
+    function armarCuotasAlta(a) {
+      a.cuotas = (a.modo === 'distintas' ? cuotasDistintas(a.cantidad, a.primerVenc) : cuotasIguales(a.total, a.cantidad, a.primerVenc)) ?? []
+    }
+
+    function textoSumaCuotas(cuotas, moneda, total = null) {
+      const suma = sumaCuotasCentavos(cuotas)
+      const t = centavosAd(total)
+      if (t === null) return { texto: `Las cuotas suman ${importeHoja(suma / 100, moneda)}.`, mal: false }
+      if (suma === t) return { texto: `Las cuotas suman ${importeHoja(suma / 100, moneda)}: da el total.`, mal: false }
+      return { texto: `Las cuotas suman ${importeHoja(suma / 100, moneda)} y el total es ${importeHoja(t / 100, moneda)}: tienen que dar lo mismo.`, mal: true }
+    }
+
+    // Las filas de cuotas (alta y edición): vencimiento e importe, editables
+    // una por una. `pagados` (en la edición): lo pagado de cada cuota.
+    function htmlFilasCuotas(cuotas, { pagados = [] } = {}) {
+      if (!(cuotas ?? []).length) return ''
+      return '<div class="ad-prestamo-cuotas-editor">' + cuotas.map((c, i) =>
+        `<div class="ad-prestamo-cuota-fila" data-cuota-fila="${esc(i)}"><span class="ad-prestamo-cuota-fila__n">${esc(i + 1)}</span>` +
+        `<input type="date" class="ad-input" data-cuota-venc="${esc(i)}" aria-label="${esc('Vencimiento de la cuota ' + (i + 1))}" value="${esc(c.vencimiento ?? '')}">` +
+        `<input type="text" inputmode="decimal" autocomplete="off" class="ad-input" data-cuota-importe="${esc(i)}" aria-label="${esc('Importe de la cuota ' + (i + 1))}">` +
+        (Number(pagados[i]) > 0 ? `<span class="ad-fila__meta">${esc('Pagado ' + importeHoja(pagados[i], c.moneda ?? 'ARS'))}</span>` : '') + '</div>').join('') + '</div>'
+    }
+
+    function htmlAltaPrestamo(a) {
+      const empresas = empresasParaPrestamo()
+      const opcionesEmpresa = '<option value="">— Elegí la empresa —</option>' + empresas.map(e =>
+        `<option value="${esc(e.id)}"${e.id === a.unidad ? ' selected' : ''}>${esc(e.nombre)}</option>`).join('')
+      const monedas = MONEDAS_PRESTAMO_AD.map(m => `<button type="button" class="ad-segmento__opcion" data-pr-moneda="${esc(m)}" aria-pressed="${esc(String(a.moneda === m))}">${esc(NOMBRE_MONEDA_AD[m])}</button>`).join('')
+      const modos = [['iguales', 'Cuotas iguales'], ['distintas', 'Cuotas distintas']].map(([k, t]) =>
+        `<button type="button" class="ad-segmento__opcion" data-pr-modo="${esc(k)}" aria-pressed="${esc(String(a.modo === k))}">${esc(t)}</button>`).join('')
+      return '<div class="ad-panel" id="ad-pr-panel"><h2 class="ad-subtitulo">Nuevo préstamo</h2>' +
+        '<div class="ad-fila-campos">' +
+        `<div class="ad-campo"><label for="ad-pr-nombre">Nombre</label><input class="ad-input" id="ad-pr-nombre" autocomplete="off" value="${esc(a.nombre)}"></div>` +
+        `<div class="ad-campo"><label for="ad-pr-acreedor">Acreedor (opcional)</label><input class="ad-input" id="ad-pr-acreedor" autocomplete="off" value="${esc(a.acreedor)}"></div>` +
+        '<div class="ad-campo"><label for="ad-pr-empresa">Empresa</label><select class="ad-select" id="ad-pr-empresa">' + opcionesEmpresa + '</select></div>' +
+        `<div class="ad-campo"><label for="ad-pr-fecha">Fecha del préstamo</label><input type="date" class="ad-input" id="ad-pr-fecha" value="${esc(a.fecha ?? '')}"></div>` +
+        '</div>' +
+        '<div class="ad-campo"><span class="ad-campo__rotulo">Moneda</span><div class="ad-segmento" role="group" aria-label="Moneda">' + monedas + '</div></div>' +
+        '<div class="ad-fila-campos">' +
+        '<div class="ad-campo"><label for="ad-pr-total">Total del préstamo</label><input type="text" inputmode="decimal" autocomplete="off" class="ad-input" id="ad-pr-total"></div>' +
+        '<div class="ad-campo"><label for="ad-pr-cantidad">Cantidad de cuotas</label><input type="text" inputmode="numeric" autocomplete="off" class="ad-input" id="ad-pr-cantidad"></div>' +
+        `<div class="ad-campo"><label for="ad-pr-primer">Primer vencimiento</label><input type="date" class="ad-input" id="ad-pr-primer" value="${esc(a.primerVenc ?? '')}"></div>` +
+        '</div>' +
+        '<div class="ad-segmento" role="group" aria-label="Cómo son las cuotas">' + modos + '</div>' +
+        '<div id="ad-pr-cuotas">' + htmlCuotasAlta(a) + '</div>' +
+        `<div class="ad-campo"><label for="ad-pr-obs">Observaciones (opcional)</label><textarea class="ad-textarea" id="ad-pr-obs">${esc(a.observaciones)}</textarea></div>` +
+        '<div class="ad-panel__acciones">' +
+        `<button type="button" class="ad-btn" id="ad-pr-guardar"${a.enviando ? ' disabled' : ''}>${esc(a.enviando ? 'Guardando…' : 'Crear el préstamo')}</button>` +
+        '<button type="button" class="ad-btn ad-btn--suave" id="ad-pr-cancelar">Cancelar</button></div>' +
+        `<p class="ad-error-pegado" id="ad-pr-error" role="alert"${a.error ? '' : ' hidden'}>${esc(a.error ?? '')}</p></div>`
+    }
+
+    function htmlCuotasAlta(a) {
+      if (!a.cuotas.length) {
+        return `<p class="ad-texto-suave">${esc(a.modo === 'distintas'
+          ? 'Poné la cantidad de cuotas y el primer vencimiento para armar las cuotas.'
+          : 'Poné el total, la cantidad de cuotas y el primer vencimiento para armar las cuotas.')}</p>`
+      }
+      const s = textoSumaCuotas(a.cuotas, a.moneda, a.total)
+      return `<p class="ad-texto-suave">${esc('Vencen todos los meses desde el primero. Podés cambiar cada una; cambiar el total, la cantidad o el primer vencimiento las vuelve a armar.')}</p>` +
+        htmlFilasCuotas(a.cuotas) +
+        `<p class="ad-prestamo-suma${s.mal ? ' ad-prestamo-suma--mal' : ''}" id="ad-pr-suma">${esc(s.texto)}</p>`
+    }
+
+    // Los campos de plata con el formato argentino (js/utils.js).
+    function enlazarCuotas(contenedor, cuotas) {
+      for (const el of contenedor?.querySelectorAll?.('[data-cuota-importe]') ?? []) {
+        enlazarCampoNumero(el, { decimales: DECIMALES_PRECIO })
+        const c = cuotas[Number(el.dataset.cuotaImporte)]
+        if (c && c.importe !== null && c.importe !== undefined) ponerNumero(el, c.importe)
+      }
+    }
+
+    function pintarAltaPrestamo() {
+      const el = document.getElementById('ad-prestamo-alta')
+      if (!el) return
+      const a = estadoPrestamos().alta
+      el.innerHTML = a ? htmlAltaPrestamo(a) : ''
+      const nuevo = document.getElementById('ad-prestamo-nuevo')
+      if (nuevo) nuevo.hidden = !!a
+      if (!a) return
+      const total = document.getElementById('ad-pr-total')
+      const cant = document.getElementById('ad-pr-cantidad')
+      if (total?.addEventListener) { enlazarCampoNumero(total, { decimales: DECIMALES_PRECIO }); if (a.total !== null) ponerNumero(total, a.total) }
+      if (cant?.addEventListener) { enlazarCampoNumero(cant, { decimales: 0 }); if (a.cantidad !== null) ponerNumero(cant, a.cantidad) }
+      enlazarCuotas(document.getElementById('ad-pr-cuotas'), a.cuotas)
+    }
+
+    function pintarCuotasAlta() {
+      const a = estadoPrestamos().alta
+      const el = document.getElementById('ad-pr-cuotas')
+      if (!a || !el) return
+      el.innerHTML = htmlCuotasAlta(a)
+      enlazarCuotas(el, a.cuotas)
+    }
+
+    function pintarSumaAlta() {
+      const a = estadoPrestamos().alta
+      const el = document.getElementById('ad-pr-suma')
+      if (!a || !el) return
+      const s = textoSumaCuotas(a.cuotas, a.moneda, a.total)
+      el.textContent = s.texto
+      el.className = 'ad-prestamo-suma' + (s.mal ? ' ad-prestamo-suma--mal' : '')
+    }
+
+    function pintarErrorAlta() {
+      const a = estadoPrestamos().alta
+      const el = document.getElementById('ad-pr-error')
+      if (!el) return
+      el.textContent = a?.error ?? ''
+      el.hidden = !a?.error
+    }
+
+    async function guardarAltaPrestamo() {
+      const ps = estadoPrestamos()
+      const a = ps.alta
+      if (!a || a.enviando) return
+      const falla = validarAltaPrestamo(a)
+      if (falla) { a.error = falla; pintarErrorAlta(); return }
+      a.error = null
+      a.enviando = true
+      const b = document.getElementById('ad-pr-guardar')
+      if (b) { b.disabled = true; b.textContent = 'Guardando…' }
+      pintarErrorAlta()
+      try {
+        const { error } = await supabase.rpc('crear_prestamo', parametrosAltaPrestamo(a))
+        if (error) throw error
+      } catch (err) {
+        console.error('No se pudo crear el préstamo:', err)
+        a.enviando = false
+        a.error = err?.message || 'No se pudo crear el préstamo. Revisá la conexión y volvé a intentar.'
+        if (b) { b.disabled = false; b.textContent = 'Crear el préstamo' }
+        pintarErrorAlta()
+        return
+      }
+      ps.alta = null
+      mostrarExito('Préstamo creado: «' + limpio(a.nombre) + '».')
+      await mostrarPrestamos()
+    }
+
+    // ── El detalle ────────────────────────────────────────────────────────
+    let turnoPrestamo = 0
+
+    async function abrirPrestamoAd(id) {
+      if (!puedePrestamos()) { mostrarInicio(); return }
+      mostrarVista('ad-vista-prestamo')
+      estado.prestamoAd = { id, data: null, error: null, anulando: null, editar: null }
+      pintarPrestamoAd()
+      const turno = ++turnoPrestamo
+      try {
+        const { data, error } = await supabase.rpc('prestamo_detalle', { p_prestamo_id: id })
+        if (error) throw error
+        if (turno !== turnoPrestamo) return
+        if (!data?.prestamo) throw new Error('sin datos')
+        estado.prestamoAd.data = data
+      } catch (err) {
+        if (turno !== turnoPrestamo) return
+        console.error('No se pudo leer el préstamo:', err)
+        estado.prestamoAd.error = 'No se pudo leer el préstamo. Revisá la conexión y volvé a entrar.'
+      }
+      pintarPrestamoAd()
+    }
+
+    function pctCuota(c) {
+      const n = Number(c?.pct)
+      if (!Number.isFinite(n)) return 0
+      return Math.max(0, Math.min(100, n))
+    }
+
+    function htmlCuotaDetalle(c, moneda, hoy = hoyArgentina()) {
+      const pct = pctCuota(c)
+      const vencida = Number(c.falta) > 0.005 && esFechaIso(c.vencimiento) && c.vencimiento < hoy
+      return `<div class="ad-prestamo-cuota" data-cuota-detalle="${esc(c.id)}">` +
+        `<div class="ad-fila__linea"><strong>${esc('Cuota ' + c.numero + ' · vence ' + fechaCorta(c.vencimiento))}</strong><span>${esc(importeHoja(c.importe, moneda))}</span></div>` +
+        `<div class="ad-prestamo-barra${pct >= 100 ? ' ad-prestamo-barra--completa' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${esc(pct)}" aria-label="${esc('Pagado de la cuota ' + c.numero)}"><span style="width: ${esc(pct)}%"></span></div>` +
+        `<div class="ad-fila__meta${vencida ? ' ad-prestamo-vencida' : ''}">${esc('Pagado ' + importeHoja(c.pagado, moneda) + ' (' + formatearNumeroAr(pct, { decimales: 1, minimos: 0 }) + ' %) · falta ' + importeHoja(c.falta, moneda) + (vencida ? ' · vencida' : ''))}</div></div>`
+    }
+
+    function textoPagoPrestamo(pg, monedaPrestamo) {
+      const otra = pg.moneda !== monedaPrestamo && Number(pg.tipo_cambio) > 0
+      return (otra ? 'a ' + formatearNumeroAr(pg.tipo_cambio, { decimales: 4, minimos: 0 }) + ' = ' : 'Se imputan ') + importeHoja(pg.imputado, monedaPrestamo) +
+        ' · desde «' + (pg.cuenta || 'cuenta') + '» · ' + (NOMBRE_MEDIO_PRESTAMO[pg.medio] ?? (pg.medio || '—')) + ' · cargó ' + (pg.cargado_por || 'alguien')
+    }
+
+    function htmlPagoAd(pg, monedaPrestamo, an) {
+      const abierto = an && String(an.pagoId) === String(pg.id)
+      let h = `<div class="ad-prestamo-pago${pg.anulado ? ' ad-prestamo-pago--anulado' : ''}" data-pago="${esc(pg.id)}">` +
+        `<div class="ad-fila__linea"><span>${esc(fechaCorta(pg.fecha) + ' · cuota ' + pg.cuota_numero)}</span><span class="ad-prestamo-pago__monto">${esc(importeHoja(pg.monto, pg.moneda))}</span></div>` +
+        `<div class="ad-fila__meta ad-prestamo-pago__detalle">${esc(textoPagoPrestamo(pg, monedaPrestamo))}</div>`
+      if (pg.anulado) return h + `<p class="ad-error-pegado">${esc('Anulado: ' + (pg.anulado_motivo || 'sin motivo'))}</p></div>`
+      if (!abierto) return h + `<button type="button" class="ad-btn ad-btn--suave" data-pago-anular="${esc(pg.id)}">Anular pago</button></div>`
+      return h + '<div class="ad-panel ad-panel--peligro">' +
+        '<div class="ad-campo"><label for="ad-pago-motivo">¿Por qué se anula el pago?</label>' +
+        `<textarea class="ad-textarea" id="ad-pago-motivo">${esc(an.motivo ?? '')}</textarea></div>` +
+        '<p class="ad-texto-suave">La plata vuelve a la cuenta de donde salió y la cuota vuelve a deber ese importe.</p>' +
+        '<div class="ad-panel__acciones">' +
+        `<button type="button" class="ad-btn ad-btn--peligro" id="ad-pago-si"${an.enviando ? ' disabled' : ''}>${esc(an.enviando ? 'Anulando…' : 'Sí, anular el pago')}</button>` +
+        '<button type="button" class="ad-btn ad-btn--suave" id="ad-pago-no">No</button></div>' +
+        `<p class="ad-error-pegado" id="ad-pago-error" role="alert"${an.error ? '' : ' hidden'}>${esc(an.error ?? '')}</p></div></div>`
+    }
+
+    function htmlDetallePrestamoAd(ui, hoy = hoyArgentina()) {
+      const d = ui.data
+      const p = d.prestamo
+      const saldo = (centavosAd(p.total) ?? 0) - (centavosAd(p.pagado) ?? 0)
+      const datos = [
+        htmlDatoAd('Empresa', p.unidad || '—'), htmlDatoAd('Acreedor', p.acreedor || '—'),
+        htmlDatoAd('Moneda', NOMBRE_MONEDA_AD[p.moneda] ?? p.moneda ?? '—'), htmlDatoAd('Fecha del préstamo', fechaCorta(p.fecha_inicio)),
+        htmlDatoAd('Total', importeHoja(p.total, p.moneda)), htmlDatoAd('Pagado', importeHoja(p.pagado, p.moneda)),
+        htmlDatoAd('Saldo', importeHoja(Math.max(0, saldo) / 100, p.moneda)), htmlDatoAd('Estado', p.estado === 'cancelado' ? 'Cancelado' : 'Activo'),
+      ]
+      if (p.observaciones) datos.push(htmlDatoAd('Observaciones', p.observaciones))
+      const cuotas = (d.cuotas ?? []).map(c => htmlCuotaDetalle(c, p.moneda, hoy)).join('')
+      const pagos = (d.pagos ?? []).map(pg => htmlPagoAd(pg, p.moneda, ui.anulando)).join('')
+      return (ui.editar ? htmlEditarPrestamo(ui) : '') +
+        '<div class="ad-tarjeta"><div class="ad-datos">' + datos.join('') + '</div></div>' +
+        '<h2 class="ad-subtitulo">Cuotas</h2><div class="ad-tarjeta">' + (cuotas || '<p class="ad-texto-suave">Sin cuotas.</p>') + '</div>' +
+        '<h2 class="ad-subtitulo">Pagos</h2><div class="ad-tarjeta">' + (pagos || `<p class="ad-texto-suave">${esc('Todavía no hay pagos. Las cuotas se pagan en Gastos, con la categoría «Préstamos».')}</p>`) + '</div>'
+    }
+
+    function pintarPrestamoAd() {
+      const ui = estado.prestamoAd
+      const cuerpo = document.getElementById('ad-prestamo-cuerpo')
+      const titulo = document.getElementById('ad-prestamo-titulo')
+      const editar = document.getElementById('ad-prestamo-editar')
+      if (!ui || !cuerpo) return
+      if (editar) editar.hidden = !ui.data || !!ui.editar
+      if (ui.error) { cuerpo.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(ui.error)}</div>`; if (titulo) titulo.textContent = 'Préstamo'; return }
+      if (!ui.data) { cuerpo.innerHTML = '<div class="ad-vacio">Cargando el préstamo…</div>'; if (titulo) titulo.textContent = 'Préstamo'; return }
+      if (titulo) titulo.textContent = ui.data.prestamo.nombre || 'Préstamo'
+      cuerpo.innerHTML = htmlDetallePrestamoAd(ui)
+      if (ui.editar) enlazarCuotas(document.getElementById('ad-pe-cuotas'), ui.editar.cuotas)
+    }
+
+    // ── Anular un pago ────────────────────────────────────────────────────
+    function pedirAnularPago(id) {
+      const ui = estado.prestamoAd
+      if (!ui?.data || ui.anulando?.enviando) return
+      ui.anulando = { pagoId: id, motivo: '', error: null, enviando: false }
+      pintarPrestamoAd()
+      document.getElementById('ad-pago-motivo')?.focus?.()
+    }
+
+    function cancelarAnularPago() {
+      const ui = estado.prestamoAd
+      if (!ui?.anulando || ui.anulando.enviando) return
+      ui.anulando = null
+      pintarPrestamoAd()
+    }
+
+    function pintarErrorPago() {
+      const an = estado.prestamoAd?.anulando
+      const el = document.getElementById('ad-pago-error')
+      if (!el) return
+      el.textContent = an?.error ?? ''
+      el.hidden = !an?.error
+    }
+
+    async function confirmarAnularPago() {
+      const ui = estado.prestamoAd
+      const an = ui?.anulando
+      if (!an || an.enviando) return
+      const motivo = String(an.motivo ?? '').trim()
+      if (motivo.length < LARGO_MINIMO_MOTIVO_PAGO) { an.error = 'Poné el motivo.'; pintarErrorPago(); return }
+      an.error = null
+      an.enviando = true
+      const b = document.getElementById('ad-pago-si')
+      if (b) { b.disabled = true; b.textContent = 'Anulando…' }
+      pintarErrorPago()
+      try {
+        const { error } = await supabase.rpc('anular_pago_prestamo', { p_pago_id: an.pagoId, p_motivo: motivo })
+        if (error) throw error
+      } catch (err) {
+        console.error('No se pudo anular el pago:', err)
+        an.enviando = false
+        an.error = err?.message || 'No se pudo anular el pago. Revisá la conexión y volvé a intentar.'
+        if (b) { b.disabled = false; b.textContent = 'Sí, anular el pago' }
+        pintarErrorPago()
+        return
+      }
+      mostrarExito('Pago anulado: la plata vuelve a la cuenta de donde salió.')
+      await abrirPrestamoAd(ui.id)
+    }
+
+    // ── Editar el préstamo ────────────────────────────────────────────────
+    // Lo pagado de cada cuota (por número) y qué cuotas tienen algún pago,
+    // aunque esté anulado (la base no deja sacarlas).
+    function pagadoPorCuota(d) {
+      return (d?.cuotas ?? []).map(c => Number(c?.pagado) || 0)
+    }
+
+    function cuotaConPagos(d, numero) {
+      return (d?.pagos ?? []).some(pg => Number(pg?.cuota_numero) === Number(numero))
+    }
+
+    function abrirEditarPrestamo() {
+      const ui = estado.prestamoAd
+      if (!ui?.data || ui.editar) return
+      const p = ui.data.prestamo
+      ui.editar = { nombre: p.nombre ?? '', acreedor: p.acreedor ?? '', observaciones: p.observaciones ?? '',
+        cuotas: (ui.data.cuotas ?? []).map(c => ({ vencimiento: c.vencimiento, importe: Number(c.importe) })), error: null, enviando: false }
+      pintarPrestamoAd()
+    }
+
+    function cancelarEditarPrestamo() {
+      const ui = estado.prestamoAd
+      if (!ui?.editar || ui.editar.enviando) return
+      ui.editar = null
+      pintarPrestamoAd()
+    }
+
+    function agregarCuotaEdicion() {
+      const e = estado.prestamoAd?.editar
+      if (!e || e.enviando) return
+      const ultima = e.cuotas[e.cuotas.length - 1]
+      e.cuotas.push({ vencimiento: ultima ? sumarMesesIso(ultima.vencimiento, 1) : null, importe: null })
+      pintarPrestamoAd()
+    }
+
+    function quitarUltimaCuotaEdicion() {
+      const ui = estado.prestamoAd
+      const e = ui?.editar
+      if (!e || e.enviando || e.cuotas.length <= 1) return
+      if (cuotaConPagos(ui.data, e.cuotas.length)) return
+      e.cuotas.pop()
+      pintarPrestamoAd()
+    }
+
+    function htmlEditarPrestamo(ui) {
+      const e = ui.editar
+      const moneda = ui.data.prestamo.moneda
+      const pagados = pagadoPorCuota(ui.data)
+      const puedeQuitar = e.cuotas.length > 1 && !cuotaConPagos(ui.data, e.cuotas.length)
+      const s = textoSumaCuotas(e.cuotas, moneda)
+      return '<div class="ad-panel" id="ad-pe-panel"><h2 class="ad-subtitulo">Editar el préstamo</h2><div class="ad-fila-campos">' +
+        `<div class="ad-campo"><label for="ad-pe-nombre">Nombre</label><input class="ad-input" id="ad-pe-nombre" autocomplete="off" value="${esc(e.nombre)}"></div>` +
+        `<div class="ad-campo"><label for="ad-pe-acreedor">Acreedor (opcional)</label><input class="ad-input" id="ad-pe-acreedor" autocomplete="off" value="${esc(e.acreedor)}"></div></div>` +
+        '<span class="ad-campo__rotulo">Cuotas</span>' +
+        `<div id="ad-pe-cuotas">${htmlFilasCuotas(e.cuotas.map(c => ({ ...c, moneda })), { pagados })}` +
+        `<p class="ad-prestamo-suma" id="ad-pe-suma">${esc(s.texto)}</p></div>` +
+        '<div class="ad-barra-acciones"><button type="button" class="ad-btn ad-btn--suave" id="ad-pe-agregar">+ Agregar una cuota</button>' +
+        (puedeQuitar ? '<button type="button" class="ad-btn ad-btn--suave" id="ad-pe-quitar">Quitar la última</button>' : '') + '</div>' +
+        `<div class="ad-campo"><label for="ad-pe-obs">Observaciones (opcional)</label><textarea class="ad-textarea" id="ad-pe-obs">${esc(e.observaciones)}</textarea></div>` +
+        '<div class="ad-panel__acciones">' +
+        `<button type="button" class="ad-btn" id="ad-pe-guardar"${e.enviando ? ' disabled' : ''}>${esc(e.enviando ? 'Guardando…' : 'Guardar los cambios')}</button>` +
+        '<button type="button" class="ad-btn ad-btn--suave" id="ad-pe-cancelar">Cancelar</button></div>' +
+        `<p class="ad-error-pegado" id="ad-pe-error" role="alert"${e.error ? '' : ' hidden'}>${esc(e.error ?? '')}</p></div>`
+    }
+
+    // Las reglas de editar_prestamo: el nombre, las cuotas, y que ninguna
+    // valga menos de lo que ya tiene pagado.
+    function validarEditarPrestamo(e, d) {
+      if (limpio(e?.nombre).length < 2) return 'Poné un nombre al préstamo.'
+      const cuotas = validarCuotasPrestamo(e.cuotas)
+      if (cuotas) return cuotas
+      const pagados = pagadoPorCuota(d)
+      for (let i = 0; i < e.cuotas.length; i++) {
+        const pag = centavosAd(pagados[i] ?? 0) ?? 0
+        if (centavosAd(e.cuotas[i].importe) < pag) return `La cuota ${i + 1} ya tiene pagado ${importeHoja(pag / 100, d?.prestamo?.moneda)}: no puede valer menos.`
+      }
+      if ((d?.cuotas ?? []).some(c => Number(c.numero) > e.cuotas.length && cuotaConPagos(d, c.numero))) {
+        return 'Hay cuotas con pagos (aunque estén anulados) que quedarían afuera: no se pueden sacar.'
+      }
+      return null
+    }
+
+    function parametrosEditarPrestamo(id, e) {
+      return { p_prestamo_id: id, p_nombre: limpio(e.nombre), p_acreedor: limpio(e.acreedor) || null,
+        p_observaciones: String(e.observaciones ?? '').trim() || null, p_cuotas: parametrosCuotas(e.cuotas) }
+    }
+
+    function pintarErrorEditar() {
+      const e = estado.prestamoAd?.editar
+      const el = document.getElementById('ad-pe-error')
+      if (!el) return
+      el.textContent = e?.error ?? ''
+      el.hidden = !e?.error
+    }
+
+    async function guardarEditarPrestamo() {
+      const ui = estado.prestamoAd
+      const e = ui?.editar
+      if (!e || e.enviando) return
+      const falla = validarEditarPrestamo(e, ui.data)
+      if (falla) { e.error = falla; pintarErrorEditar(); return }
+      e.error = null
+      e.enviando = true
+      const b = document.getElementById('ad-pe-guardar')
+      if (b) { b.disabled = true; b.textContent = 'Guardando…' }
+      pintarErrorEditar()
+      try {
+        const { error } = await supabase.rpc('editar_prestamo', parametrosEditarPrestamo(ui.id, e))
+        if (error) throw error
+      } catch (err) {
+        console.error('No se pudo editar el préstamo:', err)
+        e.enviando = false
+        e.error = err?.message || 'No se pudo guardar. Revisá la conexión y volvé a intentar.'
+        if (b) { b.disabled = false; b.textContent = 'Guardar los cambios' }
+        pintarErrorEditar()
+        return
+      }
+      mostrarExito('Préstamo actualizado.')
+      await abrirPrestamoAd(ui.id)
+    }
+
+    function pintarSumaEdicion() {
+      const ui = estado.prestamoAd
+      const el = document.getElementById('ad-pe-suma')
+      if (!ui?.editar || !el) return
+      el.textContent = textoSumaCuotas(ui.editar.cuotas, ui.data.prestamo.moneda).texto
+    }
+
+    function conectarPrestamosAd() {
+      document.getElementById('ad-prestamos-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-prestamo-nuevo').addEventListener('click', () => abrirAltaPrestamo())
+      document.getElementById('ad-prestamos-filtro').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-prestamos-filtro]')
+        if (b) elegirFiltroPrestamos(b.dataset.prestamosFiltro)
+      })
+      document.getElementById('ad-prestamos-lista').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-prestamo-abrir]')
+        if (b) abrirPrestamoAd(b.dataset.prestamoAbrir)
+      })
+      const alta = document.getElementById('ad-prestamo-alta')
+      alta.addEventListener('click', (e) => {
+        const a = estadoPrestamos().alta
+        if (!a) return
+        let b
+        if ((b = e.target.closest('[data-pr-moneda]'))) { a.moneda = b.dataset.prMoneda; a.error = null; pintarAltaPrestamo() }
+        else if ((b = e.target.closest('[data-pr-modo]'))) { a.modo = b.dataset.prModo === 'distintas' ? 'distintas' : 'iguales'; armarCuotasAlta(a); a.error = null; pintarAltaPrestamo() }
+        else if (e.target.closest('#ad-pr-guardar')) guardarAltaPrestamo()
+        else if (e.target.closest('#ad-pr-cancelar')) cancelarAltaPrestamo()
+      })
+      alta.addEventListener('input', (e) => {
+        const a = estadoPrestamos().alta
+        if (!a) return
+        const t = e.target
+        if (t.id === 'ad-pr-nombre') a.nombre = t.value
+        else if (t.id === 'ad-pr-acreedor') a.acreedor = t.value
+        else if (t.id === 'ad-pr-obs') a.observaciones = t.value
+        else if (t.dataset?.cuotaImporte !== undefined) {
+          const c = a.cuotas[Number(t.dataset.cuotaImporte)]
+          if (c) c.importe = leerCampoNumero(t)
+          pintarSumaAlta()
+        } else return
+        a.error = null
+        pintarErrorAlta()
+      })
+      alta.addEventListener('change', (e) => {
+        const a = estadoPrestamos().alta
+        if (!a) return
+        const t = e.target
+        if (t.id === 'ad-pr-empresa') a.unidad = t.value || null
+        else if (t.id === 'ad-pr-fecha') a.fecha = t.value || null
+        else if (t.dataset?.cuotaVenc !== undefined) { const c = a.cuotas[Number(t.dataset.cuotaVenc)]; if (c) c.vencimiento = t.value || null }
+        else if (t.id === 'ad-pr-total' || t.id === 'ad-pr-cantidad' || t.id === 'ad-pr-primer') {
+          if (t.id === 'ad-pr-total') a.total = leerCampoNumero(t)
+          else if (t.id === 'ad-pr-cantidad') a.cantidad = leerCampoNumero(t)
+          else a.primerVenc = t.value || null
+          armarCuotasAlta(a)
+          pintarCuotasAlta()
+        } else return
+        a.error = null
+        pintarErrorAlta()
+      })
+      document.getElementById('ad-prestamo-volver').addEventListener('click', () => mostrarPrestamos())
+      document.getElementById('ad-prestamo-editar').addEventListener('click', () => abrirEditarPrestamo())
+      const cuerpo = document.getElementById('ad-prestamo-cuerpo')
+      cuerpo.addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-pago-anular]'))) pedirAnularPago(b.dataset.pagoAnular)
+        else if (e.target.closest('#ad-pago-si')) confirmarAnularPago()
+        else if (e.target.closest('#ad-pago-no')) cancelarAnularPago()
+        else if (e.target.closest('#ad-pe-agregar')) agregarCuotaEdicion()
+        else if (e.target.closest('#ad-pe-quitar')) quitarUltimaCuotaEdicion()
+        else if (e.target.closest('#ad-pe-guardar')) guardarEditarPrestamo()
+        else if (e.target.closest('#ad-pe-cancelar')) cancelarEditarPrestamo()
+      })
+      cuerpo.addEventListener('input', (e) => {
+        const ui = estado.prestamoAd
+        const t = e.target
+        if (t.id === 'ad-pago-motivo' && ui?.anulando) { ui.anulando.motivo = t.value; return }
+        const ed = ui?.editar
+        if (!ed) return
+        if (t.id === 'ad-pe-nombre') ed.nombre = t.value
+        else if (t.id === 'ad-pe-acreedor') ed.acreedor = t.value
+        else if (t.id === 'ad-pe-obs') ed.observaciones = t.value
+        else if (t.dataset?.cuotaImporte !== undefined) {
+          const c = ed.cuotas[Number(t.dataset.cuotaImporte)]
+          if (c) c.importe = leerCampoNumero(t)
+          pintarSumaEdicion()
+        }
+      })
+      cuerpo.addEventListener('change', (e) => {
+        const ed = estado.prestamoAd?.editar
+        const t = e.target
+        if (ed && t.dataset?.cuotaVenc !== undefined) { const c = ed.cuotas[Number(t.dataset.cuotaVenc)]; if (c) c.vencimiento = t.value || null }
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -7929,6 +8739,7 @@
       // Errores de la app
       document.getElementById('ad-errores-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-errores-actualizar').addEventListener('click', () => mostrarErrores())
+      conectarPrestamosAd()
       document.getElementById('ad-seguridad-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-seguridad-actualizar').addEventListener('click', () => mostrarSeguridad())
       document.getElementById('ad-revisar-volver').addEventListener('click', () => mostrarInicio())
@@ -8001,7 +8812,7 @@
         supabase.from('empleado_tareas').select('modulo, tarea, alcance')
           // 'cuentas_corrientes' entra por registrar_pago: compensar la cuenta
           // de un cliente que también es proveedor (06/10/2026).
-          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes']).eq('habilitado', true),
+          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes', 'gastos']).eq('habilitado', true),
         supabase.from('empleado_modulos').select('modulo').eq('empleado_id', emp.id).eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre, prefijo, razon_social, cuit, domicilio, telefono, logo_url').eq('activo', true).order('nombre'),
       ])
@@ -8016,6 +8827,7 @@
     // portada, como al elegirla acá). Las vistas globales no se tocan.
     function alCambiarLaBarra(elegida) {
       estado.unidadBarra = elegida ?? null
+      if (estado.vista === 'ad-vista-prestamos') mostrarPrestamos()
       const segun = empresaSegunBarra()
       if (segun === undefined) { pintarEmpresas(); return }
       if (segun === estado.empresaId) { pintarEmpresas(); return }

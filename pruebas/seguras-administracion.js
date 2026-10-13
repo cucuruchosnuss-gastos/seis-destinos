@@ -86,6 +86,8 @@ const SEGURAS_ADMINISTRACION = [
   ['elegir', 'HTML ya escapado: htmlEditorInsumoLista() arma el selector (o el nombre) con esc()'],
   ['modos', 'HTML constante del código: el segmento Precio fijo / Costo + %'],
   ['campo', 'HTML ya escapado: htmlEditorInsumoLista() arma el campo con esc() de la unidad'],
+  // Préstamos (13/10/2026): test-administracion-prestamos.js ejecuta estos renders con marcas.
+  ['htmlFilasCuotas(e.cuotas.map(c => ({ ...c, moneda })), { pagados })', 'HTML armado por htmlFilasCuotas(), que escapa cada vencimiento, rótulo y lo pagado'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

@@ -448,8 +448,11 @@ async function main() {
       "document.getElementById('campo-importe'", "document.getElementById('campo-kilometraje'",
       'campoEditImporte', 'campoEditKm', 'campoEditFacturaImporte',
       "document.getElementById('campo-interes-monto'", "document.getElementById('campo-interes-tasa'",
+      // Préstamos (13/10/2026): el monto de cada parte y el tipo de cambio
+      // (enlazarCamposPrestamo; ver test-gastos-prestamos.js).
+      'el', 'tc',
     ])
-    chk('se enlazan exactamente los 7 campos de importe / tasa / kilometraje', enlaces.length === 7 && enlaces.every(e => permitidos.has(e)), enlaces)
+    chk('se enlazan exactamente los 9 campos de importe / tasa / kilometraje / préstamo', enlaces.length === 9 && enlaces.every(e => permitidos.has(e)), enlaces)
     chk('los identificadores NO se enlazan (número de comprobante, CUIT)', !/enlazarCampoNumero\([^)]*(numero|cuit)/i.test(codigo))
     const importes = /enlazarCampoNumero\(document\.getElementById\('campo-importe'\), \{ decimales: 2 \}\)/.test(codigo) &&
       /enlazarCampoNumero\(campoEditImporte, \{ decimales: 2 \}\)/.test(codigo) &&
