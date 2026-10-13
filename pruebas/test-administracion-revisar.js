@@ -174,10 +174,10 @@ async function pruebas() {
   {
     const S = nuevo()
     const malas = [{ item_id: marca('item'), codigo: marca('codigo'), fecha: '2026-09-27', cliente: marca('cliente'), que: marca('que'), pedidas: 3, faltante: 1, unidad: marca('unidad'), cargada_por: marca('cargo') },
-      { item_id: marca('item-2'), codigo: 'N-1', fecha: '2026-09-27', cliente: 'x', que: 'y', pedidas: 1, faltante: 1, unidad: 'cajas', cargada_por: null }]
+      { item_id: marca('item-2'), codigo: 'N-1', fecha: '2026-09-27', cliente: 'x', que: 'y', pedidas: 1, faltante: 1, unidad: 'cajas', cargada_por: null, revision_motivo: marca('motivo-base') }]
     S.estado.revisar = { filas: malas, error: null, aceptando: { itemId: malas[0].item_id, motivo: marca('motivo'), error: marca('error'), enviando: false }, hechos: [marca('hecho')] }
     S.pintarRevisar()
-    chequearMarcas(chk, 'retiros por revisar', html(S, 'ad-revisar-lista'), ['item', 'item-2', 'codigo', 'cliente', 'que', 'unidad', 'cargo', 'motivo', 'error', 'hecho'])
+    chequearMarcas(chk, 'retiros por revisar', html(S, 'ad-revisar-lista'), ['item', 'item-2', 'codigo', 'cliente', 'que', 'unidad', 'cargo', 'motivo', 'error', 'hecho', 'motivo-base'])
     chk('el botón "Aceptar" del otro renglón lleva su id escapado', html(S, 'ad-revisar-lista').includes('data-revisar-aceptar="&quot;&gt;&lt;b data-xss=&quot;item-2&quot;&gt;"'))
   }
 }

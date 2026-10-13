@@ -9,6 +9,7 @@
 const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
+const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
@@ -120,6 +121,10 @@ const FUNCIONES_BASE = [
   // Retiros por revisar (28/09/2026)
   'leerPorRevisar', 'cantidadRevisar', 'htmlFilaRevisar', 'pintarRevisar', 'mostrarRevisar',
   'abrirAceptarRevisar', 'cancelarAceptarRevisar', 'confirmarAceptarRevisar',
+  // El faltante: "¿de dónde salen?" (13/10/2026)
+  'esProductoRevisar', 'htmlBotonesRevisar', 'completarRenglonesRevisar', 'ctxFaltanteRevisar', 'abrirFaltanteRevisar', 'resolverFilaRevisar',
+  'htmlFaltanteRenglon', 'leerPlanillasDeOrden',
+  ...FUNCIONES_FR,
   // Cliente y proveedor (06/10/2026): la cuenta juntas y la clasificación
   'puedeCompensarCuentas', 'ctxCuentaUnica', 'pintarCuentaUnicaCliente',
   'nombreProveedorFicha', 'pintarClasificacionFicha', 'elegirClasificacionFicha', 'cerrarPanelVinculo',
@@ -148,6 +153,7 @@ const CONSTANTES_BASE = [
   'CONITOS',
   // Cliente y proveedor (06/10/2026)
   ...CONSTANTES_CU,
+  'LINK_TRASPASO_AD', ...CONSTANTES_FR,
   // Los clientes provisorios (06/10/2026)
   'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR', 'TOPE_BUSCAR_CLIENTES', 'TEXTO_SOLO_PROVISORIOS', 'TEXTO_SIN_LEER_CLIENTES',
 ]
@@ -252,7 +258,7 @@ const PRELUDIO = `
     cobranza: null, bancos: null,
     errores: { grupos: null, error: null, info: false, arreglando: null },
     seguridad: { filas: null, error: null },
-    revisar: { filas: null, error: null, aceptando: null, hechos: [] },
+    revisar: { filas: null, error: null, aceptando: null, falt: null, hechos: [] },
   }
 `
 
