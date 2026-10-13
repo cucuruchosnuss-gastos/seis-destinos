@@ -48,6 +48,7 @@ const RETIRADOS = [
   ['control:input#chq-emi-desde[type=date]', `la fecha de pago desde de los cheques emitidos: ${SIN_PROPIO}`],
   ['control:input#chq-emi-hasta[type=date]', `la fecha de pago hasta de los cheques emitidos: ${SIN_PROPIO}`],
   ['control:select#chq-emi-cuenta', `la cuenta de los cheques emitidos: ${SIN_PROPIO}`],
+  ['control:input#chq-salida-destino[type=text]', 'el texto "¿En qué banco o cuenta?" del depósito de un cheque: depositar (13/10/2026) elige una cuenta de banco de la Empresa y mete la plata (depositar_cheques)'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

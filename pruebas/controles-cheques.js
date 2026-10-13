@@ -73,6 +73,19 @@ const RETIRADOS_EMITIDOS = [
   ['id:chq-emi-totales', `el panel de los emitidos: ${SIN_PROPIO}`],
   ['id:chq-emi-vacio', `el panel de los emitidos: ${SIN_PROPIO}`],
 ]
+// CUARTO RETIRO (13/10/2026): el texto libre "¿En qué banco o cuenta?" del
+// depósito. Depositar ahora elige una cuenta de banco de la Empresa y mete la
+// plata (depositar_cheques). Vale para los TRES baselines (cobranzas.html,
+// cheques.html y la región con los emitidos): [clave, motivo].
+const SIN_TEXTO_DEPOSITO = 'depositar (13/10/2026) elige una cuenta de banco de la Empresa y mete la plata (depositar_cheques): ya no se escribe a mano en qué banco'
+const RETIRADOS_DEPOSITO = new Map([
+  ['control:input#chq-salida-destino[type=text]', SIN_TEXTO_DEPOSITO],
+  ['id:chq-salida-campo-destino', SIN_TEXTO_DEPOSITO],
+  ['id:chq-salida-label-destino', SIN_TEXTO_DEPOSITO],
+  ['id:chq-salida-destino', SIN_TEXTO_DEPOSITO],
+  ['id:chq-salida-ayuda-destino', SIN_TEXTO_DEPOSITO],
+])
+
 // Lo que sigue pero aparece MENOS veces: [clave, cuántas ahora, motivo].
 const MENOS_COPIAS_EMITIDOS = [
   ['control:a{Ver el pago}', 1, `queda el de la cartera; el de los emitidos se fue: ${SIN_PROPIO}`],
@@ -117,6 +130,7 @@ try {
   chk('hay controles movidos a cheques.html (si da cero, el mapa no se está leyendo)', aCheques.length > 20, aCheques.length)
 
   for (const [vieja, m] of aCheques) {
+    if (RETIRADOS_DEPOSITO.has(m.nueva)) continue
     const n = veces(B, vieja)
     chk(`la clave movida ${vieja} existía en el baseline (si no, la entrada del mapa está mal)`, n > 0)
     const hay = veces(A, m.nueva)
@@ -137,6 +151,7 @@ try {
   const controlesViejos = [...V.cuenta.keys()].filter(k => k.startsWith('control:'))
   chk('cheques.html tenía controles (si da cero, el baseline no se está leyendo)', controlesViejos.length > 20, controlesViejos.length)
   for (const k of controlesViejos) {
+    if (RETIRADOS_DEPOSITO.has(k)) continue
     const ret = RETIRADOS_CHEQUES.find(r => r.clave === k)
     const n = veces(V, k), hay = veces(A, k)
     if (ret) {
@@ -147,6 +162,7 @@ try {
     chk(`${k} → se mudó a administracion.html`, hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
   }
   for (const id of V.ids) {
+    if (RETIRADOS_DEPOSITO.has('id:' + id)) continue
     const ret = RETIRADOS_IDS_CHEQUES.find(r => r.id === id)
     if (ret) {
       console.log(`RETIRADO: #${id} (${ret.motivo})`)
@@ -175,10 +191,16 @@ try {
   }
   for (const [k, n] of MENOS_COPIAS_EMITIDOS) chk(`${k} aparece las ${n} veces declaradas`, veces(A, k) === n, `aparece ${veces(A, k)}`)
   for (const [k, n] of [...E.cuenta.entries()].sort()) {
-    if (retEmi.has(k)) continue
+    if (retEmi.has(k) || RETIRADOS_DEPOSITO.has(k)) continue
     const hay = veces(A, k)
     const pide = copiasEmi.has(k) ? Math.min(n, copiasEmi.get(k)) : n
     chk(`${BASE_EMITIDOS}: ${k} sigue en la región`, hay >= pide && hay > 0, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
+  }
+
+  for (const [k, m] of RETIRADOS_DEPOSITO) {
+    console.log(`RETIRADO: ${k} (${m})`)
+    chk(`${k}: estaba en ${BASE_EMITIDOS} (si no, la declaración sobra)`, veces(E, k) > 0)
+    chk(`${k}: declarado retirado y de verdad no está (si volvió, sacá la declaración)`, veces(A, k) === 0)
   }
 
   for (const r of referenciasDelJs(A.referencias)) {

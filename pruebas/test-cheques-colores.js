@@ -180,8 +180,8 @@ const clasesDe = (html) => ((html.match(/class="([^"]*)"/) || [])[1] || '').spli
     S.clavesEstadoCheque({ ...CH.control, fecha_pago: mas(-27) }, COBS.get('sin'), HOY).join() === 'por_controlar,vence')
   chk('el orden es el de LEYENDA_ESTADOS, no el de la lista',
     entradas([CH.anulado, CH.deposito, CH.vencido, CH.control, CH.cartera]).join() === 'por_controlar,en_cartera,vencido,salido,anulado')
-  chk('LEYENDA_ESTADOS: las seis, cada una con su nombre',
-    S.LEYENDA_ESTADOS.length === 6 && S.LEYENDA_ESTADOS.every(e => typeof e.clave === 'string' && typeof e.nombre === 'string' && e.nombre.length > 2))
+  chk('LEYENDA_ESTADOS: las siete (con "En el banco", 13/10/2026), cada una con su nombre',
+    S.LEYENDA_ESTADOS.length === 7 && S.LEYENDA_ESTADOS.every(e => typeof e.clave === 'string' && typeof e.nombre === 'string' && e.nombre.length > 2))
   const lista = S.leyendaDeCheques([CH.control, CH.anulado], COBS, HOY)
   const html = S.htmlLeyendaEstados(lista)
   chk('cada entrada: una muestrita y su NOMBRE (nunca el color solo)',

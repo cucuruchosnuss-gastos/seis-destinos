@@ -21,7 +21,7 @@ correrMutaciones({
     { nombre: 'el link al pago no usa pago_gasto_id', de: '      return ch?.pago_gasto_id || ch?.salida_gasto_id || null', a: '      return ch?.salida_gasto_id || null' },
     { nombre: '"Pagó su cuenta" sin el link al pago', de: "Pagó su cuenta corriente</span>' + htmlLinkPago(ch)", a: "Pagó su cuenta corriente</span>'" },
     { nombre: 'el link al pago sin encodeURIComponent', de: 'href="cuentas-corrientes.html?pago=${encodeURIComponent(g)}">Ver el pago</a>', a: 'href="cuentas-corrientes.html?pago=${g}">Ver el pago</a>' },
-    { nombre: 'la lista no trae pago_gasto_id', de: 'salida_proveedor_id, salida_gasto_id, pago_gasto_id\'),', a: 'salida_proveedor_id, salida_gasto_id\'),' },
+    { nombre: 'la lista no trae pago_gasto_id', de: 'salida_proveedor_id, salida_gasto_id, pago_gasto_id, salida_cuenta_id', a: 'salida_proveedor_id, salida_gasto_id, salida_cuenta_id' },
     { nombre: '"Ver el pago" además abre la cobranza', de: "      cont.querySelectorAll('.chq-link-pago').forEach(a => a.addEventListener('click', (ev) => ev.stopPropagation()))\n", a: '' },
     // ── 11/10/2026: "Emitidos" NO vuelve ──────────────────────────────────
     { nombre: 'vuelve el segmentado Cartera | Emitidos', de: '    <div id="chq-vista" hidden>\n', a: '    <div id="chq-vista" hidden>\n      <div class="chq-segmento" id="chq-vistas"><button type="button" data-chq-vista="emitidos">Emitidos</button></div>\n' },

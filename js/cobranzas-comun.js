@@ -78,9 +78,20 @@ export function formatearFechaCob(iso) {
 
 // ── Cheques ─────────────────────────────────────────────────────────────
 
+// 'vendido' (13/10/2026): vendido al banco con vender_cheques (entra la plata
+// a una cuenta de la Empresa y el descuento es un gasto de interés).
 export const ETIQUETA_ESTADO_CHEQUE = {
-  en_cartera: 'En cartera', depositado: 'Depositado', endosado: 'Endosado', anulado: 'Anulado',
+  en_cartera: 'En cartera', en_banco: 'En el banco', depositado: 'Depositado', endosado: 'Endosado', vendido: 'Vendido', anulado: 'Anulado',
 }
+
+// Los estados de un cheque que ya salió de la cartera (el papel no está más
+// en la mano): depositado, endosado o vendido al banco.
+export const ESTADOS_SALIDOS = ['depositado', 'endosado', 'vendido']
+
+// Los que no están en la cartera para usar: los que salieron y los que se
+// mandaron al banco y esperan que acrediten (13/10/2026). Una cobranza con
+// alguno de estos no se puede editar ni anular (lo frena la base).
+export const ESTADOS_FUERA_DE_CARTERA = ['en_banco', ...ESTADOS_SALIDOS]
 
 // El nombre del banco por su código. Un código que no está en el catálogo se
 // DICE, con el número a la vista: inventarle un nombre o dejarlo vacío
@@ -101,5 +112,7 @@ export function textoSalidaCheque(estadoCheque, fecha, destino) {
   const d = String(destino ?? '').trim()
   if (estadoCheque === 'endosado') return `Endosado${cuando}${d ? ` a ${d}` : ''}`
   if (estadoCheque === 'depositado') return `Depositado${cuando}${d ? ` en ${d}` : ''}`
+  if (estadoCheque === 'vendido') return `Vendido${cuando}${d ? ` en ${d}` : ''}`
+  if (estadoCheque === 'en_banco') return `En el banco${d ? ` (${d})` : ''}, esperando que acredite`
   return ETIQUETA_ESTADO_CHEQUE[estadoCheque] ?? String(estadoCheque ?? '')
 }

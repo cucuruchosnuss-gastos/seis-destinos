@@ -108,7 +108,7 @@ correrMutaciones({
     { nombre: 'la franja de "por controlar" no entra en la leyenda',
       de: "      const claves = esPorControlar(ch, cob) ? ['por_controlar'] : []", a: '      const claves = []' },
     { nombre: 'depositado y endosado como dos entradas distintas del mismo verde',
-      de: "      if (ch.estado === 'depositado' || ch.estado === 'endosado') return ['salido']", a: "      if (ch.estado === 'depositado' || ch.estado === 'endosado') return [ch.estado]" },
+      de: "      if (esSalido(ch)) return ['salido']", a: "      if (esSalido(ch)) return [ch.estado]" },
     { nombre: 'la muestra del anulado pierde su tachado (se confunde con el plazo)',
       de: '    .chq-leyenda__muestra--anulado::after {', a: '    .chq-leyenda__muestra--anulado__nada::after {' },
     { nombre: 'la muestra del salido pierde su verde',

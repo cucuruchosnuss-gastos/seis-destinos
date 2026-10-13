@@ -54,7 +54,7 @@ async function main() {
     S.abrirVolverACartera('c1')
     chk('abrirVolverACartera no abre el motivo para un pago', S.__accionMotivo() === null)
   }
-  chk('la lista de cheques trae las dos marcas del pago', /salida_proveedor_id, salida_gasto_id, pago_gasto_id'\)/.test(FUENTE))
+  chk('la lista de cheques trae las dos marcas del pago', /salida_proveedor_id, salida_gasto_id, pago_gasto_id[,']/.test(FUENTE))
   chk('"Ver el pago" no abre además la cobranza (stopPropagation)', /cont\.querySelectorAll\('\.chq-link-pago'\)\.forEach\(a => a\.addEventListener\('click', \(ev\) => ev\.stopPropagation\(\)\)\)/.test(FUENTE))
 
   // ══ 2. Sin "Emitidos" (11/10/2026): la empresa no emite cheques propios ══
