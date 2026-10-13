@@ -64,17 +64,13 @@ const OPCIONALES = [
   'elegirProveedorEndoso', 'cambiarProveedorEndoso', 'elegirUnidadEndoso', 'cargarPreviaEndoso', 'htmlPreviaEndoso',
   'pintarPreviaEndoso', 'pintarEndoso', 'abrirVincularProveedor', 'endosarEnOrden', 'textoResultadoEndoso',
   'textoFalloEndoso', 'confirmarEndoso',
-  // un pago con cheques de la cartera y los cheques emitidos (05/10/2026)
+  // un pago con cheques de la cartera (05/10/2026). La pestaña "Emitidos"
+  // se sacó el 11/10/2026: la empresa no emite cheques propios.
   'pagoAProveedor', 'gastoDelPago', 'htmlLinkPago',
-  'puedeVerEmitidos', 'mostrarVistaCheques', 'cargarEmitidos', 'nombreCuentaEmitido', 'emitidosFiltrados',
-  'pendientePorCuenta', 'textoEstadoEmitido', 'htmlEmitido', 'htmlTotalEmitidos', 'filtrosEmitidos',
-  'pintarFiltroCuentasEmitidos', 'pintarEmitidos',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
-  'puedeRegistrarPago', 'puedeVerFacturas', 'TEXTO_SIN_PERMISO_ENDOSO', 'TEXTO_SIN_FACTURAS', 'LARGO_MINIMO_BUSQUEDA',
-  // los cheques emitidos (05/10/2026)
-  'ESTADO_EMITIDO']
+  'puedeRegistrarPago', 'puedeVerFacturas', 'TEXTO_SIN_PERMISO_ENDOSO', 'TEXTO_SIN_FACTURAS', 'LARGO_MINIMO_BUSQUEDA']
 
 const PRELUDIO = `
   ${fuenteNumeros()}

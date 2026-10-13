@@ -82,7 +82,7 @@ const PRELUDIO = `
   function abrirModalAplicarCredito() {}
   var __creditoElegido = null
   async function seleccionarCreditoParaAplicar(c) { __creditoElegido = c }
-  var facturasParaPago = [], fichaOrigen = 'lista', carteraPago = [], tipoPropio = 'cheque'
+  var facturasParaPago = [], fichaOrigen = 'lista', carteraPago = []
   // Los let top-level del módulo (los turnos de las cargas): acá var.
   var turnoSaldos = 0, turnoHistorial = 0
   var estado = {
@@ -121,7 +121,7 @@ const FUNCIONES = [
   'renderizarFichaBanner', 'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'abrirModalPago', 'abrirModalAplicarCreditoDesdeFicha',
   // los cheques en un pago (05/10/2026): lo que abrirModalPago reinicia
-  'puedeUsarCartera', 'hoyCC', 'elegirTipoPropio',
+  'puedeUsarCartera', 'hoyCC',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]

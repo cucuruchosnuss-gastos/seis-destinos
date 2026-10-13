@@ -85,9 +85,9 @@ const RENDERS = [
   'pasaFiltroUnidad',
   // el saldo inicial de un proveedor (30/09/2026): los chips de la fábrica
   'htmlUnidadesSaldoInicial',
-  // los cheques en un pago (05/10/2026): la lista de la cartera y las cuentas
-  // de banco del cheque propio
-  'htmlFilaCartera', 'renderizarCarteraPago', 'pintarTotalCartera', 'sumaCheques', 'cuentasDeBancoDeLaEmpresa', 'cargarCuentasPropio',
+  // los cheques en un pago (05/10/2026): la lista de la cartera (el cheque
+  // propio se sacó el 11/10/2026)
+  'htmlFilaCartera', 'renderizarCarteraPago', 'pintarTotalCartera', 'sumaCheques',
 ]
 
 function clausura(src) {
@@ -171,7 +171,7 @@ const PRELUDIO = `
   // Los let top-level del módulo: acá var.
   var facturaPendienteAAsignar = null, proveedorAsignarSeleccionado = null, creditoAAplicar = null
   var facturasParaCredito = [], medioPagoSeleccionado = null, facturasParaPago = [], proveedorAEditar = null
-  var carteraPago = [], cuentasPropio = []
+  var carteraPago = []
   var fichaOrigen = 'lista', importacionPendiente = null, debounceFifo = null
 `
 
@@ -443,9 +443,6 @@ async function correrRenders(S) {
   S.__setVar('carteraPago', [{ id: 'chq', numero: marca('car_num'), banco: marca('car_banco'), librador: marca('car_lib'), cobra: '2026-10-01', comun: false, importe: 5, tildado: true }])
   S.renderizarCarteraPago()
   chequearMarcas(chk, 'cheques de la cartera para pagar', html('lista-cartera-pago'), ['car_num', 'car_banco', 'car_lib'])
-  S.__setDatos('cuentas_caja', [{ id: marca('cb_id'), nombre: marca('cb_nombre'), medio: 'banco', moneda: 'ARS', unidad_negocio_id: 'u-x', activa: true }])
-  await S.cargarCuentasPropio('u-x')
-  chequearMarcas(chk, 'cuentas de banco del cheque propio', html('campo-cuenta-propio'), ['cb_id', 'cb_nombre'])
   chk('resumen de aplicación: sin marcas (solo importes en ARS)', !/data-xss/.test(html('resumen-aplicacion')))
 
   // La moneda del pago (abrirModalPago está stubeada para que ningún render

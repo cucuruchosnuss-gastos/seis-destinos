@@ -182,7 +182,7 @@ const PRELUDIO = `
   var facturasParaCredito = []
   var medioPagoSeleccionado = 'cheque'
   var facturasParaPago = []
-  var carteraPago = [], tipoPropio = 'cheque'
+  var carteraPago = []
   var estado = {
     miRolApp: 'usuario', miEmpleadoId: 'yo',
     misTareas: new Set(['cuentas_corrientes:registrar_pago', 'cuentas_corrientes:ver_todo']),
@@ -203,8 +203,7 @@ const FUNCIONES = [
   // unidad de la ficha y la lista de movimientos la filtra por unidad.
   'saldosFichaDeUnidad', 'pasaFiltroUnidad', 'etiquetaUnidad',
   // los cheques en un pago (05/10/2026): confirmarPago y abrirModalPago
-  'esMedioCheque', 'puedeUsarCartera', 'hoyCC', 'elegirTipoPropio', 'sumarDiasIso', 'esFechaIsoCC',
-  'validarChequePropio', 'parametrosPagoCartera', 'parametrosPagoPropio', 'textoDebitoPropio',
+  'esMedioCheque', 'puedeUsarCartera', 'hoyCC', 'parametrosPagoCartera',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]

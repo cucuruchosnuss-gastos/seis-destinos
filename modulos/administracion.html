@@ -8137,26 +8137,10 @@
       cursor: pointer;
     }
     .chq-segmento__opcion--activo { background: var(--naranja); color: #fff; font-weight: 700; }
-    /* Cartera | Emitidos (05/10/2026) y la lista de los emitidos. */
-    .chq-vistas { margin-bottom: 0.875rem; }
+    /* "Ver el pago" (05/10/2026) de un cheque que pagó la cuenta de un
+       proveedor. La pestaña "Emitidos" se sacó el 11/10/2026: la empresa no
+       emite cheques propios. */
     .chq-link-pago { display: inline-flex; align-items: center; min-height: 44px; margin-left: 0.5rem; font-size: 0.8125rem; font-weight: 700; color: var(--naranja-oscuro); text-decoration: underline; }
-    .chq-emi-totales { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 0.5rem; margin-bottom: 0.875rem; }
-    .chq-emi-totales:empty { display: none; }
-    .chq-emi-total { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.625rem 0.875rem; min-width: 0; }
-    .chq-emi-total__cuenta { font-size: 0.8125rem; color: var(--color-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .chq-emi-total__monto { font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .chq-emi-total__nota { font-size: 0.75rem; color: var(--color-texto-2); }
-    .chq-emi-fila > * { min-width: 0; }
-    .chq-emi-lista { display: flex; flex-direction: column; gap: 0.5rem; }
-    .chq-emi { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.75rem; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.625rem 0.875rem; }
-    .chq-emi--debitado { background: var(--verde-suave); }
-    .chq-emi--anulado { background: var(--bordo-suave); }
-    .chq-emi__titulo { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .chq-emi__importe { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
-    .chq-emi__meta { font-size: 0.8125rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
-    .chq-emi__estado { font-size: 0.8125rem; font-weight: 700; text-align: right; }
-    .chq-emi--debitado .chq-emi__estado { color: var(--verde-oscuro); }
-    .chq-emi--anulado .chq-emi__estado { color: var(--bordo-oscuro); }
 
     .chq-campo { margin-bottom: 0.875rem; min-width: 0; }
     .chq-campo:last-child { margin-bottom: 0; }
@@ -8695,15 +8679,9 @@
     <div class="chq-vacio" id="chq-cargando">Cargando…</div>
 
     <div id="chq-vista" hidden>
-      <!-- Dos pestañas (05/10/2026): la CARTERA (los cheques de terceros que
-           cobramos) y los EMITIDOS (los cheques y e-cheques propios con que se
-           le paga a un proveedor, cheques_emitidos). -->
-      <div class="chq-segmento chq-vistas" id="chq-vistas" role="group" aria-label="Qué cheques ver">
-        <button type="button" class="chq-segmento__opcion chq-segmento__opcion--activo" data-chq-vista="cartera" aria-pressed="true">Cartera</button>
-        <button type="button" class="chq-segmento__opcion" data-chq-vista="emitidos" aria-pressed="false">Emitidos</button>
-      </div>
-
-      <div id="chq-panel-cartera">
+      <!-- Solo la CARTERA (los cheques de terceros que cobramos). La pestaña
+           "Emitidos" (cheques propios, cheques_emitidos) se sacó el
+           11/10/2026: la empresa no emite cheques propios. -->
       <nav class="chq-nav">
         <a id="chq-link-cobranzas" class="chq-nav__link" href="cobranzas.html">&lsaquo; Cobranzas</a>
         <!-- Selección con resumen (Parte 7): una casilla en cada cheque y la
@@ -8758,39 +8736,6 @@
            cheque. Las dos se dibujan con los mismos datos; el CSS muestra una. -->
       <div class="chq-lista" id="chq-lista" hidden></div>
       <div class="chq-vacio" id="chq-vacio" hidden></div>
-      </div><!-- /chq-panel-cartera -->
-
-      <!-- EMITIDOS (05/10/2026): los cheques propios, pendientes y debitados.
-           El banco se debita el día de pago (debitar_cheques_emitidos, todos
-           los días a las 06:00). Arriba, lo pendiente por cuenta. -->
-      <div id="chq-panel-emitidos" hidden>
-        <div class="chq-vacio" id="chq-emi-sin-permiso" hidden></div>
-        <div class="chq-emi-totales" id="chq-emi-totales"></div>
-        <div class="chq-filtros">
-          <div class="chq-segmento" id="chq-emi-estado" role="group" aria-label="Filtrar cheques emitidos por estado">
-            <button type="button" class="chq-segmento__opcion chq-segmento__opcion--activo" data-emi-estado="pendiente" aria-pressed="true">Pendientes</button>
-            <button type="button" class="chq-segmento__opcion" data-emi-estado="debitado" aria-pressed="false">Debitados</button>
-            <button type="button" class="chq-segmento__opcion" data-emi-estado="todos" aria-pressed="false">Todos</button>
-          </div>
-          <div class="chq-filtros__fila chq-emi-fila">
-            <div class="chq-campo" style="margin-bottom:0">
-              <label for="chq-emi-cuenta">Cuenta</label>
-              <select id="chq-emi-cuenta"><option value="">Todas las cuentas</option></select>
-            </div>
-            <div class="chq-campo" style="margin-bottom:0">
-              <label for="chq-emi-desde">Fecha de pago desde</label>
-              <input type="date" id="chq-emi-desde">
-            </div>
-            <div class="chq-campo" style="margin-bottom:0">
-              <label for="chq-emi-hasta">Hasta</label>
-              <input type="date" id="chq-emi-hasta">
-            </div>
-          </div>
-        </div>
-        <div class="chq-aviso" id="chq-emi-aviso" hidden></div>
-        <div class="chq-emi-lista" id="chq-emi-lista"></div>
-        <div class="chq-vacio" id="chq-emi-vacio" hidden></div>
-      </div>
     </div>
   </div>
 
@@ -8914,11 +8859,6 @@
       misTareas: new Set(),
       // Catálogo de bancos: código → nombre.
       bancos: new Map(),
-      // Cartera | Emitidos (05/10/2026) y lo de los emitidos.
-      vista: 'cartera',
-      emitidos: [],              // null = no se pudo leer
-      cuentasEmitidos: new Map(),
-      filtrosEmitidos: { estado: 'pendiente', cuenta: '', desde: '', hasta: '' },
       // Los filtros arrancan en "en cartera". soloVencen: el recorte "los que
       // vencen esta semana" del aviso de arriba (Parte 6).
       // La unidad NO es un filtro de esta pantalla: la decide la barra de
@@ -9332,7 +9272,6 @@
       recalcularResumen()
       pintarFiltrosCheques()
       renderizarCheques()
-      if (estado.vista === 'emitidos') { pintarFiltroCuentasEmitidos(); pintarEmitidos() }
     }
 
     // De qué unidad son los cheques elegidos: una entrada por unidad (la sin
@@ -11110,185 +11049,6 @@
     // bancos. Una sola función, así los dos caminos no divergen.
     async function refrescarTodo() {
       await Promise.all([cargarCheques(), cargarResumenCheques()])
-      if (estado.vista === 'emitidos') await cargarEmitidos()
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // EMITIDOS (05/10/2026): los cheques y e-cheques PROPIOS
-    // ═══════════════════════════════════════════════════════════════════════
-    // Los anota pagar_proveedor_con_cheque_propio en cheques_emitidos
-    // (pendiente / debitado / anulado). El banco se debita el DÍA DE PAGO:
-    // debitar_cheques_emitidos, todos los días a las 06:00 y al cargar un pago.
-    // Se leen con cuentas_corrientes:registrar_pago o cobranzas:procesar (la
-    // policy de la tabla); quien ve la cartera solo con ver_todo no los lee, y
-    // se le dice en vez de mostrar una lista vacía.
-    const ESTADO_EMITIDO = { pendiente: 'Pendiente', debitado: 'Debitado', anulado: 'Anulado' }
-
-    function puedeVerEmitidos() {
-      return puedeProcesar() || puedeRegistrarPago()
-    }
-
-    function mostrarVistaCheques(vista) {
-      estado.vista = vista === 'emitidos' ? 'emitidos' : 'cartera'
-      document.getElementById('chq-panel-cartera').hidden = estado.vista !== 'cartera'
-      document.getElementById('chq-panel-emitidos').hidden = estado.vista !== 'emitidos'
-      document.querySelectorAll('[data-chq-vista]').forEach(b => {
-        const si = b.dataset.chqVista === estado.vista
-        b.classList.toggle('chq-segmento__opcion--activo', si)
-        b.setAttribute('aria-pressed', String(si))
-      })
-      if (estado.vista === 'emitidos') {
-        if (estado.seleccion.activa) cancelarSeleccion()
-        cargarEmitidos()
-      }
-    }
-
-    let turnoEmitidos = 0
-    async function cargarEmitidos() {
-      const sinPermiso = document.getElementById('chq-emi-sin-permiso')
-      if (!puedeVerEmitidos()) {
-        sinPermiso.textContent = 'Para ver los cheques emitidos hace falta el permiso de registrar pagos a proveedores o el de controlar cobranzas.'
-        sinPermiso.hidden = false
-        estado.emitidos = []
-        pintarEmitidos()
-        return
-      }
-      sinPermiso.hidden = true
-      const turno = ++turnoEmitidos
-      const aviso = document.getElementById('chq-emi-aviso')
-      try {
-        const { data, error } = await supabase.from('cheques_emitidos')
-          .select('id, unidad_negocio_id, cuenta_id, tipo, numero, fecha_emision, fecha_pago, importe, moneda, proveedor_id, beneficiario, gasto_id, estado, debitado_en')
-          .order('fecha_pago', { ascending: true })
-        if (error) throw error
-        const ids = [...new Set((data ?? []).map(c => c.cuenta_id).filter(Boolean))]
-        let cuentas = []
-        if (ids.length) {
-          const r = await supabase.from('cuentas_caja').select('id, nombre').in('id', ids)
-          if (r.error) console.error(r.error)
-          cuentas = r.data ?? []
-        }
-        if (turno !== turnoEmitidos) return
-        estado.emitidos = data ?? []
-        estado.cuentasEmitidos = new Map(cuentas.map(c => [c.id, c.nombre]))
-        aviso.hidden = true
-      } catch (err) {
-        if (turno !== turnoEmitidos) return
-        console.error(err)
-        estado.emitidos = null
-        aviso.textContent = 'No se pudieron leer los cheques emitidos. Probá de nuevo.'
-        aviso.hidden = false
-      }
-      pintarFiltroCuentasEmitidos()
-      pintarEmitidos()
-    }
-
-    function nombreCuentaEmitido(c) {
-      return estado.cuentasEmitidos?.get(c.cuenta_id) ?? 'Cuenta sin nombre'
-    }
-
-    // Puro: lo que se ve, con la unidad de la barra y los filtros. Primero
-    // los pendientes (el que se debita antes, arriba); después los demás (el
-    // más nuevo arriba).
-    function emitidosFiltrados(filas, { unidad, estadoFiltro, cuenta, desde, hasta }) {
-      return (filas ?? [])
-        .filter(c => pasaFiltroUnidad(c.unidad_negocio_id, unidad))
-        .filter(c => estadoFiltro === 'todos' || c.estado === estadoFiltro)
-        .filter(c => !cuenta || c.cuenta_id === cuenta)
-        .filter(c => (!desde || String(c.fecha_pago) >= desde) && (!hasta || String(c.fecha_pago) <= hasta))
-        .sort((a, b) => {
-          const pa = a.estado === 'pendiente' ? 0 : 1, pb = b.estado === 'pendiente' ? 0 : 1
-          if (pa !== pb) return pa - pb
-          return pa === 0
-            ? String(a.fecha_pago).localeCompare(String(b.fecha_pago))
-            : String(b.fecha_pago).localeCompare(String(a.fecha_pago))
-        })
-    }
-
-    // Puro: lo PENDIENTE de debitar por cuenta (con la unidad de la barra;
-    // los otros filtros no lo cambian: es lo que todavía se va a debitar),
-    // en centavos. [{ cuenta_id, nombre, cantidad, total, proximo }]
-    function pendientePorCuenta(filas, unidad, nombre) {
-      const grupos = new Map()
-      for (const c of filas ?? []) {
-        if (c.estado !== 'pendiente' || !pasaFiltroUnidad(c.unidad_negocio_id, unidad)) continue
-        const g = grupos.get(c.cuenta_id) ?? { cuenta_id: c.cuenta_id, nombre: nombre(c), cantidad: 0, centavos: 0, proximo: null }
-        g.cantidad += 1
-        g.centavos += Math.round(Number(c.importe) * 100)
-        if (!g.proximo || String(c.fecha_pago) < g.proximo) g.proximo = c.fecha_pago
-        grupos.set(c.cuenta_id, g)
-      }
-      return [...grupos.values()]
-        .map(g => ({ ...g, total: g.centavos / 100 }))
-        .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'))
-    }
-
-    function textoEstadoEmitido(c, hoy) {
-      if (c.estado === 'debitado') return `Debitado el ${formatearFechaCob(String(c.debitado_en ?? '').slice(0, 10) || c.fecha_pago)}`
-      if (c.estado === 'anulado') return 'Anulado'
-      return c.fecha_pago <= hoy ? 'Se debita hoy' : `Se debita el ${formatearFechaCob(c.fecha_pago)}`
-    }
-
-    function htmlEmitido(c, hoy) {
-      const tipo = c.tipo === 'echeque' ? 'E-cheque' : 'Cheque'
-      const cuenta = nombreCuentaEmitido(c)
-      const linkPago = c.gasto_id ? ` · <a class="chq-link-pago" href="cuentas-corrientes.html?pago=${encodeURIComponent(c.gasto_id)}">Ver el pago</a>` : ''
-      return `<div class="chq-emi chq-emi--${esc(ESTADO_EMITIDO[c.estado] ? c.estado : 'pendiente')}">
-          <div class="chq-emi__titulo">${esc(tipo)} N° ${esc(c.numero ?? '—')} · ${esc(c.beneficiario ?? '—')}</div>
-          <div class="chq-emi__importe">${esc(formatearImporte(c.importe))}</div>
-          <div class="chq-emi__meta">${esc(cuenta)} · emitido ${esc(formatearFechaCob(c.fecha_emision))} · paga ${esc(formatearFechaCob(c.fecha_pago))}${linkPago}</div>
-          <div class="chq-emi__estado">${esc(textoEstadoEmitido(c, hoy))}</div>
-        </div>`
-    }
-
-    function htmlTotalEmitidos(g) {
-      return `<div class="chq-emi-total">
-          <div class="chq-emi-total__cuenta" title="${esc(g.nombre)}">${esc(g.nombre)}</div>
-          <div class="chq-emi-total__monto">${esc(formatearImporte(g.total))}</div>
-          <div class="chq-emi-total__nota">${g.cantidad} ${g.cantidad === 1 ? 'cheque pendiente' : 'cheques pendientes'} · el próximo se debita el ${esc(formatearFechaCob(g.proximo))}</div>
-        </div>`
-    }
-
-    function filtrosEmitidos() {
-      return {
-        unidad: estado.unidadElegida,
-        estadoFiltro: estado.filtrosEmitidos.estado,
-        cuenta: estado.filtrosEmitidos.cuenta,
-        desde: estado.filtrosEmitidos.desde,
-        hasta: estado.filtrosEmitidos.hasta,
-      }
-    }
-
-    function pintarFiltroCuentasEmitidos() {
-      const sel = document.getElementById('chq-emi-cuenta')
-      const ids = [...new Set((estado.emitidos ?? []).filter(c => pasaFiltroUnidad(c.unidad_negocio_id, estado.unidadElegida)).map(c => c.cuenta_id))]
-      const opciones = ids.map(id => ({ id, nombre: estado.cuentasEmitidos?.get(id) ?? 'Cuenta sin nombre' }))
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-      if (estado.filtrosEmitidos.cuenta && !ids.includes(estado.filtrosEmitidos.cuenta)) estado.filtrosEmitidos.cuenta = ''
-      sel.innerHTML = '<option value="">Todas las cuentas</option>' +
-        opciones.map(o => `<option value="${esc(o.id)}">${esc(o.nombre)}</option>`).join('')
-      sel.value = estado.filtrosEmitidos.cuenta
-    }
-
-    function pintarEmitidos() {
-      const hoy = hoyArgentina()
-      const lista = document.getElementById('chq-emi-lista')
-      const vacio = document.getElementById('chq-emi-vacio')
-      const totales = document.getElementById('chq-emi-totales')
-      document.querySelectorAll('[data-emi-estado]').forEach(b => {
-        const si = b.dataset.emiEstado === estado.filtrosEmitidos.estado
-        b.classList.toggle('chq-segmento__opcion--activo', si)
-        b.setAttribute('aria-pressed', String(si))
-      })
-      if (estado.emitidos == null) { lista.innerHTML = ''; totales.innerHTML = ''; vacio.hidden = true; return }
-      const grupos = pendientePorCuenta(estado.emitidos, estado.unidadElegida, nombreCuentaEmitido)
-      totales.innerHTML = grupos.map(htmlTotalEmitidos).join('')
-      const filas = emitidosFiltrados(estado.emitidos, filtrosEmitidos())
-      lista.innerHTML = filas.map(c => htmlEmitido(c, hoy)).join('')
-      vacio.hidden = filas.length > 0 || !puedeVerEmitidos()
-      vacio.textContent = estado.emitidos.length
-        ? 'No hay cheques emitidos con estos filtros.'
-        : 'Todavía no se emitió ningún cheque propio. Se cargan desde Cuentas corrientes → Registrar pago → "Cheque / e-cheque propio".'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -11329,26 +11089,6 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function conectarTodo() {
-      document.getElementById('chq-vistas').addEventListener('click', (ev) => {
-        const b = ev.target.closest('[data-chq-vista]')
-        if (b) mostrarVistaCheques(b.dataset.chqVista)
-      })
-      document.getElementById('chq-emi-estado').addEventListener('click', (ev) => {
-        const b = ev.target.closest('[data-emi-estado]')
-        if (!b) return
-        estado.filtrosEmitidos.estado = b.dataset.emiEstado
-        pintarEmitidos()
-      })
-      document.getElementById('chq-emi-cuenta').addEventListener('change', (ev) => {
-        estado.filtrosEmitidos.cuenta = ev.target.value
-        pintarEmitidos()
-      })
-      for (const [id, clave] of [['chq-emi-desde', 'desde'], ['chq-emi-hasta', 'hasta']]) {
-        document.getElementById(id).addEventListener('change', (ev) => {
-          estado.filtrosEmitidos[clave] = esFechaIso(ev.target.value) ? ev.target.value : ''
-          pintarEmitidos()
-        })
-      }
       let temporizadorCheque = null
       document.getElementById('chq-filtro-numero').addEventListener('input', (ev) => {
         estado.filtros.numero = ev.target.value

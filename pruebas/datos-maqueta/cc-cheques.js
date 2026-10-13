@@ -4,8 +4,9 @@
 // Parte de los datos de Administración (administracion.js): la pestaña
 // Clientes de Cuentas corrientes ES Administración → Clientes abierta adentro,
 // y el iframe usa la misma maqueta (sessionStorage es de la pestaña). Suma lo
-// de Cuentas corrientes: la cuenta de ANATOLIA SRL en Nuss (dos facturas), las
-// cuentas de banco de cada empresa y tres cheques emitidos.
+// de Cuentas corrientes: la cuenta de ANATOLIA SRL en Nuss (dos facturas) y
+// las cuentas de cada empresa. Los cheques emitidos (cheques propios) se
+// sacaron el 11/10/2026: la empresa no emite cheques propios.
 //
 //   http://localhost:4180/modulos/cuentas-corrientes.html?maqueta=cc-cheques
 //   http://localhost:4180/modulos/administracion.html?seccion=cheques&maqueta=cc-cheques
@@ -22,8 +23,8 @@ for (const [m, tarea] of [['cuentas_corrientes', 'ver_todo'], ['cuentas_corrient
   if (!yaTiene(m, tarea)) t.empleado_tareas.push({ empleado_id: 'emp-1', modulo: m, tarea, alcance: null, habilitado: true });
 }
 
-// Las cuentas de banco: dos de Nuss en pesos, una en dólares (no se ofrece) y
-// una de Dolce Pasta (otra empresa: no se ofrece en un pago de Nuss).
+// Las cuentas: dos de banco de Nuss en pesos, una en dólares, una de Dolce
+// Pasta y el efectivo de quien registra el pago.
 t.cuentas_caja = [
   { id: 'cta-banco-nuss', nombre: 'Banco Macro · Nuss', unidad_negocio_id: N, medio: 'banco', moneda: 'ARS', activa: true, empleado_id: 'emp-empresa' },
   { id: 'cta-nacion-nuss', nombre: 'Banco Nación · Nuss', unidad_negocio_id: N, medio: 'banco', moneda: 'ARS', activa: true, empleado_id: 'emp-empresa' },
@@ -44,15 +45,6 @@ t.v_cuenta_corriente_movimientos = [
 t.creditos_proveedor = [];
 for (const f of t.facturas_pendientes) { f.importe = f.importe ?? f.saldo_pendiente; }
 
-// Los cheques propios: dos pendientes (uno en noviembre, otro en octubre) y
-// uno ya debitado. Uno de Dolce Pasta (la barra lo filtra).
-t.cheques_emitidos = [
-  { id: 'ce-1', unidad_negocio_id: N, cuenta_id: 'cta-banco-nuss', tipo: 'cheque', numero: '00012345', fecha_emision: '2026-10-01', fecha_pago: '2026-11-15', importe: 250000, moneda: 'ARS', proveedor_id: 'pv1', beneficiario: 'ANATOLIA SRL', gasto_id: 'g-pago-1', estado: 'pendiente', debitado_en: null },
-  { id: 'ce-2', unidad_negocio_id: N, cuenta_id: 'cta-nacion-nuss', tipo: 'echeque', numero: '987654', fecha_emision: '2026-10-01', fecha_pago: '2026-10-20', importe: 120000.5, moneda: 'ARS', proveedor_id: 'pv2', beneficiario: 'FERPLAST S.R.L.', gasto_id: 'g-pago-2', estado: 'pendiente', debitado_en: null },
-  { id: 'ce-3', unidad_negocio_id: N, cuenta_id: 'cta-banco-nuss', tipo: 'cheque', numero: '00012300', fecha_emision: '2026-09-01', fecha_pago: '2026-09-20', importe: 80000, moneda: 'ARS', proveedor_id: 'pv1', beneficiario: 'ANATOLIA SRL', gasto_id: 'g-pago-3', estado: 'debitado', debitado_en: '2026-09-20T09:00:00Z' },
-  { id: 'ce-4', unidad_negocio_id: D, cuenta_id: 'cta-dolce', tipo: 'cheque', numero: '555', fecha_emision: '2026-10-01', fecha_pago: '2026-10-30', importe: 30000, moneda: 'ARS', proveedor_id: 'pv1', beneficiario: 'ANATOLIA SRL', gasto_id: 'g-pago-4', estado: 'pendiente', debitado_en: null },
-];
-
 // Un cheque de la cartera ya usado en un pago desde Cuentas corrientes.
 t.cobranza_cheques.push({
   sucursal_codigo: '123', codigo_postal: '5000', dv_ruta: 0, dv_numero: 0, cuenta: '00012345678', dv_cuenta: 0,
@@ -67,7 +59,6 @@ Object.assign(rpc, {
   remitos_sin_facturar: [],
   sugerir_facturas_fifo: [],
   pagar_proveedor_con_cheques_cartera: 'g-nuevo',
-  pagar_proveedor_con_cheque_propio: 'g-nuevo',
 });
 
 module.exports = { uid: admin.uid, tablas: t, rpc };

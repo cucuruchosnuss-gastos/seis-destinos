@@ -5,12 +5,13 @@
 //     que es la MISMA pantalla de Administración → Clientes abierta adentro
 //     (administracion.html?seccion=clientes&embebido=cc), sin copiar código.
 //     Se ve con retiros:ver.
-//  2. "Registrar pago" con CUATRO medios: efectivo y transferencia como
-//     siempre; "Cheques de la cartera" (pagar_proveedor_con_cheques_cartera:
-//     el monto es la suma de los tildados y NO mueve caja) y "Cheque /
-//     e-cheque propio" (pagar_proveedor_con_cheque_propio: el banco se debita
-//     el DÍA DE PAGO, nunca antes). "Cheque" ya no va por
-//     registrar_pago_proveedor (ahí no movía ni la caja ni la cartera).
+//  2. "Registrar pago" con TRES medios: efectivo y transferencia como
+//     siempre, y "Cheques de la cartera" (pagar_proveedor_con_cheques_cartera:
+//     el monto es la suma de los tildados y NO mueve caja). "Cheque" ya no va
+//     por registrar_pago_proveedor (ahí no movía ni la caja ni la cartera).
+//     El cuarto, "Cheque / e-cheque propio" (pagar_proveedor_con_cheque_propio),
+//     se SACÓ el 11/10/2026: la empresa no emite cheques propios. Esta suite
+//     exige que no vuelva (da rojo con el archivo de antes).
 //  3. La etiqueta de esos pagos en la cuenta del proveedor.
 //  4. Administración embebida: sin encabezado, sin portada, sin irse al
 //     dashboard.
@@ -53,12 +54,9 @@ const PRELUDIO = `
   var __secciones = [nuevoEl('b-prov'), nuevoEl('b-cli')]
   __secciones[0].dataset.ccSeccion = 'proveedores'
   __secciones[1].dataset.ccSeccion = 'clientes'
-  var __tipos = [nuevoEl('t-ch'), nuevoEl('t-ech')]
-  __tipos[0].dataset.tipoPropio = 'cheque'
-  __tipos[1].dataset.tipoPropio = 'echeque'
   var document = {
     getElementById(id) { if (!__els.has(id)) __els.set(id, nuevoEl(id)); return __els.get(id) },
-    querySelectorAll(sel) { return sel === '[data-cc-seccion]' ? __secciones : sel === '[data-tipo-propio]' ? __tipos : [] },
+    querySelectorAll(sel) { return sel === '[data-cc-seccion]' ? __secciones : [] },
     querySelector: () => null,
     createElement() { return { value: '', textContent: '' } },
   }
@@ -86,7 +84,7 @@ const PRELUDIO = `
   function cerrarModalPago() {} async function cargarFichaSaldos() {} async function cargarFichaMovimientos() {}
   async function cargarFichaCreditos() {} function renderizarFichaBanner() {} function cargarSaldos() {}
   function ajustarMarcoClientes() {}
-  var medioPagoSeleccionado = null, carteraPago = [], tipoPropio = 'cheque', facturasParaPago = [], bancosBcra = null, turnoCartera = 0, cuentasPropio = []
+  var medioPagoSeleccionado = null, carteraPago = [], facturasParaPago = [], bancosBcra = null, turnoCartera = 0
   var estado = { miRolApp: 'usuario', miEmpleadoId: 'yo', misTareas: new Set(['cuentas_corrientes:registrar_pago']),
     ficha: { proveedorId: 'p1', unidadId: 'u-n', nombre: 'DIMAFLO S.A.' } }
 `
@@ -94,10 +92,9 @@ const PRELUDIO = `
 const FUNCIONES = [
   'esc', 'formatearImporte', 'importeHtml', 'tieneTarea',
   'puedeVerClientes', 'renderizarPrimerNivel', 'mostrarSeccionCC', 'abrirMarcoClientes',
-  'esMedioCheque', 'puedeUsarCartera', 'fechaCobroCheque', 'libradorDe', 'sumaCheques', 'sumarDiasIso', 'esFechaIsoCC',
+  'esMedioCheque', 'puedeUsarCartera', 'fechaCobroCheque', 'libradorDe', 'sumaCheques',
   'chequesParaPagar', 'htmlFilaCartera', 'renderizarCarteraPago', 'pintarTotalCartera', 'tildarChequeCartera',
-  'cuentasDeBancoDeLaEmpresa', 'elegirTipoPropio', 'textoDebitoPropio', 'pintarAvisoDebito', 'validarChequePropio',
-  'parametrosPagoCartera', 'parametrosPagoPropio', 'asegurarMonedaPesos', 'pintarAvisoPesos', 'confirmarPago',
+  'parametrosPagoCartera', 'asegurarMonedaPesos', 'pintarAvisoPesos', 'confirmarPago',
   'etiquetaPagoDeGasto',
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'URL_CLIENTES']
@@ -105,7 +102,7 @@ const CONSTANTES = ['MEDIOS_CHEQUE', 'URL_CLIENTES']
 function sandbox() {
   return construirCon(ARCHIVO, {
     preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-    retorno: `estado, __els, __historial, __rpc, __errores, __exitos, __consultas, __puesto, __secciones, __tipos,
+    retorno: `estado, __els, __historial, __rpc, __errores, __exitos, __consultas, __puesto, __secciones,
       __setVar(k, v){ eval(k + ' = v') }, __getVar(k){ return eval(k) }, __monto(v){ __monto = v }, __rpcFalla(e){ __rpcError = e },
       __sugerencias(){ return __sugerencias }`,
   })
@@ -178,9 +175,24 @@ async function main() {
   chk('?pestana=clientes abre la pestaña al entrar', /if \(params\.get\('pestana'\) === 'clientes'\) mostrarSeccionCC\('clientes'\)/.test(FUENTE))
   chk('?pago= solo con un id que parece uuid', /if \(pagoURL && \/\^\[0-9a-f-\]\{36\}\$\/i\.test\(pagoURL\)\) await abrirPagoDesdeLink\(pagoURL\)/.test(FUENTE))
 
-  // ══ 2. LOS CUATRO MEDIOS ═══════════════════════════════════════════════════
-  chk('cuatro medios: efectivo, transferencia, cartera y propio',
-    ['efectivo', 'transferencia', 'cartera', 'propio'].every(v => FUENTE.includes(`data-valor="${v}"`)))
+  // ══ 2. LOS TRES MEDIOS ═════════════════════════════════════════════════════
+  const medios = [...FUENTE.matchAll(/<div class="grilla-medio-pago" id="grilla-medio-pago-cc">([\s\S]*?)<\/div>/g)][0]?.[1] ?? ''
+  chk('tres medios: efectivo, transferencia y cartera (y nada más)',
+    JSON.stringify([...medios.matchAll(/data-valor="([^"]+)"/g)].map(m => m[1])) === '["efectivo","transferencia","cartera"]',
+    JSON.stringify([...medios.matchAll(/data-valor="([^"]+)"/g)].map(m => m[1])))
+  // 11/10/2026: la empresa NO emite cheques propios. Que no vuelva nada de eso.
+  chk('sin cheque propio: no vuelve el medio "propio"', !/data-valor="propio"/.test(FUENTE))
+  chk('sin cheque propio: no vuelve la llamada a pagar_proveedor_con_cheque_propio',
+    !/rpc\(\s*['"]pagar_proveedor_con_cheque_propio['"]/.test(FUENTE))
+  chk('sin cheque propio: no vuelve su formulario (cuenta de banco, número, fechas, débito)',
+    !/id="(grupo-propio-pago|campo-cuenta-propio|campo-numero-propio|campo-emision-propio|campo-fechapago-propio|aviso-debito-propio|tipo-propio)"/.test(FUENTE) &&
+    !/data-tipo-propio/.test(FUENTE))
+  chk('sin cheque propio: no vuelve su lógica',
+    !/function (validarChequePropio|cargarCuentasPropio|textoDebitoPropio|parametrosPagoPropio|elegirTipoPropio|pintarAvisoDebito)\b/.test(FUENTE))
+  chk('MEDIOS_CHEQUE es solo la cartera', /const MEDIOS_CHEQUE = \['cartera'\]/.test(FUENTE))
+  chk('la cartera, cuando está, ocupa la fila entera (no queda un hueco con tres botones)',
+    /#grilla-medio-pago-cc \{ grid-template-columns: repeat\(2, 1fr\); \}/.test(FUENTE) &&
+    /#grilla-medio-pago-cc \[data-valor="cartera"\] \{ grid-column: 1 \/ -1; \}/.test(FUENTE))
   chk('"Cheque" suelto ya no se ofrece (iba por registrar_pago_proveedor y no movía nada)', !/data-valor="cheque"/.test(FUENTE))
   chk('"Cheques de la cartera" nace escondido', /data-valor="cartera" id="btn-medio-cartera" hidden>/.test(FUENTE))
   {
@@ -262,76 +274,10 @@ async function main() {
     chk('cartera: el error de la base, tal cual', S.__errores.at(-1) === 'Error al registrar el pago: El cheque N° 00000111 no está en cartera (está endosado).', S.__errores.at(-1))
   }
 
-  // ══ 4. EL CHEQUE / E-CHEQUE PROPIO ═════════════════════════════════════════
+  // ══ 4. LOS PARÁMETROS DE LA CARTERA ════════════════════════════════════════
+  // (El cheque / e-cheque propio se sacó el 11/10/2026: ver la sección 2.)
   {
     const S = sandbox()
-    chk('debito: un cheque con fecha de pago futura se debita ESE día, no antes',
-      S.textoDebitoPropio('2026-11-15', HOY) === 'El banco se debita el 15/11.')
-    chk('debito: con la fecha de pago hoy o pasada, se debita al registrar',
-      S.textoDebitoPropio(HOY, HOY) === 'La fecha de pago ya llegó: el banco se debita el 05/10, al registrar el pago.' &&
-      S.textoDebitoPropio('2026-10-01', HOY).startsWith('La fecha de pago ya llegó'))
-    chk('debito: sin fecha, nada', S.textoDebitoPropio('', HOY) === null)
-    const doc = S.__getVar('document')
-    doc.getElementById('campo-emision-propio').value = '2026-10-01'
-    doc.getElementById('campo-fechapago-propio').value = '2026-11-15'
-    S.pintarAvisoDebito()
-    chk('el aviso del formulario sale de la FECHA DE PAGO, no de la emisión',
-      el(S, 'aviso-debito-propio').hidden === false && el(S, 'aviso-debito-propio').textContent === 'El banco se debita el 15/11.', el(S, 'aviso-debito-propio').textContent)
-    doc.getElementById('campo-fechapago-propio').value = ''
-    S.pintarAvisoDebito()
-    chk('sin fecha de pago, el aviso no se ve', el(S, 'aviso-debito-propio').hidden === true)
-
-    const bien = { cuentaId: 'cta', numero: ' 123 ', emision: HOY, pago: '2026-12-01', importe: 500 }
-    chk('validar: con todo, nada que decir', S.validarChequePropio(bien, HOY) === null)
-    const casos = [
-      [{ cuentaId: null }, 'Elegí la cuenta de banco de donde sale el cheque.'],
-      [{ numero: '  ' }, 'Falta el número del cheque.'],
-      [{ pago: '' }, 'Faltan las fechas del cheque.'],
-      [{ emision: '2026-10-06', pago: '2026-10-07' }, 'La fecha de emisión no puede ser futura.'],
-      [{ pago: '2026-10-04' }, 'La fecha de pago tiene que estar entre la emisión y 360 días después.'],
-      [{ pago: '2027-09-31' }, 'La fecha de pago tiene que estar entre la emisión y 360 días después.'],
-      [{ importe: 0 }, 'El importe tiene que ser mayor a cero.'],
-    ]
-    for (const [cambio, texto] of casos) chk(`validar: ${texto}`, S.validarChequePropio({ ...bien, ...cambio }, HOY) === texto, S.validarChequePropio({ ...bien, ...cambio }, HOY))
-    chk('validar: justo 360 días después, vale', S.validarChequePropio({ ...bien, pago: S.sumarDiasIso(HOY, 360) }, HOY) === null && S.sumarDiasIso(HOY, 360) === '2027-09-30')
-
-    S.estado.misTareas = new Set(['cuentas_corrientes:registrar_pago'])
-    S.__setVar('tipoPropio', 'echeque')
-    S.__setVar('facturasParaPago', [{ id: 'f1', checked: true, monto: 500 }])
-    await confirmar(S, { medio: 'propio', monto: 500, fecha: '2026-01-01', campos: {
-      'campo-cuenta-propio': 'cta-macro', 'campo-numero-propio': ' 00012345 ', 'campo-emision-propio': '2026-10-01', 'campo-fechapago-propio': '2026-11-15' } })
-    const ll = S.__rpc
-    chk('propio: llama a pagar_proveedor_con_cheque_propio, y a nada más', ll.length === 1 && ll[0].nombre === 'pagar_proveedor_con_cheque_propio', JSON.stringify(ll.map(x => x.nombre)))
-    const p = ll[0]?.params ?? {}
-    chk('propio: la cuenta, el tipo y el número (sin espacios)', p.p_cuenta_id === 'cta-macro' && p.p_tipo === 'echeque' && p.p_numero === '00012345', JSON.stringify(p))
-    chk('propio: la EMISIÓN y el PAGO, cada una en su lugar (el banco se debita el día de pago)',
-      p.p_fecha_emision === '2026-10-01' && p.p_fecha_pago === '2026-11-15', JSON.stringify(p))
-    chk('propio: el importe y las aplicaciones', p.p_importe === 500 && JSON.stringify(p.p_aplicaciones) === '[{"factura_pendiente_id":"f1","monto_aplicado":500}]')
-    chk('propio: no viaja la fecha general del modal', !Object.values(p).includes('2026-01-01'))
-    chk('propio: el aviso de éxito dice cuándo se debita', S.__exitos.at(-1) === '¡Pago registrado! El banco se debita el 15/11.', S.__exitos.at(-1))
-    chk('propio: no toca la caja desde la pantalla', !S.__consultas.includes('caja_movimientos'))
-
-    await confirmar(S, { medio: 'propio', monto: 500, campos: { 'campo-fechapago-propio': '2026-09-30' } })
-    chk('propio con el pago antes de la emisión: no llama y avisa', S.__rpc.length === 1 && S.__errores.at(-1) === 'La fecha de pago tiene que estar entre la emisión y 360 días después.', S.__errores.at(-1))
-  }
-  {
-    const S = sandbox()
-    chk('cuentas: solo las de banco, de ESTA empresa, en pesos y activas',
-      JSON.stringify(S.cuentasDeBancoDeLaEmpresa([
-        { id: 'a', nombre: 'Macro Seis Destinos', medio: 'banco', moneda: 'ARS', unidad_negocio_id: 'u-n', activa: true },
-        { id: 'b', nombre: 'Macro USD', medio: 'banco', moneda: 'USD', unidad_negocio_id: 'u-n', activa: true },
-        { id: 'c', nombre: 'Caja', medio: 'efectivo', moneda: 'ARS', unidad_negocio_id: 'u-n', activa: true },
-        { id: 'd', nombre: 'Macro Dolce', medio: 'banco', moneda: 'ARS', unidad_negocio_id: 'u-dolce', activa: true },
-        { id: 'e', nombre: 'Banco Nación', medio: 'banco', moneda: 'ARS', unidad_negocio_id: 'u-n', activa: true },
-        { id: 'f', nombre: 'Vieja', medio: 'banco', moneda: 'ARS', unidad_negocio_id: 'u-n', activa: false },
-      ], 'u-n').map(c => c.id)) === '["e","a"]')
-    S.elegirTipoPropio('echeque')
-    chk('el tipo e-cheque se marca', S.__getVar('tipoPropio') === 'echeque' && S.__tipos[1].getAttribute('aria-pressed') === 'true' && S.__tipos[0].getAttribute('aria-pressed') === 'false')
-    S.elegirTipoPropio('cualquier cosa')
-    chk('un tipo desconocido es cheque', S.__getVar('tipoPropio') === 'cheque')
-    const p = S.parametrosPagoPropio({ proveedorId: 'p', unidadId: 'u', cuentaId: 'c', tipo: 'x', numero: ' 9 ', emision: 'e', pago: 'g', importe: 1, aplicaciones: [] })
-    chk('los parámetros del cheque propio son los de la función de la base',
-      JSON.stringify(Object.keys(p).sort()) === JSON.stringify(['p_aplicaciones', 'p_cuenta_id', 'p_fecha_emision', 'p_fecha_pago', 'p_importe', 'p_numero', 'p_proveedor_id', 'p_tipo', 'p_unidad_negocio_id']) && p.p_tipo === 'cheque')
     const c = S.parametrosPagoCartera({ proveedorId: 'p', unidadId: 'u', chequeIds: ['a'], fecha: 'f', aplicaciones: [] })
     chk('los parámetros de la cartera son los de la función de la base',
       JSON.stringify(Object.keys(c).sort()) === JSON.stringify(['p_aplicaciones', 'p_cheque_ids', 'p_fecha', 'p_proveedor_id', 'p_unidad_negocio_id']))
@@ -344,7 +290,7 @@ async function main() {
     const sel = doc.getElementById('campo-moneda-pago')
     sel.options = [{ value: 'USD' }]
     sel.value = 'USD'
-    S.__setVar('medioPagoSeleccionado', 'propio')
+    S.__setVar('medioPagoSeleccionado', 'cartera')
     S.asegurarMonedaPesos()
     chk('al elegir un cheque, la moneda pasa a ARS (y se agrega si no estaba)', sel.value === 'ARS' && sel.options.some(o => o.value === 'ARS'))
     sel.value = 'USD'
@@ -367,8 +313,8 @@ async function main() {
   {
     const S = sandbox()
     chk('etiqueta: cheques de la cartera', S.etiquetaPagoDeGasto({ medio_pago: 'cheque', descripcion: 'Pago con cheques de terceros (N° 00000111, N° 00000222) — DIMAFLO' }) === 'Cheques de la cartera N° 00000111, N° 00000222')
-    chk('etiqueta: e-cheque propio', S.etiquetaPagoDeGasto({ medio_pago: 'cheque', descripcion: 'Pago con e-cheque propio N° 55 (Macro, se debita el 15/11/2026) — DIMAFLO' }) === 'E-cheque propio N° 55')
-    chk('etiqueta: cheque propio', S.etiquetaPagoDeGasto({ medio_pago: 'cheque', descripcion: 'Pago con cheque propio N° 9 (Macro, se debita el 15/11/2026) — X' }) === 'Cheque propio N° 9')
+    // 11/10/2026: el "Cheque propio N° X" se sacó (nunca se registró ninguno).
+    chk('etiqueta: ya no hay "Cheque propio"', S.etiquetaPagoDeGasto({ medio_pago: 'cheque', descripcion: 'Pago con cheque propio N° 9 (Macro, se debita el 15/11/2026) — X' }) === null)
     chk('etiqueta: el endoso sigue igual', S.etiquetaPagoDeGasto({ medio_pago: 'cheque', descripcion: 'Cheque endosado 072-43300023 — X' }) === 'Cheque endosado 072-43300023')
     chk('etiqueta: otro texto, nada', S.etiquetaPagoDeGasto({ medio_pago: 'cheque', descripcion: 'Pago a cuenta corriente' }) === null && S.etiquetaPagoDeGasto({ medio_pago: 'efectivo', descripcion: 'Pago con cheque propio N° 9' }) === null)
   }

@@ -35,6 +35,34 @@ const RETIRADOS = [
   ['id:filtro-unidad-ficha', `el filtro de unidad de la ficha: ${POR_LA_BARRA}`],
 ]
 
+// SEGUNDO BASELINE (11/10/2026): el último commit con el "Cheque / e-cheque
+// propio" en Registrar pago. Todo lo de ese commit sigue estando, salvo lo
+// RETIRADO_PROPIO con su motivo. Commit FIJO, nunca HEAD.
+const BASE_PROPIO = 'e4293f5'
+const SIN_PROPIO = 'la empresa no emite cheques propios, 11/10/2026'
+const RETIRADOS_PROPIO = [
+  ['control:button[data-tipo-propio][type=button]', `Cheque / E-cheque del cheque propio: ${SIN_PROPIO}`],
+  ['control:input#campo-emision-propio[type=date]', `la fecha de emisión del cheque propio: ${SIN_PROPIO}`],
+  ['control:input#campo-fechapago-propio[type=date]', `la fecha de pago del cheque propio: ${SIN_PROPIO}`],
+  ['control:input#campo-numero-propio[type=text]', `el número del cheque propio: ${SIN_PROPIO}`],
+  ['control:select#campo-cuenta-propio', `la cuenta de banco del cheque propio: ${SIN_PROPIO}`],
+  ['data:data-tipo-propio', `el tipo del cheque propio: ${SIN_PROPIO}`],
+  ['id:aviso-debito-propio', `"El banco se debita el DD/MM": ${SIN_PROPIO}`],
+  ['id:aviso-sin-cuentas-propio', `el aviso de sin cuentas de banco del cheque propio: ${SIN_PROPIO}`],
+  ['id:campo-cuenta-propio', `la cuenta de banco del cheque propio: ${SIN_PROPIO}`],
+  ['id:campo-emision-propio', `la fecha de emisión del cheque propio: ${SIN_PROPIO}`],
+  ['id:campo-fechapago-propio', `la fecha de pago del cheque propio: ${SIN_PROPIO}`],
+  ['id:campo-numero-propio', `el número del cheque propio: ${SIN_PROPIO}`],
+  ['id:grupo-propio-pago', `el formulario del cheque propio: ${SIN_PROPIO}`],
+  ['id:tipo-propio', `el segmentado Cheque / E-cheque del cheque propio: ${SIN_PROPIO}`],
+]
+// Controles que SIGUEN pero aparecen MENOS veces: [clave, cuántas ahora, motivo].
+const MENOS_COPIAS = [
+  ['control:button[data-valor][type=button]', 2,
+    'Efectivo y Transferencia / QR (la cartera tiene id propio, #btn-medio-cartera): el "Cheque" suelto se fue el 05/10/2026 y el "Cheque / e-cheque propio" el 11/10/2026 (la empresa no emite cheques propios)'],
+  ['data:data-valor', 3, `los tres medios de Registrar pago: ${SIN_PROPIO}`],
+]
+
 let ok = 0
 const fallas = []
 function chk(nombre, cond, detalle) {
@@ -66,11 +94,38 @@ try {
     chk(`el retirado ${k} ya no está`, veces(A, k) === 0, 'sigue estando: sacá la declaración de RETIRADOS')
   }
 
+  const copias = new Map(MENOS_COPIAS.map(([k, n, m]) => { console.log(`MENOS COPIAS: ${k} × ${n} (${m})`); return [k, n] }))
+  for (const [k, n] of MENOS_COPIAS) {
+    chk(`el control ${k} sigue en el archivo`, veces(A, k) > 0, 'ya no está: va en RETIRADOS, no en MENOS_COPIAS')
+    chk(`${k} aparece las ${n} veces declaradas`, veces(A, k) === n, `aparece ${veces(A, k)}: actualizá o sacá la declaración`)
+  }
+
   // 1. Todo lo del baseline sigue estando, al menos las mismas veces.
   for (const [k, n] of [...B.cuenta.entries()].sort()) {
     if (retirado.has(k)) continue
     const m = A.cuenta.get(k) || 0
-    chk(`sigue estando ${k}`, m >= n, m === 0 ? `FALTA (estaba ${n} ${n === 1 ? 'vez' : 'veces'})` : `aparece ${m} y estaba ${n}`)
+    const pide = copias.has(k) ? Math.min(n, copias.get(k)) : n
+    chk(`sigue estando ${k}`, m >= pide && m > 0, m === 0 ? `FALTA (estaba ${n} ${n === 1 ? 'vez' : 'veces'})` : `aparece ${m} y estaba ${n}`)
+  }
+
+  // 1b. Lo del segundo baseline (con el cheque propio) también, salvo lo
+  // retirado a propósito.
+  const BP = process.env.ARCHIVO_BASE_PROPIO
+    ? inventario(fs.readFileSync(process.env.ARCHIVO_BASE_PROPIO, 'utf8'))
+    : inventario(execFileSync('git', ['show', `${BASE_PROPIO}:modulos/cuentas-corrientes.html`], {
+        cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+      }))
+  const retiradoPropio = new Map(RETIRADOS_PROPIO)
+  for (const [k, m] of RETIRADOS_PROPIO) {
+    console.log(`RETIRADO: ${k} (${m})`)
+    chk(`el retirado ${k} estaba en ${BASE_PROPIO}`, veces(BP, k) > 0, 'no estaba: la declaración sobra')
+    chk(`el retirado ${k} ya no está`, veces(A, k) === 0, 'sigue estando: sacá la declaración de RETIRADOS_PROPIO')
+  }
+  for (const [k, n] of [...BP.cuenta.entries()].sort()) {
+    if (retiradoPropio.has(k) || retirado.has(k)) continue
+    const m = A.cuenta.get(k) || 0
+    const pide = copias.has(k) ? Math.min(n, copias.get(k)) : n
+    chk(`${BASE_PROPIO}: sigue estando ${k}`, m >= pide && m > 0, m === 0 ? `FALTA (estaba ${n} ${n === 1 ? 'vez' : 'veces'})` : `aparece ${m} y estaba ${n}`)
   }
 
   // 2. Las referencias literales del JS apuntan a algo que existe.
