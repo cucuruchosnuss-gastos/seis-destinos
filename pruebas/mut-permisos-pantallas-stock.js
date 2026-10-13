@@ -13,12 +13,12 @@ correrMutaciones({
   manuales: [
     // M8
     { nombre: 'M8: con solo ver_costos, "sin acceso"', de: '      if (!verStock && !gestiona && !ajusta && !veCostos) {', a: '      if (!verStock && !gestiona && !ajusta) {' },
-    { nombre: 'M8: no abre derecho en Costos', de: "      const inicial = desdeUrl ?? (soloCostos ? 'costos' : vistas[0])", a: '      const inicial = desdeUrl ?? vistas[0]' },
+    { nombre: 'M8: no abre derecho en Costos', de: "      const inicial = desdeUrl === 'traspaso' ? 'stock' : (desdeUrl ?? (soloCostos ? 'costos' : vistas[0]))", a: "      const inicial = desdeUrl === 'traspaso' ? 'stock' : (desdeUrl ?? vistas[0])" },
     { nombre: 'M8: no carga los costos al abrir en Costos', de: "      if (inicial === 'costos') await cargarCostos()\n", a: '' },
     { nombre: 'M8: "Volver al stock" sin vista de stock', de: "      document.getElementById('btn-volver-de-costos').hidden = !verStock", a: "      document.getElementById('btn-volver-de-costos').hidden = false" },
     { nombre: 'M8: sin la pestaña Costos', de: '      const pestanaCostos = veCostos && !verStock && vistas.length > 0', a: '      const pestanaCostos = false' },
     { nombre: 'M8: pestaña Costos también con stock:ver', de: '      const pestanaCostos = veCostos && !verStock && vistas.length > 0', a: '      const pestanaCostos = veCostos && vistas.length > 0' },
-    { nombre: 'M8: ?vista=costos no se acepta', de: "    const VISTAS_DESDE_URL = ['catalogo', 'costos']", a: "    const VISTAS_DESDE_URL = ['catalogo']" },
+    { nombre: 'M8: ?vista=costos no se acepta', de: "    const VISTAS_DESDE_URL = ['catalogo', 'costos', 'traspaso']", a: "    const VISTAS_DESDE_URL = ['catalogo', 'traspaso']" },
     { nombre: 'M8: veCostos sin la tarea', de: "      const veCostos = estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:ver_costos')", a: "      const veCostos = estado.miRolApp === 'super_admin'" },
     { nombre: 'M8: veCostos para cualquiera', de: "      const veCostos = estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:ver_costos')", a: '      const veCostos = true' },
     // B8

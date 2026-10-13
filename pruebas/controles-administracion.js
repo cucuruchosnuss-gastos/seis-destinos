@@ -48,6 +48,7 @@ const RETIRADOS = [
   ['control:input#chq-emi-desde[type=date]', `la fecha de pago desde de los cheques emitidos: ${SIN_PROPIO}`],
   ['control:input#chq-emi-hasta[type=date]', `la fecha de pago hasta de los cheques emitidos: ${SIN_PROPIO}`],
   ['control:select#chq-emi-cuenta', `la cuenta de los cheques emitidos: ${SIN_PROPIO}`],
+  ['control:input#chq-salida-destino[type=text]', 'el texto "¿En qué banco o cuenta?" del depósito de un cheque: depositar (13/10/2026) elige una cuenta de banco de la Empresa y mete la plata (depositar_cheques)'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
@@ -112,6 +113,10 @@ try {
   // Lo que escribe un archivo de js/ que la pantalla importa (06/10/2026).
   const EN_JS = {
     'data-clasificacion': ['js/cuenta-unica.js', /data-clasificacion="\$\{escCu\(clave\)\}"/, 'htmlClasificacion(): los botones Cliente / Proveedor / Cliente y proveedor'],
+    // 13/10/2026: el panel "¿de dónde salen?" de Retiros por revisar.
+    'data-fr': ['js/faltante-retiro.js', /data-fr="(produccion|otro|lote|ajuste|volver|planilla|elegir-lote|confirmar-lote|confirmar-ajuste)"/, 'htmlFaltante(): las respuestas y los pasos del panel'],
+    'data-fr-valor': ['js/faltante-retiro.js', /data-fr-valor="\$\{escFr\(/, 'htmlFaltante(): la planilla o el lote de cada botón'],
+    'data-fr-motivo': ['js/faltante-retiro.js', /data-fr-motivo/, 'htmlFaltante(): el motivo del lote'],
   }
   for (const r of refs) {
     if (EN_JS[r.valor]) {

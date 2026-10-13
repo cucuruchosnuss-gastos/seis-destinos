@@ -201,10 +201,10 @@ const FACTURAS = [
   chk('con registrar_pago: Endosado habilitado y sin nota', S2.__doc.querySelectorAll('[data-salida-tipo]')[1].disabled === false && S2.__doc.getElementById('chq-salida-nota-endoso').hidden === true)
   chk('abrir deja la fábrica por defecto: la del cheque', S2.estado.salida.unidadId === U_NUSS && S2.estado.salida.proveedor === null && S2.estado.salida.modo === 'salida')
   S2.estado.salida.tipo = 'endosado'; S2.pintarModalSalida()
-  chk('endosado: el buscador a la vista, sin el campo de texto viejo', S2.__doc.getElementById('chq-endoso').hidden === false &&
-    S2.__doc.getElementById('chq-endoso-campo-buscar').hidden === false && S2.__doc.getElementById('chq-salida-campo-destino').hidden === true)
+  chk('endosado: el buscador a la vista, sin la cuenta de banco', S2.__doc.getElementById('chq-endoso').hidden === false &&
+    S2.__doc.getElementById('chq-endoso-campo-buscar').hidden === false && S2.__doc.getElementById('chq-salida-campo-cuenta').hidden === true)
   S2.estado.salida.tipo = 'depositado'; S2.pintarModalSalida()
-  chk('depositado: el campo del banco o la cuenta, sin el buscador', S2.__doc.getElementById('chq-endoso').hidden === true && S2.__doc.getElementById('chq-salida-campo-destino').hidden === false)
+  chk('depositar (13/10/2026): la cuenta de banco, sin el buscador', S2.__doc.getElementById('chq-endoso').hidden === true && S2.__doc.getElementById('chq-salida-campo-cuenta').hidden === false)
 }
 
 // ── El buscador ──────────────────────────────────────────────────────────
@@ -457,8 +457,9 @@ const FACTURAS = [
 
 // ── Lo que no se rompe ───────────────────────────────────────────────────
 {
-  chk('el depósito sigue con marcar_salida_cheque (el endoso va aparte)', /if \(s\.tipo === 'endosado' \|\| s\.modo === 'vincular'\) return confirmarEndoso\(\)/.test(JS) &&
-    /supabase\.rpc\('marcar_salida_cheque', parametrosSalida\(s\.cheque\.id, datos\)\)/.test(JS))
+  chk('depositar y vender van por su RPC (13/10/2026); el endoso va aparte', /if \(s\.tipo === 'endosado' \|\| s\.modo === 'vincular'\) return confirmarEndoso\(\)/.test(JS) &&
+    /datos\.tipo === 'vendido' \? 'vender_cheques' : 'depositar_cheques'/.test(JS) && !/marcar_salida_cheque/.test(JS.replace(/\/\/[^\n]*/g, '')))
+  chk('el endoso valida la fecha con las reglas de la salida, sin pedir cuenta', /erroresSalida\(\{ tipo: 'endosado', fecha \}, fechaCobranza, hoy\)/.test(JS))
   chk('el endoso no manda p_aplicaciones: reparte la base', !/p_aplicaciones/.test(JS.replace(/\/\/[^\n]*/g, '')))
   chk('el botón de vincular abre su diálogo', /data-vincular-proveedor\]'\)\.forEach\(b => b\.addEventListener\('click', \(ev\) => \{\s*ev\.stopPropagation\(\); abrirVincularProveedor\(b\.dataset\.vincularProveedor\)/.test(JS))
 }

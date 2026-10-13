@@ -17,6 +17,10 @@ const SEGURAS_ADMINISTRACION = [
   ['anulada', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del motivo, o vacío'],
   ['sinLotes', 'HTML constante del código: el aviso de que no se pueden ver los lotes, o vacío'],
   ['renglones', 'HTML armado por htmlRenglonOrden(), que escapa cada dato'],
+  // 13/10/2026: el faltante, "¿de dónde salen?".
+  ['htmlFaltanteRenglon(it, d)', 'HTML armado por htmlFaltanteRenglon(), que escapa el estado y el motivo con esc()'],
+  ['htmlBotonesRevisar(f)', 'HTML armado por htmlBotonesRevisar(), con esc() del id del renglón'],
+  ["htmlFaltante(falt.f, { puedeAjustar: false, linkTraspaso: LINK_TRASPASO_AD, hoy: hoyArgentina(), idTitulo: 'fr-titulo' })", 'HTML armado por htmlFaltante() de js/faltante-retiro.js, que escapa todo con escFr() (test-faltante-retiro.js lo ejecuta con marcas)'],
   ['total', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del total, o vacío'],
   ['htmlValorizar(d)', 'HTML armado por htmlValorizar(), que escapa los errores y el aviso del límite'],
   ['htmlFaltaLista(d)', 'HTML armado por htmlFaltaLista(), que escapa el nombre del cliente (06/10/2026; ejecutado con marcas en test-clientes-provisorios.js)'],
