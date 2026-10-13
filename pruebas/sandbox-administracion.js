@@ -124,6 +124,13 @@ const FUNCIONES_BASE = [
   'puedeCompensarCuentas', 'ctxCuentaUnica', 'pintarCuentaUnicaCliente',
   'nombreProveedorFicha', 'pintarClasificacionFicha', 'elegirClasificacionFicha', 'cerrarPanelVinculo',
   'confirmarVincular', 'confirmarDesvincular',
+  // Entre empresas (13/10/2026)
+  'entreVacio', 'datosEntre', 'nombreTipoEntre', 'nombreEmpresaEntre', 'centavosEntre', 'plataEntre', 'cantidadEntre', 'primerTramoEntre',
+  'normalizarEntre', 'sinPruebaEntre', 'claveParFechaEntre', 'traspasosConPrecio', 'yaTienePrecio', 'necesitaValor', 'filtrarEntre',
+  'valorEntre', 'direccionVaciaEntre', 'resumenEntre', 'ordenMonedasEntre', 'textoDireccionEntre', 'textosNetoEntre', 'htmlParEntre',
+  'htmlFilaEntre', 'entregadorasEntre', 'puedeLeerListasEntre', 'puedeValorizarProductoEntre', 'textoEstadoValorEntre',
+  'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'leerListasEntre', 'valorizarEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
+  'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
   ...FUNCIONES_CU,
 ]
 
@@ -150,6 +157,8 @@ const CONSTANTES_BASE = [
   ...CONSTANTES_CU,
   // Los clientes provisorios (06/10/2026)
   'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR', 'TOPE_BUSCAR_CLIENTES', 'TEXTO_SOLO_PROVISORIOS', 'TEXTO_SIN_LEER_CLIENTES',
+  // Entre empresas (13/10/2026)
+  'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
 ]
 
 const PRELUDIO = `

@@ -86,6 +86,13 @@ const SEGURAS_ADMINISTRACION = [
   ['elegir', 'HTML ya escapado: htmlEditorInsumoLista() arma el selector (o el nombre) con esc()'],
   ['modos', 'HTML constante del código: el segmento Precio fijo / Costo + %'],
   ['campo', 'HTML ya escapado: htmlEditorInsumoLista() arma el campo con esc() de la unidad'],
+  // Entre empresas (13/10/2026): los ejecuta con texto malicioso
+  // test-administracion-entre-empresas.js.
+  ['selloXEntre', 'HTML armado por htmlSelloEmpresa(), que escapa el nombre y el id de la empresa'],
+  ['selloYEntre', 'HTML armado por htmlSelloEmpresa(), que escapa el nombre y el id de la empresa'],
+  ['selloOrigenEntre', 'HTML armado por htmlSelloEmpresa() (escapa nombre e id), o un sello constante "—"'],
+  ['selloDestinoEntre', 'HTML armado por htmlSelloEmpresa() (escapa nombre e id), o un sello constante "—"'],
+  ['valorHtmlEntre', 'HTML ya escapado: htmlFilaEntre() lo arma con esc() del importe valorizado, la lista y el motivo, o un texto constante'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

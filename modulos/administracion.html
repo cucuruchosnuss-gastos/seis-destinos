@@ -481,6 +481,22 @@
     .ad-error-app__mensaje { font-weight: 700; overflow-wrap: anywhere; }
     .ad-error-app__detalle { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; white-space: pre-wrap; margin: 0.375rem 0 0; }
     .ad-error-app details summary { cursor: pointer; font-size: 0.8125rem; font-weight: 700; color: var(--ad-texto-secundario); min-height: 32px; display: flex; align-items: center; }
+    /* ── Entre empresas (13/10/2026) ─────────────────────────────────── */
+    .ad-entre-par__titulo { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; font-weight: 800; margin: 0 0 0.5rem; min-width: 0; }
+    .ad-entre-par__dir { margin: 0.25rem 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+    .ad-entre-par__dir strong { font-weight: 700; }
+    .ad-entre-par__neto { margin: 0.625rem 0 0; padding-top: 0.5rem; border-top: 1px solid var(--color-borde); font-weight: 800; font-size: 1rem; overflow-wrap: anywhere; }
+    .ad-entre-par__nota { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0.25rem 0 0; overflow-wrap: anywhere; }
+    .ad-entre-fila__empresas { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; min-width: 0; margin: 0.375rem 0; }
+    .ad-entre-fila__empresas .ad-fila__importe { margin-left: auto; }
+    .ad-entre-fila__detalle { margin: 0.25rem 0 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+    .ad-entre-fila__valor { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0.25rem 0 0; overflow-wrap: anywhere; }
+    .ad-entre-fila__valor--sin { color: var(--bordo-oscuro); font-weight: 600; }
+    .ad-entre-valorizar .ad-campo { margin-bottom: 0.5rem; }
+    /* En el celular, los campos con letra de 16 px (si no, el teléfono agranda la pantalla al tocarlos). */
+    @media (max-width: 1023.98px) {
+      #ad-vista-entre .ad-input, #ad-vista-entre .ad-select { font-size: 16px; }
+    }
     /* EMBEBIDA en Cuentas corrientes → Clientes (05/10/2026): la pantalla de
        afuera ya tiene su encabezado, su barra de fábricas y sus pestañas. Acá
        queda solo Clientes, sin el encabezado de Administración ni el
@@ -998,6 +1014,32 @@
       <div class="ad-lista" id="ad-seguridad-lista"></div>
     </section>
 
+    <!-- ══ ENTRE EMPRESAS (13/10/2026, con gastos:gastos_empresa) ══════════
+         Lo que pasó de una empresa del grupo a otra: cheques depositados en
+         el banco de otra, gastos pagados desde la cuenta de otra, cobros que
+         entraron en otra, traspasos de plata, mercadería e insumos, y las
+         deudas cargadas. Sale de movimientos_entre_empresas(p_desde, p_hasta).
+         Arriba, el resumen por par de empresas con su NETO. -->
+    <section id="ad-vista-entre" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-entre-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Entre empresas</h1>
+      </div>
+      <div class="ad-tarjeta">
+        <div class="ad-filtros">
+          <div class="ad-campo"><label for="ad-entre-desde">Desde</label><input type="date" class="ad-input" id="ad-entre-desde"></div>
+          <div class="ad-campo"><label for="ad-entre-hasta">Hasta</label><input type="date" class="ad-input" id="ad-entre-hasta"></div>
+          <div class="ad-campo"><label for="ad-entre-origen">Empresa que entrega</label><select class="ad-select" id="ad-entre-origen"></select></div>
+          <div class="ad-campo"><label for="ad-entre-destino">Empresa que recibe</label><select class="ad-select" id="ad-entre-destino"></select></div>
+          <div class="ad-campo"><label for="ad-entre-tipo">Tipo</label><select class="ad-select" id="ad-entre-tipo"></select></div>
+        </div>
+      </div>
+      <div id="ad-entre-valorizar"></div>
+      <div id="ad-entre-resumen"></div>
+      <p class="ad-cuenta" id="ad-entre-cuenta"></p>
+      <div class="ad-lista" id="ad-entre-lista"></div>
+    </section>
+
     <!-- ══ UNA COBRANZA (desde la cuenta de un cliente o un link) ══════════ -->
     <section id="ad-vista-cobranza" hidden>
       <div class="ad-cabecera-vista">
@@ -1208,6 +1250,10 @@
       // El registro de seguridad (27/09/2026): solo un super_admin, que es el
       // único que la base deja leer (policy de registro_seguridad).
       { id: 'seguridad', titulo: 'Seguridad', global: true, soloSuperAdmin: true, tareas: [] },
+      // Lo que pasó de una empresa del grupo a otra (13/10/2026): no es de una
+      // empresa. Pide gastos:gastos_empresa (con bypass de super_admin), la
+      // misma tarea que exige movimientos_entre_empresas().
+      { id: 'entre', titulo: 'Entre empresas', global: true, tareas: ['gastos:gastos_empresa'] },
     ]
 
     function seccionVisible(s, unidadId = estado.empresaId) {
@@ -1298,9 +1344,11 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar',
+      'ad-vista-entre']
     // Las vistas que no son de una empresa: el selector de empresa se esconde.
-    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
+    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad',
+      'ad-vista-entre']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -1317,6 +1365,7 @@
       'ad-vista-errores': 'Errores de la app',
       'ad-vista-seguridad': 'Seguridad',
       'ad-vista-revisar': 'Retiros por revisar',
+      'ad-vista-entre': 'Entre empresas',
     }
 
     function mostrarVista(id) {
@@ -1586,6 +1635,7 @@
       precios: 'M20 12l-8 8-9-9V3h8zM7.5 7.5v.01',
       importar: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3',
       errores: 'M8 6V4h8v2M5 8h14l-1 12H6zM10 12v4M14 12v4',
+      entre: 'M4 8h14l-3-3M20 16H6l3 3',
     }
     // De cada sección: su ícono y el color (el de su módulo; Por revisar va en
     // bordó, Importar y Errores en gris, como el diseño).
@@ -1599,6 +1649,7 @@
       cheques: { trazo: 'cheques', modulo: 'cheques' },
       seguridad: { trazo: 'seguridad', modulo: 'seguridad' },
       errores: { trazo: 'errores', c: 'var(--color-texto-menu)', t: '#F1EEE9' },
+      entre: { trazo: 'entre', modulo: 'administracion' },
     }
 
     function htmlTrazo(clave, tam = 18) {
@@ -1719,6 +1770,7 @@
           carga: p?.errores7 == null && !p?.errorErrores, error: p?.errorErrores,
           lineas: ['Errores y avisos sin arreglar', 'Solo lo ven los super_admin'] }
       }
+      if (s.id === 'entre') return contenidoSeccionEntre(p)
       return { numero: null, unidad: '', lineas: [] }
     }
 
@@ -1750,6 +1802,7 @@
     const PESTANAS = [
       ['inicio', 'Inicio'], ['cobranzas', 'Cobranzas'], ['ordenes', 'Órdenes'], ['revisar', 'Por revisar'], ['clientes', 'Clientes'],
       ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
+      ['entre', 'Entre empresas'],
     ]
     // De qué pestaña es cada vista (una orden es de Órdenes, un cliente de Clientes…).
     const PESTANA_DE_VISTA = {
@@ -1757,6 +1810,7 @@
       'ad-vista-cliente': 'clientes', 'ad-vista-ficha': 'clientes', 'ad-vista-listas': 'listas', 'ad-vista-lista': 'listas',
       'ad-vista-importar': 'importar', 'ad-vista-cheques': 'cheques', 'ad-vista-cobranzas': 'cobranzas', 'ad-vista-cobranza': 'cobranzas',
       'ad-vista-errores': 'errores', 'ad-vista-seguridad': 'seguridad', 'ad-vista-revisar': 'revisar',
+      'ad-vista-entre': 'entre',
     }
 
     // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
@@ -1879,6 +1933,10 @@
         contarErrores().then(n => { p.errores7 = n }).catch(err => { console.error('No se pudieron contar los errores:', err); p.errorErrores = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
+      if (SECCIONES.some(s => s.id === 'entre' && seccionVisible(s))) {
+        contarEntrePortada().then(r => { p.entre = r }).catch(err => { console.error('No se pudieron contar los movimientos entre empresas:', err); p.errorEntre = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
       if (!puedeEn('retiros', 'ver', unidad)) {
         // Quien solo gestiona clientes: cuántos provisorios hay (11/10/2026, M2).
         if (puedeGestionarCliente(unidad)) {
@@ -1907,6 +1965,7 @@
       else if (id === 'errores') mostrarErrores()
       else if (id === 'seguridad') mostrarSeguridad()
       else if (id === 'revisar') mostrarRevisar()
+      else if (id === 'entre') mostrarEntre()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -7519,6 +7578,574 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // ENTRE EMPRESAS — con gastos:gastos_empresa (13/10/2026)
+    //
+    // movimientos_entre_empresas(p_desde, p_hasta) (SECURITY DEFINER; pide
+    // gastos:gastos_empresa, el período —"Elegí el período."— y no más de
+    // dos años) devuelve lo que pasó de una empresa del grupo a otra:
+    // cheques de una depositados o vendidos en el banco de otra, gastos
+    // pagados desde la cuenta de otra, cobros que entraron en la cuenta de
+    // otra, traspasos de plata, producto terminado traspasado, insumos
+    // transferidos y las deudas cargadas (movimientos_entre_unidades).
+    //
+    // LA REGLA: "de A a B" = el valor salió de A y lo recibió B → B le debe a
+    // A. El neto de cada par suma las dos direcciones EN CENTAVOS y por
+    // moneda (pesos y dólares nunca se suman).
+    //
+    // La mercadería y los insumos llegan SIN importe: se pueden valorizar con
+    // una lista de precios de la empresa que ENTREGA (una cuenta de la
+    // pantalla, marcada "≈": no se guarda en ningún lado). Un traspaso de
+    // producto terminado CON precio ya dejó su deuda en
+    // movimientos_entre_unidades (llega como 'otro' con el concepto
+    // "Traspaso de producto terminado…", la misma fecha y las mismas dos
+    // empresas): esa mercadería no se vuelve a valorizar (nunca dos veces).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TIPOS_ENTRE = {
+      cheque: { nombre: 'Cheque en el banco de otra', resumen: 'en cheques' },
+      pago: { nombre: 'Pago desde la cuenta de otra', resumen: 'en pagos' },
+      cobro: { nombre: 'Cobro en la cuenta de otra', resumen: 'en cobros' },
+      traspaso_dinero: { nombre: 'Traspaso de plata', resumen: 'en traspasos de plata' },
+      mercaderia: { nombre: 'Producto terminado', resumen: 'en producto terminado' },
+      insumos: { nombre: 'Insumos', resumen: 'en insumos' },
+      otro: { nombre: 'Deuda cargada', resumen: 'en deudas cargadas' },
+    }
+    const ORDEN_TIPOS_ENTRE = ['cheque', 'pago', 'cobro', 'traspaso_dinero', 'mercaderia', 'insumos', 'otro']
+    // Los que llegan sin importe (cantidades): se valorizan con una lista.
+    const SIN_IMPORTE_ENTRE = ['mercaderia', 'insumos']
+    // El concepto que escribe traspasar_producto_terminado() en la deuda.
+    const CONCEPTO_TRASPASO_CON_PRECIO = 'Traspaso de producto terminado'
+    const MONEDAS_ORDEN_ENTRE = ['ARS', 'USD']
+    const UNIDAD_ENTRE = { kg: 'kg', lt: 'L', un: 'u' }
+
+    function entreVacio() {
+      return { filas: null, error: null, turno: 0, filtros: { origen: '', destino: '', tipo: '' },
+        listas: new Map(), elegidas: new Map(), valores: new Map(), valorizando: new Map(), turnosValor: new Map() }
+    }
+
+    function datosEntre() {
+      if (!estado.entre) estado.entre = entreVacio()
+      return estado.entre
+    }
+
+    function nombreTipoEntre(t) {
+      return TIPOS_ENTRE[t]?.nombre ?? String(t ?? '—')
+    }
+
+    // El nombre corto de una empresa (Nuss, Dolce Pasta…), o el que trajo la base.
+    function nombreEmpresaEntre(id, respaldo) {
+      const e = (estado.empresas ?? []).find(x => x.id === id)
+      return e ? nombreCorto(e) : (limpio(respaldo) || 'Empresa')
+    }
+
+    // A centavos (un dato ausente es null, nunca 0).
+    function centavosEntre(n) {
+      if (n === null || n === undefined || n === '') return null
+      const v = Number(n)
+      if (!Number.isFinite(v)) return null
+      return Math.round(Number((v * 100).toFixed(6)))
+    }
+
+    // "$ 1.234,50" / "US$ 2.350,00"; un dato ausente es "—", nunca "$ 0".
+    function plataEntre(n, moneda) {
+      const c = centavosEntre(n)
+      if (c === null) return '—'
+      const m = String(moneda || 'ARS').toUpperCase()
+      const pre = m === 'ARS' ? '$' : m === 'USD' ? 'US$' : m
+      return (c < 0 ? '-' : '') + pre + ' ' + formatearNumeroAr(Math.abs(c) / 100, { decimales: 2 })
+    }
+
+    // "12 cajas" / "6.250 kg" / "300 u"; sin dato, "—".
+    function cantidadEntre(f) {
+      const crudo = f?.cantidad
+      const v = Number(crudo)
+      if (crudo === null || crudo === undefined || crudo === '' || !Number.isFinite(v)) return '—'
+      const um = String(f?.unidad_medida ?? '')
+      if (um === 'cajas') return formatearNumeroAr(v, { decimales: 0 }) + (v === 1 ? ' caja' : ' cajas')
+      const u = UNIDAD_ENTRE[um] ?? um
+      return formatearNumeroAr(v, { decimales: um === 'un' ? 0 : 3, minimos: 0 }) + (u ? ' ' + u : '')
+    }
+
+    function primerTramoEntre(t) {
+      return normalizar(String(t ?? '').split(' · ')[0])
+    }
+
+    // El producto terminado llega en DOS mitades por traspaso (la base agrupa
+    // por presentación, y la de origen y la de destino son distintas: una con
+    // la empresa que entrega y sin cantidad, otra con la que recibe y las
+    // cajas). Acá se juntan: de la salida, la empresa que entrega, el detalle
+    // y la presentación de ORIGEN (con esa se busca el precio en la lista de
+    // la que entrega); de la entrada, la que recibe y las cajas. Se aparean
+    // por el detalle, después por el nombre del producto y después en orden.
+    // Una fila que ya trae las dos empresas no se toca.
+    function normalizarEntre(filas) {
+      const lista = Array.isArray(filas) ? filas : []
+      const otras = [], grupos = new Map()
+      for (const f of lista) {
+        if (f?.tipo === 'mercaderia' && (!f.de_unidad_id || !f.a_unidad_id)) {
+          const k = String(f.referencia_id ?? '')
+          if (!grupos.has(k)) grupos.set(k, [])
+          grupos.get(k).push(f)
+        } else if (f) otras.push(f)
+      }
+      const unidas = []
+      for (const g of grupos.values()) {
+        const salidas = g.filter(f => f.de_unidad_id && !f.a_unidad_id)
+        const entradas = g.filter(f => f.a_unidad_id && !f.de_unidad_id)
+        const usadas = new Set()
+        const buscar = (prueba) => salidas.findIndex((s, i) => !usadas.has(i) && prueba(s))
+        for (const e of entradas) {
+          let i = buscar(s => normalizar(s.detalle) === normalizar(e.detalle))
+          if (i < 0) i = buscar(s => primerTramoEntre(s.detalle) === primerTramoEntre(e.detalle))
+          if (i < 0) i = buscar(() => true)
+          if (i < 0) { unidas.push(e); continue }
+          usadas.add(i)
+          const s = salidas[i]
+          unidas.push({ ...e, de_unidad_id: s.de_unidad_id, de_unidad: s.de_unidad, detalle: s.detalle ?? e.detalle,
+            presentacion_id: s.presentacion_id ?? e.presentacion_id, presentacion_destino_id: e.presentacion_id ?? null,
+            cantidad: e.cantidad ?? s.cantidad, fecha: e.fecha ?? s.fecha })
+        }
+        salidas.forEach((s, i) => { if (!usadas.has(i)) unidas.push(s) })
+        for (const f of g) if (!f.de_unidad_id && !f.a_unidad_id) unidas.push(f)
+      }
+      const todas = [...otras, ...unidas]
+      todas.sort((a, b) => String(b?.fecha ?? '').localeCompare(String(a?.fecha ?? '')))
+      return todas.map((f, i) => ({ ...f, _id: 'e' + i }))
+    }
+
+    // Sin la fábrica de pruebas (ni como la que entrega ni como la que recibe).
+    function sinPruebaEntre(filas) {
+      const a = sinUnidadesDePrueba(filas, estado.fabrica, f => f?.de_unidad_id)
+      return sinUnidadesDePrueba(a, estado.fabrica, f => f?.a_unidad_id)
+    }
+
+    function claveParFechaEntre(f) {
+      return [f?.fecha, f?.de_unidad_id, f?.a_unidad_id].join('|')
+    }
+
+    // Los traspasos de producto terminado que ya tienen su deuda cargada (la
+    // fecha y las dos empresas de cada 'otro' "Traspaso de producto
+    // terminado…" con importe). Se arma con TODAS las filas, sin los filtros.
+    function traspasosConPrecio(filas) {
+      return new Set((filas ?? []).filter(f => f?.tipo === 'otro' && String(f?.detalle ?? '').startsWith(CONCEPTO_TRASPASO_CON_PRECIO) &&
+        centavosEntre(f?.importe) !== null).map(claveParFechaEntre))
+    }
+
+    function yaTienePrecio(f, conPrecio) {
+      return f?.tipo === 'mercaderia' && !!conPrecio?.has(claveParFechaEntre(f))
+    }
+
+    // Mercadería o insumos sin importe, de una empresa conocida, que no están
+    // ya en una deuda cargada: se pueden valorizar con una lista.
+    function necesitaValor(f, conPrecio) {
+      return SIN_IMPORTE_ENTRE.includes(f?.tipo) && centavosEntre(f?.importe) === null && !yaTienePrecio(f, conPrecio) && !!f?.de_unidad_id
+    }
+
+    function filtrarEntre(filas, filtros = {}) {
+      return (filas ?? []).filter(f => (!filtros.origen || f?.de_unidad_id === filtros.origen) &&
+        (!filtros.destino || f?.a_unidad_id === filtros.destino) && (!filtros.tipo || f?.tipo === filtros.tipo))
+    }
+
+    // El valor de una fila: { cent, moneda, valorizado } o null (sin valor).
+    function valorEntre(f, valores, conPrecio) {
+      const c = centavosEntre(f?.importe)
+      if (c !== null) return { cent: c, moneda: String(f?.moneda || 'ARS').toUpperCase(), valorizado: false }
+      if (yaTienePrecio(f, conPrecio)) return null
+      const v = valores?.get(f?._id)
+      if (v && v.cent !== null && v.cent !== undefined) return { cent: v.cent, moneda: v.moneda, valorizado: true }
+      return null
+    }
+
+    function direccionVaciaEntre() {
+      return { cantidad: 0, tipos: new Map(), valorizados: new Set(), sinValor: 0, conPrecioEnDeuda: 0 }
+    }
+
+    // El resumen por PAR de empresas: lo que pasó en cada dirección, por tipo y
+    // por moneda (centavos), y el neto (x → y suma, y → x resta). Las filas sin
+    // las dos empresas no entran (van en "sueltas").
+    function resumenEntre(filas, valores, conPrecio) {
+      const pares = new Map(), sueltas = []
+      for (const f of filas ?? []) {
+        const de = f?.de_unidad_id, a = f?.a_unidad_id
+        if (!de || !a || de === a) { sueltas.push(f); continue }
+        const ids = [de, a].sort((p, q) => nombreEmpresaEntre(p).localeCompare(nombreEmpresaEntre(q), 'es') || String(p).localeCompare(String(q)))
+        const k = ids.join('|')
+        if (!pares.has(k)) pares.set(k, { x: ids[0], y: ids[1], nombres: {}, dirs: { xy: direccionVaciaEntre(), yx: direccionVaciaEntre() } })
+        const p = pares.get(k)
+        if (p.nombres[de] === undefined) p.nombres[de] = f.de_unidad
+        if (p.nombres[a] === undefined) p.nombres[a] = f.a_unidad
+        const d = de === p.x ? p.dirs.xy : p.dirs.yx
+        d.cantidad++
+        if (yaTienePrecio(f, conPrecio)) { d.conPrecioEnDeuda++; continue }
+        const v = valorEntre(f, valores, conPrecio)
+        if (!v) { d.sinValor++; continue }
+        const porMoneda = d.tipos.get(f.tipo) ?? new Map()
+        d.tipos.set(f.tipo, porMoneda)
+        porMoneda.set(v.moneda, (porMoneda.get(v.moneda) ?? 0) + v.cent)
+        if (v.valorizado) d.valorizados.add(f.tipo)
+      }
+      const lista = [...pares.values()]
+      for (const p of lista) {
+        p.neto = new Map()
+        for (const [dir, signo] of [['xy', 1], ['yx', -1]]) {
+          for (const porMoneda of p.dirs[dir].tipos.values()) {
+            for (const [m, c] of porMoneda) p.neto.set(m, (p.neto.get(m) ?? 0) + signo * c)
+          }
+        }
+        p.hayValorizado = p.dirs.xy.valorizados.size + p.dirs.yx.valorizados.size > 0
+        p.sinValor = p.dirs.xy.sinValor + p.dirs.yx.sinValor
+      }
+      lista.sort((p, q) => (nombreEmpresaEntre(p.x) + nombreEmpresaEntre(p.y)).localeCompare(nombreEmpresaEntre(q.x) + nombreEmpresaEntre(q.y), 'es'))
+      return { pares: lista, sueltas }
+    }
+
+    function ordenMonedasEntre(ms) {
+      const pos = m => { const i = MONEDAS_ORDEN_ENTRE.indexOf(m); return i < 0 ? 99 : i }
+      return [...ms].sort((a, b) => pos(a) - pos(b) || String(a).localeCompare(String(b)))
+    }
+
+    // "$ 1.000,00 en cheques · $ 500,00 y US$ 20,00 en pagos · ≈ $ 3.000,00 en
+    // producto terminado (valorizado) · 2 movimientos sin valor".
+    function textoDireccionEntre(d) {
+      const partes = []
+      const tipos = [...ORDEN_TIPOS_ENTRE.filter(t => d.tipos.has(t)), ...[...d.tipos.keys()].filter(t => !ORDEN_TIPOS_ENTRE.includes(t))]
+      for (const t of tipos) {
+        const porMoneda = d.tipos.get(t)
+        const plata = ordenMonedasEntre(porMoneda.keys()).map(m => plataEntre(porMoneda.get(m) / 100, m)).join(' y ')
+        const val = d.valorizados.has(t)
+        partes.push((val ? '≈ ' : '') + plata + ' ' + (TIPOS_ENTRE[t]?.resumen ?? 'en ' + t) + (val ? ' (valorizado)' : ''))
+      }
+      if (d.sinValor) partes.push(d.sinValor === 1 ? '1 movimiento sin valor' : d.sinValor + ' movimientos sin valor')
+      if (d.conPrecioEnDeuda) partes.push(d.conPrecioEnDeuda === 1 ? '1 traspaso de producto ya incluido en la deuda cargada' : d.conPrecioEnDeuda + ' traspasos de producto ya incluidos en la deuda cargada')
+      return partes.join(' · ') || 'Nada'
+    }
+
+    // El neto de un par, una frase por moneda: "Nuss le debe a Dolce Pasta
+    // $ 1.000,00" o "Están en cero". Sin plata en el período, [].
+    function textosNetoEntre(p) {
+      const nx = nombreEmpresaEntre(p.x, p.nombres?.[p.x]), ny = nombreEmpresaEntre(p.y, p.nombres?.[p.y])
+      const monedas = ordenMonedasEntre(p.neto.keys())
+      return monedas.map(m => {
+        const c = p.neto.get(m)
+        const enMoneda = monedas.length > 1 ? (m === 'ARS' ? ' en pesos' : m === 'USD' ? ' en dólares' : ' en ' + m) : ''
+        if (c > 0) return `${ny} le debe a ${nx} ${plataEntre(c / 100, m)}`
+        if (c < 0) return `${nx} le debe a ${ny} ${plataEntre(-c / 100, m)}`
+        return 'Están en cero' + enMoneda
+      })
+    }
+
+    function htmlParEntre(p) {
+      const nombre = id => nombreEmpresaEntre(id, p.nombres?.[id])
+      const dir = (de, a, d) => d.cantidad
+        ? `<p class="ad-entre-par__dir"><strong>${esc(nombre(de) + ' → ' + nombre(a) + ':')}</strong> ${esc(textoDireccionEntre(d))}</p>` : ''
+      const netos = textosNetoEntre(p)
+      const neto = netos.length
+        ? netos.map(t => `<p class="ad-entre-par__neto">${esc('Neto: ' + t)}</p>`).join('')
+        : `<p class="ad-entre-par__neto">${esc('Neto: sin plata en el período')}</p>`
+      const notas = [
+        p.hayValorizado ? 'Incluye lo valorizado con lista de precios (≈): es una cuenta de la pantalla.' : null,
+        p.sinValor ? (p.sinValor === 1 ? 'Falta valorizar 1 movimiento de mercadería o insumos: no entra en el neto.'
+          : `Faltan valorizar ${p.sinValor} movimientos de mercadería o insumos: no entran en el neto.`) : null,
+      ].filter(Boolean).map(t => `<p class="ad-entre-par__nota">${esc(t)}</p>`).join('')
+      const selloXEntre = htmlSelloEmpresa(p.x, p.nombres?.[p.x])
+      const selloYEntre = htmlSelloEmpresa(p.y, p.nombres?.[p.y])
+      return `<div class="ad-tarjeta ad-entre-par" data-entre-par="${esc(p.x + '|' + p.y)}">` +
+        `<div class="ad-entre-par__titulo">${selloXEntre}<span aria-hidden="true">↔</span>${selloYEntre}</div>` +
+        dir(p.x, p.y, p.dirs.xy) + dir(p.y, p.x, p.dirs.yx) + neto + notas + '</div>'
+    }
+
+    function htmlFilaEntre(f, ctx = {}) {
+      const selloOrigenEntre = f?.de_unidad_id ? htmlSelloEmpresa(f.de_unidad_id, f.de_unidad) : '<span class="ad-sello">—</span>'
+      const selloDestinoEntre = f?.a_unidad_id ? htmlSelloEmpresa(f.a_unidad_id, f.a_unidad) : '<span class="ad-sello">—</span>'
+      const derecha = centavosEntre(f?.importe) !== null ? plataEntre(f.importe, f.moneda)
+        : SIN_IMPORTE_ENTRE.includes(f?.tipo) ? cantidadEntre(f) : '—'
+      let valorHtmlEntre = ''
+      if (yaTienePrecio(f, ctx.conPrecio)) {
+        valorHtmlEntre = '<p class="ad-entre-fila__valor">Con precio: el importe está en la deuda cargada del mismo día.</p>'
+      } else if (necesitaValor(f, ctx.conPrecio)) {
+        const v = ctx.valores?.get(f._id)
+        if (v && v.cent !== null && v.cent !== undefined) valorHtmlEntre = `<p class="ad-entre-fila__valor">${esc('≈ ' + plataEntre(v.cent / 100, v.moneda) + ' con la lista ' + v.lista)}</p>`
+        else if (v && v.motivo) valorHtmlEntre = `<p class="ad-entre-fila__valor ad-entre-fila__valor--sin">${esc('Sin precio en la lista ' + v.lista + ': ' + v.motivo)}</p>`
+        else valorHtmlEntre = '<p class="ad-entre-fila__valor">Sin valorizar</p>'
+      }
+      return `<div class="ad-tarjeta ad-entre-fila" data-entre="${esc(f?._id)}">` +
+        `<div class="ad-fila__linea"><span class="ad-sello">${esc(nombreTipoEntre(f?.tipo))}</span><span class="ad-fila__meta">${esc(fechaCorta(f?.fecha))}</span></div>` +
+        `<div class="ad-entre-fila__empresas"><span class="ad-fila__meta">De</span>${selloOrigenEntre}<span aria-hidden="true">→</span>${selloDestinoEntre}<span class="ad-fila__importe">${esc(derecha)}</span></div>` +
+        `<p class="ad-entre-fila__detalle">${esc(f?.detalle || '—')}</p>${valorHtmlEntre}</div>`
+    }
+
+    // Las empresas que ENTREGARON mercadería o insumos sin importe.
+    function entregadorasEntre(filas, conPrecio) {
+      const ids = []
+      for (const f of filas ?? []) if (necesitaValor(f, conPrecio) && !ids.includes(f.de_unidad_id)) ids.push(f.de_unidad_id)
+      return ids
+    }
+
+    // Las listas se leen con retiros:ver, precios o cargar en esa empresa (la
+    // policy de listas_precios); precios_insumos_lista pide lo mismo.
+    function puedeLeerListasEntre(u) {
+      return ['ver', 'precios', 'cargar'].some(t => puedeEn('retiros', t, u))
+    }
+
+    // precio_venta() pide retiros:precios en la empresa de la lista.
+    function puedeValorizarProductoEntre(u) {
+      return puedeEn('retiros', 'precios', u)
+    }
+
+    function textoEstadoValorEntre(st, nombre) {
+      if (!st) return null
+      if (st.cargando) return { t: 'Calculando…' }
+      if (st.error) return { t: 'No se pudo valorizar con la lista ' + (st.lista ?? '') + ': ' + st.error, grave: true }
+      const partes = []
+      if (st.sinPrecio) partes.push(st.sinPrecio === 1 ? `1 renglón sin precio en la lista ${st.lista}` : `${st.sinPrecio} renglones sin precio en la lista ${st.lista}`)
+      if (st.sinPermiso) partes.push(`Para valorizar el producto terminado hace falta el permiso de precios de Órdenes de retiro en ${nombre}: ` +
+        (st.sinPermiso === 1 ? '1 renglón queda sin valorizar.' : st.sinPermiso + ' renglones quedan sin valorizar.'))
+      if (!partes.length) return { t: 'Todo valorizado con la lista ' + st.lista + '.' }
+      return { t: partes.join(' · '), grave: true }
+    }
+
+    function htmlValorizarUnidadEntre(e, u, nombreBase) {
+      const nombre = nombreEmpresaEntre(u, nombreBase)
+      if (!puedeLeerListasEntre(u)) {
+        return `<p class="ad-aviso">${esc('Para valorizar lo que entregó ' + nombre + ' hace falta el permiso de precios de Órdenes de retiro en esa empresa.')}</p>`
+      }
+      const l = e.listas.get(u)
+      if (!l || l.cargando) return `<p class="ad-texto-suave">${esc('Leyendo las listas de precios de ' + nombre + '…')}</p>`
+      if (l.error) return `<p class="ad-aviso ad-aviso--grave">${esc('No se pudieron leer las listas de ' + nombre + ': ' + l.error)}</p>`
+      if (!l.filas.length) return `<p class="ad-aviso">${esc(nombre + ' no tiene listas de precios activas: no hay con qué valorizar.')}</p>`
+      const elegida = e.elegidas.get(u) ?? ''
+      const opciones = ['<option value="">Sin valorizar</option>',
+        ...l.filas.map(x => `<option value="${esc(x.id)}"${x.id === elegida ? ' selected' : ''}>${esc(x.nombre)}</option>`)].join('')
+      const st = textoEstadoValorEntre(e.valorizando.get(u), nombre)
+      return `<div class="ad-campo"><label for="ad-entre-lista-${esc(u)}">${esc('Valorizar lo que entregó ' + nombre + ' con la lista')}</label>` +
+        `<select class="ad-select" id="ad-entre-lista-${esc(u)}" data-entre-lista="${esc(u)}">${opciones}</select></div>` +
+        (st ? `<p class="${st.grave ? 'ad-error-pegado' : 'ad-texto-suave'}">${esc(st.t)}</p>` : '')
+    }
+
+    function htmlValorizarEntre(e, ids, nombres = {}) {
+      if (!ids.length) return ''
+      return '<div class="ad-tarjeta ad-entre-valorizar"><p class="ad-subtitulo">Valorizar mercadería e insumos</p>' +
+        ids.map(u => htmlValorizarUnidadEntre(e, u, nombres[u])).join('') +
+        '<p class="ad-texto-suave">Lo valorizado es una cuenta de esta pantalla (≈): no se guarda en ningún lado.</p></div>'
+    }
+
+    async function leerListasEntre(u) {
+      const e = datosEntre()
+      e.listas.set(u, { cargando: true, filas: [] })
+      try {
+        const { data, error } = await supabase.from('listas_precios').select('id, nombre, moneda, activa')
+          .eq('unidad_negocio_id', u).eq('activa', true).order('nombre')
+        if (error) throw error
+        e.listas.set(u, { filas: data ?? [] })
+      } catch (err) {
+        console.error('No se pudieron leer las listas de precios:', err)
+        e.listas.set(u, { error: err?.message || 'No se pudieron leer.', filas: [] })
+      }
+      pintarEntre()
+    }
+
+    // Valoriza lo que entregó la empresa u con la lista elegida: el producto
+    // terminado con precio_venta(lista, presentación de origen, sin cono
+    // —la fila no trae el cono: va el conito común—, fecha) × las cajas; los
+    // insumos con precios_insumos_lista(lista, fecha) × la cantidad. Lo que
+    // no tiene precio se dice, nunca se inventa.
+    async function valorizarEntre(u, listaId) {
+      const e = datosEntre()
+      e.elegidas.set(u, listaId || '')
+      const turno = (e.turnosValor.get(u) ?? 0) + 1
+      e.turnosValor.set(u, turno)
+      const conPrecio = traspasosConPrecio(e.filas)
+      const filas = (e.filas ?? []).filter(f => f.de_unidad_id === u && necesitaValor(f, conPrecio))
+      for (const f of filas) e.valores.delete(f._id)
+      if (!listaId) { e.valorizando.delete(u); pintarEntre(); return }
+      const lista = e.listas.get(u)?.filas?.find(l => l.id === listaId)
+      const nombreLista = lista?.nombre ?? 'elegida'
+      const moneda = String(lista?.moneda || 'ARS').toUpperCase()
+      e.valorizando.set(u, { cargando: true, lista: nombreLista })
+      pintarEntre()
+      const res = new Map()
+      let error = null, sinPrecio = 0, sinPermiso = 0
+      try {
+        const productos = filas.filter(f => f.tipo === 'mercaderia')
+        const insumos = filas.filter(f => f.tipo === 'insumos')
+        if (productos.length && !puedeValorizarProductoEntre(u)) sinPermiso = productos.length
+        else if (productos.length) {
+          const precios = new Map()
+          const claves = [...new Set(productos.filter(f => f.presentacion_id).map(f => f.presentacion_id + '|' + f.fecha))]
+          await Promise.all(claves.map(async k => {
+            const [pres, fecha] = k.split('|')
+            const { data, error: err } = await supabase.rpc('precio_venta', { p_lista_id: listaId, p_presentacion_id: pres, p_marca_id: null, p_fecha: fecha })
+            if (err) throw err
+            precios.set(k, data)
+          }))
+          for (const f of productos) {
+            const d = precios.get(f.presentacion_id + '|' + f.fecha)
+            const pc = centavosEntre(d?.precio_caja), cant = Number(f.cantidad)
+            if (!d || d.sin_precio || pc === null || f.cantidad === null || f.cantidad === undefined || !Number.isFinite(cant)) {
+              sinPrecio++
+              res.set(f._id, { motivo: d?.motivo || (f.presentacion_id ? 'no tiene precio' : 'falta la presentación'), lista: nombreLista })
+              continue
+            }
+            res.set(f._id, { cent: Math.round(pc * cant), moneda, lista: nombreLista })
+          }
+        }
+        if (insumos.length) {
+          const porFecha = new Map()
+          await Promise.all([...new Set(insumos.map(f => f.fecha))].map(async fecha => {
+            const { data, error: err } = await supabase.rpc('precios_insumos_lista', { p_lista_id: listaId, p_fecha: fecha })
+            if (err) throw err
+            porFecha.set(fecha, new Map((data ?? []).map(r => [r.insumo_id, r])))
+          }))
+          for (const f of insumos) {
+            const r = porFecha.get(f.fecha)?.get(f.insumo_id)
+            const c = r && f.cantidad !== null && f.cantidad !== undefined && f.cantidad !== ''
+              ? centavosEntre(Number(r.precio_unitario) * Number(f.cantidad)) : null
+            if (!r || r.sin_costo || r.precio_unitario === null || r.precio_unitario === undefined || c === null) {
+              sinPrecio++
+              res.set(f._id, { motivo: r?.sin_costo ? 'falta cargar el costo' : 'no está en la lista', lista: nombreLista })
+              continue
+            }
+            res.set(f._id, { cent: c, moneda, lista: nombreLista })
+          }
+        }
+      } catch (err) {
+        console.error('No se pudo valorizar:', err)
+        error = err?.message || 'No se pudo valorizar.'
+      }
+      if (turno !== e.turnosValor.get(u)) return
+      if (error) { e.valorizando.set(u, { error, lista: nombreLista }); pintarEntre(); return }
+      for (const [k, v] of res) e.valores.set(k, v)
+      e.valorizando.set(u, { sinPrecio, sinPermiso, lista: nombreLista })
+      pintarEntre()
+    }
+
+    function htmlOpcionesEntre(lista, elegido, todos) {
+      return [`<option value="">${esc(todos)}</option>`,
+        ...lista.map(([v, t]) => `<option value="${esc(v)}"${v === elegido ? ' selected' : ''}>${esc(t)}</option>`)].join('')
+    }
+
+    function pintarFiltrosEntre(e) {
+      const empresas = sinUnidadesDePrueba(estado.empresas ?? [], estado.fabrica).map(x => [x.id, nombreCorto(x)])
+      document.getElementById('ad-entre-origen').innerHTML = htmlOpcionesEntre(empresas, e.filtros.origen, 'Todas')
+      document.getElementById('ad-entre-destino').innerHTML = htmlOpcionesEntre(empresas, e.filtros.destino, 'Todas')
+      document.getElementById('ad-entre-tipo').innerHTML = htmlOpcionesEntre(ORDEN_TIPOS_ENTRE.map(t => [t, nombreTipoEntre(t)]), e.filtros.tipo, 'Todos')
+    }
+
+    function pintarEntre() {
+      const e = datosEntre()
+      pintarFiltrosEntre(e)
+      const lista = document.getElementById('ad-entre-lista')
+      const cuenta = document.getElementById('ad-entre-cuenta')
+      const resumen = document.getElementById('ad-entre-resumen')
+      const valorizar = document.getElementById('ad-entre-valorizar')
+      const vaciar = () => { resumen.innerHTML = ''; valorizar.innerHTML = ''; cuenta.textContent = '' }
+      if (e.error) {
+        vaciar()
+        lista.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(e.error)}</div>` +
+          '<button type="button" class="ad-btn ad-btn--suave" data-entre-reintentar>Reintentar</button>'
+        return
+      }
+      if (e.filas === null) { vaciar(); lista.innerHTML = '<div class="ad-vacio">Cargando los movimientos…</div>'; return }
+      if (!e.filas.length) { vaciar(); lista.innerHTML = '<div class="ad-vacio">En este período ninguna empresa le pasó nada a otra.</div>'; return }
+      const conPrecio = traspasosConPrecio(e.filas)
+      const visibles = filtrarEntre(e.filas, e.filtros)
+      if (!visibles.length) { vaciar(); lista.innerHTML = '<div class="ad-vacio">Con estos filtros no hay movimientos en el período.</div>'; return }
+      const r = resumenEntre(visibles, e.valores, conPrecio)
+      resumen.innerHTML = r.pares.map(htmlParEntre).join('') +
+        (r.sueltas.length ? `<div class="ad-aviso">${esc(r.sueltas.length === 1 ? '1 movimiento no tiene las dos empresas: no entra en el resumen.' : r.sueltas.length + ' movimientos no tienen las dos empresas: no entran en el resumen.')}</div>` : '')
+      const nombres = {}
+      for (const f of visibles) if (f.de_unidad_id && nombres[f.de_unidad_id] === undefined) nombres[f.de_unidad_id] = f.de_unidad
+      valorizar.innerHTML = htmlValorizarEntre(e, entregadorasEntre(visibles, conPrecio), nombres)
+      cuenta.textContent = visibles.length === 1 ? '1 movimiento' : visibles.length + ' movimientos'
+      lista.innerHTML = visibles.map(f => htmlFilaEntre(f, { conPrecio, valores: e.valores })).join('')
+    }
+
+    async function cargarEntre() {
+      const e = datosEntre()
+      const desde = document.getElementById('ad-entre-desde').value
+      const hasta = document.getElementById('ad-entre-hasta').value
+      const turno = ++e.turno
+      e.filas = null
+      e.error = null
+      e.valores = new Map()
+      e.valorizando = new Map()
+      pintarEntre()
+      if (!desde || !hasta) { e.error = 'Elegí el período.'; pintarEntre(); return }
+      try {
+        const { data, error } = await supabase.rpc('movimientos_entre_empresas', { p_desde: desde, p_hasta: hasta })
+        if (error) throw error
+        if (turno !== e.turno) return
+        e.filas = sinPruebaEntre(normalizarEntre(data ?? []))
+      } catch (err) {
+        if (turno !== e.turno) return
+        console.error('No se pudieron leer los movimientos entre empresas:', err)
+        e.error = err?.message || 'No se pudieron leer los movimientos entre empresas.'
+      }
+      pintarEntre()
+      if (!e.filas) return
+      // Las listas de cada empresa que entregó mercadería o insumos sin
+      // importe, y la valorización que ya estaba elegida, otra vez.
+      const conPrecio = traspasosConPrecio(e.filas)
+      for (const u of entregadorasEntre(e.filas, conPrecio)) {
+        if (!puedeLeerListasEntre(u)) continue
+        const yaLeidas = e.listas.get(u)
+        const leer = yaLeidas && !yaLeidas.error && !yaLeidas.cargando ? Promise.resolve() : leerListasEntre(u)
+        leer.then(() => {
+          const elegida = e.elegidas.get(u)
+          if (elegida && turno === e.turno && e.listas.get(u)?.filas?.some(l => l.id === elegida)) valorizarEntre(u, elegida)
+        })
+      }
+    }
+
+    function mostrarEntre() {
+      if (!SECCIONES.some(s => s.id === 'entre' && seccionVisible(s))) { mostrarInicio(); return }
+      mostrarVista('ad-vista-entre')
+      cargarEntre()
+    }
+
+    // La tarjeta de la portada: cuántos movimientos este mes y entre cuántos
+    // pares de empresas.
+    async function contarEntrePortada() {
+      const hoy = hoyArgentina()
+      const { data, error } = await supabase.rpc('movimientos_entre_empresas', { p_desde: hoy.slice(0, 8) + '01', p_hasta: hoy })
+      if (error) throw error
+      const filas = sinPruebaEntre(normalizarEntre(data ?? []))
+      const pares = new Set(filas.filter(f => f.de_unidad_id && f.a_unidad_id && f.de_unidad_id !== f.a_unidad_id)
+        .map(f => [f.de_unidad_id, f.a_unidad_id].sort().join('|')))
+      return { movimientos: filas.length, pares: pares.size }
+    }
+
+    function contenidoSeccionEntre(p) {
+      const r = p?.entre ?? null
+      return { numero: r ? r.movimientos : null, unidad: r && r.movimientos === 1 ? 'movimiento este mes' : 'movimientos este mes',
+        carga: !r && !p?.errorEntre, error: p?.errorEntre,
+        lineas: r ? [r.movimientos ? (r.pares === 1 ? 'Entre 1 par de empresas' : 'Entre ' + r.pares + ' pares de empresas') : 'Ninguna empresa le pasó nada a otra',
+          { ir: 'Ver quién le debe a quién ›' }] : [] }
+    }
+
+    function conectarEntre() {
+      const d = document.getElementById('ad-entre-desde')
+      const h = document.getElementById('ad-entre-hasta')
+      const hoy = hoyArgentina()
+      // Arranca en "Este mes" (del 1º a hoy, hora de Argentina).
+      d.value = hoy.slice(0, 8) + '01'
+      h.value = hoy
+      crearPeriodo({ desde: d, hasta: h, obligatorias: true })
+      for (const x of [d, h]) x.addEventListener('change', () => { if (estado.vista === 'ad-vista-entre') cargarEntre() })
+      for (const [id, k] of [['ad-entre-origen', 'origen'], ['ad-entre-destino', 'destino'], ['ad-entre-tipo', 'tipo']]) {
+        document.getElementById(id).addEventListener('change', (ev) => { datosEntre().filtros[k] = ev.target.value; pintarEntre() })
+      }
+      document.getElementById('ad-entre-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-entre-lista').addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-entre-reintentar]')) cargarEntre()
+      })
+      document.getElementById('ad-entre-valorizar').addEventListener('change', (ev) => {
+        const s = ev.target.closest('select[data-entre-lista]')
+        if (s) valorizarEntre(s.dataset.entreLista, s.value)
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SEGURIDAD — solo super_admin (27/09/2026)
     //
     // El registro_seguridad: lo escribe la base (cerrar_sesiones) y lo lee
@@ -7931,6 +8558,7 @@
       document.getElementById('ad-errores-actualizar').addEventListener('click', () => mostrarErrores())
       document.getElementById('ad-seguridad-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-seguridad-actualizar').addEventListener('click', () => mostrarSeguridad())
+      conectarEntre()
       document.getElementById('ad-revisar-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-revisar-actualizar').addEventListener('click', () => { estado.revisar.hechos = []; mostrarRevisar() })
       const revisar = document.getElementById('ad-revisar-lista')
@@ -8000,8 +8628,9 @@
       const [t, m, u] = await Promise.all([
         supabase.from('empleado_tareas').select('modulo, tarea, alcance')
           // 'cuentas_corrientes' entra por registrar_pago: compensar la cuenta
-          // de un cliente que también es proveedor (06/10/2026).
-          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes']).eq('habilitado', true),
+          // de un cliente que también es proveedor (06/10/2026). 'gastos' por
+          // gastos:gastos_empresa, la sección Entre empresas (13/10/2026).
+          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'gastos', 'produccion', 'cobranzas', 'cuentas_corrientes']).eq('habilitado', true),
         supabase.from('empleado_modulos').select('modulo').eq('empleado_id', emp.id).eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre, prefijo, razon_social, cuit, domicilio, telefono, logo_url').eq('activo', true).order('nombre'),
       ])
