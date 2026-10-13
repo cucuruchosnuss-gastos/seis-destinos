@@ -109,7 +109,7 @@ correrMutacionesEnVarios([
       { nombre: 'admin: la cuenta juntas para un cliente sin proveedor', de: '        if (proveedorId) estado.cliente.unica = estadoCuentaUnica(', a: '        estado.cliente.unica = estadoCuentaUnica(' },
       { nombre: 'admin: compensar con UNA de las dos tareas', de: "      return tieneTarea('cobranzas', 'procesar') && tieneTarea('cuentas_corrientes', 'registrar_pago')", a: "      return tieneTarea('cobranzas', 'procesar') || tieneTarea('cuentas_corrientes', 'registrar_pago')" },
       { nombre: 'admin: no se pinta la cuenta juntas', de: '      pintarCuentaUnicaCliente()\n    }', a: '    }' },
-      { nombre: 'admin: no se leen las tareas de cuentas_corrientes', de: "'produccion', 'cobranzas', 'cuentas_corrientes']", a: "'produccion', 'cobranzas']" },
+      { nombre: 'admin: no se leen las tareas de cuentas_corrientes', de: "'produccion', 'cobranzas', 'cuentas_corrientes', 'gastos']", a: "'produccion', 'cobranzas', 'gastos']" },
       // (07/10/2026: al apilar, el select siguió con más columnas después de proveedor_id.)
       { nombre: 'admin: la lista de clientes sin proveedor_id', de: 'codigo_anterior, proveedor_id, comision_habitual', a: 'codigo_anterior, comision_habitual' },
       { nombre: 'admin: vincular sin el proveedor elegido', de: "{ p_cliente_id: f.id, p_proveedor_id: f.proveedorId ?? null }", a: '{ p_cliente_id: f.id, p_proveedor_id: null }' },

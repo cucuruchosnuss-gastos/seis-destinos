@@ -24,7 +24,7 @@ correrMutaciones({
     { nombre: 'la acción sin palabras', de: "      cerrar_sesiones: 'Cerró todas las sesiones',\n", a: '' },
     { nombre: 'un error inventa un registro vacío', de: "        estado.seguridad.error = 'No se pudo leer el registro de seguridad. Revisá la conexión y volvé a entrar.'", a: '        estado.seguridad.filas = []' },
     { nombre: 'la respuesta vieja pisa la nueva', de: '        if (turno !== turnoSeguridad) return\n        estado.seguridad.filas = filas', a: '        estado.seguridad.filas = filas' },
-    { nombre: 'con empresa (el selector no se esconde)', de: "'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad',\n      'ad-vista-entre']\n    const SUBTITULO", a: "'ad-vista-cobranza', 'ad-vista-errores',\n      'ad-vista-entre']\n    const SUBTITULO" },
+    { nombre: 'con empresa (el selector no se esconde)', de: "'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-prestamos', 'ad-vista-prestamo',\n      'ad-vista-entre']\n    const SUBTITULO", a: "'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-prestamos', 'ad-vista-prestamo',\n      'ad-vista-entre']\n    const SUBTITULO" },
     { nombre: 'la portada no la ofrece', de: "      else if (id === 'seguridad') mostrarSeguridad()\n", a: '' },
   ],
 })

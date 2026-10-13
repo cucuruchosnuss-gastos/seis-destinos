@@ -57,7 +57,7 @@ correrMutaciones({
     { nombre: 'el payload lleva la empresa', de: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_proyecto_id:", a: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_unidad_negocio_id: null, p_proyecto_id:" },
     { nombre: 'el payload manda otra cobranza', de: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_proyecto_id:", a: "      return { p_id: estado.cobranzas.lista?.[0]?.cobranza_id, p_cliente_id: a.cliente.id, p_proyecto_id:" },
     { nombre: 'el error de la base se tapa', de: "        a.error = err?.message || 'No se pudo asentar la cobranza. Probá de nuevo.'", a: "        a.error = 'No se pudo asentar la cobranza. Probá de nuevo.'" },
-    { nombre: 'después del error queda trabado', de: "        a.enviando = false\n        a.error = err?.message", a: "        a.error = err?.message" },
+    { nombre: 'después del error queda trabado', de: "        a.enviando = false\n        a.error = err?.message || 'No se pudo asentar", a: "        a.error = err?.message || 'No se pudo asentar" },
     { nombre: 'no dice el saldo que le queda', de: "        `${esc('Se descontaron ' + importeCob(h.importe) + ' de la cuenta de ' + cuenta + '. ' + textoSaldoCliente(h.saldo))}</div>`", a: "        `${esc('Se descontaron ' + importeCob(h.importe) + ' de la cuenta de ' + cuenta + '.')}</div>`" },
     { nombre: 'no dice en qué cuenta', de: "      const cuenta = h.cliente.nombre + (h.cliente.empresa ? ' (' + h.cliente.empresa + ')' : '')", a: "      const cuenta = 'el cliente'" },
     { nombre: 'un saldo que no vino se muestra en cero', de: "      if (saldo === null || saldo === undefined || saldo === '' || !Number.isFinite(Number(saldo))) return 'No se pudo leer el saldo que le queda.'\n", a: '' },

@@ -71,7 +71,7 @@ correrMutaciones({
     { nombre: 'sin permiso de listas: selector igual', de: "      if (!puedeLeerListasEntre(u)) {\n        return `<p class=\"ad-aviso\">", a: "      if (false) {\n        return `<p class=\"ad-aviso\">" },
     // El permiso y la portada
     { nombre: 'la sección sin permiso propio', de: "      { id: 'entre', titulo: 'Entre empresas', global: true, tareas: ['gastos:gastos_empresa'] },", a: "      { id: 'entre', titulo: 'Entre empresas', global: true, tareas: ['retiros:ver'] }," },
-    { nombre: 'sin leer las tareas de gastos', de: "['retiros', 'pedidos', 'stock', 'gastos', 'produccion'", a: "['retiros', 'pedidos', 'stock', 'produccion'" },
+    { nombre: 'sin leer las tareas de gastos', de: "'cobranzas', 'cuentas_corrientes', 'gastos']).eq('habilitado', true)", a: "'cobranzas', 'cuentas_corrientes']).eq('habilitado', true)" },
     { nombre: 'mostrarEntre sin permiso abre', de: "      if (!SECCIONES.some(s => s.id === 'entre' && seccionVisible(s))) { mostrarInicio(); return }\n      mostrarVista('ad-vista-entre')", a: "      mostrarVista('ad-vista-entre')" },
     { nombre: 'la portada cuenta las mitades', de: '      const filas = sinPruebaEntre(normalizarEntre(data ?? []))\n      const pares', a: '      const filas = data ?? []\n      const pares' },
   ],
