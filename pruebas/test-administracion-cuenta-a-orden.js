@@ -338,8 +338,13 @@ esperas.push((async () => {
   // En la compu, con la lista al costado: tocar otra orden NO apila de nuevo.
   await S.abrirOrdenDesde('o1')
   chk('lista: otra orden desde la orden abierta no apila de nuevo', S.PILA_NAV.length === 1 && S.estado.orden.id === 'o1' && nav(S).entradas().length === 2)
+  // Desde la lista queda el "‹ Órdenes" de siempre (la flecha no: sería un
+  // segundo botón para lo mismo; e2e/detalles-dispositivos lo toca).
+  chk('lista: "‹ Órdenes" sigue visible', el(S, 'ad-orden-volver').hidden === false)
+  chk('lista: la flecha no se muestra (desde la lista vuelve "‹ Órdenes")', el(S, 'ad-volver').hidden === true && !el(S, 'ad-app').classList.contains('ad-app--pila') && S.flechaVisible() === false)
   const listaAntes = el(S, 'ad-ordenes-lista').innerHTML
-  S.volverPila()
+  S.volverAOrdenes()
+  chk('lista: "‹ Órdenes" vuelve por la pila (y el historial queda en orden)', S.PILA_NAV.length === 0 && JSON.stringify(nav(S).entradas()) === '[null]', JSON.stringify(nav(S).entradas()))
   chk('lista: vuelve a la lista (no a la cuenta ni a la portada)', S.estado.vista === 'ad-vista-ordenes' && el(S, 'ad-vista-ordenes').hidden === false)
   chk('lista: con su scroll', S.__win.scrollY === 300)
   chk('lista: con sus filtros', S.estado.filtros.estado === 'confirmada')
@@ -349,6 +354,11 @@ esperas.push((async () => {
   chk('lista: la relee en silencio', S.__llamadas.consultas.filter(c => c[0] === 'ordenes_retiro').length > consultasAntes)
   chk('lista: igual, no la redibuja', el(S, 'ad-ordenes-lista').innerHTML.endsWith('<!--sin-redibujar-->'))
   chk('lista: la flecha se fue', el(S, 'ad-volver').hidden === true && S.PILA_NAV.length === 0)
+  // El atrás del navegador también vuelve a la lista.
+  await S.abrirOrdenDesde('o2')
+  S.__win.scrollY = 0
+  S.volverPila()
+  chk('lista: la pila también vuelve (el atrás del navegador)', S.estado.vista === 'ad-vista-ordenes' && S.__win.scrollY === 300 && S.PILA_NAV.length === 0)
   // Si cambió (la orden se valorizó), se redibuja.
   await S.abrirOrdenDesde('o2')
   ORDENES[1].estado_valorizacion = 'valorizada'; ORDENES[1].total = 5000
@@ -379,6 +389,13 @@ esperas.push((async () => {
   await S.abrirOrden('o1')
   chk('misma vista: abrir de nuevo la orden (después de valorizar) no vacía la pila', S.PILA_NAV.length === 1 && el(S, 'ad-volver').hidden === false)
   chk('abrirOrdenDesde sin id no hace nada', S.abrirOrdenDesde('') === undefined && S.PILA_NAV.length === 1)
+  chk('desde la cuenta: la flecha sí, "‹ Órdenes" no', S.flechaVisible() === true && el(S, 'ad-orden-volver').hidden === true)
+  // "‹ Órdenes" (escondido) con la pila de la cuenta: va a la lista de siempre y la vacía.
+  await S.volverAOrdenes()
+  chk('"‹ Órdenes" con la pila de la cuenta va a la lista (no a la cuenta)', S.estado.vista === 'ad-vista-ordenes' && S.PILA_NAV.length === 0)
+  await S.abrirOrden('o1')
+  await S.volverAOrdenes()
+  chk('"‹ Órdenes" sin pila: la lista como siempre', S.estado.vista === 'ad-vista-ordenes' && S.PILA_NAV.length === 0)
 })())
 
 // La flecha sin la entrada del historial (otra pieza la pisó) o sin popstate.
@@ -483,6 +500,7 @@ esperas.push((async () => {
   const F = sinEspacios(FUENTE)
   chk('html: el botón "← Volver" existe, nace escondido, arriba del contenido', /<\/header> <!--[^]*?--> <button type="button" class="ad-volver-pila" id="ad-volver" hidden><span aria-hidden="true">←<\/span> Volver<\/button>/.test(F))
   chk('html: la flecha llama a volverPila', /getElementById\('ad-volver'\)\.addEventListener\('click', \(\) => volverPila\(\)\)/.test(F))
+  chk('html: "‹ Órdenes" llama a volverAOrdenes', /getElementById\('ad-orden-volver'\)\.addEventListener\('click', \(\) => volverAOrdenes\(\)\)/.test(F))
   chk('html: el atrás del navegador llama a alVolverNavegador', /window\.addEventListener\('popstate', \(e\) => alVolverNavegador\(e\)\)/.test(F))
   chk('html: la lista de órdenes abre con abrirOrdenDesde', /const b = e\.target\.closest\('\[data-orden\]'\) if \(b\) abrirOrdenDesde\(b\.dataset\.orden\)/.test(F))
   chk('html: la cuenta de cliente abre la orden con abrirOrdenDesde', /closest\('\[data-orden-retiro\]'\) if \(r && puedeVerLaOrden\(\)\) abrirOrdenDesde\(r\.dataset\.ordenRetiro\)/.test(F))

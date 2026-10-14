@@ -8,7 +8,8 @@
 //  - "← Volver" (arriba a la izquierda) deja la cuenta del mismo cliente con
 //    el MISMO filtro ("Venta") y el MISMO scroll; el atrás del navegador hace
 //    lo mismo. Sin nada en la pila, la flecha no está.
-//  - Lista de órdenes → una orden → "← Volver" = la lista.
+//  - Lista de órdenes → una orden → "‹ Órdenes" (el de siempre; la flecha no
+//    se suma) = la lista, con sus filtros; el atrás del navegador, igual.
 //  - La cobranza de la cuenta abre su detalle y vuelve igual.
 //  - Sin scroll horizontal y sin errores de JS.
 const { test, expect } = require('@playwright/test');
@@ -127,7 +128,7 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`${nombre}: lista de órdenes → orden → "← Volver" = la lista`, async ({ page }, info) => {
+  test(`${nombre}: lista de órdenes → orden → "‹ Órdenes" = la lista`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrir(page, '/modulos/administracion.html?seccion=ordenes');
@@ -139,7 +140,10 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     await expect(page.locator('#ad-ordenes-lista [data-orden="o1"]')).toBeVisible();
     await page.locator('#ad-ordenes-lista [data-orden="o1"]').click();
     await expect(page.locator('#ad-vista-orden')).toBeVisible();
-    await expect(volver).toBeVisible();
+    // Desde la lista vuelve el "‹ Órdenes" de siempre; la flecha no se suma.
+    const ordenes = page.locator('#ad-orden-volver');
+    await expect(ordenes).toBeVisible();
+    await expect(volver).toBeHidden();
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal en la orden').toBe(true);
     if (ancho >= 1100) {
       // En la compu, con la lista al costado: otra orden de la lista no apila de nuevo.
@@ -147,7 +151,7 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
       await expect(page.locator('#ad-orden-titulo')).toHaveText('Orden N-0013');
     }
     await captura(page, `lista-a-orden-${nombre}`, info);
-    await volver.click();
+    await ordenes.click();
     await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
     await expect(page.locator('#ad-vista-orden')).toBeHidden();
     await expect(page.locator('#ad-filtro-estado')).toHaveValue('confirmada');

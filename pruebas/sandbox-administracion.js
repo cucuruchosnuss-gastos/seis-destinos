@@ -17,7 +17,7 @@ const FUNCIONES_BASE = [
   'leerPreferencia', 'guardarPreferencia', 'mostrarVista', 'mostrarCheques',
   // La pila de navegación: "← Volver" y el atrás del navegador (14/10/2026)
   'scrollActual', 'apilarNav', 'pintarVolverPila', 'abrirOrdenDesde', 'abrirCobranzaDesdeCuenta', 'volverPila',
-  'alVolverNavegador', 'desapilarNav', 'refrescarAlVolver', 'puedeVerLaOrden',
+  'alVolverNavegador', 'desapilarNav', 'refrescarAlVolver', 'puedeVerLaOrden', 'flechaVisible', 'volverAOrdenes',
   // Lista | detalle en la compu (05/10/2026)
   'ladoALado', 'aplicarListaDetalle', 'marcarElegidosLista',
   'htmlLogo', 'empresaSegunBarra', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial', 'alCambiarLaBarra',

@@ -608,8 +608,9 @@
     </header>
 
     <!-- "← Volver" (14/10/2026): vuelve EXACTAMENTE a donde se estaba (la
-         cuenta del cliente con su filtro y su scroll, o la lista de órdenes).
-         Solo se ve con algo en la pila de navegación (pilaNav). -->
+         cuenta del cliente con su filtro y su scroll). Solo se ve con algo en
+         la pila de navegación (PILA_NAV) que no sea la lista de órdenes:
+         desde la lista vuelve el "‹ Órdenes" de siempre (flechaVisible). -->
     <button type="button" class="ad-volver-pila" id="ad-volver" hidden><span aria-hidden="true">←</span> Volver</button>
 
     <div class="ad-vacio" id="ad-sin-acceso" hidden></div>
@@ -1595,14 +1596,30 @@
       try { history.pushState?.({ adPila: PILA_NAV.length }, '') } catch (err) { console.error('No se pudo anotar en el historial:', err) }
     }
 
+    // La flecha se ve cuando se vino de la CUENTA (o de cualquier lugar que no
+    // sea la lista de órdenes): ahí "‹ Órdenes" / "‹ Cuenta del cliente" (que
+    // relee) irían a otro lado, y se esconden. Desde la LISTA de órdenes queda
+    // el "‹ Órdenes" de siempre, que ahora vuelve por la pila (volverAOrdenes:
+    // mismo scroll y filtros, y el historial en orden) y la flecha no se
+    // muestra: dos botones para lo mismo sobran.
+    function flechaVisible() {
+      const tope = PILA_NAV[PILA_NAV.length - 1]
+      return !!tope && tope.vista !== 'ad-vista-ordenes'
+    }
+
     function pintarVolverPila() {
-      const hay = PILA_NAV.length > 0
-      document.getElementById('ad-volver').hidden = !hay
-      document.getElementById('ad-app')?.classList?.toggle('ad-app--pila', hay)
-      // Los "‹ Órdenes" / "‹ Cuenta del cliente" de cada detalle irían a otro
-      // lado que la flecha: con la pila, manda la flecha.
-      document.getElementById('ad-orden-volver').hidden = hay
-      document.getElementById('ad-cobranza-volver').hidden = hay
+      const flecha = flechaVisible()
+      document.getElementById('ad-volver').hidden = !flecha
+      document.getElementById('ad-app')?.classList?.toggle('ad-app--pila', flecha)
+      document.getElementById('ad-orden-volver').hidden = flecha
+      document.getElementById('ad-cobranza-volver').hidden = flecha
+    }
+
+    // "‹ Órdenes": si se vino de la lista, se vuelve por la pila (igual que el
+    // atrás del navegador); si no, la lista como siempre.
+    function volverAOrdenes() {
+      if (PILA_NAV[PILA_NAV.length - 1]?.vista === 'ad-vista-ordenes') { volverPila(); return }
+      mostrarOrdenes()
     }
 
     // Abrir una orden desde la cuenta del cliente o desde la lista de órdenes.
@@ -10283,7 +10300,7 @@
         const b = e.target.closest('[data-orden]')
         if (b) abrirOrdenDesde(b.dataset.orden)
       })
-      document.getElementById('ad-orden-volver').addEventListener('click', () => mostrarOrdenes())
+      document.getElementById('ad-orden-volver').addEventListener('click', () => volverAOrdenes())
       document.getElementById('ad-btn-valorizar').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-corregir-valor').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-imprimir').addEventListener('click', () => imprimirOrden())
