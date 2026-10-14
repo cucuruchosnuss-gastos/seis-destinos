@@ -92,6 +92,13 @@ const SEGURAS_ADMINISTRACION = [
   ['campo', 'HTML ya escapado: htmlEditorInsumoLista() arma el campo con esc() de la unidad'],
   // Préstamos (13/10/2026): test-administracion-prestamos.js ejecuta estos renders con marcas.
   ['htmlFilasCuotas(e.cuotas.map(c => ({ ...c, moneda })), { pagados })', 'HTML armado por htmlFilasCuotas(), que escapa cada vencimiento, rótulo y lo pagado'],
+  // Entre empresas (13/10/2026): los ejecuta con texto malicioso
+  // test-administracion-entre-empresas.js.
+  ['selloXEntre', 'HTML armado por htmlSelloEmpresa(), que escapa el nombre y el id de la empresa'],
+  ['selloYEntre', 'HTML armado por htmlSelloEmpresa(), que escapa el nombre y el id de la empresa'],
+  ['selloOrigenEntre', 'HTML armado por htmlSelloEmpresa() (escapa nombre e id), o un sello constante "—"'],
+  ['selloDestinoEntre', 'HTML armado por htmlSelloEmpresa() (escapa nombre e id), o un sello constante "—"'],
+  ['valorHtmlEntre', 'HTML ya escapado: htmlFilaEntre() lo arma con esc() del importe valorizado, la lista y el motivo, o un texto constante'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [
