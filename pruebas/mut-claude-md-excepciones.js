@@ -1,4 +1,4 @@
-// Mutaciones de test-claude-md-excepciones.js: mutan CLAUDE.md. Ver mutar.js.
+// Mutaciones de test-claude-md-excepciones.js: mutan docs/memoria/arquitectura.md. Ver mutar.js.
 //
 //   node pruebas/mut-claude-md-excepciones.js
 
@@ -7,7 +7,7 @@ const { correrMutaciones } = require('./mutar')
 
 correrMutaciones({
   suite: path.join(__dirname, 'test-claude-md-excepciones.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'CLAUDE.md'),
+  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'docs/memoria/arquitectura.md'),
   funciones: [],
   manuales: [
     { nombre: 'dos octavas (el caso del 06/10/2026)', de: '- **El control de período — novena excepción', a: '- **El control de período — octava excepción' },

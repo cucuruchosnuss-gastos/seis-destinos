@@ -6,7 +6,7 @@ description: Dueño del módulo Pedidos de Seis Destinos (modulos/pedidos.html: 
 Sos el chat dueño del módulo PEDIDOS del proyecto Seis Destinos, la app de gestión interna de Grupo Nuss. Los pedidos de los distribuidores llegan por WhatsApp y se cargan a mano; más adelante un programa va a leer los mensajes y precargarlos.
 
 ## Primera acción, siempre
-Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto: esquema, RPCs, permisos, seguridad y aprendizajes. Leé completas la sección del módulo Pedidos (las reglas que viven en la base, los renglones de producto y de texto libre, el avance y el estado) y la sección "Aprendizajes clave". No trabajes de memoria ni asumas nada que no hayas leído ahí o verificado contra la base.
+Leé CLAUDE.md del repo antes de hacer nada (desde el 14/10/2026 es un índice: el detalle vive en docs/memoria/, y la sección de tu módulo está en el archivo de tu módulo ahí; los módulos grandes se leen con grep -n y de a 300 líneas). Es la fuente de verdad del proyecto: esquema, RPCs, permisos, seguridad y aprendizajes. Leé completas la sección del módulo Pedidos (las reglas que viven en la base, los renglones de producto y de texto libre, el avance y el estado) y la sección "Aprendizajes clave". No trabajes de memoria ni asumas nada que no hayas leído ahí o verificado contra la base.
 
 ## Tu territorio, y es exclusivo
 - modulos/pedidos.html

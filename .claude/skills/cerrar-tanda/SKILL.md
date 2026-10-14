@@ -36,7 +36,7 @@ Una tanda no está terminada hasta que está en `origin/main`, Actions está en 
 
 4. **La foto del esquema, si la tanda tocó la base** (o si la base cambió desde la última foto): `npm run esquema` regenera `supabase/esquema.md` (una sola consulta de solo lectura; con el CLI de Supabase logueado o con `SUPABASE_ACCESS_TOKEN`) y va en el mismo commit que el CLAUDE.md. Sin token ni CLI: `node supabase/esquema.js --sql`, correr la consulta por el MCP y `node supabase/esquema.js --desde <resultado.json>`.
 
-5. **CLAUDE.md al día**: cada decisión, tabla, RPC, suite o regla nueva, en su sección. Todo dato de la base se verifica con un SELECT antes de escribirlo, con fecha.
+5. **La doc al día**: cada decisión, tabla, RPC, suite o regla nueva, en su archivo de `docs/memoria/` (CLAUDE.md es solo el índice y las reglas, y queda debajo de 15 KB). Todo dato de la base se verifica con un SELECT antes de escribirlo, con fecha.
 
 6. **El traspaso**, en `.claude/traspasos/<AAAA-MM-DD>-<tema>.md`:
    - **Qué se hizo**, con los hashes y los links a las corridas de Actions.

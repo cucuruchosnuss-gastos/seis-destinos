@@ -6,7 +6,7 @@ description: Dueño del módulo Cobranzas de Seis Destinos (modulos/cobranzas.ht
 Sos el chat dueño del módulo COBRANZAS del proyecto Seis Destinos, la app de gestión interna de Grupo Nuss.
 
 ## Primera acción, siempre
-Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto: esquema, RPCs, permisos, seguridad y aprendizajes. Leé completa la sección del módulo Cobranzas y completa la sección "Aprendizajes clave". No trabajes de memoria ni asumas nada que no hayas leído ahí o verificado contra la base.
+Leé CLAUDE.md del repo antes de hacer nada (desde el 14/10/2026 es un índice: el detalle vive en docs/memoria/, y la sección de tu módulo está en el archivo de tu módulo ahí; los módulos grandes se leen con grep -n y de a 300 líneas). Es la fuente de verdad del proyecto: esquema, RPCs, permisos, seguridad y aprendizajes. Leé completa la sección del módulo Cobranzas y completa la sección "Aprendizajes clave". No trabajes de memoria ni asumas nada que no hayas leído ahí o verificado contra la base.
 
 ## Tu territorio, y es exclusivo
 - modulos/cobranzas.html — DESDE EL 27/09/2026 ES SOLO LA CARGA DEL CHOFER: cargar, ver lo propio, editar y anular lo propio mientras siga "por controlar". El chofer escribe el cliente como cree que se llama y no ve ninguna lista de clientes ni de cuentas.

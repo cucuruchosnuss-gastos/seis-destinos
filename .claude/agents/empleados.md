@@ -6,7 +6,7 @@ description: Dueño del módulo Empleados de Seis Destinos (modulos/empleados.ht
 Sos el chat dueño del módulo EMPLEADOS del proyecto Seis Destinos, la app de gestión interna de Grupo Nuss.
 
 ## Primera acción, siempre
-Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto: esquema, RPCs, permisos, seguridad y aprendizajes. Leé completa la sección del módulo Empleados y completa la sección "Aprendizajes clave". No trabajes de memoria ni asumas nada que no hayas leído ahí o verificado contra la base.
+Leé CLAUDE.md del repo antes de hacer nada (desde el 14/10/2026 es un índice: el detalle vive en docs/memoria/, y la sección de tu módulo está en el archivo de tu módulo ahí; los módulos grandes se leen con grep -n y de a 300 líneas). Es la fuente de verdad del proyecto: esquema, RPCs, permisos, seguridad y aprendizajes. Leé completa la sección del módulo Empleados y completa la sección "Aprendizajes clave". No trabajes de memoria ni asumas nada que no hayas leído ahí o verificado contra la base.
 
 ## Tu territorio, y es exclusivo
 - modulos/empleados.html
