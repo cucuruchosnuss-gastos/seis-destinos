@@ -124,6 +124,15 @@ const FUNCIONES_BASE = [
   // El faltante: "¿de dónde salen?" (13/10/2026)
   'esProductoRevisar', 'htmlBotonesRevisar', 'completarRenglonesRevisar', 'ctxFaltanteRevisar', 'abrirFaltanteRevisar', 'resolverFilaRevisar',
   'htmlFaltanteRenglon', 'leerPlanillasDeOrden',
+  // Retenciones (13/10/2026)
+  'retencionesVacio', 'ret', 'tipoRetencion', 'detalleRetencion', 'plataRet', 'sumaRet', 'origenRetencion', 'empresasRet', 'sinPruebaRet',
+  'leerRetenciones', 'leerRetencionesPortada', 'totalesPorEmpresa', 'htmlTotalRet', 'htmlTotalesRet', 'htmlAnularRet', 'htmlFilaRet',
+  'nombreEmpresaRet', 'pintarRetenciones', 'cargarRetenciones', 'mostrarRetenciones', 'cambiarPeriodoRet',
+  'abrirAnularRet', 'cancelarAnularRet', 'confirmarAnularRet', 'cargaVacia', 'leerCuentasBancoRet', 'cuentasDeEmpresaRet', 'cuentaElegidaRet',
+  'avisoCargaRet', 'validarCargaRet', 'textoONull', 'parametrosRet', 'htmlOrigenesRet', 'apodoMostrarRet', 'htmlOpcionClienteRet',
+  'htmlLocalesRet', 'htmlResultadosRet', 'htmlClienteElegidoRet', 'repintarResultadosRet', 'pintarAvisoRet', 'pintarCargaRet',
+  'abrirCargaRet', 'cerrarCargaRet', 'leerFormRet', 'elegirOrigenRet', 'buscarClienteRet', 'leerLocalesRet', 'consultarClientesRet',
+  'elegirClienteRet', 'cambiarClienteRet', 'guardarRetencion', 'filasExcelRet', 'filasExcelTotalesRet', 'nombreArchivoRet', 'exportarRetenciones',
   ...FUNCIONES_FR,
   // Cliente y proveedor (06/10/2026): la cuenta juntas y la clasificación
   'puedeCompensarCuentas', 'ctxCuentaUnica', 'pintarCuentaUnicaCliente',
@@ -156,6 +165,8 @@ const CONSTANTES_BASE = [
   'LINK_TRASPASO_AD', ...CONSTANTES_FR,
   // Los clientes provisorios (06/10/2026)
   'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR', 'TOPE_BUSCAR_CLIENTES', 'TEXTO_SOLO_PROVISORIOS', 'TEXTO_SIN_LEER_CLIENTES',
+  // Retenciones (13/10/2026)
+  'TIPOS_RETENCION', 'TIPOS_CON_JURISDICCION', 'ORIGENES_RETENCION', 'LARGO_MINIMO_MOTIVO_RET',
 ]
 
 const PRELUDIO = `
@@ -205,6 +216,7 @@ const PRELUDIO = `
   var turnoErrores = 0
   var turnoSeguridad = 0
   var turnoRevisar = 0
+  var turnoRetenciones = 0
   // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
   var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }

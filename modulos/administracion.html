@@ -412,6 +412,27 @@
     .ad-panel--peligro { border-color: var(--bordo); }
     .ad-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
 
+    /* ── Retenciones (13/10/2026) ─────────────────────────────────────────
+       Los totales por tipo en tarjetitas (por empresa) y la lista. El origen
+       es un segmento que reparte el ancho y baja de renglón si no entra (a
+       360 px no se esconde ninguno en un scroll de costado). */
+    .ad-ret-empresa { margin: 0 0 0.75rem; }
+    .ad-ret-empresa__nombre { font-size: 0.875rem; font-weight: 800; margin: 0 0 0.375rem; color: var(--color-texto); overflow-wrap: anywhere; }
+    .ad-ret-totales { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); min-width: 0; }
+    .ad-ret-total { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.625rem 0.75rem; min-width: 0; }
+    .ad-ret-total__tipo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto-menu); overflow-wrap: anywhere; }
+    .ad-ret-total__plata { font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .ad-ret-total__cantidad { font-size: 0.75rem; color: var(--ad-texto-secundario); }
+    .ad-ret-origenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); overflow-x: visible; margin: 0; }
+    .ad-ret-origenes .ad-segmento__opcion { min-width: 0; white-space: normal; line-height: 1.15; }
+    .ad-ret-fila { cursor: default; }
+    .ad-ret-fila__tipo { font-weight: 800; overflow-wrap: anywhere; min-width: 0; }
+    .ad-ret-fila .ad-fila__importe--anulada { text-decoration: line-through; color: var(--ad-texto-secundario); }
+    .ad-ret-fila__acciones { display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin: 0.25rem 0 0; }
+    .ad-ret-elegido { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+      padding: 0.5rem 0.75rem; border-radius: 10px; border: 2px solid var(--naranja); background: var(--naranja-suave); margin: 0 0 0.375rem; min-width: 0; }
+    .ad-ret-elegido__nombre { font-weight: 800; overflow-wrap: anywhere; min-width: 0; }
+
     /* ── Imprimir: la hoja de js/retiros-comun.js, CON precios ────────── */
     .ad-impresion { display: none; }
     @media print {
@@ -998,6 +1019,74 @@
       <div class="ad-lista" id="ad-seguridad-lista"></div>
     </section>
 
+    <!-- ══ RETENCIONES (13/10/2026, gastos:gastos_empresa) ═════════════════
+         Lo que nos retuvieron (un cliente, el banco, un proveedor) o nos
+         percibieron: Ganancias, IVA, IIBB, SUSS, SIRCREB y percepciones. NO
+         es de una empresa: la barra de arriba filtra (con "Todas", cada
+         renglón dice la suya). La base: retenciones_resumen, registrar_retencion
+         (con un cliente, baja su deuda), registrar_retencion_banco (descuenta
+         de la cuenta) y anular_retencion (deshace lo que movió). -->
+    <section id="ad-vista-retenciones" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-ret-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Retenciones</h1>
+        <button type="button" class="ad-btn" id="ad-ret-nueva">Cargar retención</button>
+      </div>
+      <div class="ad-tarjeta">
+        <div class="ad-filtros">
+          <div class="ad-campo"><label for="ad-ret-desde">Desde</label><input type="date" class="ad-input" id="ad-ret-desde"></div>
+          <div class="ad-campo"><label for="ad-ret-hasta">Hasta</label><input type="date" class="ad-input" id="ad-ret-hasta"></div>
+        </div>
+        <p class="ad-texto-suave" id="ad-ret-empresa-texto"></p>
+        <div class="ad-barra-acciones">
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-ret-exportar">Exportar a Excel</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-ret-actualizar">Actualizar</button>
+        </div>
+        <p class="ad-error-pegado" id="ad-ret-exportar-error" hidden></p>
+      </div>
+      <!-- CARGAR UNA RETENCIÓN. Los campos son fijos (no se redibujan al
+           tipear: el buscador no pierde el foco); lo que cambia lo pinta
+           pintarCargaRet(). -->
+      <div class="ad-panel" id="ad-ret-carga" hidden>
+        <h2 class="ad-subtitulo">Cargar retención</h2>
+        <div class="ad-fila-campos">
+          <div class="ad-campo"><label for="ad-ret-empresa">Empresa</label><select class="ad-select" id="ad-ret-empresa"></select></div>
+          <div class="ad-campo"><label for="ad-ret-fecha">Fecha</label><input type="date" class="ad-input" id="ad-ret-fecha"></div>
+          <div class="ad-campo"><label for="ad-ret-tipo">Tipo</label><select class="ad-select" id="ad-ret-tipo"></select></div>
+          <div class="ad-campo"><label for="ad-ret-importe">Importe ($)</label><input type="text" inputmode="decimal" class="ad-input" id="ad-ret-importe" autocomplete="off"></div>
+        </div>
+        <div class="ad-campo">
+          <span class="ad-campo__rotulo" id="ad-ret-origen-rotulo">¿Quién la hizo?</span>
+          <div class="ad-segmento ad-ret-origenes" role="group" aria-labelledby="ad-ret-origen-rotulo" id="ad-ret-origenes"></div>
+        </div>
+        <div class="ad-campo" id="ad-ret-campo-cliente" hidden>
+          <label for="ad-ret-cliente-buscar">Cliente (nombre, razón social, CUIT o apodo)</label>
+          <div id="ad-ret-cliente-elegido"></div>
+          <input type="search" class="ad-input" id="ad-ret-cliente-buscar" autocomplete="off" maxlength="120">
+          <div id="ad-ret-cliente-resultados"></div>
+        </div>
+        <div class="ad-campo" id="ad-ret-campo-cuenta" hidden>
+          <label for="ad-ret-cuenta">Cuenta del banco que la debitó</label>
+          <select class="ad-select" id="ad-ret-cuenta"></select>
+          <span class="ad-campo__ayuda" id="ad-ret-cuenta-ayuda"></span>
+        </div>
+        <div class="ad-fila-campos">
+          <div class="ad-campo" id="ad-ret-campo-certificado"><label for="ad-ret-certificado">N° de certificado</label><input type="text" class="ad-input" id="ad-ret-certificado" maxlength="60" autocomplete="off"></div>
+          <div class="ad-campo" id="ad-ret-campo-jurisdiccion" hidden><label for="ad-ret-jurisdiccion">Jurisdicción</label><input type="text" class="ad-input" id="ad-ret-jurisdiccion" maxlength="60" autocomplete="off" placeholder="Por ejemplo: Córdoba"></div>
+        </div>
+        <div class="ad-campo"><label for="ad-ret-detalle">Detalle (opcional)</label><textarea class="ad-textarea" id="ad-ret-detalle" maxlength="300" rows="2"></textarea></div>
+        <p class="ad-aviso" id="ad-ret-aviso" hidden></p>
+        <p class="ad-error-pegado" id="ad-ret-error" hidden></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-ret-guardar">Confirmar y cargar</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-ret-cancelar">Cancelar</button>
+        </div>
+      </div>
+      <div id="ad-ret-totales"></div>
+      <p class="ad-cuenta" id="ad-ret-cantidad"></p>
+      <div class="ad-lista" id="ad-ret-lista"></div>
+    </section>
+
     <!-- ══ UNA COBRANZA (desde la cuenta de un cliente o un link) ══════════ -->
     <section id="ad-vista-cobranza" hidden>
       <div class="ad-cabecera-vista">
@@ -1123,6 +1212,9 @@
       // Retiros por revisar (28/09/2026): lo que devolvió retiros_por_revisar()
       // y el renglón que se está aceptando: { itemId, motivo, error, enviando }.
       revisar: { filas: null, error: null, aceptando: null, falt: null, hechos: [] },
+      // Retenciones (13/10/2026): lo que devolvió retenciones_resumen, la que
+      // se está anulando y el panel de cargar una.
+      retenciones: retencionesVacio(),
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1208,6 +1300,12 @@
       // la empresa del cliente al asentarse. Pide cobranzas:procesar (con
       // bypass de super_admin), la misma tarea que exige asentar_cobranza().
       { id: 'cobranzas', titulo: 'Cobranzas por asentar', global: true, tareas: ['cobranzas:procesar'] },
+      // Las retenciones que nos hicieron (13/10/2026): no son de una empresa
+      // (la barra de arriba filtra). Pide gastos:gastos_empresa, con bypass de
+      // super_admin: lo mismo que exigen registrar_retencion,
+      // registrar_retencion_banco, anular_retencion y retenciones_resumen
+      // (tiene_tarea, sin alcance).
+      { id: 'retenciones', titulo: 'Retenciones', global: true, tareas: ['gastos:gastos_empresa'] },
       // Lo que falló en las pantallas (errores_app): solo un super_admin, que
       // es el único que la base deja leer.
       { id: 'errores', titulo: 'Errores de la app', global: true, soloSuperAdmin: true, tareas: [] },
@@ -1304,9 +1402,9 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar', 'ad-vista-retenciones']
     // Las vistas que no son de una empresa: el selector de empresa se esconde.
-    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
+    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-retenciones']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -1323,6 +1421,7 @@
       'ad-vista-errores': 'Errores de la app',
       'ad-vista-seguridad': 'Seguridad',
       'ad-vista-revisar': 'Retiros por revisar',
+      'ad-vista-retenciones': 'Retenciones',
     }
 
     function mostrarVista(id) {
@@ -1592,6 +1691,8 @@
       precios: 'M20 12l-8 8-9-9V3h8zM7.5 7.5v.01',
       importar: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3',
       errores: 'M8 6V4h8v2M5 8h14l-1 12H6zM10 12v4M14 12v4',
+      // Un comprobante con un "%": lo que nos retuvieron.
+      retenciones: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 15l6-6M9.5 9.5v.01M14.5 14.5v.01',
     }
     // De cada sección: su ícono y el color (el de su módulo; Por revisar va en
     // bordó, Importar y Errores en gris, como el diseño).
@@ -1605,6 +1706,7 @@
       cheques: { trazo: 'cheques', modulo: 'cheques' },
       seguridad: { trazo: 'seguridad', modulo: 'seguridad' },
       errores: { trazo: 'errores', c: 'var(--color-texto-menu)', t: '#F1EEE9' },
+      retenciones: { trazo: 'retenciones', modulo: 'gastos' },
     }
 
     function htmlTrazo(clave, tam = 18) {
@@ -1720,6 +1822,14 @@
           carga: p?.cierres == null && !p?.errorSeguridad, error: p?.errorSeguridad,
           lineas: ['Quién cerró las sesiones de quién, cuándo y por qué'] }
       }
+      if (s.id === 'retenciones') {
+        // Lo del mes (en la empresa de la barra; con "Todas", todas). Un dato
+        // ausente es "—", nunca "$ 0".
+        const r = p?.retenciones ?? null
+        return { numero: r ? r.cantidad : null, unidad: 'en el mes',
+          carga: !r && !p?.errorRetenciones, error: p?.errorRetenciones,
+          lineas: r ? [r.cantidad ? plataRet(r.total) + ' que nos retuvieron' : 'Este mes no se cargó ninguna', { ir: 'Ver y cargar ›' }] : [] }
+      }
       if (s.id === 'errores') {
         return { numero: p?.errores7 ?? null, unidad: 'en 7 días', urgente: Number(p?.errores7) > 0, chip: 'super_admin',
           carga: p?.errores7 == null && !p?.errorErrores, error: p?.errorErrores,
@@ -1755,7 +1865,7 @@
     // que la persona puede ver; Inicio siempre.
     const PESTANAS = [
       ['inicio', 'Inicio'], ['cobranzas', 'Cobranzas'], ['ordenes', 'Órdenes'], ['revisar', 'Por revisar'], ['clientes', 'Clientes'],
-      ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
+      ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['retenciones', 'Retenciones'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
     ]
     // De qué pestaña es cada vista (una orden es de Órdenes, un cliente de Clientes…).
     const PESTANA_DE_VISTA = {
@@ -1763,6 +1873,7 @@
       'ad-vista-cliente': 'clientes', 'ad-vista-ficha': 'clientes', 'ad-vista-listas': 'listas', 'ad-vista-lista': 'listas',
       'ad-vista-importar': 'importar', 'ad-vista-cheques': 'cheques', 'ad-vista-cobranzas': 'cobranzas', 'ad-vista-cobranza': 'cobranzas',
       'ad-vista-errores': 'errores', 'ad-vista-seguridad': 'seguridad', 'ad-vista-revisar': 'revisar',
+      'ad-vista-retenciones': 'retenciones',
     }
 
     // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
@@ -1877,6 +1988,10 @@
         leerChequesPortada().then(r => { p.cheques = r }).catch(err => { console.error('No se pudo contar la cartera:', err); p.errorCheques = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
+      if (SECCIONES.some(s => s.id === 'retenciones' && seccionVisible(s))) {
+        leerRetencionesPortada().then(r => { p.retenciones = r }).catch(err => { console.error('No se pudieron contar las retenciones:', err); p.errorRetenciones = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
       if (SECCIONES.some(s => s.id === 'seguridad' && seccionVisible(s))) {
         contarDesde('registro_seguridad', 'hecho_en').then(n => { p.cierres = n }).catch(err => { console.error('No se pudo contar el registro de seguridad:', err); p.errorSeguridad = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
@@ -1913,6 +2028,7 @@
       else if (id === 'errores') mostrarErrores()
       else if (id === 'seguridad') mostrarSeguridad()
       else if (id === 'revisar') mostrarRevisar()
+      else if (id === 'retenciones') mostrarRetenciones()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2934,7 +3050,7 @@
 
     const ETIQUETA_MOVIMIENTO = {
       saldo_inicial: 'Saldo inicial', retiro: 'Retiro', cobranza: 'Cobranza', ajuste: 'Ajuste', anulacion_retiro: 'Anulación de retiro',
-      comision: 'Comisión',
+      comision: 'Comisión', retencion: 'Retención',
     }
 
     // clientes_con_saldo() trae el saldo, la lista, los retiros del mes, si
@@ -4024,7 +4140,7 @@
     // …": se saca también esa forma (si no, el código salía DOS veces).
     function detalleMovimiento(m, codigos) {
       const base = String(m?.detalle ?? '')
-      if (!m?.orden_retiro_id) return base || (ETIQUETA_MOVIMIENTO[m?.tipo] ?? '—')
+      if (!m?.orden_retiro_id) return detalleRetencion(base) || (ETIQUETA_MOVIMIENTO[m?.tipo] ?? '—')
       const codigo = codigos?.get(m.orden_retiro_id)
       // La comisión dice "Comisión orden N° 12 (5%)": el número ya está en el código.
       const resto = base.replace(/^Orden de retiro (?:N°\s*\d+|[A-Z]+-\d+)/, '').replace(/ · Comisión orden N°\s*\d+/, ' · Comisión')
@@ -7561,6 +7677,709 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // RETENCIONES — con gastos:gastos_empresa (13/10/2026)
+    //
+    // Lo que nos retuvieron o nos percibieron, cargado a mano desde el
+    // certificado o el extracto. La base (leída con pg_get_functiondef el
+    // 13/10/2026; las cuatro SECURITY DEFINER, tiene_tarea('gastos',
+    // 'gastos_empresa') sin alcance, con bypass de super_admin):
+    //   retenciones_resumen(p_desde, p_hasta, p_unidad_negocio_id) → null sin
+    //     permiso, o { por_tipo: [{ unidad_negocio_id, unidad, tipo, total,
+    //     cantidad }] (sin las anuladas), lista: [{ id, unidad, fecha, tipo,
+    //     importe, origen, cliente, numero_certificado, jurisdiccion, detalle,
+    //     cargado_por, anulado, anulado_motivo }] }. Las dos fechas son
+    //     obligatorias (un "between" con null no trae nada).
+    //   registrar_retencion(p_unidad_negocio_id, p_fecha, p_tipo, p_importe,
+    //     p_origen, p_cliente_id, p_numero_certificado, p_jurisdiccion,
+    //     p_detalle) → uuid. Con origen 'cliente' baja la deuda del cliente
+    //     (cliente_movimientos tipo 'retencion', "Retención <tipo> · cert. N").
+    //   registrar_retencion_banco(p_cuenta_id, p_fecha, p_tipo, p_importe,
+    //     p_jurisdiccion, p_detalle) → uuid. La que debitó el banco: descuenta
+    //     de esa cuenta (egreso_ajuste). NO guarda número de certificado.
+    //   anular_retencion(p_id, p_motivo) → deshace lo que movió (un ajuste en
+    //     la cuenta del cliente o un ingreso_ajuste en la del banco).
+    // Los errores de la base van TAL CUAL, pegados al botón.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TIPOS_RETENCION = [
+      ['ganancias', 'Ganancias'], ['iva', 'IVA'], ['iibb', 'Ingresos Brutos'], ['suss', 'SUSS'], ['sircreb', 'SIRCREB'],
+      ['percepcion_iva', 'Percepción de IVA'], ['percepcion_iibb', 'Percepción de IIBB'], ['otra', 'Otra'],
+    ]
+    // Los que llevan jurisdicción (la provincia).
+    const TIPOS_CON_JURISDICCION = ['iibb', 'sircreb', 'percepcion_iibb']
+    const ORIGENES_RETENCION = [['cliente', 'Un cliente'], ['banco', 'El banco'], ['proveedor', 'Un proveedor'], ['otro', 'Otro']]
+    const LARGO_MINIMO_MOTIVO_RET = 3
+
+    function retencionesVacio() {
+      return { desde: '', hasta: '', datos: null, error: null, anulando: null, carga: null, cuentasBanco: null }
+    }
+
+    // El estado de la sección (el sandbox de las pruebas arranca sin él).
+    function ret() {
+      if (!estado.retenciones) estado.retenciones = retencionesVacio()
+      return estado.retenciones
+    }
+
+    // "Percepción de IIBB". Un tipo que la pantalla no conoce se muestra tal
+    // cual (escapado donde entra a HTML), no se esconde.
+    function tipoRetencion(clave) {
+      return TIPOS_RETENCION.find(([c]) => c === clave)?.[1] ?? String(clave ?? '—')
+    }
+
+    // La base escribe en la cuenta del cliente "Retención percepcion_iibb ·
+    // cert. 0001-123" (y al anular, "Se anuló la retención iibb: motivo"): en
+    // pantalla y en el resumen de cuenta va el tipo legible. Texto plano.
+    function detalleRetencion(texto) {
+      // Un tipo que no se conoce queda tal cual (tipoRetencion lo devuelve igual).
+      return String(texto ?? '').replace(/^(Retención|Se anuló la retención) ([a-z_]+)/, (todo, pre, clave) => pre + ' ' + tipoRetencion(clave))
+    }
+
+    // La plata con 2 decimales; un dato ausente es "—", nunca "$ 0".
+    function plataRet(n) {
+      return importeHoja(n)
+    }
+
+    // Suma en centavos (como numeric en la base). null si no hay ningún
+    // importe conocido.
+    function sumaRet(valores) {
+      let c = 0, alguno = false
+      for (const v of valores ?? []) {
+        if (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) continue
+        c += Math.round(Number(v) * 100)
+        alguno = true
+      }
+      return alguno ? c / 100 : null
+    }
+
+    function origenRetencion(r) {
+      if (r?.origen === 'cliente') return 'Cliente: ' + (limpio(r.cliente) || 'sin nombre')
+      if (r?.origen === 'banco') return 'Debitada por el banco'
+      if (r?.origen === 'proveedor') return 'Un proveedor'
+      if (r?.origen === 'otro') return 'Otro'
+      return String(r?.origen ?? '—')
+    }
+
+    // Las empresas para cargar y filtrar: las activas, sin la fábrica de
+    // pruebas para una cuenta real.
+    function empresasRet() {
+      return sinUnidadesDePrueba(estado.empresas ?? [], estado.fabrica)
+    }
+
+    // La lista de retenciones_resumen trae la empresa por NOMBRE (no su id):
+    // la fábrica de pruebas se saca por el nombre de sus unidades.
+    function sinPruebaRet(datos) {
+      const f = estado.fabrica
+      if (!datos || f?.soyDePrueba === true) return datos
+      const ids = f?.unidades instanceof Set ? f.unidades : new Set()
+      const nombres = new Set((estado.empresas ?? []).filter(e => ids.has(e.id)).map(e => e.nombre))
+      return {
+        por_tipo: sinUnidadesDePrueba(datos.por_tipo, f, x => x?.unidad_negocio_id),
+        lista: (datos.lista ?? []).filter(x => !nombres.has(x?.unidad)),
+      }
+    }
+
+    async function leerRetenciones(desde, hasta, unidadId) {
+      const { data, error } = await supabase.rpc('retenciones_resumen', { p_desde: desde, p_hasta: hasta, p_unidad_negocio_id: unidadId ?? null })
+      if (error) throw error
+      // null = la base dice que no tiene el permiso.
+      if (data === null || data === undefined) return null
+      return sinPruebaRet({
+        por_tipo: Array.isArray(data.por_tipo) ? data.por_tipo : [],
+        lista: Array.isArray(data.lista) ? data.lista : [],
+      })
+    }
+
+    // La tarjeta de la portada: lo del mes, en la empresa de la barra.
+    async function leerRetencionesPortada() {
+      const hoy = hoyArgentina()
+      const d = await leerRetenciones(hoy.slice(0, 8) + '01', hoy, estado.unidadBarra)
+      if (!d) throw new Error('sin permiso')
+      return { total: sumaRet(d.por_tipo.map(x => x?.total)), cantidad: d.por_tipo.reduce((a, x) => a + (Number(x?.cantidad) || 0), 0) }
+    }
+
+    // Los totales por tipo, agrupados por empresa (en el orden en que vienen).
+    function totalesPorEmpresa(porTipo) {
+      const grupos = []
+      for (const x of porTipo ?? []) {
+        const clave = x?.unidad_negocio_id ?? x?.unidad ?? ''
+        let g = grupos.find(y => y.clave === clave)
+        if (!g) { g = { clave, unidad: x?.unidad ?? '', tipos: [] }; grupos.push(g) }
+        g.tipos.push(x)
+      }
+      return grupos
+    }
+
+    function htmlTotalRet(tipo, total, cantidad) {
+      const n = Number(cantidad) || 0
+      return `<div class="ad-ret-total"><div class="ad-ret-total__tipo">${esc(tipo)}</div>` +
+        `<div class="ad-ret-total__plata">${esc(plataRet(total))}</div>` +
+        `<div class="ad-ret-total__cantidad">${esc(n === 1 ? '1 retención' : n + ' retenciones')}</div></div>`
+    }
+
+    function htmlTotalesRet(datos, conEmpresa) {
+      const grupos = totalesPorEmpresa(datos?.por_tipo)
+      if (!grupos.length) return ''
+      return grupos.map(g => {
+        const tarjetaTotal = htmlTotalRet('Total', sumaRet(g.tipos.map(x => x?.total)), g.tipos.reduce((a, x) => a + (Number(x?.cantidad) || 0), 0))
+        const tarjetasTipo = g.tipos.map(x => htmlTotalRet(tipoRetencion(x?.tipo), x?.total, x?.cantidad)).join('')
+        return `<div class="ad-ret-empresa">${conEmpresa ? `<div class="ad-ret-empresa__nombre">${esc(g.unidad || 'Empresa')}</div>` : ''}` +
+          `<div class="ad-ret-totales">${tarjetaTotal}${tarjetasTipo}</div></div>`
+      }).join('')
+    }
+
+    // El panel de anular, adentro del renglón (nunca la ventanita del navegador).
+    function htmlAnularRet(a) {
+      return `<div class="ad-panel ad-panel--peligro">` +
+        `<label class="ad-campo__rotulo" for="ad-ret-motivo">¿Por qué se anula? (obligatorio)</label>` +
+        `<textarea class="ad-textarea" id="ad-ret-motivo" rows="2" maxlength="300">${esc(a.motivo ?? '')}</textarea>` +
+        `<p class="ad-texto-suave">Se deshace lo que movió: si bajó la deuda de un cliente, vuelve a subir; si se descontó de una cuenta del banco, vuelve.</p>` +
+        `${a.error ? `<p class="ad-error-pegado">${esc(a.error)}</p>` : ''}` +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--peligro" id="ad-ret-anular-si"${a.enviando ? ' disabled' : ''}>${a.enviando ? 'Anulando…' : 'Anular la retención'}</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="ad-ret-anular-no"${a.enviando ? ' disabled' : ''}>No, dejarla</button></div></div>`
+    }
+
+    function htmlFilaRet(r, conEmpresa, anulando) {
+      const anulada = r?.anulado === true
+      const meta = [fechaCorta(r?.fecha), origenRetencion(r), conEmpresa ? limpio(r?.unidad) : ''].filter(Boolean).join(' · ')
+      const datos = [limpio(r?.numero_certificado) ? 'Cert. ' + limpio(r.numero_certificado) : '', limpio(r?.jurisdiccion), limpio(r?.detalle),
+        limpio(r?.cargado_por) ? 'Cargó ' + limpio(r.cargado_por) : ''].filter(Boolean).join(' · ')
+      const abierto = !anulada && anulando && anulando.id === r?.id
+      const acciones = anulada ? '' : (abierto ? htmlAnularRet(anulando)
+        : `<div class="ad-ret-fila__acciones"><button type="button" class="ad-btn ad-btn--suave" data-ret-anular="${esc(r?.id)}">Anular</button></div>`)
+      return `<div class="ad-fila ad-ret-fila${anulada ? ' ad-fila--anulada' : ''}" data-retencion="${esc(r?.id)}">` +
+        `<div class="ad-fila__linea"><span class="ad-ret-fila__tipo">${esc(tipoRetencion(r?.tipo))}${anulada ? ' <span class="ad-sello ad-sello--anulada">Anulada</span>' : ''}</span>` +
+        `<span class="ad-fila__importe${anulada ? ' ad-fila__importe--anulada' : ''}">${esc(plataRet(r?.importe))}</span></div>` +
+        `<div class="ad-fila__meta">${esc(meta)}</div>` +
+        `${datos ? `<div class="ad-fila__meta">${esc(datos)}</div>` : ''}` +
+        `${anulada ? `<div class="ad-fila__meta">${esc('Anulada: ' + (limpio(r?.anulado_motivo) || 'sin motivo'))}</div>` : ''}` +
+        acciones + `</div>`
+    }
+
+    // La empresa que se está mirando: la de la barra, o todas.
+    function nombreEmpresaRet() {
+      if (!estado.unidadBarra) return null
+      return (estado.empresas ?? []).find(e => e.id === estado.unidadBarra)?.nombre ?? 'la empresa elegida arriba'
+    }
+
+    function pintarRetenciones() {
+      const r = ret()
+      const totales = document.getElementById('ad-ret-totales')
+      const lista = document.getElementById('ad-ret-lista')
+      const cuenta = document.getElementById('ad-ret-cantidad')
+      const emp = nombreEmpresaRet()
+      document.getElementById('ad-ret-empresa-texto').textContent = emp
+        ? 'Empresa: ' + emp + ' (la de arriba).'
+        : 'Todas las empresas: cada renglón dice la suya. Para ver una sola, elegila arriba.'
+      if (r.error) { totales.innerHTML = ''; cuenta.textContent = ''; lista.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(r.error)}</div>`; return }
+      if (!r.datos) { totales.innerHTML = ''; cuenta.textContent = ''; lista.innerHTML = '<div class="ad-vacio">Cargando las retenciones…</div>'; return }
+      const conEmpresa = !estado.unidadBarra
+      totales.innerHTML = htmlTotalesRet(r.datos, conEmpresa)
+      const filas = r.datos.lista
+      const anuladas = filas.filter(x => x?.anulado === true).length
+      cuenta.textContent = filas.length
+        ? (filas.length === 1 ? '1 retención' : filas.length + ' retenciones') + (anuladas ? ` (${anuladas === 1 ? '1 anulada, no suma' : anuladas + ' anuladas, no suman'})` : '')
+        : ''
+      lista.innerHTML = filas.length ? filas.map(x => htmlFilaRet(x, conEmpresa, r.anulando)).join('')
+        : '<div class="ad-vacio">No hay retenciones cargadas en este período.</div>'
+    }
+
+    let turnoRetenciones = 0
+
+    async function cargarRetenciones() {
+      const r = ret()
+      const turno = ++turnoRetenciones
+      r.datos = null
+      r.error = null
+      r.anulando = null
+      pintarRetenciones()
+      if (!esFechaIso(r.desde) || !esFechaIso(r.hasta)) {
+        r.error = 'Elegí el período.'
+        pintarRetenciones()
+        return
+      }
+      try {
+        const d = await leerRetenciones(r.desde, r.hasta, estado.unidadBarra)
+        if (turno !== turnoRetenciones) return
+        if (!d) r.error = 'Con tu usuario no se pueden ver las retenciones: hace falta «Cargar gastos contra las cuentas de la Empresa».'
+        else r.datos = d
+      } catch (err) {
+        if (turno !== turnoRetenciones) return
+        console.error('No se pudieron leer las retenciones:', err)
+        r.error = 'No se pudieron leer las retenciones. Revisá la conexión y probá de nuevo.'
+      }
+      pintarRetenciones()
+    }
+
+    async function mostrarRetenciones() {
+      if (!SECCIONES.some(s => s.id === 'retenciones' && seccionVisible(s))) { mostrarInicio(); return }
+      mostrarVista('ad-vista-retenciones')
+      const r = ret()
+      // Arranca en "Este mes" (del 1º a hoy, en Argentina).
+      if (!esFechaIso(r.desde) || !esFechaIso(r.hasta)) {
+        const hoy = hoyArgentina()
+        r.desde = hoy.slice(0, 8) + '01'
+        r.hasta = hoy
+      }
+      document.getElementById('ad-ret-desde').value = r.desde
+      document.getElementById('ad-ret-hasta').value = r.hasta
+      await cargarRetenciones()
+    }
+
+    // El período: el control de js/periodo.js les pone la fecha a los dos
+    // campos y les dispara el 'change' de siempre.
+    function cambiarPeriodoRet() {
+      const r = ret()
+      const desde = document.getElementById('ad-ret-desde').value
+      const hasta = document.getElementById('ad-ret-hasta').value
+      if (desde === r.desde && hasta === r.hasta) return
+      r.desde = desde
+      r.hasta = hasta
+      if (estado.vista === 'ad-vista-retenciones') cargarRetenciones()
+    }
+
+    // ── Anular (con motivo; el error de la base, tal cual) ─────────────────
+
+    function abrirAnularRet(id) {
+      const r = ret()
+      if (r.anulando?.enviando) return
+      r.anulando = { id, motivo: '', error: null, enviando: false }
+      pintarRetenciones()
+      document.getElementById('ad-ret-motivo')?.focus?.()
+    }
+
+    function cancelarAnularRet() {
+      const r = ret()
+      if (r.anulando?.enviando) return
+      r.anulando = null
+      pintarRetenciones()
+    }
+
+    async function confirmarAnularRet() {
+      const r = ret()
+      const a = r.anulando
+      if (!a || a.enviando) return
+      const motivo = limpio(a.motivo)
+      if (motivo.length < LARGO_MINIMO_MOTIVO_RET) { a.error = 'Escribí el motivo (al menos 3 letras).'; pintarRetenciones(); return }
+      a.enviando = true
+      a.error = null
+      pintarRetenciones()
+      const { error } = await supabase.rpc('anular_retencion', { p_id: a.id, p_motivo: motivo })
+      if (r.anulando !== a) return
+      if (error) {
+        console.error('No se pudo anular la retención:', error)
+        a.enviando = false
+        a.error = error.message || 'No se pudo anular la retención.'
+        pintarRetenciones()
+        return
+      }
+      mostrarExito('Retención anulada: se deshizo lo que había movido.')
+      r.anulando = null
+      await cargarRetenciones()
+    }
+
+    // ── Cargar una retención ──────────────────────────────────────────────
+
+    function cargaVacia() {
+      const empresas = empresasRet()
+      const barra = empresas.some(e => e.id === estado.unidadBarra) ? estado.unidadBarra : null
+      return {
+        empresaId: barra ?? (empresas.length === 1 ? empresas[0].id : ''),
+        fecha: hoyArgentina(), tipo: '', importe: null, origen: '',
+        cliente: null, busqueda: '', remoto: null, turno: 0, espera: null, locales: undefined, localesEmpresa: null,
+        cuentaId: '', certificado: '', jurisdiccion: '', detalle: '', error: null, enviando: false,
+      }
+    }
+
+    // Las cuentas de banco de la Empresa (la persona ficticia tipo 'empresa'),
+    // activas y en pesos, de una empresa, sin la fábrica de pruebas: lo mismo
+    // que pide registrar_retencion_banco. NUNCA tira: si falla, lo dice.
+    async function leerCuentasBancoRet() {
+      const r = ret()
+      if (r.cuentasBanco && !r.cuentasBanco.error) return
+      try {
+        const [emp, cuentas] = await Promise.all([
+          supabase.from('v_empleados_publico').select('id').eq('tipo', 'empresa'),
+          supabase.from('cuentas_caja').select('id, nombre, medio, moneda, unidad_negocio_id, empleado_id, activa').eq('medio', 'banco').eq('moneda', 'ARS').eq('activa', true).order('nombre'),
+        ])
+        if (emp.error) throw emp.error
+        if (cuentas.error) throw cuentas.error
+        const empresa = new Set((emp.data ?? []).map(e => e.id))
+        const lista = (cuentas.data ?? []).filter(c => empresa.has(c.empleado_id) && c.unidad_negocio_id && c.medio === 'banco' && c.moneda === 'ARS' && c.activa !== false)
+        r.cuentasBanco = { lista: sinUnidadesDePrueba(lista, estado.fabrica, c => c.unidad_negocio_id), error: null }
+      } catch (err) {
+        console.error('No se pudieron leer las cuentas de banco:', err)
+        r.cuentasBanco = { lista: [], error: 'No se pudieron leer las cuentas de banco. Revisá la conexión.' }
+      }
+      if (r.carga) pintarCargaRet()
+    }
+
+    function cuentasDeEmpresaRet(c) {
+      return (ret().cuentasBanco?.lista ?? []).filter(x => x.unidad_negocio_id === c?.empresaId)
+    }
+
+    function cuentaElegidaRet(c) {
+      return cuentasDeEmpresaRet(c).find(x => x.id === c?.cuentaId) ?? null
+    }
+
+    // El aviso de lo que va a pasar, ANTES de confirmar. Texto plano.
+    function avisoCargaRet(c) {
+      if (!c) return ''
+      if (c.origen === 'cliente') {
+        if (!c.cliente) return ''
+        return c.importe > 0 ? `Baja la deuda de ${c.cliente.nombre} en ${plataRet(c.importe)}.` : `Baja la deuda de ${c.cliente.nombre} por el importe que cargues.`
+      }
+      if (c.origen === 'banco') {
+        const cta = cuentaElegidaRet(c)
+        if (!cta) return ''
+        return c.importe > 0 ? `Se descuenta ${plataRet(c.importe)} de ${cta.nombre}.` : `Se descuenta de ${cta.nombre}.`
+      }
+      if (c.origen === 'proveedor' || c.origen === 'otro') return 'No mueve ninguna cuenta: queda anotada en las retenciones.'
+      return ''
+    }
+
+    // Las mismas reglas (y los mismos textos, cuando los hay) que la base.
+    function validarCargaRet(c) {
+      if (!c) return 'Abrí el formulario de nuevo.'
+      if (!c.empresaId) return 'Elegí la empresa.'
+      if (!esFechaIso(c.fecha) || c.fecha > hoyArgentina()) return 'La fecha es obligatoria y no puede ser futura.'
+      if (!TIPOS_RETENCION.some(([k]) => k === c.tipo)) return 'Elegí el tipo de retención.'
+      if (!(Number(c.importe) > 0)) return 'El importe tiene que ser mayor a cero.'
+      if (!ORIGENES_RETENCION.some(([k]) => k === c.origen)) return 'Elegí quién la hizo.'
+      if (c.origen === 'cliente' && !c.cliente?.id) return 'Elegí el cliente que hizo la retención.'
+      if (c.origen === 'banco' && !cuentaElegidaRet(c)) return 'Elegí la cuenta del banco (en pesos, de una empresa).'
+      return null
+    }
+
+    function textoONull(t) {
+      const v = String(t ?? '').trim()
+      return v ? v : null
+    }
+
+    // [rpc, parámetros]. La del banco va por registrar_retencion_banco (que
+    // descuenta de la cuenta y NO guarda número de certificado).
+    function parametrosRet(c) {
+      const jurisdiccion = TIPOS_CON_JURISDICCION.includes(c.tipo) ? textoONull(c.jurisdiccion) : null
+      if (c.origen === 'banco') {
+        return ['registrar_retencion_banco', { p_cuenta_id: c.cuentaId, p_fecha: c.fecha, p_tipo: c.tipo, p_importe: c.importe, p_jurisdiccion: jurisdiccion, p_detalle: textoONull(c.detalle) }]
+      }
+      return ['registrar_retencion', {
+        p_unidad_negocio_id: c.empresaId, p_fecha: c.fecha, p_tipo: c.tipo, p_importe: c.importe, p_origen: c.origen,
+        p_cliente_id: c.origen === 'cliente' ? c.cliente.id : null,
+        // El número de certificado es un IDENTIFICADOR: va tal cual (solo sin
+        // espacios en los bordes), nunca con formato de número.
+        p_numero_certificado: textoONull(c.certificado),
+        p_jurisdiccion: jurisdiccion, p_detalle: textoONull(c.detalle),
+      }]
+    }
+
+    function htmlOrigenesRet(c) {
+      return ORIGENES_RETENCION.map(([k, t]) =>
+        `<button type="button" class="ad-segmento__opcion" data-ret-origen="${esc(k)}" aria-pressed="${c?.origen === k ? 'true' : 'false'}">${esc(t)}</button>`).join('')
+    }
+
+    // El apodo que coincidió, solo si el nombre (o la razón social) no
+    // coinciden por sí solos (la regla de los otros buscadores).
+    function apodoMostrarRet(cl, busqueda) {
+      const q = normalizar(busqueda)
+      if (!q) return ''
+      if (normalizar(cl?.nombre).includes(q) || normalizar(cl?.razon_social).includes(q)) return ''
+      const apodo = limpio(cl?.apodo_coincide) || (Array.isArray(cl?.apodos) ? (cl.apodos.find(a => normalizar(a).includes(q)) ?? '') : '')
+      return limpio(apodo)
+    }
+
+    function htmlOpcionClienteRet(cl, busqueda) {
+      const id = cl?.cliente_id ?? cl?.id
+      const apodo = apodoMostrarRet(cl, busqueda)
+      const razon = limpio(cl?.razon_social) && normalizar(cl.razon_social) !== normalizar(cl?.nombre) ? limpio(cl.razon_social) : ''
+      const detalle = [razon, limpio(cl?.localidad)].filter(Boolean).join(' · ')
+      return `<button type="button" class="ad-opcion-cliente" data-ret-cliente="${esc(id)}">` +
+        `<span class="ad-opcion-cliente__nombre">${esc(limpio(cl?.nombre) + (apodo ? ' · ' + apodo : ''))}</span>` +
+        `${detalle ? `<span class="ad-opcion-cliente__detalle">${esc(detalle)}</span>` : ''}</button>`
+    }
+
+    function htmlLocalesRet(c, q) {
+      if (c.locales === undefined) return '<div class="ad-texto-suave">Buscando…</div>'
+      if (c.locales === null) return '<div class="ad-aviso">Con tu usuario no se pueden ver los clientes de esta empresa.</div>'
+      const lista = clientesParaAsentar(c.locales, q).slice(0, MAX_RESULTADOS_CLIENTES)
+      return lista.length ? `<div class="ad-opciones-clientes">${lista.map(x => htmlOpcionClienteRet(x, q)).join('')}</div>`
+        : '<div class="ad-texto-suave">Ningún cliente coincide.</div>'
+    }
+
+    function htmlResultadosRet(c) {
+      if (!c || c.cliente) return ''
+      if (!c.empresaId) return '<p class="ad-texto-suave">Primero elegí la empresa.</p>'
+      const q = limpio(c.busqueda)
+      if (q.length < MIN_LETRAS_BUSCAR) return `<p class="ad-texto-suave">${esc('Escribí al menos ' + MIN_LETRAS_BUSCAR + ' letras para buscar entre los clientes de la empresa.')}</p>`
+      const rr = c.remoto
+      if (!rr || rr.texto !== q || rr.filas === undefined) return '<div class="ad-texto-suave">Buscando…</div>'
+      if (rr.error) return '<div class="ad-aviso ad-aviso--grave">No se pudo buscar en la base: revisá la conexión. Estos son los que coinciden entre los clientes que ves:</div>' + htmlLocalesRet(c, q)
+      if (rr.filas === null) return '<div class="ad-aviso">Con tu usuario no se puede buscar en la base. Estos son los que coinciden entre los clientes que ves:</div>' + htmlLocalesRet(c, q)
+      if (!rr.filas.length) return '<div class="ad-texto-suave">Ningún cliente de esta empresa coincide.</div>'
+      return `<div class="ad-opciones-clientes">${rr.filas.slice(0, MAX_RESULTADOS_CLIENTES).map(x => htmlOpcionClienteRet(x, q)).join('')}</div>`
+    }
+
+    function htmlClienteElegidoRet(c) {
+      if (!c?.cliente) return ''
+      const nombre = c.cliente.nombre + (c.cliente.apodo ? ' · ' + c.cliente.apodo : '')
+      return `<div class="ad-ret-elegido"><span class="ad-ret-elegido__nombre">${esc(nombre)}</span>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="ad-ret-cliente-cambiar">Cambiar</button></div>`
+    }
+
+    function repintarResultadosRet() {
+      const c = ret().carga
+      const el = document.getElementById('ad-ret-cliente-resultados')
+      if (c && el) el.innerHTML = htmlResultadosRet(c)
+    }
+
+    // El aviso y el error (sin redibujar los campos: nadie pierde el foco).
+    function pintarAvisoRet() {
+      const c = ret().carga
+      const aviso = avisoCargaRet(c)
+      const el = document.getElementById('ad-ret-aviso')
+      el.textContent = aviso
+      el.hidden = !aviso
+      const err = document.getElementById('ad-ret-error')
+      err.textContent = c?.error ?? ''
+      err.hidden = !c?.error
+      const btn = document.getElementById('ad-ret-guardar')
+      btn.disabled = !!c?.enviando
+      btn.textContent = c?.enviando ? 'Cargando…' : 'Confirmar y cargar'
+    }
+
+    function pintarCargaRet() {
+      const c = ret().carga
+      const panel = document.getElementById('ad-ret-carga')
+      panel.hidden = !c
+      if (!c) return
+      document.getElementById('ad-ret-origenes').innerHTML = htmlOrigenesRet(c)
+      document.getElementById('ad-ret-campo-cliente').hidden = c.origen !== 'cliente'
+      document.getElementById('ad-ret-cliente-elegido').innerHTML = htmlClienteElegidoRet(c)
+      document.getElementById('ad-ret-cliente-buscar').hidden = !!c.cliente
+      repintarResultadosRet()
+      const esBanco = c.origen === 'banco'
+      document.getElementById('ad-ret-campo-cuenta').hidden = !esBanco
+      const cuentas = cuentasDeEmpresaRet(c)
+      const sel = document.getElementById('ad-ret-cuenta')
+      sel.innerHTML = '<option value="">Elegí la cuenta…</option>' + cuentas.map(x => `<option value="${esc(x.id)}">${esc(x.nombre)}</option>`).join('')
+      sel.value = cuentas.some(x => x.id === c.cuentaId) ? c.cuentaId : ''
+      const cb = ret().cuentasBanco
+      document.getElementById('ad-ret-cuenta-ayuda').textContent = !c.empresaId ? 'Primero elegí la empresa.'
+        : !cb ? 'Leyendo las cuentas…' : cb.error ? cb.error : !cuentas.length ? 'Esta empresa no tiene cuentas de banco en pesos.' : ''
+      // registrar_retencion_banco no guarda número de certificado.
+      document.getElementById('ad-ret-campo-certificado').hidden = esBanco
+      document.getElementById('ad-ret-campo-jurisdiccion').hidden = !TIPOS_CON_JURISDICCION.includes(c.tipo)
+      pintarAvisoRet()
+    }
+
+    function abrirCargaRet() {
+      const r = ret()
+      if (r.carga?.enviando) return
+      r.carga = cargaVacia()
+      const c = r.carga
+      const empresas = empresasRet()
+      document.getElementById('ad-ret-empresa').innerHTML = '<option value="">Elegí la empresa…</option>' + empresas.map(e => `<option value="${esc(e.id)}">${esc(e.nombre)}</option>`).join('')
+      document.getElementById('ad-ret-empresa').value = c.empresaId
+      document.getElementById('ad-ret-fecha').value = c.fecha
+      document.getElementById('ad-ret-fecha').max = hoyArgentina()
+      document.getElementById('ad-ret-tipo').innerHTML = '<option value="">Elegí el tipo…</option>' + TIPOS_RETENCION.map(([k, t]) => `<option value="${esc(k)}">${esc(t)}</option>`).join('')
+      document.getElementById('ad-ret-tipo').value = ''
+      ponerNumero(document.getElementById('ad-ret-importe'), null)
+      for (const id of ['ad-ret-cliente-buscar', 'ad-ret-certificado', 'ad-ret-jurisdiccion', 'ad-ret-detalle']) document.getElementById(id).value = ''
+      pintarCargaRet()
+      leerCuentasBancoRet()
+    }
+
+    function cerrarCargaRet() {
+      const r = ret()
+      if (r.carga?.enviando) return
+      clearTimeout(r.carga?.espera)
+      r.carga = null
+      pintarCargaRet()
+    }
+
+    // Lo que se tipeó, al estado (sin redibujar los campos).
+    function leerFormRet() {
+      const c = ret().carga
+      if (!c) return
+      const empresa = document.getElementById('ad-ret-empresa').value
+      if (empresa !== c.empresaId) {
+        // Otra empresa: el cliente y la cuenta eran de la otra.
+        c.empresaId = empresa
+        c.cliente = null
+        c.remoto = null
+        c.locales = undefined
+        c.localesEmpresa = null
+        c.cuentaId = ''
+        document.getElementById('ad-ret-cliente-buscar').value = ''
+        c.busqueda = ''
+      }
+      c.fecha = document.getElementById('ad-ret-fecha').value
+      c.tipo = document.getElementById('ad-ret-tipo').value
+      c.importe = leerCampoNumero(document.getElementById('ad-ret-importe'))
+      c.cuentaId = document.getElementById('ad-ret-cuenta').value
+      c.certificado = document.getElementById('ad-ret-certificado').value
+      c.jurisdiccion = document.getElementById('ad-ret-jurisdiccion').value
+      c.detalle = document.getElementById('ad-ret-detalle').value
+      c.error = null
+    }
+
+    function elegirOrigenRet(origen) {
+      const c = ret().carga
+      if (!c || c.enviando || !ORIGENES_RETENCION.some(([k]) => k === origen)) return
+      c.origen = origen
+      c.error = null
+      pintarCargaRet()
+      if (origen === 'cliente' && !c.cliente) document.getElementById('ad-ret-cliente-buscar').focus?.()
+    }
+
+    // Cada tecla repinta al instante; la consulta sale cuando se deja de
+    // escribir un momento, y una respuesta vieja no pisa la nueva (el turno).
+    function buscarClienteRet(texto) {
+      const c = ret().carga
+      if (!c) return
+      c.busqueda = texto
+      clearTimeout(c.espera)
+      const q = limpio(texto)
+      if (c.empresaId && q.length >= MIN_LETRAS_BUSCAR && c.remoto?.texto !== q) {
+        c.remoto = { texto: q, filas: undefined, error: null }
+        c.espera = setTimeout(() => consultarClientesRet(c), ESPERA_BUSCAR_MS)
+      }
+      repintarResultadosRet()
+    }
+
+    // La red: los clientes activos de la empresa que la persona puede leer
+    // (la tabla clientes; su policy pide Pedidos o Retiros). null = no se pudo.
+    async function leerLocalesRet(c) {
+      if (c.localesEmpresa === c.empresaId && c.locales !== undefined) return
+      const empresa = c.empresaId
+      const { data, error } = await supabase.from('clientes').select('id, nombre, razon_social, apodos, localidad, unidad_negocio_id')
+        .eq('unidad_negocio_id', empresa).eq('activo', true).order('nombre')
+      if (ret().carga !== c || c.empresaId !== empresa) return
+      c.localesEmpresa = empresa
+      c.locales = error ? null : (data ?? [])
+    }
+
+    async function consultarClientesRet(c) {
+      const q = c?.remoto?.texto
+      if (!q) return
+      const turno = c.turno = (c.turno ?? 0) + 1
+      const empresa = c.empresaId
+      let filas = null, error = null
+      try {
+        const { data, error: e } = await supabase.rpc('buscar_clientes', { p_busqueda: q, p_unidad_negocio_id: empresa })
+        if (e) throw e
+        // null = la base dice que no tiene el permiso de buscar.
+        if (data !== null) filas = sinUnidadesDePrueba((Array.isArray(data) ? data : []).filter(x => x?.unidad_negocio_id === empresa && x?.activo !== false), estado.fabrica, x => x.unidad_negocio_id)
+      } catch (err) {
+        console.error('No se pudo buscar el cliente:', err)
+        error = err?.message || 'error'
+      }
+      if (turno !== c.turno || ret().carga !== c || c.remoto?.texto !== q || c.empresaId !== empresa) return
+      c.remoto = { texto: q, filas, error }
+      if (filas === null || error) await leerLocalesRet(c)
+      if (turno !== c.turno || ret().carga !== c) return
+      repintarResultadosRet()
+    }
+
+    function elegirClienteRet(id) {
+      const c = ret().carga
+      if (!c || c.enviando) return
+      const q = limpio(c.busqueda)
+      const remoto = Array.isArray(c.remoto?.filas) ? c.remoto.filas.find(x => x.cliente_id === id) : null
+      const local = !remoto && Array.isArray(c.locales) ? c.locales.find(x => x.id === id) : null
+      const cl = remoto ?? local
+      if (!cl) return
+      c.cliente = { id, nombre: limpio(cl.nombre), apodo: apodoMostrarRet(cl, q) }
+      c.error = null
+      pintarCargaRet()
+    }
+
+    function cambiarClienteRet() {
+      const c = ret().carga
+      if (!c || c.enviando) return
+      c.cliente = null
+      c.busqueda = ''
+      c.remoto = null
+      document.getElementById('ad-ret-cliente-buscar').value = ''
+      pintarCargaRet()
+      document.getElementById('ad-ret-cliente-buscar').focus?.()
+    }
+
+    async function guardarRetencion() {
+      const r = ret()
+      const c = r.carga
+      if (!c || c.enviando) return
+      leerFormRet()
+      const falta = validarCargaRet(c)
+      if (falta) { c.error = falta; pintarAvisoRet(); return }
+      const [nombre, params] = parametrosRet(c)
+      c.enviando = true
+      c.error = null
+      pintarAvisoRet()
+      const { error } = await supabase.rpc(nombre, params)
+      if (r.carga !== c) return
+      if (error) {
+        console.error('No se pudo cargar la retención:', error)
+        c.enviando = false
+        // El mensaje de la base va tal cual, pegado al botón.
+        c.error = error.message || 'No se pudo cargar la retención.'
+        pintarAvisoRet()
+        return
+      }
+      const hecho = avisoCargaRet(c)
+      mostrarExito('Retención cargada.' + (c.origen === 'cliente' || c.origen === 'banco' ? ' ' + hecho : ''))
+      r.carga = null
+      pintarCargaRet()
+      await cargarRetenciones()
+    }
+
+    // ── Exportar a Excel (SheetJS, cargado al usarlo) ─────────────────────
+
+    function filasExcelRet(lista) {
+      const filas = [['Empresa', 'Fecha', 'Tipo', 'Importe', 'Origen', 'Cliente', 'N° de certificado', 'Jurisdicción', 'Detalle', 'Cargó', 'Estado', 'Motivo de la anulación']]
+      for (const r of lista ?? []) {
+        const imp = r?.importe === null || r?.importe === undefined || r?.importe === '' || !Number.isFinite(Number(r.importe)) ? '' : Number(r.importe)
+        filas.push([limpio(r?.unidad), fechaCorta(r?.fecha), tipoRetencion(r?.tipo), imp, ORIGENES_RETENCION.find(([k]) => k === r?.origen)?.[1] ?? String(r?.origen ?? ''),
+          limpio(r?.cliente), String(r?.numero_certificado ?? ''), limpio(r?.jurisdiccion), limpio(r?.detalle), limpio(r?.cargado_por),
+          r?.anulado === true ? 'Anulada' : 'Vigente', r?.anulado === true ? limpio(r?.anulado_motivo) : ''])
+      }
+      return filas
+    }
+
+    function filasExcelTotalesRet(porTipo) {
+      const filas = [['Empresa', 'Tipo', 'Total', 'Cantidad']]
+      for (const x of porTipo ?? []) {
+        const t = x?.total
+        filas.push([limpio(x?.unidad), tipoRetencion(x?.tipo), t === null || t === undefined || t === '' || !Number.isFinite(Number(t)) ? '' : Number(t), Number(x?.cantidad) || 0])
+      }
+      return filas
+    }
+
+    function nombreArchivoRet(r) {
+      const emp = nombreEmpresaRet()
+      const limpiar = t => String(t ?? '').replace(/[\\/:*?"<>|]/g, ' ').trim()
+      return `Retenciones ${fechaCorta(r.desde).replace(/\//g, '-')} a ${fechaCorta(r.hasta).replace(/\//g, '-')}${emp ? ' - ' + limpiar(emp) : ''}.xlsx`
+    }
+
+    async function exportarRetenciones() {
+      const r = ret()
+      const err = document.getElementById('ad-ret-exportar-error')
+      const decir = (t) => { err.textContent = t; err.hidden = !t }
+      if (!r.datos) { decir('Todavía no se leyeron las retenciones de este período.'); return }
+      if (!r.datos.lista.length) { decir('No hay retenciones en este período para exportar.'); return }
+      decir('')
+      try {
+        await descargarPlanilla(nombreArchivoRet(r), [
+          { nombre: 'Retenciones', filas: filasExcelRet(r.datos.lista) },
+          { nombre: 'Totales por tipo', filas: filasExcelTotalesRet(r.datos.por_tipo) },
+        ])
+      } catch (e) {
+        console.error('No se pudo exportar:', e)
+        decir(e?.message || 'No se pudo armar el Excel.')
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SEGURIDAD — solo super_admin (27/09/2026)
     //
     // El registro_seguridad: lo escribe la base (cerrar_sesiones) y lo lee
@@ -8104,6 +8923,43 @@
       document.getElementById('ad-importar-confirmar-no').addEventListener('click', () => { if (estado.importar) { estado.importar.confirmar = false; pintarImportar() } })
       document.getElementById('ad-importar-resumen').addEventListener('click', () => bajarResumenImportar())
       document.getElementById('ad-importar-descartar').addEventListener('click', () => descartarImportacion())
+      // Retenciones (13/10/2026)
+      document.getElementById('ad-ret-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-ret-actualizar').addEventListener('click', () => cargarRetenciones())
+      document.getElementById('ad-ret-exportar').addEventListener('click', () => exportarRetenciones())
+      document.getElementById('ad-ret-nueva').addEventListener('click', () => abrirCargaRet())
+      document.getElementById('ad-ret-cancelar').addEventListener('click', () => cerrarCargaRet())
+      document.getElementById('ad-ret-guardar').addEventListener('click', () => guardarRetencion())
+      for (const id of ['ad-ret-desde', 'ad-ret-hasta']) document.getElementById(id).addEventListener('change', () => cambiarPeriodoRet())
+      crearPeriodo({ desde: document.getElementById('ad-ret-desde'), hasta: document.getElementById('ad-ret-hasta'), obligatorias: true })
+      enlazarCampoNumero(document.getElementById('ad-ret-importe'), { decimales: 2 })
+      // Los selects cambian lo que se ve (cuentas, jurisdicción): se repinta;
+      // al tipear, solo el aviso (nadie pierde el foco).
+      for (const id of ['ad-ret-empresa', 'ad-ret-tipo', 'ad-ret-cuenta', 'ad-ret-fecha']) {
+        document.getElementById(id).addEventListener('change', () => { leerFormRet(); pintarCargaRet() })
+      }
+      for (const id of ['ad-ret-importe', 'ad-ret-certificado', 'ad-ret-jurisdiccion', 'ad-ret-detalle']) {
+        document.getElementById(id).addEventListener('input', () => { leerFormRet(); pintarAvisoRet() })
+      }
+      document.getElementById('ad-ret-cliente-buscar').addEventListener('input', (e) => buscarClienteRet(e.target.value))
+      document.getElementById('ad-ret-carga').addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('button[data-ret-origen]'))) { leerFormRet(); elegirOrigenRet(b.dataset.retOrigen) }
+        else if ((b = e.target.closest('button[data-ret-cliente]'))) elegirClienteRet(b.dataset.retCliente)
+        else if (e.target.closest('#ad-ret-cliente-cambiar')) cambiarClienteRet()
+      })
+      const listaRet = document.getElementById('ad-ret-lista')
+      listaRet.addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('button[data-ret-anular]'))) abrirAnularRet(b.dataset.retAnular)
+        else if (e.target.closest('#ad-ret-anular-si')) confirmarAnularRet()
+        else if (e.target.closest('#ad-ret-anular-no')) cancelarAnularRet()
+      })
+      // El motivo se guarda al tipear, sin redibujar (no se pierde el foco).
+      listaRet.addEventListener('input', (e) => {
+        const a = ret().anulando
+        if (e.target.id === 'ad-ret-motivo' && a) a.motivo = e.target.value
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -8130,7 +8986,8 @@
         supabase.from('empleado_tareas').select('modulo, tarea, alcance')
           // 'cuentas_corrientes' entra por registrar_pago: compensar la cuenta
           // de un cliente que también es proveedor (06/10/2026).
-          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes']).eq('habilitado', true),
+          // 'gastos' entra por gastos_empresa: la sección Retenciones (13/10/2026).
+          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas', 'cuentas_corrientes', 'gastos']).eq('habilitado', true),
         supabase.from('empleado_modulos').select('modulo').eq('empleado_id', emp.id).eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre, prefijo, razon_social, cuit, domicilio, telefono, logo_url').eq('activo', true).order('nombre'),
       ])
@@ -8145,6 +9002,8 @@
     // portada, como al elegirla acá). Las vistas globales no se tocan.
     function alCambiarLaBarra(elegida) {
       estado.unidadBarra = elegida ?? null
+      // Retenciones no es de una empresa: la barra la filtra (se vuelve a leer).
+      if (estado.vista === 'ad-vista-retenciones') cargarRetenciones()
       const segun = empresaSegunBarra()
       if (segun === undefined) { pintarEmpresas(); return }
       if (segun === estado.empresaId) { pintarEmpresas(); return }

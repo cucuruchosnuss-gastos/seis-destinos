@@ -90,6 +90,12 @@ const SEGURAS_ADMINISTRACION = [
   ['elegir', 'HTML ya escapado: htmlEditorInsumoLista() arma el selector (o el nombre) con esc()'],
   ['modos', 'HTML constante del código: el segmento Precio fijo / Costo + %'],
   ['campo', 'HTML ya escapado: htmlEditorInsumoLista() arma el campo con esc() de la unidad'],
+  // Retenciones (13/10/2026): los ejecuta con texto malicioso
+  // test-administracion-retenciones.js.
+  ['tarjetaTotal', 'HTML armado por htmlTotalRet(), que escapa el tipo, la plata y la cantidad'],
+  ['tarjetasTipo', 'HTML armado por htmlTotalRet(), que escapa el tipo, la plata y la cantidad'],
+  ["lista.map(x => htmlOpcionClienteRet(x, q)).join('')", 'HTML armado por htmlOpcionClienteRet(), que escapa el id, el nombre, el apodo y el detalle'],
+  ["rr.filas.slice(0, MAX_RESULTADOS_CLIENTES).map(x => htmlOpcionClienteRet(x, q)).join('')", 'HTML armado por htmlOpcionClienteRet(), que escapa el id, el nombre, el apodo y el detalle'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [
