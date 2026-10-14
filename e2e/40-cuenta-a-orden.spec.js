@@ -10,7 +10,8 @@
 //    lo mismo. Sin nada en la pila, la flecha no está.
 //  - Lista de órdenes → una orden → "‹ Órdenes" (el de siempre; la flecha no
 //    se suma) = la lista, con sus filtros; el atrás del navegador, igual.
-//  - La cobranza de la cuenta abre su detalle y vuelve igual.
+//  - La cobranza de la cuenta abre su detalle y vuelve con "‹ Cuenta del
+//    cliente" (el de siempre: va al mismo lugar, la flecha no se suma).
 //  - Sin scroll horizontal y sin errores de JS.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
@@ -108,15 +109,23 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     await expect(volver).toBeHidden();
     expect(page.url(), 'sigue en Administración').toContain('/modulos/administracion.html');
 
-    // La cobranza: abre su detalle y vuelve igual.
-    await unica.locator('[data-cu-filtro]').selectOption('');
+    // La cobranza: abre su detalle y vuelve con el "‹ Cuenta del cliente" de
+    // siempre (va al mismo lugar: la flecha no se suma), con filtro y scroll.
+    await unica.locator('[data-cu-filtro]').selectOption('Cobranza');
     const cob = unica.locator('.cu-fila--link[data-cobranza-id]');
+    await cob.scrollIntoViewIfNeeded();
+    const y3 = await scrollY(page);
     await cob.click();
     await expect(page.locator('#ad-vista-cobranza')).toBeVisible();
-    await expect(volver).toBeVisible();
-    await expect(page.locator('#ad-cobranza-volver')).toBeHidden();
-    await volver.click();
+    const cuentaDelCliente = page.locator('#ad-cobranza-volver');
+    await expect(cuentaDelCliente).toBeVisible();
+    await expect(cuentaDelCliente).toHaveText('‹ Cuenta del cliente');
+    await expect(volver).toBeHidden();
+    await cuentaDelCliente.click();
     await expect(page.locator('#ad-vista-cliente')).toBeVisible();
+    await expect(unica.locator('[data-cu-filtro]')).toHaveValue('Cobranza');
+    await expect.poll(() => scrollY(page), { message: 'el mismo scroll al volver de la cobranza' }).toBe(y3);
+    await unica.locator('[data-cu-filtro]').selectOption('');
     await expect(unica.locator('.cu-fila')).toHaveCount(6);
 
     // Ir a otro lado vacía la pila: de la orden a la pestaña Clientes, sin flecha.

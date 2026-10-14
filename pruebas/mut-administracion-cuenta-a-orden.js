@@ -65,10 +65,17 @@ correrMutacionesEnVarios([
       { nombre: 'adm: la flecha siempre visible', de: "      document.getElementById('ad-volver').hidden = !flecha", a: "      document.getElementById('ad-volver').hidden = false" },
       { nombre: 'adm: "‹ Órdenes" no se esconde con la pila', de: "      document.getElementById('ad-orden-volver').hidden = flecha", a: "      document.getElementById('ad-orden-volver').hidden = false" },
       { nombre: 'adm: "‹ Órdenes" se esconde también desde la lista (e2e/detalles-dispositivos)', de: "      document.getElementById('ad-orden-volver').hidden = flecha", a: '      document.getElementById(\'ad-orden-volver\').hidden = PILA_NAV.length > 0' },
-      { nombre: 'adm: "‹ Cuenta del cliente" no se esconde con la pila', de: "      document.getElementById('ad-cobranza-volver').hidden = flecha", a: "      document.getElementById('ad-cobranza-volver').hidden = false" },
+      // (Sin la de "‹ Cuenta del cliente" nunca se esconde: es EQUIVALENTE desde
+      // el 14/10/2026. Una cobranza solo se apila desde la cuenta, y ahí su
+      // volver va al mismo lugar: la flecha nunca se ve en la cobranza.)
       { nombre: 'adm: el "‹ Volver" al dashboard no se esconde', de: "toggle('ad-app--pila', flecha)", a: "toggle('ad-app--pila', false)" },
-      { nombre: 'adm: la flecha también desde la lista', de: "      return !!tope && tope.vista !== 'ad-vista-ordenes'", a: '      return !!tope' },
-      { nombre: 'adm: la flecha nunca', de: "      return !!tope && tope.vista !== 'ad-vista-ordenes'", a: '      return false' },
+      { nombre: 'adm: la flecha también cuando el volver de siempre va al mismo lugar', de: '      return !!tope && !propioVuelveAlMismoLugar(tope)', a: '      return !!tope' },
+      { nombre: 'adm: la flecha nunca', de: '      return !!tope && !propioVuelveAlMismoLugar(tope)', a: '      return false' },
+      { nombre: 'adm: "‹ Cuenta del cliente" se esconde desde la cuenta (e2e/5-maqueta)', de: " ||\n        (tope.destino === 'ad-vista-cobranza' && tope.vista === 'ad-vista-cliente')", a: '' },
+      { nombre: 'adm: "‹ Órdenes" se esconde desde la lista (la regla)', de: "      return (tope.destino === 'ad-vista-orden' && tope.vista === 'ad-vista-ordenes') ||\n", a: '      return false ||\n' },
+      { nombre: 'adm: "‹ Cuenta del cliente" se esconde con cualquier pila', de: "      document.getElementById('ad-cobranza-volver').hidden = flecha", a: "      document.getElementById('ad-cobranza-volver').hidden = PILA_NAV.length > 0" },
+      { nombre: 'adm: "‹ Cuenta del cliente" no vuelve por la pila (relee y pierde el filtro)', de: "      if (PILA_NAV[PILA_NAV.length - 1]?.destino === 'ad-vista-cobranza') { volverPila(); return }\n", a: '' },
+      { nombre: 'adm: "‹ Cuenta del cliente" vuelve por cualquier pila', de: "      if (PILA_NAV[PILA_NAV.length - 1]?.destino === 'ad-vista-cobranza') { volverPila(); return }", a: '      if (PILA_NAV.length) { volverPila(); return }' },
       { nombre: 'adm: "‹ Órdenes" no vuelve por la pila (recarga y deja el historial colgado)', de: "      if (PILA_NAV[PILA_NAV.length - 1]?.vista === 'ad-vista-ordenes') { volverPila(); return }\n", a: '' },
       { nombre: 'adm: "‹ Órdenes" vuelve por la pila aunque se haya venido de la cuenta', de: "      if (PILA_NAV[PILA_NAV.length - 1]?.vista === 'ad-vista-ordenes') { volverPila(); return }", a: '      if (PILA_NAV.length) { volverPila(); return }' },
       { nombre: 'adm: "‹ Órdenes" no escucha a la pila', de: "addEventListener('click', () => volverAOrdenes())", a: "addEventListener('click', () => mostrarOrdenes())" },

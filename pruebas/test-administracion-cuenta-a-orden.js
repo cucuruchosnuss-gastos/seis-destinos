@@ -472,19 +472,31 @@ esperas.push((async () => {
   preparar(S)
   await S.abrirCliente('c1')
   const ctx = S.ctxCuentaUnica()
+  S.alCambiarCuentaUnica({ target: { matches: (s) => s === '[data-cu-filtro]', value: 'Cobranza' } }, ctx)
+  const cliente = S.estado.cliente
   S.__win.scrollY = 222
   await ctx.abrirCobranza(COB)
   chk('cobranza: desde la cuenta de cliente y proveedor abre el detalle de la cobranza', S.estado.vista === 'ad-vista-cobranza' && S.estado.cobranza?.id === COB && S.estado.cobranza.origen === 'cuenta')
   chk('cobranza: apiló la cuenta', S.PILA_NAV.length === 1 && S.PILA_NAV[0].vista === 'ad-vista-cliente' && S.PILA_NAV[0].destino === 'ad-vista-cobranza')
-  chk('cobranza: flecha visible y "‹ Cuenta del cliente" escondido', el(S, 'ad-volver').hidden === false && el(S, 'ad-cobranza-volver').hidden === true)
+  // "‹ Cuenta del cliente" ya va a la cuenta: queda el de siempre, sin flecha
+  // (e2e/5-maqueta.spec.js lo toca; esconderlo dio rojo en GitHub el 14/10).
+  chk('cobranza: queda "‹ Cuenta del cliente" (visible, con su texto)', el(S, 'ad-cobranza-volver').hidden === false && el(S, 'ad-cobranza-volver').textContent === '‹ Cuenta del cliente')
+  chk('cobranza: y la flecha no (sería otro botón para lo mismo)', el(S, 'ad-volver').hidden === true && S.flechaVisible() === false && !el(S, 'ad-app').classList.contains('ad-app--pila'))
+  S.volverDeCobranza()
+  chk('cobranza: "‹ Cuenta del cliente" vuelve por la pila: la MISMA cuenta, sin releerla de cero', S.estado.vista === 'ad-vista-cliente' && S.estado.cliente === cliente && S.PILA_NAV.length === 0)
+  chk('cobranza: con su scroll y su filtro', S.__win.scrollY === 222 && S.estado.cliente.unica.filtro === 'Cobranza')
+  chk('cobranza: el historial queda en orden', JSON.stringify(nav(S).entradas()) === '[null]', JSON.stringify(nav(S).entradas()))
+  chk('cobranza: y suelta la cobranza', S.estado.cobranza === null && S.estado.cobranzas.asentando === null)
+  await ctx.abrirCobranza(COB)
   S.volverPila()
-  chk('cobranza: volver deja la cuenta con su scroll y suelta la cobranza', S.estado.vista === 'ad-vista-cliente' && S.__win.scrollY === 222 && S.estado.cobranza === null && S.estado.cobranzas.asentando === null)
+  chk('cobranza: volverPila (la pila) hace lo mismo', S.estado.vista === 'ad-vista-cliente' && S.__win.scrollY === 222 && S.estado.cobranza === null)
   // El botón de la cuenta de cliente (data-cuenta-cobranza) usa lo mismo.
   await S.abrirCobranzaDesdeCuenta(COB)
   chk('cobranza: abrirCobranzaDesdeCuenta apila', S.PILA_NAV.length === 1 && S.estado.vista === 'ad-vista-cobranza')
   S.alVolverNavegador({ state: null })
   chk('cobranza: el atrás del navegador vuelve a la cuenta', S.estado.vista === 'ad-vista-cliente' && S.PILA_NAV.length === 0)
   chk('cobranza: un id que no es uuid no abre nada', S.abrirCobranzaDesdeCuenta('o1') === undefined && S.estado.vista === 'ad-vista-cliente' && S.PILA_NAV.length === 0)
+  S.estado.cliente.unica.filtro = ''
   S.estado.misTareas = new Map([['retiros:ver', { todas: true }]])
   chk('cobranza: sin cobranzas:procesar / ver_todo, la cuenta no la ofrece', S.ctxCuentaUnica().abrirCobranza === null && S.abrirCobranzaDesdeCuenta(COB) === undefined && S.PILA_NAV.length === 0)
   S.pintarCliente()
@@ -492,6 +504,27 @@ esperas.push((async () => {
   S.estado.misTareas = new Map([['cobranzas:procesar', null]])
   S.pintarCliente()
   chk('orden: sin retiros:ver, ctx.abrirOrden es null y no hay link a la orden', S.ctxCuentaUnica().abrirOrden === null && !/cu-fila--link" data-orden-retiro/.test(el(S, 'ad-cuenta-unica').innerHTML))
+})())
+
+// "‹ Cuenta del cliente" sin la pila (la cobranza vino de otro lado): lo de siempre.
+esperas.push((async () => {
+  const S = nuevo()
+  preparar(S)
+  await S.abrirCliente('c2')
+  await S.abrirCobranza(COB, { origen: 'cuenta', clienteOrigen: 'c1' })
+  chk('sin pila: la cobranza no muestra la flecha y sí "‹ Cuenta del cliente"', S.PILA_NAV.length === 0 && el(S, 'ad-volver').hidden === true && el(S, 'ad-cobranza-volver').hidden === false)
+  S.volverDeCobranza()
+  await asentar()
+  chk('sin pila: "‹ Cuenta del cliente" abre la cuenta de su cliente, como siempre', S.estado.vista === 'ad-vista-cliente' && S.estado.cliente.id === 'c1' && S.estado.cobranza === null)
+  // Con la pila de una ORDEN arriba (no de la cobranza): tampoco usa la pila.
+  await S.abrirOrdenDesde('o1')
+  S.estado.cobranza = { id: COB, origen: 'lista' }
+  S.volverDeCobranza()
+  chk('pila de una orden: "‹ Cuenta del cliente" no vuelve por ella (va a donde iba siempre)', S.estado.vista === 'ad-vista-cobranzas', S.estado.vista)
+  chk('la regla: la orden desde la cuenta sí muestra la flecha', S.propioVuelveAlMismoLugar({ vista: 'ad-vista-cliente', destino: 'ad-vista-orden' }) === false)
+  chk('la regla: la orden desde la lista no', S.propioVuelveAlMismoLugar({ vista: 'ad-vista-ordenes', destino: 'ad-vista-orden' }) === true)
+  chk('la regla: la cobranza desde la cuenta no', S.propioVuelveAlMismoLugar({ vista: 'ad-vista-cliente', destino: 'ad-vista-cobranza' }) === true)
+  chk('la regla: la cobranza desde otro lado sí', S.propioVuelveAlMismoLugar({ vista: 'ad-vista-ordenes', destino: 'ad-vista-cobranza' }) === false)
 })())
 
 // ═══ 7. El cableado (estático) ═════════════════════════════════════════════

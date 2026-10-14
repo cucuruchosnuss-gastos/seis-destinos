@@ -609,8 +609,10 @@
 
     <!-- "← Volver" (14/10/2026): vuelve EXACTAMENTE a donde se estaba (la
          cuenta del cliente con su filtro y su scroll). Solo se ve con algo en
-         la pila de navegación (PILA_NAV) que no sea la lista de órdenes:
-         desde la lista vuelve el "‹ Órdenes" de siempre (flechaVisible). -->
+         la pila de navegación (PILA_NAV) y cuando el "volver" de siempre de
+         esa vista llevaría a otro lado (flechaVisible): desde la lista vuelve
+         "‹ Órdenes"; desde la cuenta, una cobranza vuelve con "‹ Cuenta del
+         cliente". -->
     <button type="button" class="ad-volver-pila" id="ad-volver" hidden><span aria-hidden="true">←</span> Volver</button>
 
     <div class="ad-vacio" id="ad-sin-acceso" hidden></div>
@@ -1596,15 +1598,24 @@
       try { history.pushState?.({ adPila: PILA_NAV.length }, '') } catch (err) { console.error('No se pudo anotar en el historial:', err) }
     }
 
-    // La flecha se ve cuando se vino de la CUENTA (o de cualquier lugar que no
-    // sea la lista de órdenes): ahí "‹ Órdenes" / "‹ Cuenta del cliente" (que
-    // relee) irían a otro lado, y se esconden. Desde la LISTA de órdenes queda
-    // el "‹ Órdenes" de siempre, que ahora vuelve por la pila (volverAOrdenes:
-    // mismo scroll y filtros, y el historial en orden) y la flecha no se
-    // muestra: dos botones para lo mismo sobran.
+    // LA REGLA (14/10/2026): un "volver" de siempre se esconde SOLO si
+    // llevaría a otro lugar que la flecha. Si va al mismo lugar, queda el de
+    // siempre (con su id y su texto; las pruebas y la costumbre lo tocan),
+    // vuelve por la pila (mismo filtro y scroll, historial en orden) y la
+    // flecha no se muestra: dos botones para lo mismo sobran.
+    //  - una orden abierta desde la LISTA: "‹ Órdenes" (volverAOrdenes);
+    //  - una cobranza abierta desde la CUENTA: "‹ Cuenta del cliente"
+    //    (volverDeCobranza).
+    // Solo una orden abierta desde la cuenta muestra la flecha ("‹ Órdenes"
+    // llevaría a la lista, no a la cuenta).
+    function propioVuelveAlMismoLugar(tope) {
+      return (tope.destino === 'ad-vista-orden' && tope.vista === 'ad-vista-ordenes') ||
+        (tope.destino === 'ad-vista-cobranza' && tope.vista === 'ad-vista-cliente')
+    }
+
     function flechaVisible() {
       const tope = PILA_NAV[PILA_NAV.length - 1]
-      return !!tope && tope.vista !== 'ad-vista-ordenes'
+      return !!tope && !propioVuelveAlMismoLugar(tope)
     }
 
     function pintarVolverPila() {
@@ -7758,6 +7769,9 @@
     }
 
     function volverDeCobranza() {
+      // Abierta desde la cuenta (la pila): vuelve a ESA cuenta con su filtro
+      // y su scroll, y el historial queda en orden (14/10/2026).
+      if (PILA_NAV[PILA_NAV.length - 1]?.destino === 'ad-vista-cobranza') { volverPila(); return }
       const d = estado.cobranza
       estado.cobranza = null
       estado.cobranzas.asentando = null
