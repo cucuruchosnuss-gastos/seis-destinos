@@ -7,10 +7,15 @@ const { defineConfig } = require('@playwright/test');
 // para no chocar con un servidor que ya esté corriendo en 4173 / 4180).
 const PUERTO = Number(process.env.E2E_PUERTO || 4173);
 const PUERTO_MAQUETA = Number(process.env.E2E_PUERTO_MAQUETA || 4180);
+// En GitHub el trabajo "Navegador" corre en dos mitades a la vez (E2E_MITAD=1
+// o 2, ver mitades.js). Sin E2E_MITAD corre todo, como siempre.
+const { opcionesDeMitad } = require('./mitades');
 
 module.exports = defineConfig({
   testDir: __dirname,
   testMatch: /.*\.spec\.js$/,
+  // DESPUÉS de testMatch: la mitad 1 lo reemplaza por su lista.
+  ...opcionesDeMitad(process.env.E2E_MITAD),
   outputDir: `${__dirname}/resultados`,
   // Los recorridos comparten la fábrica de pruebas: nunca en paralelo.
   workers: 1,
