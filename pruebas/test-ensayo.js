@@ -133,6 +133,12 @@ chk('… y con los specs elegidos', an.includes('e2e/0-humo.spec.js') && an[1] =
     const pid = Number(fs.readFileSync(marca, 'utf8'))
     await new Promise(res => setTimeout(res, 1500))
     try { process.kill(pid, 0); nietoVivo = true } catch { nietoVivo = false }
+    // Un ZOMBI (estado Z en /proc: ya está muerto, falta que lo recoja el
+    // proceso 1) cuenta como cortado. En el contenedor de la nube el proceso 1
+    // tarda en recogerlos y kill(pid, 0) los da por vivos (14/10/2026).
+    if (nietoVivo) {
+      try { if (fs.readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ').pop().startsWith('Z')) nietoVivo = false } catch {}
+    }
     if (nietoVivo) try { process.kill(pid) } catch {}
   } catch (e) { nietoVivo = 'sin marca: ' + e.message }
   chk('… y se corta también lo que lanzó (el nieto, como el navegador)', nietoVivo === false, String(nietoVivo))
