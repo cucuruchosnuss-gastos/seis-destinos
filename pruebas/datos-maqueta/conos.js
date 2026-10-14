@@ -45,6 +45,25 @@ const conos_stock = CONOS.map(([cono, ilus, stock, camino, armado, c30, activa])
   recibido: 0, ajustes: 0, consumido: 0, stock, en_camino: camino, en_armado: armado, consumo_30d: c30,
 }));
 
+// Todos los conos (14/10/2026): conos_catalogo() trae TODAS las marcas, con
+// doble bolsa e ilustración; además de las de arriba, una nueva por revisar
+// (que se usa igual: está activa), una rechazada y una apagada sin stock.
+const DOBLE = new Set(['QUINTANA', 'RIO']);
+const EXTRA = [
+  // [id, nombre, activa, doble, ilus, estado_alta]
+  [M(90), 'HELADERÍA ÑANDÚ', true, false, false, 'pendiente_revision'],
+  [M(91), 'RECHAZADO SA', false, false, false, 'rechazada'],
+  [M(92), 'ÁRBOL VIEJO', false, true, false, 'aprobada'],
+];
+const conos_catalogo = [
+  ...CONOS.map(([cono, ilus, stock, , , c30, activa]) => ({
+    marca_id: ID[cono], cono, activa, doble_bolsa: DOBLE.has(cono), papel_ilustracion: ilus, estado_alta: 'aprobada', stock, consumo_30d: c30,
+  })),
+  ...EXTRA.map(([marca_id, cono, activa, doble, ilus, alta]) => ({
+    marca_id, cono, activa, doble_bolsa: doble, papel_ilustracion: ilus, estado_alta: alta, stock: 0, consumo_30d: 0,
+  })),
+].sort((a, b) => (b.activa - a.activa) || a.cono.localeCompare(b.cono, 'es'));
+
 const P = { p317: 'pl-317', p320: 'pl-320', p321: 'pl-321', p322: 'pl-322', p323: 'pl-323' };
 const pliego = (id, numero, papel, total, estado, fecha, entrega, precio, comentarios, extra = {}) => ({
   id, numero, papel, cantidad_total: total, fecha_pedido: fecha, fecha_entrega_estimada: entrega, estado,
@@ -143,5 +162,10 @@ module.exports = {
     ajustar_stock_cono: null,
     guardar_precio_cono_papel: 'pp-nuevo',
     proponer_marca: { marca_id: M(99), ya_existia: false },
+    conos_catalogo,
+    // La respuesta del Supabase falso es fija: null deja el interruptor como
+    // lo puso la pantalla (e2e/42-conos-todos.spec.js pone una respuesta
+    // propia en globalThis.__maqueta cuando quiere mirar lo que devuelve).
+    configurar_cono: null,
   },
 };

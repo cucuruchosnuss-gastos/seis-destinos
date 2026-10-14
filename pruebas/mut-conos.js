@@ -40,7 +40,7 @@ correrMutacionesEnVarios([
   ] },
   { original: path.join(__dirname, '..', 'js', 'modulos.js'), funciones: [], salir: false, variable: 'ARCHIVO_MODULOS',
     suite: path.join(__dirname, 'test-conos-catalogo.js'), manuales: [
-    { nombre: 'la tarjeta pide la fila del módulo', de: '  const habilitado = esAdmin || modulo.sinFilaModulo === true || misModulos', a: '  const habilitado = esAdmin || misModulos' },
+    { nombre: 'la tarjeta pide la fila del módulo', de: '  const habilitado = esAdmin || modulo.sinFilaModulo === true || (misModulos', a: '  const habilitado = esAdmin || (misModulos' },
     { nombre: 'la tarjeta no pide tareas', de: "    requiereTareas: ['conos:ver', 'conos:pedir', 'conos:precios', 'conos:recibir'],", a: '' },
     { nombre: 'la tarjeta sin recibir', de: "    requiereTareas: ['conos:ver', 'conos:pedir', 'conos:precios', 'conos:recibir'],", a: "    requiereTareas: ['conos:pedir', 'conos:precios'],\n    requiereTareas2: [ 'conos:ver', 'conos:recibir']," },
   ] },
