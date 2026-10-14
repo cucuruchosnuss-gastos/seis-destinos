@@ -152,6 +152,8 @@ function sandbox() {
       __invocaciones(){ return __invocaciones }, __setInvoke(f){ __invokeImpl = f }, __subidas(){ return __subidas }`,
   })
 }
+// La leyenda de la fecha de emisión está siempre en la tarjeta: se mira si se VE.
+const leyendaVisible = (h) => /data-echeck-aviso-fecha="[^"]*">No figura en el comprobante: revisala</.test(h)
 const esperar = async (n = 10) => { for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r)) }
 const PDF = { type: 'application/pdf', size: 180 * 1024, name: 'ECHEQ BERSANO.pdf' }
 
@@ -219,7 +221,7 @@ async function pruebas() {
     chk('respondió: el importe', e?.importe === 9400228.77)
     chk('sin fecha de emisión en el comprobante: queda la de hoy', e?.fecha_emision === HOY, e?.fecha_emision)
     const h2 = e ? S.htmlEcheckForm(e, 0, true) : ''
-    chk('…con la leyenda "No figura en el comprobante: revisala"', /No figura en el comprobante: revisala/.test(h2))
+    chk('…con la leyenda "No figura en el comprobante: revisala"', leyendaVisible(h2))
     chk('ya leído, la tarjeta no dice "Leyendo"', !/Leyendo el comprobante/.test(h2))
     chk('ya leído, el aviso en el lugar se esconde', linea.hidden === true)
     chk('la tarjeta dice que se leyó del comprobante (la fecha de hoy puesta por el sistema no es una corrección)',
@@ -230,7 +232,7 @@ async function pruebas() {
     chk('para la base: el emisor y su CUIT en titulares, y la fecha de emisión de hoy', JSON.stringify(b.titulares) === '[{"nombre":"BERSANO SRL","cuit":"30690839691"}]' && b.fecha_emision === HOY)
     chk('sin nada más que completar: el e-cheque no frena el guardado', !S.motivosParaNoGuardar().some(m => /^E-cheque/.test(m)), S.motivosParaNoGuardar().join(' | '))
     S.actualizarEcheck(e?.id, 'fecha_emision', '2026-10-10')
-    chk('cambiar la fecha de emisión saca la leyenda', !/No figura en el comprobante/.test(S.htmlEcheckForm(e, 0, true)))
+    chk('cambiar la fecha de emisión saca la leyenda', !leyendaVisible(S.htmlEcheckForm(e, 0, true)))
     chk('…y eso sí es una corrección ("ocr_corregido")', S.echequeParaBase(e).origen_datos === 'ocr_corregido')
   })
 
@@ -249,7 +251,7 @@ async function pruebas() {
     const e = f.echecks[0]
     chk('con tarjeta vacía: respondió y completó ESA tarjeta', f.echecks.length === 1 && e.id === id && e.banco_codigo === '285' && e.numero === '78013718' &&
       e.emisor === 'BERSANO SRL' && e.cuit_emisor === '30690839691' && e.fecha_pago === '2026-11-16' && e.importe === 9400228.77, JSON.stringify(f.echecks))
-    chk('con tarjeta vacía: la fecha de emisión de hoy, con su leyenda', e.fecha_emision === HOY && /No figura en el comprobante: revisala/.test(S.htmlEcheckForm(e, 0, true)))
+    chk('con tarjeta vacía: la fecha de emisión de hoy, con su leyenda', e.fecha_emision === HOY && leyendaVisible(S.htmlEcheckForm(e, 0, true)))
   })
 
   // ══ 3. ESCRIBIENDO MIENTRAS EL LECTOR NO RESPONDIÓ ═════════════════════════
@@ -274,7 +276,7 @@ async function pruebas() {
     chk(`escribiendo (${cual}): lo escrito NO se pisa (emisor, importe y fecha de emisión)`, e.emisor === 'Bersano Hnos' && e.importe === '9.400.000,00' && e.fecha_emision === '2026-10-01', JSON.stringify(e))
     chk(`escribiendo (${cual}): lo vacío se completa (banco, CUIT, fecha de pago)`, e.banco_codigo === '285' && e.cuit_emisor === '30690839691' && e.fecha_pago === '2026-11-16' && e.tipo === 'diferido', JSON.stringify(e))
     chk(`escribiendo (${cual}): un campo escrito y borrado quedó vacío, así que se completa`, e.numero === '78013718', e.numero)
-    chk(`escribiendo (${cual}): con fecha de emisión escrita no va la leyenda`, !/No figura en el comprobante/.test(S.htmlEcheckForm(e, 0, true)))
+    chk(`escribiendo (${cual}): con fecha de emisión escrita no va la leyenda`, !leyendaVisible(S.htmlEcheckForm(e, 0, true)))
     chk(`escribiendo (${cual}): queda "ocr_corregido" (difiere de lo leído)`, S.echequeParaBase(e).origen_datos === 'ocr_corregido')
   })
   // Elegir "A la vista" mientras lee: no se vuelve diferido ni se le pone la
@@ -291,6 +293,28 @@ async function pruebas() {
     await esperar()
     chk('eligió "A la vista" mientras leía: queda a la vista y sin fecha de pago', e?.tipo === 'comun' && e?.fecha_pago === '', JSON.stringify(e))
     chk('…y lo demás se completa igual', e?.banco_codigo === '285' && e?.importe === 9400228.77)
+  })
+
+  // Elegir "Diferido" mientras lee, y el comprobante sin fecha de pago: la
+  // elección de la persona manda (no se vuelve "a la vista").
+  await bloque('diferido elegido', async () => {
+    const S = formularioConEcheque()
+    const f = S.estado.form
+    const soltar = lectorDemorado(S, { ...RESPUESTA, propuestos: [{ ...PROPUESTOS[0], fecha_pago: null }] })
+    await S.agregarFotos([PDF], 'echeque')
+    await esperar()
+    const e = f.echecks?.[0]
+    if (e) S.actualizarEcheck(e.id, 'tipo', 'diferido')
+    soltar()
+    await esperar()
+    chk('eligió "Diferido" mientras leía y el comprobante no trae fecha de pago: sigue diferido', e?.tipo === 'diferido' && e?.fecha_pago === '', JSON.stringify(e))
+    const g = formularioConEcheque()
+    const soltar2 = lectorDemorado(g, { ...RESPUESTA, propuestos: [{ ...PROPUESTOS[0], fecha_pago: null }] })
+    await g.agregarFotos([PDF], 'echeque')
+    await esperar()
+    soltar2()
+    await esperar()
+    chk('sin elegir nada y sin fecha de pago en el comprobante: a la vista', g.estado.form.echecks[0]?.tipo === 'comun')
   })
 
   // ══ 4. UNA TARJETA A MANO CON DATOS NO SE MEZCLA CON EL COMPROBANTE ═══════
@@ -335,7 +359,7 @@ async function pruebas() {
     await esperar()
     chk('dos e-cheques en un PDF: el primero completa la tarjeta y el segundo trae otra con el mismo comprobante',
       f.echecks.length === 2 && f.echecks[0].numero === '78013718' && f.echecks[1].numero === '78013719' && f.echecks.every(e => e.foto_id === f.fotos[0].id), JSON.stringify(f.echecks))
-    chk('el que trae fecha de emisión la usa, sin leyenda', f.echecks[1]?.fecha_emision === '2026-10-05' && !/No figura en el comprobante/.test(S.htmlEcheckForm(f.echecks[1], 1, true)))
+    chk('el que trae fecha de emisión la usa, sin leyenda', f.echecks[1]?.fecha_emision === '2026-10-05' && !leyendaVisible(S.htmlEcheckForm(f.echecks[1], 1, true)))
   })
 
   // ══ 7. EL LECTOR FALLA O NO ENCUENTRA NADA: LA MISMA TARJETA ═══════════════

@@ -134,14 +134,14 @@ for (const t of TAMANOS) {
           await expect(tarjeta.locator('[data-echeck-origen]')).toHaveText('Leído del comprobante: revisalo antes de guardar.');
         }
 
+        const { doc, vista } = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, vista: window.innerWidth }));
+        expect(doc, `scroll horizontal: ${doc} px contra ${vista}`).toBeLessThanOrEqual(vista);
+        await tarjeta.locator('[data-echeck-aviso-fecha]').scrollIntoViewIfNeeded();
+        await captura(page, `echeque-pdf-leido-${origen}-${caso.replace(/\s+/g, '-')}-${t.nombre}`, info);
+
         // Cambiar la fecha de emisión saca la leyenda.
         await campo(tarjeta, 'fecha_emision').fill('2026-10-10');
         await expect(tarjeta.locator('[data-echeck-aviso-fecha]')).toBeHidden();
-
-        const { doc, vista } = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, vista: window.innerWidth }));
-        expect(doc, `scroll horizontal: ${doc} px contra ${vista}`).toBeLessThanOrEqual(vista);
-        await tarjeta.scrollIntoViewIfNeeded();
-        await captura(page, `echeque-pdf-leido-${origen}-${caso.replace(/\s+/g, '-')}-${t.nombre}`, info);
         expect(errores, errores.join('\n')).toEqual([]);
       });
     }
