@@ -34,7 +34,7 @@ for (const ancho of [390, 1280]) {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: 900 });
-    await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=cantidades`);
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=cantidades`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
 
@@ -92,7 +92,7 @@ for (const ancho of [390, 1280]) {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: 900 });
-    await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=cantidades`);
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=cantidades`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
 

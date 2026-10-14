@@ -61,7 +61,7 @@ const PANTALLAS = [
   { nombre: 'Producción · Historial', url: '/modulos/produccion-gestion.html?maqueta=produccion-gestion', tocarAntes: '#pr-menu-historial', menuCelular: '#pr-btn-menu',
     cont: '#pr-historial-listado .pr-campos',
     periodo: 'pr-historial-desde', hasta: 'pr-historial-hasta', lista: '#pr-historial-lista', obligatorias: true },
-  { nombre: 'Stock', url: '/modulos/stock.html?maqueta=stock', cont: '#buscador-stock-actual' },
+  { nombre: 'Stock', url: '/modulos/stock.html?vista=insumos&maqueta=stock', cont: '#buscador-stock-actual' },
   { nombre: 'Proyectos Taller', url: '/modulos/taller.html?maqueta=taller-diseno', cont: '.tl-tool' },
   { nombre: 'Ingreso', url: '/modulos/materia-prima.html?maqueta=materia-prima', cont: '#filtro-busqueda-ingresos' },
   { nombre: 'Empleados', url: '/modulos/empleados.html?maqueta=empleados', cont: '#filtro-busqueda-empleados' },

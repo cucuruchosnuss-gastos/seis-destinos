@@ -71,7 +71,11 @@ esperas.push((async () => {
   chk('el menú se abre con una CLASE y no con [hidden] (la regla global de hidden gana siempre)', !/pr-menu'\)\.hidden = !/.test(FUENTE) && /document\.body\.classList\.add\('pg-menu-abierto'\)/.test(FUENTE))
   chk('Escape lo cierra', /ev\.key === 'Escape' && document\.body\.classList\.contains\('pg-menu-abierto'\)\) cerrarMenu\(\)/.test(FUENTE))
   for (const id of ['pr-historial-volver', 'pr-stock-volver']) {
-    chk(`"‹ Menú" de la sección (${id}) abre el menú`, new RegExp(`getElementById\\('${id}'\\)\\.addEventListener\\('click', abrirMenu\\)`).test(FUENTE))
+    // El del stock pasa por alVolverDelStock (14/10/2026: desde Stock vuelve
+    // a Stock), que sin venir de Stock abre el menú.
+    const fn = id === 'pr-stock-volver' ? 'alVolverDelStock' : 'abrirMenu'
+    chk(`"‹ Menú" de la sección (${id}) abre el menú`, new RegExp(`getElementById\\('${id}'\\)\\.addEventListener\\('click', ${fn}\\)`).test(FUENTE) &&
+      (fn === 'abrirMenu' || /function alVolverDelStock\(\) \{\s*if \(estado\.volverStock\) \{[^}]*\}\s*abrirMenu\(\)/.test(FUENTE)))
   }
   chk('Historial y Stock dicen "‹ Menú"', ['pr-historial-volver', 'pr-stock-volver'].every(id => new RegExp(`id="${id}"[^>]*>(?:&lsaquo;|‹) Menú<`).test(FUENTE)))
   // Configuración (diseño 7a/7b, 29/09/2026): ‹ atrás, que del detalle vuelve

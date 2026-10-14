@@ -72,8 +72,9 @@ const PRELUDIO = `
     barraLista: Promise.resolve(), fabrica: null, cargados: new Set(),
   }
 `
-const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'init']
-const CONSTANTES = ['puedeVerStock', 'puedeAjustar', 'puedeEnviar', 'puedeGestionar', 'VISTAS_DESDE_URL', 'PESTANA_DE_VISTA', 'SUBTITULO_VISTA']
+// 14/10/2026: init() decide además la entrada (las dos entradas de Stock).
+const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'puedeVerTerminado', 'decidirEntrada', 'entradaPedida', 'urlTerminado', 'mostrarEleccion', 'init']
+const CONSTANTES = ['puedeVerStock', 'puedeAjustar', 'puedeEnviar', 'puedeGestionar', 'VISTAS_DESDE_URL', 'PESTANA_DE_VISTA', 'SUBTITULO_VISTA', 'VISTAS_DE_INSUMOS']
 
 function sandboxInit() {
   return construirCon(ARCHIVO, {

@@ -87,7 +87,7 @@ for (const ancho of [360, 390]) {
         ['dashboard.html?maqueta=tablero', []],
         ['modulos/gastos.html?maqueta=gastos', ['#btn-nuevo-gasto', '#btn-sin-foto']],
         ['modulos/cobranzas.html?maqueta=cobranzas', ['#cob-btn-nueva']],
-        ['modulos/stock.html?maqueta=stock', ['#btn-registrar-movimiento']],
+        ['modulos/stock.html?vista=insumos&maqueta=stock', ['#btn-registrar-movimiento']],
       ]) {
         await abrir(page, ancho, ruta, pasos);
         const v = await caja(page, '#version-banner');

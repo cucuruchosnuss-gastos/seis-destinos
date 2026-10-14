@@ -13,7 +13,7 @@ for (const ancho of [390, 1280]) {
   test(`stock: la harina en bultos, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: 900 });
-    await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=stock`);
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=stock`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
     const harina = page.locator('#lista-stock [data-stock="i-harina"]');

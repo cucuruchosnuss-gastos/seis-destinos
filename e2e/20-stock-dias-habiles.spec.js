@@ -12,7 +12,7 @@ for (const ancho of [390, 1280]) {
   test(`stock: para cuántos días hábiles alcanza, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: 900 });
-    await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=stock`);
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=stock`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
     const lista = page.locator('#lista-stock');

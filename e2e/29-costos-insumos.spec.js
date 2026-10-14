@@ -31,7 +31,7 @@ for (const ancho of [390, 1280]) {
   test(`stock: costos y stock valorizado, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: 860 });
-    await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=stock-costos`);
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=stock-costos`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
 
