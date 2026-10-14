@@ -827,6 +827,51 @@
       line-height: 1.4;
     }
     .aviso-taller--arriba { margin: -0.25rem 0 0.75rem; }
+
+    /* ── Préstamos (13/10/2026): pagar la cuota de un préstamo ───────────── */
+    .prestamo-lista { display: grid; gap: 0.75rem; }
+    .prestamo-tarjeta {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem;
+      width: 100%; min-height: 44px; padding: 0.875rem 1rem; text-align: left;
+      background: var(--color-fondo); border: 2px solid var(--color-borde); border-radius: 16px;
+      font: inherit; color: var(--color-texto); cursor: pointer; min-width: 0;
+    }
+    .prestamo-tarjeta:hover, .prestamo-tarjeta:focus-visible { border-color: var(--color-acento); }
+    .prestamo-tarjeta__nombre { font-weight: 700; font-size: 1rem; overflow-wrap: anywhere; }
+    .prestamo-tarjeta__saldo { font-weight: 700; color: var(--color-texto); }
+    .prestamo-tarjeta__linea, .prestamo-nota { font-size: 0.875rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .prestamo-mal { color: var(--color-error); font-weight: 600; }
+    .prestamo-volver {
+      background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit;
+      font-weight: 600; color: var(--color-acento); cursor: pointer;
+    }
+    .prestamo-cabeza { margin: 0 0 1rem; overflow-wrap: anywhere; }
+    .prestamo-cabeza strong { font-size: 1.0625rem; }
+    .prestamo-subtitulo { font-size: 0.9375rem; font-weight: 700; margin: 1.25rem 0 0.5rem; }
+    .prestamo-cuota {
+      padding: 0.75rem 0.875rem; border-radius: 12px; background: var(--color-acento-suave);
+      border: 1px solid var(--color-borde); overflow-wrap: anywhere;
+    }
+    .prestamo-cuotas { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 0; }
+    .prestamo-cuotas button {
+      min-height: 44px; padding: 0 0.75rem; border-radius: 10px; font: inherit; font-size: 0.875rem;
+      border: 1px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto); cursor: pointer;
+    }
+    .prestamo-cuotas button[aria-pressed="true"] { background: var(--color-acento); border-color: var(--color-acento); color: #fff; font-weight: 700; }
+    .prestamo-parte {
+      border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.75rem; margin: 0 0 0.75rem;
+      display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); min-width: 0;
+    }
+    .prestamo-parte__cabeza { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-weight: 700; }
+    .prestamo-parte .grupo-campo { min-width: 0; }
+    .prestamo-parte input, .prestamo-parte select, #prestamo-tc, #prestamo-fecha { font-size: 16px; min-height: 44px; width: 100%; box-sizing: border-box; }
+    .prestamo-agregar { width: 100%; margin: 0 0 1rem; }
+    .prestamo-calculo {
+      margin: 0.75rem 0; padding: 0.75rem 0.875rem; border-radius: 12px; font-weight: 600;
+      background: var(--color-superficie); border-left: 4px solid var(--color-acento); overflow-wrap: anywhere;
+    }
+    .prestamo-calculo--mal { border-left-color: var(--color-error); color: var(--color-error); }
+    .prestamo-pagar { width: 100%; min-height: 48px; }
     .aviso-taller__link {
       background: none;
       border: 0;
@@ -1965,6 +2010,7 @@
       <div class="paso__contenido">
         <h2 class="paso__titulo">Detalles del gasto</h2>
         <p class="paso__subtitulo">Todos los campos son opcionales excepto Empleado (y Proyecto en un gasto del Taller).</p>
+        <p class="aviso-taller aviso-taller--arriba" id="aviso-prestamo-permiso" hidden></p>
 
         <div class="formulario">
           <div class="grupo-campo">
@@ -2018,6 +2064,21 @@
       <div class="wizard-nav">
         <button class="btn btn--secundario" id="btn-detalles-atras">← Atrás</button>
         <button class="btn btn--primario" id="btn-detalles-siguiente">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ── Sub-paso PRÉSTAMO (13/10/2026) ───────────────────────────────────
+         Con la empresa elegida y la categoría «Préstamos», quien tiene
+         gastos:gastos_empresa paga acá la cuota de un préstamo en vez de
+         cargar el formulario común. Lo arma pintarPrestamos(). -->
+    <div class="paso" id="sp-prestamo">
+      <div class="paso__contenido">
+        <h2 class="paso__titulo" id="prestamo-titulo">Préstamos activos</h2>
+        <p class="paso__subtitulo">Elegí el préstamo y la cuota que pagás. Cada parte del pago queda como un gasto de «Préstamos» desde la cuenta que elijas; el importe y la razón social del paso «Datos» no se usan.</p>
+        <div id="prestamo-cuerpo"></div>
+      </div>
+      <div class="wizard-nav">
+        <button class="btn btn--secundario" id="btn-prestamo-atras">← Atrás</button>
       </div>
     </div>
 
@@ -2135,7 +2196,7 @@
     import { verificarSesion } from '../js/auth.js'
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
-    import { crearPeriodo, ubicarPanel } from '../js/periodo.js'
+    import { crearPeriodo, ubicarPanel, hoyIsoAr } from '../js/periodo.js'
     import { crearAmpliar } from '../js/ampliar.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     // La barra de unidad de negocio, arriba (28/09/2026): es el mismo archivo
@@ -2245,7 +2306,7 @@
     const SUBPASO_A_CIRCULO = {
       'foto': 1, 'datos': 2,
       'destino': 3, 'vehiculo-destino': 3,
-      'categoria': 4, 'detalles': 4,
+      'categoria': 4, 'detalles': 4, 'prestamo': 4,
       'resumen': 5,
     }
 
@@ -4089,9 +4150,12 @@
         pintarAvisoTaller()
       }
 
+      if (id === 'prestamo') abrirPrestamos()
+
       if (id === 'detalles') {
         poblarSelectEmpleados(unidadSeleccionada)
         actualizarSelectorCuentaGasto()
+        pintarAvisoPermisoPrestamos()
 
         const grupoKmDetalle = document.getElementById('grupo-kilometraje-detalle')
         if (grupoKmDetalle) grupoKmDetalle.style.display = viaVehiculos ? 'block' : 'none'
@@ -4138,7 +4202,7 @@
 
     function actualizarBreadcrumb(subpaso) {
       const bcEl = document.getElementById('wizard-breadcrumb')
-      const visibleEn = ['vehiculo-destino','categoria','detalles','resumen']
+      const visibleEn = ['vehiculo-destino','categoria','detalles','prestamo','resumen']
       if (!visibleEn.includes(subpaso)) { bcEl.hidden = true; return }
 
       bcEl.hidden = false
@@ -4169,7 +4233,7 @@
       }
 
       // Segmento categoría (una vez confirmada)
-      if (['detalles','resumen'].includes(subpaso) && categoriaSeleccionada) {
+      if (['detalles','prestamo','resumen'].includes(subpaso) && categoriaSeleccionada) {
         const cat = estado.maestros.categorias.find(c => c.id === categoriaSeleccionada)
         if (cat) items.push({ labelHtml: `${iconoCategoriaHtml(cat.nombre)} ${esc(cat.nombre)}`, subpaso: 'categoria' })
       }
@@ -4401,7 +4465,7 @@
           categoriaSeleccionada = btn.dataset.id
           grilla.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('btn-categoria--seleccionado'))
           btn.classList.add('btn-categoria--seleccionado')
-          irASubpaso('detalles') // auto-avanza
+          irASubpaso(vaAPrestamos() ? 'prestamo' : 'detalles') // auto-avanza (Préstamos: ver vaAPrestamos)
         })
       })
     }
@@ -4732,6 +4796,565 @@
           return mostrarError('Volvé al paso Datos y elegí el proveedor.'), false
       }
       return true
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRÉSTAMOS (13/10/2026): pagar la cuota de un préstamo de la empresa
+    // ═══════════════════════════════════════════════════════════════════════
+    // Con la empresa elegida y la categoría «Préstamos», quien tiene
+    // gastos:gastos_empresa (con bypass de super_admin: la misma tarea que
+    // piden todas las RPCs de préstamos) no ve el formulario común: ve los
+    // préstamos activos de esa empresa (prestamos_activos) y paga UNA cuota
+    // con pagar_cuota_prestamo(p_cuota_id, p_fecha, p_tipo_cambio, p_partes).
+    // Cada parte (moneda + monto + cuenta) la convierte LA BASE en un gasto
+    // «Préstamos» desde esa cuenta (el trigger del gasto descuenta la caja).
+    //
+    // La pantalla calcula EN VIVO lo mismo que la base: cada parte se redondea
+    // a 2 decimales; la que va en otra moneda que el préstamo se convierte con
+    // el tipo de cambio (pesos por dólar: un préstamo en dólares DIVIDE, uno en
+    // pesos MULTIPLICA) y se vuelve a redondear a 2; la suma no puede pasar lo
+    // que falta de la cuota + 0,01. Valida antes de mandar con los textos de
+    // la base, y el error de la base va TAL CUAL, pegado al botón.
+    //
+    // Los datos del paso «Datos» (importe, razón social, foto) NO se usan: la
+    // base arma cada gasto con el acreedor y la cuota.
+
+    const NOMBRE_CATEGORIA_PRESTAMOS = 'Préstamos'
+    const MONEDAS_PRESTAMO = ['ARS', 'USD']
+    const NOMBRE_MONEDA_PRESTAMO = { ARS: 'Pesos', USD: 'Dólares' }
+    const MESES_PRESTAMO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    const TEXTO_SIN_PERMISO_PRESTAMOS = 'Pagar cuotas de préstamos pide el permiso «Cargar gastos contra las cuentas de la Empresa»: con este formulario se carga como un gasto común.'
+
+    function esCategoriaPrestamos(id) {
+      if (!id) return false
+      return (estado.maestros.categorias ?? []).find(c => c.id === id)?.nombre === NOMBRE_CATEGORIA_PRESTAMOS
+    }
+
+    // ¿El paso que sigue a la categoría es el del préstamo? Solo por una
+    // empresa (por Vehículos no hay «Préstamos») y con el permiso.
+    function vaAPrestamos() {
+      return !viaVehiculos && !!unidadSeleccionada && esCategoriaPrestamos(categoriaSeleccionada) && puedeUsarCuentasEmpresa()
+    }
+
+    // Sin el permiso, «Préstamos» sigue con el formulario común y una línea
+    // chica en Detalles lo dice.
+    function pintarAvisoPermisoPrestamos() {
+      const el = document.getElementById('aviso-prestamo-permiso')
+      if (!el) return
+      const mostrar = esCategoriaPrestamos(categoriaSeleccionada) && !puedeUsarCuentasEmpresa()
+      el.textContent = mostrar ? TEXTO_SIN_PERMISO_PRESTAMOS : ''
+      el.hidden = !mostrar
+    }
+
+    // Redondeo a 2 decimales como round(x, 2) de la base (todo es positivo).
+    // Con la notación «e2» y no multiplicando: 1.005 * 100 da 100.49999…
+    function redondearPlata(n) {
+      const v = Number(n)
+      if (!Number.isFinite(v)) return null
+      if (/e/i.test(String(v))) return Math.round(v * 100) / 100
+      return Number(Math.round(Number(v + 'e2')) + 'e-2')
+    }
+
+    function centavosPrestamo(n) {
+      return Math.round(Number(redondearPlata(n)) * 100)
+    }
+
+    function numeroPositivo(n) {
+      if (n === null || n === undefined || n === '') return null
+      const v = Number(n)
+      return Number.isFinite(v) && v > 0 ? v : null
+    }
+
+    function textoTipoCambio(tc) {
+      return formatearNumeroAr(tc, { decimales: 4, minimos: 0 })
+    }
+
+    function fechaPrestamo(iso) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(iso ?? '')) ? formatearFecha(iso) : '—'
+    }
+
+    // "octubre" (o "octubre de 2027" si no es de este año).
+    function mesDeCuota(iso, hoy = hoyIsoAr()) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso ?? ''))) return null
+      const [a, m] = iso.split('-').map(Number)
+      return MESES_PRESTAMO[m - 1] + (String(a) !== String(hoy).slice(0, 4) ? ' de ' + a : '')
+    }
+
+    function nombreCuota(cuota, hoy) {
+      const mes = mesDeCuota(cuota?.vencimiento, hoy)
+      return mes ? 'la cuota de ' + mes : 'la cuota ' + (cuota?.numero ?? '')
+    }
+
+    // Lo que imputa una parte en la moneda del préstamo, o null si todavía no
+    // se puede saber (sin monto, o en otra moneda sin tipo de cambio).
+    function imputadoDeParte(parte, monedaPrestamo, tc) {
+      const m = numeroPositivo(parte?.monto)
+      if (m === null) return null
+      const monto = redondearPlata(m)
+      if (parte.moneda === monedaPrestamo) return monto
+      const t = numeroPositivo(tc)
+      if (t === null) return null
+      return redondearPlata(monedaPrestamo === 'USD' ? monto / t : monto * t)
+    }
+
+    function necesitaTipoCambio(partes, monedaPrestamo) {
+      return (partes ?? []).some(x => MONEDAS_PRESTAMO.includes(x?.moneda) && x.moneda !== monedaPrestamo)
+    }
+
+    // { imputado, queda, completo, pasa }. "pasa": la suma pasa lo que falta
+    // + 0,01 (la misma tolerancia de la base), en centavos.
+    function calcularPagoPrestamo({ moneda, falta, partes, tc }) {
+      let centavos = 0
+      let completo = (partes ?? []).length > 0
+      for (const x of partes ?? []) {
+        const imp = imputadoDeParte(x, moneda, tc)
+        if (imp === null) { completo = false; continue }
+        centavos += Math.round(imp * 100)
+      }
+      const f = Number(falta)
+      const conFalta = falta !== null && falta !== undefined && falta !== '' && Number.isFinite(f)
+      const queda = conFalta ? (centavosPrestamo(f) - centavos) / 100 : null
+      return { imputado: centavos / 100, queda, completo, pasa: conFalta && centavos > centavosPrestamo(f) + 1 }
+    }
+
+    function textoTePasas(cuota, moneda, suma) {
+      return `Te pasás: de la cuota ${cuota?.numero ?? ''} faltan ${formatearImporte(cuota?.falta, moneda)} y estás pagando ${formatearImporte(suma, moneda)}. Lo que sobra cargalo en la cuota siguiente.`
+    }
+
+    // "Pagás USD 2.000,00 + $ 2.600.000,00 a 1.300 = USD 4.000,00; quedan
+    // USD 1.000,00 de la cuota de octubre." → { texto, mal }.
+    function textoCalculoPrestamo({ moneda, cuota, partes, tc }, hoy = hoyIsoAr()) {
+      const conMonto = (partes ?? []).filter(x => numeroPositivo(x?.monto) !== null)
+      if (!cuota) return { texto: 'Elegí la cuota que pagás.', mal: false }
+      if (!conMonto.length) return { texto: 'Escribí cuánto pagás.', mal: false }
+      const otra = necesitaTipoCambio(conMonto, moneda)
+      if (otra && numeroPositivo(tc) === null) return { texto: 'Poné el tipo de cambio (pesos por dólar) para ver cuánto se descuenta de la cuota.', mal: false }
+      const c = calcularPagoPrestamo({ moneda, falta: cuota.falta, partes: conMonto, tc })
+      let t = 'Pagás ' + conMonto.map(x => formatearImporte(redondearPlata(x.monto), x.moneda)).join(' + ')
+      if (otra) t += ' a ' + textoTipoCambio(tc) + ' = ' + formatearImporte(c.imputado, moneda)
+      if (c.pasa) return { texto: t + '. ' + textoTePasas(cuota, moneda, c.imputado), mal: true }
+      if (c.queda === null) return { texto: t + '.', mal: false }
+      if (c.queda <= 0) return { texto: t + '; ' + nombreCuota(cuota, hoy) + ' queda paga.', mal: false }
+      return { texto: t + '; quedan ' + formatearImporte(c.queda, moneda) + ' de ' + nombreCuota(cuota, hoy) + '.', mal: false }
+    }
+
+    // Las mismas reglas (y los mismos textos) que pagar_cuota_prestamo.
+    // cuentaDe(id) → la cuenta activa, o null.
+    function validarPagoPrestamo({ cuota, moneda, partes, tc, fecha }, hoy = hoyIsoAr(), cuentaDe = cuentaActivaPrestamo) {
+      if (!cuota?.id) return 'Elegí la cuota que pagás.'
+      if (!(Number(cuota.falta) > 0.005)) return 'Esa cuota ya está paga.'
+      if (!fecha) return 'Falta la fecha del pago.'
+      if (String(fecha) > String(hoy)) return 'La fecha no puede ser futura.'
+      if (!(partes ?? []).length) return 'Decí cómo lo pagás.'
+      let i = 0
+      for (const x of partes) {
+        i++
+        if (!MONEDAS_PRESTAMO.includes(x?.moneda)) return `Parte ${i}: la moneda tiene que ser pesos o dólares.`
+        if (numeroPositivo(x.monto) === null || redondearPlata(x.monto) <= 0) return `Parte ${i}: el monto tiene que ser mayor a cero.`
+        const c = x.cuentaId ? cuentaDe(x.cuentaId) : null
+        if (!c) return `Parte ${i}: elegí la cuenta de donde sale la plata.`
+        if (c.moneda !== x.moneda) return `Parte ${i}: la cuenta ${c.nombre} es en ${c.moneda}, no en ${x.moneda}.`
+        if (x.moneda !== moneda && numeroPositivo(tc) === null) return 'Poné el tipo de cambio (pesos por dólar).'
+      }
+      const r = calcularPagoPrestamo({ moneda, falta: cuota.falta, partes, tc })
+      if (r.pasa) return textoTePasas(cuota, moneda, r.imputado)
+      return null
+    }
+
+    function parametrosPagoPrestamo({ cuota, moneda, partes, tc, fecha }) {
+      return {
+        p_cuota_id: cuota.id,
+        p_fecha: fecha,
+        p_tipo_cambio: necesitaTipoCambio(partes, moneda) ? Number(tc) : null,
+        p_partes: partes.map(x => ({ moneda: x.moneda, monto: redondearPlata(x.monto), cuenta_id: x.cuentaId })),
+      }
+    }
+
+    // Lo que dice el aviso de después de pagar.
+    function textoResultadoPrestamo(res, fila, cuota, hoy = hoyIsoAr()) {
+      const moneda = res?.moneda ?? fila?.moneda ?? 'ARS'
+      const imp = formatearImporte(res?.imputado, moneda)
+      const falta = Number(res?.falta)
+      const donde = `${nombreCuota(cuota, hoy)} de «${fila?.nombre ?? 'el préstamo'}»`
+      const resto = Number.isFinite(falta) && falta > 0.005
+        ? `; quedan ${formatearImporte(falta, moneda)} de esa cuota.`
+        : '; la cuota quedó paga.'
+      return `Pago registrado: se imputaron ${imp} a ${donde}${resto}`
+    }
+
+    // ── Las cuentas: el MISMO criterio que el selector del gasto ──────────
+    // (opcionesCuentaParaGasto): las propias de quien carga + las de la Cuenta
+    // de Empresa (acá siempre: este paso ya pide gastos:gastos_empresa), solo
+    // las activas y de la moneda de la parte. Cualquier medio: la base acepta
+    // efectivo o banco y arma el gasto con el medio de la cuenta.
+    async function cargarCuentasPrestamo() {
+      if (estado.miEmpleadoId) await cargarCuentasDe(estado.miEmpleadoId)
+      const idEmpresa = await resolverEmpresa()
+      if (idEmpresa && idEmpresa !== estado.miEmpleadoId) await cargarCuentasDe(idEmpresa)
+    }
+
+    function cuentaActivaPrestamo(id) {
+      const c = estado.cuentasPorId[id]
+      return c && c.activa ? c : null
+    }
+
+    function cuentasParaPrestamo(moneda) {
+      const etiqueta = c => `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio] ?? c.medio} ${c.moneda})`
+      const propias = estado.miEmpleadoId ? cuentasDe(estado.miEmpleadoId).filter(c => c.moneda === moneda)
+        .map(c => ({ value: c.id, label: etiqueta(c) })) : []
+      const idEmp = estado.idEmpresa
+      const deEmpresa = idEmp && idEmp !== estado.miEmpleadoId ? cuentasDe(idEmp).filter(c => c.moneda === moneda)
+        .map(c => ({ value: c.id, label: `${c.nombre} — ${estado.nombreEmpresa || 'Empresa'} (${MEDIO_CUENTA_LABEL[c.medio] ?? c.medio} ${c.moneda})` })) : []
+      return [...propias, ...deEmpresa]
+    }
+
+    // ── El estado y la carga ──────────────────────────────────────────────
+    let turnoPrestamos = 0
+
+    async function abrirPrestamos() {
+      const unidad = unidadSeleccionada
+      const nombre = (estado.maestros.unidades ?? []).find(u => String(u.id) === String(unidad))?.nombre ?? 'la empresa'
+      estado.prestamo = { unidad, nombre, lista: null, error: null, elegido: null }
+      pintarPrestamos()
+      const turno = ++turnoPrestamos
+      try {
+        const [r] = await Promise.all([
+          supabase.rpc('prestamos_activos', { p_unidad_negocio_id: unidad }),
+          cargarCuentasPrestamo(),
+        ])
+        if (turno !== turnoPrestamos) return
+        if (r?.error) throw r.error
+        estado.prestamo.lista = (Array.isArray(r?.data) ? r.data : []).filter(f => f?.estado !== 'cancelado')
+      } catch (err) {
+        if (turno !== turnoPrestamos) return
+        console.error('No se pudieron leer los préstamos:', err)
+        estado.prestamo.error = 'No se pudieron leer los préstamos. Revisá la conexión y tocá «Volver a intentar».'
+      }
+      pintarPrestamos()
+    }
+
+    // La cuota que se paga: la elegida (de prestamo_detalle) o, si todavía no
+    // llegó el detalle, la próxima que dio prestamos_activos.
+    function cuotaElegidaPrestamo(pg) {
+      if (!pg) return null
+      const det = (pg.detalle?.cuotas ?? []).find(c => String(c.id) === String(pg.cuotaId))
+      if (det) return det
+      const px = pg.fila?.proxima
+      if (px && String(px.cuota_id) === String(pg.cuotaId)) {
+        return { id: px.cuota_id, numero: px.numero, vencimiento: px.vencimiento, importe: px.importe, pagado: px.pagado, falta: px.falta }
+      }
+      return null
+    }
+
+    function cuotasConSaldo(pg) {
+      return (pg?.detalle?.cuotas ?? []).filter(c => Number(c?.falta) > 0.005)
+    }
+
+    // Una parte nueva: la moneda del préstamo, lo que falta de la cuota (la
+    // primera) y la cuenta si hay una sola.
+    function parteNuevaPrestamo(moneda, monto = null) {
+      const cuentas = cuentasParaPrestamo(moneda)
+      return { moneda, monto, cuentaId: cuentas.length === 1 ? cuentas[0].value : null }
+    }
+
+    function reiniciarPartesPrestamo(pg) {
+      const cuota = cuotaElegidaPrestamo(pg)
+      const falta = numeroPositivo(cuota?.falta)
+      pg.partes = [parteNuevaPrestamo(pg.fila.moneda, falta === null ? null : redondearPlata(falta))]
+      pg.tc = null
+      pg.error = null
+    }
+
+    async function elegirPrestamo(id) {
+      const ps = estado.prestamo
+      const fila = (ps?.lista ?? []).find(f => String(f.id) === String(id))
+      if (!fila) return
+      const pg = { fila, detalle: null, errorDetalle: null, cuotaId: fila.proxima?.cuota_id ?? null,
+        partes: [], tc: null, fecha: hoyIsoAr(), enviando: false, error: null }
+      reiniciarPartesPrestamo(pg)
+      ps.elegido = pg
+      pintarPrestamos()
+      const turno = ++turnoPrestamos
+      let det = null, falla = null
+      try {
+        const { data, error } = await supabase.rpc('prestamo_detalle', { p_prestamo_id: fila.id })
+        if (error) throw error
+        det = data
+      } catch (err) { falla = err }
+      if (turno !== turnoPrestamos || estado.prestamo?.elegido !== pg) return
+      if (falla || !det) {
+        if (falla) console.error('No se pudo leer el préstamo:', falla)
+        pg.errorDetalle = 'No se pudieron leer las cuotas de este préstamo: se paga la próxima.'
+      } else {
+        pg.detalle = det
+        if (!cuotaElegidaPrestamo(pg)) { pg.cuotaId = cuotasConSaldo(pg)[0]?.id ?? null; reiniciarPartesPrestamo(pg) }
+      }
+      pintarPrestamos()
+    }
+
+    function elegirCuotaPrestamo(id) {
+      const pg = estado.prestamo?.elegido
+      if (!pg || pg.enviando || !cuotasConSaldo(pg).some(c => String(c.id) === String(id))) return
+      pg.cuotaId = id
+      reiniciarPartesPrestamo(pg)
+      pintarPrestamos()
+    }
+
+    function volverAPrestamos() {
+      if (!estado.prestamo || estado.prestamo.elegido?.enviando) return
+      estado.prestamo.elegido = null
+      turnoPrestamos++
+      pintarPrestamos()
+    }
+
+    function agregarPartePrestamo() {
+      const pg = estado.prestamo?.elegido
+      if (!pg || pg.enviando) return
+      const otra = pg.fila.moneda === 'USD' ? 'ARS' : 'USD'
+      pg.partes.push(parteNuevaPrestamo(otra))
+      pg.error = null
+      pintarPrestamos()
+    }
+
+    function quitarPartePrestamo(i) {
+      const pg = estado.prestamo?.elegido
+      if (!pg || pg.enviando || pg.partes.length <= 1) return
+      pg.partes.splice(Number(i), 1)
+      pg.error = null
+      pintarPrestamos()
+    }
+
+    // Cambiar la moneda de una parte suelta la cuenta (era de la otra moneda).
+    function cambiarMonedaParte(i, moneda) {
+      const pg = estado.prestamo?.elegido
+      const x = pg?.partes?.[Number(i)]
+      if (!x || !MONEDAS_PRESTAMO.includes(moneda)) return
+      const cuentas = cuentasParaPrestamo(moneda)
+      x.moneda = moneda
+      x.cuentaId = cuentas.length === 1 ? cuentas[0].value : null
+      pg.error = null
+      pintarPrestamos()
+    }
+
+    // ── El HTML ───────────────────────────────────────────────────────────
+    function htmlTarjetaPrestamo(f, hoy = hoyIsoAr()) {
+      const px = f?.proxima
+      const vencida = px && /^\d{4}-\d{2}-\d{2}$/.test(String(px.vencimiento ?? '')) && px.vencimiento < hoy
+      const proxima = px
+        ? `<span class="prestamo-tarjeta__linea${vencida ? ' prestamo-mal' : ''}">Próxima: cuota ${esc(px.numero)} de ${esc(f.cuotas)} · vence ${esc(fechaPrestamo(px.vencimiento))}${vencida ? ' (vencida)' : ''} · falta ${esc(formatearImporte(px.falta, f.moneda))}</span>`
+        : '<span class="prestamo-tarjeta__linea">No le quedan cuotas por pagar.</span>'
+      return `<button type="button" class="prestamo-tarjeta" data-prestamo="${esc(f.id)}">` +
+        `<span class="prestamo-tarjeta__nombre">${esc(f.nombre)}</span>` +
+        `<span class="prestamo-tarjeta__linea">${esc(f.acreedor || 'Sin acreedor cargado')}</span>` +
+        `<span class="prestamo-tarjeta__saldo">Saldo ${esc(formatearImporte(f.saldo, f.moneda))}</span>` +
+        `<span class="prestamo-tarjeta__linea">${esc(f.cuotas_pagas ?? 0)} de ${esc(f.cuotas ?? 0)} cuotas pagas</span>` +
+        proxima + '</button>'
+    }
+
+    function htmlOpcionesCuentaPrestamo(moneda, elegida) {
+      const ops = cuentasParaPrestamo(moneda)
+      return `<option value="">— Elegí la cuenta —</option>` + ops.map(o =>
+        `<option value="${esc(o.value)}"${String(o.value) === String(elegida) ? ' selected' : ''}>${esc(o.label)}</option>`).join('')
+    }
+
+    function htmlPartePrestamo(x, i, total) {
+      const n = i + 1
+      const cuentas = cuentasParaPrestamo(x.moneda)
+      const cuenta = cuentas.length
+        ? `<select id="prestamo-parte-cuenta-${esc(i)}" data-parte-cuenta="${esc(i)}">${htmlOpcionesCuentaPrestamo(x.moneda, x.cuentaId)}</select>`
+        : `<p class="prestamo-nota prestamo-mal">No hay ninguna cuenta activa en ${esc(x.moneda)} (tuya ni de la Empresa).</p>`
+      return `<div class="prestamo-parte" data-parte="${esc(i)}">` +
+        `<div class="prestamo-parte__cabeza"><span>Parte ${esc(n)}</span>` +
+        (total > 1 ? `<button type="button" class="prestamo-volver" data-parte-quitar="${esc(i)}">Quitar</button>` : '') + '</div>' +
+        `<div class="grupo-campo"><label for="prestamo-parte-moneda-${esc(i)}">Moneda</label>` +
+        `<select id="prestamo-parte-moneda-${esc(i)}" data-parte-moneda="${esc(i)}">` +
+        MONEDAS_PRESTAMO.map(m => `<option value="${esc(m)}"${m === x.moneda ? ' selected' : ''}>${esc(NOMBRE_MONEDA_PRESTAMO[m])}</option>`).join('') + '</select></div>' +
+        `<div class="grupo-campo"><label for="prestamo-parte-monto-${esc(i)}">Monto</label>` +
+        `<input type="text" inputmode="decimal" autocomplete="off" id="prestamo-parte-monto-${esc(i)}" data-parte-monto="${esc(i)}"></div>` +
+        `<div class="grupo-campo"><label for="prestamo-parte-cuenta-${esc(i)}">De qué cuenta sale</label>${cuenta}</div>` +
+        '</div>'
+    }
+
+    function htmlPagoPrestamo(pg, hoy = hoyIsoAr()) {
+      const f = pg.fila
+      const cuota = cuotaElegidaPrestamo(pg)
+      const conSaldo = cuotasConSaldo(pg)
+      let h = '<button type="button" class="prestamo-volver" data-prestamo-volver>‹ Otros préstamos</button>'
+      h += `<div class="prestamo-cabeza"><strong>${esc(f.nombre)}</strong>` +
+        `<div class="prestamo-nota">${esc(f.acreedor || 'Sin acreedor cargado')} · Saldo ${esc(formatearImporte(f.saldo, f.moneda))}</div></div>`
+      h += '<h3 class="prestamo-subtitulo">La cuota que pagás</h3>'
+      if (cuota) {
+        h += `<div class="prestamo-cuota">Cuota ${esc(cuota.numero)} de ${esc(f.cuotas)} · vence ${esc(fechaPrestamo(cuota.vencimiento))}` +
+          `<div><strong>Faltan ${esc(formatearImporte(cuota.falta, f.moneda))}</strong> de ${esc(formatearImporte(cuota.importe, f.moneda))}</div></div>`
+      } else {
+        h += '<p class="prestamo-nota">Este préstamo no tiene cuotas por pagar.</p>'
+      }
+      if (conSaldo.length > 1) {
+        h += '<p class="prestamo-nota">¿Otra cuota? Tocala:</p><div class="prestamo-cuotas" role="group" aria-label="Cuotas con saldo">' +
+          conSaldo.map(c => `<button type="button" data-cuota="${esc(c.id)}" aria-pressed="${String(c.id) === String(pg.cuotaId) ? 'true' : 'false'}">` +
+            `Cuota ${esc(c.numero)} · ${esc(fechaPrestamo(c.vencimiento))}</button>`).join('') + '</div>'
+      }
+      if (pg.errorDetalle) h += `<p class="prestamo-nota prestamo-mal">${esc(pg.errorDetalle)}</p>`
+      if (!cuota) return h
+      h += '<h3 class="prestamo-subtitulo">¿Cómo lo pagás?</h3>'
+      h += pg.partes.map((x, i) => htmlPartePrestamo(x, i, pg.partes.length)).join('')
+      h += '<button type="button" class="btn btn--secundario prestamo-agregar" data-parte-agregar>+ Otra parte (otra moneda u otra cuenta)</button>'
+      if (necesitaTipoCambio(pg.partes, f.moneda)) {
+        h += '<div class="grupo-campo"><label for="prestamo-tc">Tipo de cambio (pesos por dólar)</label>' +
+          '<input type="text" inputmode="decimal" autocomplete="off" id="prestamo-tc"></div>'
+      }
+      h += `<div class="grupo-campo"><label for="prestamo-fecha">Fecha del pago</label>` +
+        `<input type="date" id="prestamo-fecha" max="${esc(hoy)}" value="${esc(pg.fecha ?? '')}"></div>`
+      const c = textoCalculoPrestamo({ moneda: f.moneda, cuota, partes: pg.partes, tc: pg.tc }, hoy)
+      h += `<p class="prestamo-calculo${c.mal ? ' prestamo-calculo--mal' : ''}" id="prestamo-calculo" aria-live="polite">${esc(c.texto)}</p>`
+      h += `<button type="button" class="btn btn--primario prestamo-pagar" id="prestamo-pagar"${pg.enviando ? ' disabled' : ''}>${pg.enviando ? 'Registrando el pago…' : 'Pagar la cuota'}</button>`
+      h += `<p class="campo-error-pegado" id="prestamo-error" role="alert"${pg.error ? '' : ' hidden'}>${esc(pg.error ?? '')}</p>`
+      return h
+    }
+
+    function htmlPrestamos(ps, hoy = hoyIsoAr()) {
+      if (!ps) return ''
+      if (ps.error) {
+        return `<p class="prestamo-nota prestamo-mal">${esc(ps.error)}</p>` +
+          '<button type="button" class="btn btn--secundario" data-prestamo-reintentar>Volver a intentar</button>'
+      }
+      if (ps.lista === null) return '<p class="prestamo-nota">Cargando los préstamos…</p>'
+      if (ps.elegido) return htmlPagoPrestamo(ps.elegido, hoy)
+      if (!ps.lista.length) {
+        return `<p class="prestamo-nota">${esc(ps.nombre)} no tiene préstamos activos. Se cargan en Administración → Préstamos.</p>`
+      }
+      return '<div class="prestamo-lista">' + ps.lista.map(f => htmlTarjetaPrestamo(f, hoy)).join('') + '</div>'
+    }
+
+    // Los campos de plata con el formato argentino (js/utils.js).
+    function enlazarCamposPrestamo() {
+      const pg = estado.prestamo?.elegido
+      if (!pg) return
+      pg.partes.forEach((x, i) => {
+        const el = document.getElementById(`prestamo-parte-monto-${i}`)
+        if (!el || typeof el.addEventListener !== 'function') return
+        enlazarCampoNumero(el, { decimales: 2 })
+        if (x.monto !== null && x.monto !== undefined) ponerNumero(el, x.monto)
+      })
+      const tc = document.getElementById('prestamo-tc')
+      if (tc && necesitaTipoCambio(pg.partes, pg.fila.moneda)) {
+        enlazarCampoNumero(tc, { decimales: 4 })
+        if (pg.tc !== null && pg.tc !== undefined) ponerNumero(tc, pg.tc)
+      }
+    }
+
+    function pintarPrestamos() {
+      const ps = estado.prestamo
+      const t = document.getElementById('prestamo-titulo')
+      if (t) t.textContent = ps ? 'Préstamos activos de ' + ps.nombre : 'Préstamos activos'
+      const el = document.getElementById('prestamo-cuerpo')
+      if (!el) return
+      el.innerHTML = htmlPrestamos(ps)
+      enlazarCamposPrestamo()
+    }
+
+    // Al escribir un monto o el tipo de cambio: solo la línea del cálculo y el
+    // error (re-dibujar todo le sacaría el foco al campo).
+    function pintarCalculoPrestamo() {
+      const pg = estado.prestamo?.elegido
+      if (!pg) return
+      const c = textoCalculoPrestamo({ moneda: pg.fila.moneda, cuota: cuotaElegidaPrestamo(pg), partes: pg.partes, tc: pg.tc })
+      const el = document.getElementById('prestamo-calculo')
+      if (el) {
+        el.textContent = c.texto
+        el.className = 'prestamo-calculo' + (c.mal ? ' prestamo-calculo--mal' : '')
+      }
+      pintarErrorPrestamo()
+    }
+
+    function pintarErrorPrestamo() {
+      const pg = estado.prestamo?.elegido
+      const el = document.getElementById('prestamo-error')
+      if (!el) return
+      el.textContent = pg?.error ?? ''
+      el.hidden = !pg?.error
+    }
+
+    function pintarBotonPagarPrestamo() {
+      const pg = estado.prestamo?.elegido
+      const b = document.getElementById('prestamo-pagar')
+      if (!b || !pg) return
+      b.disabled = !!pg.enviando
+      b.textContent = pg.enviando ? 'Registrando el pago…' : 'Pagar la cuota'
+    }
+
+    // ── Pagar ─────────────────────────────────────────────────────────────
+    async function pagarCuotaPrestamo() {
+      const pg = estado.prestamo?.elegido
+      if (!pg || pg.enviando) return
+      const cuota = cuotaElegidaPrestamo(pg)
+      const datos = { cuota, moneda: pg.fila.moneda, partes: pg.partes, tc: pg.tc, fecha: pg.fecha }
+      const falla = validarPagoPrestamo(datos)
+      if (falla) { pg.error = falla; pintarErrorPrestamo(); return }
+      pg.error = null
+      pg.enviando = true
+      pintarErrorPrestamo()
+      pintarBotonPagarPrestamo()
+      let res
+      try {
+        const { data, error } = await supabase.rpc('pagar_cuota_prestamo', parametrosPagoPrestamo(datos))
+        if (error) throw error
+        res = data
+      } catch (err) {
+        console.error('No se pudo pagar la cuota:', err)
+        pg.enviando = false
+        pg.error = err?.message || 'No se pudo registrar el pago. Revisá la conexión y volvé a intentar.'
+        pintarBotonPagarPrestamo()
+        pintarErrorPrestamo()
+        return
+      }
+      pg.enviando = false
+      mostrarExito(textoResultadoPrestamo(res, pg.fila, cuota))
+      estado.prestamo = null
+      cerrarWizard()
+    }
+
+    function conectarPrestamos() {
+      const el = document.getElementById('prestamo-cuerpo')
+      if (!el) return
+      el.addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-prestamo]'))) elegirPrestamo(b.dataset.prestamo)
+        else if (e.target.closest('[data-prestamo-volver]')) volverAPrestamos()
+        else if (e.target.closest('[data-prestamo-reintentar]')) abrirPrestamos()
+        else if ((b = e.target.closest('[data-cuota]'))) elegirCuotaPrestamo(b.dataset.cuota)
+        else if (e.target.closest('[data-parte-agregar]')) agregarPartePrestamo()
+        else if ((b = e.target.closest('[data-parte-quitar]'))) quitarPartePrestamo(b.dataset.parteQuitar)
+        else if (e.target.closest('#prestamo-pagar')) pagarCuotaPrestamo()
+      })
+      el.addEventListener('change', (e) => {
+        const pg = estado.prestamo?.elegido
+        if (!pg) return
+        const t = e.target
+        if (t.dataset?.parteMoneda !== undefined) cambiarMonedaParte(t.dataset.parteMoneda, t.value)
+        else if (t.dataset?.parteCuenta !== undefined) {
+          const x = pg.partes[Number(t.dataset.parteCuenta)]
+          if (x) x.cuentaId = t.value || null
+          pg.error = null
+          pintarErrorPrestamo()
+        } else if (t.id === 'prestamo-fecha') {
+          pg.fecha = t.value || null
+          pg.error = null
+          pintarErrorPrestamo()
+        }
+      })
+      el.addEventListener('input', (e) => {
+        const pg = estado.prestamo?.elegido
+        if (!pg) return
+        const t = e.target
+        if (t.dataset?.parteMonto !== undefined) {
+          const x = pg.partes[Number(t.dataset.parteMonto)]
+          if (x) x.monto = leerCampoNumero(t)
+        } else if (t.id === 'prestamo-tc') pg.tc = leerCampoNumero(t)
+        else return
+        pg.error = null
+        pintarCalculoPrestamo()
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -6781,6 +7404,10 @@
 
     // ── Sub-paso CATEGORIA ─────────────────────────────────────────────────
     document.getElementById('btn-categoria-atras').addEventListener('click', () => irASubpaso(viaVehiculos ? 'vehiculo-destino' : 'destino'))
+
+    // ── Sub-paso PRÉSTAMO (13/10/2026) ─────────────────────────────────────
+    document.getElementById('btn-prestamo-atras').addEventListener('click', () => irASubpaso('categoria'))
+    conectarPrestamos()
 
     // ── Sub-paso DETALLES ──────────────────────────────────────────────────
     document.getElementById('campo-empleado').addEventListener('change', actualizarSelectorCuentaGasto)
