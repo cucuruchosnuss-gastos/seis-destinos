@@ -7,8 +7,8 @@
 // y 600 × 940— y las pone lado a lado con un tercer cuadro que marca dónde
 // difieren (e2e/comparar.js).
 //
-// Deja las imágenes en e2e/resultados/comparar/ (artefacto "capturas" en
-// GitHub) y, con COMPARAR_SALIDA=<carpeta>, también ahí (para el traspaso).
+// Deja las imágenes en e2e/resultados/comparar/ (artefacto "capturas-1" en
+// GitHub: este spec va en la mitad 1, ver mitades.js) y, con COMPARAR_SALIDA=<carpeta>, también ahí (para el traspaso).
 // AVISA con una anotación cuando una pantalla difiere más de AVISO, y FALLA
 // cuando difiere más de FALLA: el número mide bloques de color de 8 × 8 px, no
 // píxeles, así que un texto distinto casi no cuenta y un bloque fuera de lugar
