@@ -265,17 +265,34 @@ function columnaCu(v, moneda) {
   return c === 0 ? '' : plataCu(c / 100, moneda)
 }
 
-export function htmlFilaCu(f) {
+// ABRIR LA ORDEN O LA COBRANZA DE UN RENGLÓN (14/10/2026). cuenta_unificada()
+// trae orden_retiro_id y cobranza_id: el renglón lleva SIEMPRE
+// data-orden-retiro / data-cobranza-id, y se VE como link (botón, "Ver la
+// orden ›") solo si la pantalla lo pide con abreOrden / abreCobranza (en
+// pintarCuentaUnica: ctx.abrirOrden / ctx.abrirCobranza). Así una pantalla que
+// no sabe abrir la orden no muestra un link que no hace nada. Si trae las dos,
+// manda la orden.
+export function linkFilaCu(f, { abreOrden = false, abreCobranza = false } = {}) {
+  if (abreOrden && f?.orden_retiro_id) return 'orden'
+  if (abreCobranza && f?.cobranza_id) return 'cobranza'
+  return null
+}
+
+export function htmlFilaCu(f, { abreOrden = false, abreCobranza = false } = {}) {
   const moneda = f.moneda || 'ARS'
   const neto = centavosCu(f.neto_acum)
   const netoTexto = neto === null ? '—' : neto > 0 ? 'te debe ' + plataCu(neto / 100, moneda) : neto < 0 ? 'le debés ' + plataCu(-neto / 100, moneda) : 'en cero'
-  return '<div class="cu-fila">' +
+  const link = linkFilaCu(f, { abreOrden, abreCobranza })
+  const datos = (f.orden_retiro_id ? ` data-orden-retiro="${escCu(f.orden_retiro_id)}"` : '') +
+    (f.cobranza_id ? ` data-cobranza-id="${escCu(f.cobranza_id)}"` : '')
+  const ver = link ? `<span class="cu-fila__ver">${link === 'orden' ? 'Ver la orden' : 'Ver la cobranza'} <span aria-hidden="true">›</span></span>` : ''
+  return (link ? `<button type="button" class="cu-fila cu-fila--link"${datos}>` : `<div class="cu-fila"${datos}>`) +
     `<div class="cu-fila__que"><span class="${claseEtiquetaCu(f.etiqueta)}">${escCu(f.etiqueta || 'Movimiento')}</span>` +
     `<span class="cu-fila__fecha">${escCu(fechaCu(f.fecha))}</span>` +
-    `<span class="cu-fila__detalle">${escCu(f.detalle || '')}</span></div>` +
+    `<span class="cu-fila__detalle">${escCu(f.detalle || '')}</span>${ver}</div>` +
     `<div class="cu-fila__te" data-col="Te debe">${escCu(columnaCu(f.te_debe, moneda))}</div>` +
     `<div class="cu-fila__le" data-col="Le debés">${escCu(columnaCu(f.le_debes, moneda))}</div>` +
-    `<div class="cu-fila__neto" data-col="Neto">${escCu(netoTexto)}</div></div>`
+    `<div class="cu-fila__neto" data-col="Neto">${escCu(netoTexto)}</div>` + (link ? '</button>' : '</div>')
 }
 
 export function htmlCompensar(cu, { hoy } = {}) {
@@ -321,7 +338,7 @@ export function htmlResumenCu(c) {
       : `<div class="cu-resumen__despues">${escCu(textoDespues(c.saldos, c.monto))}</div>`)
 }
 
-export function htmlCuentaUnica(cu, { puedeCompensar = false, hoy = null } = {}) {
+export function htmlCuentaUnica(cu, { puedeCompensar = false, hoy = null, abreOrden = false, abreCobranza = false } = {}) {
   if (cu.error) return `<div class="cu-caja"><div class="cu-aviso cu-aviso--grave">${escCu(cu.error)}</div></div>`
   if (!cu.filas) return '<div class="cu-caja"><p class="cu-suave">Cargando la cuenta de cliente y proveedor…</p></div>'
   const netos = netoPorMoneda(cu.filas)
@@ -340,7 +357,7 @@ export function htmlCuentaUnica(cu, { puedeCompensar = false, hoy = null } = {})
     : ''
   const filas = [...filasFiltradas(cu.filas, cu.filtro)].reverse()
   const lista = filas.length
-    ? '<div class="cu-lista"><div class="cu-encabezado" aria-hidden="true"><span>Movimiento</span><span>Te debe</span><span>Le debés</span><span>Neto</span></div>' + filas.map(htmlFilaCu).join('') + '</div>'
+    ? '<div class="cu-lista"><div class="cu-encabezado" aria-hidden="true"><span>Movimiento</span><span>Te debe</span><span>Le debés</span><span>Neto</span></div>' + filas.map(f => htmlFilaCu(f, { abreOrden, abreCobranza })).join('') + '</div>'
     : (cu.filas.length ? `<p class="cu-suave">${escCu('Ningún movimiento de «' + cu.filtro + '».')}</p>` : '')
   return '<div class="cu-caja">' +
     '<div class="cu-cabeza"><span class="cu-rotulo">Cuenta de cliente y proveedor</span>' + cabeza +
@@ -349,11 +366,16 @@ export function htmlCuentaUnica(cu, { puedeCompensar = false, hoy = null } = {})
 }
 
 // ── Lo que hace la pantalla (las dos pantallas llaman a lo mismo) ─────────
-// ctx = { sb, cu, contenedor, hoy, puedeCompensar, alCompensado(gastoId) }
+// ctx = { sb, cu, contenedor, hoy, puedeCompensar, alCompensado(gastoId),
+//         abrirOrden(id)?, abrirCobranza(id)? } — las dos últimas, opcionales:
+//         solo con ellas los renglones se ven y se tocan como link.
 
 export function pintarCuentaUnica(ctx) {
   if (!ctx?.contenedor) return
-  ctx.contenedor.innerHTML = htmlCuentaUnica(ctx.cu, { puedeCompensar: ctx.puedeCompensar, hoy: ctx.hoy })
+  ctx.contenedor.innerHTML = htmlCuentaUnica(ctx.cu, {
+    puedeCompensar: ctx.puedeCompensar, hoy: ctx.hoy,
+    abreOrden: typeof ctx.abrirOrden === 'function', abreCobranza: typeof ctx.abrirCobranza === 'function',
+  })
   enlazarCamposCu(ctx)
 }
 
@@ -455,6 +477,11 @@ export function alTocarCuentaUnica(e, ctx) {
   if (t.closest('[data-cu-compensar]')) { abrirCompensar(ctx); return }
   if (t.closest('[data-cu-cancelar]')) { cerrarCompensar(ctx); return }
   if (t.closest('[data-cu-confirmar]')) { confirmarCompensacion(ctx); return }
+  // Un renglón con su orden o su cobranza: lo decide la pantalla (14/10/2026).
+  const fo = t.closest('[data-orden-retiro]')
+  if (fo && typeof ctx.abrirOrden === 'function') { ctx.abrirOrden(fo.dataset.ordenRetiro); return }
+  const fc = t.closest('[data-cobranza-id]')
+  if (fc && typeof ctx.abrirCobranza === 'function') ctx.abrirCobranza(fc.dataset.cobranzaId)
 }
 
 export function alCambiarCuentaUnica(e, ctx) {
