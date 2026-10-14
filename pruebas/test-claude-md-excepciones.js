@@ -1,4 +1,5 @@
-// Las excepciones a la regla de duplicar helpers (CLAUDE.md, Arquitectura)
+// Las excepciones a la regla de duplicar helpers (docs/memoria/arquitectura.md;
+// hasta el 14/10/2026 vivían en CLAUDE.md, Arquitectura)
 // van numeradas una sola vez cada número y sin saltos (08/10/2026: hubo dos
 // "octava excepción" sin que nada avisara). Y cuando un archivo de js/ dice su
 // número en el encabezado, tiene que ser el mismo que en CLAUDE.md.
@@ -12,7 +13,7 @@ const fs = require('fs')
 const path = require('path')
 
 const RAIZ = path.join(__dirname, '..')
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'CLAUDE.md')
+const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'docs/memoria/arquitectura.md')
 const md = fs.readFileSync(ARCHIVO, 'utf8')
 console.log(`ARCHIVO ${ARCHIVO} (${md.length} bytes)`)   // mutar.js lee esta línea
 
