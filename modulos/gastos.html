@@ -1127,9 +1127,66 @@
       flex-shrink: 0;
     }
 
+    /* La grilla de totales (14/10/2026): DOS columnas fijas, el total y
+       Registros; "Por unidad" va abajo en su renglón (grid-column 1 / -1).
+       Era repeat(auto-fit, minmax(160px, 1fr)): con dos tarjetas las columnas
+       sobrantes se plegaban y cada una quedaba en la mitad, pero con "Por
+       unidad" (gastos de más de una empresa, lo normal en el mes) esas
+       columnas dejaban de estar vacías y el total quedaba en una de seis de
+       160 px, cortado. e2e/43-gastos-total-mes.spec.js. En el celular, una
+       columna (más abajo). */
+    .grilla-totales {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin: 0 0 1.25rem;
+    }
+
     .grilla-totales__card {
       min-width: 0;
       overflow: hidden;
+    }
+
+    /* El recuadro naranja del total: el número NUNCA se corta. La letra se
+       achica con el ancho de la tarjeta (cqi: container-type) y, si igual no
+       entra, el número baja de renglón; sin overflow oculto ni puntos
+       suspensivos. Mide lo mismo en Hoy, la semana, el mes o un rango. */
+    .grilla-totales__card.grilla-totales__card--total {
+      container-type: inline-size;
+      overflow: visible;
+      min-width: 0;
+      min-height: 5.5rem;
+      border-radius: 18px;
+      padding: 1.125rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: linear-gradient(135deg, var(--color-acento), var(--color-acento-hover));
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(28, 26, 23, 0.25);
+    }
+    .grilla-totales__texto {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .grilla-totales__rotulo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.75;
+      color: #fff;
+    }
+    .grilla-totales__card--total .grilla-totales__monto {
+      font-size: 1.75rem;
+      font-size: clamp(1.125rem, 11cqi, 1.75rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+      color: #fff;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
 
@@ -1766,7 +1823,7 @@
         <button type="button" class="segmented-rango__opcion" data-rango="mes">En el mes</button>
       </div>
 
-      <div id="total-gastos" class="grilla-totales" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:0.75rem; margin:0 0 1.25rem;" hidden></div>
+      <div id="total-gastos" class="grilla-totales" hidden></div>
 
       <div class="lista-filtros" id="contenedor-filtros"></div>
 
@@ -2873,23 +2930,15 @@
 
       const tituloTotal = estado.filtros.rangoRapido === 'mes' ? 'Gastos del mes' : 'Gastos de hoy'
 
+      // El estilo vive en el CSS (.grilla-totales__card--total): el recuadro
+      // es el mismo en todos los períodos y el número no se corta nunca.
       const tarjetaTotal = `
-        <div class="grilla-totales__card" style="
-          border-radius:18px;
-          padding:1.125rem 1.25rem;
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:0.75rem;
-          background:linear-gradient(135deg, var(--color-acento), var(--color-acento-hover));
-          color:#fff;
-          box-shadow:0 8px 24px rgba(28, 26, 23,0.25);
-        ">
-          <div>
-            <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:0.75; color:#fff;">
+        <div class="grilla-totales__card grilla-totales__card--total">
+          <div class="grilla-totales__texto">
+            <div class="grilla-totales__rotulo">
               ${tituloTotal}
             </div>
-            <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:#fff;">
+            <div class="grilla-totales__monto">
               ${formatearImporte(totalARS, 'ARS')}
             </div>
           </div>
