@@ -138,6 +138,16 @@ const FUNCIONES_BASE = [
   'puedeCompensarCuentas', 'ctxCuentaUnica', 'pintarCuentaUnicaCliente',
   'nombreProveedorFicha', 'pintarClasificacionFicha', 'elegirClasificacionFicha', 'cerrarPanelVinculo',
   'confirmarVincular', 'confirmarDesvincular',
+  // Préstamos (13/10/2026)
+  'prestamosVacio', 'estadoPrestamos', 'centavosAd', 'leerPrestamos', 'resumenPrestamos', 'textoSaldosPrestamos', 'contarPrestamosPortada',
+  'textoProximaCuota', 'htmlFilaPrestamoAd', 'prestamosDelFiltro', 'pintarPrestamosAd', 'puedePrestamos', 'mostrarPrestamos', 'elegirFiltroPrestamos',
+  'sumarMesesIso', 'cuotasIguales', 'cuotasDistintas', 'sumaCuotasCentavos', 'validarCuotasPrestamo', 'validarAltaPrestamo', 'parametrosCuotas',
+  'parametrosAltaPrestamo', 'empresasParaPrestamo', 'abrirAltaPrestamo', 'cancelarAltaPrestamo', 'armarCuotasAlta', 'textoSumaCuotas',
+  'htmlFilasCuotas', 'htmlAltaPrestamo', 'htmlCuotasAlta', 'enlazarCuotas', 'pintarAltaPrestamo', 'pintarCuotasAlta', 'pintarSumaAlta',
+  'pintarErrorAlta', 'guardarAltaPrestamo', 'abrirPrestamoAd', 'pctCuota', 'htmlCuotaDetalle', 'textoPagoPrestamo', 'htmlPagoAd',
+  'htmlDetallePrestamoAd', 'pintarPrestamoAd', 'pedirAnularPago', 'cancelarAnularPago', 'pintarErrorPago', 'confirmarAnularPago',
+  'pagadoPorCuota', 'cuotaConPagos', 'abrirEditarPrestamo', 'cancelarEditarPrestamo', 'agregarCuotaEdicion', 'quitarUltimaCuotaEdicion',
+  'htmlEditarPrestamo', 'validarEditarPrestamo', 'parametrosEditarPrestamo', 'pintarErrorEditar', 'guardarEditarPrestamo', 'pintarSumaEdicion',
   ...FUNCIONES_CU,
 ]
 
@@ -167,6 +177,8 @@ const CONSTANTES_BASE = [
   'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR', 'TOPE_BUSCAR_CLIENTES', 'TEXTO_SOLO_PROVISORIOS', 'TEXTO_SIN_LEER_CLIENTES',
   // Retenciones (13/10/2026)
   'TIPOS_RETENCION', 'TIPOS_CON_JURISDICCION', 'ORIGENES_RETENCION', 'LARGO_MINIMO_MOTIVO_RET',
+  // Préstamos (13/10/2026)
+  'MONEDAS_PRESTAMO_AD', 'NOMBRE_MONEDA_AD', 'NOMBRE_MEDIO_PRESTAMO', 'MAX_CUOTAS_PRESTAMO', 'LARGO_MINIMO_MOTIVO_PAGO',
 ]
 
 const PRELUDIO = `
@@ -217,6 +229,8 @@ const PRELUDIO = `
   var turnoSeguridad = 0
   var turnoRevisar = 0
   var turnoRetenciones = 0
+  var turnoPrestamos = 0
+  var turnoPrestamo = 0
   // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
   var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }

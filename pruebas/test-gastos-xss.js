@@ -528,6 +528,13 @@ const SEGURAS = {
   },
   htmlTotalesPorUnidad: { filas: HTML_PROPIO, 'x.registros': NUM },
   htmlSelectProyectoEdicion: { primera: HTML_PROPIO },
+  // Préstamos (13/10/2026): test-gastos-prestamos.js ejecuta estos renders
+  // con marcas en cada dato.
+  htmlPartePrestamo: {
+    cuenta: HTML_PROPIO,
+    'htmlOpcionesCuentaPrestamo(x.moneda, x.cuentaId)': 'HTML de htmlOpcionesCuentaPrestamo(), que escapa adentro (ejecutada con marcas)',
+  },
+  pintarPrestamos: { 'htmlPrestamos(ps)': 'HTML de htmlPrestamos(), que escapa adentro (ejecutada con marcas en test-gastos-prestamos.js)' },
   renderizarCardGasto: {
     'iconoCategoriaHtml(categoria)': ICONO,
     'colorAvatar(razonSocial)': 'colorAvatar(): el texto solo elige un color de PALETA_AVATAR (constante)',

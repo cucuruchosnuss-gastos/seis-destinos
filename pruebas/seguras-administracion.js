@@ -96,6 +96,8 @@ const SEGURAS_ADMINISTRACION = [
   ['tarjetasTipo', 'HTML armado por htmlTotalRet(), que escapa el tipo, la plata y la cantidad'],
   ["lista.map(x => htmlOpcionClienteRet(x, q)).join('')", 'HTML armado por htmlOpcionClienteRet(), que escapa el id, el nombre, el apodo y el detalle'],
   ["rr.filas.slice(0, MAX_RESULTADOS_CLIENTES).map(x => htmlOpcionClienteRet(x, q)).join('')", 'HTML armado por htmlOpcionClienteRet(), que escapa el id, el nombre, el apodo y el detalle'],
+  // Préstamos (13/10/2026): test-administracion-prestamos.js ejecuta estos renders con marcas.
+  ['htmlFilasCuotas(e.cuotas.map(c => ({ ...c, moneda })), { pagados })', 'HTML armado por htmlFilasCuotas(), que escapa cada vencimiento, rótulo y lo pagado'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

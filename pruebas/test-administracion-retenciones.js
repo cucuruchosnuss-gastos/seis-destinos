@@ -93,7 +93,7 @@ async function pruebas() {
     const sa = nuevo({ rol: 'super_admin', conTarea: false })
     chk('un super_admin la ve (bypass, como tiene_tarea)', sa.seccionesVisibles().some(s => s.id === 'retenciones'))
     const orden = S.PESTANAS.map(p => p[0]).join(',')
-    chk('va después de Cheques', /cheques,retenciones,seguridad/.test(orden), orden)
+    chk('va después de Cheques', /cheques,retenciones,(prestamos,)?seguridad/.test(orden), orden)
     chk('no es de una empresa (se esconde el selector)', S.VISTAS_GLOBALES.includes('ad-vista-retenciones'))
     chk('Administración lee las tareas de gastos', /\.in\('modulo', \[[^\]]*'gastos'\]\)/.test(src))
   }
