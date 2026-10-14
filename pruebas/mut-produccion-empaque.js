@@ -132,7 +132,7 @@ correrMutacionesProduccion({
     { nombre: 'el embolsado sugerido no se guarda en el borrador', de: "      if (t.dataset.empSug !== undefined) { if (b.cajas[Number(i)]) b.cajas[Number(i)].embolsado_sugerido = t.value }", a: "      if (t.dataset.empSug !== undefined) { }" },
     { nombre: 'lo tocado no se marca', de: "      b.tocado = true\n      errorConfig(null)", a: "      errorConfig(null)" },
     { nombre: 'la caja nueva sin sugerencia', de: "        b.cajas.push({ insumo_id: id, embolsado_sugerido: 'grande' })", a: "        b.cajas.push({ insumo_id: id, embolsado_sugerido: null })" },
-    { nombre: 'las marcas sin doble_bolsa en config', de: "creada_por, creada_en, doble_bolsa').order('nombre')", a: "creada_por, creada_en').order('nombre')" },
+    { nombre: 'las marcas sin doble_bolsa en config', de: "creada_por, creada_en, doble_bolsa, papel_ilustracion').order('nombre')", a: "creada_por, creada_en, papel_ilustracion').order('nombre')" },
     { nombre: 'el tilde no refleja lo guardado', de: 'data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? \' checked\' : \'\'}', a: 'data-marca-doble="${esc(m.id)}"' },
     { nombre: 'el tilde manda al revés', de: "await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !!valor })", a: "await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !valor })" },
     { nombre: 'el error del tilde no va pegado', de: "        c.errorCono = { id: marcaId, texto: `${que}: ${error}` }", a: "        c.errorCono = null" },
