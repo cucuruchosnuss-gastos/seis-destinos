@@ -66,7 +66,7 @@ correrMutaciones({
     // ── La cuenta y reabrir ──
     { nombre: 'la cuenta no averigua de qué cobranza es cada movimiento', de: "        if (!r.error) cuenta = aparearCobranzas(cuenta, r.data ?? [])", a: "" },
     { nombre: 'aparea aunque los movimientos no sean los mismos', de: "      if (!iguales) return cuenta\n", a: '' },
-    { nombre: 'se abre también sin permisos de cobranzas', de: "        const abre = m.tipo === 'cobranza' && m.cobranza_id && puedeVerLaCobranza()", a: "        const abre = m.tipo === 'cobranza' && m.cobranza_id" },
+    { nombre: 'se abre también sin permisos de cobranzas', de: "        const abre = !orden && m.tipo === 'cobranza' && m.cobranza_id && puedeVerLaCobranza()", a: "        const abre = !orden && m.tipo === 'cobranza' && m.cobranza_id" },
     { nombre: 'se consulta cliente_movimientos sin permiso', de: "      if (cuenta.some(m => m.tipo === 'cobranza') && puedeVerLaCobranza()) {", a: "      if (cuenta.some(m => m.tipo === 'cobranza')) {" },
     { nombre: 'Reabrir sin procesar', de: "      if (c.estado === 'procesada' && puedeAsentar()) {\n        reabrir", a: "      if (c.estado === 'procesada') {\n        reabrir" },
     { nombre: 'reabrir sin motivo mínimo', de: "      if (motivo.length < LARGO_MINIMO_MOTIVO) { r.error = 'Escribí por qué se reabre.'; pintarCobranza(); return }\n", a: '' },
