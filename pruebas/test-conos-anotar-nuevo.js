@@ -58,6 +58,8 @@ if (S) {
   chk('dos letras: sí', of('zz') === 'zz')
   chk('el exacto se busca en TODOS los conos, no solo en los 8 que muestra la lista', S.conoNuevoOfrecido('C9', [...Array(20)].map((_, i) => ({ cono: 'C' + i }))) === null)
   chk('un cono apagado con ese nombre también cuenta (la base lo encontraría: ya_existia)', S.conoNuevoOfrecido('viejo', [{ cono: 'VIEJO', activa: false }]) === null)
+  chk('un cono CON acentos y lo escrito sin ellos: no ("heladeria nandu" = HELADERÍA ÑANDÚ)', S.conoNuevoOfrecido('heladeria nandu', [{ cono: 'HELADERÍA ÑANDÚ' }]) === null)
+  chk('un cono guardado con espacios de más también cuenta ("LA  AMERICANA")', S.conoNuevoOfrecido('la americana', [{ cono: ' LA  AMERICANA' }]) === null)
   chk('sin lista de conos: se ofrece', S.conoNuevoOfrecido('nuevo', null) === 'nuevo')
 
   // ── 2. El texto que viaja a proponer_marca ───────────────────────────────
@@ -97,7 +99,7 @@ chk('al tocarlo, proponerCono sabe a qué formulario volver', /if \(\(el = b\('\
 chk('en anotar, el cono creado queda ELEGIDO ahí (elegirConoAnotar)', /if \(destino === 'anotar'\) await elegirConoAnotar\(id\)/.test(FUENTE))
 chk('se refresca el catálogo después de crearlo', /await Promise\.allSettled\(\[cargarStock\(\), cargarCatalogo\(\)\]\)/.test(FUENTE))
 chk('el error de la base va tal cual al formulario de donde salió', /document\.getElementById\(destino === 'anotar' \? 'cn-anotar-error' : 'cn-agr-error'\)/.test(FUENTE) &&
-  /err\.textContent = mensajeDe\(e\); err\.hidden = false/.test(FUENTE))
+  /if \(err\) \{ err\.textContent = mensajeDe\(e\); err\.hidden = false \} else mostrarError\(mensajeDe\(e\)\)/.test(FUENTE))
 chk('a proponer_marca viaja el texto con los espacios colapsados', /rpc\('proponer_marca', \{ p_nombre: textoConoNuevo\(nombre\) \}\)/.test(FUENTE))
 chk('ya_existia: igual queda elegido (y se avisa)', /if \(r\.ya_existia\) mostrarExito\('Ese cono ya existía: quedó elegido\.'\)/.test(FUENTE))
 chk('un segundo toque mientras crea no manda otra vez', /if \(estado\.proponiendo\) return/.test(FUENTE))

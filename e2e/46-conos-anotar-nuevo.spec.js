@@ -75,6 +75,22 @@ for (const [ancho, alto, que] of TAMANOS) {
   });
 }
 
+test('Agregar cono al pliego: "+ Cono nuevo" sigue volviendo a Agregar (no a Anotar), a 390', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const errores = vigilarErrores(page);
+  const ll = anotarRpc(page);
+  await page.goto(`${MAQUETA}/modulos/conos.html?maqueta=conos&pliego=pl-322`);
+  await page.locator('#cn-arm-agregar-abrir').click();
+  await page.fill('#cn-agr-buscar', 'le cremme');
+  await expect(page.locator('#cn-agr-resultados [data-cono-nuevo]')).toHaveText('+ Cono nuevo: «LE CREMME»');
+  await page.locator('#cn-agr-resultados [data-cono-nuevo]').click();
+  await expect.poll(() => llamadas(ll, 'proponer_marca').length).toBe(1);
+  await expect(page.locator('#cn-arm-agregar .cn-elegido')).toContainText('LE CREMME');
+  await expect(page.locator('#cn-anotar-elegido')).toBeHidden();
+  await sinCostado(page, 390);
+  expect(errores).toEqual([]);
+});
+
 for (const [ancho, alto] of [[1280, 900], [390, 844]]) {
   test(`Anotar para pedir: si la base rechaza el cono nuevo, el error se ve tal cual, a ${ancho}`, async ({ page }) => {
     await page.setViewportSize({ width: ancho, height: alto });
