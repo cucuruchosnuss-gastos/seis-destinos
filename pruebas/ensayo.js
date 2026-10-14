@@ -41,8 +41,9 @@ const CARPETA_ENSAYOS = path.join(RAIZ, '.ensayo')
 
 // ── LO PURO: qué pruebas de navegador alcanza lo cambiado ─────────────────
 const SIEMPRE_NAVEGADOR = ['0-humo.spec.js']
-// Lo que usan todos los specs: si cambia, corren todos.
-const DE_TODOS = /^e2e\/(playwright\.config|servidor|ayuda)\.js$|^e2e\/maqueta\/[^/]+\.js$|^package(-lock)?\.json$/
+// Lo que usan todos los specs: si cambia, corren todos (mitades.js lo lee la
+// config: un error ahí no deja correr ninguno).
+const DE_TODOS = /^e2e\/(playwright\.config|servidor|ayuda|mitades)\.js$|^e2e\/maqueta\/[^/]+\.js$|^package(-lock)?\.json$/
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 

@@ -1,12 +1,19 @@
 # Pruebas en un navegador real (Chromium con Playwright) contra un servidor
 # estático con el repo tal cual y la base real. Cada push a main, cada push a
 # una rama ci-prueba/** y todas las noches a las 5 de la mañana de Argentina
-# (08:00 UTC). La concurrency "navegador" las pone en fila: nunca dos a la vez.
+# (08:00 UTC).
+#
+# DOS MITADES A LA VEZ (14/10/2026): con un solo trabajo, Playwright tardaba
+# ~22 de los 30 minutos de tope. Ahora son dos trabajos en paralelo ("Navegador
+# 1/2" y "Navegador 2/2"); cada uno corre su mitad de los specs
+# (E2E_MITAD, ver e2e/mitades.js: la mitad 1 es una lista, la 2 es todo lo
+# demás). pruebas/test-navegador-en-dos.js exige que ningún spec quede afuera
+# ni corra dos veces. El workflow se sigue llamando "Navegador": es una sola
+# corrida por commit, con dos trabajos adentro.
 #
 # Los recorridos de la planta, la gestión y Accesos necesitan los secretos
 # E2E_PLANTA_EMAIL, E2E_GESTION_EMAIL y E2E_SERVICE_ROLE_KEY (Settings →
-# Secrets and variables → Actions). Sin ellos se saltean con un aviso y corre
-# solo el humo, que no necesita nada.
+# Secrets and variables → Actions). Sin ellos se saltean con un aviso.
 name: Navegador
 
 on:
@@ -17,21 +24,40 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # La fábrica de pruebas es UNA: dos corridas a la vez se pisarían los turnos.
-  group: navegador
+  # UNA FILA POR RAMA. Antes era un solo grupo "navegador" para todo, y GitHub
+  # deja UNA sola corrida esperando por grupo: si main estaba esperando y
+  # llegaba un push de una rama ci-prueba/**, GitHub CANCELABA la de main (pasó
+  # el 14/10/2026). Ahora main solo espera detrás de main (y del horario de la
+  # noche, que corre sobre main), y cada rama solo detrás de sí misma.
+  # cancel-in-progress: false = una corrida que ya empezó nunca se corta.
+  group: navegador-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   navegador:
+    name: Navegador ${{ matrix.mitad }}/2
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      # Si una mitad falla, la otra termina igual: así se ven todas las fallas.
+      fail-fast: false
+      matrix:
+        mitad: [1, 2]
     env:
-      E2E_PLANTA_EMAIL: ${{ secrets.E2E_PLANTA_EMAIL }}
-      E2E_GESTION_EMAIL: ${{ secrets.E2E_GESTION_EMAIL }}
-      E2E_RETIROS_EMAIL: ${{ secrets.E2E_RETIROS_EMAIL }}
-      E2E_SERVICE_ROLE_KEY: ${{ secrets.E2E_SERVICE_ROLE_KEY }}
-      E2E_MAESTRO_NOMBRE: ${{ secrets.E2E_MAESTRO_NOMBRE }}
-      E2E_MAESTRO_PIN: ${{ secrets.E2E_MAESTRO_PIN }}
+      E2E_MITAD: ${{ matrix.mitad }}
+      # LA FÁBRICA DE PRUEBAS ES UNA SOLA: dos corridas a la vez se pisarían los
+      # turnos. Con una fila por rama, main y una rama pueden correr al mismo
+      # tiempo, así que los secretos del robot van SOLO a las corridas de main
+      # (push, la noche y a mano sobre main). En una rama los recorridos del
+      # robot se saltean, como cuando faltan los secretos. Adentro de una misma
+      # corrida no hay choque: los specs del robot van todos en la misma mitad
+      # (lo exige test-navegador-en-dos.js).
+      E2E_PLANTA_EMAIL: ${{ github.ref == 'refs/heads/main' && secrets.E2E_PLANTA_EMAIL || '' }}
+      E2E_GESTION_EMAIL: ${{ github.ref == 'refs/heads/main' && secrets.E2E_GESTION_EMAIL || '' }}
+      E2E_RETIROS_EMAIL: ${{ github.ref == 'refs/heads/main' && secrets.E2E_RETIROS_EMAIL || '' }}
+      E2E_SERVICE_ROLE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.E2E_SERVICE_ROLE_KEY || '' }}
+      E2E_MAESTRO_NOMBRE: ${{ github.ref == 'refs/heads/main' && secrets.E2E_MAESTRO_NOMBRE || '' }}
+      E2E_MAESTRO_PIN: ${{ github.ref == 'refs/heads/main' && secrets.E2E_MAESTRO_PIN || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,25 +70,29 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - name: ¿Están las credenciales del robot?
         run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "### Rama $GITHUB_REF_NAME: los recorridos del robot se saltean (la fábrica de pruebas la usa solo main)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           faltan=""
           for v in E2E_PLANTA_EMAIL E2E_GESTION_EMAIL E2E_SERVICE_ROLE_KEY; do
             [ -z "${!v}" ] && faltan="$faltan $v"
           done
           if [ -n "$faltan" ]; then
-            echo "::warning::Faltan los secretos:$faltan. Los recorridos de planta, gestión y Accesos se saltean; corre solo el humo."
-            echo "### ⚠️ Faltan los secretos:$faltan — corrió solo el humo" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Faltan los secretos:$faltan. Los recorridos de planta, gestión y Accesos se saltean."
+            echo "### ⚠️ Faltan los secretos:$faltan — los recorridos del robot se saltean" >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Playwright
+      - name: Playwright (mitad ${{ matrix.mitad }} de 2)
         run: npm run e2e
       - name: Resumen
         if: always()
         run: |
           n=$(ls e2e/resultados/capturas 2>/dev/null | wc -l)
-          echo "### Capturas del recorrido: $n (artefacto \"capturas\")" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Mitad ${{ matrix.mitad }} de 2 — capturas del recorrido: $n (artefacto \"capturas-${{ matrix.mitad }}\")" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: capturas
+          name: capturas-${{ matrix.mitad }}
           path: |
             e2e/resultados/
             e2e/informe/
