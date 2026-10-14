@@ -2271,7 +2271,9 @@
     .pc-seg__op--on { background: var(--naranja); color: #fff; font-weight: 700; }
     .pc-seg__n { opacity: 0.75; }
     .pc-conos__tabla { flex: 1; min-height: 0; overflow: auto; padding: 0 18px 10px; }
-    .pc-cono { display: grid; grid-template-columns: minmax(0, 1.5fr) 100px 130px 60px; gap: 12px; align-items: center; }
+    .pc-cono { display: grid; grid-template-columns: minmax(0, 1.5fr) 100px 100px 130px 110px; gap: 12px; align-items: center; }
+    /* Los rótulos largos de la cabecera, cortos en el celular (14/10/2026). */
+    .pc-cab-corto { display: none; }
     .pc-cono__cab { height: 32px; border-bottom: 1px solid var(--color-divisor); font-size: 12px; font-weight: 700; color: var(--color-texto-suave); letter-spacing: 0.03em; position: sticky; top: 0; background: var(--color-fondo); z-index: 1; }
     .pc-cono__fila { min-height: 40px; border-bottom: 1px solid var(--color-pista); }
     .pc-cono__fila .pg-cono__error { grid-column: 1 / -1; margin-bottom: 6px; }
@@ -2386,7 +2388,12 @@
       .pc-conos__cab, .pc-personal__cab { padding: 12px; }
       .pc-buscar--conos, .pc-buscar--per { width: 100%; flex: 1 1 100%; }
       .pc-conos__tabla, .pc-personal__tabla { padding: 0 12px 10px; overflow: visible; }
-      .pc-cono { grid-template-columns: minmax(0, 1fr) 36px auto 40px; gap: 8px; }
+      /* Columnas fijas: con "auto" cada renglón medía distinto y los tildes
+         no quedaban uno abajo del otro ("Nuevo, a revisar" es ancho). */
+      .pc-cono { grid-template-columns: minmax(0, 1fr) 36px 36px 74px 44px; gap: 8px; }
+      .pc-cono__fila .pc-chip { height: auto; min-height: 22px; white-space: normal; line-height: 1.15; padding: 2px 6px; text-align: center; }
+      .pc-cab-largo { display: none; }
+      .pc-cab-corto { display: inline; }
       .pc-cono__cab { font-size: 10.5px; }
       .pc-per__cab { display: none; }
       .pc-per { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 0; }
@@ -7903,6 +7910,10 @@
     //
     // La columna "Cliente" del diseño no está: marcas_personalizadas no tiene
     // cliente (verificado con information_schema el 29/09/2026).
+    //
+    // "Ilustración" (14/10/2026, lo mismo que Conos de papel → Todos los
+    // conos): configurar_cono(p_marca_id, p_activa, p_doble_bolsa,
+    // p_papel_ilustracion) con SOLO ese campo; los otros van null.
     async function tocarCono(marcaId, campo, valor) {
       const c = estado.config
       const m = c?.datos?.marcas?.find(x => x.id === marcaId)
@@ -7918,7 +7929,9 @@
       try {
         const { error: e } = campo === 'activa'
           ? await supabase.rpc('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !!valor })
-          : await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !!valor })
+          : campo === 'papel_ilustracion'
+            ? await supabase.rpc('configurar_cono', { p_marca_id: m.id, p_activa: null, p_doble_bolsa: null, p_papel_ilustracion: !!valor })
+            : await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !!valor })
         if (e) throw e
       } catch (err) {
         console.error('cono:', err)
@@ -7927,11 +7940,13 @@
       c.conosOcupados.delete(marcaId)
       if (error) {
         m[campo] = anterior
-        const que = campo === 'activa' ? (valor ? 'No se pudo prender' : 'No se pudo apagar') : 'No se pudo cambiar la doble bolsa'
+        const que = campo === 'activa' ? (valor ? 'No se pudo prender' : 'No se pudo apagar')
+          : campo === 'papel_ilustracion' ? 'No se pudo cambiar el papel' : 'No se pudo cambiar la doble bolsa'
         c.errorCono = { id: marcaId, texto: `${que}: ${error}` }
       } else {
-        mostrarExito(campo === 'activa' ? (valor ? `${m.nombre}: activo.` : `${m.nombre}: apagado.`)
-          : (valor ? `${m.nombre} va con doble bolsa.` : `${m.nombre} ya no va con doble bolsa.`))
+        mostrarExito(campo === 'activa' ? (valor ? `${m.nombre}: en producción.` : `${m.nombre}: apagado.`)
+          : campo === 'papel_ilustracion' ? (valor ? `${m.nombre} va en papel Ilustración.` : `${m.nombre} ya no va en papel Ilustración.`)
+            : (valor ? `${m.nombre} va con doble bolsa.` : `${m.nombre} ya no va con doble bolsa.`))
       }
       if (estado.config === c && c.tab === 'marcas') pintarPestanaConfig()
       return !error
@@ -7944,7 +7959,7 @@
 
     async function leerMarcasConfig() {
       const { data, error } = await supabase.from('marcas_personalizadas')
-        .select('id, nombre, activa, estado_alta, creada_por, creada_en, doble_bolsa').order('nombre')
+        .select('id, nombre, activa, estado_alta, creada_por, creada_en, doble_bolsa, papel_ilustracion').order('nombre')
       if (error) throw error
       const marcas = data ?? []
       const nombres = await nombresDeEmpleados(marcasPendientes({ marcas }).map(m => m.creada_por))
@@ -7995,7 +8010,7 @@
     // cono con el filtro "Activos" lo haría desaparecer bajo el dedo. Todos
     // = todos; Apagados = los que no están activos ni por revisar (los
     // rechazados también), así Activos + Apagados + Por revisar = Todos.
-    const FILTROS_CONOS = [['todos', 'Todos'], ['activos', 'Activos'], ['apagados', 'Apagados'], ['revisar', 'Por revisar']]
+    const FILTROS_CONOS = [['todos', 'Todos'], ['activos', 'En producción'], ['apagados', 'Apagados'], ['revisar', 'Por revisar']]
 
     function conosDelFiltro(d, filtro) {
       const todas = d?.marcas ?? []
@@ -8029,7 +8044,8 @@
     }
 
     const ESTADO_CONO = {
-      aprobada: ['Aceptado', 'gris'], pendiente_revision: ['Por revisar', 'naranja'], rechazada: ['Rechazado', 'grave'],
+      // "Nuevo, a revisar" como en la tablet y en Conos de papel (14/10/2026).
+      aprobada: ['Aceptado', 'gris'], pendiente_revision: ['Nuevo, a revisar', 'naranja'], rechazada: ['Rechazado', 'grave'],
     }
 
     function htmlFilaCono(c, m) {
@@ -8039,8 +8055,9 @@
       return `<div class="pc-cono pc-cono__fila${m.activa ? '' : ' pg-cono--apagado'}">` +
         `<div class="pc-cono__n">` + htmlResaltado(m.nombre, c.busqueda) + `</div>` +
         `<div><label class="pc-tilde"><input type="checkbox" class="pc-tilde__input" data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? ' checked' : ''}${ocupado ? ' disabled' : ''} aria-label="Doble bolsa: ${esc(m.nombre)}"><span class="pc-tilde__caja" aria-hidden="true">${ICONO_TILDE}</span></label></div>` +
+        `<div><label class="pc-tilde"><input type="checkbox" class="pc-tilde__input" data-marca-ilus="${esc(m.id)}"${m.papel_ilustracion ? ' checked' : ''}${ocupado ? ' disabled' : ''} aria-label="Ilustración: ${esc(m.nombre)}"><span class="pc-tilde__caja" aria-hidden="true">${ICONO_TILDE}</span></label></div>` +
         `<div>` + htmlPastilla(estadoTxt, estadoTipo) + `</div>` +
-        swAbre() + `<input type="checkbox" role="switch" class="pc-sw__input" data-marca-activo="${esc(m.id)}"${m.activa ? ' checked' : ''}${ocupado ? ' disabled' : ''} aria-label="Activo: ${esc(m.nombre)}">` + SW_CIERRA +
+        swAbre() + `<input type="checkbox" role="switch" class="pc-sw__input" data-marca-activo="${esc(m.id)}"${m.activa ? ' checked' : ''}${ocupado ? ' disabled' : ''} aria-label="En producción: ${esc(m.nombre)}">` + SW_CIERRA +
         err + '</div>'
     }
 
@@ -8058,12 +8075,12 @@
       const seg = '<div class="pc-seg" role="group" aria-label="Qué conos mostrar">' + FILTROS_CONOS.map(([k, r]) =>
         `<button type="button" class="pc-seg__op${k === c.filtroConos ? ' pc-seg__op--on' : ''}" data-conos-filtro="${k}" aria-pressed="${k === c.filtroConos ? 'true' : 'false'}">${r}<span class="pc-seg__n">${esc(cuenta[k])}</span></button>`).join('') + '</div>'
       const lista = listaConosVisible(c)
-      const cab = `<div class="pc-cono pc-cono__cab"><div>CONO</div><div title="Para los conos que van al norte, por la humedad: llevan siempre la bolsa grande y las bolsitas individuales, y en la tablet no se puede bajar.">DOBLE BOLSA</div><div>ESTADO</div><div>ACTIVO</div></div>`
+      const cab = `<div class="pc-cono pc-cono__cab"><div>CONO</div><div title="Para los conos que van al norte, por la humedad: llevan siempre la bolsa grande y las bolsitas individuales, y en la tablet no se puede bajar.">DOBLE BOLSA</div><div title="Papel ilustración"><span class="pc-cab-largo">ILUSTRACIÓN</span><span class="pc-cab-corto" aria-hidden="true">ILUS.</span></div><div>ESTADO</div><div><span class="pc-cab-largo">EN PRODUCCIÓN</span><span class="pc-cab-corto" aria-hidden="true">EN PROD.</span></div></div>`
       const filas = lista.length ? lista.map(m => htmlFilaCono(c, m)).join('')
         : `<p class="pc-texto2 pc-conos__vacio">${c.busqueda ? 'Ningún cono coincide con la búsqueda.' : 'No hay conos acá.'}</p>`
       const cuantosHtml = c.busqueda ? `<span class="pc-texto2">${esc(lista.length)} ${lista.length === 1 ? 'cono' : 'conos'} con “${esc(c.busqueda)}”</span>` : ''
       return `<div class="pc-panel pc-conos"><div class="pc-conos__cab">` +
-        `<div class="pc-conos__titulo"><h2 class="pc-titulo pc-titulo--21">${esc(todas.length)} conos del catálogo</h2><span class="pc-texto2 pc-15">· ${esc(activos)} activos</span></div>` +
+        `<div class="pc-conos__titulo"><h2 class="pc-titulo pc-titulo--21">${esc(todas.length)} conos del catálogo</h2><span class="pc-texto2 pc-15">· ${esc(activos)} en producción</span></div>` +
         arriba +
         `<div class="pc-conos__barra"><label class="pc-buscar pc-buscar--conos${c.busqueda ? ' pc-buscar--lleno' : ''}">${ICONO_BUSCAR}<input type="text" class="pc-buscar__input" id="pr-config-marca-buscar" placeholder="Buscar cono" aria-label="Buscar cono" value="${esc(c.busqueda)}" autocomplete="off">` +
         (c.busqueda ? `<button type="button" class="pc-buscar__borrar" data-conos-limpiar="1" aria-label="Borrar la búsqueda">${ICONO_CRUZ}</button>` : '') + `</label>` +
@@ -8675,6 +8692,7 @@
         if (t.dataset?.recetaCmp !== undefined) { c.comparar = { ...(c.comparar ?? {}), [t.dataset.recetaCmp]: t.value }; c.volverA = null; return pintarPestanaConfig() }
         if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
         if (t.dataset?.marcaActivo !== undefined) return tocarCono(t.dataset.marcaActivo, 'activa', t.checked)
+        if (t.dataset?.marcaIlus !== undefined) return tocarCono(t.dataset.marcaIlus, 'papel_ilustracion', t.checked)
         // Horarios: el interruptor Activo NO guarda solo; va con "Guardar" de su fila.
         if (t.dataset?.horActivo !== undefined) { tocarHorario(t.dataset.horActivo, 'activo', t.checked); return pintarPestanaConfig() }
         if (t.dataset?.recetaTipo !== undefined) { c.recetaTipo = t.value; c.recetaVer = null; c.comparar = null; c.volverA = null; c.recetaEditando = t.value === NUEVO_TIPO; pintarPestanaConfig() }

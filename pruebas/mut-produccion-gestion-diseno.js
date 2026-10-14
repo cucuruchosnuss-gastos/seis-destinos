@@ -86,7 +86,7 @@ correrMutacionesProduccion({
     { nombre: 'el rechazo no vuelve el control', de: '        m[campo] = anterior\n', a: '' },
     { nombre: 'el error no queda pegado a la fila', de: "        c.errorCono = { id: marcaId, texto: `${que}: ${error}` }", a: "        c.errorCono = null" },
     { nombre: 'el error se pega a todas las filas', de: 'const err = c.errorCono?.id === m.id ?', a: 'const err = c.errorCono ?' },
-    { nombre: 'el error no dice qué no se pudo', de: "const que = campo === 'activa' ? (valor ? 'No se pudo prender' : 'No se pudo apagar') : 'No se pudo cambiar la doble bolsa'", a: "const que = 'Error'" },
+    { nombre: 'el error no dice qué no se pudo', de: "const que = campo === 'activa' ? (valor ? 'No se pudo prender' : 'No se pudo apagar')\n          : campo === 'papel_ilustracion' ? 'No se pudo cambiar el papel' : 'No se pudo cambiar la doble bolsa'", a: "const que = 'Error'" },
     { nombre: 'un toque nuevo no borra el error viejo', de: '      m[campo] = !!valor\n      c.errorCono = null\n', a: '      m[campo] = !!valor\n' },
     { nombre: 'un segundo toque mientras se guarda manda otro', de: '      if (c.conosOcupados.has(marcaId)) return false\n', a: '' },
     { nombre: 'mientras se guarda no se traba', de: "      const ocupado = !!c.conosOcupados?.has(m.id)", a: '      const ocupado = false' },

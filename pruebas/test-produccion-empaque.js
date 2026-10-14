@@ -734,7 +734,7 @@ esperas.push((async () => {
   await S.cambiarDobleBolsa('mk-grido', false)
   chk('se intentó sacarle la doble bolsa', S.__llamadas.rpc.filter(([n]) => n === 'marcar_doble_bolsa').at(-1)?.[1].p_doble === false)
   chk('el error de la base, tal cual, pegado a la fila de ese cono',
-    /data-marca-doble="mk-grido"[\s\S]{0,700}class="pr-cfg-error pg-cono__error" role="alert">No se pudo cambiar la doble bolsa: No tenés permiso\./.test(cuerpoCfg(S)))
+    /data-marca-doble="mk-grido"[\s\S]{0,1200}class="pr-cfg-error pg-cono__error" role="alert">No se pudo cambiar la doble bolsa: No tenés permiso\./.test(cuerpoCfg(S)))
   chk('… y el tilde vuelve a lo guardado', /data-marca-doble="mk-grido" checked/.test(cuerpoCfg(S)))
 })())
 
