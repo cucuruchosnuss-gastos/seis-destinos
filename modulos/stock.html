@@ -733,6 +733,50 @@
       font-size: 0.875rem;
     }
 
+    /* ── Dos entradas (14/10/2026): en el celular una arriba de la otra, en
+       la compu lado a lado. Mientras se elige, lo demás no se ve. */
+    .stock-eleccion {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      margin: 0.5rem 0 1rem;
+    }
+    @media (min-width: 640px) {
+      .stock-eleccion { grid-template-columns: 1fr 1fr; }
+    }
+    .stock-eleccion__opcion {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.375rem;
+      min-height: 7.5rem;
+      padding: 1.25rem;
+      border-radius: 16px;
+      border: 1px solid var(--color-borde);
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+    }
+    .stock-eleccion__opcion:hover { border-color: var(--color-acento); text-decoration: none; }
+    .stock-eleccion__opcion:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+    .stock-eleccion__titulo {
+      font-family: var(--fuente-titulo);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
+    }
+    .stock-eleccion__texto { font-size: 0.9375rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    body.stock-en-eleccion .vista-stock,
+    body.stock-en-eleccion .pestanas-stock,
+    body.stock-en-eleccion .stock-actualizado { display: none !important; }
+
     /* ── Modales — bottom-sheet, mismo patrón que materia-prima ───────────── */
 
     .modal-stock {
@@ -2486,6 +2530,20 @@
     <!-- Sin NINGUNA de las dos tareas no hay nada que mostrar. -->
     <div class="estado-vacio-stock" id="sin-acceso" hidden>
       No tenés permiso para ver el stock ni el catálogo de insumos. Pedíselo a un administrador.
+    </div>
+
+    <!-- DOS ENTRADAS (14/10/2026, pedido del 13/10, paso 4): quien puede ver
+         el producto terminado Y los insumos elige primero qué mirar. Con una
+         sola de las dos se entra derecho (ver decidirEntrada()). -->
+    <div class="stock-eleccion" id="stock-eleccion" hidden>
+      <a class="stock-eleccion__opcion" id="btn-entrada-terminado" href="produccion-gestion.html?vista=stock&amp;desde=stock">
+        <span class="stock-eleccion__titulo">Producto terminado</span>
+        <span class="stock-eleccion__texto">Las cajas producidas, por producto, cono y lote.</span>
+      </a>
+      <button type="button" class="stock-eleccion__opcion" id="btn-entrada-insumos">
+        <span class="stock-eleccion__titulo">Insumos y materias primas</span>
+        <span class="stock-eleccion__texto">El stock de cada insumo, el catálogo, el recuento y los costos.</span>
+      </button>
     </div>
 
     <!-- Solo se dibuja si hay DOS vistas para elegir: una pestaña sola no es
@@ -9667,7 +9725,8 @@
       document.getElementById('vista-traspaso').hidden = id !== 'traspaso'
       document.getElementById('vista-costos').hidden = id !== 'costos'
       document.getElementById('vista-alias').hidden = id !== 'alias'
-      document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
+      // En la elección de entrada (dos botones) el subtítulo es el de ella.
+      document.getElementById('stock-subtitulo').textContent = estado.enEleccion ? 'Elegí qué mirar' : SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
         btn.classList.toggle('pestana-stock--activa',
           btn.dataset.vista === id || btn.dataset.vista === PESTANA_DE_VISTA[id])
@@ -11230,6 +11289,8 @@
 
     // ── Traspaso a otra fábrica ────────────────────────────────────────────
     document.getElementById('btn-ver-traspaso').addEventListener('click', abrirTraspaso)
+    document.getElementById('btn-entrada-insumos').addEventListener('click', salirDeEleccion)
+    document.querySelector('.stock-header__volver').addEventListener('click', alVolverDelEncabezado)
     document.getElementById('btn-volver-de-traspaso').addEventListener('click', () => mostrarVista('stock'))
     document.getElementById('trp-origen').addEventListener('change', (e) => pedirCambioOrigenTrp(e.target.value))
     document.getElementById('trp-destino').addEventListener('change', (e) => cambiarDestinoTrp(e.target.value))
@@ -11572,6 +11633,9 @@
         const params = new URLSearchParams(window.location.search)
         if (!params.has('vista')) return null
         pedida = params.get('vista')
+        // ?vista=insumos (14/10/2026) es la entrada elegida, no una vista: se
+        // QUEDA en la dirección, así recargar no vuelve a la elección.
+        if (pedida === 'insumos') return null
         params.delete('vista')
         const resto = params.toString()
         history.replaceState(history.state, '', window.location.pathname + (resto ? '?' + resto : '') + window.location.hash)
@@ -11590,6 +11654,72 @@
       estado.filtro = 'pendientes'
       renderizarChips()
       renderizarLista()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DOS ENTRADAS (14/10/2026, pedido del 13/10, paso 4)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Al entrar a Stock: "Producto terminado" (la gestión de Producción, en su
+    // vista de stock) e "Insumos y materias primas" (esta pantalla). Cada una
+    // solo con su permiso; con una sola se entra derecho; sin ninguna, el aviso
+    // de siempre. ?vista=terminado y ?vista=insumos (o catalogo, costos,
+    // traspaso) saltean la elección.
+
+    const VISTAS_DE_INSUMOS = ['insumos', 'catalogo', 'costos', 'traspaso']
+
+    // 'eleccion' / 'insumos' / 'terminado' / 'sin'.
+    function decidirEntrada({ insumos, terminado, pedida }) {
+      if (pedida === 'terminado') return terminado ? 'terminado' : (insumos ? 'insumos' : 'sin')
+      if (VISTAS_DE_INSUMOS.includes(pedida)) return insumos ? 'insumos' : (terminado ? 'terminado' : 'sin')
+      if (insumos && terminado) return 'eleccion'
+      if (insumos) return 'insumos'
+      if (terminado) return 'terminado'
+      return 'sin'
+    }
+
+    // Se lee SIN sacarla de la dirección: vistaDesdeUrl() la saca después.
+    function entradaPedida() {
+      try { return new URLSearchParams(window.location.search).get('vista') } catch { return null }
+    }
+
+    // El stock terminado lo deja leer la base con stock:ver o con Producción
+    // (policy de stock_terminado_movimientos: _ve_produccion_en(unidad) OR
+    // tiene_tarea_alcance('stock','ver', unidad); verificado el 13/10/2026).
+    function puedeVerTerminado() {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:ver') ||
+        estado.misTareas.has('produccion:ver') || estado.misTareas.has('produccion:configurar')
+    }
+
+    // Con "&desde=stock" la gestión dice "‹ Stock" y vuelve acá: solo si acá
+    // hay algo más que mirar (si no, volver rebotaría a la gestión).
+    function urlTerminado(conVolver) {
+      return 'produccion-gestion.html?vista=stock' + (conVolver ? '&desde=stock' : '')
+    }
+
+    function mostrarEleccion() {
+      estado.enEleccion = true
+      document.body?.classList.add('stock-en-eleccion')
+      document.getElementById('stock-eleccion').hidden = false
+      document.getElementById('stock-subtitulo').textContent = 'Elegí qué mirar'
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+
+    function salirDeEleccion() {
+      estado.enEleccion = false
+      document.body?.classList.remove('stock-en-eleccion')
+      document.getElementById('stock-eleccion').hidden = true
+      document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[estado.vista] ?? ''
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+
+    // El "‹ Volver" del encabezado: con elección, desde los insumos vuelve a
+    // los dos botones (sin recargar); en la elección o sin ella, al inicio.
+    function alVolverDelEncabezado(e) {
+      if (estado.hayEleccion && !estado.enEleccion) {
+        e.preventDefault()
+        mostrarEleccion()
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -11639,7 +11769,8 @@
         .select('modulo, tarea, alcance')
         .eq('empleado_id', emp.id)
         // retiros: el precio del traspaso (B8, retiros:precios por fábrica).
-        .in('modulo', ['stock', 'retiros'])
+        // produccion: si puede ver el producto terminado (las dos entradas).
+        .in('modulo', ['stock', 'retiros', 'produccion'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
       estado.alcancesTareas = new Map((tareas ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? null]))
@@ -11664,10 +11795,19 @@
       // 11/10/2026 (M8): con stock:ver_costos (aunque no tenga stock:ver) se
       // entra, y si no tiene otra vista abre derecho en Costos.
       const veCostos = estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:ver_costos')
-      if (!verStock && !gestiona && !ajusta && !veCostos) {
+      const insumos = verStock || gestiona || ajusta || veCostos
+      const terminado = puedeVerTerminado()
+      const entrada = decidirEntrada({ insumos, terminado, pedida: entradaPedida() })
+      if (entrada === 'sin') {
         document.getElementById('sin-acceso').hidden = false
         return
       }
+      if (entrada === 'terminado') {
+        window.location.replace(urlTerminado(insumos))
+        return
+      }
+      estado.hayEleccion = insumos && terminado
+      if (entrada === 'eleccion') mostrarEleccion()
 
       // El orden de este array es el de las pestañas Y el del default: se abre
       // en Stock, que es lo que se mira todos los días. Pero se resuelve por

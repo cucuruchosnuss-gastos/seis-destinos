@@ -339,7 +339,7 @@ esperas.push((async () => {
   chk('la respuesta que llega tarde no pisa la nueva', numConos(T).textContent === '5', numConos(T).textContent)
 
   // Cuándo se pide.
-  chk('se pide al entrar', /pintarAccesosOficina\(\)\n\s+cargarBurbujaConos\(\)/.test(FUENTE_G))
+  chk('se pide al entrar (salvo en "solo stock", 14/10/2026)', /pintarAccesosOficina\(\)\n\s+pintarVolverStock\(\)\n\s+if \(!estado\.soloStock\) cargarBurbujaConos\(\)/.test(FUENTE_G))
   chk('… y al volver a la pestaña', /visibilityState === 'visible'\) \{[\s\S]{0,120}cargarBurbujaConos\(\)/.test(FUENTE_G))
   chk('… y después de aceptar o rechazar un cono', /if \(r\.ok\) \{ cargarBurbujaConos\(\); await cargarPestanaConfig\(\) \}/.test(FUENTE_G))
 })())

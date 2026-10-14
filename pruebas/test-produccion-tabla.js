@@ -522,7 +522,7 @@ esperas.push((async () => {
   const menu = sinComent.slice(sinComent.indexOf('<nav class="pg-menu"'), sinComent.indexOf('id="pr-menu-bloque-control"'))
   chk('arriba del bloque Control no queda ningún renglón suelto', !/pg-menu__item/.test(menu))
   const init = extraerFn(src, 'init')
-  chk('al entrar abre lo que dice vistaDeEntrada (la tabla), no los indicadores', /const entrada = vistaDeEntrada\(window\.location\?\.search\)/.test(init) && /\n\s*navegar\(entrada\)\n\s*\}$/.test(init) && !/mostrarInicioOficina\(\)/.test(init))
+  chk('al entrar abre lo que dice vistaDeEntrada (la tabla), no los indicadores', /const entrada = estado\.soloStock \? 'stock' : vistaDeEntrada\(window\.location\?\.search\)/.test(init) && /\n\s*navegar\(entrada\)\n\s*\}$/.test(init) && !/mostrarInicioOficina\(\)/.test(init))
   chk('?vista= se saca de la dirección', /url\.searchParams\.delete\('vista'\)/.test(init))
   chk('"Salir sin guardar" vuelve al inicio de la gestión', /function volverDeOficina\(\) \{\s*navegar\(INICIO_GESTION\)\s*\}/.test(src))
   chk('"Producción" de las migas de Configuración vuelve al inicio de la gestión', /getElementById\('pr-config-a-produccion'\)\.addEventListener\('click', \(\) => irA\(INICIO_GESTION\)\)/.test(src))

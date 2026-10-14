@@ -32,7 +32,7 @@ const VISTAS = {
     ver: '#ad-comision-guardar',
   },
   salida: { url: 'modulos/administracion.html?maqueta=celular-administracion', pasos: ['[data-pestana="cheques"]', '[data-dar-salida]:visible'], ver: '#chq-salida-confirmar' },
-  costo: { url: 'modulos/stock.html?maqueta=stock-costos', pasos: ['.barra-unidad__chip[data-unidad="u-n"]', '#btn-ver-costos', '[data-costo="i-harina"]'], ver: '#modal-costo #costo-precio' },
+  costo: { url: 'modulos/stock.html?vista=insumos&maqueta=stock-costos', pasos: ['.barra-unidad__chip[data-unidad="u-n"]', '#btn-ver-costos', '[data-costo="i-harina"]'], ver: '#modal-costo #costo-precio' },
   misRetiros: { url: 'modulos/retiros.html?maqueta=celular-retiros', pasos: ['[data-empresa]', '#rt-btn-mis'], ver: '[data-mia="o-2"]' },
   ordenMia: { url: 'modulos/retiros.html?maqueta=celular-retiros', pasos: ['[data-empresa]', '#rt-btn-mis', '[data-mia="o-2"]'], ver: '#rt-mio-volver' },
   planilla: {

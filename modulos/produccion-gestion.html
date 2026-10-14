@@ -5785,6 +5785,7 @@
     // Catálogo y Personas solo con configurar. Un bloque sin renglones no se
     // dibuja.
     function pintarAccesosOficina() {
+      if (estado.soloStock) { document.getElementById('pr-menu').hidden = true; return }
       const ver = puedeVerHistorial(), conf = tieneTarea('configurar')
       document.getElementById('pr-menu').hidden = false
       document.body.classList.add('pg-con-menu')
@@ -8677,6 +8678,9 @@
 
     // Las unidades que la persona puede mirar: las de ver y las de configurar.
     function unidadesDeHistorial() {
+      // Solo stock (14/10/2026): quien entra desde Stock con stock:ver y sin
+      // Producción mira el stock terminado de las fábricas de su stock:ver.
+      if (estado.soloStock) return [...estado.unidades.keys()].filter(id => puedeVerStockEn(id) === true)
       const set = new Set([...unidadesCon('ver'), ...unidadesCon('configurar')])
       return [...estado.unidades.keys()].filter(id => set.has(id))
     }
@@ -9771,7 +9775,7 @@
 
     function conectarHistorial() {
       document.getElementById('pr-historial-volver').addEventListener('click', abrirMenu)
-      document.getElementById('pr-stock-volver').addEventListener('click', abrirMenu)
+      document.getElementById('pr-stock-volver').addEventListener('click', alVolverDelStock)
       document.getElementById('pr-historial-detalle-volver').addEventListener('click', () => {
         document.getElementById('pr-historial-detalle').hidden = true
         document.getElementById('pr-historial-listado').hidden = false
@@ -9868,9 +9872,54 @@
       estado.unidades = mapaDeUnidades(unidades, estado.fabrica)
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // DESDE STOCK (14/10/2026, pedido del 13/10, paso 4)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Stock (stock.html) ofrece "Producto terminado", que abre esta pantalla
+    // con ?vista=stock (y &desde=stock si en Stock hay algo más que mirar).
+    // Con &desde=stock, el "‹ Menú" del stock terminado dice "‹ Stock" y
+    // vuelve a stock.html. Quien tiene stock:ver y NO tiene Producción entra
+    // igual, en "solo stock": sin menú, solo el stock terminado de las
+    // fábricas de su stock:ver (la base se lo deja leer: la policy de
+    // stock_terminado_movimientos acepta tiene_tarea_alcance('stock','ver',
+    // unidad); verificado el 13/10/2026).
+
+    function leerParametrosEntrada(search) {
+      try {
+        const p = new URLSearchParams(search ?? '')
+        return { vista: p.get('vista'), desdeStock: p.get('desde') === 'stock' }
+      } catch { return { vista: null, desdeStock: false } }
+    }
+
+    // Adónde vuelve el "‹ Menú" del stock terminado: null = abre el menú.
+    function destinoVolverStock({ desdeStock, soloStock }) {
+      if (desdeStock) return { texto: '‹ Stock', url: 'stock.html' }
+      if (soloStock) return { texto: '‹ Inicio', url: '../dashboard.html' }
+      return null
+    }
+
+    function pintarVolverStock() {
+      const btn = document.getElementById('pr-stock-volver')
+      const d = destinoVolverStock({ desdeStock: estado.desdeStock, soloStock: estado.soloStock })
+      estado.volverStock = d?.url ?? null
+      if (!d) return
+      btn.textContent = d.texto
+      // pg-volver-menu lo esconde en la compu (donde el menú está a la vista):
+      // este botón tiene que verse siempre.
+      btn.classList.remove('pg-volver-menu')
+    }
+
+    function alVolverDelStock() {
+      if (estado.volverStock) { window.location.href = estado.volverStock; return }
+      abrirMenu()
+    }
+
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+      const entradaUrl = leerParametrosEntrada(window.location?.search)
+      estado.desdeStock = entradaUrl.vista === 'stock' && entradaUrl.desdeStock
       // En paralelo con los permisos: no frena el arranque.
       const pFabrica = cargarFabricaDePruebas(supabase)
       try {
@@ -9890,7 +9939,13 @@
       } catch (err) {
         console.error('mi_sesion_produccion:', err)
       }
-      if (!puedeVerGestion()) {
+      // Sin Producción, pero pidiendo el stock terminado y con stock:ver en
+      // alguna fábrica: "solo stock".
+      if (!puedeVerGestion() && entradaUrl.vista === 'stock') {
+        await cargarPermisoStock()
+        estado.soloStock = [...estado.unidades.keys()].some(id => puedeVerStockEn(id) === true)
+      }
+      if (!puedeVerGestion() && !estado.soloStock) {
         sinAcceso(tieneTarea('cargar')
           ? 'Tu usuario carga desde la tablet de la planta: acá no hay nada que ver. Te llevamos al inicio…'
           : 'No tenés acceso a Producción. Te llevamos al inicio…')
@@ -9912,11 +9967,14 @@
       alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
       pintarSelectorGestion()
       pintarAccesosOficina()
-      cargarBurbujaConos()
+      pintarVolverStock()
+      if (!estado.soloStock) cargarBurbujaConos()
       // Abre en la tabla de producción (09/10/2026), o en la sección que pida
       // `?vista=`, que se saca de la dirección para que recargar abra la tabla.
-      const entrada = vistaDeEntrada(window.location?.search)
-      if (window.location?.search && window.history?.replaceState) {
+      // Desde Stock (o en solo stock) la dirección queda: recargar vuelve al
+      // stock terminado con su "‹ Stock".
+      const entrada = estado.soloStock ? 'stock' : vistaDeEntrada(window.location?.search)
+      if (!estado.desdeStock && !estado.soloStock && window.location?.search && window.history?.replaceState) {
         const url = new URL(window.location.href)
         if (url.searchParams.has('vista')) { url.searchParams.delete('vista'); window.history.replaceState(null, '', url.pathname + url.search + url.hash) }
       }

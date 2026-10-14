@@ -73,7 +73,9 @@ function armar(rol, tareas, archivo = ARCHIVO) {
 {
   chk('lee las tareas de produccion habilitadas, con su alcance',
     /\.from\('empleado_tareas'\)\.select\('tarea, alcance'\)\s*\n\s*\.eq\('empleado_id', emp\.id\)\.eq\('modulo', 'produccion'\)\.eq\('habilitado', true\)/.test(FUENTE))
-  chk('gestión: sin permiso, aviso y vuelta al dashboard', /if \(!puedeVerGestion\(\)\) \{\s*\n\s*sinAcceso\(/.test(FUENTE_G))
+  // 14/10/2026: "solo stock" (desde Stock con stock:ver) es la única excepción;
+  // la prueba de esa rama está en test-stock-entrada.js.
+  chk('gestión: sin permiso, aviso y vuelta al dashboard', /if \(!puedeVerGestion\(\) && !estado\.soloStock\) \{\s*\n\s*sinAcceso\(/.test(FUENTE_G))
   chk('gestión: sinAcceso vuelve al dashboard', /window\.location\.href = '\.\.\/dashboard\.html'/.test(FUENTE_G))
   chk('planta: NINGÚN link ni redirección al dashboard (la cuenta de la tablet no tiene nada que hacer ahí)', !/dashboard\.html/.test(FUENTE))
   chk('planta: una cuenta personal se va a la gestión con replace', /if \(destino === 'gestion'\) \{ olvidarPlantaInstalada\(\); window\.location\.replace\('produccion-gestion\.html'\)/.test(FUENTE))

@@ -24,7 +24,7 @@ for (const ancho of [390, 1280]) {
     const errores = vigilarErrores(page);
     await page.clock.install();
     await page.setViewportSize({ width: ancho, height: 900 });
-    await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=stock`);
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=stock`);
     const texto = page.locator('#stock-actualizado-texto');
     await expect(texto).toHaveText('Actualizado recién');
     await expect(page.locator('#btn-actualizar-stock')).toBeVisible();
