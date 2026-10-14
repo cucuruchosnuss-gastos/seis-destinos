@@ -2030,19 +2030,43 @@
     // entra con los datos cargados y la persona confirma o corrige. Con fecha
     // de pago es diferido; sin ella, a la vista.
     function echequeDesdeOcr(pr, fotoId) {
-      const e = echequeVacio()
-      e.banco_codigo = pr?.banco_codigo ?? ''
-      e.numero = pr?.numero ?? ''
-      e.sucursal_codigo = pr?.sucursal_codigo ?? ''
-      e.codigo_postal = pr?.codigo_postal ?? ''
-      e.cuenta = pr?.cuenta ?? ''
-      e.fecha_emision = pr?.fecha_emision ?? ''
-      e.fecha_pago = pr?.fecha_pago ?? ''
-      e.tipo = e.fecha_pago ? 'diferido' : 'comun'
-      e.importe = typeof pr?.importe === 'number' && Number.isFinite(pr.importe) ? pr.importe : ''
-      e.emisor = pr?.emisor ?? ''
-      e.cuit_emisor = pr?.cuit_emisor ?? ''
-      e.foto_id = fotoId ?? null
+      return completarEcheque(Object.assign(echequeVacio(), { foto_id: fotoId ?? null }), pr)
+    }
+
+    // Lo que la persona ESCRIBIÓ en una tarjeta de e-cheque (y no borró) es
+    // suyo: el lector no lo pisa. Un campo escrito y vaciado se completa.
+    // `escritos` lo anota actualizarEcheck().
+    function escritoPorPersona(e, campo) {
+      if (!(e?.escritos ?? []).includes(campo)) return false
+      return campo === 'tipo' || String(e[campo] ?? '').trim() !== ''
+    }
+
+    // La tarjeta vacía que deja "Cargar a mano", sin comprobante: la que usa
+    // el comprobante que se sube después. Una con algún dato NO: puede ser
+    // otro e-cheque, y mezclarlos sería peor que tener una tarjeta de más.
+    function echequeSinDatos(e) {
+      return !e.foto_id && !e.ocr_propuesto &&
+        ['banco_codigo', 'numero', 'emisor', 'cuit_emisor', 'fecha_pago', 'importe'].every(c => String(e[c] ?? '').trim() === '') &&
+        !escritoPorPersona(e, 'fecha_emision')
+    }
+
+    // Completa una tarjeta con lo que propuso el lector, SOLO en lo que la
+    // persona no escribió (14/10/2026: con un PDF el lector tarda 20-40 s y en
+    // ese rato se escribe en la tarjeta). Sin fecha de emisión en el
+    // comprobante (un ECHEQ del Macro no la trae) queda la de hoy con la
+    // leyenda "No figura en el comprobante: revisala".
+    function completarEcheque(e, pr) {
+      for (const campo of ['banco_codigo', 'numero', 'sucursal_codigo', 'codigo_postal', 'cuenta', 'emisor', 'cuit_emisor']) {
+        if (!escritoPorPersona(e, campo)) e[campo] = pr?.[campo] ?? ''
+      }
+      if (!escritoPorPersona(e, 'fecha_pago') && !(escritoPorPersona(e, 'tipo') && e.tipo === 'comun')) e.fecha_pago = pr?.fecha_pago ?? ''
+      if (!escritoPorPersona(e, 'tipo'))
+        e.tipo = e.fecha_pago ? 'diferido' : 'comun'
+      if (!escritoPorPersona(e, 'importe')) e.importe = typeof pr?.importe === 'number' && Number.isFinite(pr.importe) ? pr.importe : ''
+      if (!escritoPorPersona(e, 'fecha_emision')) {
+        e.fecha_emision = pr?.fecha_emision || hoyArgentina()
+        e.fechaEmisionNoFigura = !pr?.fecha_emision
+      }
       e.ocr_propuesto = pr ?? null
       return e
     }
@@ -2103,8 +2127,12 @@
       const pr = e?.ocr_propuesto
       if (!pr) return 'manual'
       const a = camposEcheque(e)
+      // La fecha de hoy que puso el sistema porque el comprobante no la traía
+      // (y nadie cambió) no es una corrección de la persona.
+      const fechaIgual = (pr.fecha_emision ?? null) === a.fecha_emision ||
+        (!pr.fecha_emision && e.fechaEmisionNoFigura === true)
       const igual = (pr.banco_codigo ?? null) === a.banco_codigo && (pr.numero ?? null) === a.numero &&
-        (pr.fecha_emision ?? null) === a.fecha_emision && (pr.fecha_pago ?? null) === a.fecha_pago &&
+        fechaIgual && (pr.fecha_pago ?? null) === a.fecha_pago &&
         Number(pr.importe ?? NaN) === Number(a.importe ?? NaN) &&
         (pr.emisor ?? null) === a.emisor && (pr.cuit_emisor ?? null) === a.cuit_emisor
       return igual ? 'ocr' : 'ocr_corregido'
@@ -2473,7 +2501,13 @@
       const lista = Array.isArray(propuestos) ? propuestos : []
       if (tipo === 'echeque') {
         if (!f.echecks) f.echecks = []
-        if (lista.length) lista.forEach(pr => f.echecks.push(echequeDesdeOcr(pr, foto.id)))
+        // La tarjeta que se abrió al subir este comprobante (y que la persona
+        // pudo ir llenando mientras leía): se completa ESA, no se agrega otra.
+        const esperando = f.echecks.find(e => e.foto_id === foto.id && !e.ocr_propuesto)
+        if (esperando) {
+          if (lista.length) completarEcheque(esperando, lista[0])
+          lista.slice(1).forEach(pr => f.echecks.push(echequeDesdeOcr(pr, foto.id)))
+        } else if (lista.length) lista.forEach(pr => f.echecks.push(echequeDesdeOcr(pr, foto.id)))
         else f.echecks.push(Object.assign(echequeVacio(), { foto_id: foto.id }))
       } else if (tipo === 'transferencia') {
         if (!f.transferencias) f.transferencias = []
@@ -2515,6 +2549,29 @@
         await guardarBorrador()
         return true
       }
+    }
+
+    // Al subir el comprobante de un e-cheque su tarjeta aparece EN EL MOMENTO
+    // (14/10/2026): la vacía que ya estaba abierta ("Cargar a mano") o una
+    // nueva. Ahí dice "Leyendo el comprobante…", se puede ir escribiendo, y
+    // cuando el lector responde se completa ESA tarjeta (agregarPropuestos).
+    function tarjetaParaComprobante(f, foto) {
+      if (tipoFoto(foto) !== 'echeque') return null
+      if (!f.echecks) f.echecks = []
+      let e = f.echecks.find(echequeSinDatos)
+      if (e) e.foto_id = foto.id
+      else { e = Object.assign(echequeVacio(), { foto_id: foto.id }); f.echecks.push(e) }
+      return e
+    }
+
+    // Lo que dice la tarjeta de un e-cheque mientras su comprobante se sube o
+    // se lee. Leído (o una tarjeta sin comprobante), nada.
+    function textoLecturaEcheque(e) {
+      const foto = e?.foto_id ? (estado.form?.fotos ?? []).find(x => x.id === e.foto_id) : null
+      if (!foto || foto.leida || e.ocr_propuesto) return ''
+      if (foto.enCurso && foto.fase === 'subiendo') return 'Subiendo el comprobante…'
+      if (!navigator.onLine || foto.errorRed) return 'Sin señal: el comprobante se lee solo cuando vuelva.'
+      return 'Leyendo el comprobante… Podés ir escribiendo: lo que escribas no se pisa.'
     }
 
     function htmlAvisoComprobante(foto, i) {
@@ -2567,6 +2624,13 @@
           img.addEventListener('click', () => abrirVisor(foto, 'Comprobante'))
         })
       }
+      // El aviso de lectura de cada tarjeta de e-cheque, EN EL LUGAR: repintar
+      // la tarjeta le sacaría el foco a quien está escribiendo en ella.
+      ;(document.querySelectorAll?.('[data-echeck-leyendo]') ?? []).forEach(linea => {
+        const texto = textoLecturaEcheque((f.echecks ?? []).find(e => e.id === linea.dataset?.echeckLeyendo))
+        linea.hidden = !texto
+        linea.textContent = texto
+      })
     }
 
     // Los comprobantes de e-cheques y transferencias que ninguna tarjeta usa
@@ -2669,6 +2733,7 @@
       const errores = e.tocado ? erroresDeEcheque(e) : []
       const origen = textoOrigenComprobante(origenDatosEcheque(e))
       const avisoCuitE = avisoCuit(e.cuit_emisor)
+      const leyendo = textoLecturaEcheque(e)
       const cabecera = `
           <div class="cob-cheque__cabecera">
             <div class="cob-cheque__resumen">
@@ -2689,6 +2754,7 @@
         <div class="cob-cheque cob-echeck${errores.length ? ' cob-cheque--error' : ''}" data-echeck="${escCob(e.id)}">${cabecera}
           <div class="cob-cheque__cuerpo">
             <div class="cob-campo__ayuda" data-echeck-origen="${escCob(e.id)}"${origen ? '' : ' hidden'}>${escCob(origen)}</div>
+            <div class="cob-aviso" data-echeck-leyendo="${escCob(e.id)}"${leyendo ? '' : ' hidden'}>${escCob(leyendo)}</div>
             ${e.foto_id ? `<div class="cob-acciones" style="margin-top:0">${htmlBotonComprobante(e.foto_id)}</div>` : ''}
             <div class="cob-campo">
               <label>Banco (los 3 números del código)</label>
@@ -2717,6 +2783,7 @@
             <div class="cob-campo">
               <label>Fecha de emisión</label>
               <input type="date" data-echeck-id="${escCob(e.id)}" data-echeck-campo="fecha_emision" value="${escCob(e.fecha_emision)}">
+              <div class="cob-campo__ayuda" data-echeck-aviso-fecha="${escCob(e.id)}"${e.fechaEmisionNoFigura ? '' : ' hidden'}>No figura en el comprobante: revisala</div>
             </div>
             <div class="cob-campo" ${e.tipo === 'diferido' ? '' : 'hidden'}>
               <label>Fecha de pago</label>
@@ -2810,6 +2877,12 @@
       const admin = puedeProcesar()
       const echecks = f.echecks ?? []
       const transf = f.transferencias ?? []
+      // El campo donde se está escribiendo: el repintado lo reemplaza y el foco
+      // vuelve a él al final (la lectura de un PDF termina mientras se tipea).
+      const activo = document.activeElement
+      const foco = activo?.dataset?.echeckCampo
+        ? { tipo: 'echeck', id: activo.dataset.echeckId, campo: activo.dataset.echeckCampo }
+        : activo?.dataset?.transfCampo ? { tipo: 'transf', id: activo.dataset.transfId, campo: activo.dataset.transfCampo } : null
       pintarFormasPago()
       document.getElementById('cob-lista-echecks').innerHTML = echecks.map((e, i) => htmlEcheckForm(e, i, admin)).join('')
       document.getElementById('cob-lista-transferencias').innerHTML = transf.map((t, i) => htmlTransferenciaForm(t, i, admin)).join('')
@@ -2826,7 +2899,24 @@
           if (n !== null) ponerNumero(campoImporte, n)
         })
       }
+      restaurarFoco(foco)
       pintarResumenFormas()
+    }
+
+    // El foco al campo de la tarjeta repintada que corresponde (mismo id y
+    // mismo dato), con el cursor al final para seguir tipeando.
+    function restaurarFoco(foco) {
+      if (!foco) return
+      const clave = foco.tipo === 'echeck' ? 'echeckId' : 'transfId'
+      const campo = foco.tipo === 'echeck' ? 'echeckCampo' : 'transfCampo'
+      const el = [...(document.querySelectorAll?.(`[data-${foco.tipo}-campo]`) ?? [])]
+        .find(x => x.dataset?.[clave] === foco.id && x.dataset?.[campo] === foco.campo)
+      if (!el) return
+      el.focus?.()
+      try {
+        const n = String(el.value ?? '').length
+        el.setSelectionRange?.(n, n)
+      } catch { /* una fecha o un select no tienen cursor */ }
     }
 
     // Arriba de la cobranza: las cuatro formas con su etiqueta y el total.
@@ -2907,6 +2997,14 @@
       const e = echeckDelForm(id)
       if (!e || !puedeProcesar()) return
       e[campo] = valor
+      // Lo escrito es de la persona: el lector, si responde después, no lo pisa.
+      if (!Array.isArray(e.escritos)) e.escritos = []
+      if (!e.escritos.includes(campo)) e.escritos.push(campo)
+      if (campo === 'fecha_emision') {
+        e.fechaEmisionNoFigura = false
+        const aviso = [...(document.querySelectorAll?.('[data-echeck-aviso-fecha]') ?? [])].find(x => x.dataset?.echeckAvisoFecha === id)
+        if (aviso) aviso.hidden = true
+      }
       if (campo === 'tipo' && valor === 'comun') e.fecha_pago = ''
       e.tocado = true
       guardarBorrador()
@@ -5275,6 +5373,7 @@
           blob: listo.blob, subida: false, leida: false, ocr_crudo: null, ocr_modelo: null, error: null,
         }
         f.fotos.push(foto)
+        tarjetaParaComprobante(f, foto)
         if (!f.abiertas) f.abiertas = {}
         f.abiertas[tipo] = true
         await guardarBorrador()
