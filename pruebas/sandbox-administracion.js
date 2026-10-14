@@ -148,6 +148,13 @@ const FUNCIONES_BASE = [
   'htmlDetallePrestamoAd', 'pintarPrestamoAd', 'pedirAnularPago', 'cancelarAnularPago', 'pintarErrorPago', 'confirmarAnularPago',
   'pagadoPorCuota', 'cuotaConPagos', 'abrirEditarPrestamo', 'cancelarEditarPrestamo', 'agregarCuotaEdicion', 'quitarUltimaCuotaEdicion',
   'htmlEditarPrestamo', 'validarEditarPrestamo', 'parametrosEditarPrestamo', 'pintarErrorEditar', 'guardarEditarPrestamo', 'pintarSumaEdicion',
+  // Entre empresas (13/10/2026)
+  'entreVacio', 'datosEntre', 'nombreTipoEntre', 'nombreEmpresaEntre', 'centavosEntre', 'plataEntre', 'cantidadEntre', 'primerTramoEntre',
+  'normalizarEntre', 'sinPruebaEntre', 'claveParFechaEntre', 'traspasosConPrecio', 'yaTienePrecio', 'necesitaValor', 'filtrarEntre',
+  'valorEntre', 'direccionVaciaEntre', 'resumenEntre', 'ordenMonedasEntre', 'textoDireccionEntre', 'textosNetoEntre', 'htmlParEntre',
+  'htmlFilaEntre', 'entregadorasEntre', 'puedeLeerListasEntre', 'puedeValorizarProductoEntre', 'textoEstadoValorEntre',
+  'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'leerListasEntre', 'valorizarEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
+  'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
   ...FUNCIONES_CU,
 ]
 
@@ -179,6 +186,8 @@ const CONSTANTES_BASE = [
   'TIPOS_RETENCION', 'TIPOS_CON_JURISDICCION', 'ORIGENES_RETENCION', 'LARGO_MINIMO_MOTIVO_RET',
   // Préstamos (13/10/2026)
   'MONEDAS_PRESTAMO_AD', 'NOMBRE_MONEDA_AD', 'NOMBRE_MEDIO_PRESTAMO', 'MAX_CUOTAS_PRESTAMO', 'LARGO_MINIMO_MOTIVO_PAGO',
+  // Entre empresas (13/10/2026)
+  'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
 ]
 
 const PRELUDIO = `

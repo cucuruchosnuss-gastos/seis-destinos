@@ -57,7 +57,8 @@ async function pruebas() {
     const h = html(S, 'ad-pestanas')
     const ids = [...h.matchAll(/data-pestana="([^"]+)"/g)].map(m => m[1])
     // Retenciones y Préstamos (13/10/2026) van después de Cheques: también son plata de la empresa.
-    chk('un super_admin ve las doce (más Retenciones y Préstamos), en el orden del diseño', ids.join(',') === 'inicio,cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores', ids.join(','))
+    // "Entre empresas" (13/10/2026) va al final: no está en el diseño.
+    chk('un super_admin ve las once del diseño, más Retenciones, Préstamos y Entre empresas', ids.join(',') === 'inicio,cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores,entre', ids.join(','))
     chk('una cobranza abierta marca Cobranzas', /data-pestana="cobranzas" aria-current="page"/.test(h))
     chk('cobranzas y órdenes: burbuja bordó (urgente)', /data-pestana="cobranzas"[^>]*>Cobranzas<span class="ad-pestana__burbuja ad-pestana__burbuja--urgente">5</.test(h) &&
       /data-pestana="ordenes"[^>]*>Órdenes<span class="ad-pestana__burbuja ad-pestana__burbuja--urgente">4</.test(h))
@@ -86,7 +87,7 @@ async function pruebas() {
   {
     const S = nuevo({ rol: 'super_admin' })
     const orden = S.enOrdenDePestanas(S.SECCIONES).map(s => s.id).join(',')
-    chk('la portada va en el orden del diseño', orden === 'cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores', orden)
+    chk('la portada va en el orden del diseño', orden === 'cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores,entre', orden)
   }
   {
     const S = nuevo({ rol: 'super_admin' })
@@ -115,7 +116,7 @@ async function pruebas() {
     const tarjeta = id => (h.match(new RegExp(`<button[^>]*data-seccion="${id}"[\\s\\S]*?</button>`)) || [''])[0]
     chk('ningún texto de la base entra crudo', !h.includes('<img src=x'))
     const orden = [...h.matchAll(/data-seccion="([^"]+)"/g)].map(m => m[1]).join(',')
-    chk('la portada dibuja las tarjetas en el orden del diseño', orden === 'cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores', orden)
+    chk('la portada dibuja las tarjetas en el orden del diseño', orden === 'cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores,entre', orden)
     chk('cobranzas: el número grande en bordó, el total que cargaron y la más vieja', /numero--atencion">2</.test(tarjeta('cobranzas')) &&
       /\$ 640\.000 que cargaron los choferes/.test(tarjeta('cobranzas')) && /La más vieja: 26\/09\/2026 · Marcelo/.test(tarjeta('cobranzas')) && /Ir a asentar ›/.test(tarjeta('cobranzas')))
     chk('revisar: qué se llevó cada uno, escapado', /Los Forte &quot;&gt;&lt;img/.test(tarjeta('revisar')) && /14 cajas de Mini/.test(tarjeta('revisar')))
