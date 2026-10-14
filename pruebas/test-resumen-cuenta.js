@@ -24,7 +24,7 @@ const fs = require('fs')
 const path = require('path')
 const { arnes } = require('./circuito-comun')
 const { cargarNumeros } = require('./numeros-comun')
-const { extraerFn } = require('./extraer')
+const { extraerFn, extraerConst } = require('./extraer')
 
 const RAIZ = path.join(__dirname, '..')
 const RUTA = process.env.ARCHIVO_TEST || path.join(RAIZ, 'js', 'resumen-cuenta.js')
@@ -265,9 +265,14 @@ chk('CC: lee TODOS los movimientos del proveedor (sin fechas) y de a 1000', /asy
 chk('CC: saca la fábrica de pruebas', /unidadVisible: id => !id \|\| visibles\.has\(id\)/.test(cc) && /const visibles = new Set\(unidadesParaElegir\(/.test(cc))
 
 // Cómo nombra cada movimiento Administración.
-const fnAdm = [extraerFn(adm, 'detalleMovimiento'), extraerFn(adm, 'describirClienteResumen')].join('\n')
+// (13/10/2026) detalleMovimiento pasa la retención por detalleRetencion(): el
+// tipo legible, igual en la cuenta y en el resumen.
+const fnAdm = [extraerFn(adm, 'detalleMovimiento'), extraerFn(adm, 'describirClienteResumen'), extraerFn(adm, 'detalleRetencion'), extraerFn(adm, 'tipoRetencion'),
+  extraerConst(adm, 'TIPOS_RETENCION').replace(/^\s*const /, 'var ')].join('\n')
 const describirAdm = new Function('ETIQUETA_RESUMEN_CLIENTE', 'ETIQUETA_MOVIMIENTO', fnAdm + '\nreturn describirClienteResumen')(
-  { retiro: 'Retiro', cobranza: 'Cobranza', compensacion: 'Compensación' }, { retiro: 'Retiro', cobranza: 'Cobranza' })
+  { retiro: 'Retiro', cobranza: 'Cobranza', compensacion: 'Compensación', retencion: 'Retención' }, { retiro: 'Retiro', cobranza: 'Cobranza', retencion: 'Retención' })
+d = describirAdm({ tipo: 'retencion', detalle: 'Retención percepcion_iibb · cert. 0001-00012345' }, new Map())
+chk('Adm: una retención dice su tipo legible y el certificado', d.comprobante === 'Retención' && d.detalle === 'Retención Percepción de IIBB · cert. 0001-00012345', JSON.stringify(d))
 d = describirAdm({ tipo: 'retiro', orden_retiro_id: 'o1', detalle: 'Orden de retiro N° 12' }, new Map([['o1', 'N-0012']]))
 chk('Adm: un retiro es "Retiro <código>"', d.comprobante === 'Retiro N-0012' && d.detalle === 'Orden de retiro N-0012', JSON.stringify(d))
 d = describirAdm({ tipo: 'compensacion', detalle: 'Con su cuenta de proveedor' }, new Map())

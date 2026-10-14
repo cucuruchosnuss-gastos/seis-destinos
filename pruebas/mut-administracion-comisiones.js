@@ -64,7 +64,7 @@ correrMutaciones({
     // La hoja: la comisión es interna
     { nombre: 'la hoja suma la comisión', de: "        total: o.estado_valorizacion === 'valorizada' ? o.total : null,", a: "        total: o.estado_valorizacion === 'valorizada' ? (totalConComision(o.total, o.comision_importe) ?? o.total) : null," },
     // La cuenta del cliente
-    { nombre: 'sin la etiqueta Comisión', de: "      comision: 'Comisión',\n", a: '' },
+    { nombre: 'sin la etiqueta Comisión', de: "      comision: 'Comisión', retencion: 'Retención',\n", a: "      retencion: 'Retención',\n" },
     { nombre: 'el número de la orden en la comisión', de: ".replace(/ · Comisión orden N°\\s*\\d+/, ' · Comisión')", a: '' },
     { nombre: 'el código sale dos veces', de: "base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-\\d+)/, '')", a: "base.replace(/^Orden de retiro N°\\s*\\d+/, '')" },
     // La ficha

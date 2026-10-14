@@ -73,7 +73,7 @@ esperas.push((async () => {
   chk('otras tareas de gastos no alcanzan', !T.seccionesVisibles().some(s => s.id === 'prestamos'))
   const U = nuevo({ rol: 'super_admin', conPermiso: false })
   chk('super_admin la ve por el bypass', U.seccionesVisibles().some(s => s.id === 'prestamos'))
-  chk('la pestaña va después de Cheques', /\['cheques', 'Cheques'\], \['prestamos', 'Préstamos'\]/.test(src))
+  chk('la pestaña va después de Cheques', /\['cheques', 'Cheques'\], (\['retenciones', 'Retenciones'\], )?\['prestamos', 'Préstamos'\]/.test(src))
   chk('Administración lee las tareas de gastos', /\.in\('modulo', \[[^\]]*'gastos'\]\)/.test(src))
 
   const r = S.resumenPrestamos(PRESTAMOS, '2026-10-13')
