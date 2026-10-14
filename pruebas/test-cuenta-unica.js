@@ -192,6 +192,11 @@ const FIFO = [
   // La moneda de la base va en las dos columnas y en el neto.
   const fila = S.htmlFilaCu(fx[0])
   chk('htmlFilaCu: la moneda escapada en las TRES columnas', (fila.match(/&lt;b data-xss=&quot;moneda&quot;&gt;/g) || []).length === 3 && !/<b data-xss/.test(fila))
+  // Los ids de la orden y de la cobranza (14/10/2026: data-orden-retiro /
+  // data-cobranza-id, siempre; con link o sin link).
+  const ids = { ...fx[0], orden_retiro_id: marca('orden_retiro_id'), cobranza_id: marca('cobranza_id') }
+  chequearMarcas(chk, 'htmlFilaCu (ids, sin link)', S.htmlFilaCu(ids), ['orden_retiro_id', 'cobranza_id'])
+  chequearMarcas(chk, 'htmlFilaCu (ids, con link)', S.htmlFilaCu(ids, { abreOrden: true, abreCobranza: true }), ['orden_retiro_id', 'cobranza_id'])
   chequearMarcas(chk, 'htmlCuentaUnica (error)', S.htmlCuentaUnica({ ...cu, error: marca('error-cuenta') }), ['error-cuenta'])
   const hx = S.htmlCuentaUnica({ ...cu, filas: fx, filtro: marca('etiqueta') }, { puedeCompensar: true })
   chequearMarcas(chk, 'htmlCuentaUnica', hx, ['etiqueta', 'detalle', 'moneda'])

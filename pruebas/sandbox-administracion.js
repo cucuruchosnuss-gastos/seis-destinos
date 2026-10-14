@@ -15,6 +15,9 @@ const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
   'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles', 'moduloVisible',
   'leerPreferencia', 'guardarPreferencia', 'mostrarVista', 'mostrarCheques',
+  // La pila de navegación: "← Volver" y el atrás del navegador (14/10/2026)
+  'scrollActual', 'apilarNav', 'pintarVolverPila', 'abrirOrdenDesde', 'abrirCobranzaDesdeCuenta', 'volverPila',
+  'alVolverNavegador', 'desapilarNav', 'refrescarAlVolver', 'puedeVerLaOrden', 'flechaVisible', 'volverAOrdenes',
   // Lista | detalle en la compu (05/10/2026)
   'ladoALado', 'aplicarListaDetalle', 'marcarElegidosLista',
   'htmlLogo', 'empresaSegunBarra', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial', 'alCambiarLaBarra',
@@ -161,7 +164,7 @@ const FUNCIONES_BASE = [
 const CONSTANTES_BASE = [
   // MODULOS (js/modulos.js) antes de LINKS, que se arma con él.
   'MODULOS', 'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'CLAVES_ACCESOS', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
-  'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE', 'MODOS_COMISION',
+  'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE', 'MODOS_COMISION', 'PILA_NAV',
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
@@ -240,6 +243,7 @@ const PRELUDIO = `
   var turnoRetenciones = 0
   var turnoPrestamos = 0
   var turnoPrestamo = 0
+  var turnoVolver = 0
   // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
   var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }

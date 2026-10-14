@@ -9,7 +9,7 @@ const FUNCIONES_CU = [
   'repartoFifoCu', 'aplicadoCu', 'textoDespues', 'validarCompensacion', 'parametrosCompensar',
   'htmlClasificacion', 'textoVinculado',
   'estadoCuentaUnica', 'parametrosCuentaUnica', 'cargarCuentaUnica', 'fechaCu', 'columnaCu',
-  'htmlFilaCu', 'htmlCompensar', 'htmlFacturasCu', 'htmlResumenCu', 'htmlCuentaUnica',
+  'linkFilaCu', 'htmlFilaCu', 'htmlCompensar', 'htmlFacturasCu', 'htmlResumenCu', 'htmlCuentaUnica',
   'pintarCuentaUnica', 'enlazarCamposCu', 'enlazarFacturasCu', 'repintarParteCu',
   'abrirCompensar', 'cerrarCompensar', 'confirmarCompensacion', 'alTocarCuentaUnica', 'alCambiarCuentaUnica',
 ]
