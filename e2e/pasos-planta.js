@@ -93,7 +93,11 @@ const PASOS_PLANTA = [
     await page.locator('#pr-parada-hora [data-parada-hora="fin"]').click()
     for (const d of '1600') await page.locator(`#pr-hora-ventana [data-hv-tecla="${d}"]`).click()
     await page.locator('#pr-hora-ventana-guardar').click()
-    await expect(page.locator('#pr-parada-hora [data-parada-lote-nuevo]')).toBeVisible()
+    // Con HASTA aparece "Volvió con lote nuevo" o, en los últimos 30 minutos
+    // del turno o después (14/10/2026; en la maqueta el turno Mañana es hasta
+    // las 15:00 y HASTA es 16:00), "Cerrar planilla del turno". En la fábrica
+    // de pruebas no hay horario cargado: la casilla.
+    await expect(page.locator('#pr-parada-hora').locator('[data-parada-lote-nuevo], [data-parada-cerrar-planilla]')).toBeVisible()
     await expect(page.locator('#pr-parada-resumen')).toBeVisible()
   }],
   ['cerrar-planilla', async (page) => {

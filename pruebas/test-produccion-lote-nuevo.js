@@ -31,11 +31,27 @@
 
 process.env.TZ = 'UTC'
 const path = require('path')
-const { arnes } = require('./circuito-comun')
+const { arnes, leer } = require('./circuito-comun')
 const { construirProduccion } = require('./sandbox-produccion')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
+// Primero: el runner de mutaciones confirma por esta línea que se leyó el mutado.
+const FUENTE = leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
+
+// ── Fuente ─────────────────────────────────────────────────────────────
+chk('la ventana de "Anular la planilla": un diálogo con el motivo y sus dos botones',
+  /id="pr-anular-planilla" hidden role="dialog" aria-modal="true"/.test(FUENTE) && /id="pr-anular-planilla-motivo" class="pr-input"/.test(FUENTE) &&
+  /id="pr-anular-planilla-cancelar">Cancelar</.test(FUENTE) && /id="pr-anular-planilla-confirmar">Anular la planilla</.test(FUENTE))
+chk('el botón "No" del cartel corre su acción; afuera y Escape solo lo cierran',
+  /getElementById\('pr-confirma-no'\)\.addEventListener\('click', \(\) => responderConfirma\(false\)\)/.test(FUENTE) &&
+  /if \(ev\.target\.id === 'pr-confirma'\) responderConfirma\(false, true\)/.test(FUENTE) &&
+  /ev\.key === 'Escape' && estado\.confirma\) responderConfirma\(false, true\)/.test(FUENTE))
+chk('los botones nuevos están escuchados', /closest\('\[data-hv-cerrar-planilla\]'\)\) return confirmarHoraVentana\(new Date\(\), \{ luegoCerrar: true \}\)/.test(FUENTE) &&
+  /closest\('\[data-parada-cerrar-planilla\]'\)\) return guardarParadaNueva\(new Date\(\), \{ luegoCerrar: true \}\)/.test(FUENTE) &&
+  /closest\('\[data-anular-error\]'\)\) abrirAnularPorError\(\)/.test(FUENTE) &&
+  /getElementById\('pr-anular-planilla-confirmar'\)\.addEventListener\('click', confirmarAnularPorError\)/.test(FUENTE))
+chk('la planta importa leerNumeroAr de js/utils.js', /formatearNumeroAr, leerNumeroAr,\n\s*cargarFabricaDePruebas/.test(FUENTE))
 
 // Lo nuevo de este pedido (también está en la lista del sandbox; acá por si
 // una suite vieja de la lista no lo trae).
@@ -193,7 +209,8 @@ const CARTEL = 'Se va a CERRAR el lote 6241 y se va a ABRIR el lote nuevo en Má
   chk('con el cierre en la cola: no', S.puedeAnularPorError(P({ cierreCola: { estado: 'pendiente' } }), en(10), []) === false)
   chk('con algo de esta planilla esperando en la cola: no', S.puedeAnularPorError(P(), en(10), [{ grupo: 't1', estado: 'pendiente' }]) === false)
   chk('… lo de OTRA planilla, o lo ya enviado, no cuenta', S.puedeAnularPorError(P(), en(10), [{ grupo: 't9', estado: 'pendiente' }, { grupo: 't1', estado: 'enviado' }]) === true)
-  chk('sin hora de apertura: no', S.puedeAnularPorError(P({ abierto_en: null }), en(10), []) === false)
+  chk('sin hora de apertura (o una que no es fecha): no', S.puedeAnularPorError(P({ abierto_en: null }), en(10), []) === false &&
+    S.puedeAnularPorError(P({ abierto_en: undefined }), en(10), []) === false && S.puedeAnularPorError(P({ abierto_en: 'ayer' }), en(10), []) === false)
   chk('sin planilla: no', S.puedeAnularPorError(null, en(10), []) === false)
   S.estado.colaLista = []
   chk('el botón: «Anular, se abrió por error», solo cuando corresponde', /data-anular-error="1">Anular, se abrió por error</.test(S.htmlAnularPorError(P(), en(10))) &&
@@ -218,12 +235,12 @@ esperas.push((async () => {
     chk('el cartel, con los datos de la planilla: lote, máquina, turno y encargado', el(S, 'pr-confirma-texto').textContent === CARTEL, el(S, 'pr-confirma-texto').textContent)
     chk('… y los dos botones grandes', el(S, 'pr-confirma-si').textContent === 'Sí, abrir lote nuevo' && el(S, 'pr-confirma-no').textContent === 'No, solo terminar la parada' &&
       S.estado.confirma?.grande === true)
-    S.responderConfirma(false)
+    S.responderConfirma(false, true)
     await tic()
     chk('tocar afuera del cartel no manda nada (ni lote nuevo ni terminar)', rpcs(S, 'relanzar_con_lote_nuevo').length === 0 && rpcs(S, 'editar_parada').length === 0 &&
       el(S, 'pr-confirma').hidden === true && el(S, 'pr-hora-ventana').hidden === false)
     await S.confirmarHoraVentana(AHORA)
-    S.responderConfirma(false, true)
+    S.responderConfirma(false)
     await tic()
     chk('"No, solo terminar la parada": editar_parada a las 14:00 y NADA de lote nuevo', rpcs(S, 'relanzar_con_lote_nuevo').length === 0 &&
       JSON.stringify(rpcs(S, 'editar_parada')[0]?.[1]) === '{"p_parada_id":"pa-7","p_motivo":"Limpieza de planchas","p_inicio":"2026-10-14T13:00:00-03:00","p_fin":"2026-10-14T14:00:00-03:00"}',
@@ -275,7 +292,7 @@ esperas.push((async () => {
     await escribirHora(N, 'hasta', '1400', AHORA)
     N.alternarLoteNuevoParada(AHORA)
     await N.guardarParadaNueva(AHORA)
-    N.responderConfirma(false, true)
+    N.responderConfirma(false)
     await tic(); await tic()
     chk('"No, solo terminar la parada": registrar_parada de 13:00 a 14:00 y ningún relanzar', rpcs(N, 'relanzar_con_lote_nuevo').length === 0 &&
       JSON.stringify(rpcs(N, 'registrar_parada')[0]?.[1]) === '{"p_turno_id":"t1","p_motivo":"Limpieza de planchas","p_inicio":"2026-10-14T13:00:00-03:00","p_fin":"2026-10-14T14:00:00-03:00"}',
@@ -303,7 +320,8 @@ esperas.push((async () => {
     await tic()
     chk('marcado a la fuerza, al mandar tampoco relanza: lo dice', rpcs(S, 'relanzar_con_lote_nuevo').length === 0 && rpcs(S, 'editar_parada').length === 0 &&
       /El turno termina a las 15:00/.test(el(S, 'pr-hora-ventana-error').textContent), el(S, 'pr-hora-ventana-error').textContent)
-    S.estado.horaForm.loteNuevo = false
+    // "Cerrar planilla del turno" nunca relanza, aunque quedara marcado.
+    S.estado.horaForm.loteNuevo = true
     S.estado.horaForm.errorBase = ''
     await S.confirmarHoraVentana(AHORA, { luegoCerrar: true })
     await tic(); await tic()
@@ -365,6 +383,27 @@ esperas.push((async () => {
     await escribirHora(A, 'desde', '1300', ar('14:29'))
     await escribirHora(A, 'hasta', '1429', ar('14:29'))
     chk('Paró hasta 14:29 a las 14:29: la casilla sigue', /data-parada-lote-nuevo="1"/.test(html(A, 'pr-parada-hora')))
+    // Marcada con HASTA 14:00 a las 14:10, y después HASTA pasa a 14:35: se desmarca.
+    const D = armar()
+    await D.abrirPlanilla('t1', 'pr-paradas')
+    await D.asegurarMotivosParada()
+    D.elegirMotivoParada('mo-limp')
+    await escribirHora(D, 'desde', '1300', ar('14:10'))
+    await escribirHora(D, 'hasta', '1400', ar('14:10'))
+    D.alternarLoteNuevoParada(ar('14:10'))
+    chk('marcada a las 14:10 con HASTA 14:00', D.estado.paradaNueva.loteNuevo === true)
+    // Todavía a las 14:10, HASTA 14:35 (futura: no se puede mandar) ya cae en
+    // los últimos 30 minutos: la regla mira la hora escrita igual.
+    await escribirHora(D, 'hasta', '1435', ar('14:10'))
+    chk('a las 14:10, HASTA 14:35 (futura) ya no ofrece el lote nuevo', D.estado.paradaNueva.loteNuevo === false &&
+      /data-parada-cerrar-planilla/.test(html(D, 'pr-parada-hora')) && !/data-parada-lote-nuevo/.test(html(D, 'pr-parada-hora')))
+    await escribirHora(D, 'hasta', '1435', ar('14:40'))
+    chk('… HASTA pasa a 14:35 (son 14:40): se desmarca sola y queda "Cerrar planilla del turno"', D.estado.paradaNueva.loteNuevo === false &&
+      /data-parada-cerrar-planilla/.test(html(D, 'pr-parada-hora')))
+    await D.guardarParadaNueva(ar('14:40'))
+    await tic()
+    chk('… y Guardar la manda terminada, sin cartel ni lote nuevo', D.estado.confirma == null && rpcs(D, 'relanzar_con_lote_nuevo').length === 0 &&
+      rpcs(D, 'registrar_parada')[0]?.[1]?.p_fin === '2026-10-14T14:35:00-03:00')
   }
 
   // ═══ 3 · "ANULAR, SE ABRIÓ POR ERROR" en la planilla ═══════════════════
@@ -435,12 +474,12 @@ esperas.push((async () => {
     chk('… cerrar_turno con p_scrap_kg 6.7', rpcs(S, 'cerrar_turno')[0]?.[1]?.p_scrap_kg === 6.7, JSON.stringify(rpcs(S, 'cerrar_turno')[0]?.[1]))
     const N = await cierre(6700)
     N.intentarCerrar()
-    N.responderConfirma(false, true)
+    N.responderConfirma(false)
     await tic()
     chk('"No, fueron 6.700 kg": se manda igual (la base dice si es demasiado)', rpcs(N, 'cerrar_turno')[0]?.[1]?.p_scrap_kg === 6700, JSON.stringify(rpcs(N, 'cerrar_turno')))
     const A = await cierre(6700)
     A.intentarCerrar()
-    A.responderConfirma(false)
+    A.responderConfirma(false, true)
     await tic()
     chk('tocar afuera: ni corrige ni manda', rpcs(A, 'cerrar_turno').length === 0 && el(A, 'pr-cierre-scrap').value === '6.700')
     const D = await cierre(6.7)
@@ -454,14 +493,14 @@ esperas.push((async () => {
     await tic()
     chk('… "Corregir el número" no manda nada', rpcs(M, 'cerrar_turno').length === 0 && M.estado.confirma == null)
     M.intentarCerrar()
-    M.responderConfirma(false, true)
+    M.responderConfirma(false)
     await tic()
     chk('… "Sí, fueron 9.999.999 kg" lo manda (y la base lo rechaza con su mensaje)', rpcs(M, 'cerrar_turno')[0]?.[1]?.p_scrap_kg === 9999999)
     const MSG = 'El scrap de 9999999 kg es demasiado para un turno. Revisá el número: si fueron, por ejemplo, 6,7 kg, escribí 6,7 (con coma, sin punto de miles).'
     const B = await cierre(9999999)
     B.__setRpc(async (n) => n === 'cerrar_turno' ? { data: null, error: { message: MSG } } : { data: null, error: null })
     B.intentarCerrar()
-    B.responderConfirma(false, true)
+    B.responderConfirma(false)
     await tic(); await tic()
     chk('el rechazo de la base, TAL CUAL', B.estado.cierre?.errorBase === MSG, B.estado.cierre?.errorBase)
   }

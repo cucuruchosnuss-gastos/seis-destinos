@@ -436,6 +436,12 @@ const NUEVAS_PLANTA = [
   'sumarCajas', 'recordarCajas', 'sumarCajasAgregar', 'deshacerCajasAgregar', 'borrarCajasAgregar',
   // Un solo "sin cono" (10/10/2026)
   'faltaConoAgregar',
+  // El lote nuevo por error (14/10/2026): el cartel, el fin del turno,
+  // "Anular, se abrió por error" y el scrap con punto de miles.
+  'finTurnoPlanillaMs', 'loteNuevoSegunHorario', 'textoFinDeTurno', 'textoConfirmaLoteNuevo', 'pedirConfirmaLoteNuevo',
+  'irAlCierreDe', 'finParadaFormulario', 'loteNuevoFormulario', 'loteNuevoVentana', 'puedeAnularPorError', 'htmlAnularPorError',
+  'abrirAnularPorError', 'cerrarAnularPorError', 'pintarAnularPorError', 'confirmarAnularPorError', 'avisoScrapMiles',
+  'preguntaScrapMiles', 'preguntarScrapMiles',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -464,7 +470,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'CLAVE_SESION_SB', 'CADA_PRECARGA_MS', 'CADA_REVISAR_VERSION_MS', 'MS_TODO_ENVIADO',
   'MENSAJE_ABRIR_SIN_RED', 'MENSAJE_PIN_SIN_RED', 'MENSAJE_LOTE_NUEVO_SIN_RED', 'MENSAJE_SIN_RED',
   // Un solo "sin cono" (10/10/2026)
-  'TEXTO_FALTA_CONO', 'TEXTO_ELEGI_CONO']
+  'TEXTO_FALTA_CONO', 'TEXTO_ELEGI_CONO',
+  // El lote nuevo por error (14/10/2026)
+  'MINUTOS_SIN_LOTE_NUEVO', 'MINUTOS_ANULAR_POR_ERROR']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
