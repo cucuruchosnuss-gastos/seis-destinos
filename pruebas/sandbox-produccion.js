@@ -201,6 +201,12 @@ const SOLO_GESTION = [
 ]
 // Nuevas de la gestión (se suman a su lista).
 const NUEVAS_GESTION = [
+  // El ingreso de producto terminado (14/10/2026)
+  'cargarPermisoIngreso', 'puedeIngresarEn', 'unidadesDeIngreso', 'pintarBotonIngreso', 'nuevoRenglonIngreso', 'nuevoIngreso',
+  'elegirOrigenIngreso', 'origenParaBase', 'presentacionDe', 'itemsParaBase', 'faltaIngreso', 'parametrosIngreso',
+  'lotesVigentesAGuardar', 'textoListoIngreso', 'proveedoresQueCoinciden', 'leerCatalogoIngreso', 'leerProveedoresIngreso',
+  'abrirIngreso', 'cargarCatalogoIngreso', 'opcionesIngreso', 'htmlRenglonIngreso', 'pintarProveedoresIngreso', 'pintarIngreso',
+  'renglonIngreso', 'alEscribirIngreso', 'alCambiarIngreso', 'alTocarIngreso', 'mostrarErrorIngreso', 'guardarIngreso', 'conectarIngreso',
   // Parte 2 (25/09/2026): la unidad de la gestión y los indicadores
   'unidadesDeGestion', 'unidadSegunBarra', 'textoSinProduccionEnBarra', 'sinUnidadPorBarra', 'unidadGestionInicial', 'pintarSelectorGestion', 'elegirUnidadGestion', 'alCambiarLaBarra',
   'numeroInd', 'enteroInd', 'diferenciaInd', 'horasMinutosInd', 'porcentajeScrapInd',
@@ -274,7 +280,7 @@ const NUEVAS_GESTION = [
   // Un solo "sin cono" (10/10/2026)
   'nombreConoStock',
 ]
-const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
+const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'TAREAS_INGRESO', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   // La tabla de producción (09/10/2026)
   'DIMENSIONES_TABLA', 'TURNOS_TABLA', 'MESES_TABLA', 'DIAS_TABLA', 'MAX_DIAS_TABLA', 'CLAVE_TABLA', 'INICIO_GESTION', 'VISTAS_DE_ENTRADA',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',

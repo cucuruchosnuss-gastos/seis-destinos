@@ -2508,6 +2508,31 @@
     @media (max-width: 1023.98px) {
       body .pr-gestion-unidad .pr-select, body .pc-unidad__select, body .pc-buscar__input { font-size: 16px; }
     }
+
+    /* ── Ingreso de producto terminado (14/10/2026). Los campos van en 16 px
+       (con menos, el celular agranda la pantalla al tocarlos). */
+    .pr-ing__abrir { width: 100%; min-height: 52px; font-size: 1.0625rem; margin-top: 0.75rem; }
+    .pr-ing .pr-input, .pr-ing .pr-select, .pr-ing .pr-textarea { font-size: 16px; min-height: 44px; width: 100%; box-sizing: border-box; }
+    .pr-ing__cabeza { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+    @media (min-width: 900px) { .pr-ing__cabeza { grid-template-columns: 1fr 1fr; } }
+    .pr-ing__origen { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .pr-ing__op { min-height: 48px; border-radius: 12px; border: 1px solid var(--color-borde-boton, #9A9287); background: var(--color-fondo); color: var(--color-texto); font: inherit; font-weight: 600; cursor: pointer; padding: 0.5rem; overflow-wrap: anywhere; }
+    .pr-ing__op[aria-pressed="true"] { background: var(--naranja-suave); border-color: var(--naranja); color: var(--naranja-oscuro); }
+    .pr-ing__elegido { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; min-height: 44px; }
+    .pr-ing__provs { display: flex; flex-direction: column; gap: 0.25rem; }
+    .pr-ing__prov { text-align: left; min-height: 44px; padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+    .pr-ing__renglones { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .pr-ing__renglon { border: 1px solid var(--color-borde); border-radius: 16px; background: var(--color-fondo); padding: 0.875rem 1rem; }
+    .pr-ing__renglon-cab { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .pr-ing__num { font-weight: 700; }
+    .pr-ing__grilla { display: grid; grid-template-columns: 1fr; gap: 0.625rem; }
+    @media (min-width: 900px) { .pr-ing__grilla { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .pr-ing__tilde { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.625rem; min-height: 44px; }
+    .pr-ing__tilde input { width: 22px; height: 22px; }
+    .pr-ing__obs { margin: 0.75rem 0; }
+    .pr-ing__pie { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem; }
+    .pr-ing__guardar { min-height: 52px; font-size: 1.0625rem; }
+    .pr-ing__error { margin: 0; padding: 0.5rem 0.75rem; border-radius: 10px; background: var(--bordo-suave); color: var(--bordo-oscuro); font-weight: 600; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2756,6 +2781,10 @@
             <h1 class="pr-titulo">Stock terminado</h1>
           </div>
           <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-stock-unidad" class="pr-select"></select></label>
+          <!-- Ingreso de producto terminado (14/10/2026): de un proveedor o de
+               otra fábrica. Solo con materia_prima:cargar o
+               stock:ajustar_inventario en alguna fábrica (lo decide la base). -->
+          <button type="button" class="pr-btn pr-btn--primario pr-ing__abrir" id="pr-stock-ingresar" hidden>Cargar ingreso</button>
         </div>
         <div id="pr-stock-aviso"></div>
         <div id="pr-stock-lista"></div>
@@ -2764,6 +2793,19 @@
         <!-- Los traspasos entre fábricas (30/09/2026): lo que se mandó a otra
              fábrica del grupo y lo que llegó de otra. -->
         <div id="pr-stock-traspasos"></div>
+      </section>
+
+      <!-- INGRESO DE PRODUCTO TERMINADO (14/10/2026). El formulario lo arma
+           pintarIngreso(); ver el bloque del mismo nombre en el script. -->
+      <section id="pr-ingreso" class="pr-of pr-ing" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-ing-volver">‹ Stock terminado</button>
+            <h1 class="pr-titulo">Cargar ingreso</h1>
+          </div>
+          <p class="pr-texto-suave">Cajas que entran de un proveedor o de otra fábrica del grupo.</p>
+        </div>
+        <div id="pr-ing-cuerpo"></div>
       </section>
 
     </main>
@@ -3006,7 +3048,7 @@
 
     // La gestión: todas sus pantallas son "de oficina". La tablet quedó en
     // produccion.html.
-    const VISTAS = ['pr-inicio', 'pr-config', 'pr-tabla', 'pr-historial', 'pr-stock']
+    const VISTAS = ['pr-inicio', 'pr-config', 'pr-tabla', 'pr-historial', 'pr-stock', 'pr-ingreso']
     function mostrarVista(id) {
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -3051,7 +3093,7 @@
     function seccionActual() {
       if (estado.vista === 'pr-config') return `config:${estado.config?.tab ?? ''}`
       if (estado.vista === 'pr-historial') return estado.historial?.estado === 'pendiente_completar' && estado.historial?.desdePendientes ? 'pendientes' : 'historial'
-      if (estado.vista === 'pr-stock') return 'stock'
+      if (estado.vista === 'pr-stock' || estado.vista === 'pr-ingreso') return 'stock'
       if (estado.vista === 'pr-tabla') return 'tabla'
       return 'inicio'
     }
@@ -9555,6 +9597,7 @@
       if (!unidades.length) return
       estado.stockUnidad = unidades.includes(estado.stockUnidad) ? estado.stockUnidad : unidadInicialOficina(unidades)
       pintarSelectorUnidad('pr-stock-unidad', unidades, estado.stockUnidad)
+      pintarBotonIngreso()
       mostrarVista('pr-stock')
       await cargarStockTerminado()
     }
@@ -9776,6 +9819,7 @@
     function conectarHistorial() {
       document.getElementById('pr-historial-volver').addEventListener('click', abrirMenu)
       document.getElementById('pr-stock-volver').addEventListener('click', alVolverDelStock)
+      conectarIngreso()
       document.getElementById('pr-historial-detalle-volver').addEventListener('click', () => {
         document.getElementById('pr-historial-detalle').hidden = true
         document.getElementById('pr-historial-listado').hidden = false
@@ -9828,6 +9872,444 @@
 
     // Sin permiso se dice y se vuelve al dashboard: quedarse en una pantalla
     // vacía no le dice a nadie por qué no ve nada.
+    // ═══════════════════════════════════════════════════════════════════════
+    // INGRESO DE PRODUCTO TERMINADO (14/10/2026, pedido del 14/10)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Cajas que entran de afuera: de un PROVEEDOR (Rodrigo con capelinas) o de
+    // OTRA FÁBRICA del grupo (Mengui → Dolce). Uno u otro, nunca los dos (la
+    // base lo exige igual). Una sola llamada a ingresar_producto_terminado con
+    // todos los renglones y un p_client_uuid por formulario: dos toques en
+    // Guardar no duplican. La base pide materia_prima:cargar O
+    // stock:ajustar_inventario en la fábrica que recibe (leído el 14/10/2026).
+    // El lote viene puesto con el vigente del producto en esa fábrica
+    // (producto_lote_vigente, que lee cualquiera); si se cambia, el tilde
+    // "Guardar como lote vigente" llama a guardar_lote_vigente después.
+
+    const TAREAS_INGRESO = ['materia_prima:cargar', 'stock:ajustar_inventario']
+
+    // estado.ingresoAlcances: Map 'modulo:tarea' → alcance; undefined = no se
+    // pudo leer (el botón no aparece: no se ofrece algo que no se sabe).
+    async function cargarPermisoIngreso() {
+      try {
+        const { data, error } = await supabase.from('empleado_tareas').select('modulo, tarea, alcance')
+          .eq('empleado_id', estado.miEmpleadoId).in('modulo', ['materia_prima', 'stock']).in('tarea', ['cargar', 'ajustar_inventario']).eq('habilitado', true)
+        if (error) throw error
+        estado.ingresoAlcances = new Map((data ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? {}]).filter(([k]) => TAREAS_INGRESO.includes(k)))
+      } catch (err) {
+        console.error('permiso de ingreso:', err)
+        estado.ingresoAlcances = undefined
+      }
+    }
+
+    // La misma regla que tiene_tarea_alcance(): super_admin siempre; con la
+    // tarea, {"todas": true} o la unidad en {"unidades": [...]}.
+    function puedeIngresarEn(unidadId) {
+      if (estado.miRolApp === 'super_admin') return true
+      if (!(estado.ingresoAlcances instanceof Map)) return false
+      for (const alcance of estado.ingresoAlcances.values()) {
+        if (alcance?.todas === true) return true
+        if (Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))) return true
+      }
+      return false
+    }
+
+    function unidadesDeIngreso() {
+      return [...estado.unidades.keys()].filter(id => puedeIngresarEn(id))
+    }
+
+    function pintarBotonIngreso() {
+      const btn = document.getElementById('pr-stock-ingresar')
+      if (btn) btn.hidden = unidadesDeIngreso().length === 0
+    }
+
+    function nuevoRenglonIngreso() {
+      estado.ingresoSeq = (estado.ingresoSeq ?? 0) + 1
+      return { id: `r${estado.ingresoSeq}`, productoId: '', presentacionId: '', marcaId: '', cajas: null, lote: '', loteVigente: '', guardarVigente: false, precio: null }
+    }
+
+    function nuevoIngreso(unidadId, hoy) {
+      return {
+        unidadId, fecha: hoy, origen: null, proveedorId: null, proveedorNombre: '', busqueda: '', unidadOrigenId: '',
+        remito: '', observaciones: '', renglones: [nuevoRenglonIngreso()], clientUuid: crypto.randomUUID(),
+        enviando: false, error: '', catalogo: null, catalogoError: false, avisoLote: '',
+      }
+    }
+
+    // Proveedor u otra fábrica: elegir uno SUELTA el otro (nunca los dos).
+    function elegirOrigenIngreso(ing, tipo) {
+      if (tipo !== 'proveedor' && tipo !== 'fabrica') return
+      ing.origen = tipo
+      if (tipo === 'proveedor') ing.unidadOrigenId = ''
+      else { ing.proveedorId = null; ing.proveedorNombre = ''; ing.busqueda = '' }
+    }
+
+    // { p_proveedor_id, p_unidad_origen_id }: exactamente uno con valor.
+    function origenParaBase(ing) {
+      if (ing.origen === 'proveedor') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: null }
+      if (ing.origen === 'fabrica') return { p_proveedor_id: null, p_unidad_origen_id: ing.unidadOrigenId || null }
+      return { p_proveedor_id: null, p_unidad_origen_id: null }
+    }
+
+    function presentacionDe(cat, id) {
+      return (cat?.presentaciones ?? []).find(p => p.id === id) ?? null
+    }
+
+    // El renglón como lo espera la base. El precio solo de un proveedor (de
+    // otra fábrica no se pide: la deuda entre fábricas no se carga acá); un
+    // cono solo en una presentación con cono; el lote como se escribió (vacío
+    // = null: la base pone el vigente o 'SIN LOTE').
+    function itemsParaBase(ing, cat) {
+      return ing.renglones.filter(r => r.presentacionId).map(r => {
+        const pr = presentacionDe(cat, r.presentacionId)
+        const lote = String(r.lote ?? '').trim()
+        return {
+          presentacion_id: r.presentacionId,
+          marca_id: pr?.con_cono && r.marcaId ? r.marcaId : null,
+          cajas: r.cajas,
+          lote: lote || null,
+          precio_caja: ing.origen === 'proveedor' && r.precio != null ? r.precio : null,
+        }
+      })
+    }
+
+    // Lo que falta, en castellano, o null. La base valida todo igual: esto es
+    // para decirlo antes y pegado al botón.
+    function faltaIngreso(ing, cat) {
+      if (!ing.unidadId) return 'Elegí la fábrica que recibe.'
+      if (!ing.fecha) return 'Poné la fecha.'
+      if (ing.origen !== 'proveedor' && ing.origen !== 'fabrica') return 'Elegí de dónde viene: un proveedor o una fábrica del grupo.'
+      if (ing.origen === 'proveedor' && !ing.proveedorId) return 'Elegí el proveedor.'
+      if (ing.origen === 'fabrica' && !ing.unidadOrigenId) return 'Elegí la fábrica de donde viene.'
+      if (ing.origen === 'fabrica' && ing.unidadOrigenId === ing.unidadId) return 'La fábrica de origen tiene que ser otra.'
+      const usados = ing.renglones.filter(r => r.productoId || r.presentacionId || r.cajas != null)
+      if (!usados.length) return 'Cargá al menos un producto.'
+      for (let i = 0; i < usados.length; i++) {
+        const r = usados[i], n = i + 1
+        if (!r.presentacionId) return `Renglón ${n}: elegí el producto y la presentación.`
+        const pr = presentacionDe(cat, r.presentacionId)
+        if (pr?.con_cono && !r.marcaId) return `Renglón ${n}: elegí el cono (si es común, elegí la presentación sin cono).`
+        if (!Number.isInteger(r.cajas) || r.cajas <= 0) return `Renglón ${n}: las cajas tienen que ser un número entero mayor que cero.`
+        if (ing.origen === 'proveedor' && r.precio != null && r.precio < 0) return `Renglón ${n}: el precio no puede ser negativo.`
+      }
+      return null
+    }
+
+    function parametrosIngreso(ing, cat) {
+      const remito = String(ing.remito ?? '').trim()
+      const obs = String(ing.observaciones ?? '').trim()
+      return {
+        p_unidad_negocio_id: ing.unidadId,
+        p_fecha: ing.fecha,
+        ...origenParaBase(ing),
+        p_remito: remito || null,
+        p_items: itemsParaBase(ing, cat),
+        p_observaciones: obs || null,
+        p_client_uuid: ing.clientUuid,
+      }
+    }
+
+    // Los lotes vigentes a guardar: uno por producto (el último que se marcó),
+    // solo si cambió y no está vacío.
+    function lotesVigentesAGuardar(ing) {
+      const porProducto = new Map()
+      for (const r of ing.renglones) {
+        const lote = String(r.lote ?? '').trim().toUpperCase()
+        if (!r.guardarVigente || !r.productoId || !lote || lote === String(r.loteVigente ?? '').toUpperCase()) continue
+        porProducto.set(r.productoId, lote)
+      }
+      return [...porProducto].map(([productoId, lote]) => ({ productoId, lote }))
+    }
+
+    function textoListoIngreso(res, ing) {
+      const cajas = Number(res?.cajas ?? ing.renglones.reduce((s, r) => s + (Number.isInteger(r.cajas) ? r.cajas : 0), 0))
+      if (res?.reintento) return 'Listo: ese ingreso ya estaba cargado (no se cargó dos veces).'
+      return `Listo: entraron ${formatearNumeroAr(cajas, { decimales: 0 })} ${cajas === 1 ? 'caja' : 'cajas'}.`
+    }
+
+    // normalizarBusqueda() es la del buscador de conos (sin acentos ni mayúsculas).
+    function proveedoresQueCoinciden(lista, busqueda) {
+      const q = normalizarBusqueda(busqueda)
+      if (!q) return []
+      return (lista ?? []).filter(p => normalizarBusqueda(`${p.razon_social ?? ''} ${p.nombre_fantasia ?? ''} ${p.cuit ?? ''}`).includes(q)).slice(0, 8)
+    }
+
+    // El catálogo de la fábrica que recibe (productos, presentaciones, conos y
+    // lotes vigentes). Productos de reventa incluidos: son los que entran.
+    async function leerCatalogoIngreso(unidadId) {
+      const leer = async (q) => { const { data, error } = await q; if (error) throw error; return data ?? [] }
+      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden, tipo_masa').eq('unidad_negocio_id', unidadId).eq('activo', true))
+      const ids = productos.map(p => p.id)
+      const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, con_cono, unidades_por_caja, orden').in('producto_id', ids).eq('activa', true)) : []
+      const marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre, activa, estado_alta').eq('activa', true))
+      const vigentes = await leer(supabase.from('producto_lote_vigente').select('producto_id, lote').eq('unidad_negocio_id', unidadId))
+      const orden = (a, b) => (a.orden ?? 0) - (b.orden ?? 0) || String(a.nombre).localeCompare(String(b.nombre))
+      return {
+        productos: productos.sort(orden),
+        presentaciones: presentaciones.sort(orden),
+        marcas: marcas.filter(m => m.estado_alta !== 'rechazada').sort((a, b) => String(a.nombre).localeCompare(String(b.nombre))),
+        vigentes: new Map(vigentes.map(v => [v.producto_id, v.lote])),
+      }
+    }
+
+    async function leerProveedoresIngreso() {
+      if (estado.ingresoProveedores) return estado.ingresoProveedores
+      const { data, error } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit')
+        .eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
+      if (error) throw error
+      estado.ingresoProveedores = data ?? []
+      return estado.ingresoProveedores
+    }
+
+    async function abrirIngreso() {
+      const unidades = unidadesDeIngreso()
+      if (!unidades.length) return
+      const unidad = unidades.includes(estado.stockUnidad) ? estado.stockUnidad : unidades[0]
+      estado.ing = nuevoIngreso(unidad, hoyArgentina())
+      mostrarVista('pr-ingreso')
+      pintarIngreso()
+      await cargarCatalogoIngreso(estado.ing)
+      leerProveedoresIngreso().then(() => { if (estado.ing) pintarProveedoresIngreso() }).catch(err => console.error('proveedores:', err))
+    }
+
+    async function cargarCatalogoIngreso(ing) {
+      ing.catalogo = null; ing.catalogoError = false
+      pintarIngreso()
+      const unidad = ing.unidadId
+      try {
+        const cat = await leerCatalogoIngreso(unidad)
+        if (estado.ing !== ing || ing.unidadId !== unidad) return
+        ing.catalogo = cat
+      } catch (err) {
+        console.error('catálogo del ingreso:', err)
+        if (estado.ing !== ing) return
+        ing.catalogoError = true
+      }
+      pintarIngreso()
+    }
+
+    function opcionesIngreso(lista, elegida, vacia, nombre = (x) => x.nombre) {
+      // vacia null: sin la opción vacía (la fábrica que recibe siempre tiene una).
+      return (vacia == null ? '' : `<option value="">${esc(vacia)}</option>`) + lista.map(x =>
+        `<option value="${esc(x.id)}"${x.id === elegida ? ' selected' : ''}>${esc(nombre(x))}</option>`).join('')
+    }
+
+    function htmlRenglonIngreso(r, i, ing) {
+      const cat = ing.catalogo
+      const pres = (cat?.presentaciones ?? []).filter(p => p.producto_id === r.productoId)
+      const pr = presentacionDe(cat, r.presentacionId)
+      const loteCambio = r.productoId && String(r.lote ?? '').trim() !== '' && String(r.lote).trim().toUpperCase() !== String(r.loteVigente ?? '').toUpperCase()
+      return `<div class="pr-ing__renglon" data-ing-renglon="${esc(r.id)}">
+        <div class="pr-ing__renglon-cab"><span class="pr-ing__num">Renglón ${i + 1}</span>
+          ${ing.renglones.length > 1 ? `<button type="button" class="pr-btn pr-btn--secundario pr-ing__quitar" data-ing-quitar="${esc(r.id)}">Quitar</button>` : ''}</div>
+        <div class="pr-ing__grilla">
+          <label class="pr-campo"><span class="pr-campo__rotulo">Producto</span>
+            <select class="pr-select" data-ing-campo="productoId">${opcionesIngreso(cat?.productos ?? [], r.productoId, 'Elegí el producto')}</select></label>
+          <label class="pr-campo"><span class="pr-campo__rotulo">Presentación</span>
+            <select class="pr-select" data-ing-campo="presentacionId"${r.productoId ? '' : ' disabled'}>${opcionesIngreso(pres, r.presentacionId, r.productoId ? 'Elegí la presentación' : 'Primero el producto')}</select></label>
+          ${pr?.con_cono ? `<label class="pr-campo"><span class="pr-campo__rotulo">Cono</span>
+            <select class="pr-select" data-ing-campo="marcaId">${opcionesIngreso(cat?.marcas ?? [], r.marcaId, 'Elegí el cono')}</select></label>` : ''}
+          <label class="pr-campo"><span class="pr-campo__rotulo">Cajas</span>
+            <input class="pr-input" data-ing-campo="cajas" inputmode="numeric" autocomplete="off"></label>
+          <label class="pr-campo"><span class="pr-campo__rotulo">Lote</span>
+            <input class="pr-input" data-ing-campo="lote" autocomplete="off" value="${esc(r.lote)}" placeholder="${esc(r.loteVigente ? '' : 'Sin lote vigente')}"></label>
+          ${ing.origen === 'proveedor' ? `<label class="pr-campo"><span class="pr-campo__rotulo">Precio por caja (opcional)</span>
+            <input class="pr-input" data-ing-campo="precio" inputmode="decimal" autocomplete="off"></label>` : ''}
+        </div>
+        <label class="pr-ing__tilde" data-ing-tilde="${esc(r.id)}"${loteCambio ? '' : ' hidden'}><input type="checkbox" data-ing-campo="guardarVigente"${r.guardarVigente ? ' checked' : ''}> Guardar como lote vigente${r.loteVigente ? ` (hoy es ${esc(r.loteVigente)})` : ''}</label>
+      </div>`
+    }
+
+    function pintarProveedoresIngreso() {
+      const ing = estado.ing
+      const caja = document.getElementById('pr-ing-proveedores')
+      if (!ing || !caja) return
+      if (ing.proveedorId) { caja.innerHTML = ''; return }
+      if (!estado.ingresoProveedores) { caja.innerHTML = '<p class="pr-texto-suave">Cargando proveedores…</p>'; return }
+      const lista = proveedoresQueCoinciden(estado.ingresoProveedores, ing.busqueda)
+      caja.innerHTML = !normalizarBusqueda(ing.busqueda) ? ''
+        : lista.length ? lista.map(p => `<button type="button" class="pr-ing__prov" data-ing-proveedor="${esc(p.id)}">${esc(p.razon_social)}${p.cuit ? ` <span class="pr-texto-suave">· ${esc(p.cuit)}</span>` : ''}</button>`).join('')
+        : `<p class="pr-texto-suave">No hay ningún proveedor con «${esc(ing.busqueda)}». Si es nuevo, se da de alta en Cuentas corrientes.</p>`
+    }
+
+    function pintarIngreso() {
+      const ing = estado.ing
+      const cont = document.getElementById('pr-ing-cuerpo')
+      if (!ing || !cont) return
+      const unidades = unidadesDeIngreso()
+      const otras = [...estado.unidades.keys()].filter(id => id !== ing.unidadId)
+      const cat = ing.catalogo
+      cont.innerHTML = `
+        <div class="pr-tarjeta pr-ing__cabeza">
+          <label class="pr-campo"><span class="pr-campo__rotulo">Fábrica que recibe</span>
+            <select class="pr-select" id="pr-ing-unidad">${opcionesIngreso(unidades.map(id => ({ id, nombre: estado.unidades.get(id) ?? id })), ing.unidadId, null)}</select></label>
+          <label class="pr-campo"><span class="pr-campo__rotulo">Fecha</span>
+            <input class="pr-input" type="date" id="pr-ing-fecha" value="${esc(ing.fecha)}" max="${esc(hoyArgentina())}"></label>
+          <div class="pr-campo"><span class="pr-campo__rotulo">¿De dónde viene?</span>
+            <div class="pr-ing__origen" role="group" aria-label="De dónde viene">
+              <button type="button" class="pr-ing__op" data-ing-origen="proveedor" aria-pressed="${ing.origen === 'proveedor' ? 'true' : 'false'}">Proveedor</button>
+              <button type="button" class="pr-ing__op" data-ing-origen="fabrica" aria-pressed="${ing.origen === 'fabrica' ? 'true' : 'false'}">Otra fábrica del grupo</button>
+            </div></div>
+          ${ing.origen === 'proveedor' ? (ing.proveedorId
+            ? `<div class="pr-campo"><span class="pr-campo__rotulo">Proveedor</span><div class="pr-ing__elegido"><strong>${esc(ing.proveedorNombre)}</strong> <button type="button" class="pr-btn pr-btn--secundario" id="pr-ing-cambiar-prov">Cambiar</button></div></div>`
+            : `<label class="pr-campo"><span class="pr-campo__rotulo">Proveedor</span><input class="pr-input" id="pr-ing-buscar" autocomplete="off" placeholder="Buscá por nombre o CUIT" value="${esc(ing.busqueda)}"></label><div id="pr-ing-proveedores" class="pr-ing__provs"></div>`) : ''}
+          ${ing.origen === 'fabrica' ? `<label class="pr-campo"><span class="pr-campo__rotulo">Fábrica de donde viene</span>
+            <select class="pr-select" id="pr-ing-origen-unidad">${opcionesIngreso(otras.map(id => ({ id, nombre: estado.unidades.get(id) ?? id })), ing.unidadOrigenId, 'Elegí la fábrica')}</select></label>` : ''}
+          <label class="pr-campo"><span class="pr-campo__rotulo">Remito (opcional)</span>
+            <input class="pr-input" id="pr-ing-remito" autocomplete="off" value="${esc(ing.remito)}"></label>
+        </div>
+        ${ing.catalogoError ? '<div class="pr-aviso pr-aviso--grave">No se pudieron leer los productos de esta fábrica. Revisá la conexión y volvé a abrir.</div>'
+          : !cat ? '<p class="pr-texto-suave">Cargando productos…</p>'
+          : !cat.productos.length ? '<div class="pr-aviso">Esta fábrica no tiene productos cargados.</div>'
+          : `<div class="pr-ing__renglones">${ing.renglones.map((r, i) => htmlRenglonIngreso(r, i, ing)).join('')}</div>
+             <button type="button" class="pr-btn pr-btn--secundario" id="pr-ing-agregar">+ Agregar otro producto</button>`}
+        <label class="pr-campo pr-ing__obs"><span class="pr-campo__rotulo">Observaciones (opcional)</span>
+          <textarea class="pr-textarea" id="pr-ing-obs" rows="2">${esc(ing.observaciones)}</textarea></label>
+        <div class="pr-ing__pie">
+          <p class="pr-ing__error" id="pr-ing-error" role="alert"${ing.error ? '' : ' hidden'}>${esc(ing.error)}</p>
+          <button type="button" class="pr-btn pr-btn--primario pr-ing__guardar" id="pr-ing-guardar"${ing.enviando ? ' disabled' : ''}>${ing.enviando ? 'Guardando…' : 'Guardar el ingreso'}</button>
+        </div>`
+      // Los números se escriben con su formato; se ponen desde el estado.
+      for (const r of ing.renglones) {
+        const fila = cont.querySelector(`[data-ing-renglon="${r.id}"]`)
+        if (!fila) continue
+        const cajas = fila.querySelector('[data-ing-campo="cajas"]')
+        if (cajas) { enlazarCampoNumero(cajas, { decimales: 0 }); if (r.cajas != null) ponerNumero(cajas, r.cajas) }
+        const precio = fila.querySelector('[data-ing-campo="precio"]')
+        if (precio) { enlazarCampoNumero(precio, { decimales: 2 }); if (r.precio != null) ponerNumero(precio, r.precio) }
+      }
+      pintarProveedoresIngreso()
+    }
+
+    function renglonIngreso(id) {
+      return estado.ing?.renglones.find(r => r.id === id) ?? null
+    }
+
+    // Lo que se escribe NO repinta (el cursor no salta); lo que cambia la
+    // forma del formulario (producto, presentación, origen) sí.
+    function alEscribirIngreso(ev) {
+      const ing = estado.ing
+      if (!ing) return
+      const t = ev.target
+      if (t.id === 'pr-ing-buscar') { ing.busqueda = t.value; pintarProveedoresIngreso(); return }
+      if (t.id === 'pr-ing-remito') { ing.remito = t.value; return }
+      if (t.id === 'pr-ing-obs') { ing.observaciones = t.value; return }
+      if (t.id === 'pr-ing-fecha') { ing.fecha = t.value; return }
+      const fila = t.closest?.('[data-ing-renglon]')
+      const r = fila ? renglonIngreso(fila.dataset.ingRenglon) : null
+      if (!r) return
+      const campo = t.dataset?.ingCampo
+      if (campo === 'cajas') r.cajas = leerCampoNumero(t)
+      else if (campo === 'precio') r.precio = leerCampoNumero(t)
+      else if (campo === 'lote') {
+        r.lote = t.value
+        const cambio = String(r.lote).trim() !== '' && String(r.lote).trim().toUpperCase() !== String(r.loteVigente ?? '').toUpperCase()
+        const tilde = fila.querySelector('[data-ing-tilde]')
+        if (tilde) tilde.hidden = !cambio
+        if (!cambio) r.guardarVigente = false
+      }
+    }
+
+    function alCambiarIngreso(ev) {
+      const ing = estado.ing
+      if (!ing) return
+      const t = ev.target
+      if (t.id === 'pr-ing-unidad') {
+        ing.unidadId = t.value
+        if (ing.unidadOrigenId === ing.unidadId) ing.unidadOrigenId = ''
+        ing.renglones = [nuevoRenglonIngreso()]
+        cargarCatalogoIngreso(ing)
+        return
+      }
+      if (t.id === 'pr-ing-origen-unidad') { ing.unidadOrigenId = t.value; return }
+      const fila = t.closest?.('[data-ing-renglon]')
+      const r = fila ? renglonIngreso(fila.dataset.ingRenglon) : null
+      if (!r) return
+      const campo = t.dataset?.ingCampo
+      if (campo === 'productoId') {
+        r.productoId = t.value; r.presentacionId = ''; r.marcaId = ''
+        r.loteVigente = ing.catalogo?.vigentes.get(r.productoId) ?? ''
+        r.lote = r.loteVigente; r.guardarVigente = false
+        const pres = (ing.catalogo?.presentaciones ?? []).filter(p => p.producto_id === r.productoId)
+        if (pres.length === 1) r.presentacionId = pres[0].id
+        pintarIngreso()
+      } else if (campo === 'presentacionId') {
+        r.presentacionId = t.value
+        if (!presentacionDe(ing.catalogo, r.presentacionId)?.con_cono) r.marcaId = ''
+        pintarIngreso()
+      } else if (campo === 'marcaId') r.marcaId = t.value
+      else if (campo === 'guardarVigente') r.guardarVigente = t.checked
+    }
+
+    function alTocarIngreso(ev) {
+      const ing = estado.ing
+      if (!ing) return
+      const b = ev.target.closest?.('button')
+      if (!b) return
+      if (b.dataset.ingOrigen) { elegirOrigenIngreso(ing, b.dataset.ingOrigen); ing.error = ''; pintarIngreso(); document.getElementById('pr-ing-buscar')?.focus?.(); return }
+      if (b.dataset.ingProveedor) {
+        const p = (estado.ingresoProveedores ?? []).find(x => x.id === b.dataset.ingProveedor)
+        if (p) { ing.proveedorId = p.id; ing.proveedorNombre = p.razon_social; ing.busqueda = '' }
+        pintarIngreso(); return
+      }
+      if (b.id === 'pr-ing-cambiar-prov') { ing.proveedorId = null; ing.proveedorNombre = ''; pintarIngreso(); document.getElementById('pr-ing-buscar')?.focus?.(); return }
+      if (b.id === 'pr-ing-agregar') { ing.renglones.push(nuevoRenglonIngreso()); pintarIngreso(); return }
+      if (b.dataset.ingQuitar) { ing.renglones = ing.renglones.filter(r => r.id !== b.dataset.ingQuitar); pintarIngreso(); return }
+      if (b.id === 'pr-ing-guardar') guardarIngreso()
+    }
+
+    function mostrarErrorIngreso(ing, texto) {
+      ing.error = texto
+      const el = document.getElementById('pr-ing-error')
+      if (el) { el.textContent = texto; el.hidden = !texto }
+    }
+
+    async function guardarIngreso() {
+      const ing = estado.ing
+      if (!ing || ing.enviando) return
+      const falta = faltaIngreso(ing, ing.catalogo)
+      if (falta) { mostrarErrorIngreso(ing, falta); return }
+      ing.enviando = true; ing.error = ''
+      pintarIngreso()
+      let res
+      try {
+        const { data, error } = await supabase.rpc('ingresar_producto_terminado', parametrosIngreso(ing, ing.catalogo))
+        if (error) throw error
+        res = data
+      } catch (err) {
+        console.error('ingresar_producto_terminado:', err)
+        ing.enviando = false
+        // El mensaje de la base va tal cual (ya viene en castellano); sin
+        // mensaje, es la conexión: el mismo formulario no duplica.
+        ing.error = err?.message && !/fetch|network/i.test(err.message) ? err.message
+          : 'No se pudo guardar: revisá la conexión y tocá «Guardar el ingreso» de nuevo (no se carga dos veces).'
+        pintarIngreso()
+        return
+      }
+      const lotes = lotesVigentesAGuardar(ing)
+      const fallaron = []
+      for (const l of lotes) {
+        const { error } = await supabase.rpc('guardar_lote_vigente', { p_unidad_negocio_id: ing.unidadId, p_producto_id: l.productoId, p_lote: l.lote })
+        if (error) { console.error('guardar_lote_vigente:', error); fallaron.push(error.message) }
+      }
+      const texto = textoListoIngreso(res, ing)
+      estado.stockUnidad = ing.unidadId
+      estado.ing = null
+      if (fallaron.length) mostrarError(`${texto} Pero no se pudo guardar el lote vigente: ${fallaron[0]}`)
+      else mostrarExito(texto)
+      await mostrarStockTerminado()
+    }
+
+    function conectarIngreso() {
+      const sec = document.getElementById('pr-ingreso')
+      if (!sec) return
+      sec.addEventListener('input', alEscribirIngreso)
+      sec.addEventListener('change', alCambiarIngreso)
+      sec.addEventListener('click', alTocarIngreso)
+      document.getElementById('pr-stock-ingresar')?.addEventListener('click', abrirIngreso)
+      document.getElementById('pr-ing-volver')?.addEventListener('click', () => { estado.ing = null; mostrarStockTerminado() })
+    }
+
     function sinAcceso(texto) {
       document.getElementById('pr-cargando').hidden = true
       const el = document.getElementById('pr-sin-acceso')
@@ -9954,6 +10436,7 @@
       const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       await cargarPermisoStock()
       await cargarPermisoRetiros()
+      await cargarPermisoIngreso()
       estado.unidadBarra = (await barra)?.elegida ?? null
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false
