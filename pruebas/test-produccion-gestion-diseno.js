@@ -265,16 +265,17 @@ esperas.push((async () => {
   let h = cuerpoCfg(S)
   // Diseño 5a (29/09/2026): el título cuenta TODO el catálogo, y el filtro
   // arranca en "Todos" (Activos + Apagados + Por revisar).
-  chk('arriba: cuántos conos y cuántos activos', /4 conos del catálogo<\/h2><span class="pc-texto2 pc-15">· 2 activos<\/span>/.test(h))
-  chk('el filtro: Todos · Activos · Apagados · Por revisar, con su cuenta', /data-conos-filtro="todos" aria-pressed="true">Todos<span class="pc-seg__n">4</.test(h) &&
-    /data-conos-filtro="activos" aria-pressed="false">Activos<span class="pc-seg__n">2</.test(h) && /data-conos-filtro="apagados" aria-pressed="false">Apagados<span class="pc-seg__n">1</.test(h) &&
+  chk('arriba: cuántos conos y cuántos en producción', /4 conos del catálogo<\/h2><span class="pc-texto2 pc-15">· 2 en producción<\/span>/.test(h))
+  chk('el filtro: Todos · En producción · Apagados · Por revisar, con su cuenta', /data-conos-filtro="todos" aria-pressed="true">Todos<span class="pc-seg__n">4</.test(h) &&
+    /data-conos-filtro="activos" aria-pressed="false">En producción<span class="pc-seg__n">2</.test(h) && /data-conos-filtro="apagados" aria-pressed="false">Apagados<span class="pc-seg__n">1</.test(h) &&
     /data-conos-filtro="revisar" aria-pressed="false">Por revisar<span class="pc-seg__n">1</.test(h))
   chk('abre en Todos: los cuatro, cada uno con su estado', ['FRIGOR', 'GRIDO', 'VIEJA', 'NUEVA'].every(n => new RegExp(`pc-cono__n">${n}<`).test(h)))
   S.elegirFiltroConos('activos')
   h = cuerpoCfg(S)
   chk('"Activos": FRIGOR y GRIDO, sin VIEJA ni la por revisar', /pc-cono__n">FRIGOR</.test(h) && /pc-cono__n">GRIDO</.test(h) && !/pc-cono__n">VIEJA</.test(h) && !/pc-cono__n">NUEVA</.test(h))
-  chk('cada cono: el interruptor "Activo" (role=switch) y el tilde "Doble bolsa"',
-    /data-marca-doble="mk2" checked[^>]*aria-label="Doble bolsa: GRIDO"/.test(h) && /role="switch" class="pc-sw__input" data-marca-activo="mk1" checked aria-label="Activo: FRIGOR"/.test(h))
+  chk('cada cono: el interruptor "En producción" (role=switch) y los tildes "Doble bolsa" e "Ilustración" (como en Conos de papel)',
+    /data-marca-doble="mk2" checked[^>]*aria-label="Doble bolsa: GRIDO"/.test(h) && /role="switch" class="pc-sw__input" data-marca-activo="mk1" checked aria-label="En producción: FRIGOR"/.test(h) &&
+    /data-marca-ilus="mk1"[^>]*aria-label="Ilustración: FRIGOR"/.test(h) && />ILUSTRACIÓN<[\s\S]*>EN PRODUCCIÓN</.test(h))
   chk('ya no hay botón Activar/Desactivar', !/data-marca-activa=/.test(h))
   chk('los interruptores van a tocarCono al cambiar', /if \(t\.dataset\?\.marcaActivo !== undefined\) return tocarCono\(t\.dataset\.marcaActivo, 'activa', t\.checked\)/.test(FUENTE))
 
@@ -300,6 +301,17 @@ esperas.push((async () => {
   await S.tocarCono('mk2', 'doble_bolsa', false)
   chk('tocar otra cosa borra el error viejo', !/pg-cono__error/.test(cuerpoCfg(S)))
   chk('la doble bolsa va a marcar_doble_bolsa', JSON.stringify(rpcs(S, 'marcar_doble_bolsa').at(-1)) === '{"p_marca_id":"mk2","p_doble":false}')
+  // Ilustración (14/10/2026): configurar_cono con SOLO ese campo.
+  chk('el tilde Ilustración va a tocarCono al cambiar', /if \(t\.dataset\?\.marcaIlus !== undefined\) return tocarCono\(t\.dataset\.marcaIlus, 'papel_ilustracion', t\.checked\)/.test(FUENTE))
+  await S.tocarCono('mk2', 'papel_ilustracion', true)
+  chk('Ilustración va a configurar_cono con solo ese campo (los otros null)',
+    JSON.stringify(rpcs(S, 'configurar_cono').at(-1)) === '{"p_marca_id":"mk2","p_activa":null,"p_doble_bolsa":null,"p_papel_ilustracion":true}')
+  chk('… queda tildado', /data-marca-ilus="mk2" checked/.test(cuerpoCfg(S)) && S.__llamadas.exitos.some(m => m === 'GRIDO va en papel Ilustración.'))
+  S.__setRpc(async () => ({ data: null, error: { message: 'No tenés permiso para cambiar el papel del cono.' } }))
+  await S.tocarCono('mk2', 'papel_ilustracion', false)
+  chk('… si la base lo rechaza vuelve y el error va tal cual', /data-marca-ilus="mk2" checked/.test(cuerpoCfg(S)) &&
+    /No se pudo cambiar el papel: No tenés permiso para cambiar el papel del cono\./.test(cuerpoCfg(S)))
+  S.__setRpc(async () => ({ data: null, error: null }))
 
   // Mientras se guarda, un segundo toque no manda otra cosa.
   // Se guardan TODOS los que esperan: si un segundo toque llegara a llamar,
@@ -336,7 +348,7 @@ esperas.push((async () => {
   chk('los pendientes, arriba de la lista, con quién los cargó en la tablet', /POR REVISAR · 1<\/div>[^]*lo cargó Laura Méndez en la tablet/.test(cuerpoCfg(B)) &&
     cuerpoCfg(B).indexOf('POR REVISAR · 1</div>') < cuerpoCfg(B).indexOf('id="pr-cfg-marcas-lista"'))
   B.elegirFiltroConos('revisar')
-  chk('el filtro "Por revisar" muestra en la tabla solo los por revisar, con su estado', /pc-cono__n">NUEVA<\/div>[^]{0,900}pc-chip--naranja">Por revisar/.test(cuerpoCfg(B).slice(cuerpoCfg(B).indexOf('id="pr-cfg-marcas-lista"'))) &&
+  chk('el filtro "Por revisar" muestra en la tabla solo los por revisar, con su estado ("Nuevo, a revisar")', /pc-cono__n">NUEVA<\/div>[^]{0,1400}pc-chip--naranja">Nuevo, a revisar/.test(cuerpoCfg(B).slice(cuerpoCfg(B).indexOf('id="pr-cfg-marcas-lista"'))) &&
     !/pc-cono__n">FRIGOR/.test(cuerpoCfg(B)))
 })())
 
