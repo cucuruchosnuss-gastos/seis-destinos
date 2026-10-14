@@ -27,7 +27,16 @@
        - conos:precios → ver y cargar el precio del papel. Sin esta tarea no se
                          ve NINGÚN precio en ninguna parte (tampoco en la O.C.).
        - conos:recibir → recibir un pliego pedido.
-       Mauricio Silva tiene ver + recibir: ve Stock y Pendientes de entrega. -->
+       Mauricio Silva tiene ver + recibir: ve Stock y Pendientes de entrega.
+
+       TODOS LOS CONOS (14/10/2026): todas las marcas (conos_catalogo()) con tres
+       interruptores que se guardan al tocarlos con configurar_cono (solo el
+       campo tocado; los otros van null). Lo ven conos:ver, conos:pedir o
+       quien tenga producción (ver/cargar/configurar), como deja la base.
+       "En producción" y "Doble bolsa" piden produccion:configurar;
+       "Ilustración", produccion:configurar o conos:pedir o conos:precios. Es
+       lo mismo que Producción → Configuración → Marcas / Conos; los nuevos
+       (pendiente_revision) se aceptan ALLÁ, acá solo se avisa. -->
 
   <style>
     [hidden] { display: none !important; }
@@ -123,6 +132,43 @@
       .cn-stock-nombre { grid-column: 1 / -1; }
       .cn-stock-fila .cn-num { text-align: left; }
       .cn-stock-fila .cn-num small { display: block; font-size: 0.6875rem; color: var(--color-texto-2, #6B645A); font-weight: 600; }
+    }
+
+    /* Todos los conos (14/10/2026): un renglón por marca con el stock (solo
+       con conos:ver) y los tres interruptores, cada uno con su nombre al lado.
+       En el celular el nombre va arriba y los tres interruptores abajo, en
+       tres columnas iguales. */
+    .cn-chip--revisar { background: var(--color-acento-suave); color: var(--naranja-oscuro); }
+    .cn-chip--rechazado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .cn-seg-n { font-variant-numeric: tabular-nums; opacity: 0.7; margin-left: 0.25rem; }
+    .cn-todos-cuenta { font-size: 0.875rem; color: var(--color-texto-2, #6B645A); margin: 0 0 0.5rem; }
+    .cn-cat-fila { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem auto; gap: 0.25rem 1rem; align-items: center; padding: 0.375rem 0.75rem; border-bottom: 1px solid var(--color-divisor); }
+    .cn-cat-fila--sin-stock { grid-template-columns: minmax(0, 1fr) auto; }
+    .cn-cat-nombre { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+    .cn-cat-fila--apagado .cn-cat-nombre { color: var(--color-texto-2, #6B645A); }
+    .cn-cat-stock { text-align: right; font-variant-numeric: tabular-nums; }
+    .cn-cat-stock small { font-size: 0.75rem; color: var(--color-texto-2, #6B645A); font-weight: 600; margin-right: 0.25rem; }
+    .cn-cat-sws { display: grid; grid-template-columns: repeat(3, 9rem); gap: 0.25rem 0.5rem; }
+    .cn-cat-error { grid-column: 1 / -1; margin: 0 0 0.25rem; }
+    .cn-sw { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; cursor: pointer; font-size: 0.875rem; font-weight: 600; min-width: 0; }
+    .cn-sw__input {
+      appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 auto;
+      width: 40px; height: 24px; margin: 0; border-radius: 999px; background: var(--color-pista);
+      border: 1px solid var(--color-borde-fuerte); cursor: pointer; transition: background 0.15s;
+    }
+    .cn-sw__input::before {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 2px rgba(28, 26, 23, 0.3); transition: transform 0.15s;
+    }
+    .cn-sw__input:checked { background: var(--color-acento); border-color: var(--color-acento); }
+    .cn-sw__input:checked::before { transform: translateX(16px); }
+    .cn-sw__input:focus-visible { outline: 2px solid var(--color-acento); outline-offset: 2px; }
+    .cn-sw__input:disabled { cursor: not-allowed; opacity: 0.45; }
+    .cn-sw--sin-permiso { cursor: not-allowed; color: var(--color-texto-2, #6B645A); }
+    @media (max-width: 720px) {
+      .cn-cat-fila, .cn-cat-fila--sin-stock { grid-template-columns: minmax(0, 1fr) auto; padding: 0.5rem 0.75rem; }
+      .cn-cat-sws { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .cn-sw { flex-direction: column; gap: 0.125rem; font-size: 0.75rem; text-align: center; min-height: 48px; justify-content: center; }
     }
 
     /* Por pedir: grupos por papel. */
@@ -315,6 +361,18 @@
       <div class="cn-tarjeta" style="padding: 0;" id="cn-stock-lista"></div>
     </section>
 
+    <!-- ══ TODOS LOS CONOS ═══════════════════════════════════════════════════ -->
+    <section id="cn-vista-todos" hidden>
+      <div id="cn-todos-aviso"></div>
+      <div class="cn-campo" style="margin-bottom: 0.5rem;">
+        <label for="cn-todos-buscar">Buscar</label>
+        <input type="text" id="cn-todos-buscar" placeholder="Nombre del cono…" autocomplete="off">
+      </div>
+      <div class="cn-segmento" id="cn-todos-filtros" role="group" aria-label="Qué conos mostrar"></div>
+      <p class="cn-todos-cuenta" id="cn-todos-cuenta" aria-live="polite"></p>
+      <div class="cn-tarjeta" style="padding: 0;" id="cn-todos-lista"></div>
+    </section>
+
     <!-- ══ PLIEGOS (lista) / PENDIENTES DE ENTREGA ═══════════════════════════ -->
     <section id="cn-vista-pliegos" hidden>
       <div id="cn-pliegos-filtros">
@@ -459,12 +517,19 @@
       return a + n
     }
 
-    // Los permisos de la persona: ver, pedir, precios, recibir. Un super_admin
-    // los tiene todos (como tiene_tarea() en la base).
-    function permisosDe(tareas, esSuper) {
+    // Los permisos de la persona: ver, pedir, precios, recibir (de conos) y,
+    // de producción, configurar y si tiene alguna (ver/cargar/configurar, lo
+    // que mira puede_ver_produccion()). Un super_admin los tiene todos (como
+    // tiene_tarea() en la base, que no mira el alcance).
+    function permisosDe(tareas, esSuper, tareasProduccion = []) {
       const t = new Set(tareas ?? [])
       const tiene = x => !!esSuper || t.has(x)
-      return { ver: tiene('ver'), pedir: tiene('pedir'), precios: tiene('precios'), recibir: tiene('recibir') }
+      const pr = new Set(tareasProduccion ?? [])
+      const tieneP = x => !!esSuper || pr.has(x)
+      return {
+        ver: tiene('ver'), pedir: tiene('pedir'), precios: tiene('precios'), recibir: tiene('recibir'),
+        configurar: tieneP('configurar'), produccion: tieneP('configurar') || tieneP('ver') || tieneP('cargar'),
+      }
     }
 
     // Las pestañas que ve cada uno, en orden. "Por pedir" primero (es lo que más
@@ -475,6 +540,7 @@
       if (p.ver || p.pedir) v.push({ clave: 'stock', texto: 'Stock' })
       if (p.pedir) v.push({ clave: 'pliegos', texto: 'Pliegos' })
       else if (p.ver) v.push({ clave: 'entregas', texto: 'Pendientes de entrega' })
+      if (p.ver || p.pedir || p.produccion) v.push({ clave: 'todos', texto: 'Todos los conos' })
       if (p.precios) v.push({ clave: 'precios', texto: 'Precios del papel' })
       return v
     }
@@ -526,6 +592,123 @@
       }
       const orden = p => { const i = ORDEN_PAPELES.indexOf(p); return i === -1 ? 99 : i }
       return [...grupos.values()].sort((a, b) => orden(a.papel) - orden(b.papel))
+    }
+
+    // ── Todos los conos (14/10/2026) ──────────────────────────────────────
+    // Las mismas marcas que Producción → Configuración → Marcas / Conos: TODAS,
+    // también las rechazadas (allá están en Todos y en Apagados con
+    // "Rechazado"; acá igual) y las nuevas, con "nuevo, a revisar".
+    const FILTROS_TODOS = [
+      { v: 'produccion', t: 'En producción' }, { v: 'apagados', t: 'Apagados' },
+      { v: 'doble', t: 'Doble bolsa' }, { v: 'ilus', t: 'Ilustración' }, { v: 'todos', t: 'Todos' },
+    ]
+    // Los tres interruptores, con el nombre que tienen en las dos pantallas y
+    // el parámetro de configurar_cono que mueve cada uno.
+    const INTERRUPTORES = [
+      { campo: 'activa', param: 'p_activa', texto: 'En producción' },
+      { campo: 'doble_bolsa', param: 'p_doble_bolsa', texto: 'Doble bolsa' },
+      { campo: 'papel_ilustracion', param: 'p_papel_ilustracion', texto: 'Ilustración' },
+    ]
+    const ETIQUETA_ALTA = { pendiente_revision: 'nuevo, a revisar', rechazada: 'Rechazado' }
+    const DONDE_SE_APRUEBA = 'Producción → Configuración → Marcas / Conos'
+
+    function pasaFiltroTodos(f, filtro) {
+      if (filtro === 'produccion') return f.activa === true
+      if (filtro === 'apagados') return f.activa !== true
+      if (filtro === 'doble') return f.doble_bolsa === true
+      if (filtro === 'ilus') return f.papel_ilustracion === true
+      return true
+    }
+
+    // El filtro y el buscador (sin acentos ni mayúsculas; el nombre ya viene
+    // normalizado en _buscar para no rehacerlo en cada tecla con 357 conos).
+    function conosDeTodos(filas, filtro, busqueda) {
+      const q = normalizarBusqueda(busqueda)
+      return (filas ?? []).filter(f => pasaFiltroTodos(f, filtro) && (!q || (f._buscar ?? normalizarBusqueda(f.cono)).includes(q)))
+    }
+
+    function cuentaTodos(filas) {
+      return Object.fromEntries(FILTROS_TODOS.map(x => [x.v, (filas ?? []).filter(f => pasaFiltroTodos(f, x.v)).length]))
+    }
+
+    // Lo mismo que exige configurar_cono (pg_get_functiondef, 14/10/2026).
+    function puedeTocar(perm, campo) {
+      if (campo === 'papel_ilustracion') return !!(perm?.configurar || perm?.pedir || perm?.precios)
+      return !!perm?.configurar
+    }
+    function porQueNoSePuede(campo) {
+      return campo === 'papel_ilustracion'
+        ? 'Para cambiar el papel hace falta el permiso de configurar producción, de armar pedidos de conos o de precios del papel.'
+        : 'Hace falta el permiso de configurar producción.'
+    }
+
+    // SOLO el campo tocado; los otros van null (la base deja como está lo null).
+    function paramsConfigurarCono(marcaId, campo, valor) {
+      const i = INTERRUPTORES.find(x => x.campo === campo)
+      if (!i) return null
+      const p = { p_marca_id: marcaId, p_activa: null, p_doble_bolsa: null, p_papel_ilustracion: null }
+      p[i.param] = !!valor
+      return p
+    }
+
+    // La fila queda como la devolvió configurar_cono (si es la de ese cono).
+    function aplicarRespuestaCono(f, r) {
+      if (!f || !r || typeof r !== 'object' || r.marca_id !== f.marca_id) return f
+      for (const k of ['activa', 'doble_bolsa', 'papel_ilustracion']) if (typeof r[k] === 'boolean') f[k] = r[k]
+      if (typeof r.cono === 'string' && r.cono) { f.cono = r.cono; f._buscar = normalizarBusqueda(r.cono) }
+      return f
+    }
+
+    // Toca un interruptor: lo pone, avisa (para trabarlo y pintarlo), llama a
+    // la base y deja lo que devolvió. Si la base lo rechaza, VUELVE al valor
+    // de antes y devuelve el error tal cual.
+    async function guardarInterruptor(f, campo, valor, llamar, alCambiar = () => {}) {
+      const params = paramsConfigurarCono(f.marca_id, campo, valor)
+      if (!params) return { ok: false, error: 'No se puede cambiar eso.' }
+      const anterior = f[campo]
+      f[campo] = !!valor
+      alCambiar()
+      try {
+        aplicarRespuestaCono(f, await llamar('configurar_cono', params))
+        return { ok: true }
+      } catch (e) {
+        f[campo] = anterior
+        return { ok: false, error: mensajeDe(e) }
+      }
+    }
+
+    function textoGuardado(f, campo) {
+      if (campo === 'activa') return f.activa ? `${f.cono}: en producción.` : `${f.cono}: apagado.`
+      if (campo === 'doble_bolsa') return f.doble_bolsa ? `${f.cono} va con doble bolsa.` : `${f.cono} ya no va con doble bolsa.`
+      return f.papel_ilustracion ? `${f.cono} va en papel Ilustración.` : `${f.cono} ya no va en papel Ilustración.`
+    }
+
+    // Un renglón. El stock, solo con conos:ver (sin ese permiso la base
+    // devuelve 0, no null: no se puede decidir por el valor).
+    function htmlFilaTodos(f, perm, ocupado = false, error = '') {
+      const etiqueta = ETIQUETA_ALTA[f.estado_alta]
+      const chip = etiqueta ? ` <span class="cn-chip cn-chip--${f.estado_alta === 'rechazada' ? 'rechazado' : 'revisar'}">${esc(etiqueta)}</span>` : ''
+      const stock = perm?.ver
+        ? `<span class="cn-cat-stock${Number(f.stock) < 0 ? ' cn-negativo' : ''}"><small>Stock</small>${esc(miles(f.stock))}</span>` : ''
+      const sws = INTERRUPTORES.map(i => {
+        const puede = puedeTocar(perm, i.campo)
+        return `<label class="cn-sw${puede ? '' : ' cn-sw--sin-permiso'}"${puede ? '' : ` title="${esc(porQueNoSePuede(i.campo))}"`}>` +
+          `<input type="checkbox" role="switch" class="cn-sw__input" data-configurar="${esc(f.marca_id)}" data-campo="${esc(i.campo)}"` +
+          `${f[i.campo] ? ' checked' : ''}${!puede || ocupado ? ' disabled' : ''} aria-label="${esc(i.texto)}: ${esc(f.cono)}">` +
+          `<span class="cn-sw__txt">${esc(i.texto)}</span></label>`
+      }).join('')
+      return `<div class="cn-cat-fila${f.activa ? '' : ' cn-cat-fila--apagado'}${perm?.ver ? '' : ' cn-cat-fila--sin-stock'}" data-cat-cono="${esc(f.marca_id)}">` +
+        `<span class="cn-cat-nombre">${esc(f.cono)}${chip}</span>${stock}<span class="cn-cat-sws">${sws}</span>` +
+        (error ? `<div class="cn-error cn-cat-error" role="alert">${esc(error)}</div>` : '') + `</div>`
+    }
+
+    // Los nuevos se aceptan donde ya se aceptan: acá solo se avisa (con el
+    // enlace para quien puede aceptarlos).
+    function htmlAvisoRevisar(filas, perm) {
+      const n = (filas ?? []).filter(f => f.estado_alta === 'pendiente_revision').length
+      if (!n) return ''
+      const donde = perm?.configurar ? `<a href="produccion-gestion.html?vista=conos">${esc(DONDE_SE_APRUEBA)}</a>` : esc(DONDE_SE_APRUEBA)
+      return `<div class="cn-aviso">${n === 1 ? 'Hay 1 cono nuevo, a revisar' : `Hay ${esc(miles(n))} conos nuevos, a revisar`}. Se aceptan o se rechazan en ${donde}; mientras tanto se pueden usar igual.</div>`
     }
 
     // El precio por cono vigente para un pliego: la MISMA regla que
@@ -680,7 +863,7 @@
     const estado = {
       sesion: null,
       yo: null,
-      perm: { ver: false, pedir: false, precios: false, recibir: false },
+      perm: { ver: false, pedir: false, precios: false, recibir: false, configurar: false, produccion: false },
       vistas: [],
       vista: null,
       conos: [],
@@ -703,6 +886,15 @@
       anotar: { marcaId: null, sugerido: false },
       agregar: { abierto: false, marcaId: null, buscar: '' },
       enviando: false,
+      // Todos los conos
+      catalogo: [],
+      catalogoPorId: new Map(),
+      errorCatalogo: null,
+      filtroTodos: 'todos',
+      buscarTodos: '',
+      listaTodos: null,
+      conosOcupados: new Set(),
+      errorTodos: null,
     }
 
     function nombreCono(id) {
@@ -735,13 +927,17 @@
         .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
       if (error || !emp) throw error ?? new Error('sin empleado')
       estado.yo = emp
-      const { data: tareas, error: e2 } = await supabase.from('empleado_tareas').select('tarea')
-        .eq('empleado_id', emp.id).eq('modulo', 'conos').eq('habilitado', true)
+      const { data: tareas, error: e2 } = await supabase.from('empleado_tareas').select('modulo, tarea')
+        .eq('empleado_id', emp.id).in('modulo', ['conos', 'produccion']).eq('habilitado', true)
       if (e2) throw e2
-      estado.perm = permisosDe((tareas ?? []).map(t => t.tarea), emp.rol_app === 'super_admin')
+      const de = m => (tareas ?? []).filter(t => t.modulo === m).map(t => t.tarea)
+      estado.perm = permisosDe(de('conos'), emp.rol_app === 'super_admin', de('produccion'))
     }
 
     async function cargarStock() {
+      // conos_stock() pide conos:ver o conos:pedir (quien entra solo por
+      // producción ve únicamente "Todos los conos").
+      if (!estado.perm.ver && !estado.perm.pedir) { estado.conos = []; estado.conoPorId = new Map(); return }
       const filas = await rpc('conos_stock')
       estado.conos = (filas ?? []).map(f => ({ ...f }))
       estado.conoPorId = new Map(estado.conos.map(f => [f.marca_id, f]))
@@ -781,8 +977,25 @@
       estado.nuss = (un.data ?? [])[0] ?? null
     }
 
+    // Todos los conos: conos_catalogo() (activos primero, por nombre). El
+    // nombre normalizado se guarda una vez para que el buscador no lo rehaga.
+    async function cargarCatalogo() {
+      if (!estado.vistas.some(v => v.clave === 'todos')) return
+      try {
+        const filas = (await rpc('conos_catalogo')) ?? []
+        estado.catalogo = filas.map(f => ({ ...f, _buscar: normalizarBusqueda(f.cono) }))
+        estado.errorCatalogo = null
+      } catch (err) {
+        estado.errorCatalogo = mensajeDe(err)
+        throw err
+      } finally {
+        estado.catalogoPorId = new Map(estado.catalogo.map(f => [f.marca_id, f]))
+        estado.listaTodos = null
+      }
+    }
+
     async function recargar() {
-      const tareas = [cargarStock(), cargarPendientes(), cargarPrecios()]
+      const tareas = [cargarStock(), cargarPendientes(), cargarPrecios(), cargarCatalogo()]
       if (estado.perm.ver || estado.perm.pedir) tareas.push(cargarPliegos())
       const r = await Promise.allSettled(tareas)
       const fallo = r.find(x => x.status === 'rejected')
@@ -793,7 +1006,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const SECCIONES = ['porpedir', 'stock', 'pliegos', 'armado', 'detalle', 'oc', 'precios']
+    const SECCIONES = ['porpedir', 'stock', 'todos', 'pliegos', 'armado', 'detalle', 'oc', 'precios']
 
     function pintarTabs() {
       const nav = document.getElementById('cn-tabs')
@@ -813,6 +1026,7 @@
       pintarTabs()
       if (vista === 'porpedir') pintarPorPedir()
       if (vista === 'stock') pintarStock()
+      if (vista === 'todos') pintarTodos()
       if (vista === 'pliegos' || vista === 'entregas') pintarPliegos()
       if (vista === 'armado') pintarArmado()
       if (vista === 'detalle') pintarDetalle()
@@ -991,6 +1205,97 @@
           </span>` : ''}
         </div>`
       }).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TODOS LOS CONOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // La lista se arma al entrar, al filtrar o al buscar, y NO al tocar un
+    // interruptor: apagar un cono con el filtro "En producción" no lo hace
+    // desaparecer bajo el dedo (igual que en Producción → Configuración).
+    function listaTodos() {
+      if (!estado.listaTodos) estado.listaTodos = conosDeTodos(estado.catalogo, estado.filtroTodos, estado.buscarTodos).map(f => f.marca_id)
+      return estado.listaTodos.map(id => estado.catalogoPorId.get(id)).filter(Boolean)
+    }
+
+    function htmlFilaDe(f) {
+      const error = estado.errorTodos?.id === f.marca_id ? estado.errorTodos.texto : ''
+      return htmlFilaTodos(f, estado.perm, estado.conosOcupados.has(f.marca_id), error)
+    }
+
+    function pintarFiltrosTodos() {
+      const n = cuentaTodos(estado.catalogo)
+      document.getElementById('cn-todos-filtros').innerHTML = FILTROS_TODOS.map(x =>
+        `<button type="button" data-filtro-todos="${esc(x.v)}" aria-pressed="${x.v === estado.filtroTodos}">${esc(x.t)}<span class="cn-seg-n">${esc(miles(n[x.v]))}</span></button>`).join('')
+    }
+
+    function pintarListaTodos() {
+      const lista = listaTodos()
+      const q = estado.buscarTodos.trim()
+      document.getElementById('cn-todos-cuenta').textContent =
+        `${miles(lista.length)} ${lista.length === 1 ? 'cono' : 'conos'}${q ? ` con «${q}»` : ''}`
+      document.getElementById('cn-todos-lista').innerHTML = lista.length ? lista.map(htmlFilaDe).join('')
+        : `<div class="cn-vacio">${q ? 'Ningún cono coincide con la búsqueda.' : 'No hay conos acá.'}</div>`
+    }
+
+    function pintarTodos() {
+      const aviso = estado.errorCatalogo
+        ? `<div class="cn-aviso cn-aviso--grave">No se pudo leer la lista de conos: ${esc(estado.errorCatalogo)}</div>`
+        : htmlAvisoRevisar(estado.catalogo, estado.perm)
+      document.getElementById('cn-todos-aviso').innerHTML = aviso
+      const buscar = document.getElementById('cn-todos-buscar')
+      if (buscar.value !== estado.buscarTodos) buscar.value = estado.buscarTodos
+      pintarFiltrosTodos()
+      pintarListaTodos()
+    }
+
+    // Repinta un solo renglón (con 357 no se rearma la lista entera) y le
+    // devuelve el foco al interruptor que lo tenía (o al recién tocado, que
+    // lo perdió al quedar trabado mientras se guardaba).
+    function pintarFilaTodos(id, campoTocado = null) {
+      const f = estado.catalogoPorId.get(id)
+      const el = [...document.querySelectorAll('[data-cat-cono]')].find(x => x.dataset.catCono === id)
+      if (!f || !el) return
+      const activo = document.activeElement
+      const foco = activo?.closest?.('[data-cat-cono]') === el ? activo.dataset.campo
+        : (!activo || activo === document.body ? campoTocado : null)
+      el.outerHTML = htmlFilaDe(f)
+      if (foco) {
+        const nuevo = [...document.querySelectorAll('[data-configurar]')].find(x => x.dataset.configurar === id && x.dataset.campo === foco)
+        if (nuevo && !nuevo.disabled) nuevo.focus({ preventScroll: true })
+      }
+    }
+
+    // Buscar en cada tecla, sin trabarse: se pinta una vez por cuadro.
+    let cuadroTodos = 0
+    function buscarEnTodos(texto) {
+      estado.buscarTodos = texto
+      estado.listaTodos = null
+      if (cuadroTodos) return
+      cuadroTodos = requestAnimationFrame(() => { cuadroTodos = 0; pintarListaTodos() })
+    }
+
+    function elegirFiltroTodos(filtro) {
+      if (!FILTROS_TODOS.some(x => x.v === filtro)) return
+      estado.filtroTodos = filtro
+      estado.listaTodos = null
+      estado.errorTodos = null
+      pintarFiltrosTodos()
+      pintarListaTodos()
+    }
+
+    async function tocarInterruptor(marcaId, campo, valor) {
+      const f = estado.catalogoPorId.get(marcaId)
+      if (!f || estado.conosOcupados.has(marcaId) || !puedeTocar(estado.perm, campo)) { pintarFilaTodos(marcaId); return }
+      estado.conosOcupados.add(marcaId)
+      if (estado.errorTodos?.id === marcaId) estado.errorTodos = null
+      const r = await guardarInterruptor(f, campo, valor, rpc, () => pintarFilaTodos(marcaId))
+      estado.conosOcupados.delete(marcaId)
+      if (r.ok) mostrarExito(textoGuardado(f, campo))
+      else estado.errorTodos = { id: marcaId, texto: r.error }
+      pintarFilaTodos(marcaId, campo)
+      pintarFiltrosTodos()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1841,6 +2146,7 @@
       document.getElementById('cn-anotar-papel').addEventListener('change', () => { estado.anotar.sugerido = false; pintarAnotar() })
       document.getElementById('cn-stock-buscar').addEventListener('input', ev => { estado.buscarStock = ev.target.value; pintarStock() })
       document.getElementById('cn-stock-todos').addEventListener('change', ev => { estado.stockTodos = ev.target.checked; pintarStock() })
+      document.getElementById('cn-todos-buscar').addEventListener('input', ev => buscarEnTodos(ev.target.value))
       document.getElementById('cn-pliegos-papel').addEventListener('change', ev => { estado.filtroPapel = ev.target.value; pintarPliegos() })
       document.getElementById('cn-pliegos-buscar').addEventListener('input', ev => { estado.buscarPliego = ev.target.value; pintarPliegos() })
       document.getElementById('cn-btn-pliego-nuevo').addEventListener('click', abrirPliegoNuevo)
@@ -1865,6 +2171,8 @@
         if (ev.target.id === 'cn-arm-total') document.getElementById('cn-arm-total-otra').hidden = ev.target.value !== 'otra'
         const logo = ev.target.closest('[data-logo-nuevo]')
         if (logo) marcarLogo(logo.dataset.logoNuevo, logo.checked, logo)
+        const sw = ev.target.closest('[data-configurar]')
+        if (sw) tocarInterruptor(sw.dataset.configurar, sw.dataset.campo, sw.checked)
       })
 
       document.body.addEventListener('click', ev => {
@@ -1884,6 +2192,7 @@
         if ((el = b('[data-conteo]'))) { abrirConteoAjuste(el.dataset.conteo, 'conteo'); return }
         if ((el = b('[data-ajuste]'))) { abrirConteoAjuste(el.dataset.ajuste, 'ajuste'); return }
         if ((el = b('[data-filtro-estado]'))) { estado.filtroEstado = el.dataset.filtroEstado; pintarPliegos(); return }
+        if ((el = b('[data-filtro-todos]'))) { elegirFiltroTodos(el.dataset.filtroTodos); return }
         if ((el = b('[data-recibir]'))) { abrirRecibir(el.dataset.recibir); return }
         if ((el = b('[data-pliego]'))) { abrirPliego(el.dataset.pliego); return }
         if (b('[data-volver-pliegos]')) { mostrar(estado.perm.pedir ? 'pliegos' : 'entregas'); return }

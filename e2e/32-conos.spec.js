@@ -168,7 +168,7 @@ for (const ancho of [1280, 390]) {
     await page.setViewportSize({ width: ancho, height: alto });
     const errores = vigilarErrores(page);
     await page.goto(URL('conos-mauricio'));
-    await expect(page.locator('#cn-tabs [data-vista]')).toHaveText(['Stock', 'Pendientes de entrega']);
+    await expect(page.locator('#cn-tabs [data-vista]')).toHaveText(['Stock', 'Pendientes de entrega', 'Todos los conos']);
     await expect(page.locator('#cn-stock-alertas')).toContainText('FIBRO');
     expect(await page.locator('[data-conteo], [data-ajuste]').count()).toBe(0);
     await page.locator('[data-vista="entregas"]').click();
