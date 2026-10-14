@@ -253,6 +253,13 @@
     .pr-confirma__texto { margin: 0; font-size: 16px; color: var(--p-tinta-2); }
     .pr-confirma__botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
     .pr-confirma__botones .pr-btn { min-height: 52px; }
+    /* El cartel grande (14/10/2026): "Volvió con lote nuevo" y el scrap con
+       punto de miles. Botones a todo el ancho, uno arriba del otro, el de
+       "Sí" arriba. */
+    .pr-confirma--grande { max-width: 520px; }
+    .pr-confirma--grande .pr-confirma__texto { font-size: 18px; line-height: 1.35; color: var(--p-tinta); }
+    .pr-confirma--grande .pr-confirma__botones { flex-direction: column-reverse; }
+    .pr-confirma--grande .pr-confirma__botones .pr-btn { width: 100%; min-height: 60px; font-size: 18px; }
 
     /* ── Piezas comunes ── */
     .pr-tarjeta { background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 12px; }
@@ -340,6 +347,10 @@
     .pr-hv .pr-pa-casilla { min-height: 48px; }
     .pr-hv .pr-acciones .pr-btn { flex: 1; min-height: 52px; font-size: 17px; }
     .pr-aviso--relanzado { background: var(--p-acento-suave); border-color: var(--p-acento); color: var(--p-acento-osc); font-weight: 700; }
+    /* "Anular, se abrió por error" (14/10/2026): solo en la primera hora de
+       una planilla sin cajas ni masas. */
+    .pr-aviso--anular { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+    .pr-aviso--anular .pr-btn { min-height: 44px; }
     .pr-cerrar-x { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 0; background: var(--p-renglon); color: var(--p-tinta-2); display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1; padding: 0; }
 
     /* ════ LA BARRA (diseño: "Estructura") ════
@@ -956,6 +967,9 @@
     .pr-pa-casilla--sigue[aria-pressed="true"] .pr-pa-casilla__caja { background: var(--p-mal); border-color: var(--p-mal); }
     .pr-pa-casilla:disabled { color: var(--p-apagado); border-color: var(--p-borde); background: var(--p-alt); }
     .pr-pa-casilla__nota { font-size: 13px; font-weight: 600; color: var(--p-gris); }
+    /* El fin del turno (14/10/2026): en vez de "Volvió con lote nuevo",
+       "Cerrar planilla del turno". */
+    .pr-pa-cerrar-planilla { justify-content: center; text-align: center; border-color: var(--p-acento); color: var(--p-acento-osc); }
     .pr-pa-resumen { margin: 0; font-size: 16px; font-weight: 600; color: var(--p-gris); line-height: 1.2; }
     .pr-pa-resumen--listo { color: var(--p-tinta); font-weight: 800; }
     .pr-pa-botones { display: flex; gap: 8px; flex-shrink: 0; }
@@ -2124,6 +2138,28 @@
             </div>
           </div>
         </div>
+
+        <!-- "Anular, se abrió por error" (14/10/2026): anular_turno_vacio
+             borra una planilla abierta hace menos de una hora y sin cajas ni
+             masas. La base revisa todo; acá se pide el motivo. -->
+        <div class="pr-lp" id="pr-anular-planilla" hidden role="dialog" aria-modal="true" aria-labelledby="pr-anular-planilla-titulo">
+          <div class="pr-lp__caja">
+            <h2 class="pr-lp__titulo" id="pr-anular-planilla-titulo" tabindex="-1">Anular la planilla</h2>
+            <div class="pr-aviso pr-aviso--grave">
+              La planilla se borra y la máquina queda <strong>sin planilla abierta</strong>.
+              Se puede solo si se abrió hace menos de una hora y no tiene cajas ni masas.
+            </div>
+            <label class="pr-campo">
+              <span class="pr-campo__rotulo">¿Por qué se anula?</span>
+              <input type="text" id="pr-anular-planilla-motivo" class="pr-input" maxlength="300" autocomplete="off" enterkeyhint="done">
+            </label>
+            <p class="pr-error" id="pr-anular-planilla-error" hidden></p>
+            <div class="pr-acciones">
+              <button type="button" class="pr-btn pr-btn--secundario" id="pr-anular-planilla-cancelar">Cancelar</button>
+              <button type="button" class="pr-btn pr-btn--peligro" id="pr-anular-planilla-confirmar">Anular la planilla</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Rediseño parte 3 (P5b y P5c): agregar un producto, en pasos. Los
@@ -2592,7 +2628,7 @@
     import { verificarSesion, iniciarSesion } from '../js/auth.js'
     import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion, registrarError, marcarPlantaInstalada, olvidarPlantaInstalada, tiempoRealCaido, tiempoRealConectado } from '../js/salud.js'
     import {
-      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr, leerNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
@@ -3451,8 +3487,11 @@
     }
 
     // La pregunta de antes de perder algo. accion() corre solo con "Sí".
-    function pedirConfirmacion({ titulo, texto, si }, accion) {
-      estado.confirma = { titulo, texto, si, accion }
+    // Con `no` (14/10/2026) el botón de "No" dice otra cosa y, si hay
+    // accionNo, la corre (p. ej. "No, solo terminar la parada"). Tocar
+    // afuera del cartel o Escape solo lo cierra: nunca corre accionNo.
+    function pedirConfirmacion({ titulo, texto, si, no = null, grande = false }, accion, accionNo = null) {
+      estado.confirma = { titulo, texto, si, no, grande, accion, accionNo }
       pintarConfirma()
       document.getElementById('pr-confirma-no').focus?.()
     }
@@ -3464,13 +3503,17 @@
       document.getElementById('pr-confirma-titulo').textContent = c.titulo
       document.getElementById('pr-confirma-texto').textContent = c.texto
       document.getElementById('pr-confirma-si').textContent = c.si
+      document.getElementById('pr-confirma-no').textContent = c.no || 'No, seguir'
+      document.querySelector('#pr-confirma .pr-confirma')?.classList.toggle('pr-confirma--grande', !!c.grande)
     }
 
-    function responderConfirma(si) {
+    // afuera: se tocó fuera del cartel o Escape (solo lo cierra).
+    function responderConfirma(si, afuera = false) {
       const c = estado.confirma
       estado.confirma = null
       pintarConfirma()
       if (si && c?.accion) return c.accion()
+      if (!si && !afuera && c?.accionNo) return c.accionNo()
     }
 
     // "Máquina 4 · turno nuevo" con UNA máquina elegida; con varias, cuántas.
@@ -5161,8 +5204,9 @@
       })
       document.getElementById('pr-confirma-no').addEventListener('click', () => responderConfirma(false))
       document.getElementById('pr-confirma-si').addEventListener('click', () => responderConfirma(true))
-      document.getElementById('pr-confirma').addEventListener('click', ev => { if (ev.target.id === 'pr-confirma') responderConfirma(false) })
-      document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && estado.confirma) responderConfirma(false) })
+      // Afuera del cartel o Escape: solo lo cierra (nunca corre el "No").
+      document.getElementById('pr-confirma').addEventListener('click', ev => { if (ev.target.id === 'pr-confirma') responderConfirma(false, true) })
+      document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && estado.confirma) responderConfirma(false, true) })
       // La banda de "¿Quién sos?" también se repinta entera.
       document.getElementById('pr-quien-banda').addEventListener('click', ev => {
         const ir = ev.target.closest('#pr-quien-ir-masa')
@@ -6429,6 +6473,161 @@
       }
     }
 
+    // ── EL LOTE NUEVO AL FINAL DEL TURNO (14/10/2026) ──────────────────────
+    //
+    // Caso real (14/10, Máquina 2, lote 6241): la parada terminó 14:35 y a
+    // las 15:03 tocaron "Volvió con lote nuevo". relanzar_con_lote_nuevo abre
+    // la planilla nueva con el MISMO turno y el MISMO encargado (Mañana,
+    // Federico) justo en el cambio de turno, y la tarde no pudo abrir la suya.
+    // Regla: en los últimos 30 minutos del turno, o después de su fin, NO se
+    // ofrece el lote nuevo: se ofrece terminar la parada y cerrar la planilla.
+    // Cuenta la hora en que terminó la parada Y la hora de ahora (la más
+    // tarde de las dos): si ya se pasó el fin, la planilla nueva quedaría con
+    // el turno que terminó, aunque la parada haya sido antes.
+    // El fin sale de horarios_turno (una planilla abierta no tiene hora_fin;
+    // relanzar le pone hora_fin a la vieja). Sin horario cargado para esa
+    // unidad y turno no se puede saber: se ofrece, siempre con el cartel de
+    // confirmación (textoConfirmaLoteNuevo).
+    const MINUTOS_SIN_LOTE_NUEVO = 30
+
+    // El fin del turno de la planilla en ms, o null si no se sabe. El día lo
+    // decide el horario entero (inicio y fin del MISMO lado): la planilla
+    // relanzada tiene hora_inicio = la hora del relanzado (15:03) y con ella
+    // un fin de 15:00 pasaría al día siguiente.
+    function finTurnoPlanillaMs(p) {
+      const t = p?.turno
+      const propio = horaCorta(t?.hora_fin)
+      const fin = propio || horaCorta(p?.horario?.hora_fin)
+      if (!fin) return null
+      const inicio = propio ? horaCorta(t?.hora_inicio) : horaCorta(p?.horario?.hora_inicio)
+      return instanteDelTurno(t?.fecha, fin, inicio)
+    }
+
+    // { ofrecer, fin: 'HH:MM' | '' }: ¿se ofrece "Volvió con lote nuevo" si
+    // la parada terminó en finParadaMs (null = no se sabe todavía) y son
+    // `ahora`?
+    function loteNuevoSegunHorario(p, finParadaMs, ahora = new Date()) {
+      const finMs = finTurnoPlanillaMs(p)
+      if (finMs == null) return { ofrecer: true, fin: '' }
+      const ahoraMs = new Date(ahora).getTime()
+      const ref = Number.isFinite(finParadaMs) ? Math.max(finParadaMs, ahoraMs) : ahoraMs
+      return { ofrecer: ref < finMs - MINUTOS_SIN_LOTE_NUEVO * 60000, fin: horaArgentina(new Date(finMs)) }
+    }
+
+    function textoFinDeTurno(fin) {
+      return `El turno termina a las ${fin || '—'}: a esta hora no se abre un lote nuevo.`
+    }
+
+    // El texto del cartel, con los datos de la planilla abierta: lo que hace
+    // relanzar_con_lote_nuevo (mismo turno, mismo encargado, misma máquina).
+    function textoConfirmaLoteNuevo(p) {
+      const t = p?.turno ?? {}
+      const enc = nombrePersona(t.encargado_id)
+      return `Se va a CERRAR el lote ${t.lote ?? '—'} y se va a ABRIR el lote nuevo en ${p?.maquinaNombre || 'la máquina'}, ` +
+        `turno ${t.turno ?? '—'}${enc === '—' ? '' : `, encargado ${enc}`}. ¿Confirmás?`
+    }
+
+    // El cartel antes de relanzar: "Sí" abre el lote nuevo, "No" termina la
+    // parada sin lote nuevo. Tocar afuera no hace nada.
+    function pedirConfirmaLoteNuevo(p, siAbrir, soloTerminar) {
+      pedirConfirmacion({ titulo: '¿Abrir un lote nuevo?', texto: textoConfirmaLoteNuevo(p), si: 'Sí, abrir lote nuevo', no: 'No, solo terminar la parada', grande: true },
+        siAbrir, soloTerminar)
+    }
+
+    // Después de terminar la parada con "Cerrar planilla del turno": el cierre
+    // de ESA planilla (si mientras tanto no se tocó otra máquina).
+    function irAlCierreDe(turnoId) {
+      if (estado.planilla?.turno?.id === turnoId) return mostrarCierre()
+    }
+
+    // ── "ANULAR, SE ABRIÓ POR ERROR" (14/10/2026) ───────────────────────────
+    //
+    // anular_turno_vacio(p_turno_id, p_motivo) → { lote_anulado, motivo }
+    // (verificado con pg_get_functiondef el 14/10/2026): exige cargar en la
+    // unidad, la planilla 'abierto', menos de 60 minutos desde abierto_en
+    // (más, solo con configurar), sin produccion_items, sin masas (también
+    // anuladas) y sin una orden de retiro que la espere; motivo de 3 letras o
+    // más. Borra las paradas, los operarios y la planilla. La pantalla ofrece
+    // el botón solo cuando, por lo que la tablet sabe, corresponde; lo demás
+    // lo dice la base, tal cual.
+    const MINUTOS_ANULAR_POR_ERROR = 60
+
+    function puedeAnularPorError(p, ahora = new Date(), cola = estado.colaLista ?? []) {
+      const t = p?.turno
+      if (!t || t.estado !== 'abierto' || t.cierreCola) return false
+      const abierto = new Date(t.abierto_en).getTime()
+      if (!Number.isFinite(abierto)) return false
+      const pasaron = new Date(ahora).getTime() - abierto
+      if (pasaron < -TOLERANCIA_FUTURO_MS || pasaron >= MINUTOS_ANULAR_POR_ERROR * 60000) return false
+      if ((p.items ?? []).length || (p.masas ?? []).length) return false
+      // Algo de esta planilla esperando en la cola de la tablet: no se anula.
+      return !(cola ?? []).some(x => String(x.grupo) === String(t.id) && x.estado !== 'enviado')
+    }
+
+    function htmlAnularPorError(p, ahora = new Date()) {
+      if (!puedeAnularPorError(p, ahora)) return ''
+      return '<div class="pr-aviso pr-aviso--anular"><span>¿Esta planilla se abrió por error? Recién abierta y sin cajas ni masas, se puede anular.</span>' +
+        '<button type="button" class="pr-btn pr-btn--secundario" data-anular-error="1">Anular, se abrió por error</button></div>'
+    }
+
+    function abrirAnularPorError() {
+      const p = estado.planilla
+      if (!p?.turno) return
+      tocar()
+      estado.anularPlanilla = { turnoId: p.turno.id, enviando: false, error: '' }
+      document.getElementById('pr-anular-planilla-titulo').textContent = `Anular la planilla del lote ${p.turno.lote ?? ''}`
+      document.getElementById('pr-anular-planilla-motivo').value = ''
+      pintarAnularPorError()
+      document.getElementById('pr-anular-planilla').hidden = false
+      document.getElementById('pr-anular-planilla-motivo').focus?.()
+    }
+
+    function cerrarAnularPorError() {
+      if (estado.anularPlanilla?.enviando) return
+      estado.anularPlanilla = null
+      document.getElementById('pr-anular-planilla').hidden = true
+    }
+
+    function pintarAnularPorError() {
+      const f = estado.anularPlanilla
+      if (!f) return
+      const err = document.getElementById('pr-anular-planilla-error')
+      err.textContent = f.error
+      err.hidden = !f.error
+      const b = document.getElementById('pr-anular-planilla-confirmar')
+      b.disabled = !!f.enviando
+      b.textContent = f.enviando ? 'Anulando…' : 'Anular la planilla'
+    }
+
+    async function confirmarAnularPorError() {
+      const f = estado.anularPlanilla, p = estado.planilla
+      if (!f || f.enviando || !p?.turno || p.turno.id !== f.turnoId) return
+      const motivo = String(document.getElementById('pr-anular-planilla-motivo').value ?? '').trim()
+      f.error = ''
+      if (motivo.length < 3) f.error = 'Escribí por qué se anula, con tres letras por lo menos.'
+      else if (sinInternet()) f.error = 'Sin internet no se puede anular la planilla. Probá cuando vuelva la señal.'
+      if (f.error) return pintarAnularPorError()
+      f.enviando = true
+      pintarAnularPorError()
+      const turnoId = p.turno.id
+      try {
+        const { data, error } = await supabase.rpc('anular_turno_vacio', { p_turno_id: turnoId, p_motivo: motivo })
+        if (error) throw error
+        f.enviando = false
+        cerrarAnularPorError()
+        guardarPreferencia(claveBorradorCierre(turnoId), null)
+        mostrarExito(`Se anuló la planilla del lote ${data?.lote_anulado ?? p.turno.lote}. La máquina quedó sin planilla abierta.`)
+        await maquinaCerrada(turnoId)
+        await mostrarTablero()
+      } catch (e) {
+        console.error('anular_turno_vacio:', e)
+        f.enviando = false
+        // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
+        f.error = e?.message || 'No se pudo anular la planilla. Revisá la conexión y probá de nuevo.'
+        pintarAnularPorError()
+      }
+    }
+
     // Las masas, en solo lectura: cuántas van y cómo fueron las dos últimas.
     function htmlMasasPlanilla(masas) {
       const lista = masas ?? []
@@ -6838,6 +7037,8 @@
       for (const id of ['pr-planilla-error', 'pr-forzar-form', 'pr-corregir', 'pr-ops-ventana', 'pr-parada-activa', 'pr-parada-error', 'pr-aviso-largada', 'pr-hora-ventana']) {
         document.getElementById(id).hidden = true
       }
+      estado.anularPlanilla = null
+      document.getElementById('pr-anular-planilla').hidden = true
       mostrarVista(vista)
       const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
       try {
@@ -6872,7 +7073,7 @@
       if (!p) return
       pintarLateral()
       pintarCabeceraVista()
-      document.getElementById('pr-planilla-estado').innerHTML = htmlAvisoRelanzado(p) + htmlEstadoPlanilla(p, hoyArgentina())
+      document.getElementById('pr-planilla-estado').innerHTML = htmlAvisoRelanzado(p) + htmlEstadoPlanilla(p, hoyArgentina()) + htmlAnularPorError(p)
       pintarOperariosPlanilla()
       document.getElementById('pr-planilla-masas').innerHTML = htmlMasasResumen(p.masas)
       const largada = document.getElementById('pr-btn-largada')
@@ -7074,6 +7275,21 @@
       return !!f && !f.sigue && !!normalizarHora(f.fin) && p?.turno?.estado === 'abierto'
     }
 
+    // La hora de HASTA en ms para la regla del fin del turno: la que se va a
+    // mandar y, si todavía no se puede mandar (p. ej. es futura), la hora
+    // escrita en el día del turno. null sin HASTA.
+    function finParadaFormulario(f, p, ahora = new Date()) {
+      if (!f || f.sigue || !normalizarHora(f.fin) || !p?.turno) return null
+      const h = horasParadaNueva(f, p.turno, ahora)
+      if (!h.error && h.fin) return new Date(h.fin).getTime()
+      return instanteDelTurno(p.turno.fecha, f.fin, horarioDePlanilla(p).inicio)
+    }
+
+    // { ofrecer, fin } de "Volvió con lote nuevo" en el formulario de Paró.
+    function loteNuevoFormulario(f, p, ahora = new Date()) {
+      return loteNuevoSegunHorario(p, finParadaFormulario(f, p, ahora), ahora)
+    }
+
     // Lo que falta, en palabras. Lista vacía = se puede mandar.
     function faltanParaParadaNueva(f, p, ahora = new Date(), motivos = estado.motivosParada) {
       const faltan = []
@@ -7098,6 +7314,7 @@
       if (f.loteNuevo && !h.error && h.fin !== null) {
         if (p.turno.estado !== 'abierto') faltan.push('«Volvió con lote nuevo» solo se puede con la planilla abierta.')
         else if (enCurso) faltan.push('Ya hay una parada sin terminar: tocá «Volvió a las…» primero.')
+        else if (!loteNuevoFormulario(f, p, ahora).ofrecer) faltan.push(textoFinDeTurno(loteNuevoFormulario(f, p, ahora).fin))
       }
       return faltan
     }
@@ -7138,7 +7355,7 @@
 
     // DESDE y HASTA (dos botones que abren la ventana de la hora), "Todavía
     // está parada" y, con HASTA puesto, "Volvió con lote nuevo".
-    function htmlHorasParadaNueva(f, p) {
+    function htmlHorasParadaNueva(f, p, ahora = new Date()) {
       const marcar = !!f.intentado
       const hora = (clave, rotulo, valor) => {
         const v = normalizarHora(valor)
@@ -7155,7 +7372,13 @@
       const sigueApagada = !puedeQuedarAbierta(p) && !f.sigue
       out += `<button type="button" class="pr-pa-casilla pr-pa-casilla--sigue" data-parada-sigue="1" aria-pressed="${f.sigue ? 'true' : 'false'}"${sigueApagada ? ' disabled' : ''}>` +
         `${caja}<span>Todavía está parada</span></button>`
-      if (puedeLoteNuevo(f, p)) {
+      // Al final del turno (o después), en vez del lote nuevo: "Cerrar
+      // planilla del turno" (guarda la parada y pasa al cierre).
+      const horario = puedeLoteNuevo(f, p) ? loteNuevoFormulario(f, p, ahora) : null
+      if (horario && !horario.ofrecer) {
+        out += `<span class="pr-pa-casilla__nota" data-parada-fin-turno="1">${esc(textoFinDeTurno(horario.fin))}</span>` +
+          '<button type="button" class="pr-pa-casilla pr-pa-cerrar-planilla" data-parada-cerrar-planilla="1">Cerrar planilla del turno</button>'
+      } else if (puedeLoteNuevo(f, p)) {
         out += `<button type="button" class="pr-pa-casilla" data-parada-lote-nuevo="1" aria-pressed="${f.loteNuevo ? 'true' : 'false'}">${caja}<span>Volvió con lote nuevo</span></button>`
         if (f.loteNuevo) out += `<span class="pr-pa-casilla__nota">El lote ${esc(p.turno.lote ?? '')} queda para completar (productos y scrap) y la máquina sigue con uno nuevo, con los mismos operarios.</span>`
       }
@@ -7197,7 +7420,8 @@
       campo.placeholder = libre ? 'Escribí qué pasó' : (m?.pide_detalle ? '¿Qué pasó? (obligatorio)' : 'Detalle (opcional)')
       if (document.activeElement !== campo) campo.value = libre ? f.textoLibre : f.detalle
       if (f.loteNuevo && !puedeLoteNuevo(f, p)) f.loteNuevo = false
-      document.getElementById('pr-parada-hora').innerHTML = htmlHorasParadaNueva(f, p)
+      if (f.loteNuevo && !loteNuevoFormulario(f, p, ahora).ofrecer) f.loteNuevo = false
+      document.getElementById('pr-parada-hora').innerHTML = htmlHorasParadaNueva(f, p, ahora)
       pintarResumenParada(ahora)
       pintarVolver()
     }
@@ -7227,13 +7451,14 @@
       pintarParadaNueva()
     }
 
-    function alternarLoteNuevoParada() {
+    function alternarLoteNuevoParada(ahora = new Date()) {
       const f = estado.paradaNueva, p = estado.planilla
       if (!f || !puedeLoteNuevo(f, p)) return
+      // Al final del turno, pintarParadaNueva la vuelve a desmarcar.
       tocar()
       f.loteNuevo = !f.loteNuevo
       f.errorBase = ''
-      pintarParadaNueva()
+      pintarParadaNueva(ahora)
     }
 
     function escribirDetalleParada(valor) {
@@ -7245,7 +7470,10 @@
       pintarResumenParada()
     }
 
-    async function guardarParadaNueva(ahora = new Date()) {
+    // opciones: loteConfirmado (ya se dijo "Sí, abrir lote nuevo" en el
+    // cartel) y luegoCerrar ("Cerrar planilla del turno": guardada la parada,
+    // pasa al cierre).
+    async function guardarParadaNueva(ahora = new Date(), { loteConfirmado = false, luegoCerrar = false } = {}) {
       const p = estado.planilla, f = estado.paradaNueva
       if (!p || !f || f.enviando) return
       escribirDetalleParada(document.getElementById('pr-parada-motivo').value)
@@ -7259,6 +7487,16 @@
       if (loteNuevo && sinInternet()) {
         f.errorBase = MENSAJE_LOTE_NUEVO_SIN_RED
         return pintarResumenParada(ahora)
+      }
+      // EL CARTEL (14/10/2026): qué lote se cierra y cuál se abre, con qué
+      // turno y qué encargado. "No" guarda la parada sin lote nuevo.
+      if (loteNuevo && !loteConfirmado) {
+        return pedirConfirmaLoteNuevo(p, () => guardarParadaNueva(ahora, { loteConfirmado: true }), () => {
+          const g = estado.paradaNueva
+          if (!g || g !== f) return
+          g.loteNuevo = false
+          return guardarParadaNueva(ahora)
+        })
       }
       f.enviando = true
       pintarResumenParada(ahora)
@@ -7274,11 +7512,13 @@
       estado.paradaNueva = paradaNuevaVacia(p.turno)
       if (r.resultado !== 'ok') {
         mostrarExito(textoGuardadaEnTablet(r, 'La parada quedó guardada'))
+        if (luegoCerrar && !loteNuevo) { await recargarOConCola(); return irAlCierreDe(p.turno.id) }
         return recargarOConCola()
       }
       const res = r.data
       if (!loteNuevo) {
         mostrarExito('Parada guardada.')
+        if (luegoCerrar) { await recargarPlanilla(); return irAlCierreDe(p.turno.id) }
         return recargarPlanilla()
       }
       // Volvió con lote nuevo: la parada ya está guardada (abierta), ahora la
@@ -7412,7 +7652,9 @@
       const p = estado.planilla
       if (!p?.turno || !['largada', 'desde', 'hasta', 'volvio', 'termino'].includes(tipo)) return
       tocar()
-      const f = { tipo, turnoId: p.turno.id, hora: '', buffer: '', ahora: false, loteNuevo: false, enviando: false, errorBase: '' }
+      // abiertaEn: la hora de referencia para la regla del fin del turno
+      // mientras la ventana está abierta (la de verdad, salvo en las pruebas).
+      const f = { tipo, turnoId: p.turno.id, hora: '', buffer: '', ahora: false, loteNuevo: false, enviando: false, errorBase: '', abiertaEn: new Date(ahora).getTime() }
       const sug = horaSugerida(p.turno, ahora)
       if (tipo === 'largada') f.hora = horaCorta(p.turno.hora_largada) || sug
       if (tipo === 'desde') f.hora = normalizarHora(estado.paradaNueva?.inicio) || sug
@@ -7454,9 +7696,14 @@
       teclado += '<button type="button" class="pr-hv__tecla" data-hv-tecla="borrar" aria-label="Borrar el último número">⌫</button></div>'
       const ahora = conAhoraVentana(p)
         ? `<button type="button" class="pr-hv__ahora" data-hv-ahora="1" aria-pressed="${f.ahora ? 'true' : 'false'}">Ahora</button>` : ''
-      const lote = f.tipo === 'volvio' && conAhoraVentana(p)
-        ? `<button type="button" class="pr-pa-casilla" data-hv-lote-nuevo="1" aria-pressed="${f.loteNuevo ? 'true' : 'false'}"><span class="pr-pa-casilla__caja" aria-hidden="true">&#10003;</span><span>Volvió con lote nuevo</span></button>`
-        : ''
+      // Al final del turno (o después), en vez de "Volvió con lote nuevo":
+      // "Cerrar planilla del turno" (termina la parada y pasa al cierre).
+      let lote = ''
+      if (f.tipo === 'volvio' && conAhoraVentana(p)) {
+        lote = loteNuevoVentana(f, p).ofrecer
+          ? `<button type="button" class="pr-pa-casilla" data-hv-lote-nuevo="1" aria-pressed="${f.loteNuevo ? 'true' : 'false'}"><span class="pr-pa-casilla__caja" aria-hidden="true">&#10003;</span><span>Volvió con lote nuevo</span></button>`
+          : '<button type="button" class="pr-pa-casilla pr-pa-cerrar-planilla" data-hv-cerrar-planilla="1">Cerrar planilla del turno</button>'
+      }
       return `<div class="pr-hv__fila"><span class="pr-hv__num" aria-live="polite">${esc(muestraHoraVentana(f))}</span>${ahora}</div>` + teclado + lote
     }
 
@@ -7466,17 +7713,30 @@
         case 'largada': return { titulo: '¿A qué hora empezó a producir?', boton: 'Guardar', nota: `Lote ${lote}: la hora en que la máquina empezó a sacar producto, no la de abrir la planilla.` }
         case 'desde': return { titulo: '¿Desde qué hora estuvo parada?', boton: 'Listo', nota: '' }
         case 'hasta': return { titulo: '¿Hasta qué hora estuvo parada?', boton: 'Listo', nota: '' }
-        case 'volvio': return { titulo: '¿A qué hora volvió?', boton: f.loteNuevo ? 'Volvió con lote nuevo' : 'Guardar',
-          nota: f.loteNuevo
-            ? `La parada «${f.motivo}» termina a esa hora. El lote ${lote} queda para completar (productos y scrap) y la máquina sigue con un lote nuevo, con el mismo encargado y los mismos operarios.`
-            : `Parada «${f.motivo}», desde las ${horaArgentina(f.inicioParada) || '—'}.` }
+        case 'volvio': {
+          // Al final del turno: "Terminar parada" y el fin del turno en la nota.
+          const h = conAhoraVentana(p) ? loteNuevoVentana(f, p) : { ofrecer: true, fin: '' }
+          return { titulo: '¿A qué hora volvió?', boton: f.loteNuevo ? 'Volvió con lote nuevo' : (h.ofrecer ? 'Guardar' : 'Terminar parada'),
+            nota: f.loteNuevo
+              ? `La parada «${f.motivo}» termina a esa hora. El lote ${lote} queda para completar (productos y scrap) y la máquina sigue con un lote nuevo, con el mismo encargado y los mismos operarios.`
+              : `Parada «${f.motivo}», desde las ${horaArgentina(f.inicioParada) || '—'}.${h.ofrecer ? '' : ' ' + textoFinDeTurno(h.fin)}` }
+        }
         default: return { titulo: '¿A qué hora terminó de producir?', boton: 'Listo', nota: '' }
       }
+    }
+
+    // "Volvió con lote nuevo" en la ventana, según la hora escrita y la regla
+    // del fin del turno. La hora de referencia es la de cuando se abrió la
+    // ventana (abiertaEn).
+    function loteNuevoVentana(f, p = estado.planilla, ahora = new Date(f?.abiertaEn ?? Date.now())) {
+      const v = vueltaDeParada(f, p?.turno, ahora)
+      return loteNuevoSegunHorario(p, v.error ? null : v.ms, ahora)
     }
 
     function pintarHoraVentana() {
       const f = estado.horaForm
       if (!f) return
+      if (f.tipo === 'volvio' && f.loteNuevo && !loteNuevoVentana(f).ofrecer) f.loteNuevo = false
       const t = textosHoraVentana(f)
       document.getElementById('pr-hora-ventana-titulo').textContent = t.titulo
       const nota = document.getElementById('pr-hora-ventana-nota')
@@ -7520,6 +7780,7 @@
     function alternarLoteNuevoVentana() {
       const f = estado.horaForm
       if (!f || f.enviando || f.tipo !== 'volvio' || !conAhoraVentana()) return
+      // Al final del turno, pintarHoraVentana la vuelve a desmarcar.
       tocar()
       f.loteNuevo = !f.loteNuevo
       f.errorBase = ''
@@ -7589,13 +7850,19 @@
       }
       const v = vueltaDeParada(f, p?.turno, ahora)
       if (v.error) return v
+      // El fin del turno, también al mandar (la ventana pudo quedar abierta).
+      if (f.loteNuevo && !loteNuevoSegunHorario(p, v.ms, ahora).ofrecer) return { error: textoFinDeTurno(loteNuevoSegunHorario(p, v.ms, ahora).fin) }
       if (f.loteNuevo) return { rpc: 'relanzar_con_lote_nuevo', params: { p_parada_id: f.paradaId, p_hora: isoAr(v.ms) } }
       return { rpc: 'editar_parada', params: { p_parada_id: f.paradaId, p_motivo: f.motivo, p_inicio: f.inicioParada, p_fin: isoAr(v.ms) } }
     }
 
-    async function confirmarHoraVentana(ahora = new Date()) {
+    // opciones: loteConfirmado (ya se dijo "Sí, abrir lote nuevo" en el
+    // cartel) y luegoCerrar ("Cerrar planilla del turno": terminada la
+    // parada, pasa al cierre).
+    async function confirmarHoraVentana(ahora = new Date(), { loteConfirmado = false, luegoCerrar = false } = {}) {
       const f = estado.horaForm, p = estado.planilla
       if (!f || f.enviando || !p) return
+      if (luegoCerrar) f.loteNuevo = false
       const pedido = pedidoHoraVentana(f, p, ahora)
       if (pedido.error) { f.errorBase = pedido.error; return pintarHoraVentana() }
       if (pedido.local) {
@@ -7606,11 +7873,21 @@
         if (f.tipo === 'desde') g.inicio = pedido.hora
         else { g.fin = pedido.hora; g.sigue = false }
         g.errorBase = ''
-        return pintarParadaNueva()
+        return pintarParadaNueva(ahora)
       }
       if (pedido.rpc === 'relanzar_con_lote_nuevo' && sinInternet()) {
         f.errorBase = MENSAJE_LOTE_NUEVO_SIN_RED
         return pintarHoraVentana()
+      }
+      // EL CARTEL (14/10/2026): "Sí" relanza; "No" termina la parada a esa
+      // hora, sin lote nuevo.
+      if (pedido.rpc === 'relanzar_con_lote_nuevo' && !loteConfirmado) {
+        return pedirConfirmaLoteNuevo(p, () => confirmarHoraVentana(ahora, { loteConfirmado: true }), () => {
+          const g = estado.horaForm
+          if (!g || g !== f) return
+          g.loteNuevo = false
+          return confirmarHoraVentana(ahora)
+        })
       }
       f.enviando = true
       f.errorBase = ''
@@ -7631,17 +7908,20 @@
         return pintarHoraVentana()
       }
       cerrarHoraVentana()
+      const alCierre = luegoCerrar && pedido.rpc === 'editar_parada'
       if (r.resultado !== 'ok') {
         mostrarExito(textoGuardadaEnTablet(r))
+        if (alCierre) { await recargarOConCola(); return irAlCierreDe(p.turno.id) }
         return recargarOConCola()
       }
       if (pedido.rpc === 'relanzar_con_lote_nuevo') return trasRelanzar(r.data, p)
       mostrarExito(pedido.rpc === 'registrar_hora_largada' ? `Empezó a producir: ${pedido.params.p_hora}.` : `Volvió a las ${horaArgentina(pedido.params.p_fin)}.`)
+      if (alCierre) { await recargarPlanilla(); return irAlCierreDe(p.turno.id) }
       return recargarPlanilla()
     }
 
     function teclaVentanaHora(ev) {
-      if (!estado.horaForm) return
+      if (!estado.horaForm || estado.confirma) return
       if (ev.key === 'Escape') { ev.preventDefault(); cerrarHoraVentana(); return }
       if (ev.key !== 'Tab') return
       const panel = document.getElementById('pr-hora-ventana')
@@ -9638,12 +9918,67 @@
       cambioEnCierre()
     }
 
+    // ── EL SCRAP CON PUNTO DE MILES (14/10/2026) ────────────────────────────
+    //
+    // El campo es de número argentino (enlazarCampoNumero, 3 decimales): la
+    // coma es decimal y el punto tipeado se vuelve coma, así que "6.7" queda
+    // "6,7". Pero quien escribe 6700 pensando en 6,7 ve "6.700" (el campo pone
+    // el punto de miles) y eso son seis mil setecientos kilos (caso real: un
+    // scrap de 9.999.999). La base rechaza más de 100 kg; la pantalla lo
+    // pregunta ANTES de mandar.
+    // Regla, sobre el texto del campo: con punto y 1000 kg o más es un punto
+    // de miles. Con UN solo grupo y sin coma ("6.700", "12.500") se sugiere
+    // leer el punto como coma (6,7 · 12,5); con más grupos o con coma
+    // ("9.999.999", "6.700,5") se pregunta sin sugerir. "6.7" y "6.70" son
+    // decimales (leerNumeroAr: un punto con 1 o 2 dígitos) y "0.700" también.
+    // → null, o { valor, sugerido (número o null) }.
+    function avisoScrapMiles(texto) {
+      const s = String(texto ?? '').trim()
+      if (!s.includes('.')) return null
+      const valor = leerNumeroAr(s, { decimales: 3 })
+      if (valor == null || valor < 1000) return null
+      const grupo = /^([1-9]\d{0,2})\.(\d{3})$/.exec(s)
+      return { valor, sugerido: grupo ? Number(`${grupo[1]}.${grupo[2]}`) : null }
+    }
+
+    // Los textos del cartel.
+    function preguntaScrapMiles(aviso) {
+      const kg = (n) => formatearNumeroAr(n, { decimales: 3, minimos: 0 })
+      const escrito = kg(aviso.valor)
+      if (aviso.sugerido != null) {
+        const sug = kg(aviso.sugerido)
+        return { titulo: `¿Quisiste decir ${sug} kg?`, texto: `Escribiste ${escrito} kg de scrap: más de mil kilos. Si fueron ${sug} kg, va con coma.`,
+          si: `Sí, ${sug} kg`, no: `No, fueron ${escrito} kg` }
+      }
+      return { titulo: `¿Fueron ${escrito} kg de scrap?`, texto: 'Es más de mil kilos. Los kilos van con coma, por ejemplo 6,7.',
+        si: 'Corregir el número', no: `Sí, fueron ${escrito} kg` }
+    }
+
+    // "Sí" corrige (pone la sugerencia y sigue cerrando, o deja el campo listo
+    // para escribir); "No" manda igual: la base dice si es demasiado.
+    function preguntarScrapMiles(aviso) {
+      const q = preguntaScrapMiles(aviso)
+      const campo = document.getElementById('pr-cierre-scrap')
+      pedirConfirmacion({ ...q, grande: true }, () => {
+        if (aviso.sugerido == null) { campo.focus?.(); campo.select?.(); return }
+        ponerNumero(campo, aviso.sugerido)
+        cambioEnCierre()
+        return intentarCerrar()
+      }, () => {
+        if (!estado.cierre) return
+        estado.cierre.scrapMilesAceptado = aviso.valor
+        return intentarCerrar()
+      })
+    }
+
     function intentarCerrar() {
       const b = estado.cierre
       if (!b) return
       b.intentado = true
       cambioEnCierre()
       if (faltanParaCerrar(b).length || bloqueosCierre() > 0) return
+      const miles = avisoScrapMiles(document.getElementById('pr-cierre-scrap').value)
+      if (miles && b.scrapMilesAceptado !== miles.valor) return preguntarScrapMiles(miles)
       const avisos = avisosDeCierre(estado.planilla)
       if (avisos.length && !b.confirmado) {
         document.getElementById('pr-cierre-confirmar-texto').innerHTML = htmlAvisosCierre(avisos)
@@ -9715,6 +10050,7 @@
         const h = ev.target.closest('[data-parada-hora]'); if (h) return abrirHoraVentana(h.dataset.paradaHora === 'fin' ? 'hasta' : 'desde')
         const sig = ev.target.closest('[data-parada-sigue]'); if (sig && !sig.disabled) return alternarSigueParadaNueva()
         const ln = ev.target.closest('[data-parada-lote-nuevo]'); if (ln && !ln.disabled) return alternarLoteNuevoParada()
+        if (ev.target.closest('[data-parada-cerrar-planilla]')) return guardarParadaNueva(new Date(), { luegoCerrar: true })
       })
       // Las tres acciones de la planilla y el aviso de la hora de largada.
       document.getElementById('pr-btn-largada').addEventListener('click', () => abrirHoraVentana('largada'))
@@ -9728,6 +10064,7 @@
         const t = ev.target.closest('[data-hv-tecla]'); if (t) return teclaHoraVentana(t.dataset.hvTecla)
         if (ev.target.closest('[data-hv-ahora]')) return ahoraHoraVentana()
         if (ev.target.closest('[data-hv-lote-nuevo]')) return alternarLoteNuevoVentana()
+        if (ev.target.closest('[data-hv-cerrar-planilla]')) return confirmarHoraVentana(new Date(), { luegoCerrar: true })
       })
       ventanaHora.addEventListener('keydown', teclaVentanaHora)
       document.getElementById('pr-btn-guardar-parada').addEventListener('click', () => guardarParadaNueva())
@@ -9774,6 +10111,17 @@
       })
       document.getElementById('pr-planilla-estado').addEventListener('click', ev => {
         if (ev.target.closest('[data-forzar]')) abrirForzar()
+        if (ev.target.closest('[data-anular-error]')) abrirAnularPorError()
+      })
+      // "Anular, se abrió por error" (14/10/2026).
+      const anularPlanilla = document.getElementById('pr-anular-planilla')
+      anularPlanilla.addEventListener('click', ev => { if (ev.target === anularPlanilla) cerrarAnularPorError() })
+      anularPlanilla.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrarAnularPorError() })
+      document.getElementById('pr-anular-planilla-cancelar').addEventListener('click', cerrarAnularPorError)
+      document.getElementById('pr-anular-planilla-confirmar').addEventListener('click', confirmarAnularPorError)
+      document.getElementById('pr-anular-planilla-motivo').addEventListener('input', () => {
+        const f = estado.anularPlanilla
+        if (f?.error) { f.error = ''; pintarAnularPorError() }
       })
       document.getElementById('pr-forzar-cancelar').addEventListener('click', () => { document.getElementById('pr-forzar-form').hidden = true })
       document.getElementById('pr-forzar-confirmar').addEventListener('click', confirmarForzar)
@@ -13324,6 +13672,7 @@
       if (visible('pr-parada-editor')) { cerrarEditorParada(); return 'ventana' }
       if (visible('pr-corregir')) { cerrarCorregir(); return 'ventana' }
       if (visible('pr-forzar-form')) { document.getElementById('pr-forzar-form').hidden = true; return 'ventana' }
+      if (estado.anularPlanilla && visible('pr-anular-planilla')) { cerrarAnularPorError(); return 'ventana' }
       if (estado.vista === 'pr-cierre' && visible('pr-cierre-confirmar')) { document.getElementById('pr-cierre-confirmar-no').click(); return 'ventana' }
       if (estado.vista === 'pr-agregar-prod' && visible('pr-agregar-cono-form')) { document.getElementById('pr-agregar-cono-form').hidden = true; return 'ventana' }
       // 2 · Un paso de Agregar producto: al paso anterior; del primero, a la
