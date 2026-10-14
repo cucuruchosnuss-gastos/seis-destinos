@@ -372,9 +372,9 @@ esperas.push((async () => {
   // con el estado de cada uno; los rechazados cuentan como apagados.
   const tablaK = (h) => h.slice(h.indexOf('id="pr-cfg-marcas-lista"'))
   chk('arranca en "Todos", y la tabla muestra también los por revisar y los rechazados, con su estado',
-    K.estado.config.filtroConos === 'todos' && /CASERATO 2<\/div>[\s\S]{0,600}pc-chip--naranja">Por revisar/.test(tablaK(hk)) && /NO VA<\/div>[\s\S]{0,600}pc-chip--grave">Rechazado/.test(tablaK(hk)))
-  chk('las cuentas del segmentado: Todos 4 · Activos 1 · Apagados 2 · Por revisar 1',
-    /data-conos-filtro="todos"[^>]*>Todos<span class="pc-seg__n">4</.test(hk) && /data-conos-filtro="activos"[^>]*>Activos<span class="pc-seg__n">1</.test(hk) &&
+    K.estado.config.filtroConos === 'todos' && /CASERATO 2<\/div>[\s\S]{0,1200}pc-chip--naranja">Nuevo, a revisar/.test(tablaK(hk)) && /NO VA<\/div>[\s\S]{0,1200}pc-chip--grave">Rechazado/.test(tablaK(hk)))
+  chk('las cuentas del segmentado: Todos 4 · En producción 1 · Apagados 2 · Por revisar 1',
+    /data-conos-filtro="todos"[^>]*>Todos<span class="pc-seg__n">4</.test(hk) && /data-conos-filtro="activos"[^>]*>En producción<span class="pc-seg__n">1</.test(hk) &&
     /data-conos-filtro="apagados"[^>]*>Apagados<span class="pc-seg__n">2</.test(hk) && /data-conos-filtro="revisar"[^>]*>Por revisar<span class="pc-seg__n">1</.test(hk))
   K.elegirFiltroConos('activos')
   chk('"Activos" no lista ni los pendientes ni los rechazados ni los apagados', !/CASERATO 2</.test(tablaK(cuerpo(K))) && !/NO VA/.test(tablaK(cuerpo(K))) && !/GRIDO/.test(tablaK(cuerpo(K))) && /FRIGOR/.test(tablaK(cuerpo(K))))

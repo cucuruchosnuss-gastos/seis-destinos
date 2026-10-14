@@ -49,6 +49,11 @@ const SEGURAS = [
   ["negativos.map(f => esc(f.cono) + ' (' + esc(miles(f.stock)) + ')').join(', ')", 'cada parte con esc()'],
   ["pocos.map(f => esc(f.cono) + ' (' + esc(textoAlcanza(diasAlcanza(f.stock, f.consumo_30d))) + ')').join(', ')", 'cada parte con esc()'],
   ["coincide.map(i => esc(nombreCono(i.marca_id)) + ' ' + esc(miles(i.cantidad))).join(', ')", 'cada parte con esc()'],
+  ['chip', 'htmlFilaTodos: la etiqueta "nuevo, a revisar" / "Rechazado" armada arriba con esc()'],
+  ['stock', 'htmlFilaTodos: el stock armado arriba con esc(miles())'],
+  ['sws', 'htmlFilaTodos: los tres interruptores armados arriba con esc() del id, del campo y del nombre'],
+  ['donde', 'htmlAvisoRevisar: el enlace o el texto, armados arriba con esc() de DONDE_SE_APRUEBA'],
+  ['x.v === estado.filtroTodos', 'booleano'],
 ]
 const SEGURAS_REGEX = [
   [/^[\w.?()[\]]+\.map\(\w+ => `/s, ANIDADA],
