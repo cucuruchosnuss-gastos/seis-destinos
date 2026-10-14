@@ -95,6 +95,11 @@ export const supabase = {
   functions: {
     invoke: async (nombreFn, op) => {
       console.log('[maqueta] función', nombreFn, op?.body)
+      // EN VIVO (14/10/2026, e-cheque desde PDF): una prueba puede poner
+      // globalThis.__maqueta.funciones.<nombre> = (op) => respuesta | Promise,
+      // para que el lector tarde lo que ella decida (o responda según el tipo).
+      const viva = globalThis.__maqueta?.funciones?.[nombreFn]
+      if (typeof viva === 'function') return { data: await viva(op), error: null }
       const r = DATOS.funciones?.[nombreFn]
       if (r === undefined) return { data: null, error: { message: 'sin funciones en la maqueta' } }
       if (typeof r === 'string' && r.startsWith('ERROR:')) return { data: null, error: { message: r.slice(6) } }
