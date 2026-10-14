@@ -279,6 +279,10 @@ const SEGURAS_REGEX_PRODUCCION = [
   // El diseño "Producción · Configuración" (29/09/2026): los íconos del
   // diseño son SVG constantes del código (ICONO_BUSCAR, ICONO_CAJA…).
   [/^ICONO_[A-Z]+(\.replace\('[^']*', '[^']*'\))?$/, 'SVG constante del código (los íconos del diseño de Configuración); el .replace() cambia solo el tamaño, con textos literales'],
+  // Ingreso de producto terminado (14/10/2026): opcionesIngreso() escapa el
+  // texto vacío, cada id y cada nombre; htmlRenglonIngreso() escapa adentro.
+  [/^opcionesIngreso\(/, 'HTML armado por opcionesIngreso(), que escapa el texto vacío, cada id y cada nombre'],
+  [/^(ing\.renglones\.map\(\(r, i\) => )?htmlRenglonIngreso\(r, i, ing\)\)?(\.join\(''\))?$/, 'HTML armado por htmlRenglonIngreso(), que escapa todo dato adentro'],
 ]
 
 module.exports = { SEGURAS_PRODUCCION, SEGURAS_REGEX_PRODUCCION }

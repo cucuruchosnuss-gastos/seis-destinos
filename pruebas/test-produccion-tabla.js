@@ -535,7 +535,10 @@ esperas.push((async () => {
   chk('la primera columna es fija (sticky)', /\.pt-tabla th\[scope="row"\], \.pt-tabla \.pt-esquina \{\s*position: sticky; left: 0;/.test(src))
   chk('la tabla scrollea adentro de su caja', /\.pt-scroll \{\s*overflow-x: auto; max-width: 100%;/.test(src))
   for (const f of ['cargarMaquinas', 'mostrarStockTerminado', 'cargarIndicadores', 'sumarTurnos']) {
-    chk(`${f} no cambió (contra ${BASE})`, extraerFn(src, f) === extraerFn(antes, f))
+    // 14/10/2026: mostrarStockTerminado suma, a propósito, pintarBotonIngreso()
+    // (el ingreso de producto terminado); lo demás tiene que seguir igual.
+    const ahora = f === 'mostrarStockTerminado' ? extraerFn(src, f).replace(/\n\s*pintarBotonIngreso\(\)/, '') : extraerFn(src, f)
+    chk(`${f} no cambió (contra ${BASE})`, ahora === extraerFn(antes, f))
   }
   // mostrarHistorial lo cambiaron las ramas de ayer (masas compactas, corregir
   // sublote completo), integradas antes que esta: se compara contra el main de
