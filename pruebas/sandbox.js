@@ -25,6 +25,8 @@ const FUNCIONES_PAGO = [
   'htmlBancosOrigen', 'textoOrigenComprobante', 'htmlBotonComprobante', 'echequeVacio', 'echequeDesdeOcr', 'digitosONull', 'avisoCuit',
   'camposEcheque', 'origenDatosEcheque', 'transferenciaVacia', 'transferenciaDesdeOcr', 'camposTransferencia', 'origenDatosTransferencia',
   'esPdf', 'textoMb', 'prepararArchivo', 'cuitValidoCob',
+  // E-cheque desde un PDF (14/10/2026): la tarjeta aparece al subir y se completa.
+  'escritoPorPersona', 'echequeSinDatos', 'completarEcheque', 'tarjetaParaComprobante', 'textoLecturaEcheque', 'restaurarFoco',
 ]
 const CONSTANTES_PAGO = [
   'FORMAS_PAGO', 'SECCION_FORMA', 'TEXTO_OTRO_COMPROBANTE', 'TEXTO_PRIMER_COMPROBANTE', 'TIPOS_COMPROBANTE', 'BANCOS_ORIGEN',
