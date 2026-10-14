@@ -114,6 +114,17 @@
     @media (min-width: 1024px) {
       .ad-header__volver { display: none; }
     }
+    /* "← Volver" de la pila de navegación (14/10/2026): arriba a la izquierda
+       del contenido. Mientras se ve, el "‹ Volver" al dashboard del celular
+       se esconde (dos "Volver" que van a lugares distintos confunden). */
+    .ad-volver-pila {
+      display: inline-flex; align-items: center; gap: 0.375rem; min-height: 44px; padding: 0 0.875rem 0 0.625rem; margin: 0 0 0.75rem;
+      border: 1px solid var(--color-borde); border-radius: var(--radio-boton); background: var(--color-fondo); color: var(--color-texto);
+      font: inherit; font-size: 0.9375rem; font-weight: 700; cursor: pointer; touch-action: manipulation; max-width: 100%;
+    }
+    .ad-volver-pila:hover { background: var(--color-fila-hover); }
+    .ad-volver-pila:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .ad-app--pila .ad-header__volver { display: none; }
     /* En el celular (10a): "Administración" chico arriba y la sección grande;
        las pestañas bajan a su propia fila y scrollean de costado ADENTRO. */
     @media (max-width: 1023px) {
@@ -595,6 +606,14 @@
       </div>
       <nav class="ad-pestanas" id="ad-pestanas" aria-label="Secciones de Administración"></nav>
     </header>
+
+    <!-- "← Volver" (14/10/2026): vuelve EXACTAMENTE a donde se estaba (la
+         cuenta del cliente con su filtro y su scroll). Solo se ve con algo en
+         la pila de navegación (PILA_NAV) y cuando el "volver" de siempre de
+         esa vista llevaría a otro lado (flechaVisible): desde la lista vuelve
+         "‹ Órdenes"; desde la cuenta, una cobranza vuelve con "‹ Cuenta del
+         cliente". -->
+    <button type="button" class="ad-volver-pila" id="ad-volver" hidden><span aria-hidden="true">←</span> Volver</button>
 
     <div class="ad-vacio" id="ad-sin-acceso" hidden></div>
     <div class="ad-vacio" id="ad-cargando">Cargando…</div>
@@ -1533,6 +1552,9 @@
     }
 
     function mostrarVista(id) {
+      // Ir a cualquier otro lado que no sea la vista que abrió la pila (una
+      // pestaña, "‹ Clientes", la portada) la vacía: la flecha ya no aplica.
+      if (PILA_NAV.length && PILA_NAV[PILA_NAV.length - 1].destino !== id) PILA_NAV.length = 0
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       if (id !== 'ad-sin-acceso') document.getElementById('ad-sin-acceso').hidden = true
       estado.vista = id
@@ -1547,7 +1569,155 @@
       if (id !== 'ad-vista-cheques' && /[?&]seccion=cheques/.test(window.location.search)) history.replaceState(null, '', window.location.pathname)
       if (Object.values(LISTA_DE_DETALLE).includes(id)) (estado.listasAbiertas ??= new Set()).add(id)
       aplicarListaDetalle()
+      pintarVolverPila()
       window.scrollTo(0, 0)
+    }
+
+    // ── LA PILA DE NAVEGACIÓN (14/10/2026) ─────────────────────────────────
+    // Desde la cuenta de un cliente se abre una orden de retiro (o una
+    // cobranza) y "← Volver" tiene que dejar EXACTAMENTE donde se estaba: la
+    // misma cuenta, con el mismo filtro y el mismo scroll. Lo mismo desde la
+    // lista de órdenes. Al abrir, se apila de dónde se vino (la vista, el
+    // scroll y el cliente) y se empuja una entrada al historial
+    // (history.pushState), así el atrás del navegador y del celular hacen lo
+    // mismo que la flecha (alVolverNavegador). Las vistas de antes NO se
+    // redibujan desde cero: quedan escondidas con todo lo que tenían (el
+    // filtro de la cuenta de cliente y proveedor vive en estado.cliente.unica);
+    // al volver se muestran, se repone el scroll y se releen en silencio por
+    // si la orden cambió (refrescarAlVolver). Sin nada en la pila, la flecha no
+    // se ve. Ir a cualquier otra vista la vacía (mostrarVista).
+    const PILA_NAV = []
+    let turnoVolver = 0
+
+    function scrollActual() {
+      return Math.max(0, Number(window.scrollY ?? window.pageYOffset ?? 0) || 0)
+    }
+
+    function apilarNav(destino) {
+      PILA_NAV.push({ vista: estado.vista, destino, scroll: scrollActual(), clienteId: estado.cliente?.id ?? null })
+      try { history.pushState?.({ adPila: PILA_NAV.length }, '') } catch (err) { console.error('No se pudo anotar en el historial:', err) }
+    }
+
+    // LA REGLA (14/10/2026): un "volver" de siempre se esconde SOLO si
+    // llevaría a otro lugar que la flecha. Si va al mismo lugar, queda el de
+    // siempre (con su id y su texto; las pruebas y la costumbre lo tocan),
+    // vuelve por la pila (mismo filtro y scroll, historial en orden) y la
+    // flecha no se muestra: dos botones para lo mismo sobran.
+    //  - una orden abierta desde la LISTA: "‹ Órdenes" (volverAOrdenes);
+    //  - una cobranza abierta desde la CUENTA: "‹ Cuenta del cliente"
+    //    (volverDeCobranza).
+    // Solo una orden abierta desde la cuenta muestra la flecha ("‹ Órdenes"
+    // llevaría a la lista, no a la cuenta).
+    function propioVuelveAlMismoLugar(tope) {
+      return (tope.destino === 'ad-vista-orden' && tope.vista === 'ad-vista-ordenes') ||
+        (tope.destino === 'ad-vista-cobranza' && tope.vista === 'ad-vista-cliente')
+    }
+
+    function flechaVisible() {
+      const tope = PILA_NAV[PILA_NAV.length - 1]
+      return !!tope && !propioVuelveAlMismoLugar(tope)
+    }
+
+    function pintarVolverPila() {
+      const flecha = flechaVisible()
+      document.getElementById('ad-volver').hidden = !flecha
+      document.getElementById('ad-app')?.classList?.toggle('ad-app--pila', flecha)
+      document.getElementById('ad-orden-volver').hidden = flecha
+      document.getElementById('ad-cobranza-volver').hidden = flecha
+    }
+
+    // "‹ Órdenes": si se vino de la lista, se vuelve por la pila (igual que el
+    // atrás del navegador); si no, la lista como siempre.
+    function volverAOrdenes() {
+      if (PILA_NAV[PILA_NAV.length - 1]?.vista === 'ad-vista-ordenes') { volverPila(); return }
+      mostrarOrdenes()
+    }
+
+    // Abrir una orden desde la cuenta del cliente o desde la lista de órdenes.
+    // En la compu, con la lista al costado, tocar otra orden de la lista no
+    // apila de nuevo: la flecha sigue volviendo a donde se vino.
+    function abrirOrdenDesde(id) {
+      if (!id) return
+      if (estado.vista !== 'ad-vista-orden') apilarNav('ad-vista-orden')
+      return abrirOrden(id)
+    }
+
+    // Una cobranza desde la cuenta del cliente: la vista de detalle que ya
+    // existía (Cobranzas por asentar → una cobranza, con "Reabrir").
+    function abrirCobranzaDesdeCuenta(id) {
+      if (!RE_UUID.test(String(id ?? '')) || !estado.cliente || !puedeVerLaCobranza()) return
+      if (estado.vista !== 'ad-vista-cobranza') apilarNav('ad-vista-cobranza')
+      return abrirCobranza(id, { origen: 'cuenta', clienteOrigen: estado.cliente.id })
+    }
+
+    // La flecha: con la entrada del historial que puso apilarNav arriba de
+    // todo, va para atrás en el historial (popstate hace el resto, igual que
+    // el atrás del navegador); si no, o si el navegador no avisa, vuelve acá.
+    function volverPila() {
+      if (!PILA_NAV.length) return
+      const antes = PILA_NAV.length
+      const tope = PILA_NAV[antes - 1]
+      if (history.state?.adPila === antes && typeof history.back === 'function') {
+        history.back()
+        setTimeout(() => { if (PILA_NAV.length === antes && PILA_NAV[antes - 1] === tope) desapilarNav() }, 600)
+        return
+      }
+      desapilarNav()
+    }
+
+    // El atrás del navegador o del celular. Adelante (o una entrada que ya
+    // no es de la pila) no hace nada.
+    function alVolverNavegador(e) {
+      const n = Number(e?.state?.adPila) || 0
+      if (n >= PILA_NAV.length) return
+      PILA_NAV.length = n + 1
+      desapilarNav()
+    }
+
+    function desapilarNav() {
+      const e = PILA_NAV.pop()
+      if (!e) { pintarVolverPila(); return false }
+      if (estado.vista === 'ad-vista-cobranza') { estado.cobranza = null; estado.cobranzas.asentando = null }
+      // La cuenta de otro cliente (no debería pasar: abrir otro vacía la
+      // pila): se abre la de ese cliente de nuevo.
+      if (e.vista === 'ad-vista-cliente' && e.clienteId && estado.cliente?.id !== e.clienteId) {
+        abrirCliente(e.clienteId)
+        return true
+      }
+      mostrarVista(e.vista)
+      window.scrollTo(0, e.scroll)
+      refrescarAlVolver(e)
+      return true
+    }
+
+    // Lo de antes se relee en silencio (sin "Cargando…"): una orden valorizada
+    // o anulada cambia la cuenta y la lista. Si llega IGUAL no se redibuja
+    // nada (el filtro, el scroll y un panel a medio llenar quedan como
+    // estaban); si cambió, se redibuja; si falla, queda lo que se veía.
+    async function refrescarAlVolver(e) {
+      const turno = ++turnoVolver
+      try {
+        if (e.vista === 'ad-vista-cliente' && estado.cliente?.id === e.clienteId) {
+          const c = estado.cliente
+          if (c.error || !c.cuenta) return
+          const cu = c.unica ? { ...c.unica } : null
+          const [r] = await Promise.all([leerCuenta(c.id), cu ? cargarCuentaUnica(supabase, cu) : null])
+          if (turno !== turnoVolver || estado.cliente !== c || estado.vista !== e.vista) return
+          const unicaNueva = cu && !cu.error ? cu.filas : (c.unica?.filas ?? null)
+          if (JSON.stringify([r.cuenta, unicaNueva]) === JSON.stringify([c.cuenta, c.unica?.filas ?? null])) return
+          Object.assign(c, r)
+          if (c.unica) c.unica.filas = unicaNueva
+          pintarCliente()
+        } else if (e.vista === 'ad-vista-ordenes' && Array.isArray(estado.ordenes)) {
+          const lista = await leerOrdenes(estado.empresaId, estado.filtros)
+          if (turno !== turnoVolver || estado.vista !== e.vista) return
+          if (JSON.stringify(lista) === JSON.stringify(estado.ordenes)) return
+          estado.ordenes = lista
+          pintarOrdenes()
+        }
+      } catch (err) {
+        console.error('No se pudo releer al volver:', err)
+      }
     }
 
     // LISTA | DETALLE (05/10/2026, diseño "Administración" 3a y 6a). En la
@@ -4258,6 +4428,12 @@
       return tieneTarea('cobranzas', 'procesar') || tieneTarea('cobranzas', 'ver_todo')
     }
 
+    // Abrir la orden de un movimiento (14/10/2026): lo mismo que pide la
+    // sección Órdenes (ordenes_retiro se lee con retiros:ver).
+    function puedeVerLaOrden() {
+      return puedeEn('retiros', 'ver')
+    }
+
     // Devuelve una copia: con cobranza_id en los movimientos de cobranza si
     // los dos listados cierran uno a uno, o la cuenta tal cual si no.
     function aparearCobranzas(cuenta, movs) {
@@ -4298,14 +4474,19 @@
         `${limite !== null ? `<p class="ad-texto-suave">${esc('Límite de crédito ' + importeHoja(limite))}</p>` : ''}` +
         `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>`
       if (!c.cuenta.length) return cabecera + '<div class="ad-vacio">Todavía no tiene movimientos.</div>'
-      // Una cobranza asentada se abre (su detalle, con "Reabrir").
+      // Una cobranza asentada se abre (su detalle, con "Reabrir"), y un
+      // movimiento de una orden de retiro abre la orden (14/10/2026; con
+      // "← Volver" a esta misma cuenta, ver la pila de navegación).
       const filas = [...c.cuenta].reverse().map(m => {
-        const abre = m.tipo === 'cobranza' && m.cobranza_id && puedeVerLaCobranza()
-        const inicio = abre ? `<button type="button" class="ad-renglon ad-renglon--boton" data-cuenta-cobranza="${esc(m.cobranza_id)}">` : '<div class="ad-renglon">'
+        const orden = m.orden_retiro_id && puedeVerLaOrden() ? m.orden_retiro_id : null
+        const abre = !orden && m.tipo === 'cobranza' && m.cobranza_id && puedeVerLaCobranza()
+        const inicio = orden ? `<button type="button" class="ad-renglon ad-renglon--boton" data-orden-retiro="${esc(orden)}">`
+          : abre ? `<button type="button" class="ad-renglon ad-renglon--boton" data-cuenta-cobranza="${esc(m.cobranza_id)}">` : '<div class="ad-renglon">'
         return inicio + `<div><div class="ad-renglon__desc">${esc(detalleMovimiento(m, c.codigos))}</div>` +
-          `<div class="ad-renglon__lotes">${esc(fechaCorta(m.fecha) + ' · ' + (ETIQUETA_MOVIMIENTO[m.tipo] ?? m.tipo))}${abre ? ' · <span class="ad-renglon__ver">Ver la cobranza ›</span>' : ''}</div></div>` +
+          `<div class="ad-renglon__lotes">${esc(fechaCorta(m.fecha) + ' · ' + (ETIQUETA_MOVIMIENTO[m.tipo] ?? m.tipo))}` +
+          `${orden ? ' · <span class="ad-renglon__ver">Ver la orden ›</span>' : abre ? ' · <span class="ad-renglon__ver">Ver la cobranza ›</span>' : ''}</div></div>` +
           `<div class="ad-renglon__plata"><div class="ad-fila__importe">${esc(importeHoja(m.importe))}</div>` +
-          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${abre ? '</button>' : '</div>'}`
+          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${orden || abre ? '</button>' : '</div>'}`
       }).join('')
       return cabecera + `<div class="ad-tarjeta">${filas}</div>`
     }
@@ -4362,6 +4543,10 @@
           estado.saldos = null
           await abrirCliente(c.id)
         },
+        // Los renglones con su orden o su cobranza se abren acá mismo, con
+        // "← Volver" a esta cuenta (14/10/2026). Sin permiso, no son link.
+        abrirOrden: puedeVerLaOrden() ? (id) => abrirOrdenDesde(id) : null,
+        abrirCobranza: puedeVerLaCobranza() ? (id) => abrirCobranzaDesdeCuenta(id) : null,
       }
     }
 
@@ -7584,6 +7769,9 @@
     }
 
     function volverDeCobranza() {
+      // Abierta desde la cuenta (la pila): vuelve a ESA cuenta con su filtro
+      // y su scroll, y el historial queda en orden (14/10/2026).
+      if (PILA_NAV[PILA_NAV.length - 1]?.destino === 'ad-vista-cobranza') { volverPila(); return }
       const d = estado.cobranza
       estado.cobranza = null
       estado.cobranzas.asentando = null
@@ -10111,6 +10299,9 @@
         if (e.target.closest('button[data-link="cheques"]')) mostrarCheques()
       })
       document.getElementById('ad-ordenes-volver').addEventListener('click', () => mostrarInicio())
+      // "← Volver" y el atrás del navegador / del celular (la pila, 14/10/2026).
+      document.getElementById('ad-volver').addEventListener('click', () => volverPila())
+      window.addEventListener('popstate', (e) => alVolverNavegador(e))
       // Lista | detalle: al girar la tablet o achicar la ventana, se rearma.
       window.matchMedia?.(MQ_LISTA_DETALLE)?.addEventListener?.('change', () => aplicarListaDetalle())
       for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar', 'ad-filtro-comision']) {
@@ -10121,9 +10312,9 @@
       crearPeriodo({ desde: document.getElementById('ad-filtro-desde'), hasta: document.getElementById('ad-filtro-hasta') })
       document.getElementById('ad-ordenes-lista').addEventListener('click', (e) => {
         const b = e.target.closest('[data-orden]')
-        if (b) abrirOrden(b.dataset.orden)
+        if (b) abrirOrdenDesde(b.dataset.orden)
       })
-      document.getElementById('ad-orden-volver').addEventListener('click', () => mostrarOrdenes())
+      document.getElementById('ad-orden-volver').addEventListener('click', () => volverAOrdenes())
       document.getElementById('ad-btn-valorizar').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-corregir-valor').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-imprimir').addEventListener('click', () => imprimirOrden())
@@ -10183,7 +10374,9 @@
       document.getElementById('ad-cliente-volver').addEventListener('click', () => mostrarClientes())
       document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
         const b = e.target.closest('[data-cuenta-cobranza]')
-        if (b && estado.cliente) abrirCobranza(b.dataset.cuentaCobranza, { origen: 'cuenta', clienteOrigen: estado.cliente.id })
+        if (b && estado.cliente) abrirCobranzaDesdeCuenta(b.dataset.cuentaCobranza)
+        const r = e.target.closest('[data-orden-retiro]')
+        if (r && puedeVerLaOrden()) abrirOrdenDesde(r.dataset.ordenRetiro)
         const o = e.target.closest('[data-otra-cuenta]')
         if (o) abrirOtraCuenta(o.dataset.otraCuenta, o.dataset.otraUnidad)
       })
