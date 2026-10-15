@@ -86,7 +86,8 @@ const PRELUDIO = `
   function ajustarMarcoClientes() {}
   var medioPagoSeleccionado = null, carteraPago = [], facturasParaPago = [], bancosBcra = null, turnoCartera = 0
   var estado = { miRolApp: 'usuario', miEmpleadoId: 'yo', misTareas: new Set(['cuentas_corrientes:registrar_pago']),
-    ficha: { proveedorId: 'p1', unidadId: 'u-n', nombre: 'DIMAFLO S.A.' } }
+    ficha: { proveedorId: 'p1', unidadId: 'u-n', nombre: 'DIMAFLO S.A.' },
+    maestros: { unidades: [{ id: 'u-n', nombre: 'Cucuruchos Nuss' }, { id: 'u-dolce', nombre: 'Dolce Pasta' }] } }
 `
 
 const FUNCIONES = [
@@ -94,10 +95,12 @@ const FUNCIONES = [
   'puedeVerClientes', 'renderizarPrimerNivel', 'mostrarSeccionCC', 'abrirMarcoClientes',
   'esMedioCheque', 'puedeUsarCartera', 'fechaCobroCheque', 'libradorDe', 'sumaCheques',
   'chequesParaPagar', 'htmlFilaCartera', 'renderizarCarteraPago', 'pintarTotalCartera', 'tildarChequeCartera',
+  'htmlListaCartera', 'agruparChequesPorEmpresa', 'avisosOtraEmpresa', 'textoAvisoOtraEmpresa', 'montoTotalCartera',
+  'pintarResumenPagoMixto', 'textoResumenPagoMixto', 'nombreUnidad', 'repartirAplicacionesPagoMixto',
   'parametrosPagoCartera', 'asegurarMonedaPesos', 'pintarAvisoPesos', 'confirmarPago',
   'etiquetaPagoDeGasto',
 ]
-const CONSTANTES = ['MEDIOS_CHEQUE', 'URL_CLIENTES']
+const CONSTANTES = ['MEDIOS_CHEQUE', 'URL_CLIENTES', 'NOMBRE_COMPLETAR']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -207,8 +210,13 @@ async function main() {
   {
     const S = sandbox()
     const bancos = new Map([['007', 'GALICIA']])
-    const lista = S.chequesParaPagar(CHEQUES, COBRANZAS, 'u-n', bancos)
-    chk('solo los en cartera, asentados, de ESTA empresa y en pesos', JSON.stringify(lista.map(c => c.id)) === '["c2","c1"]', JSON.stringify(lista.map(c => c.id)))
+    // Desde el 15/10/2026 se ofrecen los de TODAS las empresas (c4 es de
+    // Dolce): las reglas de cartera, asentada y pesos siguen. Lo de la lista
+    // agrupada por empresa está en test-cuentas-corrientes-pago-mixto.js.
+    const todos = S.chequesParaPagar(CHEQUES, COBRANZAS, 'u-n', bancos)
+    chk('solo los en cartera, asentados y en pesos, de cualquier empresa', JSON.stringify(todos.map(c => c.id)) === '["c2","c4","c1"]', JSON.stringify(todos.map(c => c.id)))
+    chk('el de otra empresa va marcado; los propios no', todos.find(c => c.id === 'c4').otraEmpresa === true && todos.filter(c => c.id !== 'c4').every(c => c.otraEmpresa === false))
+    const lista = todos.filter(c => !c.otraEmpresa)
     chk('el que se cobra primero va arriba (un común cobra en su emisión)', lista[0].id === 'c2' && lista[0].cobra === '2026-10-01' && lista[0].comun === true)
     chk('el diferido cobra en su fecha de pago', lista[1].cobra === '2026-11-10' && lista[1].comun === false)
     chk('el banco por su nombre; sin catálogo, por su código', lista[1].banco === 'GALICIA' && lista[0].banco === 'Banco 999')
@@ -235,12 +243,13 @@ async function main() {
     chk('destildar resta', S.__puesto.at(-1) === 100000.1 && el(S, 'total-cartera-pago').textContent === '1 cheque tildado · total $ 100.000,10')
     S.__setVar('carteraPago', [])
     S.renderizarCarteraPago()
-    chk('sin cheques en cartera, se dice', /No hay cheques en cartera de esta empresa/.test(el(S, 'lista-cartera-pago').innerHTML))
+    chk('sin cheques en cartera, se dice', /No hay cheques en cartera de ninguna empresa/.test(el(S, 'lista-cartera-pago').innerHTML))
 
     // Lo que viene de la base, escapado.
-    S.__setVar('carteraPago', [{ id: 'x', numero: marca('num'), banco: marca('banco'), librador: marca('lib'), cobra: HOY, comun: false, importe: 1, tildado: false }])
+    S.__setVar('carteraPago', [{ id: 'x', numero: marca('num'), banco: marca('banco'), librador: marca('lib'), cobra: HOY, comun: false, importe: 1, tildado: false,
+      unidadId: 'u-dolce', unidadNombre: marca('emp'), otraEmpresa: true }])
     S.renderizarCarteraPago()
-    chequearMarcas(chk, 'lista de la cartera', el(S, 'lista-cartera-pago').innerHTML, ['num', 'banco', 'lib'])
+    chequearMarcas(chk, 'lista de la cartera', el(S, 'lista-cartera-pago').innerHTML, ['num', 'banco', 'lib', 'emp'])
   }
 
   // Confirmar con cheques de la cartera.
@@ -252,7 +261,7 @@ async function main() {
     const ll = S.__rpc
     chk('cartera: llama a pagar_proveedor_con_cheques_cartera, y a nada más', ll.length === 1 && ll[0].nombre === 'pagar_proveedor_con_cheques_cartera', JSON.stringify(ll.map(x => x.nombre)))
     const p = ll[0]?.params ?? {}
-    chk('cartera: los ids de los tildados', JSON.stringify(p.p_cheque_ids) === '["c2","c1"]', JSON.stringify(p.p_cheque_ids))
+    chk('cartera: los ids de los tildados (también el de otra empresa)', JSON.stringify(p.p_cheque_ids) === '["c2","c4","c1"]', JSON.stringify(p.p_cheque_ids))
     chk('cartera: proveedor, empresa, fecha y aplicaciones', p.p_proveedor_id === 'p1' && p.p_unidad_negocio_id === 'u-n' && p.p_fecha === HOY &&
       JSON.stringify(p.p_aplicaciones) === '[{"factura_pendiente_id":"f1","monto_aplicado":100000}]', JSON.stringify(p))
     chk('cartera: NO MUEVE CAJA — no viaja ninguna cuenta ni medio de pago', !('p_cuenta_id' in p) && !('p_medio_pago' in p) && !('p_monto' in p), Object.keys(p).join(','))

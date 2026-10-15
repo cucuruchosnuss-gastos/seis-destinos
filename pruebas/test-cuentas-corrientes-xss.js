@@ -440,9 +440,13 @@ async function correrRenders(S) {
   chequearMarcas(chk, 'filas FIFO', html('lista-fifo'), ['fifo_num'])
   // Los cheques de la cartera (05/10/2026): número, banco y librador vienen de
   // la base (el librador lo leyó el OCR del papel).
-  S.__setVar('carteraPago', [{ id: 'chq', numero: marca('car_num'), banco: marca('car_banco'), librador: marca('car_lib'), cobra: '2026-10-01', comun: false, importe: 5, tildado: true }])
+  // Desde el 15/10/2026, de todas las empresas: el nombre de la empresa (de la
+  // base) va en el título del grupo, en "de <empresa>" y en el aviso.
+  S.__setVar('carteraPago', [{ id: 'chq', numero: marca('car_num'), banco: marca('car_banco'), librador: marca('car_lib'), cobra: '2026-10-01', comun: false, importe: 5, tildado: true,
+    unidadId: 'u-otra', unidadNombre: marca('car_emp'), otraEmpresa: true }])
   S.renderizarCarteraPago()
-  chequearMarcas(chk, 'cheques de la cartera para pagar', html('lista-cartera-pago'), ['car_num', 'car_banco', 'car_lib'])
+  chequearMarcas(chk, 'cheques de la cartera para pagar', html('lista-cartera-pago'), ['car_num', 'car_banco', 'car_lib', 'car_emp'])
+  chequearMarcas(chk, 'aviso del cheque de otra empresa', html('aviso-cartera-otra-empresa'), ['car_emp'])
   chk('resumen de aplicación: sin marcas (solo importes en ARS)', !/data-xss/.test(html('resumen-aplicacion')))
 
   // La moneda del pago (abrirModalPago está stubeada para que ningún render
@@ -577,10 +581,10 @@ const SEGURAS = {
     "empresa.map(opciones).join('')": 'opciones() es la flecha de plantilla de la línea de arriba, con esc() en cada dato (sus interpolaciones las revisa el escáner; ejecutada con marcas)',
   },
   htmlFilaCartera: {
-    i: 'índice del map', 'importeHtml(c.importe)': IMPORTE,
+    i: 'índice del map', 'importeHtml(c.importe)': IMPORTE, deOtra: HTML_PROPIO,
   },
   renderizarCarteraPago: {
-    "carteraPago.map(htmlFilaCartera).join('')": 'htmlFilaCartera() escapa cada dato (ejecutada con marcas)',
+    'htmlListaCartera(carteraPago)': 'htmlListaCartera() escapa el nombre de la empresa y cada fila va por htmlFilaCartera() (ejecutadas con marcas)',
   },
   renderizarFilasFifo: {
     i: 'índice del map', 'formatearFecha(f.fecha)': fecha('sugerir_facturas_fifo() devuelve fecha_factura date'), 'importeHtml(f.saldo)': IMPORTE,

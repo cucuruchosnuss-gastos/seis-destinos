@@ -39,16 +39,19 @@ correrMutacionesEnVarios([
       { nombre: 'la cartera sin cobranzas:procesar', de: "      return tieneTarea('cobranzas', 'procesar')", a: '      return true' },
       { nombre: 'la cartera nace visible', de: 'data-valor="cartera" id="btn-medio-cartera" hidden>', a: 'data-valor="cartera" id="btn-medio-cartera">' },
       // ── Los cheques de la cartera ─────────────────────────────────────────
-      { nombre: 'se ofrecen cheques de cobranzas sin asentar', de: "!!cob && cob.estado === 'procesada' && cob.unidad_negocio_id === unidadId", a: '!!cob && cob.unidad_negocio_id === unidadId' },
-      { nombre: 'se ofrecen cheques de otra empresa', de: "cob.estado === 'procesada' && cob.unidad_negocio_id === unidadId && (cob.moneda", a: "cob.estado === 'procesada' && (cob.moneda" },
+      { nombre: 'se ofrecen cheques de cobranzas sin asentar', de: "!!cob && cob.estado === 'procesada' && !!cob.unidad_negocio_id", a: '!!cob && !!cob.unidad_negocio_id' },
+      // Desde el 15/10/2026 SÍ se ofrecen los de otra empresa: las mutaciones
+      // de eso (y de la de una cobranza sin empresa) están en
+      // mut-cuentas-corrientes-pago-mixto.js.
+      { nombre: 'vuelve a ofrecer solo los de la empresa que paga', de: "cob.estado === 'procesada' && !!cob.unidad_negocio_id && (cob.moneda", a: "cob.estado === 'procesada' && cob.unidad_negocio_id === unidadId && (cob.moneda" },
       { nombre: 'se ofrecen cheques en dólares', de: " && (cob.moneda ?? 'ARS') === 'ARS'\n", a: '\n' },
       { nombre: 'se ofrecen cheques que ya salieron', de: "          if (ch.estado && ch.estado !== 'en_cartera') return false\n", a: '' },
       { nombre: 'un común cobra en su fecha de pago', de: "      return ch?.tipo === 'diferido' ? ch.fecha_pago : ch?.fecha_emision", a: '      return ch?.fecha_pago' },
       { nombre: 'el orden no es por cobro', de: ".sort((a, b) => String(a.cobra ?? '9999').localeCompare(String(b.cobra ?? '9999'))", a: ".sort((a, b) => String(b.cobra ?? '9999').localeCompare(String(a.cobra ?? '9999'))" },
       { nombre: 'la suma sin centavos (arrastra decimales)', de: '.reduce((acc, c) => acc + Math.round(Number(c.importe) * 100), 0)\n      return centavos / 100', a: '.reduce((acc, c) => acc + Number(c.importe), 0)\n      return centavos' },
       { nombre: 'la suma cuenta los destildados', de: '      const centavos = (lista ?? []).filter(c => c.tildado).reduce(', a: '      const centavos = (lista ?? []).reduce(' },
-      { nombre: 'el monto no es la suma de los tildados', de: "        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? sumaCheques(carteraPago) : null)", a: '' },
-      { nombre: 'tildar no recalcula las facturas', de: "        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? sumaCheques(carteraPago) : null)\n        programarActualizarSugerenciasPago()", a: "        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? sumaCheques(carteraPago) : null)" },
+      { nombre: 'el monto no es la suma de los tildados', de: "        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? montoTotalCartera() : null)", a: '' },
+      { nombre: 'tildar no recalcula las facturas', de: "        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? montoTotalCartera() : null)\n        programarActualizarSugerenciasPago()", a: "        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? montoTotalCartera() : null)" },
       // ── Confirmar con la cartera: NO MUEVE CAJA ───────────────────────────
       { nombre: 'la cartera va por registrar_pago_proveedor (movería caja con una cuenta)', de: "          ? await supabase.rpc('pagar_proveedor_con_cheques_cartera', parametrosPagoCartera({ ...base, chequeIds, fecha }))", a: "          ? await supabase.rpc('registrar_pago_proveedor', { ...parametrosPagoCartera({ ...base, chequeIds, fecha }), p_medio_pago: 'cheque', p_cuenta_id: document.getElementById('campo-cuenta-pago-cc').value })" },
       { nombre: 'la cartera manda una cuenta de caja', de: '      return { p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cheque_ids: chequeIds, p_fecha: fecha, p_aplicaciones: aplicaciones }', a: "      return { p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cheque_ids: chequeIds, p_fecha: fecha, p_aplicaciones: aplicaciones, p_cuenta_id: 'cta' }" },
