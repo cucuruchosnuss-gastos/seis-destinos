@@ -15,4 +15,6 @@ Pruebas: unitaria del reparto de aplicaciones entre los dos pagos y del agrupado
 
 ## Avance
 
-(se completa al cerrar; el detalle va en `.claude/traspasos/2026-10-15-pago-mixto.md` dentro de la rama)
+(el detalle va en `.claude/traspasos/2026-10-15-pago-mixto.md` dentro de la rama)
+
+**15/10/2026 — hecho en `ci-prueba/pago-mixto` (`240b4b9` + memoria `3ddbace`), sin integrar.** Verificado en la base (15/10, solo lectura): `pagar_proveedor_con_cheques_cartera` acepta cheques de otra empresa e inserta en `movimientos_entre_unidades`; la policy de `cobranzas` es "propias o `cobranzas:ver_todo`" (sin `ver_todo` se ven solo los cheques de las cobranzas propias; hoy quien paga lo tiene). "Cheques de la cartera" lista los de todas las empresas agrupados (la que paga primero), con "de Dolce Pasta" y el aviso de Entre empresas; "Completar con" efectivo o transferencia por el resto; resumen antes de confirmar; dos pagos en orden (cheques con las facturas más viejas, después el resto); si el resto falla, "Los cheques ya quedaron pagados… Falta registrar el resto" y solo se reintenta el resto. Pruebas: `test-cuentas-corrientes-pago-mixto` 120/120 (mut 86/86 + 4 equivalentes), suites del módulo actualizadas en verde, `e2e/49-pago-mixto` 8/8 (0/8 contra `main`), `npm run pruebas` 264/264, GitHub Pruebas + Navegador en verde. **Para el chat de la base (opcional):** una RPC `pagar_proveedor_mixto` que haga los dos pagos en una sola transacción. Se une sin conflictos con las otras dos ramas del día.
