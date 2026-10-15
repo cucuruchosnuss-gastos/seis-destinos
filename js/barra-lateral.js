@@ -306,6 +306,117 @@ export function pintarBurbujasAbajo(nav, porModulo) {
   })
 }
 
+// ── EL IPHONE Y EL TECLADO (15/10/2026; captura de Facu del 14/10, 18:57) ──
+// En el iPhone, sobre todo con la app abierta desde el ícono, al cerrarse el
+// teclado iOS a veces NO recoloca lo que va con position: fixed: la barra de
+// abajo quedaba dibujada a mitad de pantalla (el alto del teclado arriba del
+// borde) y el contenido seguía por debajo. Cuando el teclado se cierra (o
+// cambia lo que se ve: visualViewport resize / scroll, al volver a la página)
+// se compara lo que se ve (visualViewport.height + offsetTop) con el alto de
+// la ventana (innerHeight) y dónde quedó la barra; si no coinciden, se fuerza
+// la recolocación con un scroll de ida y vuelta de 1 px en el mismo cuadro
+// (la página no se mueve ni parpadea). NO se toca nada con un campo con
+// teclado enfocado, con zoom, ni en el rebote de arriba o de abajo de todo.
+// En la compu la barra de abajo está escondida y no coincide nada que
+// corregir. Revisado sin encontrar otra causa: la barra cuelga del body, sin
+// ancestros con transform / filter / will-change; el body con overflow-x
+// hidden (main.css) es un contenedor de scroll que no scrollea (no mueve lo
+// fijo; cambiarlo cambiaría las barras de arriba de toda la app).
+export const TIPOS_SIN_TECLADO = ['button', 'checkbox', 'radio', 'submit', 'reset', 'range', 'color', 'file', 'image', 'hidden']
+export const TOLERANCIA_TECLADO_PX = 2
+export const MS_DESPUES_DEL_TECLADO = 80
+export const MS_ENTRE_RECOLOCACIONES = 400
+export const MAX_RECOLOCACIONES = 3
+
+// ¿Este elemento abre el teclado (o la rueda de opciones) del celular?
+export function abreTeclado(el) {
+  if (!el || el.disabled) return false
+  if (el.isContentEditable) return true
+  const tag = String(el.tagName ?? '').toUpperCase()
+  if (tag === 'SELECT') return true
+  if (tag !== 'INPUT' && tag !== 'TEXTAREA') return false
+  if (el.readOnly) return false
+  return tag === 'TEXTAREA' || !TIPOS_SIN_TECLADO.includes(String(el.type || 'text').toLowerCase())
+}
+
+// Cuántos px no coincide lo que se ve con el alto de la ventana. 0 sin
+// visualViewport o con zoom (con zoom es normal que no coincida).
+export function desfaseTeclado(win) {
+  const vv = win?.visualViewport
+  if (!vv) return 0
+  if (Math.abs((Number(vv.scale) || 1) - 1) > 0.01) return 0
+  const d = Number(win.innerHeight) - (Number(vv.height) + Number(vv.offsetTop))
+  return Number.isFinite(d) ? Math.round(d) : 0
+}
+
+// El rebote del iPhone arriba o abajo de todo: el scroll se pasa del borde.
+export function enRebote(win, doc) {
+  const y = Number(win?.scrollY) || 0
+  const max = Math.max(0, (Number(doc?.documentElement?.scrollHeight) || 0) - (Number(win?.innerHeight) || 0))
+  return y < 0 || y > max + 1
+}
+
+// ¿La barra de abajo (visible) no termina en el borde de abajo de la ventana?
+export function barraCorrida(win, barra) {
+  const r = barra?.getBoundingClientRect?.()
+  if (!r || !(r.height > 0)) return false
+  return Math.abs(r.bottom - Number(win.innerHeight)) > TOLERANCIA_TECLADO_PX
+}
+
+export function hayQueRecolocar({ win, doc, barra }) {
+  // Sin la barra de abajo a la vista (la compu, la impresión) no hay nada que corregir.
+  if (!(barra?.getBoundingClientRect?.()?.height > 0)) return false
+  if (abreTeclado(doc?.activeElement)) return false
+  if (enRebote(win, doc)) return false
+  return Math.abs(desfaseTeclado(win)) > TOLERANCIA_TECLADO_PX || barraCorrida(win, barra)
+}
+
+// Ida y vuelta de 1 px en el mismo cuadro: iOS vuelve a ubicar lo fijo y la
+// página queda donde estaba.
+export function recolocarFijos(win) {
+  const x = Number(win.scrollX) || 0
+  const y = Number(win.scrollY) || 0
+  win.scrollTo(x, y > 0 ? y - 1 : y + 1)
+  win.scrollTo(x, y)
+}
+
+// Lo que mueve la pantalla (scroll, visualViewport) se revisa cuando lleva
+// este rato quieta: un scroll en medio del envión del iPhone lo frenaría.
+export const MS_QUIETO = 250
+
+export function vigilarTeclado({ win, doc, barra, ahora = () => Date.now() }) {
+  if (typeof win?.setTimeout !== 'function' || typeof doc?.addEventListener !== 'function') return null
+  let espera = null
+  let ultima = -Infinity
+  let seguidas = 0
+  const pedir = (ms) => {
+    if (espera !== null) win.clearTimeout(espera)
+    espera = win.setTimeout(revisar, ms)
+  }
+  function revisar() {
+    espera = null
+    if (!hayQueRecolocar({ win, doc, barra })) { seguidas = 0; return }
+    // Si no se arregla, se reintenta pocas veces y espaciado (nunca en bucle).
+    if (seguidas >= MAX_RECOLOCACIONES) return
+    const pasaron = ahora() - ultima
+    if (pasaron < MS_ENTRE_RECOLOCACIONES) return pedir(MS_ENTRE_RECOLOCACIONES - pasaron)
+    seguidas++
+    ultima = ahora()
+    recolocarFijos(win)
+    pedir(MS_ENTRE_RECOLOCACIONES)
+  }
+  doc.addEventListener('focusin', ev => { if (abreTeclado(ev.target)) seguidas = 0 })
+  doc.addEventListener('focusout', ev => { if (abreTeclado(ev.target)) pedir(MS_DESPUES_DEL_TECLADO) })
+  win.visualViewport?.addEventListener('resize', () => pedir(MS_QUIETO))
+  win.visualViewport?.addEventListener('scroll', () => pedir(MS_QUIETO))
+  win.addEventListener('scroll', () => pedir(MS_QUIETO), { passive: true })
+  win.addEventListener('pageshow', () => pedir(0))
+  win.addEventListener('orientationchange', () => pedir(MS_DESPUES_DEL_TECLADO))
+  // Al abrir la página: el teclado puede venir de la anterior (el login).
+  pedir(MS_DESPUES_DEL_TECLADO)
+  return { revisar }
+}
+
 function leerGuardado() {
   try { return localStorage.getItem(CLAVE_COLAPSADA) } catch { return null }
 }
@@ -476,6 +587,8 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     doc.body.prepend(nav)
     doc.body.append(abajo, hoja, editor)
     doc.body.classList.add('con-barra-lateral')
+    // El iPhone a veces deja la barra a mitad de pantalla al cerrar el teclado.
+    vigilarTeclado({ win, doc, barra: abajo })
     // Personalizar avisa cuando cambia el orden o los fijados.
     win.addEventListener('preferencias:cambio', () => {
       prefs = leerPrefs(yo.id)

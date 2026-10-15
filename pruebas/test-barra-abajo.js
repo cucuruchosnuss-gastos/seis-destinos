@@ -37,6 +37,8 @@ const { chk, esperas, fin } = arnes()
 
 const FUNCIONES = ['htmlIcono', 'debeMostrarse', 'modulosDeBarra', 'claveActual', 'leerColapsada', 'htmlBurbujaBarra', 'htmlItem',
   'htmlBarra', 'capacidadBarraAbajo', 'htmlBarraAbajo', 'htmlHojaMas', 'htmlEditarAbajo', 'cambiarListaAbajo',
+  // El iPhone y el teclado (15/10/2026): la suite propia es test-barra-abajo-teclado.js.
+  'abreTeclado', 'desfaseTeclado', 'enRebote', 'barraCorrida', 'hayQueRecolocar', 'recolocarFijos', 'vigilarTeclado',
   'pintarBurbujasBarra', 'pintarBurbujasAbajo', 'leerGuardado', 'guardar', 'instalarBarraLateral']
 const DE_MODULOS = ['moduloVisible', 'urlDeModulo', 'escDash', 'textoPendiente', 'agruparPendientes', 'colorDeModulo', 'enOrdenDeBarra']
 const DE_PREFS = ['clavePrefs', 'prefsVacias', 'normalizarPrefs', 'leerCopia', 'escribirCopia', 'sonDeFabrica', 'leerPrefs', 'guardarPrefs', 'subirPrefs',
@@ -56,7 +58,8 @@ function construir() {
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
   for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA', 'TOPE_USO', 'VERSION_PREFS', 'ESTADO_PREFS']) codigo += extraerConst(pref, c)
   for (const f of DE_PREFS) codigo += extraerFn(pref, f) + '\n'
-  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'NOMBRE_CORTO_ABAJO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
+  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'NOMBRE_CORTO_ABAJO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR',
+    'TIPOS_SIN_TECLADO', 'TOLERANCIA_TECLADO_PX', 'MS_DESPUES_DEL_TECLADO', 'MS_ENTRE_RECOLOCACIONES', 'MAX_RECOLOCACIONES', 'MS_QUIETO']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += `return { ${FUNCIONES.join(', ')}, ${DE_PREFS.join(', ')}, MODULOS, ESTADO_PREFS, __ls, __errores }`
   return new Function(codigo)()
@@ -350,8 +353,10 @@ esperas.push((async () => {
   await tic(); await tic(); await tic()
   chk('"Volver a la automática" saca la clave', !('barra_inferior' in sb.guardadas.at(-1)) && tabs(abajo.innerHTML)[1] === 'pedidos')
   // El toque largo abre el editor, y ese toque no navega.
+  // (Desde el 15/10/2026 hay otro reloj de antes: el que mira el teclado del iPhone.)
+  const relojesAntes = win.relojes.length
   abajo.disparar('pointerdown')
-  chk('el toque largo espera', editor.hidden === true && win.relojes.length === 1)
+  chk('el toque largo espera', editor.hidden === true && win.relojes.length === relojesAntes + 1)
   win.correrRelojes()
   chk('… y abre el editor', editor.hidden === false)
   let prevenido = false

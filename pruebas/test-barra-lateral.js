@@ -36,6 +36,8 @@ const { chk, esperas, fin } = arnes()
 
 const FUNCIONES = ['htmlIcono', 'debeMostrarse', 'modulosDeBarra', 'claveActual', 'leerColapsada', 'htmlBurbujaBarra', 'htmlItem',
   'htmlBarra', 'capacidadBarraAbajo', 'htmlBarraAbajo', 'htmlHojaMas', 'htmlEditarAbajo', 'cambiarListaAbajo',
+  // El iPhone y el teclado (15/10/2026): la suite propia es test-barra-abajo-teclado.js.
+  'abreTeclado', 'desfaseTeclado', 'enRebote', 'barraCorrida', 'hayQueRecolocar', 'recolocarFijos', 'vigilarTeclado',
   'pintarBurbujasBarra', 'pintarBurbujasAbajo', 'leerGuardado', 'guardar', 'instalarBarraLateral']
 const DE_MODULOS = ['moduloVisible', 'urlDeModulo', 'escDash', 'textoPendiente', 'agruparPendientes', 'colorDeModulo', 'enOrdenDeBarra']
 const DE_PREFS = ['clavePrefs', 'prefsVacias', 'normalizarPrefs', 'leerCopia', 'escribirCopia', 'sonDeFabrica', 'leerPrefs', 'guardarPrefs', 'subirPrefs',
@@ -55,7 +57,8 @@ function construir() {
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
   for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA', 'TOPE_USO', 'VERSION_PREFS', 'ESTADO_PREFS']) codigo += extraerConst(pref, c)
   for (const f of DE_PREFS) codigo += extraerFn(pref, f) + '\n'
-  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'NOMBRE_CORTO_ABAJO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
+  for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ANCHO_TAB_ABAJO', 'MIN_ABAJO', 'MAX_ABAJO', 'MS_TOQUE_LARGO', 'NOMBRE_CORTO_ABAJO', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR',
+    'TIPOS_SIN_TECLADO', 'TOLERANCIA_TECLADO_PX', 'MS_DESPUES_DEL_TECLADO', 'MS_ENTRE_RECOLOCACIONES', 'MAX_RECOLOCACIONES', 'MS_QUIETO']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += `return { ${FUNCIONES.join(', ')}, ${DE_PREFS.join(', ')}, MODULOS, __ls, __paneles }`
   return new Function(codigo)()
