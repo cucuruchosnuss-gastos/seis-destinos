@@ -352,8 +352,10 @@ esperas.push((async () => {
     chk('… la acción Paró de la planilla también lo dice', /PARADA desde las 15:30<\/span><span class="pr-acc__sub">Corte de cadena/.test(html(S, 'pr-planilla-paradas-resumen')))
     chk('… y "Todavía está parada" se apaga para otra (la base no deja dos)', /data-parada-sigue="1" aria-pressed="false" disabled>/.test(html(S, 'pr-parada-hora')))
     S.abrirHoraVentana('volvio', AHORA)
+    // A las 17:00 el turno Mañana (hasta las 15:00) ya terminó: en vez de
+    // "Volvió con lote nuevo", "Cerrar planilla del turno" (14/10/2026).
     chk('"Volvió a las…": la ventana con la hora de ahora y la parada', el(S, 'pr-hora-ventana-titulo').textContent === '¿A qué hora volvió?' &&
-      S.estado.horaForm.hora === '17:00' && /Corte de cadena/.test(el(S, 'pr-hora-ventana-nota').textContent) && /data-hv-lote-nuevo/.test(html(S, 'pr-hora-ventana-hora')))
+      S.estado.horaForm.hora === '17:00' && /Corte de cadena/.test(el(S, 'pr-hora-ventana-nota').textContent) && /data-hv-cerrar-planilla/.test(html(S, 'pr-hora-ventana-hora')))
     for (const d of '1620') S.teclaHoraVentana(d)
     await S.confirmarHoraVentana(AHORA)
     await tic()
@@ -374,9 +376,14 @@ esperas.push((async () => {
   }
 
   // ═══ "Volvió con lote nuevo" ═══════════════════════════════════════════
+  // Desde el 14/10/2026: a las 17:00 el turno Mañana (hasta las 15:00) ya
+  // terminó y no se ofrece el lote nuevo (test-produccion-lote-nuevo.js).
+  // Acá se prueba el lote nuevo en sí, sin horario cargado (como una unidad
+  // que no tiene horarios_turno), y pasa por el cartel de confirmación.
+  const SIN_HORARIO = { horarios: [] }
   {
     // Desde el formulario: con HASTA cargado, la casilla.
-    const S = armar()
+    const S = armar(SIN_HORARIO)
     await S.abrirPlanilla('t1', 'pr-paradas')
     await S.asegurarMotivosParada()
     S.elegirMotivoParada('mo-cadena')
@@ -387,6 +394,7 @@ esperas.push((async () => {
     S.alternarLoteNuevoParada()
     chk('… marcada, dice qué pasa con el lote', /El lote 7040 queda para completar/.test(html(S, 'pr-parada-hora')))
     await S.guardarParadaNueva(AHORA)
+    await S.responderConfirma(true) // "Sí, abrir lote nuevo" en el cartel
     await tic()
     chk('la parada entra ABIERTA (relanzar solo termina una abierta)', rpcs(S, 'registrar_parada')[0]?.[1]?.p_fin === null)
     chk('… y relanzar_con_lote_nuevo la termina a la hora de HASTA', JSON.stringify(rpcs(S, 'relanzar_con_lote_nuevo')[0]?.[1]) ===
@@ -394,7 +402,7 @@ esperas.push((async () => {
     chk('… se abre la planilla nueva con el aviso', S.estado.planilla?.turno?.id === 't2' &&
       /Lote 7040 queda para completar · Ahora la Máquina 1 sigue con el lote 7041/.test(html(S, 'pr-planilla-estado')), html(S, 'pr-planilla-estado'))
     // Si relanzar falla, la parada quedó guardada y se dice.
-    const E = armar()
+    const E = armar(SIN_HORARIO)
     const base = E.__llamadas
     E.__setRpc(async (n, p) => n === 'relanzar_con_lote_nuevo'
       ? { data: null, error: { message: 'El turno no está abierto.' } }
@@ -406,11 +414,12 @@ esperas.push((async () => {
     await escribirHora(E, 'hasta', ['1', '6', '0', '0'])
     E.alternarLoteNuevoParada()
     await E.guardarParadaNueva(AHORA)
+    await E.responderConfirma(true)
     chk('si relanzar falla: la parada quedó guardada y se dice, con el mensaje de la base',
       /La parada quedó guardada, pero no se pudo pasar al lote nuevo: El turno no está abierto\./.test(el(E, 'pr-parada-error').textContent) && base.rpc.length >= 2,
       el(E, 'pr-parada-error').textContent)
     // Desde "Volvió a las…": la casilla en la ventana.
-    const V = armar({ paradas: [{ id: 'pa-7', inicio: '2026-10-05T15:30:00-03:00', fin: null, motivo: 'Corte de luz', categoria: 'falla' }] })
+    const V = armar({ ...SIN_HORARIO, paradas: [{ id: 'pa-7', inicio: '2026-10-05T15:30:00-03:00', fin: null, motivo: 'Corte de luz', categoria: 'falla' }] })
     await V.abrirPlanilla('t1', 'pr-paradas')
     V.abrirHoraVentana('volvio', AHORA)
     V.alternarLoteNuevoVentana()
@@ -418,17 +427,19 @@ esperas.push((async () => {
       /queda para completar/.test(el(V, 'pr-hora-ventana-nota').textContent))
     for (const d of '1610') V.teclaHoraVentana(d)
     await V.confirmarHoraVentana(AHORA)
+    await V.responderConfirma(true)
     await tic()
     chk('… relanzar_con_lote_nuevo a las 16:10 (y no editar_parada)', JSON.stringify(rpcs(V, 'relanzar_con_lote_nuevo')[0]?.[1]) ===
       '{"p_parada_id":"pa-7","p_hora":"2026-10-05T16:10:00-03:00"}' && rpcs(V, 'editar_parada').length === 0, JSON.stringify(rpcs(V, 'relanzar_con_lote_nuevo')))
     // En una pendiente de completar no hay lote nuevo.
-    const P = armar({ turno: { ...TURNO, estado: 'pendiente_completar', forzado_por: 'e', forzado_motivo: 'x', forzado_en: '2026-10-05T19:00:00Z' } })
+    const P = armar({ ...SIN_HORARIO, turno: { ...TURNO, estado: 'pendiente_completar', forzado_por: 'e', forzado_motivo: 'x', forzado_en: '2026-10-05T19:00:00Z' } })
     await P.abrirPlanilla('t1', 'pr-paradas')
     await P.asegurarMotivosParada()
     P.elegirMotivoParada('mo-cadena')
     await escribirHora(P, 'desde', ['1', '5', '0', '0'])
     await escribirHora(P, 'hasta', ['1', '6', '0', '0'])
-    chk('en una pendiente de completar no se ofrece "Volvió con lote nuevo"', !/data-parada-lote-nuevo/.test(html(P, 'pr-parada-hora')))
+    chk('en una pendiente de completar no se ofrece "Volvió con lote nuevo"', !/data-parada-lote-nuevo/.test(html(P, 'pr-parada-hora')) &&
+      !/data-parada-cerrar-planilla/.test(html(P, 'pr-parada-hora')))
   }
 
   // ═══ CASO 4 · EL CIERRE SIMPLE (07/10/2026): "¿Paró antes de lo normal?" ═══
