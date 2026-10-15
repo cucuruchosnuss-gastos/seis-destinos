@@ -221,28 +221,44 @@ function htmlClienteHoja(cli, transporte) {
     `<span>${escHoja(textoTransporteHoja(transporte))}</span></div></div>`
 }
 
-// "7021 ×15 · 7033 ×10", y lo que no estaba en stock (el lote "SIN STOCK")
-// como "faltan 14". Los lotes son IDENTIFICADORES: van tal cual.
+// LA HOJA ES PARA EL CLIENTE (pedido del 15/10/2026, caso N-0013): muestra lo
+// que se llevó, NUNCA estados internos. Los lotes que lleva son los REALES de
+// los que salió la mercadería (los 'despacho' de la orden en
+// stock_terminado_movimientos, o en stock_movimientos si es un insumo),
+// SUMADOS por lote. El lote "SIN STOCK" (lo que la base todavía no ubicó en
+// un lote: se está produciendo o queda para revisar) y lo que no tiene lote
+// NO van: ni "faltan N" ni "Faltante… pendiente de revisión". Eso se ve solo
+// en pantalla (Carga, Mis retiros y Administración → Por revisar).
 export const LOTE_SIN_STOCK_HOJA = 'SIN STOCK'
-export function textoLotesHoja(lotes, unidad = null) {
-  const lista = Array.isArray(lotes) ? lotes : []
-  if (!lista.length) return '—'
-  const cuanto = (l) => unidad ? cantidadInsumoHoja(l?.cantidad, unidad) : enteroHoja(l?.cajas)
-  return lista.map(l => {
-    const lote = String(l?.lote ?? '—')
+export function lotesRealesHoja(lotes, unidad = null) {
+  const porLote = new Map()
+  for (const l of Array.isArray(lotes) ? lotes : []) {
+    const lote = String(l?.lote ?? '').trim()
+    if (!lote || lote === LOTE_SIN_STOCK_HOJA || lote === 'sin lote') continue
     const c = unidad ? l?.cantidad : l?.cajas
-    if (lote === LOTE_SIN_STOCK_HOJA) return `faltan ${cuanto(l)}`
-    if (c === null || c === undefined || c === '') return lote
-    return lista.length === 1 ? lote : `${lote} ×${cuanto(l)}`
-  }).join(' · ')
+    const n = c === null || c === undefined || c === '' || !Number.isFinite(Number(c)) ? null : Number(c)
+    const antes = porLote.has(lote) ? porLote.get(lote) : 0
+    porLote.set(lote, antes === null || n === null ? null : antes + n)
+  }
+  return [...porLote].filter(([, n]) => n === null || n > 0)
+    .map(([lote, n]) => unidad ? { lote, cantidad: n } : { lote, cajas: n })
 }
 
-// Lo que faltó de un renglón (su lote "SIN STOCK"), o null.
-function faltanteDeRenglon(r) {
-  const l = (Array.isArray(r?.lotes) ? r.lotes : []).find(x => String(x?.lote ?? '') === LOTE_SIN_STOCK_HOJA)
-  if (!l) return null
-  const n = Number(r?.esInsumo ? l.cantidad : l.cajas)
-  return n > 0 ? n : null
+// "6242-2 ×30 · 6244-1 ×5". Un solo lote va sin cantidad si cubre todo el
+// renglón (`total`); si cubre una parte (el resto todavía sin lote) lleva la
+// suya, sin decir nada de lo demás. Los lotes son IDENTIFICADORES: van tal cual.
+export function textoLotesHoja(lotes, unidad = null, total = null) {
+  const lista = lotesRealesHoja(lotes, unidad)
+  if (!lista.length) return '—'
+  const cant = (l) => unidad ? l.cantidad : l.cajas
+  const cuanto = (l) => unidad ? cantidadInsumoHoja(l.cantidad, unidad) : enteroHoja(l.cajas)
+  const suma = lista.length === 1 ? cant(lista[0]) : null
+  const parcial = suma !== null && total !== null && total !== undefined && total !== '' &&
+    Number.isFinite(Number(total)) && Math.abs(Number(total) - suma) > 1e-9
+  return lista.map(l => {
+    if (cant(l) === null) return l.lote
+    return lista.length === 1 && !parcial ? l.lote : `${l.lote} ×${cuanto(l)}`
+  }).join(' · ')
 }
 
 // "Cucurucho grande · Caja x 100 · LOLO": el producto con su presentación y
@@ -259,7 +275,7 @@ function cantidadHoja(r) {
 }
 
 function htmlFilaHoja(r, conPrecios, moneda) {
-  const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)
+  const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null, r?.esInsumo ? r?.cantidad : r?.cajas)
   let precio = ''
   if (conPrecios) {
     const u = r?.esInsumo ? unidadHoja(r.unidad) : ''
@@ -299,18 +315,12 @@ function htmlTablaHoja(renglones, conPrecios, moneda, { conTotal, orden }) {
   return `<table class="rh-tabla">${col}<thead>${cab}</thead><tbody>${filas}</tbody>${pie}</table>`
 }
 
-// Las observaciones y el faltante (si hay), en un renglón chico debajo de la tabla.
+// Las observaciones (si hay), en un renglón chico debajo de la tabla. El
+// faltante NO va (15/10/2026): la hoja la firma el cliente.
 function htmlNotasHoja(orden) {
   const obs = String(orden?.observaciones ?? '').trim()
-  const faltantes = (orden?.renglones ?? []).map(r => {
-    const f = faltanteDeRenglon(r)
-    if (f === null) return null
-    const cuanto = r.esInsumo ? cantidadInsumoHoja(f, r.unidad) : `${enteroHoja(f)} ${f === 1 ? 'caja' : 'cajas'}`
-    return `${cuanto} de ${descripcionHoja(r)}`
-  }).filter(Boolean)
-  if (!obs && !faltantes.length) return ''
-  return '<p class="rh-notas">' + (obs ? `<strong>Observaciones:</strong> ${escHoja(obs)} ` : '') +
-    (faltantes.length ? `<strong>Faltante:</strong> ${escHoja(faltantes.join('; '))}, pendiente de revisión.` : '') + '</p>'
+  if (!obs) return ''
+  return `<p class="rh-notas"><strong>Observaciones:</strong> ${escHoja(obs)}</p>`
 }
 
 function htmlPieHoja(orden) {
@@ -530,12 +540,15 @@ export function textoOrden(orden) {
   for (const r of orden?.renglones ?? []) {
     if (r?.esInsumo) {
       insumos++
-      const lotesI = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes, r.unidad)})` : ''
+      // Como en la hoja: solo los lotes reales, sumados (nada de "SIN STOCK").
+      const realesI = lotesRealesHoja(r.lotes, r.unidad)
+      const lotesI = realesI.length ? ` (lotes ${textoLotes(realesI, r.unidad)})` : ''
       lineas.push(`- ${cantidadInsumoHoja(r.cantidad, r.unidad)} · ${nombreInsumoHoja(r)}${lotesI}`)
       continue
     }
     const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
-    const lotes = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes)})` : ''
+    const reales = lotesRealesHoja(r.lotes)
+    const lotes = reales.length ? ` (lotes ${textoLotes(reales)})` : ''
     lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)
   }
   lineas.push('', `Total: ${enteroHoja(totalCajasOrden(orden))} cajas` +

@@ -316,14 +316,63 @@ const MIXTA = {
   chequearMarcas(chk, 'hoja anulada con faltante', S.htmlHoja(anul), ['anul-por', 'anul-motivo', 'f-producto'])
 }
 
-// ── El faltante y el sello de anulada ──────────────────────
+// ── El faltante NUNCA va en la hoja (pedido del 15/10/2026, caso N-0013) ────
+// La hoja la firma el cliente: muestra lo que se llevó y de qué lotes salió,
+// nunca "faltan N" ni "Faltante… pendiente de revisión".
 {
   const S = nuevo()
-  const conFaltante = { ...ORDEN, renglones: [{ producto: 'Cucurucho mini', presentacion: 'Caja x 320', cono: 'CASERATO', cajas: 50, unidades: 16000, lotes: [{ lote: '7031', cajas: 20 }, { lote: '7038', cajas: 16 }, { lote: 'SIN STOCK', cajas: 14 }] }] }
-  const h = S.htmlHoja(conFaltante)
-  chk('lo que no estaba en stock se dice "faltan N" en los lotes', /7031 ×20 · 7038 ×16 · faltan 14/.test(h))
-  chk('y abajo, el faltante pendiente de revisión', /<strong>Faltante:<\/strong> 14 cajas de Cucurucho mini · Caja x 320 · CASERATO, pendiente de revisión\./.test(h))
+  const PROD = { producto: 'Cucuruchón Mini', presentacion: 'Caja con cono', cono: 'ASPEN', unidades: 3500 }
+  const lotesDe = (h) => [...h.matchAll(/<td class="rh-lote">([^<]*)<\/td>/g)].map(m => m[1])
+  const sinInternos = (txt) => !/pendiente de revisi|faltan|Faltante|SIN STOCK/i.test(txt)
+  // Un lote: va solo, sin cantidad.
+  const uno = S.htmlHoja({ ...ORDEN, renglones: [{ ...PROD, cajas: 35, lotes: [{ lote: '6242-2', cajas: 35 }] }] })
+  chk('LOTE con un lote que cubre todo: el lote solo', lotesDe(uno)[0] === '6242-2')
+  // Dos lotes (N-0013 ya conciliada): los dos, con lo de cada uno.
+  const dos = S.htmlHoja({ ...ORDEN, renglones: [{ ...PROD, cajas: 35, lotes: [{ lote: '6242-2', cajas: 30 }, { lote: '6244-1', cajas: 5 }] }] })
+  chk('LOTE con dos lotes: "6242-2 ×30 · 6244-1 ×5"', lotesDe(dos)[0] === '6242-2 ×30 · 6244-1 ×5')
+  // Una parte sin lote todavía (N-0013 al imprimirse): solo lo conocido.
+  const caso = { ...ORDEN, observaciones: '', renglones: [{ ...PROD, cajas: 35, lotes: [{ lote: '6242-2', cajas: 30 }, { lote: 'SIN STOCK', cajas: 5 }] }] }
+  const parte = S.htmlHoja(caso)
+  chk('LOTE con una parte sin lote: solo el lote conocido, con su cantidad', lotesDe(parte)[0] === '6242-2 ×30')
+  chk('N-0013: la hoja no dice "faltan" ni "pendiente de revisión" ni "SIN STOCK"', sinInternos(parte))
+  chk('N-0013: CAJAS dice 35 (lo que se llevó)', /<td class="rh-num rh-cajas">35<\/td><td class="rh-producto">/.test(parte))
+  chk('N-0013: TOTAL DE CAJAS dice 35', /<tr class="rh-total"><td class="rh-num rh-cajas">35<\/td>/.test(parte))
+  chk('N-0013: el PDF (una copia) tampoco', sinInternos(S.htmlHoja(caso, { copias: S.COPIAS_PDF })))
+  chk('N-0013: con precios (Administración) tampoco', sinInternos(S.htmlHoja({ ...caso, renglones: caso.renglones.map(r => ({ ...r, precio: 100, subtotal: 3500 })) }, { conPrecios: true })))
+  const entera = S.htmlHoja(caso, { plan: { modo: 'entera', paginas: [[0, 1]] } })
+  chk('N-0013: ni en hojas enteras', sinInternos(entera) && lotesDe(entera)[0] === '6242-2 ×30')
+  // Todo sin lote: guion, sin texto de faltante.
+  const nada = S.htmlHoja({ ...ORDEN, renglones: [{ ...PROD, cajas: 50, lotes: [{ lote: 'SIN STOCK', cajas: 50 }] }] })
+  chk('todo sin lote: "—" en LOTE y nada de faltante', lotesDe(nada)[0] === '—' && sinInternos(nada))
+  // El viejo caso de tres lotes con faltante.
+  const viejo = S.htmlHoja({ ...ORDEN, renglones: [{ producto: 'Cucurucho mini', presentacion: 'Caja x 320', cono: 'CASERATO', cajas: 50, unidades: 16000, lotes: [{ lote: '7031', cajas: 20 }, { lote: '7038', cajas: 16 }, { lote: 'SIN STOCK', cajas: 14 }] }] })
+  chk('tres lotes con faltante: solo los reales', lotesDe(viejo)[0] === '7031 ×20 · 7038 ×16' && sinInternos(viejo))
+  chk('y las observaciones siguen yendo', /<strong>Observaciones:<\/strong> Frágil/.test(viejo))
   chk('sin faltante no se nombra', !/Faltante/.test(S.htmlHoja(ORDEN)))
+  // Agrupados: el mismo lote en dos movimientos va una vez, sumado.
+  chk('el mismo lote dos veces se suma', S.textoLotesHoja([{ lote: '6244-1', cajas: 3 }, { lote: '6242-2', cajas: 30 }, { lote: '6244-1', cajas: 2 }], null, 35) === '6244-1 ×5 · 6242-2 ×30')
+  chk('un lote partido en dos movimientos que cubre todo va solo', S.textoLotesHoja([{ lote: '6242-2', cajas: 30 }, { lote: '6242-2', cajas: 5 }], null, 35) === '6242-2')
+  chk('un movimiento que se compensa a cero no va', S.textoLotesHoja([{ lote: '6242-2', cajas: 35 }, { lote: '7000', cajas: 4 }, { lote: '7000', cajas: -4 }], null, 35) === '6242-2')
+  chk('un lote sin cantidad va solo', S.textoLotesHoja([{ lote: '6242-2' }, { lote: '6244-1', cajas: 5 }], null, 35) === '6242-2 · 6244-1 ×5')
+  chk('sin total conocido, un lote va solo', S.textoLotesHoja([{ lote: '6242-2', cajas: 30 }]) === '6242-2')
+  chk('lote vacío o "sin lote" no va', S.textoLotesHoja([{ lote: '', cajas: 2 }, { lote: null, cajas: 1 }, { lote: 'sin lote', cajas: 3 }, { lote: '6242-2', cajas: 30 }], null, 36) === '6242-2 ×30')
+  chk('lista vacía o ausente: "—"', S.textoLotesHoja([]) === '—' && S.textoLotesHoja(null) === '—')
+  // Un INSUMO: lo mismo, en su unidad.
+  const ins = S.htmlHoja({ ...ORDEN, renglones: [{ esInsumo: true, producto: 'Azúcar', marca: 'Ledesma', cantidad: 50, unidad: 'kg', lotes: [{ lote: 'A-1', cantidad: 30.5 }, { lote: 'SIN STOCK', cantidad: 19.5 }] }] })
+  chk('insumo con una parte sin lote: solo el lote conocido, en kilos', lotesDe(ins)[0] === 'A-1 ×30,5 kg' && sinInternos(ins))
+  // Compartir (WhatsApp): lo mismo.
+  const t = S.textoOrden(caso)
+  chk('el texto para compartir dice 35 cajas y solo el lote real', /- 35 cajas · Cucuruchón Mini · Caja con cono · ASPEN \(lotes 6242-2 \(30\)\)/.test(t) && /Total: 35 cajas/.test(t))
+  chk('el texto para compartir no dice SIN STOCK ni faltante', sinInternos(t))
+  const tDos = S.textoOrden({ ...caso, renglones: [{ ...PROD, cajas: 35, lotes: [{ lote: '6242-2', cajas: 30 }, { lote: '6244-1', cajas: 2 }, { lote: '6244-1', cajas: 3 }] }] })
+  chk('el texto para compartir suma por lote', /\(lotes 6242-2 \(30\) · 6244-1 \(5\)\)/.test(tDos))
+  const tIns = S.textoOrden({ ...caso, renglones: [{ esInsumo: true, producto: 'Azúcar', cantidad: 50, unidad: 'kg', lotes: [{ lote: 'SIN STOCK', cantidad: 50 }] }] })
+  chk('un insumo todo sin lote: el texto no nombra lotes', /- 50 kg · Azúcar\n/.test(tIns + '\n') && sinInternos(tIns))
+}
+
+// ── El sello de anulada ─────────────────────────────────────────────────────
+{
+  const S = nuevo()
   const a = S.htmlHoja({ ...ORDEN, estado: 'anulada', anuladaEn: '2026-09-28', anuladaPor: 'Pablo Nuss', anuladaMotivo: 'el cliente canceló el retiro' })
   chk('el sello de ANULADA lleva fecha, quién y motivo', /rh-anulada__detalle">28\/09\/2026 · Pablo Nuss · el cliente canceló el retiro</.test(a))
   chk('sin esos datos el sello va solo', !/rh-anulada__detalle/.test(S.htmlHoja({ ...ORDEN, estado: 'anulada' })))
