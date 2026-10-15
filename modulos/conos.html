@@ -528,8 +528,32 @@
       const tieneP = x => !!esSuper || pr.has(x)
       return {
         ver: tiene('ver'), pedir: tiene('pedir'), precios: tiene('precios'), recibir: tiene('recibir'),
-        configurar: tieneP('configurar'), produccion: tieneP('configurar') || tieneP('ver') || tieneP('cargar'),
+        configurar: tieneP('configurar'), cargar: tieneP('cargar'),
+        produccion: tieneP('configurar') || tieneP('ver') || tieneP('cargar'),
       }
+    }
+
+    // ── "+ Cono nuevo" (14/10/2026, también al anotar para pedir) ─────────
+    // proponer_marca(p_nombre) lo deja a produccion:cargar, produccion:configurar
+    // o conos:pedir (verificado el 14/10/2026): a los demás no se les ofrece.
+    function puedeProponer(perm) {
+      return !!(perm?.pedir || perm?.configurar || perm?.cargar)
+    }
+    // El texto que viaja: sin espacios en los bordes y los del medio de a uno.
+    // La base compara upper(btrim(p_nombre)) EXACTO y no los colapsa: así
+    // "LE   CREMME" no queda como otro cono distinto de "LE CREMME".
+    function textoConoNuevo(texto) {
+      return String(texto ?? '').trim().replace(/\s+/g, ' ')
+    }
+    // Se ofrece crear con 2 letras o más y si NINGÚN cono (de todos, no solo
+    // de los que muestra la lista) se llama igual, sin mirar mayúsculas,
+    // acentos ni espacios. Devuelve el texto a proponer, o null.
+    function conoNuevoOfrecido(texto, conos) {
+      const t = textoConoNuevo(texto)
+      if (t.length < 2) return null
+      const q = normalizarBusqueda(t)
+      const igual = (conos ?? []).some(c => normalizarBusqueda(textoConoNuevo(c.cono)) === q)
+      return igual ? null : t
     }
 
     // Las pestañas que ve cada uno, en orden. "Por pedir" primero (es lo que más
@@ -886,6 +910,7 @@
       anotar: { marcaId: null, sugerido: false },
       agregar: { abierto: false, marcaId: null, buscar: '' },
       enviando: false,
+      proponiendo: false,
       // Todos los conos
       catalogo: [],
       catalogoPorId: new Map(),
@@ -1059,10 +1084,16 @@
         .slice(0, tope)
     }
 
-    function htmlResultados(lista, atributo, textoNuevo) {
+    // La lista del buscador y, al final, "+ Cono nuevo" con el formulario al
+    // que vuelve el cono creado ('anotar' o 'agregar').
+    function htmlResultados(lista, atributo, textoNuevo, destino) {
       const filas = lista.map(c => `<button type="button" class="cn-resultado" ${atributo}="${esc(c.marca_id)}">${esc(c.cono)}${c.papel_ilustracion ? ' <span class="cn-chip cn-chip--ilus">Ilustración</span>' : ''}</button>`)
-      if (textoNuevo) filas.push(`<button type="button" class="cn-resultado" data-cono-nuevo="${esc(textoNuevo)}">+ Cono nuevo: «${esc(textoNuevo.toUpperCase())}»</button>`)
+      if (textoNuevo) filas.push(`<button type="button" class="cn-resultado" data-cono-nuevo="${esc(textoNuevo)}" data-cono-destino="${esc(destino)}">+ Cono nuevo: «${esc(textoNuevo.toUpperCase())}»</button>`)
       return filas.join('')
+    }
+
+    function ofrecerConoNuevo(texto) {
+      return puedeProponer(estado.perm) ? conoNuevoOfrecido(texto, estado.conos) : null
     }
 
     function pintarAnotar() {
@@ -1460,8 +1491,7 @@
       if (!res) return
       const texto = estado.agregar.buscar.trim()
       const lista = buscarConos(texto)
-      const exacto = lista.some(c => normalizarBusqueda(c.cono) === normalizarBusqueda(texto))
-      res.innerHTML = htmlResultados(lista, 'data-agregar-cono', texto.length >= 2 && !exacto ? texto : null)
+      res.innerHTML = htmlResultados(lista, 'data-agregar-cono', ofrecerConoNuevo(texto), 'agregar')
     }
 
     async function confirmarAgregar() {
@@ -1494,22 +1524,35 @@
       }
     }
 
-    async function proponerCono(nombre) {
+    // "+ Cono nuevo": proponer_marca y el cono queda ELEGIDO en el formulario
+    // de donde salió ('anotar' = Anotar para pedir; si no, Agregar cono al
+    // pliego). Con ya_existia (estaba, quizás apagado) también queda elegido.
+    // Los errores de la base ("Ese cono está marcado como rechazado…") van
+    // tal cual al formulario.
+    async function proponerCono(nombre, destino = 'agregar') {
+      if (estado.proponiendo) return
+      estado.proponiendo = true
+      const err = document.getElementById(destino === 'anotar' ? 'cn-anotar-error' : 'cn-agr-error')
       try {
-        const r = await rpc('proponer_marca', { p_nombre: nombre })
+        const r = await rpc('proponer_marca', { p_nombre: textoConoNuevo(nombre) })
         const id = r?.marca_id
         if (!id) throw new Error('La base no devolvió el cono.')
+        // El catálogo se refresca (el nuevo ya está en la base); si la lectura
+        // todavía no lo trae, se agrega a mano para poder nombrarlo.
+        await Promise.allSettled([cargarStock(), cargarCatalogo()])
         if (!estado.conoPorId.has(id)) {
-          const fila = { marca_id: id, cono: String(nombre).trim().toUpperCase(), activa: true, papel_ilustracion: false, stock: 0, en_camino: 0, en_armado: 0, consumo_30d: 0 }
+          const fila = { marca_id: id, cono: textoConoNuevo(nombre).toUpperCase(), activa: true, papel_ilustracion: false, stock: 0, en_camino: 0, en_armado: 0, consumo_30d: 0 }
           estado.conos.push(fila)
           estado.conoPorId.set(id, fila)
         }
-        estado.agregar.marcaId = id
-        pintarAgregar()
+        if (err) err.hidden = true
+        if (destino === 'anotar') await elegirConoAnotar(id)
+        else { estado.agregar.marcaId = id; pintarAgregar() }
         if (r.ya_existia) mostrarExito('Ese cono ya existía: quedó elegido.')
       } catch (e) {
-        const err = document.getElementById('cn-agr-error')
-        err.textContent = mensajeDe(e); err.hidden = false
+        if (err) { err.textContent = mensajeDe(e); err.hidden = false } else mostrarError(mensajeDe(e))
+      } finally {
+        estado.proponiendo = false
       }
     }
 
@@ -2140,7 +2183,7 @@
       const cantAnotar = document.getElementById('cn-anotar-cantidad')
       enlazarCampoNumero(cantAnotar, { decimales: 0 })
       document.getElementById('cn-anotar-buscar').addEventListener('input', ev => {
-        document.getElementById('cn-anotar-resultados').innerHTML = htmlResultados(buscarConos(ev.target.value), 'data-anotar-cono', null)
+        document.getElementById('cn-anotar-resultados').innerHTML = htmlResultados(buscarConos(ev.target.value), 'data-anotar-cono', ofrecerConoNuevo(ev.target.value), 'anotar')
       })
       document.getElementById('cn-btn-anotar').addEventListener('click', anotar)
       document.getElementById('cn-anotar-papel').addEventListener('change', () => { estado.anotar.sugerido = false; pintarAnotar() })
@@ -2211,7 +2254,7 @@
         if (b('#cn-agr-confirmar')) { confirmarAgregar(); return }
         if ((el = b('[data-agregar-cono]'))) { estado.agregar.marcaId = el.dataset.agregarCono; pintarAgregar(); return }
         if (b('[data-agregar-cambiar]')) { estado.agregar.marcaId = null; pintarAgregar(); return }
-        if ((el = b('[data-cono-nuevo]'))) { proponerCono(el.dataset.conoNuevo); return }
+        if ((el = b('[data-cono-nuevo]'))) { proponerCono(el.dataset.conoNuevo, el.dataset.conoDestino); return }
         if ((el = b('[data-sumar-agregar]'))) {
           const c = document.getElementById('cn-agr-cantidad')
           const n = Number(el.dataset.sumarAgregar)

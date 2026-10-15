@@ -20,4 +20,7 @@ Pruebas: unitaria de la regla de 1) (exacto vs. parecido); e2e a 1280, 390, 360 
 
 ## Avance
 
-(se completa al terminar)
+- 14/10: prueba sola primero (`ae36926`: `test-conos-anotar-nuevo.js` y `e2e/46` en rojo), después el arreglo en la misma rama.
+- Hecho: en Anotar para pedir aparece "+ Cono nuevo: «TEXTO»" con la misma regla que en Agregar (ahora una sola función, `conoNuevoOfrecido`, que busca el exacto en TODOS los conos); al tocarlo, `proponer_marca` y el cono queda elegido en Anotar (con el papel sugerido); errores de la base tal cual en el formulario de donde salió.
+- Decidido: a la base viaja el texto sin bordes y con los espacios del medio colapsados; el botón solo a quien `proponer_marca` deja (conos:pedir, produccion:configurar o produccion:cargar); Stock, "¿En qué pliego está…?" y Todos los conos no llevan el botón (filtran, no eligen).
+- Pruebas: suite 46/46, mutaciones 28/28, e2e 46 (7/7) y 32/42 en verde en la maqueta.

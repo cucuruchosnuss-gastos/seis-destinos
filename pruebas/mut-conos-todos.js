@@ -40,7 +40,7 @@ correrMutacionesEnVarios([
     { nombre: 'un segundo toque mientras guarda manda otra vez', de: '      if (!f || estado.conosOcupados.has(marcaId) || !puedeTocar', a: '      if (!f || !puedeTocar' },
     { nombre: 'la pestaña no se ve con permisos de producción', de: "      if (p.ver || p.pedir || p.produccion) v.push({ clave: 'todos'", a: "      if (p.ver || p.pedir) v.push({ clave: 'todos'" },
     { nombre: 'la pestaña se ve con solo precios', de: "      if (p.ver || p.pedir || p.produccion) v.push({ clave: 'todos'", a: "      if (p.ver || p.pedir || p.produccion || p.precios) v.push({ clave: 'todos'" },
-    { nombre: 'produccion:configurar se confunde con una tarea de conos', de: "configurar: tieneP('configurar'), produccion:", a: "configurar: tiene('configurar') || tieneP('configurar'), produccion:" },
+    { nombre: 'produccion:configurar se confunde con una tarea de conos', de: "configurar: tieneP('configurar'), cargar:", a: "configurar: tiene('configurar') || tieneP('configurar'), cargar:" },
     { nombre: 'producción sin cargar', de: " || tieneP('ver') || tieneP('cargar'),", a: " || tieneP('ver')," },
     { nombre: 'no se leen las tareas de producción', de: ".in('modulo', ['conos', 'produccion'])", a: ".eq('modulo', 'conos')" },
     { nombre: 'conos_stock se pide sin ver ni pedir', de: "      if (!estado.perm.ver && !estado.perm.pedir) { estado.conos = []; estado.conoPorId = new Map(); return }\n", a: '' },
