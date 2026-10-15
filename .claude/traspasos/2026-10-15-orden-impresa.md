@@ -70,3 +70,64 @@ o Stock).
 - El PDF real (html2canvas + jsPDF bajan del CDN): se probó el HTML que
   fotografía (`htmlHoja` con `COPIAS_PDF`), no el archivo.
 - iPhone/Safari: la hoja es la misma en todos los navegadores.
+
+---
+
+# Sumado el 15/10/2026: el caso N-0014 (FERNANDEZ RICARDO, 10:51)
+
+Verificado en la base (15/10, solo lectura): N-0014 tiene 3 renglones, los tres
+"Caja sin cono" (`con_cono = false`), subtotal 1.007.613,60 y total
+2.220.140,16; lotes 6235-1 ×42 · (6241-2 ×1 + SIN STOCK 20) · INICIAL ×21.
+En `stock_terminado_movimientos` hay lotes INICIAL (inventario inicial, ajustes
+y 4 despachos) y también **CORTE-1010** y **CORTE-1010-PY**.
+
+## Qué cambió (`js/retiros-comun.js`; detalle en `docs/memoria/arquitectura.md`)
+
+1. **Los números nunca se parten.** La causa: la regla general de las celdas
+   (`.rh-tabla td { white-space: normal }`) le ganaba por especificidad a la de
+   los importes, y la columna era angosta. Cada número va en un bloque que no
+   baja de renglón (tabular-nums) y, si no entra, se achica la letra de esa
+   columna (la mide `medirHoja` antes de imprimir y la aplica `htmlHoja`).
+2. **Letra ~22 % más chica** en toda la hoja; CAJAS, LOTE, PRECIO X CAJA y
+   SUBTOTAL de ancho fijo; el producto puede ir en dos renglones.
+3. **Siempre partida al medio**: si no entra, sigue en otra hoja también
+   partida ("ORIGINAL · HOJA 1 DE 2"), repitiendo cabecera, N°, fecha y
+   cliente, con el TOTAL y las firmas solo en la última. Medido: 1 y 8
+   renglones en una hoja; 15 en 11 + 4; 30 en 11 + 10 + 9.
+4. "Caja sin cono · sin cono" → "Caja sin cono" (y lo mismo con "con cono");
+   también en el texto para compartir.
+5. Lote "INICIAL" → "—" (si hay otro lote real, va solo el real).
+
+## Pruebas
+
+- `pruebas/test-retiros-hoja.js` 245/245 (las de 1) y 4), los tamaños, el
+  plan de hojas, INICIAL); `mut-retiros-hoja.js` 114/114.
+- `e2e/28-hoja-retiro.spec.js` 9/9: A4 en Chromium con 1, 8, 15 y 30
+  renglones, sin y con precios (importes grandes), y N-0014: ningún número en
+  dos renglones ni afuera de su celda, el total entero, cada hoja partida con
+  sus rótulos, total y firmas solo en la última, PDF con una página por hoja.
+  **Contra el código anterior fallan 8 de 9.**
+- Ajustadas: `test-administracion-ordenes.js` (el total ahora va en su bloque),
+  `seguras-retiros.js` (los valores nuevos que entran al HTML, justificados),
+  `e2e/5-maqueta.spec.js` (solo comentarios). `e2e/47` y `e2e/34` en verde.
+- `npm run pruebas` 263/263.
+
+## Decidido sin consultar
+
+- "Seguir en otra hoja" = **cada hoja sigue partida** (ORIGINAL arriba y
+  DUPLICADO abajo, con los mismos renglones). Antes, si no entraba, cada copia
+  iba en hojas enteras; se sacó.
+- La cantidad de un insumo en la columna CAJAS ("1.250,5 kg") se achica aparte,
+  para no achicar las cajas de los productos. Con 1.250,5 kg queda chica
+  (~8,6 px) pero entera.
+- **CORTE-1010 / CORTE-1010-PY** se siguen imprimiendo: parecen lotes del corte
+  como INICIAL, pero el pedido nombra solo INICIAL. **Para Facu**: ¿también
+  "—"? Es agregarlos a `LOTES_QUE_NO_SON_LOTE`.
+- Los rótulos van en mayúscula ("ORIGINAL · HOJA 1 DE 2"), como el resto del
+  diseño.
+
+## No probado
+
+- La impresora de verdad (se midió en Chromium en modo impresión A4 y con
+  `page.pdf`). Safari/iPhone imprimiendo: no.
+- El PDF de "Enviar" (html2canvas desde el CDN): se probó el HTML que fotografía.

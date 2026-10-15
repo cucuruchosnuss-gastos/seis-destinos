@@ -32,9 +32,10 @@ const ALTO_UTIL_A4_MM = 297 - 2 * 8;
 // estilos de impresión (emulateMedia) y en milímetros (96 px = 25,4 mm).
 // LA IMPRESIÓN NUEVA (07/10/2026): la hoja se MIDE antes de imprimir; con
 // pocos renglones van las dos copias en media hoja cada una, y si no entran,
-// cada copia en hojas enteras. Lo que se exige: el original y el duplicado con
-// TODOS los renglones, ninguna página más alta que la A4, ningún renglón ni el
-// pie cortados. (El detalle, con 3 y 25 renglones, en e2e/28-hoja-retiro.)
+// la orden sigue en otra hoja, también partida (15/10/2026). Lo que se exige:
+// el original y el duplicado con TODOS los renglones, ninguna página más alta
+// que la A4, ningún renglón ni el pie cortados. (El detalle, con 1, 8, 15 y
+// 30 renglones, en e2e/28-hoja-retiro.)
 async function medirHoja(page, boton, contenedor, info, nombre) {
   await page.evaluate(() => { window.print = () => {} });
   await page.locator(boton).click();
@@ -69,7 +70,7 @@ async function medirHoja(page, boton, contenedor, info, nombre) {
   for (const a of m.paginas) expect(a, `una página mide ${a.toFixed(1)} mm y en la A4 entran ${ALTO_UTIL_A4_MM}`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM);
   if (m.media) for (const a of m.altoCopias) expect(a, `en media hoja una copia mide ${a.toFixed(1)} mm`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM / 2);
   expect(m.afuera, 'ningún renglón ni el pie se cortan').toEqual([]);
-  console.log(`[hoja ${nombre}] ${m.renglones} renglones (${m.insumos} de insumos): ${m.media ? 'media hoja' : `${m.originales} hojas enteras por copia`}; páginas ${m.paginas.map(a => a.toFixed(1)).join(' / ')} mm`);
+  console.log(`[hoja ${nombre}] ${m.renglones} renglones (${m.insumos} de insumos): partida al medio en ${m.originales} hoja(s); páginas ${m.paginas.map(a => a.toFixed(1)).join(' / ')} mm`);
 }
 
 // Sube un archivo al importador (el input escondido) y espera la vista previa.

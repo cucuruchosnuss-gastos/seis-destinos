@@ -80,7 +80,14 @@ const SEGURAS_HOJA = [
   ['htmlLogoHoja(emp, nombre)', 'HTML armado por htmlLogoHoja(), que pasa el logo por logoSeguro() + encodeURIComponent y escapa el nombre'],
   ['htmlClienteHoja(orden?.cliente, orden?.transporte)', 'HTML armado por htmlClienteHoja(), que escapa el nombre, la localidad y el transporte'],
   ['htmlTablaHoja(renglones, conPrecios, orden?.moneda || \'ARS\', { conTotal: ultima, orden })', 'HTML armado por htmlTablaHoja(), que escapa cada dato con escHoja()'],
-  ['htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos.slice(d, h), pagina: i + 1, paginas: plan.paginas.length, entera: true })', 'HTML armado por htmlCopiaHoja(), que escapa todo'],
+  // Los números que no se parten (15/10/2026, caso N-0014).
+  ['numeroHoja(p === \'—\' || !u ? p : p + \' / \' + u)', 'HTML armado por numeroHoja(), que escapa el texto con escHoja() adentro del <span class="rh-n">'],
+  ['numeroHoja(importeHoja(r?.subtotal, moneda))', 'HTML armado por numeroHoja(), que escapa el texto con escHoja()'],
+  ['numeroHoja(cantidadHoja(r))', 'HTML armado por numeroHoja(), que escapa el texto con escHoja()'],
+  ['htmlLotesHoja(lotes)', 'HTML armado por htmlLotesHoja(): cada lote pasa por numeroHoja(), que escapa con escHoja()'],
+  ['numeroHoja(enteroHoja(totalCajasOrden(orden)))', 'HTML armado por numeroHoja(), que escapa el texto con escHoja()'],
+  ['numeroHoja(importeHoja(orden?.total, moneda))', 'HTML armado por numeroHoja(), que escapa el texto con escHoja()'],
+  ['estiloEscalasHoja(plan?.escalas)', 'Atributo armado por estiloEscalasHoja(): solo columnas conocidas (COLUMNAS_NUMERO_HOJA) y números entre 0,4 y 1 (escalasHoja)'],
 ]
 
 module.exports = { SEGURAS_RETIROS, SEGURAS_REGEX_RETIROS, SEGURAS_HOJA }

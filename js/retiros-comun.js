@@ -157,9 +157,13 @@ export function nombreInsumoHoja(r) {
 //
 // HOJA PARTIDA AL MEDIO: el ORIGINAL arriba y el DUPLICADO abajo, cada uno en
 // media A4, con una línea punteada de 1,5 px entre los dos. Si los renglones
-// no entran en media hoja —se MIDE, no se cuenta: armarHoja()— cada copia va
-// en hojas enteras (primero el original, después el duplicado) y debajo del
-// título dice "ORIGINAL · HOJA 1 DE N". Ningún renglón se corta entre páginas.
+// no entran en media hoja —se MIDE, no se cuenta: armarHoja()— la orden
+// SIGUE EN OTRA HOJA, también partida (15/10/2026, caso N-0014; antes cada
+// copia iba en hojas enteras): debajo del título dice "ORIGINAL · HOJA 1 DE
+// N", cada hoja repite la cabecera y el cliente, y el total y las firmas van
+// solo en la última. Ningún renglón se corta entre páginas. Desde el
+// 15/10/2026 la letra es ~22 % más chica (entran más renglones por mitad) y
+// los números nunca se parten (ver COLUMNAS_NUMERO_HOJA).
 //
 // Cada copia: la cabecera (logo en círculo, la fábrica y sus datos, "RETIRO DE
 // MERCADERÍA" con la copia, y el recuadro con el número de orden y la fecha),
@@ -229,12 +233,15 @@ function htmlClienteHoja(cli, transporte) {
 // un lote: se está produciendo o queda para revisar) y lo que no tiene lote
 // NO van: ni "faltan N" ni "Faltante… pendiente de revisión". Eso se ve solo
 // en pantalla (Carga, Mis retiros y Administración → Por revisar).
+// "INICIAL" (15/10/2026, caso N-0014) es el stock cargado en el corte, sin
+// lote real: tampoco va; si no queda ningún lote, la hoja dice "—".
 export const LOTE_SIN_STOCK_HOJA = 'SIN STOCK'
+export const LOTES_QUE_NO_SON_LOTE = [LOTE_SIN_STOCK_HOJA, 'INICIAL', 'SIN LOTE']
 export function lotesRealesHoja(lotes, unidad = null) {
   const porLote = new Map()
   for (const l of Array.isArray(lotes) ? lotes : []) {
     const lote = String(l?.lote ?? '').trim()
-    if (!lote || lote === LOTE_SIN_STOCK_HOJA || lote === 'sin lote') continue
+    if (!lote || LOTES_QUE_NO_SON_LOTE.includes(lote.toUpperCase())) continue
     const c = unidad ? l?.cantidad : l?.cajas
     const n = c === null || c === undefined || c === '' || !Number.isFinite(Number(c)) ? null : Number(c)
     const antes = porLote.has(lote) ? porLote.get(lote) : 0
@@ -262,11 +269,20 @@ export function textoLotesHoja(lotes, unidad = null, total = null) {
 }
 
 // "Cucurucho grande · Caja x 100 · LOLO": el producto con su presentación y
-// su cono (o "sin cono"); un insumo con su marca. ENTERO, siempre.
+// su cono (o "sin cono"); un insumo con su marca. ENTERO, siempre. Si la
+// presentación ya lo dice ("Caja sin cono", "Caja con cono"), el cono no se
+// repite (15/10/2026, caso N-0014: salía "Caja sin cono · sin cono").
+const sinAcentosHoja = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 export function descripcionHoja(r) {
   if (r?.esInsumo) return nombreInsumoHoja(r)
-  const cono = String(r?.cono ?? '').trim()
-  return [r?.producto, r?.presentacion, cono && cono !== '—' ? (cono === 'Sin cono' ? 'sin cono' : cono) : '']
+  const presentacion = String(r?.presentacion ?? '').trim()
+  let cono = String(r?.cono ?? '').trim()
+  if (cono === '—') cono = ''
+  if (cono === 'Sin cono') cono = 'sin cono'
+  // Solo "sin cono" / "con cono": una marca de cono (LOLO, ASPEN) va siempre.
+  const c = sinAcentosHoja(cono)
+  if ((c === 'sin cono' || c === 'con cono') && sinAcentosHoja(presentacion).includes(c)) cono = ''
+  return [r?.producto, presentacion, cono]
     .map(x => String(x ?? '').trim()).filter(Boolean).join(' · ') || '—'
 }
 
@@ -274,16 +290,29 @@ function cantidadHoja(r) {
   return r?.esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad) : enteroHoja(r?.cajas)
 }
 
+// LOS NÚMEROS NUNCA SE PARTEN (15/10/2026, caso N-0014: "$ 1.007.613, / 60").
+// Cada número va en un <span class="rh-n"> que no baja de renglón, y su celda
+// dice de qué columna es (data-col): si en esa columna algún número no entra,
+// medirHoja() calcula cuánto achicar la letra de TODA la columna (escalas) y
+// htmlHoja() la achica con una variable (--rh-esc-<columna>).
+// ('cantidad' es la de un insumo, "1.250,5 kg", en la columna CAJAS: se
+// achica aparte, para no achicar las cajas de los productos.)
+export const COLUMNAS_NUMERO_HOJA = ['cajas', 'cantidad', 'precio', 'subtotal', 'total']
+const numeroHoja = (texto) => `<span class="rh-n">${escHoja(texto)}</span>`
+// Un lote es un identificador: "6242-2 ×30" no se parte; entre lotes sí.
+const htmlLotesHoja = (texto) => String(texto).split(' · ').map(numeroHoja).join(' · ')
+
 function htmlFilaHoja(r, conPrecios, moneda) {
   const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null, r?.esInsumo ? r?.cantidad : r?.cajas)
   let precio = ''
   if (conPrecios) {
     const u = r?.esInsumo ? unidadHoja(r.unidad) : ''
     const p = importeHoja(r?.precio, moneda)
-    precio = `<td class="rh-num rh-plata">${escHoja(p === '—' || !u ? p : p + ' / ' + u)}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
+    precio = `<td class="rh-num rh-plata" data-col="precio">${numeroHoja(p === '—' || !u ? p : p + ' / ' + u)}</td>` +
+      `<td class="rh-num rh-plata" data-col="subtotal">${numeroHoja(importeHoja(r?.subtotal, moneda))}</td>`
   }
-  return `<tr class="rh-fila${r?.esInsumo ? ' rh-insumo' : ''}"><td class="rh-num rh-cajas">${escHoja(cantidadHoja(r))}</td>` +
-    `<td class="rh-producto">${escHoja(descripcionHoja(r))}</td><td class="rh-lote">${escHoja(lotes)}</td>${precio}</tr>`
+  return `<tr class="rh-fila${r?.esInsumo ? ' rh-insumo' : ''}"><td class="rh-num rh-cajas" data-col="${r?.esInsumo ? 'cantidad' : 'cajas'}">${numeroHoja(cantidadHoja(r))}</td>` +
+    `<td class="rh-producto">${escHoja(descripcionHoja(r))}</td><td class="rh-lote">${htmlLotesHoja(lotes)}</td>${precio}</tr>`
 }
 
 // Las cantidades de los insumos, sumadas por unidad ("100 un. + 25,5 kg"):
@@ -300,7 +329,7 @@ function totalInsumosHoja(orden) {
 
 function htmlTablaHoja(renglones, conPrecios, moneda, { conTotal, orden }) {
   const col = '<colgroup><col class="rh-col-cajas"><col class="rh-col-producto"><col class="rh-col-lote">' +
-    (conPrecios ? '<col class="rh-col-precio"><col class="rh-col-precio">' : '') + '</colgroup>'
+    (conPrecios ? '<col class="rh-col-precio"><col class="rh-col-subtotal">' : '') + '</colgroup>'
   const hayInsumo = (orden?.renglones ?? []).some(r => r?.esInsumo)
   const cab = '<tr><th class="rh-num">CAJAS</th><th>PRODUCTO</th><th>LOTE</th>' +
     (conPrecios ? `<th class="rh-num">${hayInsumo ? 'PRECIO' : 'PRECIO X CAJA'}</th><th class="rh-num">SUBTOTAL</th>` : '') + '</tr>'
@@ -308,9 +337,9 @@ function htmlTablaHoja(renglones, conPrecios, moneda, { conTotal, orden }) {
   let pie = ''
   if (conTotal) {
     const insumos = totalInsumosHoja(orden)
-    pie = `<tfoot><tr class="rh-total"><td class="rh-num rh-cajas">${escHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
+    pie = `<tfoot><tr class="rh-total"><td class="rh-num rh-cajas" data-col="cajas">${numeroHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
       `<td colspan="2" class="rh-total__rotulo">TOTAL DE CAJAS${insumos ? ` <span class="rh-total__insumos">+ ${escHoja(insumos)}</span>` : ''}</td>` +
-      (conPrecios ? `<td></td><td class="rh-num rh-plata rh-total__plata">${escHoja(importeHoja(orden?.total, moneda))}</td>` : '') + '</tr></tfoot>'
+      (conPrecios ? `<td></td><td class="rh-num rh-plata rh-total__plata" data-col="total">${numeroHoja(importeHoja(orden?.total, moneda))}</td>` : '') + '</tr></tfoot>'
   }
   return `<table class="rh-tabla">${col}<thead>${cab}</thead><tbody>${filas}</tbody>${pie}</table>`
 }
@@ -336,21 +365,22 @@ function htmlSelloAnulada(orden) {
     (detalle ? `<span class="rh-anulada__detalle">${escHoja(detalle)}</span>` : '') + `</div></div>`
 }
 
-// "ORIGINAL", o "ORIGINAL · HOJA 1 DE 3" en hojas enteras.
-export function rotuloCopiaHoja(copia, pagina = 1, paginas = 1, entera = false) {
-  return entera ? `${copia} · HOJA ${pagina} DE ${paginas}` : copia
+// "ORIGINAL", o "ORIGINAL · HOJA 1 DE 3" si la orden ocupa más de una hoja.
+export function rotuloCopiaHoja(copia, pagina = 1, paginas = 1, varias = false) {
+  return varias ? `${copia} · HOJA ${pagina} DE ${paginas}` : copia
 }
 
-// UNA copia en UNA página: la cabecera, el cliente, sus renglones y, en la
-// última, el total, las notas y el pie. La leyenda va en todas.
-function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, paginas = 1, entera = false }) {
+// UNA copia en UNA media hoja: la cabecera (empresa, N° y fecha), el cliente,
+// sus renglones y, en la última hoja, el total, las notas y el pie. La
+// leyenda va en todas.
+function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, paginas = 1, varias = false }) {
   const anulada = orden?.estado === 'anulada'
   const ultima = pagina === paginas
   const fecha = orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)
   return `<section class="rh-copia${anulada ? ' rh-copia--anulada' : ''}" data-copia="${escHoja(copia)}">` +
     `<header class="rh-cab">${htmlEmpresaHoja(orden?.empresa)}` +
     `<div class="rh-titulo"><span class="rh-titulo__grande">ORDEN DE PEDIDO</span>` +
-    `<span class="rh-titulo__copia">${escHoja(rotuloCopiaHoja(copia, pagina, paginas, entera))}</span>` +
+    `<span class="rh-titulo__copia">${escHoja(rotuloCopiaHoja(copia, pagina, paginas, varias))}</span>` +
     (anulada ? '<span class="rh-titulo__anulada">ANULADA</span>' : '') + '</div>' +
     `<div class="rh-orden"><span class="rh-orden__rotulo">ORDEN N°</span>` +
     `<span class="rh-codigo">${escHoja(orden?.codigo || '—')}</span>` +
@@ -365,26 +395,38 @@ function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, pagina
 export const CORTE_HOJA = '<div class="rh-corte" aria-hidden="true"></div>'
 
 // EL PLAN DE LA HOJA, con lo que se midió (puro: lo prueban las suites sin
-// navegador). `medidas`: { copiaEntera } = cuánto mide UNA copia con todos
-// sus renglones, y para las hojas enteras { fijo, final, intermedio, filas }:
-// la cabecera + el cliente + el encabezado de la tabla; lo que va al final
-// (total, notas, pie y leyenda); lo que va en una hoja que sigue ("Sigue en
-// la hoja…" y leyenda); y el alto de cada renglón. Todo en mm.
-// → { modo: 'media' } o { modo: 'entera', paginas: [[desde, hasta), …] }.
-export function planHoja(medidas, { media = ALTO_MEDIA_HOJA_MM, entera = ALTO_UTIL_A4_MM } = {}) {
-  const filas = Array.isArray(medidas?.filas) ? medidas.filas : []
-  if (Number(medidas?.copiaEntera) <= media) return { modo: 'media' }
+// navegador). LA HOJA SIEMPRE VA PARTIDA AL MEDIO (15/10/2026, caso N-0014):
+// ORIGINAL arriba y DUPLICADO abajo. Si los renglones no entran en media
+// hoja, la orden SIGUE EN OTRA HOJA, también partida: cada hoja lleva los
+// mismos renglones en las dos mitades, "ORIGINAL · HOJA 1 DE 2", y el total,
+// las notas y las firmas solo en la última. (Antes, del 07/10 al 15/10, cada
+// copia iba en hojas enteras.)
+// `medidas`: { copiaEntera } = cuánto mide UNA copia con todos sus renglones;
+// { fijo } = desde arriba de la copia hasta el primer renglón (cabecera,
+// cliente y encabezado de la tabla); { final } = desde el último renglón
+// hasta abajo en la última hoja (total, notas, firmas y leyenda); {
+// intermedio } = lo mismo en una hoja que sigue ("Sigue en la hoja…" y la
+// leyenda); { filas } = el alto de cada renglón; todo en mm. { escalas }:
+// cuánto achicar la letra de cada columna de números (1 = nada).
+// → { modo: 'media', escalas } (una hoja) o { modo: 'media', paginas:
+// [[desde, hasta), …], escalas } (varias).
+export const MARGEN_PLAN_MM = 1
+export function planHoja(medidas, { media = ALTO_MEDIA_HOJA_MM } = {}) {
+  const escalas = escalasHoja(medidas?.escalas)
+  const filas = Array.isArray(medidas?.filas) ? medidas.filas.map(f => Number(f) || 0) : []
+  if (!(Number(medidas?.copiaEntera) > media - MARGEN_PLAN_MM) || !filas.length) return { modo: 'media', escalas }
   const fijo = Number(medidas?.fijo) || 0, final = Number(medidas?.final) || 0, inter = Number(medidas?.intermedio) || 0
+  const cabe = media - MARGEN_PLAN_MM
   const paginas = []
   let desde = 0
-  while (desde < filas.length || !paginas.length) {
+  while (desde < filas.length) {
     // ¿Entra todo lo que queda, con el final?
     let suma = 0, k = desde
-    while (k < filas.length && fijo + suma + filas[k] + final <= entera) { suma += filas[k]; k++ }
+    while (k < filas.length && fijo + suma + filas[k] + final <= cabe) { suma += filas[k]; k++ }
     if (k === filas.length) { paginas.push([desde, k]); break }
     // No: esta hoja lleva lo que entre con "Sigue en la hoja…" (al menos un renglón).
     suma = 0; k = desde
-    while (k < filas.length && fijo + suma + filas[k] + inter <= entera) { suma += filas[k]; k++ }
+    while (k < filas.length && fijo + suma + filas[k] + inter <= cabe) { suma += filas[k]; k++ }
     if (k === desde) k = desde + 1
     // Si entraron TODOS los que quedan, la hoja final quedaría sin renglones
     // y sin lugar para el total y las firmas: el último pasa a la final.
@@ -392,36 +434,50 @@ export function planHoja(medidas, { media = ALTO_MEDIA_HOJA_MM, entera = ALTO_UT
     paginas.push([desde, k])
     desde = k
   }
-  return { modo: 'entera', paginas }
+  return paginas.length > 1 ? { modo: 'media', paginas, escalas } : { modo: 'media', escalas }
 }
 
-// La hoja con un plan ya hecho. Sin plan (o 'media'): las copias juntas en
-// una página, con la línea punteada. 'entera': cada copia en sus hojas.
+// Las escalas que valen: un número entre 0,4 y 1 por columna conocida.
+export function escalasHoja(escalas) {
+  const out = {}
+  for (const c of COLUMNAS_NUMERO_HOJA) {
+    // (Vacía o null da 0: no pasa el "> 0".)
+    const n = Number(escalas?.[c])
+    if (Number.isFinite(n) && n > 0 && n < 1) out[c] = Math.max(0.4, Math.floor(n * 1000) / 1000)
+  }
+  return out
+}
+
+function estiloEscalasHoja(escalas) {
+  const e = escalasHoja(escalas)
+  const partes = Object.keys(e).map(c => `--rh-esc-${c}:${e[c]}`)
+  return partes.length ? ` style="${partes.join(';')}"` : ''
+}
+
+// La hoja con un plan ya hecho: cada página con las copias una abajo de la
+// otra (la línea punteada entre las dos) y, si son varias, cada página con
+// sus renglones.
 export function htmlHoja(orden, { conPrecios = false, copias = COPIAS_IMPRESION, plan = null } = {}) {
   const todos = Array.isArray(orden?.renglones) ? orden.renglones : []
   const precios = conPrecios === true
-  if (!plan || plan.modo !== 'entera') {
-    const partes = copias.map(c => htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos }))
-    return `<div class="rh-hoja rh-hoja--media"><div class="rh-pagina">${partes.join(CORTE_HOJA)}</div></div>`
-  }
-  const hojas = []
-  for (const c of copias) {
-    plan.paginas.forEach(([d, h], i) => {
-      hojas.push(`<div class="rh-pagina">${htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos.slice(d, h), pagina: i + 1, paginas: plan.paginas.length, entera: true })}</div>`)
-    })
-  }
-  return `<div class="rh-hoja rh-hoja--entera">${hojas.join('')}</div>`
+  const paginas = Array.isArray(plan?.paginas) && plan.paginas.length > 1 ? plan.paginas : [[0, todos.length]]
+  const varias = paginas.length > 1
+  const hojas = paginas.map(([d, h], i) => {
+    const partes = copias.map(c => htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos.slice(d, h), pagina: i + 1, paginas: paginas.length, varias }))
+    return `<div class="rh-pagina">${partes.join(CORTE_HOJA)}</div>`
+  })
+  return `<div class="rh-hoja rh-hoja--media"${estiloEscalasHoja(plan?.escalas)}>${hojas.join('')}</div>`
 }
 
-// Cuántas páginas imprime la hoja con ese plan.
-export function paginasHoja(plan, copias = COPIAS_IMPRESION) {
-  return plan?.modo === 'entera' ? plan.paginas.length * copias.length : 1
+// Cuántas páginas imprime la hoja con ese plan (las copias van juntas).
+export function paginasHoja(plan) {
+  return Array.isArray(plan?.paginas) && plan.paginas.length > 1 ? plan.paginas.length : 1
 }
 
 // ── MEDIR Y ARMAR (en el navegador) ────────────────────────────────────────
 // Arma la hoja en `contenedor`: primero la mide afuera de la pantalla (con el
 // ancho útil de la A4 y la letra ya cargada) y después pone la que corresponde.
-// Devuelve el plan. Si no se puede medir (sin DOM), media hoja.
+// Devuelve el plan. Si no se puede medir (sin DOM), una hoja.
 const MM = 96 / 25.4
 export async function medirHoja(orden, { conPrecios = false, doc = document } = {}) {
   asegurarEstilosHoja(doc)
@@ -430,22 +486,49 @@ export async function medirHoja(orden, { conPrecios = false, doc = document } = 
   doc.body.appendChild(caja)
   try {
     try { await Promise.race([doc.fonts?.ready, new Promise(r => setTimeout(r, 1500))]) } catch { /* sin fuentes */ }
-    const una = [COPIAS_IMPRESION[0]]
-    caja.innerHTML = htmlHoja(orden, { conPrecios, copias: una })
+    const una = COPIAS_IMPRESION[0]
+    const todos = Array.isArray(orden?.renglones) ? orden.renglones : []
+    // Dos copias: la última hoja (con el total y las firmas) y una que sigue.
+    caja.innerHTML = `<div class="rh-hoja rh-hoja--media rh-hoja--medir">` +
+      htmlCopiaHoja(orden, una, { conPrecios: conPrecios === true, renglones: todos }) +
+      htmlCopiaHoja(orden, una, { conPrecios: conPrecios === true, renglones: todos, pagina: 1, paginas: 2, varias: true }) + '</div>'
     await Promise.all([...caja.querySelectorAll('img')].map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 1500) })))
-    const alto = (el) => el ? el.getBoundingClientRect().height / MM : 0
-    const copia = caja.querySelector('.rh-copia')
-    // La copia con TODO, sin el alto mínimo de la media hoja.
-    copia.style.minHeight = '0'; copia.style.height = 'auto'
-    const filas = [...copia.querySelectorAll('tbody tr')].map(alto)
-    const tabla = copia.querySelector('.rh-tabla')
-    const fijo = alto(copia.querySelector('.rh-cab')) + alto(copia.querySelector('.rh-cliente')) + alto(tabla?.querySelector('thead')) + 6
-    const final = alto(tabla?.querySelector('tfoot')) + alto(copia.querySelector('.rh-notas')) + alto(copia.querySelector('.rh-pie')) + alto(copia.querySelector('.rh-legal')) + 8
-    const intermedio = 8 + alto(copia.querySelector('.rh-legal')) + 4
-    return { copiaEntera: alto(copia), fijo, final, intermedio, filas }
+    const [ultima, sigue] = caja.querySelectorAll('.rh-copia')
+    const r = (el) => el.getBoundingClientRect()
+    const mm = (px) => px / MM
+    const filasDe = (copia) => [...copia.querySelectorAll('tbody tr')]
+    const filas = filasDe(ultima).map(f => mm(r(f).height))
+    const abajoDeFilas = (copia) => { const fs = filasDe(copia); return fs.length ? r(fs[fs.length - 1]).bottom : r(copia.querySelector('thead')).bottom }
+    const arribaDeFilas = (copia) => { const fs = filasDe(copia); return fs.length ? r(fs[0]).top : r(copia.querySelector('thead')).bottom }
+    return {
+      copiaEntera: mm(r(ultima).height),
+      fijo: mm(arribaDeFilas(ultima) - r(ultima).top),
+      final: mm(r(ultima).bottom - abajoDeFilas(ultima)),
+      intermedio: mm(r(sigue).bottom - abajoDeFilas(sigue)),
+      filas,
+      escalas: medirEscalasHoja(ultima),
+    }
   } finally {
     caja.remove()
   }
+}
+
+// Cuánto hay que achicar la letra de cada columna de números para que TODOS
+// sus números entren en un renglón (con 2 % de aire). 1 = entran.
+function medirEscalasHoja(raiz) {
+  const escalas = {}
+  for (const td of raiz.querySelectorAll('td[data-col]')) {
+    const n = td.querySelector('.rh-n')
+    if (!n) continue
+    const cs = getComputedStyle(td)
+    const libre = td.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)
+    const ocupa = n.getBoundingClientRect().width
+    if (!(ocupa > 0) || !(libre > 0)) continue
+    const e = ocupa > libre ? (libre / ocupa) * 0.98 : 1
+    const c = td.dataset.col
+    escalas[c] = Math.min(escalas[c] ?? 1, e)
+  }
+  return escalas
 }
 
 export async function armarHoja(contenedor, orden, { conPrecios = false, copias = COPIAS_IMPRESION, doc = document } = {}) {
@@ -463,52 +546,59 @@ export async function armarHoja(contenedor, orden, { conPrecios = false, copias 
 export const FUENTE_HOJA = 'https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap'
 export const ESTILOS_HOJA = `
 @import url('${FUENTE_HOJA}');
-.rh-hoja { font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; width: ${ANCHO_UTIL_A4_MM}mm; font-size: 14px; line-height: 1.25; }
+.rh-hoja { font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; width: ${ANCHO_UTIL_A4_MM}mm; font-size: 11px; line-height: 1.25; }
 .rh-hoja * { color: #000; }
 .rh-pagina + .rh-pagina { break-before: page; page-break-before: always; }
-.rh-copia { position: relative; box-sizing: border-box; padding: 2mm 1mm; display: flex; flex-direction: column; gap: 8px; break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
+.rh-copia { position: relative; box-sizing: border-box; padding: 2mm 1mm; display: flex; flex-direction: column; gap: 6px; break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
 .rh-hoja--media .rh-copia { height: ${ALTO_MEDIA_HOJA_MM}mm; }
-.rh-hoja--entera .rh-copia { min-height: ${ALTO_UTIL_A4_MM - 2}mm; }
-.rh-cab { display: flex; align-items: center; gap: 10px; min-height: 70px; }
-.rh-empresa { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 260px; }
-.rh-logo { width: 70px; height: 70px; border-radius: 50%; border: 1px solid #000; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; }
+.rh-hoja--medir .rh-copia { height: auto; min-height: 0; overflow: visible; }
+.rh-cab { display: flex; align-items: center; gap: 8px; min-height: 56px; }
+.rh-empresa { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 0 1 220px; }
+.rh-logo { width: 56px; height: 56px; border-radius: 50%; border: 1px solid #000; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; }
 .rh-logo img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(1); }
-.rh-empresa__datos { display: flex; flex-direction: column; font-size: 12px; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
-.rh-empresa__nombre { font-size: 16px; font-weight: 800; }
+.rh-empresa__datos { display: flex; flex-direction: column; font-size: 9.5px; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+.rh-empresa__nombre { font-size: 12.5px; font-weight: 800; }
 .rh-titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
-.rh-titulo__grande { font-size: 23px; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; }
-.rh-titulo__copia { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
-.rh-titulo__anulada { font-size: 14px; font-weight: 800; letter-spacing: 0.1em; }
-.rh-orden { width: 128px; box-sizing: border-box; border: 2px solid #000; padding: 4px 6px; display: flex; flex-direction: column; align-items: center; text-align: center; flex-shrink: 0; }
-.rh-orden__rotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
-.rh-codigo { font-size: 28px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rh-orden__fecha { font-size: 12px; font-weight: 600; white-space: nowrap; }
-.rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+.rh-titulo__grande { font-size: 18px; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; }
+.rh-titulo__copia { font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; white-space: nowrap; }
+.rh-titulo__anulada { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; }
+.rh-orden { width: 104px; box-sizing: border-box; border: 2px solid #000; padding: 3px 5px; display: flex; flex-direction: column; align-items: center; text-align: center; flex-shrink: 0; }
+.rh-orden__rotulo { font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; }
+.rh-codigo { font-size: 22px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rh-orden__fecha { font-size: 9.5px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; border-bottom: 2px solid #000; padding-bottom: 3px; }
 .rh-cliente__izq { display: flex; flex-direction: column; min-width: 0; }
-.rh-rotulo { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
-.rh-cliente__nombre { font-size: 26px; font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
-.rh-cliente__der { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 14px; flex-shrink: 0; max-width: 45%; }
+.rh-rotulo { font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; }
+.rh-cliente__nombre { font-size: 20px; font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
+.rh-cliente__der { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px; flex-shrink: 0; max-width: 45%; }
 .rh-tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.rh-col-cajas { width: 74px; } .rh-col-producto { width: auto; } .rh-col-lote { width: 120px; } .rh-col-precio { width: 96px; }
-.rh-tabla th { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-align: left; border-bottom: 1px solid #000; padding: 2px 6px 3px; }
-.rh-tabla td { font-size: 16px; padding: 3px 6px; border-bottom: 1px solid #000; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
+/* Anchos FIJOS: solo el producto se estira (y puede ir en dos renglones). */
+.rh-col-cajas { width: 56px; } .rh-col-producto { width: auto; } .rh-col-lote { width: 104px; } .rh-col-precio { width: 100px; } .rh-col-subtotal { width: 116px; }
+.rh-tabla th { font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-align: left; border-bottom: 1px solid #000; padding: 2px 5px 3px; white-space: nowrap; overflow: hidden; }
+.rh-tabla td { font-size: 12.5px; padding: 2px 5px; border-bottom: 1px solid #000; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
 .rh-tabla tr { break-inside: avoid; page-break-inside: avoid; }
 .rh-num { text-align: right !important; font-variant-numeric: tabular-nums; }
-.rh-cajas { font-size: 22px !important; font-weight: 800; line-height: 1.1; white-space: nowrap; }
-.rh-insumo .rh-cajas { font-size: 16px !important; white-space: normal; }
+/* LOS NÚMEROS NUNCA SE PARTEN (15/10/2026): ni importes, ni cajas, ni un
+   lote. Si una columna no alcanza, se achica su letra (--rh-esc-<columna>,
+   la calcula medirHoja) en vez de bajar de renglón. */
+.rh-tabla td .rh-n { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-variant-numeric: tabular-nums; }
+.rh-tabla td.rh-num { white-space: nowrap; overflow-wrap: normal; }
+.rh-tabla td.rh-cajas { font-size: calc(17px * var(--rh-esc-cajas, 1)); font-weight: 800; line-height: 1.1; }
+.rh-tabla tr.rh-insumo td.rh-cajas { font-size: calc(12.5px * var(--rh-esc-cantidad, 1)); }
 .rh-producto { font-weight: 600; }
-.rh-plata { font-size: 14px !important; white-space: nowrap; }
-.rh-total td { border-bottom: 0; padding-top: 4px; }
-.rh-total__rotulo { font-size: 14px !important; font-weight: 800; letter-spacing: 0.08em; vertical-align: middle !important; }
+.rh-tabla td[data-col="precio"] { font-size: calc(11px * var(--rh-esc-precio, 1)); }
+.rh-tabla td[data-col="subtotal"] { font-size: calc(11px * var(--rh-esc-subtotal, 1)); }
+.rh-tabla td[data-col="total"] { font-size: calc(12.5px * var(--rh-esc-total, 1)); font-weight: 800; }
+.rh-total td { border-bottom: 0; padding-top: 3px; }
+.rh-tabla td.rh-total__rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; vertical-align: middle; }
 .rh-total__insumos { font-weight: 600; letter-spacing: 0; }
-.rh-total__plata { font-size: 16px !important; font-weight: 800; }
-.rh-notas { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
-.rh-pie { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
-.rh-entrego { font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
-.rh-firmas { width: 440px; max-width: 70%; display: grid; grid-template-columns: 1.3fr 1.3fr 1fr; gap: 12px; flex-shrink: 0; }
-.rh-firma { border-top: 1px solid #000; padding-top: 3px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; height: 34px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; }
-.rh-sigue { margin: auto 0 0; font-size: 14px; font-weight: 700; }
-.rh-legal { margin: 0; font-size: 12px; text-align: center; white-space: nowrap; }
+.rh-notas { margin: 0; font-size: 9.5px; overflow-wrap: anywhere; }
+.rh-pie { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; }
+.rh-entrego { font-size: 11px; min-width: 0; overflow-wrap: anywhere; }
+.rh-firmas { width: 400px; max-width: 70%; display: grid; grid-template-columns: 1.3fr 1.3fr 1fr; gap: 10px; flex-shrink: 0; }
+.rh-firma { border-top: 1px solid #000; padding-top: 3px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; height: 28px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; }
+.rh-sigue { margin: auto 0 0; font-size: 11px; font-weight: 700; }
+.rh-legal { margin: 0; font-size: 9.5px; text-align: center; white-space: nowrap; }
 .rh-corte { height: 0; border-top: 1.5px dotted #000; margin: 3.5mm 0; }
 .rh-anulada-capa { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .rh-anulada { transform: rotate(-16deg); border: 6px solid #000; border-radius: 14px; padding: 4px 26px; background: rgba(255,255,255,0.85); font-size: 72pt; font-weight: 800; letter-spacing: 0.08em; line-height: 1.05; text-align: center; display: flex; flex-direction: column; align-items: center; }
@@ -546,7 +636,8 @@ export function textoOrden(orden) {
       lineas.push(`- ${cantidadInsumoHoja(r.cantidad, r.unidad)} · ${nombreInsumoHoja(r)}${lotesI}`)
       continue
     }
-    const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
+    // Como en la hoja: "Caja sin cono" no repite "· sin cono".
+    const desc = descripcionHoja(r)
     const reales = lotesRealesHoja(r.lotes)
     const lotes = reales.length ? ` (lotes ${textoLotes(reales)})` : ''
     lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)
