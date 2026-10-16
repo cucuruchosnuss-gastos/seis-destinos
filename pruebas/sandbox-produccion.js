@@ -102,7 +102,7 @@ const FUNCIONES_BASE = [
   'htmlPanelSala', 'partidaDeModificar', 'dePartida', 'pintarSala',
   'claveBorradorMasa', 'claveMasaEnCurso', 'nuevoBorradorMasa', 'leerBorradorMasa', 'guardarBorradorMasa',
   'borrarBorradorMasa', 'marcarEnCurso', 'soltarEnCurso', 'borradorEnCurso', 'borradoresPendientes',
-  'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'textoCantidad',
+  'redondearKg', 'tamanoElegido', 'factorTamano', 'pasoDe', 'cantidadesDesde', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'textoCantidad',
   'diferenciaDeMasa', 'seAleja',
   'ingredientesConLote', 'pideLote', 'insumosDe', 'lotesIniciales', 'opcionesLote', 'indiceLote', 'estadoLote',
   'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate', 'pasaAChocolate',
