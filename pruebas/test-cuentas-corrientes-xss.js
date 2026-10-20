@@ -592,6 +592,25 @@ const SEGURAS = {
   '(top-level)': {
     'importeHtml(total, moneda)': IMPORTE + ' — la línea de "Total a cargar" del listener de input de "Cargar importe"',
   },
+  // 20/10/2026: la nota de crédito de un proveedor (lo ejecuta con marcas
+  // test-cuentas-corrientes-nota-credito.js).
+  htmlResultadosInsumoNota: {
+    k: 'índice del ajuste (un número del código)',
+  },
+  htmlAjustesNota: {
+    k: 'índice del ajuste (un número del código)', v: "'resta' o 'suma': constante del código", t: 'texto constante del código (el rótulo del sentido)',
+    insumo: 'HTML armado en la misma función con esc() del nombre y la unidad, o el buscador con esc() de lo buscado',
+    "sentido('resta', 'Sale del stock (se devolvió)')": 'sentido() arma el botón con el índice, una constante y un texto constante',
+    "sentido('suma', 'Entra al stock (se contó de menos)')": 'sentido() arma el botón con el índice, una constante y un texto constante',
+    'htmlResultadosInsumoNota(n, a, k)': 'htmlResultadosInsumoNota() escapa el id, el nombre y la marca de cada insumo',
+  },
+  renderizarNotaCredito: {
+    'htmlFacturasNota(n)': 'htmlFacturasNota() escapa el id, el número, la fecha y el saldo de cada factura',
+    'htmlAjustesNota(n)': 'htmlAjustesNota() escapa el insumo, su unidad, el lote y lo buscado',
+  },
+  escribirNota: {
+    'htmlResultadosInsumoNota(n, a, k)': 'htmlResultadosInsumoNota() escapa el id, el nombre y la marca de cada insumo',
+  },
 }
 const SEGURAS_REGEX = {}
 

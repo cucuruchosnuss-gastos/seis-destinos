@@ -561,8 +561,14 @@ async function main() {
     chk('IDS_CAMPOS_MONTO son exactamente pago, crédito y saldo inicial', /const IDS_CAMPOS_MONTO = \['campo-monto-pago', 'campo-monto-credito', 'campo-saldo-inicial-importe'\]/.test(codigo))
     chk('los montos se enlazan con 2 decimales', /enlazarCampoNumero\(document\.getElementById\(id\), \{ decimales: 2 \}\)/.test(codigo))
     const enlaces = codigo.split('\n').filter(l => /enlazarCampoNumero\(/.test(l)).map(l => l.trim())
-    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo)',
-      enlaces.length === 3 && enlaces.filter(a => /decimales: 2 \}/.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)), enlaces)
+    // Más los tres de la nota de crédito (20/10/2026): el importe (2), lo
+    // aplicado a cada factura (2, hasta su saldo) y la cantidad de un ajuste (3).
+    const deLaNota = enlaces.filter(a => /importeNotaEnlazado|max: f \? Number\(f\.saldo\)|decimales: 3 \}/.test(a))
+    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo), más los 3 de la nota de crédito',
+      enlaces.length === 6 && deLaNota.length === 3 &&
+      enlaces.filter(a => !deLaNota.includes(a)).filter(a => /decimales: 2 \}/.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)) &&
+      deLaNota.some(a => /enlazarCampoNumero\(imp, \{ decimales: 2 \}\)/.test(a)) && deLaNota.some(a => /\{ decimales: 2, max: f \? Number\(f\.saldo\) : undefined \}/.test(a)) &&
+      deLaNota.some(a => /enlazarCampoNumero\(input, \{ decimales: 3 \}\)/.test(a)), enlaces)
     chk('los CUIT NO se enlazan', !/enlazarCampoNumero\([^)]*cuit/i.test(codigo) && !/IDS_CAMPOS_MONTO = \[[^\]]*cuit/.test(codigo))
     const iEnlace = codigo.indexOf('\n    enlazarCamposMonto()\n'), iListener = codigo.indexOf("document.getElementById('campo-monto-pago').addEventListener('input'")
     chk('el enlace corre al iniciar, ANTES del listener de sugerencias', iEnlace !== -1 && iListener !== -1 && iEnlace < iListener, [iEnlace, iListener])
