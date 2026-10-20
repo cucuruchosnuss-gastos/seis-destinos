@@ -796,6 +796,36 @@
       font-size: 1rem;
     }
     .saldo-inicial__error { font-size: 0.8125rem; color: var(--bordo); margin: 0.75rem 0 0; overflow-wrap: anywhere; }
+    /* La nota de crédito de un proveedor (20/10/2026). */
+    .nota-credito__fila { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .nota-credito__fila select, .nota-credito__fila input { flex: 1 1 10rem; min-width: 0; }
+    #modal-nota-credito select, #modal-nota-credito input[type="text"] {
+      min-height: 44px; padding: 0 0.75rem; border: 1px solid var(--color-borde); border-radius: 8px; background: #fff;
+      color: var(--color-texto); font-family: var(--fuente); font-size: 1rem; box-sizing: border-box;
+    }
+    .nota-credito__bloque { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--color-borde); display: flex; flex-direction: column; gap: 0.5rem; }
+    .nota-credito__cabeza { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .btn-link-cc { background: none; border: 0; padding: 0; min-height: 44px; color: var(--color-acento); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+    .btn-link-cc:hover { color: var(--color-acento-hover); }
+    .nota-credito__factura { display: grid; grid-template-columns: auto 1fr minmax(7rem, 9rem); gap: 0.5rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--color-borde); }
+    .nota-credito__factura label { display: flex; gap: 0.5rem; align-items: center; min-height: 44px; cursor: pointer; overflow-wrap: anywhere; }
+    .nota-credito__factura input[type="checkbox"] { width: 22px; height: 22px; flex-shrink: 0; }
+    .nota-credito__factura input[type="text"] { width: 100%; }
+    .nota-credito__detalle { font-size: 0.8125rem; color: var(--color-texto-2); }
+    .nota-credito__totales { margin: 0.25rem 0 0; font-size: 0.875rem; font-weight: 700; overflow-wrap: anywhere; }
+    .nota-credito__totales--mal { color: var(--bordo); }
+    .nota-credito__vacio { margin: 0; font-size: 0.875rem; color: var(--color-texto-2); }
+    .nota-credito__ajuste { border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .nota-credito__ajuste-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-weight: 700; overflow-wrap: anywhere; }
+    .nota-credito__opciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .nota-credito__opciones .ficha-unidad-cc__chip { text-align: left; }
+    .nota-credito__campos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .nota-credito__campos label { font-size: 0.8125rem; color: var(--color-texto-2); display: flex; flex-direction: column; gap: 0.25rem; }
+    @media (max-width: 420px) {
+      .nota-credito__factura { grid-template-columns: auto 1fr; }
+      .nota-credito__factura input[type="text"] { grid-column: 1 / -1; }
+      .nota-credito__campos { grid-template-columns: 1fr; }
+    }
     .btn-saldo-inicial-padron {
       min-height: 36px;
       padding: 0 0.75rem;
@@ -1904,6 +1934,64 @@
       </div>
     </div>
   </div><!-- /modal-saldo-inicial -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — CARGAR NOTA DE CRÉDITO DE UN PROVEEDOR (20/10/2026)
+
+       El proveedor manda una nota de crédito: baja lo que se le debe. Se
+       aplica a una o varias facturas (en parte, si hace falta) y lo que sobra
+       queda a favor. Si devuelve mercadería o corrige cantidades, ajusta el
+       stock. Todo en UNA llamada a registrar_nota_credito_proveedor (que la
+       base todavía no tiene: ver el traspaso). Pide
+       cuentas_corrientes:aplicar_credito.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-nota-credito" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-nota-credito" title="Cerrar">✕</button>
+      <h2>Cargar nota de crédito</h2>
+      <p class="saldo-inicial__proveedor" id="nota-credito-proveedor"></p>
+      <p class="saldo-inicial__nota">Lo que el proveedor nos acredita: baja lo que se le debe. Se aplica a las facturas que elijas (en parte, si hace falta) y lo que sobra queda a favor. Solo en pesos.</p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-nota-tipo">Comprobante</label>
+          <div class="nota-credito__fila">
+            <select id="campo-nota-tipo"></select>
+            <input type="text" id="campo-nota-numero" placeholder="0001-00001234" autocomplete="off" inputmode="text">
+          </div>
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-nota-fecha">Fecha</label>
+          <input type="date" id="campo-nota-fecha">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-nota-importe">Importe total</label>
+          <input type="text" id="campo-nota-importe" placeholder="0,00" inputmode="decimal" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="nota-credito__bloque">
+        <div class="nota-credito__cabeza">
+          <strong>Facturas a las que se aplica</strong>
+          <button type="button" class="btn-link-cc" id="btn-nota-viejas">Aplicar a las más viejas</button>
+        </div>
+        <div id="nota-credito-facturas"></div>
+        <p class="nota-credito__totales" id="nota-credito-totales" aria-live="off"></p>
+      </div>
+
+      <div class="nota-credito__bloque">
+        <button type="button" class="btn-link-cc" id="btn-nota-ajuste" aria-expanded="false">¿Devuelve mercadería o corrige cantidades?</button>
+        <div id="nota-credito-ajustes" hidden></div>
+      </div>
+
+      <p class="saldo-inicial__error" id="nota-credito-error" role="alert" hidden></p>
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-nota-credito">Cancelar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-nota-credito">Cargar nota de crédito</button>
+      </div>
+    </div>
+  </div><!-- /modal-nota-credito -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — ELEGIR UNIDAD DE NEGOCIO
@@ -3494,6 +3582,406 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // NOTA DE CRÉDITO DE UN PROVEEDOR (20/10/2026)
+    //
+    // El proveedor nos acredita algo (devolvió mercadería, facturó de más):
+    // baja lo que se le debe. Se carga desde la ficha, en UNA fábrica y en
+    // pesos: el comprobante (tipo y número), la fecha, el importe total, a qué
+    // facturas se aplica (en parte, si hace falta; lo que sobra queda a
+    // favor) y, si devuelve mercadería o corrige cantidades, un ajuste de
+    // stock por insumo.
+    //
+    // TODO en UNA llamada: registrar_nota_credito_proveedor(p_proveedor_id,
+    // p_unidad_negocio_id, p_comprobante, p_fecha, p_importe, p_aplicaciones
+    // [{factura_pendiente_id, monto_aplicado}], p_ajustes_stock [{insumo_id,
+    // lote, cantidad (con signo)}]) → {credito_id, aplicado, a_favor}. LA BASE
+    // TODAVÍA NO LA TIENE (20/10/2026): la definición propuesta está en
+    // .claude/traspasos/2026-10-20-nota-credito.md. Mientras no exista, la base
+    // contesta "no existe la función" y la pantalla lo dice en castellano. NO
+    // se inserta nada a mano en creditos_proveedor: tiene que ser atómico.
+    // Pide cuentas_corrientes:aplicar_credito (la tarea de aplicar créditos).
+
+    const TIPOS_NOTA_CREDITO = ['Nota de crédito A', 'Nota de crédito B', 'Nota de crédito C', 'Nota de crédito X']
+    let notaCredito = null   // ver abrirModalNotaCredito()
+    let claveAjusteNota = 0
+    let importeNotaEnlazado = false   // el importe se enlaza una sola vez
+
+    function puedeCargarNotaCredito() {
+      return tieneTarea('cuentas_corrientes', 'aplicar_credito')
+    }
+
+    // Centavos enteros: nada de 0,1 + 0,2.
+    const centavosNota = (n) => Math.round((Number(n) || 0) * 100)
+
+    // El comprobante como lo guarda la base: "Nota de crédito A 0001-00001234".
+    function comprobanteNota(tipo, numero) {
+      const t = String(tipo ?? '').trim()
+      const n = String(numero ?? '').trim()
+      return [t, n].filter(Boolean).join(' ')
+    }
+
+    // Lo aplicado y lo que queda a favor, en centavos.
+    function totalesNota(importe, facturas) {
+      const imp = importe == null ? null : centavosNota(importe)
+      const aplicado = (facturas ?? []).filter(f => f.tildada).reduce((s, f) => s + centavosNota(f.monto), 0)
+      return { importe: imp, aplicado, aFavor: imp == null ? null : imp - aplicado }
+    }
+
+    // "Aplicar a las más viejas": reparte el importe de la factura más vieja a
+    // la más nueva, cada una hasta su saldo; las demás quedan sin tildar.
+    function aplicarNotaAViejas(importe, facturas) {
+      let resta = importe == null ? 0 : centavosNota(importe)
+      const orden = [...(facturas ?? [])].sort((a, b) => String(a.fecha ?? '').localeCompare(String(b.fecha ?? '')))
+      for (const f of orden) {
+        const toma = Math.max(0, Math.min(resta, centavosNota(f.saldo)))
+        f.tildada = toma > 0
+        f.monto = toma > 0 ? toma / 100 : null
+        resta -= toma
+      }
+      return facturas
+    }
+
+    // Lo que falta o está mal, con el texto para la persona; null si se puede mandar.
+    function validarNota(n, { importe, hoy }) {
+      if (!n?.proveedorId) return 'Falta el proveedor.'
+      if (!n.unidadId) return 'Elegí la fábrica (arriba, en la ficha).'
+      if (!String(n.numero ?? '').trim()) return 'Escribí el número de la nota de crédito.'
+      if (!/\d/.test(String(n.numero ?? ''))) return 'El número de la nota de crédito tiene que tener algún número.'
+      if (!n.fecha) return 'Elegí la fecha.'
+      if (hoy && n.fecha > hoy) return 'La fecha no puede ser futura.'
+      if (importe == null) return 'Escribí el importe total de la nota.'
+      if (!(importe > 0)) return 'El importe tiene que ser mayor a cero.'
+      for (const f of (n.facturas ?? []).filter(x => x.tildada)) {
+        const nombre = numeroParaMostrar(f.numero) || 'sin número'
+        if (!(Number(f.monto) > 0)) return `Poné cuánto se aplica a la factura ${nombre} (o destildala).`
+        if (centavosNota(f.monto) > centavosNota(f.saldo)) return `A la factura ${nombre} se le aplica más que su saldo (${formatearImporte(f.saldo)}).`
+      }
+      const t = totalesNota(importe, n.facturas)
+      if (t.aplicado > t.importe) return `Lo aplicado a las facturas (${formatearImporte(t.aplicado / 100)}) pasa del importe de la nota (${formatearImporte(importe)}).`
+      if (n.conAjuste) {
+        for (const [k, a] of (n.ajustes ?? []).entries()) {
+          const cual = `Ajuste ${k + 1}`
+          if (!a.insumoId) return `${cual}: elegí el insumo.`
+          if (!(Number(a.cantidad) > 0)) return `${cual}: poné la cantidad.`
+          if (a.tipo === 'materia_prima' && !String(a.lote ?? '').trim()) return `${cual}: ${a.nombre} es materia prima: escribí el lote.`
+        }
+      }
+      return null
+    }
+
+    // Lo que viaja a la base (exactamente esto).
+    function parametrosNota(n, importe) {
+      return {
+        p_proveedor_id: n.proveedorId,
+        p_unidad_negocio_id: n.unidadId,
+        p_comprobante: comprobanteNota(n.tipo, n.numero),
+        p_fecha: n.fecha,
+        p_importe: importe,
+        p_aplicaciones: (n.facturas ?? []).filter(f => f.tildada && Number(f.monto) > 0)
+          .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: centavosNota(f.monto) / 100 })),
+        p_ajustes_stock: n.conAjuste
+          ? (n.ajustes ?? []).filter(a => a.insumoId && Number(a.cantidad) > 0).map(a => ({
+            insumo_id: a.insumoId,
+            lote: String(a.lote ?? '').trim() || null,
+            cantidad: a.sentido === 'suma' ? Number(a.cantidad) : -Number(a.cantidad),
+          }))
+          : [],
+      }
+    }
+
+    // El error de la base TAL CUAL, salvo el de "la función no existe" (la
+    // base todavía no la tiene), que se dice en castellano.
+    function mensajeErrorNota(error) {
+      const m = String(error?.message ?? '')
+      if (error?.code === 'PGRST202' || /Could not find the function|registrar_nota_credito_proveedor.*(does not exist|no existe)/i.test(m)) {
+        return 'Todavía no se puede cargar: la base no tiene la función registrar_nota_credito_proveedor. Avisale al chat de la base.'
+      }
+      return m || 'No se pudo cargar la nota de crédito.'
+    }
+
+    function textoExitoNota(data) {
+      return `Nota de crédito cargada: aplicada ${formatearImporte(data?.aplicado)} · queda a favor ${formatearImporte(data?.a_favor)}.`
+    }
+
+    function htmlFacturasNota(n) {
+      if (n.cargandoFacturas) return '<p class="nota-credito__vacio">Buscando las facturas…</p>'
+      if (n.errorFacturas) return `<p class="nota-credito__vacio">${esc(n.errorFacturas)}</p>`
+      if (!n.facturas.length) return '<p class="nota-credito__vacio">No hay facturas pendientes en pesos en esta fábrica: la nota queda toda a favor.</p>'
+      return n.facturas.map(f => `
+        <div class="nota-credito__factura">
+          <input type="checkbox" id="nc-tilde-${esc(f.id)}" data-nc-tilde="${esc(f.id)}"${f.tildada ? ' checked' : ''}>
+          <label for="nc-tilde-${esc(f.id)}"><span>${esc(numeroParaMostrar(f.numero) || 'Sin número')}<br><span class="nota-credito__detalle">${esc(formatearFecha(f.fecha))} · saldo ${esc(formatearImporte(f.saldo))}</span></span></label>
+          <input type="text" data-nc-monto="${esc(f.id)}" placeholder="0,00" inputmode="decimal" autocomplete="off" aria-label="Monto a aplicar a la factura ${esc(numeroParaMostrar(f.numero) || 'sin número')}">
+        </div>`).join('') +
+        (tieneTarea('cuentas_corrientes', 'ver_todo') ? '' : '<p class="nota-credito__vacio">Sin «ver todo» se ven solo las facturas que cargaste vos.</p>')
+    }
+
+    function htmlTotalesNota(n, importe) {
+      const t = totalesNota(importe, n.facturas)
+      if (t.importe == null) return { texto: `Aplicado ${formatearImporte(t.aplicado / 100)}`, mal: false }
+      if (t.aplicado > t.importe) return { texto: `Lo aplicado pasa del importe en ${formatearImporte((t.aplicado - t.importe) / 100)}.`, mal: true }
+      return { texto: `Nota ${formatearImporte(t.importe / 100)} · Aplicado ${formatearImporte(t.aplicado / 100)} · Queda a favor ${formatearImporte(t.aFavor / 100)}`, mal: false }
+    }
+
+    // Los insumos que coinciden con lo buscado (desde 2 letras, hasta 8).
+    function htmlResultadosInsumoNota(n, a, k) {
+      const q = String(a?.busqueda ?? '').trim().toLowerCase()
+      if (n.errorInsumos) return `<p class="nota-credito__vacio">${esc(n.errorInsumos)}</p>`
+      if (!n.insumos) return '<p class="nota-credito__vacio">Buscando los insumos…</p>'
+      if (q.length < 2) return '<p class="nota-credito__vacio">Escribí al menos 2 letras.</p>'
+      const lista = n.insumos.filter(i => `${i.nombre} ${i.marca ?? ''}`.toLowerCase().includes(q)).slice(0, 8)
+      if (!lista.length) return '<p class="nota-credito__vacio">Ningún insumo se llama así.</p>'
+      return `<div class="nota-credito__opciones">${lista.map(i =>
+        `<button type="button" class="ficha-unidad-cc__chip" data-nc-insumo="${k}" data-id="${esc(i.id)}">${esc([i.nombre, i.marca].filter(Boolean).join(' · '))}</button>`).join('')}</div>`
+    }
+
+    function htmlAjustesNota(n) {
+      const ajustes = n.ajustes.map((a, k) => {
+        let insumo
+        if (a.insumoId) {
+          insumo = `<div class="nota-credito__ajuste-cabeza"><span>${esc(a.nombre)}${a.unidad ? ` <span class="nota-credito__detalle">(${esc(a.unidad)})</span>` : ''}</span>` +
+            `<button type="button" class="btn-link-cc" data-nc-cambiar="${k}">Cambiar</button></div>`
+        } else {
+          insumo = `<label class="nota-credito__detalle" for="nc-buscar-${k}">¿Qué insumo?</label>` +
+            `<input type="text" id="nc-buscar-${k}" data-nc-buscar="${k}" autocomplete="off" placeholder="Buscar insumo" value="${esc(a.busqueda ?? '')}">` +
+            `<div data-nc-resultados="${k}">${htmlResultadosInsumoNota(n, a, k)}</div>`
+        }
+        const sentido = (v, t) => `<button type="button" class="ficha-unidad-cc__chip${a.sentido === v ? ' ficha-unidad-cc__chip--elegido' : ''}" data-nc-sentido="${k}" data-nc-valor="${v}" aria-pressed="${a.sentido === v ? 'true' : 'false'}">${t}</button>`
+        return `<div class="nota-credito__ajuste">${insumo}` +
+          `<div class="nota-credito__opciones">${sentido('resta', 'Sale del stock (se devolvió)')}${sentido('suma', 'Entra al stock (se contó de menos)')}</div>` +
+          `<div class="nota-credito__campos"><label>Cantidad${a.unidad ? ` (${esc(a.unidad)})` : ''}<input type="text" data-nc-cantidad="${k}" inputmode="decimal" autocomplete="off" placeholder="0"></label>` +
+          `<label>Lote${a.tipo === 'materia_prima' ? '' : ' (opcional)'}<input type="text" data-nc-lote="${k}" autocomplete="off" value="${esc(a.lote ?? '')}"></label></div>` +
+          `<button type="button" class="btn-link-cc" data-nc-quitar="${k}">Quitar este ajuste</button></div>`
+      }).join('')
+      return `<p class="nota-credito__vacio">Cada renglón carga un ajuste de stock en ${esc(nombreUnidad(n.unidadId))} (corrección de carga), con el comprobante de la nota.</p>` +
+        ajustes + '<button type="button" class="btn-link-cc" data-nc-agregar>+ Agregar un insumo</button>'
+    }
+
+    // Vuelve a dibujar el modal entero (no al tipear en un campo: ahí se
+    // redibuja solo lo que cambia, para no sacar el foco).
+    function renderizarNotaCredito() {
+      const n = notaCredito
+      if (!n) return
+      document.getElementById('nota-credito-proveedor').textContent = [n.nombre, nombreUnidad(n.unidadId)].filter(Boolean).join(' · ')
+      const fac = document.getElementById('nota-credito-facturas')
+      fac.innerHTML = htmlFacturasNota(n)
+      for (const input of fac.querySelectorAll('[data-nc-monto]')) {
+        const f = n.facturas.find(x => x.id === input.dataset.ncMonto)
+        enlazarCampoNumero(input, { decimales: 2, max: f ? Number(f.saldo) : undefined })
+        if (f && f.tildada && f.monto != null) ponerNumero(input, f.monto)
+      }
+      const aj = document.getElementById('nota-credito-ajustes')
+      aj.hidden = !n.conAjuste
+      document.getElementById('btn-nota-ajuste').setAttribute('aria-expanded', n.conAjuste ? 'true' : 'false')
+      aj.innerHTML = n.conAjuste ? htmlAjustesNota(n) : ''
+      for (const input of aj.querySelectorAll('[data-nc-cantidad]')) {
+        const a = n.ajustes[Number(input.dataset.ncCantidad)]
+        enlazarCampoNumero(input, { decimales: 3 })
+        if (a && a.cantidad != null) ponerNumero(input, a.cantidad)
+      }
+      pintarPieNota()
+    }
+
+    function pintarPieNota() {
+      const n = notaCredito
+      if (!n) return
+      const tot = htmlTotalesNota(n, montoDeCampo('campo-nota-importe'))
+      const t = document.getElementById('nota-credito-totales')
+      t.textContent = tot.texto
+      t.className = 'nota-credito__totales' + (tot.mal ? ' nota-credito__totales--mal' : '')
+      const err = document.getElementById('nota-credito-error')
+      err.textContent = n.error || ''
+      err.hidden = !n.error
+      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
+      const btn = document.getElementById('btn-confirmar-nota-credito')
+      btn.disabled = !!n.enviando
+      btn.textContent = n.enviando ? 'Cargando…' : 'Cargar nota de crédito'
+    }
+
+    async function abrirModalNotaCredito() {
+      if (!puedeCargarNotaCredito() || !estado.ficha?.proveedorId) return
+      if (!estado.ficha.unidadId) { mostrarError('Elegí la fábrica para cargar una nota de crédito.'); return }
+      const ficha = estado.ficha
+      notaCredito = {
+        proveedorId: ficha.proveedorId, nombre: ficha.nombre, unidadId: ficha.unidadId,
+        tipo: TIPOS_NOTA_CREDITO[0], numero: '', fecha: fechaISO(new Date()),
+        facturas: [], cargandoFacturas: true, errorFacturas: null,
+        conAjuste: false, ajustes: [], insumos: null, errorInsumos: null,
+        enviando: false, error: null,
+      }
+      const n = notaCredito
+      const tipo = document.getElementById('campo-nota-tipo')
+      tipo.innerHTML = TIPOS_NOTA_CREDITO.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')
+      tipo.value = n.tipo
+      document.getElementById('campo-nota-numero').value = ''
+      document.getElementById('campo-nota-fecha').value = n.fecha
+      const imp = document.getElementById('campo-nota-importe')
+      if (!importeNotaEnlazado) { enlazarCampoNumero(imp, { decimales: 2 }); importeNotaEnlazado = true }
+      ponerNumero(imp, null)
+      renderizarNotaCredito()
+      document.getElementById('modal-nota-credito').hidden = false
+      // Las facturas pendientes en pesos de esa fábrica, las más viejas primero.
+      const { data, error } = await supabase.from('facturas_pendientes')
+        .select('id, numero_comprobante, fecha_factura, saldo_pendiente, moneda')
+        .eq('proveedor_id', n.proveedorId)
+        .eq('unidad_negocio_id', n.unidadId)
+        .eq('moneda', 'ARS')
+        .in('estado', ['pendiente', 'parcial'])
+        .order('fecha_factura', { ascending: true })
+      if (notaCredito !== n) return
+      n.cargandoFacturas = false
+      if (error) { console.error(error); n.errorFacturas = 'No se pudieron leer las facturas: la nota quedaría toda a favor.' }
+      else n.facturas = (data ?? []).filter(f => Number(f.saldo_pendiente) > 0)
+        .map(f => ({ id: f.id, numero: f.numero_comprobante, fecha: f.fecha_factura, saldo: Number(f.saldo_pendiente), tildada: false, monto: null }))
+      renderizarNotaCredito()
+    }
+
+    function cerrarModalNotaCredito() {
+      // Mientras se manda no se cierra: la respuesta tiene que verse.
+      if (notaCredito?.enviando) return
+      document.getElementById('modal-nota-credito').hidden = true
+      notaCredito = null
+    }
+
+    async function asegurarInsumosNota() {
+      const n = notaCredito
+      if (!n || n.insumos) return
+      const { data, error } = await supabase.from('insumos').select('id, nombre, marca, unidad_medida, tipo, activo').order('nombre')
+      if (notaCredito !== n) return
+      if (error) { console.error(error); n.errorInsumos = 'No se pudieron leer los insumos.'; n.insumos = [] }
+      else n.insumos = (data ?? []).filter(i => i.activo !== false)
+      renderizarNotaCredito()
+    }
+
+    // Los toques del modal (por delegación: se redibuja).
+    function accionNota(ev) {
+      const n = notaCredito
+      if (!n || n.enviando) return
+      const b = ev.target.closest?.('[data-nc-agregar], [data-nc-quitar], [data-nc-insumo], [data-nc-cambiar], [data-nc-sentido]')
+      if (!b) return
+      if (b.dataset.ncAgregar !== undefined) {
+        n.ajustes.push({ clave: ++claveAjusteNota, insumoId: null, nombre: '', unidad: null, tipo: null, busqueda: '', sentido: 'resta', cantidad: null, lote: '' })
+        asegurarInsumosNota()
+      } else if (b.dataset.ncQuitar !== undefined) {
+        n.ajustes.splice(Number(b.dataset.ncQuitar), 1)
+      } else if (b.dataset.ncInsumo !== undefined) {
+        const a = n.ajustes[Number(b.dataset.ncInsumo)]
+        const i = (n.insumos ?? []).find(x => x.id === b.dataset.id)
+        if (!a || !i) return
+        Object.assign(a, { insumoId: i.id, nombre: [i.nombre, i.marca].filter(Boolean).join(' · '), unidad: i.unidad_medida ?? null, tipo: i.tipo ?? null, busqueda: '' })
+      } else if (b.dataset.ncCambiar !== undefined) {
+        const a = n.ajustes[Number(b.dataset.ncCambiar)]
+        if (a) Object.assign(a, { insumoId: null, nombre: '', unidad: null, tipo: null })
+      } else if (b.dataset.ncSentido !== undefined) {
+        const a = n.ajustes[Number(b.dataset.ncSentido)]
+        if (a) a.sentido = b.dataset.ncValor === 'suma' ? 'suma' : 'resta'
+      }
+      n.error = null
+      renderizarNotaCredito()
+    }
+
+    // Al tipear: el estado y el pie, sin redibujar el campo.
+    function escribirNota(t) {
+      const n = notaCredito
+      if (!n) return
+      if (t.dataset.ncMonto !== undefined) {
+        const f = n.facturas.find(x => x.id === t.dataset.ncMonto)
+        if (!f) return
+        f.monto = leerCampoNumero(t)
+        f.tildada = f.monto != null && f.monto > 0 ? true : f.tildada
+        const caja = document.getElementById('nc-tilde-' + f.id)
+        if (caja) caja.checked = f.tildada
+      } else if (t.dataset.ncTilde !== undefined) {
+        const f = n.facturas.find(x => x.id === t.dataset.ncTilde)
+        if (!f) return
+        f.tildada = !!t.checked
+        // Tildada sin monto: lo que falta del importe, hasta su saldo.
+        if (f.tildada && !(Number(f.monto) > 0)) {
+          const imp = montoDeCampo('campo-nota-importe')
+          const t2 = totalesNota(imp, n.facturas.filter(x => x !== f))
+          const resto = imp == null ? centavosNota(f.saldo) : Math.max(0, t2.importe - t2.aplicado)
+          const v = Math.min(resto, centavosNota(f.saldo))
+          f.monto = v > 0 ? v / 100 : null
+        }
+        if (!f.tildada) f.monto = null
+        renderizarNotaCredito()
+      } else if (t.dataset.ncBuscar !== undefined) {
+        const a = n.ajustes[Number(t.dataset.ncBuscar)]
+        if (!a) return
+        a.busqueda = t.value
+        // Solo los resultados: el campo no se redibuja.
+        const k = Number(t.dataset.ncBuscar)
+        const cont = document.querySelector(`[data-nc-resultados="${k}"]`)
+        if (cont) cont.innerHTML = htmlResultadosInsumoNota(n, a, k)
+      } else if (t.dataset.ncCantidad !== undefined) {
+        const a = n.ajustes[Number(t.dataset.ncCantidad)]
+        if (a) a.cantidad = leerCampoNumero(t)
+      } else if (t.dataset.ncLote !== undefined) {
+        const a = n.ajustes[Number(t.dataset.ncLote)]
+        if (a) a.lote = t.value
+      } else if (t.id === 'campo-nota-numero') n.numero = t.value
+      else if (t.id === 'campo-nota-tipo') n.tipo = t.value
+      else if (t.id === 'campo-nota-fecha') n.fecha = t.value
+      n.error = null
+      pintarPieNota()
+    }
+
+    function aplicarNotaAViejasDesdeBoton() {
+      const n = notaCredito
+      if (!n || n.enviando) return
+      const imp = montoDeCampo('campo-nota-importe')
+      if (imp == null) { n.error = 'Escribí primero el importe total de la nota.'; pintarPieNota(); return }
+      aplicarNotaAViejas(imp, n.facturas)
+      n.error = null
+      renderizarNotaCredito()
+    }
+
+    function alternarAjusteNota() {
+      const n = notaCredito
+      if (!n || n.enviando) return
+      n.conAjuste = !n.conAjuste
+      if (n.conAjuste && !n.ajustes.length) {
+        n.ajustes.push({ clave: ++claveAjusteNota, insumoId: null, nombre: '', unidad: null, tipo: null, busqueda: '', sentido: 'resta', cantidad: null, lote: '' })
+        asegurarInsumosNota()
+      }
+      renderizarNotaCredito()
+    }
+
+    async function confirmarNotaCredito() {
+      const n = notaCredito
+      // Un doble toque manda una sola vez.
+      if (!n || n.enviando) return
+      n.numero = document.getElementById('campo-nota-numero').value
+      n.tipo = document.getElementById('campo-nota-tipo').value || n.tipo
+      n.fecha = document.getElementById('campo-nota-fecha').value
+      const importe = montoDeCampo('campo-nota-importe')
+      const falta = validarNota(n, { importe, hoy: fechaISO(new Date()) })
+      if (falta) { n.error = falta; pintarPieNota(); return }
+      n.enviando = true
+      n.error = null
+      pintarPieNota()
+      let data = null, error = null
+      try {
+        ;({ data, error } = await supabase.rpc('registrar_nota_credito_proveedor', parametrosNota(n, importe)))
+      } catch (e) {
+        error = { message: 'No hay conexión: la nota de crédito no se cargó. Probá de nuevo.' }
+      }
+      n.enviando = false
+      if (error) {
+        n.error = mensajeErrorNota(error)
+        if (notaCredito === n) pintarPieNota()
+        return
+      }
+      mostrarExito(textoExitoNota(data))
+      if (notaCredito === n) cerrarModalNotaCredito()
+      const ficha = estado.ficha
+      if (ficha && ficha.proveedorId === n.proveedorId) {
+        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+        if (estado.ficha === ficha) renderizarFichaBanner()
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // IMPORTAR PROVEEDORES DESDE EXCEL
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -4501,6 +4989,7 @@
           ${tieneTarea('cuentas_corrientes', 'registrar_pago') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--primario" id="btn-registrar-pago" ${dis}>Registrar pago</button>` : ''}
           ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${hayCreditos ? '' : 'hidden'} ${dis}>Aplicar crédito</button>` : ''}
           ${puedeCargarSaldoInicial() ? '<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-saldo-inicial-ficha">Cargar saldo inicial</button>' : ''}
+          ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-nota-credito-ficha" ${dis}>Cargar nota de crédito</button>` : ''}
         </div>
         ${todas ? `<div class="banner-ficha-cc__ayuda">Registrar un pago o aplicar un crédito es de una unidad: elegila abajo.</div>` : ''}`
 
@@ -4547,6 +5036,8 @@
       document.getElementById('btn-saldo-inicial-ficha')?.addEventListener('click', () => {
         if (estado.ficha) abrirModalSaldoInicial(estado.ficha.proveedorId, estado.ficha.nombre, estado.ficha.unidadId)
       })
+      // La nota de crédito es de UNA fábrica: en "todas" queda deshabilitada.
+      document.getElementById('btn-nota-credito-ficha')?.addEventListener('click', () => abrirModalNotaCredito())
     }
 
     async function cargarFichaMovimientos() {
@@ -6553,6 +7044,21 @@
     document.getElementById('saldo-inicial-unidades').addEventListener('click', (ev) => {
       const b = ev.target.closest?.('[data-si-unidad]')
       if (b) elegirUnidadSaldoInicial(b.dataset.siUnidad)
+    })
+
+    // ── Modal: nota de crédito de un proveedor (20/10/2026) ────────────────
+    document.getElementById('btn-cerrar-nota-credito').addEventListener('click', cerrarModalNotaCredito)
+    document.getElementById('btn-cancelar-nota-credito').addEventListener('click', cerrarModalNotaCredito)
+    document.querySelector('#modal-nota-credito .modal-cc__backdrop').addEventListener('click', cerrarModalNotaCredito)
+    document.getElementById('btn-confirmar-nota-credito').addEventListener('click', confirmarNotaCredito)
+    document.getElementById('btn-nota-viejas').addEventListener('click', aplicarNotaAViejasDesdeBoton)
+    document.getElementById('btn-nota-ajuste').addEventListener('click', alternarAjusteNota)
+    document.getElementById('nota-credito-ajustes').addEventListener('click', accionNota)
+    document.getElementById('modal-nota-credito').addEventListener('input', (ev) => escribirNota(ev.target))
+    document.getElementById('modal-nota-credito').addEventListener('change', (ev) => {
+      // (El tilde de una factura ya llega por 'input'; el tipo y la fecha, por
+      // las dudas, también por 'change'.)
+      if (ev.target.id === 'campo-nota-tipo' || ev.target.id === 'campo-nota-fecha') escribirNota(ev.target)
     })
 
     // ── Cargar importe de una descarga sin importe (delegado: se redibuja) ─
