@@ -95,7 +95,12 @@ const PANTALLAS = [
       // lotes (8 + 15 = 23) y lo que falta queda como faltante, en bordó.
       await page.locator('[data-r-completar="0"]').click()
       await expect(page.locator('[data-r-lotes-resumen="0"]')).toContainText('Faltan 7 cajas')
-      await expect(page.locator('[data-r-faltante-caja="0"] [data-r-faltante]')).toContainText('queda pendiente de revisión en Administración')
+      // 20/10/2026: un producto con faltante pregunta "¿De dónde salen?" y no
+      // se puede confirmar sin contestar (sin planillas abiertas: "Se produjo
+      // antes y no está cargado", con una nota).
+      await expect(page.locator('[data-r-faltante-caja="0"] [data-r-origen-caja]')).toContainText('Hay 23 cajas, faltan 7 cajas. ¿De dónde salen?')
+      await page.locator('[data-r-origen="antes"]').click()
+      await page.locator('[data-r-origen-nota="0"]').fill('Se hizo ayer y no se cargó')
       // Un renglón de insumo, buscado por el buscador que filtra todo junto.
       // En el celular el renglón se arma en su propio paso: se vuelve a la orden.
       if (await page.locator('#rt-editor-volver').isVisible()) await page.locator('#rt-editor-volver').click()

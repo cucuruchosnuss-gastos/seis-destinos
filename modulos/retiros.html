@@ -426,6 +426,27 @@
     .rt-faltante { display: flex; gap: 10px; }
     .rt-faltante svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--bordo); }
     .rt-faltante strong { display: block; font-size: 15.5px; }
+    /* "¿De dónde salen?" antes de confirmar (20/10/2026): la pregunta del
+       renglón que lleva más cajas de las que hay. Bordó suave como el aviso
+       de faltante; lo elegido en naranja (lo que se toca). */
+    .rt-origen { margin-top: 10px; padding: 12px; border: 1px solid var(--rt-borde-faltante); border-radius: 12px; background: var(--bordo-suave);
+      display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .rt-origen--falta { border: 2px solid var(--bordo); }
+    .rt-origen__titulo { margin: 0; color: var(--bordo-oscuro); font-size: 15px; overflow-wrap: anywhere; }
+    .rt-origen__titulo strong { font-weight: 800; }
+    .rt-origen__sub { margin: 0; font-size: 13px; font-weight: 700; color: var(--color-texto-2); }
+    .rt-origen__ops { display: flex; flex-wrap: wrap; gap: 8px; }
+    .rt-origen__op { min-height: 44px; padding: 8px 14px; border: 1px solid var(--color-borde-boton, #9A9287); border-radius: 12px; background: #fff;
+      color: var(--color-texto); font: inherit; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; }
+    .rt-origen__op--elegido { border: 2px solid var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento-hover); }
+    .rt-origen__otro-link { align-self: flex-start; min-height: 44px; }
+    .rt-origen__otro, .rt-origen__nota { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .rt-origen__otro label, .rt-origen__nota label { font-size: 13px; font-weight: 700; color: var(--color-texto-2); }
+    .rt-origen__otro .rt-link { align-self: flex-start; min-height: 44px; }
+    .rt-origen textarea, .rt-origen input { font-size: 16px; width: 100%; box-sizing: border-box; }
+    .rt-origen__ayuda { font-size: 12.5px; color: var(--color-texto-2); }
+    .rt-origen__ayuda--falta { color: var(--bordo-oscuro); font-weight: 700; }
+    .rt-origen__despues { margin: 0; font-size: 13px; color: var(--color-texto-2); overflow-wrap: anywhere; }
 
     /* La acción de abajo (56 px, naranja), pegada al borde de la pantalla. */
     .rt-accion {
@@ -829,10 +850,13 @@
     // regla que Stock e Ingreso (05/10/2026).
     import { unidadCorta } from '../js/cantidades.js'
     // El faltante de un renglón: "¿de dónde salen?" (13/10/2026). El mismo
-    // cartel que Administración → Retiros por revisar.
+    // cartel que Administración → Retiros por revisar. Desde el 20/10/2026,
+    // también la pregunta ANTES de confirmar (TEXTO_PRODUJO_ANTES en adelante).
     import {
       nuevoFaltante, htmlFaltante, accionFaltante, escribirMotivoFaltante, asegurarEstilosFaltante,
       textoEsperando, textoCajasFr,
+      TEXTO_PRODUJO_ANTES, LARGO_MINIMO_MOTIVO_FALTANTE, origenHabitual, origenCompleto, textoOrigenElegido,
+      textoVienenDe, textoPlanillaBoton, loteDeOrigen, notaObservacionOrigen, notaFaltaIngreso, resolverOrigenes,
     } from '../js/faltante-retiro.js'
     import { supabase } from '../js/supabase.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
@@ -849,7 +873,8 @@
       miEmpleadoId: null,
       miRolApp: null,
       miNombre: '',
-      // Tareas habilitadas de retiros, stock y producción: 'modulo:tarea' → alcance.
+      // Tareas habilitadas de retiros, stock, producción y materia prima:
+      // 'modulo:tarea' → alcance.
       misTareas: new Map(),
       // Las empresas de mis_unidades_retiro(), con prefijo, logo y datos.
       empresas: [],
@@ -885,6 +910,15 @@
       hecho: null,       // { ordenId, codigo, faltantes, reintento, orden, error, aviso, unidadId, renglones, resueltos }
       falt: null,        // el cartel del faltante abierto: { cola, idx, f, alResolver, foco }
       planillasMio: null, // planillas_en_curso de la fábrica, para nombrar la de un renglón que espera
+      // "¿De dónde salen?" antes de confirmar (20/10/2026):
+      // el origen habitual de cada presentación de la empresa
+      //   { unidad, mapa: Map(presentacion_id → origenHabitual), error }
+      origenes: null,
+      // las planillas abiertas de la empresa { unidad, cargando, error, lista }
+      planillasForm: null,
+      // para "Otro origen": las fábricas del grupo y los proveedores
+      //   { cargando, error, unidades: [{id, nombre}], proveedores: [{id, nombre}] }
+      otrosOrigenes: null,
       mis: null,         // lo que devolvió mis_ordenes_retiro (null = todavía no)
       errorMis: null,
       mio: null,         // { orden, error, aviso }
@@ -961,6 +995,21 @@
       const alcance = estado.misTareas.get('retiros:cargar')
       if (alcance && alcance.todas === true) return true
       return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
+
+    // ¿Puede cargar el ingreso de lo que vino de afuera? ingresar_producto_terminado
+    // pide materia_prima:cargar o stock:ajustar_inventario en la empresa (con
+    // la regla de tiene_tarea_alcance). Sin eso, el renglón queda pendiente
+    // con la nota "Viene de X, falta cargar el ingreso".
+    function puedeIngresarEn(unidadId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      return ['materia_prima:cargar', 'stock:ajustar_inventario'].some(clave => {
+        if (!estado.misTareas.has(clave)) return false
+        const alcance = estado.misTareas.get(clave)
+        if (alcance && alcance.todas === true) return true
+        return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+      })
     }
 
     // Los lotes de PRODUCTO salen de lotes_para_retiro() y los de INSUMO de
@@ -1155,6 +1204,8 @@
         estado.nuevoCliente = null
         estado.catalogo = null
         estado.lotes = new Map()
+        estado.origenes = null
+        estado.planillasForm = null
         estado.mis = null
         estado.form = null
       }
@@ -1522,7 +1573,115 @@
         tareas.push(leerClientes(unidad).then(c => { if (unidad === estado.empresaId) estado.clientes = c })
           .catch(err => { console.error('No se pudieron leer los clientes:', err); estado.errorClientes = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.' }))
       }
+      // El origen habitual de cada producto: si no se puede leer, la carga
+      // sigue y la pregunta ofrece las dos alternativas.
+      if (estado.origenes?.unidad !== unidad) {
+        estado.origenes = { unidad, mapa: new Map(), error: null }
+        tareas.push(leerOrigenes(unidad).then(mapa => { if (estado.origenes?.unidad === unidad) estado.origenes.mapa = mapa })
+          .catch(err => { console.error('No se pudo leer de dónde viene cada producto:', err); if (estado.origenes?.unidad === unidad) estado.origenes.error = true }))
+      }
       await Promise.all(tareas)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DE DÓNDE VIENE CADA PRODUCTO (20/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // productos_terminados.origen_tipo ('fabrica' | 'unidad' | 'proveedor' |
+    // null) de los productos de la empresa, por presentación (el catálogo de
+    // la carga no trae el id del producto). Los nombres de la fábrica o el
+    // proveedor de origen, de unidades_negocio y proveedores.
+    async function leerOrigenes(unidad) {
+      const { data: prods, error } = await supabase.from('productos_terminados')
+        .select('id, origen_tipo, origen_unidad_id, origen_proveedor_id').eq('unidad_negocio_id', unidad)
+      if (error) throw error
+      const ids = (prods ?? []).map(p => p.id)
+      const mapa = new Map()
+      if (!ids.length) return mapa
+      const { data: pres, error: e2 } = await supabase.from('producto_presentaciones').select('id, producto_id').in('producto_id', ids)
+      if (e2) throw e2
+      const unidades = new Map()
+      const proveedores = new Map()
+      const idsUni = [...new Set((prods ?? []).map(p => p.origen_unidad_id).filter(Boolean))]
+      const idsProv = [...new Set((prods ?? []).map(p => p.origen_proveedor_id).filter(Boolean))]
+      if (idsUni.length) {
+        const { data, error: e3 } = await supabase.from('unidades_negocio').select('id, nombre').in('id', idsUni)
+        if (e3) throw e3
+        for (const u of data ?? []) unidades.set(u.id, u.nombre)
+      }
+      if (idsProv.length) {
+        const { data, error: e4 } = await supabase.from('proveedores').select('id, razon_social').in('id', idsProv)
+        if (e4) throw e4
+        for (const p of data ?? []) proveedores.set(p.id, p.razon_social)
+      }
+      const porProducto = new Map((prods ?? []).map(p => [p.id, origenHabitual(p, { unidades, proveedores })]))
+      for (const pr of pres ?? []) if (porProducto.has(pr.producto_id)) mapa.set(pr.id, porProducto.get(pr.producto_id))
+      return mapa
+    }
+
+    // El origen habitual de un renglón (o el "no se sabe": null).
+    function origenHabitualDe(r) {
+      return estado.origenes?.mapa?.get?.(r?.presentacionId) ?? { tipo: null, unidadId: null, proveedorId: null, nombre: null }
+    }
+
+    // Las planillas abiertas de la empresa, para "salen de una planilla".
+    async function asegurarPlanillasForm() {
+      const unidad = estado.empresaId
+      // Una sola vez por empresa (si falló, se vuelve a pedir con "Volver a intentar").
+      if (!unidad || estado.planillasForm?.unidad === unidad) return
+      estado.planillasForm = { unidad, cargando: true, error: null, lista: [] }
+      try {
+        const { data, error } = await supabase.rpc('planillas_en_curso', { p_unidad_negocio_id: unidad })
+        if (error) throw error
+        if (estado.planillasForm?.unidad !== unidad) return
+        estado.planillasForm = { unidad, cargando: false, error: null, lista: Array.isArray(data) ? data.filter(x => x?.turno_id) : [] }
+      } catch (err) {
+        console.error('No se pudieron leer las planillas abiertas:', err)
+        if (estado.planillasForm?.unidad === unidad) estado.planillasForm = { unidad, cargando: false, error: 'No se pudieron leer las planillas abiertas.', lista: [] }
+      }
+      repintarOrigenes()
+    }
+
+    // Para "Otro origen": las otras fábricas del grupo (sin la de pruebas para
+    // una cuenta real) y los proveedores activos.
+    async function asegurarOtrosOrigenes() {
+      if (estado.otrosOrigenes) return
+      estado.otrosOrigenes = { cargando: true, error: null, unidades: [], proveedores: [] }
+      repintarOrigenes()
+      try {
+        const [u, p] = await Promise.all([
+          supabase.from('unidades_negocio').select('id, nombre, activo, es_prueba'),
+          supabase.from('proveedores').select('id, razon_social, activo'),
+        ])
+        if (u.error) throw u.error
+        if (p.error) throw p.error
+        const unidades = sinUnidadesDePrueba((u.data ?? []).filter(x => x?.activo !== false), estado.fabrica)
+          .map(x => ({ id: x.id, nombre: limpio(x.nombre) })).filter(x => x.nombre)
+          .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+        const proveedores = (p.data ?? []).filter(x => x?.activo !== false && limpio(x.razon_social))
+          .map(x => ({ id: x.id, nombre: limpio(x.razon_social) })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+        estado.otrosOrigenes = { cargando: false, error: null, unidades, proveedores }
+      } catch (err) {
+        console.error('No se pudieron leer las fábricas y los proveedores:', err)
+        estado.otrosOrigenes = { cargando: false, error: 'No se pudieron leer las fábricas y los proveedores. Revisá la conexión.', unidades: [], proveedores: [] }
+      }
+      repintarOrigenes()
+    }
+
+    // Vuelve a dibujar la pregunta del renglón abierto (sin tocar los campos
+    // de cajas ni de lotes).
+    function repintarOrigenes() {
+      const f = estado.form
+      if (Number.isInteger(f?.editando)) {
+        // Si se está escribiendo en el buscador de "Otro origen", se
+        // redibujan solo los resultados (redibujar la caja le saca el foco).
+        const activo = document.activeElement
+        const buscando = activo?.dataset?.rOrigenBuscar
+        const cont = buscando !== undefined ? document.getElementById('rt-renglones')?.querySelector(`[data-r-origen-resultados="${Number(buscando)}"]`) : null
+        if (cont && Number(buscando) === f.editando) cont.innerHTML = htmlResultadosOtro(renglon(buscando), Number(buscando))
+        else pintarOrigenCaja(f.editando)
+      }
+      pintarPie()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1760,7 +1919,48 @@
         const x = faltanRenglon(r)
         if (x) faltan.push(`Renglón ${i + 1}: ${x}.`)
       })
+      // "¿De dónde salen?" es obligatorio (20/10/2026).
+      f.renglones.forEach((r, i) => {
+        if (faltaOrigen(r)) faltan.push(`Falta decir de dónde salen las cajas del renglón ${i + 1}.`)
+      })
       return faltan
+    }
+
+    // ── "¿De dónde salen?" de un renglón (20/10/2026) ──────────────────────
+    //
+    // Un renglón de PRODUCTO TERMINADO que lleva más cajas de las que hay
+    // pregunta de dónde salen las que faltan, y no se puede confirmar sin
+    // contestarlo. La respuesta vive en el renglón (r.origen) y vale mientras
+    // sea el mismo producto, presentación y cono (su clave de lotes):
+    //   { tipo: 'planilla', clave, turnoId, texto, maquina, lote, turno }
+    //   { tipo: 'antes', clave, nota }
+    //   { tipo: 'afuera', clave, unidadId | proveedorId, nombre, uuid }
+    // El uuid del ingreso es UNO por renglón (r.uuidIngreso): un reintento no
+    // carga el ingreso dos veces.
+
+    // Las cajas que faltan de un renglón de producto (0 si no falta nada o si
+    // los lotes todavía no se leyeron: ahí no se puede saber).
+    function faltanteProducto(r) {
+      if (!r || r.insumoId || !r.presentacionId) return 0
+      const lista = listaLotesDe(r)
+      if (!lista) return 0
+      const a = asignacion(r, lista)
+      return a.faltante > 0 ? a.faltante : 0
+    }
+
+    function origenDe(r) {
+      const o = r?.origen
+      return o && typeof o === 'object' && o.clave === claveLotesRenglon(r) ? o : null
+    }
+
+    function faltaOrigen(r) {
+      return faltanteProducto(r) > 0 && !origenCompleto(origenDe(r))
+    }
+
+    // ¿El producto tiene un origen afuera conocido ("Vienen de Mengui")? Si
+    // no, se ofrecen las planillas de la fábrica.
+    function conOrigenAfuera(h) {
+      return (h?.tipo === 'unidad' || h?.tipo === 'proveedor') && !!limpio(h.nombre)
     }
 
     // Un renglón para la base: el producto, el cono (null sin cono), las cajas
@@ -1781,12 +1981,26 @@
     }
 
     // UNA sola llamada, con el uuid de la orden: el mismo en cada reintento.
+    // Lo que queda pendiente para Administración (se produjo antes y no está
+    // cargado; viene de afuera sin permiso para cargar el ingreso) va en las
+    // observaciones de la orden, con el número de renglón (20/10/2026).
+    function notasDeOrigen(f) {
+      const puede = puedeIngresarEn(estado.empresaId)
+      return (f?.renglones ?? []).map((r, i) => faltanteProducto(r) > 0
+        ? notaObservacionOrigen(i + 1, nombreCortoRenglon(r), origenDe(r), puede) : null).filter(Boolean)
+    }
+
+    function nombreCortoRenglon(r) {
+      const cat = estado.catalogo
+      return cat && r?.productoId ? nombreProductoPresentacion(cat, r.productoId, r.presentacionId) : ''
+    }
+
     function parametrosRegistrar(f) {
       return {
         p_cliente_id: f.clienteId,
         p_fecha: hoyArgentina(),
         p_transporte: limpio(f.transporte) || null,
-        p_observaciones: String(f.observaciones ?? '').trim() || null,
+        p_observaciones: [String(f.observaciones ?? '').trim(), ...notasDeOrigen(f)].filter(Boolean).join('\n') || null,
         p_items: f.renglones.map(itemParaBase),
         p_client_uuid: f.uuid,
       }
@@ -2435,10 +2649,208 @@
     function htmlAvisoFaltante(r, a) {
       if (!(a?.faltante > 0)) return ''
       const hay = r3(a.porLote.reduce((s, l) => s + l.saldo, 0))
+      // En un producto terminado (el resumen) se dice de dónde salen: se
+      // contestó antes de llegar acá (20/10/2026).
+      const texto = r?.insumoId
+        ? `${TEXTO_FALTANTE} (faltan ${cantidadRenglon(r, a.faltante)}).`
+        : `Faltan ${cantidadRenglon(r, a.faltante)}: ${textoOrigenTarjeta(r)}.`
       return `<div class="rt-aviso rt-aviso--grave rt-faltante" data-r-faltante>` +
         `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01"/></svg>` +
         `<span><strong>Hay ${esc(cantidadRenglon(r, hay))} y se lleva ${esc(cantidadRenglon(r, a.pedido))}</strong>` +
-        `${esc(TEXTO_FALTANTE)} (faltan ${esc(cantidadRenglon(r, a.faltante))}).</span></div>`
+        `${esc(texto)}</span></div>`
+    }
+
+    // La caja de abajo de los lotes: en un INSUMO, el aviso de siempre; en un
+    // producto terminado, la pregunta "¿De dónde salen?" (20/10/2026).
+    function htmlFaltanteRenglon(r, i) {
+      const lista = listaLotesDe(r)
+      if (r?.insumoId) return htmlAvisoFaltante(r, asignacion(r, lista))
+      return htmlOrigenRenglon(r, i)
+    }
+
+    // "Hay 10, faltan 5. ¿De dónde salen?" con las respuestas según de dónde
+    // se hace habitualmente el producto.
+    function htmlOrigenRenglon(r, i) {
+      const falta = faltanteProducto(r)
+      if (!(falta > 0)) return ''
+      const a = asignacion(r, listaLotesDe(r))
+      const hay = r3(a.porLote.reduce((s, l) => s + l.saldo, 0))
+      const o = origenDe(r)
+      const hab = origenHabitualDe(r)
+      const afueraHabitual = conOrigenAfuera(hab)
+      const btn = (accion, texto, elegido) =>
+        `<button type="button" class="rt-origen__op${elegido ? ' rt-origen__op--elegido' : ''}" data-r-origen="${accion}" data-r-i="${i}" aria-pressed="${elegido ? 'true' : 'false'}">${esc(texto)}</button>`
+      const partes = []
+      if (afueraHabitual) {
+        const esHab = o?.tipo === 'afuera' && (o.unidadId ?? null) === (hab.unidadId ?? null) && (o.proveedorId ?? null) === (hab.proveedorId ?? null)
+        partes.push(`<div class="rt-origen__ops">${btn('habitual', textoVienenDe(hab.nombre), esHab)}</div>`)
+      } else {
+        // Se hace en la fábrica (o no se sabe): las planillas abiertas.
+        const pl = estado.planillasForm?.unidad === estado.empresaId ? estado.planillasForm : null
+        if (!pl || pl.cargando) partes.push('<p class="rt-texto-suave">Buscando las planillas abiertas…</p>')
+        else if (pl.error) {
+          partes.push(`<div class="rt-aviso rt-aviso--grave">${esc(pl.error)} ` +
+            `<button type="button" class="rt-link" data-r-origen="reintentar-planillas" data-r-i="${i}">Volver a intentar</button></div>`)
+        } else if (pl.lista.length) {
+          partes.push(`<p class="rt-origen__sub">Salen de una planilla abierta:</p><div class="rt-origen__ops">` +
+            pl.lista.map(p => {
+              const el = o?.tipo === 'planilla' && String(o.turnoId) === String(p.turno_id)
+              return `<button type="button" class="rt-origen__op${el ? ' rt-origen__op--elegido' : ''}" data-r-origen="planilla" data-r-i="${i}" data-turno="${esc(p.turno_id)}" aria-pressed="${el ? 'true' : 'false'}">${esc(textoPlanillaBoton(p))}</button>`
+            }).join('') + '</div>')
+        } else {
+          partes.push(`<p class="rt-origen__sub">No hay ninguna planilla abierta.</p><div class="rt-origen__ops">${btn('antes', TEXTO_PRODUJO_ANTES, o?.tipo === 'antes')}</div>`)
+        }
+        if (o?.tipo === 'antes') {
+          const corta = limpio(o.nota).length < LARGO_MINIMO_MOTIVO_FALTANTE
+          partes.push(`<div class="rt-origen__nota"><label for="rt-r-${i}-origen-nota">¿Qué pasó? (al menos ${LARGO_MINIMO_MOTIVO_FALTANTE} letras)</label>` +
+            `<textarea class="rt-input" id="rt-r-${i}-origen-nota" data-r-origen-nota="${i}" rows="2">${esc(o.nota ?? '')}</textarea>` +
+            `<span class="rt-origen__ayuda${corta && (r.pedirOrigen || estado.form?.intentado) ? ' rt-origen__ayuda--falta' : ''}">Queda pendiente para que lo revise Administración.</span></div>`)
+        }
+      }
+      // Otro origen: otra fábrica o un proveedor.
+      const otroElegido = o?.tipo === 'afuera' && !(afueraHabitual &&
+        (o.unidadId ?? null) === (hab.unidadId ?? null) && (o.proveedorId ?? null) === (hab.proveedorId ?? null))
+      // (Un producto que se hace en la fábrica no lo ofrece: sale de una
+      // planilla o se produjo antes.)
+      if (hab.tipo === 'fabrica') { /* nada */ } else if (r.otroAbierto) partes.push(htmlOtroOrigen(r, i))
+      else if (otroElegido) partes.push(`<div class="rt-origen__ops">${btn('otro', textoVienenDe(o.nombre), true)}</div>`)
+      else partes.push(`<button type="button" class="rt-link rt-origen__otro-link" data-r-origen="otro" data-r-i="${i}">${afueraHabitual ? 'Otro origen' : 'Vienen de otro lado'}</button>`)
+      // Lo que va a pasar al confirmar.
+      if (o?.tipo === 'afuera' && origenCompleto(o)) {
+        partes.push(puedeIngresarEn(estado.empresaId)
+          ? `<p class="rt-origen__despues">Al confirmar se carga el ingreso de las ${esc(textoCajasFr(falta))} en el lote ${esc(loteDeOrigen(o, hoyArgentina()))}.</p>`
+          : `<p class="rt-origen__despues">Con tu usuario no se puede cargar el ingreso: el renglón queda pendiente con la nota «${esc(notaFaltaIngreso(o))}».</p>`)
+      } else if (o?.tipo === 'planilla') {
+        partes.push('<p class="rt-origen__despues">Al confirmar quedan esperando esa planilla: cuando se cargue lo producido, salen de su lote.</p>')
+      }
+      const sinContestar = !origenCompleto(o) && (r.pedirOrigen || estado.form?.intentado)
+      return `<div class="rt-origen${sinContestar ? ' rt-origen--falta' : ''}" data-r-origen-caja>` +
+        `<p class="rt-origen__titulo"><strong>Hay ${esc(cantidadRenglon(r, hay))}, faltan ${esc(cantidadRenglon(r, falta))}.</strong> ¿De dónde salen?</p>` +
+        partes.join('') +
+        (sinContestar ? '<p class="rt-error-pegado">Falta decir de dónde salen las cajas.</p>' : '') + '</div>'
+    }
+
+    // El buscador de "Otro origen": las otras fábricas del grupo y, al
+    // escribir, los proveedores.
+    function htmlOtroOrigen(r, i) {
+      return `<div class="rt-origen__otro"><label for="rt-r-${i}-origen-buscar">¿De qué fábrica o proveedor vienen?</label>` +
+        `<input type="text" class="rt-input" id="rt-r-${i}-origen-buscar" data-r-origen-buscar="${i}" autocomplete="off" placeholder="Escribí para buscar un proveedor" value="${esc(r.otroBusqueda ?? '')}">` +
+        `<div data-r-origen-resultados="${i}">${htmlResultadosOtro(r, i)}</div>` +
+        `<button type="button" class="rt-link" data-r-origen="otro-cerrar" data-r-i="${i}">Cancelar</button></div>`
+    }
+
+    function htmlResultadosOtro(r, i) {
+      const oo = estado.otrosOrigenes
+      if (!oo || oo.cargando) return '<p class="rt-texto-suave">Buscando…</p>'
+      if (oo.error) return `<div class="rt-aviso rt-aviso--grave">${esc(oo.error)} <button type="button" class="rt-link" data-r-origen="reintentar-otros" data-r-i="${i}">Volver a intentar</button></div>`
+      const q = normalizar(r.otroBusqueda)
+      const o = origenDe(r)
+      const fabricas = oo.unidades.filter(u => u.id !== estado.empresaId && (!q || normalizar(u.nombre).includes(q)))
+      const provs = q.length >= 2 ? oo.proveedores.filter(p => normalizar(p.nombre).includes(q)).slice(0, 8) : []
+      const btn = (tipo, x) => {
+        const elegido = o?.tipo === 'afuera' && (tipo === 'unidad' ? o.unidadId === x.id : o.proveedorId === x.id)
+        return `<button type="button" class="rt-origen__op${elegido ? ' rt-origen__op--elegido' : ''}" data-r-origen="elegir" data-r-i="${i}" data-tipo="${tipo}" data-id="${esc(x.id)}" aria-pressed="${elegido ? 'true' : 'false'}">${esc(x.nombre)}</button>`
+      }
+      let html = ''
+      if (fabricas.length) html += `<p class="rt-origen__sub">Fábricas del grupo</p><div class="rt-origen__ops">${fabricas.map(u => btn('unidad', u)).join('')}</div>`
+      if (q.length >= 2) {
+        html += provs.length
+          ? `<p class="rt-origen__sub">Proveedores</p><div class="rt-origen__ops">${provs.map(p => btn('proveedor', p)).join('')}</div>`
+          : `<p class="rt-texto-suave">Ningún proveedor se llama «${esc(r.otroBusqueda)}».</p>`
+      }
+      return html || '<p class="rt-texto-suave">Escribí para buscar un proveedor.</p>'
+    }
+
+    // Vuelve a dibujar SOLO la pregunta de un renglón (no toca los campos de
+    // cajas ni de lotes) y pide lo que haga falta leer.
+    function pintarOrigenCaja(i) {
+      const r = renglon(i)
+      const caja = document.getElementById('rt-renglones')?.querySelector(`[data-r-faltante-caja="${Number(i)}"]`)
+      if (!r || !caja) return
+      const html = htmlFaltanteRenglon(r, Number(i))
+      caja.innerHTML = html
+      ultimoOrigenDibujado.set(caja, html)
+      pedirLoQueFaltaDelOrigen(r)
+    }
+
+    // Lo último que se dibujó en cada caja de la pregunta.
+    const ultimoOrigenDibujado = new WeakMap()
+
+    function pedirLoQueFaltaDelOrigen(r) {
+      if (faltanteProducto(r) > 0 && !conOrigenAfuera(origenHabitualDe(r))) asegurarPlanillasForm()
+    }
+
+    // Una respuesta de la pregunta.
+    function accionOrigen(i, accion, b) {
+      const r = renglon(i)
+      if (!r) return
+      const clave = claveLotesRenglon(r)
+      const afuera = (unidadId, proveedorId, nombre) => {
+        if (!r.uuidIngreso) r.uuidIngreso = nuevoUuid()
+        r.origen = { tipo: 'afuera', clave, unidadId: unidadId ?? null, proveedorId: proveedorId ?? null, nombre: limpio(nombre), uuid: r.uuidIngreso }
+        r.otroAbierto = false
+      }
+      let foco = null
+      if (accion === 'planilla') {
+        const p = (estado.planillasForm?.lista ?? []).find(x => String(x.turno_id) === String(b?.dataset.turno))
+        if (!p) return
+        r.origen = { tipo: 'planilla', clave, turnoId: p.turno_id, texto: textoPlanillaBoton(p), maquina: p.maquina ?? null, lote: p.lote ?? null, turno: p.turno ?? null }
+        r.otroAbierto = false
+      } else if (accion === 'antes') {
+        r.origen = { tipo: 'antes', clave, nota: origenDe(r)?.tipo === 'antes' ? origenDe(r).nota : '' }
+        r.otroAbierto = false
+        foco = `rt-r-${i}-origen-nota`
+      } else if (accion === 'habitual') {
+        const h = origenHabitualDe(r)
+        if (!conOrigenAfuera(h)) return
+        afuera(h.unidadId, h.proveedorId, h.nombre)
+      } else if (accion === 'otro') {
+        r.otroAbierto = true
+        r.otroBusqueda = ''
+        asegurarOtrosOrigenes()
+        foco = `rt-r-${i}-origen-buscar`
+      } else if (accion === 'otro-cerrar') {
+        r.otroAbierto = false
+      } else if (accion === 'elegir') {
+        const oo = estado.otrosOrigenes
+        const tipo = b?.dataset.tipo
+        const x = (tipo === 'unidad' ? oo?.unidades : oo?.proveedores)?.find(y => String(y.id) === String(b?.dataset.id))
+        if (!x) return
+        afuera(tipo === 'unidad' ? x.id : null, tipo === 'proveedor' ? x.id : null, x.nombre)
+      } else if (accion === 'reintentar-planillas') {
+        estado.planillasForm = null
+        asegurarPlanillasForm()
+      } else if (accion === 'reintentar-otros') {
+        estado.otrosOrigenes = null
+        asegurarOtrosOrigenes()
+      } else return
+      pintarOrigenCaja(i)
+      pintarPie()
+      guardarBorrador()
+      if (foco) document.getElementById(foco)?.focus()
+    }
+
+    // Al tipear la nota o la búsqueda: no se redibuja el campo.
+    function escribirOrigen(t) {
+      if (t.dataset.rOrigenNota !== undefined) {
+        const r = renglon(t.dataset.rOrigenNota)
+        const o = origenDe(r)
+        if (!o || o.tipo !== 'antes') return
+        o.nota = t.value
+        pintarPie()
+        guardarBorrador()
+        return true
+      }
+      if (t.dataset.rOrigenBuscar !== undefined) {
+        const i = t.dataset.rOrigenBuscar
+        const r = renglon(i)
+        if (!r) return
+        r.otroBusqueda = t.value
+        const cont = document.getElementById('rt-renglones')?.querySelector(`[data-r-origen-resultados="${Number(i)}"]`)
+        if (cont) cont.innerHTML = htmlResultadosOtro(r, Number(i))
+        return true
+      }
+      return false
     }
 
     // El resumen de los lotes del renglón: lo pedido, lo asignado y cuánto
@@ -2496,7 +2908,7 @@
       return `<div class="rt-lote"><div class="rt-lote__cab"><span class="rt-lote__titulo"><strong>¿De qué lotes?</strong><span>El más viejo arriba</span></span>${completar}</div>` +
         `<div class="rt-lote__cuerpo">${cuerpo}</div>` +
         `<div class="rt-lote__pie" data-r-lotes-resumen="${i}">${htmlResumenLotes(r, lista)}</div></div>` +
-        `<div data-r-faltante-caja="${i}">${htmlAvisoFaltante(r, asignacion(r, lista))}</div>`
+        `<div data-r-faltante-caja="${i}">${htmlFaltanteRenglon(r, i)}</div>`
     }
 
     // EL RENGLÓN QUE SE ESTÁ ARMANDO: sin elegir, el catálogo (1c); elegido,
@@ -2548,6 +2960,14 @@
         `<button type="button" class="rt-link" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">Quitar de la orden</button></div></div>`
     }
 
+    // Lo que dice la tarjeta de un renglón con faltante: un insumo, como
+    // siempre; un producto, la respuesta, o que falta contestarla.
+    function textoOrigenTarjeta(r) {
+      if (r?.insumoId || !(faltanteProducto(r) > 0)) return 'queda para revisar en Administración'
+      const o = origenDe(r)
+      return origenCompleto(o) ? textoOrigenElegido(o) : 'falta decir de dónde salen'
+    }
+
     // "Agregar · 42 cajas", o "Agregar igual · 50 cajas" si falta stock.
     function textoAgregarRenglon(r) {
       const a = asignacion(r, listaLotesDe(r))
@@ -2579,7 +2999,7 @@
         `<span class="rt-item__lotes"><span class="rt-item__lotes-texto">${esc(textoLotesR)}</span>` +
         lotes.map(l => `<span class="rt-lote-chip">${esc(l)}</span>`).join('') +
         (faltante ? `<span class="rt-lote-chip rt-lote-chip--falta">faltan ${esc(faltante.replace(/ cajas$/, ''))}</span>` : '') + `</span>` +
-        (faltante ? `<span class="rt-item__falta">Faltan ${esc(faltante)} · queda para revisar en Administración</span>` : '') +
+        (faltante ? `<span class="rt-item__falta">Faltan ${esc(faltante)} · ${esc(textoOrigenTarjeta(r))}</span>` : '') +
         (falta ? `<span class="rt-item__falta">Falta: ${esc(falta)}.</span>` : '') +
         `<span class="rt-item__cant"><span class="rt-item__q">${esc(q)}</span><span class="rt-item__u">${esc(u)}</span></span></button>` +
         `<button type="button" class="rt-item__quitar" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">` +
@@ -2611,6 +3031,7 @@
       const r = editandoDe(f)
       const cont = document.getElementById('rt-renglones')
       cont.innerHTML = r ? htmlRenglon(r, f.editando, cat, f.intentado) : htmlEleccionRenglon({ busqueda: f.busquedaNueva ?? '' }, 'nuevo', cat)
+      if (r) pedirLoQueFaltaDelOrigen(r)
       // Las cajas se enlazan DESPUÉS de dibujarlas y el valor se escribe con
       // ponerNumero(): nunca un número en un value="…".
       for (const input of cont.querySelectorAll('[data-r-cajas]')) {
@@ -2698,8 +3119,14 @@
       const lista = listaLotesDe(r)
       const pie = cont.querySelector(`[data-r-lotes-resumen="${Number(i)}"]`)
       if (pie) pie.innerHTML = htmlResumenLotes(r, lista)
+      // La pregunta "¿De dónde salen?" se redibuja solo si cambió (aparece,
+      // desaparece o cambia la cuenta): si no, el foco de su nota no se pierde.
       const caja = cont.querySelector(`[data-r-faltante-caja="${Number(i)}"]`)
-      if (caja) caja.innerHTML = htmlAvisoFaltante(r, asignacion(r, lista))
+      if (caja) {
+        const nuevo = htmlFaltanteRenglon(r, Number(i))
+        if (ultimoOrigenDibujado.get(caja) !== nuevo) { caja.innerHTML = nuevo; ultimoOrigenDibujado.set(caja, nuevo) }
+        pedirLoQueFaltaDelOrigen(r)
+      }
       const listo = cont.querySelector(`[data-r-listo="${Number(i)}"]`)
       if (listo) listo.textContent = textoAgregarRenglon(r)
     }
@@ -2832,8 +3259,9 @@
       const f = estado.form
       const r = renglon(i)
       if (!f || !r) return
-      const falta = faltanRenglon(r)
+      const falta = faltanRenglon(r) ?? (faltaOrigen(r) ? 'decir de dónde salen las cajas' : null)
       if (falta) {
+        if (faltaOrigen(r)) { r.pedirOrigen = true; pintarOrigenCaja(i) }
         const e = document.getElementById('rt-renglones').querySelector(`[data-r-listo-error="${Number(i)}"]`)
         if (e) { e.textContent = `Falta: ${falta}.`; e.hidden = false }
         return
@@ -3102,15 +3530,23 @@
           // Para el cartel del faltante: la fábrica y, por número de renglón,
           // la presentación y el cono que se mandaron (la base numera los
           // renglones en el orden de p_items, desde 1).
-          unidadId: estado.empresaId, renglones: renglonesMandados(f), resueltos: {} }
+          unidadId: estado.empresaId, renglones: renglonesMandados(f), resueltos: {},
+          // "¿De dónde salen?" (20/10/2026): la respuesta de cada renglón (por
+          // número de renglón − 1), si se podía cargar el ingreso y el día.
+          origenes: f.renglones.map(r => faltanteProducto(r) > 0 ? origenDe(r) : null),
+          puedeIngresar: puedeIngresarEn(estado.empresaId), hoy: hoyArgentina(), erroresOrigen: {}, resolviendo: false }
         estado.form = null
         estado.mis = null
         guardarBorrador()
         mostrarExito(data?.codigo ? `Orden ${data.codigo} confirmada.` : 'Orden confirmada.')
         mostrarHecho()
-        // Lo que no estaba en stock: un cartel por renglón pregunta de dónde
-        // salió (no en un reintento: ahí la base no dice qué faltó).
-        abrirFaltantesDeHecho()
+        // Lo que no estaba en stock: se resuelve con lo que se contestó en el
+        // formulario. El cartel queda para lo que no se contestó o falló (no
+        // en un reintento: ahí la base no dice qué faltó; se resuelve al leer
+        // la orden).
+        const h = estado.hecho
+        if (!h.reintento) await resolverOrigenesDeHecho(h)
+        if (estado.hecho === h) abrirFaltantesDeHecho()
         await cargarOrdenHecha()
       } catch (err) {
         console.error('No se pudo confirmar la orden:', err)
@@ -3174,6 +3610,54 @@
       return h ? faltantesDeProducto(h.faltantes, h.renglones, h.unidadId, h.codigo) : []
     }
 
+    // La respuesta del formulario para un faltante de la base (por su número
+    // de renglón, y solo si es el mismo producto y cono que se mandó).
+    function origenDeFaltante(h, x) {
+      const k = Number(x?.renglon) - 1
+      const o = Number.isInteger(k) && k >= 0 ? h?.origenes?.[k] : null
+      if (!o || !origenCompleto(o)) return null
+      const r = h?.renglones?.[k]
+      if (r && x.presentacion_id && r.presentacionId && String(r.presentacionId) !== String(x.presentacion_id)) return null
+      return o
+    }
+
+    // Resuelve los faltantes de la orden con lo que se contestó en el
+    // formulario: planilla → faltante_en_produccion; afuera → el ingreso y
+    // faltante_a_lote (js/faltante-retiro.js). Uno que falla no frena a los
+    // demás: su error va tal cual y el renglón queda para el cartel.
+    // `soloItem`: el "Reintentar" de uno (el mismo uuid de ingreso: no se duplica).
+    async function resolverOrigenesDeHecho(h, soloItem = null) {
+      if (!h || h.resolviendo) return
+      const lista = (Array.isArray(h.faltantes) ? h.faltantes : [])
+        .filter(x => x && !x.insumo && x.item_id && !h.resueltos?.[x.item_id] && (!soloItem || x.item_id === soloItem))
+        .map(x => ({ x, origen: origenDeFaltante(h, x), unidadId: h.unidadId, hoy: h.hoy ?? hoyArgentina(), codigo: h.codigo, puedeIngresar: !!h.puedeIngresar }))
+        .filter(a => a.origen)
+      if (!lista.length) return
+      h.resolviendo = true
+      pintarHecho()
+      let salida = []
+      try {
+        salida = await resolverOrigenes(supabase, lista)
+      } finally {
+        h.resolviendo = false
+      }
+      h.erroresOrigen = { ...(h.erroresOrigen ?? {}) }
+      for (const o of salida) {
+        if (!o.itemId) continue
+        if (o.ok && o.resultado) {
+          h.resueltos = { ...(h.resueltos ?? {}), [o.itemId]: o.resultado }
+          delete h.erroresOrigen[o.itemId]
+        } else if (!o.ok) h.erroresOrigen[o.itemId] = o.error
+      }
+      if (estado.hecho === h) pintarHecho()
+    }
+
+    async function reintentarOrigen(itemId) {
+      const h = estado.hecho
+      if (!h || !itemId) return
+      await resolverOrigenesDeHecho(h, itemId)
+    }
+
     // Lo que dice la orden de un faltante ya contestado o todavía pendiente.
     // Esperar una planilla NO es un error: va en gris.
     function textoEstadoFaltante(res) {
@@ -3181,6 +3665,10 @@
       if (res?.revision === 'aceptada') {
         const t = res.lote ? `Salieron del lote ${res.lote}` : res.ajuste ? 'Ajustado a mano' : 'Salieron de la producción en curso'
         return { texto: t, clase: ' rt-falt-estado__como--ok' }
+      }
+      // Se produjo antes / viene de afuera sin permiso para el ingreso: con su nota.
+      if (res?.revision === 'pendiente' && limpio(res.nota)) {
+        return { texto: `Pendiente para Administración: ${limpio(res.nota)}`, clase: ' rt-falt-estado__como--pend' }
       }
       return { texto: 'Pendiente: queda para revisar en Administración', clase: ' rt-falt-estado__como--pend' }
     }
@@ -3194,10 +3682,20 @@
       const filas = prod.map(d => {
         const res = d.itemId ? h.resueltos?.[d.itemId] : null
         const est = textoEstadoFaltante(res)
-        const boton = d.itemId && !res
+        // Lo que se contestó en el formulario y falló: el error de la base tal
+        // cual y "Volver a intentar" (el mismo ingreso: no se carga dos veces).
+        const error = d.itemId && !res ? h.erroresOrigen?.[d.itemId] : null
+        const contestado = !!origenDeFaltante(h, { renglon: d.renglon, presentacion_id: d.presentacionId })
+        const enCurso = !res && contestado && h.resolviendo
+        const como = enCurso ? '<span class="rt-falt-estado__como">Guardando de dónde salen…</span>'
+          : error ? `<span class="rt-falt-estado__como rt-falt-estado__como--pend">No se pudo guardar: ${esc(error)}</span>`
+          : `<span class="rt-falt-estado__como${est.clase}">${esc(est.texto)}</span>`
+        const reintentar = error && contestado
+          ? `<button type="button" class="rt-btn rt-btn--secundario" data-falt-reintentar="${esc(d.itemId)}"${h.resolviendo ? ' disabled' : ''}>Volver a intentar</button>` : ''
+        const boton = d.itemId && !res && !enCurso
           ? `<button type="button" class="rt-btn rt-btn--secundario" data-falt-abrir="${esc(d.itemId)}">¿De dónde salen?</button>` : ''
         return `<li><span class="rt-falt-estado__que">${esc(d.texto || 'Producto')} · faltaban ${esc(textoCajasFr(d.faltan))}</span>` +
-          `<span class="rt-falt-estado__como${est.clase}">${esc(est.texto)}</span>${boton}</li>`
+          `${como}${reintentar}${boton}</li>`
       }).concat(ins.map(x =>
         `<li><span class="rt-falt-estado__que">${esc(x.insumo)} · faltaban ${esc(cantidadInsumoHoja(x.faltaron, x.unidad))}</span>` +
         `<span class="rt-falt-estado__como rt-falt-estado__como--pend">Pendiente: queda para revisar en Administración</span></li>`)).join('')
@@ -3242,8 +3740,11 @@
       return true
     }
 
+    // Los que todavía no se resolvieron. `contestado`: se contestó en el
+    // formulario y falló al guardarlo (el cartel no ofrece "Dejarlo pendiente").
     function pendientesDeHecho(h) {
       return faltantesDeHecho(h).filter(d => d.itemId && !h.resueltos?.[d.itemId])
+        .map(d => ({ ...d, contestado: !!origenDeFaltante(h, { renglon: d.renglon, presentacion_id: d.presentacionId }) }))
     }
 
     function alResolverHecho(res, item) {
@@ -3270,9 +3771,12 @@
         puedeAjustar: puedeRetirosEn('precios', f.item.unidadId), linkTraspaso: LINK_TRASPASO, hoy: hoyArgentina(), idTitulo: 'fr-titulo',
       })
       const hay = siguienteFaltante(c) !== null
+      // Si el faltante ya se contestó en el formulario (y falló al guardarlo),
+      // no es "dejarlo pendiente": es cerrar el cartel (20/10/2026).
+      const contestado = c.cola[c.idx]?.contestado === true
       document.getElementById('rt-falt-pie').innerHTML = f.paso === 'listo'
         ? `<button type="button" class="rt-btn" data-falt-pie="${hay ? 'siguiente' : 'cerrar'}">${hay ? 'Siguiente faltante' : 'Listo'}</button>`
-        : `<button type="button" class="rt-btn rt-btn--secundario" data-falt-pie="cerrar"${f.enviando ? ' disabled' : ''}>Dejarlo pendiente</button>`
+        : `<button type="button" class="rt-btn rt-btn--secundario" data-falt-pie="cerrar"${f.enviando ? ' disabled' : ''}>${contestado ? 'Cerrar' : 'Dejarlo pendiente'}</button>`
     }
 
     // El próximo de la cola que todavía no se contestó (o null).
@@ -3317,6 +3821,8 @@
         if (e.key === 'Escape' && estado.falt) { e.preventDefault(); cerrarCartelFaltante() }
       })
       document.getElementById('rt-hecho').addEventListener('click', (e) => {
+        const r = e.target.closest('[data-falt-reintentar]')
+        if (r && !r.disabled) { reintentarOrigen(r.dataset.faltReintentar); return }
         const b = e.target.closest('[data-falt-abrir]')
         if (b) abrirFaltantesDeHecho(b.dataset.faltAbrir)
       })
@@ -3365,7 +3871,19 @@
         if (!o) { h.error = 'La orden se confirmó pero no se pudo leer para imprimirla. Buscala en «Mis retiros».'; pintarHecho(); return }
         h.orden = o
         // Si fue un reintento, lo que faltó no vino: se deduce de los lotes.
-        if (h.reintento && !h.faltantes) h.faltantes = faltantesDeLotes(o)
+        if (h.reintento && !h.faltantes) {
+          h.faltantes = faltantesDeLotes(o)
+          // Lo ya resuelto en la base no se vuelve a mandar; lo pendiente se
+          // resuelve con lo que se contestó en el formulario (el mismo uuid de
+          // ingreso: si ya había entrado, no se carga dos veces).
+          for (const x of h.faltantes) {
+            if (!x.item_id || !x.revision || x.revision === 'pendiente') continue
+            h.resueltos = { ...(h.resueltos ?? {}), [x.item_id]: { revision: x.revision } }
+          }
+          pintarHecho()
+          await resolverOrigenesDeHecho(h)
+          if (estado.hecho !== h) return
+        }
       } catch (err) {
         console.error('No se pudo leer la orden:', err)
         if (estado.hecho === h) h.error = 'La orden se confirmó pero no se pudo leer para imprimirla. Buscala en «Mis retiros».'
@@ -3383,7 +3901,12 @@
           .reduce((s, l) => s + (Number(insumo ? l.cantidad : l.cajas) || 0), 0)
         if (falta <= 0) return
         if (insumo) out.push({ renglon: i + 1, insumo: r.insumo, unidad: r.unidad_medida, pedidas: r.cantidad, faltaron: falta })
-        else out.push({ renglon: i + 1, producto: r.producto, presentacion: r.presentacion, pedidas: r.cajas, faltaron: falta })
+        else {
+          // El renglón de la base (orden) y su id, si mis_ordenes_retiro los trae.
+          const x = { renglon: Number(r.orden) > 0 ? Number(r.orden) : i + 1, producto: r.producto, presentacion: r.presentacion, pedidas: r.cajas, faltaron: falta }
+          if (r.item_id) Object.assign(x, { item_id: r.item_id, presentacion_id: r.presentacion_id ?? null, marca_id: r.marca_id ?? null, revision: r.revision ?? null })
+          out.push(x)
+        }
       })
       return out
     }
@@ -3759,8 +4282,10 @@
       const renglones = document.getElementById('rt-renglones')
       renglones.addEventListener('click', (e) => {
         let b
+        // "¿De dónde salen?" (20/10/2026).
+        if ((b = e.target.closest('[data-r-origen]'))) accionOrigen(b.dataset.rI, b.dataset.rOrigen, b)
         // Desde el catálogo de la compu ('nuevo') se agrega un renglón.
-        if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(indiceDestino(b.dataset.rProducto), b.dataset.id, b.dataset.presentacion ?? null, b.dataset.marca)
+        else if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(indiceDestino(b.dataset.rProducto), b.dataset.id, b.dataset.presentacion ?? null, b.dataset.marca)
         else if ((b = e.target.closest('[data-r-insumo]'))) elegirInsumoRenglon(indiceDestino(b.dataset.rInsumo), b.dataset.id)
         else if ((b = e.target.closest('[data-r-listo]'))) renglonListo(b.dataset.rListo)
         else if ((b = e.target.closest('[data-r-menos]'))) sumarAlRenglon(b.dataset.rMenos, -1)
@@ -3775,6 +4300,7 @@
       })
       renglones.addEventListener('input', (e) => {
         const t = e.target
+        if (escribirOrigen(t)) return
         if (t.dataset.rCajas !== undefined) {
           const r = renglon(t.dataset.rCajas)
           if (r) { r.cajas = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCajas); pintarPie(); guardarBorrador() }
@@ -3831,7 +4357,7 @@
       estado.miNombre = emp.nombre ?? ''
       const { data: tareas, error: e2 } = await supabase
         .from('empleado_tareas').select('modulo, tarea, alcance')
-        .eq('empleado_id', emp.id).in('modulo', ['retiros', 'stock', 'produccion']).eq('habilitado', true)
+        .eq('empleado_id', emp.id).in('modulo', ['retiros', 'stock', 'produccion', 'materia_prima']).eq('habilitado', true)
       if (e2) throw e2
       estado.misTareas = new Map((tareas ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? null]))
       const { data: empresas, error: e3 } = await supabase.rpc('mis_unidades_retiro')

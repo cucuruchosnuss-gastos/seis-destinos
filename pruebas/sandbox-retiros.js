@@ -44,6 +44,11 @@ const FUNCIONES_BASE = [
   'ctxFaltante', 'abrirCartelFaltante', 'pendientesDeHecho', 'alResolverHecho', 'abrirFaltantesDeHecho', 'pintarCartelFaltante',
   'siguienteFaltante', 'pasarAlSiguienteFaltante', 'cerrarCartelFaltante', 'planillaDeRenglon', 'htmlFaltanteMio', 'faltantesDeMia',
   'abrirFaltanteMio', 'asegurarPlanillasMio',
+  // "¿De dónde salen?" ANTES de confirmar (20/10/2026)
+  'puedeIngresarEn', 'leerOrigenes', 'origenHabitualDe', 'asegurarPlanillasForm', 'asegurarOtrosOrigenes', 'repintarOrigenes',
+  'faltanteProducto', 'origenDe', 'faltaOrigen', 'conOrigenAfuera', 'htmlFaltanteRenglon', 'htmlOrigenRenglon', 'htmlOtroOrigen',
+  'htmlResultadosOtro', 'pintarOrigenCaja', 'pedirLoQueFaltaDelOrigen', 'accionOrigen', 'escribirOrigen', 'textoOrigenTarjeta',
+  'notasDeOrigen', 'nombreCortoRenglon', 'origenDeFaltante', 'resolverOrigenesDeHecho', 'reintentarOrigen',
   // de js/faltante-retiro.js
   ...FUNCIONES_FR,
   'htmlHecho', 'pintarHecho', 'mostrarHecho', 'cargarOrdenHecha', 'faltantesDeLotes', 'htmlAvisoEmpresa',
@@ -71,7 +76,7 @@ const CONSTANTES_BASE = [
   'ZONA_AR', 'DECIMALES_CAJAS', 'LARGO_MINIMO_NOMBRE_CLIENTE', 'TEXTO_NOMBRE_CORTO', 'MAX_PARECIDOS', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes', 'claveLotesInsumo',
   'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'GRUPOS_RETIRO', 'hayStock', 'CLASE_GRUPO',
   'MARCA_A_ELEGIR', 'TEXTO_FALTA_CONO', 'PASOS_RETIRO', 'COLOR_TAMANO_RETIRO', 'COLOR_INSUMO_RETIRO', 'TONOS_RETIRO', 'PALETA_CONO_RETIRO', 'TEXTO_SIN_SENAL', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
-  'LINK_TRASPASO', ...CONSTANTES_FR,
+  'LINK_TRASPASO', 'ultimoOrigenDibujado', ...CONSTANTES_FR,
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
 ]
 
@@ -162,7 +167,7 @@ const PRELUDIO = `
     buscarClientes: null, buscarClientesSinPermiso: false, turnoBuscarClientes: 0, esperaBuscarClientes: null,
     nuevoCliente: null,
     lotes: new Map(), form: null, confirmando: false, hecho: null, mis: null, errorMis: null, mio: null, enviando: false,
-    falt: null, planillasMio: null,
+    falt: null, planillasMio: null, origenes: null, planillasForm: null, otrosOrigenes: null,
   }
 `
 

@@ -451,6 +451,9 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   const f = conEmpresa(S)
   S.elegirCliente('c1')
   cargarRenglon(S, 0, 10)
+  // Sin lotes leídos con stock, todo es faltante: se contesta de dónde salen
+  // (20/10/2026: sin eso no se puede confirmar).
+  f.renglones[0].origen = { tipo: 'antes', clave: S.claveLotesRenglon(f.renglones[0]), nota: 'se produjo ayer' }
   let vez = 0
   S.__setRpc(async (n) => {
     if (n === 'registrar_orden_retiro') {
@@ -679,6 +682,13 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.estado.lotes.set(S.claveLotes('pr1', 'm1'), S.estado.lotes.get(S.claveLotes('pr1', null)))
   chequearMarcas(chk, 'resumen', S.htmlResumen(S.estado.form, cat), ['empresa', 'cliente', 'transporte', 'obs', 'producto', 'presentacion', 'cono', 'lote-elegido'])
   chequearMarcas(chk, 'faltantes', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 1, item_id: marca('f-item'), producto: marca('f-prod'), presentacion: marca('f-pres'), pedidas: 3, faltaron: 1 }], renglones: [], resueltos: {} }), ['f-prod', 'f-pres', 'f-item'])
+  // 20/10/2026: lo contestado en el formulario que falló al guardarse: el
+  // error de la base y "Volver a intentar", escapados.
+  chequearMarcas(chk, 'faltante contestado que falló', S.htmlEstadoFaltantes({
+    faltantes: [{ renglon: 1, item_id: marca('g-item'), presentacion_id: 'pr1', producto: 'P', presentacion: 'Q', faltaron: 1 }],
+    renglones: [{ presentacionId: 'pr1' }], resueltos: {}, origenes: [{ tipo: 'antes', nota: 'se hizo ayer' }],
+    erroresOrigen: { [marca('g-item')]: marca('g-err') },
+  }), ['g-item', 'g-err'])
   // 13/10/2026: el estado de lo que faltó (la máquina viene de la base) y la unidad del insumo.
   chequearMarcas(chk, 'faltante esperando', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 1, item_id: 'it-1', producto: 'P', presentacion: 'Q', faltaron: 1 }], renglones: [], resueltos: { 'it-1': { revision: 'en_produccion', planilla: { maquina: marca('maquina'), lote: marca('lote') } } } }), ['maquina', 'lote'])
   chequearMarcas(chk, 'faltante de insumo con su unidad', S.htmlEstadoFaltantes({ faltantes: [{ renglon: 2, insumo: 'Harina', pedidas: 3, faltaron: 1, unidad: marca('unidad-insumo') }], renglones: [], resueltos: {} }), ['unidad-insumo'])

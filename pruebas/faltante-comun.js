@@ -9,8 +9,11 @@ const FUNCIONES_FR = [
   'lotesParaFaltante', 'nuevoFaltante', 'puedeResolverFaltante', 'validarMotivoFaltante', 'htmlErrorFr', 'htmlVolverFr', 'htmlPreguntaFr',
   'htmlProduccionFr', 'htmlOtroFr', 'htmlLoteFr', 'htmlAjusteFr', 'htmlListoFr', 'htmlFaltante', 'cargarPlanillas', 'cargarLotesFaltante',
   'elegirPlanillaFr', 'confirmarLoteFr', 'confirmarAjusteFr', 'irAFr', 'accionFaltante', 'escribirMotivoFaltante', 'asegurarEstilosFaltante',
+  // "¿De dónde salen?" ANTES de confirmar (20/10/2026)
+  'mayusculasFr', 'origenHabitual', 'textoVienenDe', 'prefijoOrigen', 'loteDeOrigen', 'textoPlanillaBoton', 'origenCompleto',
+  'textoOrigenElegido', 'notaObservacionOrigen', 'notaFaltaIngreso', 'parametrosIngresoOrigen', 'resolverOrigen', 'resolverOrigenes',
 ]
 
-const CONSTANTES_FR = ['LARGO_MINIMO_MOTIVO_FALTANTE', 'PASOS_FALTANTE', 'ESTILOS_FALTANTE']
+const CONSTANTES_FR = ['LARGO_MINIMO_MOTIVO_FALTANTE', 'PASOS_FALTANTE', 'ESTILOS_FALTANTE', 'TEXTO_PRODUJO_ANTES']
 
 module.exports = { FUNCIONES_FR, CONSTANTES_FR }

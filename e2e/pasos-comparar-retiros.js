@@ -56,7 +56,8 @@ const PASOS_COMPARAR_RETIROS = [
   }],
   ['1e', CELULAR, async (page) => {
     await producto(page, 30)
-    await expect(page.locator('[data-r-faltante-caja="0"] [data-r-faltante]')).toBeVisible()
+    // 20/10/2026: el faltante de un producto pregunta "¿De dónde salen?".
+    await expect(page.locator('[data-r-faltante-caja="0"] [data-r-origen-caja]')).toBeVisible()
   }],
   ['1f', CELULAR, async (page) => {
     await producto(page, 20)

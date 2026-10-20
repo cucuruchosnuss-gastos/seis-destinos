@@ -34,6 +34,10 @@
 //    tener las cajas que faltan; motivo de 3 letras o más.
 //  - Las dos piden retiros:cargar o retiros:precios en la fábrica de la orden
 //    y un renglón de producto terminado con revision = 'pendiente'.
+//
+// Desde el 20/10/2026 la Carga hace la pregunta ANTES de confirmar (ver el
+// bloque "¿DE DÓNDE SALEN?" ANTES DE CONFIRMAR, al final): el cartel queda
+// para los reintentos y para Administración.
 
 import { formatearNumeroAr } from './utils.js'
 
@@ -411,6 +415,168 @@ export async function accionFaltante(ctx, accion, valor) {
 
 export function escribirMotivoFaltante(ctx, valor) {
   if (ctx?.f) ctx.f.motivo = String(valor ?? '')
+}
+
+// ═══ "¿DE DÓNDE SALEN?" ANTES DE CONFIRMAR (20/10/2026) ═══════════════════
+//
+// Desde el 20/10/2026 la Carga pregunta de dónde salen las cajas que faltan
+// ANTES de confirmar, en el mismo formulario, y no se puede confirmar sin
+// contestarla. La respuesta depende de dónde se hace habitualmente el producto
+// (productos_terminados.origen_tipo, verificado el 20/10/2026):
+//  - 'fabrica': una planilla abierta (planillas_en_curso); sin ninguna,
+//    "Se produjo antes y no está cargado" con una nota (queda pendiente para
+//    Administración, como antes).
+//  - 'unidad' / 'proveedor': "Vienen de Mengui" (de su origen habitual) u
+//    "Otro origen" (otra fábrica o un proveedor).
+//  - null: las dos cosas.
+// Al confirmar, por cada faltante que devuelve registrar_orden_retiro:
+//  - planilla → faltante_en_produccion(item, turno);
+//  - afuera → ingresar_producto_terminado(…) (las cajas que faltaron, en el
+//    lote <PREFIJO>-ddmm, con un client_uuid estable por renglón: un
+//    reintento no duplica el ingreso) y después faltante_a_lote(item, lote,
+//    'Viene de <origen>'). Pide materia_prima:cargar o
+//    stock:ajustar_inventario: sin eso queda pendiente con la nota
+//    "Viene de <origen>, falta cargar el ingreso".
+// Si una falla, la orden ya está confirmada: ese renglón queda para el cartel
+// de siempre (reintentar, o Administración) y se sigue con los demás.
+
+export const TEXTO_PRODUJO_ANTES = 'Se produjo antes y no está cargado'
+
+// Mayúsculas sin acentos.
+function mayusculasFr(t) {
+  return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+}
+
+// El origen habitual de un producto, de productos_terminados.
+// { tipo: 'fabrica' | 'unidad' | 'proveedor' | null, unidadId, proveedorId, nombre }
+export function origenHabitual(fila, nombres = {}) {
+  const tipo = ['fabrica', 'unidad', 'proveedor'].includes(fila?.origen_tipo) ? fila.origen_tipo : null
+  if (tipo === 'unidad' && fila?.origen_unidad_id) {
+    return { tipo, unidadId: fila.origen_unidad_id, proveedorId: null, nombre: limpioFr(nombres.unidades?.get?.(fila.origen_unidad_id)) || null }
+  }
+  if (tipo === 'proveedor' && fila?.origen_proveedor_id) {
+    return { tipo, unidadId: null, proveedorId: fila.origen_proveedor_id, nombre: limpioFr(nombres.proveedores?.get?.(fila.origen_proveedor_id)) || null }
+  }
+  return { tipo: tipo === 'fabrica' ? 'fabrica' : null, unidadId: null, proveedorId: null, nombre: null }
+}
+
+// "Vienen de Mengui".
+export function textoVienenDe(nombre) {
+  return `Vienen de ${limpioFr(nombre) || 'otro lado'}`
+}
+
+// El prefijo del lote de lo que entró de afuera: DOLCE, MENGUI (NUSS, TALLER)
+// para una fábrica del grupo; las primeras 8 letras del proveedor, en
+// mayúsculas y sin espacios, para un proveedor.
+export function prefijoOrigen(origen) {
+  const n = mayusculasFr(origen?.nombre)
+  if (origen?.unidadId) {
+    for (const k of ['DOLCE', 'MENGUI', 'NUSS', 'TALLER']) if (n.includes(k)) return k
+    return (n.match(/[A-Z0-9]+/)?.[0] ?? 'FABRICA').slice(0, 8)
+  }
+  return (n.replace(/[^A-Z0-9]/g, '') || 'PROVEED').slice(0, 8)
+}
+
+// El lote: <PREFIJO>-ddmm (del día de hoy en Argentina).
+export function loteDeOrigen(origen, hoyIso) {
+  const m = /^\d{4}-(\d{2})-(\d{2})/.exec(String(hoyIso ?? ''))
+  return `${prefijoOrigen(origen)}-${m ? m[2] + m[1] : ''}`
+}
+
+// El botón de una planilla abierta: "Máquina 1 · Tarde · lote 6249".
+export function textoPlanillaBoton(p) {
+  if (!p) return '—'
+  return [
+    limpioFr(p.maquina) || 'Máquina sin nombre',
+    limpioFr(p.turno) || null,
+    p.lote === null || p.lote === undefined || p.lote === '' ? null : 'lote ' + p.lote,
+  ].filter(Boolean).join(' · ')
+}
+
+// ¿La respuesta está completa?
+export function origenCompleto(o) {
+  if (!o) return false
+  if (o.tipo === 'planilla') return !!o.turnoId
+  if (o.tipo === 'antes') return limpioFr(o.nota).length >= LARGO_MINIMO_MOTIVO_FALTANTE
+  if (o.tipo === 'afuera') return !!limpioFr(o.nombre) && (!!o.unidadId !== !!o.proveedorId)
+  return false
+}
+
+// Cómo se dice la respuesta elegida.
+export function textoOrigenElegido(o) {
+  if (o?.tipo === 'planilla') return `Salen de ${limpioFr(o.texto) || 'una planilla abierta'}`
+  if (o?.tipo === 'antes') return `${TEXTO_PRODUJO_ANTES}: ${limpioFr(o.nota)}`
+  if (o?.tipo === 'afuera') return textoVienenDe(o.nombre)
+  return ''
+}
+
+// Lo que va a las observaciones de la orden (lo ve Administración): el
+// renglón que queda pendiente, con su nota.
+export function notaObservacionOrigen(numero, producto, o, puedeIngresar) {
+  const cual = `Renglón ${numero}${limpioFr(producto) ? ` (${limpioFr(producto)})` : ''}`
+  if (o?.tipo === 'antes' && origenCompleto(o)) return `${cual}: ${TEXTO_PRODUJO_ANTES.toLowerCase()} — ${limpioFr(o.nota)}`
+  if (o?.tipo === 'afuera' && origenCompleto(o) && !puedeIngresar) return `${cual}: ${notaFaltaIngreso(o)}`
+  return null
+}
+export function notaFaltaIngreso(o) {
+  return `Viene de ${limpioFr(o?.nombre) || 'otro lado'}, falta cargar el ingreso`
+}
+
+// Los parámetros exactos de ingresar_producto_terminado para lo que faltó.
+// x = el faltante que devolvió la base ({item_id, presentacion_id, marca_id,
+// faltaron}).
+export function parametrosIngresoOrigen({ unidadId, hoy, origen, x, codigo }) {
+  return {
+    p_unidad_negocio_id: unidadId,
+    p_fecha: hoy,
+    p_proveedor_id: origen.proveedorId ?? null,
+    p_unidad_origen_id: origen.unidadId ?? null,
+    p_remito: null,
+    p_items: [{ presentacion_id: x.presentacion_id, marca_id: x.marca_id ?? null, cajas: Number(x.faltaron), lote: loteDeOrigen(origen, hoy) }],
+    p_observaciones: `Faltante de la orden ${limpioFr(codigo) || 'sin código'}`,
+    p_client_uuid: origen.uuid ?? null,
+  }
+}
+
+// Resuelve UN faltante con la respuesta del formulario. Devuelve el resultado
+// para la orden ({ revision, planilla?, lote?, mensaje, nota? }) o tira un
+// error con el mensaje de la base tal cual (y `paso`: 'planilla', 'ingreso'
+// o 'lote').
+export async function resolverOrigen(sb, { x, origen, unidadId, hoy, codigo, puedeIngresar }) {
+  const item = x?.item_id
+  if (!item || !origenCompleto(origen)) return null
+  const tirar = (paso, error) => { const e = new Error(error?.message || 'No se pudo guardar.'); e.paso = paso; throw e }
+  if (origen.tipo === 'planilla') {
+    const { data, error } = await sb.rpc('faltante_en_produccion', { p_item_id: item, p_turno_id: origen.turnoId })
+    if (error) tirar('planilla', error)
+    const revision = (typeof data === 'string' && data) || 'en_produccion'
+    const planilla = { maquina: origen.maquina ?? null, lote: origen.lote ?? null, turno: origen.turno ?? null }
+    return { revision, planilla, mensaje: mensajeProduccion(revision, planilla) }
+  }
+  if (origen.tipo === 'antes') return { revision: 'pendiente', nota: `${TEXTO_PRODUJO_ANTES}: ${limpioFr(origen.nota)}` }
+  if (!puedeIngresar) return { revision: 'pendiente', nota: notaFaltaIngreso(origen) }
+  const params = parametrosIngresoOrigen({ unidadId, hoy, origen, x, codigo })
+  const ing = await sb.rpc('ingresar_producto_terminado', params)
+  if (ing.error) tirar('ingreso', ing.error)
+  const lote = params.p_items[0].lote
+  const fl = await sb.rpc('faltante_a_lote', { p_item_id: item, p_lote: lote, p_motivo: `Viene de ${limpioFr(origen.nombre)}` })
+  if (fl.error) tirar('lote', fl.error)
+  return { revision: 'aceptada', lote, mensaje: `Listo: las ${textoCajasFr(x.faltaron)} entraron en el lote ${lote}.` }
+}
+
+// Todos los faltantes de la orden, en orden: uno que falla no frena a los
+// demás. Devuelve [{ itemId, ok, resultado?, error? }].
+export async function resolverOrigenes(sb, lista) {
+  const out = []
+  for (const a of lista ?? []) {
+    try {
+      const resultado = await resolverOrigen(sb, a)
+      out.push({ itemId: a?.x?.item_id ?? null, ok: true, resultado })
+    } catch (err) {
+      out.push({ itemId: a?.x?.item_id ?? null, ok: false, error: err?.message || String(err), paso: err?.paso ?? null })
+    }
+  }
+  return out
 }
 
 // Los estilos del cartel (las dos pantallas los inyectan una vez con
