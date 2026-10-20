@@ -60,6 +60,19 @@ const SEGURAS_RETIROS = [
   ['cuanto', 'HTML armado en htmlRenglon() con el índice numérico, texto constante y esc() de la unidad'],
   // 06/10/2026: el cliente nuevo (provisorio).
   ['listaParecidos', 'HTML ya escapado: htmlClienteNuevo() arma los parecidos con htmlResultadoCliente() (que escapa) o un texto con esc()'],
+  // 20/10/2026: "¿de dónde salen?" antes de confirmar.
+  ['accion', 'texto constante del código: la acción de un botón de la pregunta ("planilla", "antes", "habitual", "otro", "elegir"…)'],
+  ["btn('habitual', textoVienenDe(hab.nombre), esHab)", 'HTML armado por btn() de htmlOrigenRenglon(), que escapa el texto'],
+  ["btn('antes', TEXTO_PRODUJO_ANTES, o?.tipo === 'antes')", 'HTML armado por btn() de htmlOrigenRenglon(), que escapa el texto'],
+  ["btn('otro', textoVienenDe(o.nombre), true)", 'HTML armado por btn() de htmlOrigenRenglon(), que escapa el texto'],
+  ['LARGO_MINIMO_MOTIVO_FALTANTE', 'número: constante del código (3)'],
+  ['htmlResultadosOtro(r, i)', 'HTML armado por htmlResultadosOtro(), que escapa cada nombre, cada id y lo buscado'],
+  ['tipo', 'texto constante del código: "unidad" o "proveedor"'],
+  ["fabricas.map(u => btn('unidad', u)).join('')", 'HTML ya escapado: btn() de htmlResultadosOtro() escapa el id y el nombre'],
+  ["provs.map(p => btn('proveedor', p)).join('')", 'HTML ya escapado: btn() de htmlResultadosOtro() escapa el id y el nombre'],
+  ['htmlFaltanteRenglon(r, i)', 'HTML armado por htmlFaltanteRenglon(): htmlAvisoFaltante() o htmlOrigenRenglon(), que escapan adentro'],
+  ['como', 'HTML ya escapado: htmlEstadoFaltantes() arma el estado con esc() del error de la base o del texto'],
+  ['reintentar', 'HTML ya escapado: el botón "Volver a intentar" con esc() del id del renglón, o vacío'],
 ]
 
 const SEGURAS_REGEX_RETIROS = [

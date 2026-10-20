@@ -11,7 +11,9 @@
 //   total y cuánto falta asignar.
 // - El payload con 'lotes' [{lote, cajas}] / [{lote, cantidad}]; lo que no
 //   entra en ningún lote va al lote "SIN STOCK".
-// - El faltante se avisa en bordó y NO bloquea: la orden sale igual.
+// - El faltante de un INSUMO se avisa en bordó y NO bloquea; el de un
+//   PRODUCTO TERMINADO pregunta "¿de dónde salen?" y no se puede confirmar
+//   sin contestarlo (20/10/2026; lo prueba test-retiros-origen.js).
 //
 //   node pruebas/test-retiros-lotes.js
 
@@ -244,7 +246,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('un lote que no está en la lista no viaja', (r.lotes = { 'no-existe': 5 }, !('lotes' in S.itemParaBase(r))))
 }
 
-// ── El FALTANTE: se avisa en bordó y NO bloquea ─────────────────────────────
+// ── El FALTANTE de un producto: la pregunta "¿de dónde salen?" ─────────────
 {
   const S = nuevo()
   const f = conEmpresa(S)
@@ -256,8 +258,8 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   let a = S.asignacion(r, LOTES_MINI)
   chk('sin repartir, lo pedido de más que el stock es faltante', a.faltante === 5)
   let h = S.htmlLoteRenglon(r, 0)
-  chk('el aviso en bordó con el texto pedido', /rt-aviso rt-aviso--grave rt-faltante" data-r-faltante>/.test(h) && /<strong>Hay 45 cajas y se lleva 50 cajas<\/strong>Se puede confirmar igual\. Lo que falta queda pendiente de revisión en Administración \(faltan 5 cajas\)/.test(h))
-  chk('y no bloquea', S.faltanRenglon(r) === null)
+  chk('la pregunta con lo que hay y lo que falta', /data-r-origen-caja/.test(h) && /<strong>Hay 45 cajas, faltan 5 cajas\.<\/strong> ¿De dónde salen\?/.test(h))
+  chk('el renglón está completo, pero falta decir de dónde salen', S.faltanRenglon(r) === null && S.faltaOrigen(r) === true)
   chk('sin repartir no viajan lotes: la base descuenta y marca el faltante', !('lotes' in S.itemParaBase(r)))
   // Completar: 45 asignadas, 5 sin lugar → lote SIN STOCK.
   S.completarLotes(0)
@@ -295,17 +297,23 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   conLotes(S, S.claveLotes('pr-mini', null), LOTES_MINI)
   f.renglones[0].cajas = 50
   S.completarLotes(0)
+  // Sin contestar "¿de dónde salen?" no se llega al resumen.
+  S.revisar()
+  chk('sin contestar de dónde salen, no se puede seguir', S.estado.vista !== 'rt-vista-resumen' &&
+    S.faltanOrden(f).includes('Falta decir de dónde salen las cajas del renglón 1.'))
+  f.renglones[0].origen = { tipo: 'antes', clave: S.claveLotesRenglon(f.renglones[0]), nota: 'se produjo ayer' }
   S.revisar()
   const res = S.__els.get('rt-resumen').innerHTML
   chk('el resumen dice de qué lote sale cada parte', /Lote 7001-1: 15 cajas · Lote 7005-2: 10 cajas · Lote 7010-1: 20 cajas/.test(res))
-  chk('y el aviso del faltante en bordó', /rt-aviso--grave rt-faltante" data-r-faltante><svg[^]*?<strong>Hay 45 cajas y se lleva 50 cajas<\/strong>/.test(res))
+  chk('y el aviso del faltante en bordó, con de dónde salen', /rt-aviso--grave rt-faltante" data-r-faltante><svg[^]*?<strong>Hay 45 cajas y se lleva 50 cajas<\/strong>Faltan 5 cajas: Se produjo antes y no está cargado: se produjo ayer\./.test(res))
   let p = null
   S.__setRpc(async (n, x) => {
     if (n === 'registrar_orden_retiro') { p = x; return { data: { orden_id: 'o', codigo: 'N-0040', stock_insuficiente: [{ renglon: 1, producto: 'Cucurucho Mini', presentacion: 'Caja x 600', pedidas: 50, faltaron: 5 }] }, error: null } }
     return { data: [], error: null }
   })
   esperas.push(S.confirmar().then(() => {
-    chk('confirmar con faltante LLAMA a la base (no bloquea)', !!p && p.p_items[0].lotes.length === 4)
+    chk('contestado, confirmar con faltante LLAMA a la base', !!p && p.p_items[0].lotes.length === 4)
+    chk('lo que queda para Administración va en las observaciones', /Renglón 1 \(Cucurucho Mini · Caja x 600\): se produjo antes y no está cargado — se produjo ayer/.test(p?.p_observaciones ?? ''))
     const h = S.__els.get('rt-hecho').innerHTML
     chk('la orden sale y dice que quedó pendiente de revisión en Administración', S.estado.vista === 'rt-vista-hecho' && /queda para revisar en Administración/.test(h) && /faltaban 5 cajas/.test(h))
   }))
@@ -329,6 +337,8 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   S.completarLotes(0)
   chk('un insumo que no alcanza: el resto al lote "SIN STOCK", con cantidad', JSON.stringify(S.itemParaBase(r).lotes.at(-1)) === '{"lote":"SIN STOCK","cantidad":5}')
   chk('y el aviso lo dice en su unidad', /faltan 5 kg/.test(S.htmlLoteRenglon(r, 0)))
+  chk('un insumo no pregunta de dónde salen: queda para Administración', /Lo que falta queda pendiente de revisión en Administración/.test(S.htmlLoteRenglon(r, 0)) &&
+    !/data-r-origen-caja/.test(S.htmlLoteRenglon(r, 0)) && !S.faltaOrigen(r))
 }
 
 // ── Los lotes se leen solos y el resumen se redibuja sin perder el foco ───
