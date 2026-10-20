@@ -176,11 +176,15 @@ const PRELUDIO = `
   function renderizarFichaBanner() {} function cargarSaldos() {} function cerrarModalPago() {}
   async function recargarTrasImporte() {} async function cargarCuentasParaPago() {}
   function seleccionarMedioPagoCC(v) { medioPagoSeleccionado = v } function abrirModalDetallePago() {} async function eliminarFactura() {}
+  // El pago en los dos sentidos (20/10/2026): lo de la moneda y la orden de
+  // pago son de test-cuentas-corrientes-pago-mixto.js.
+  function pintarMedioPorMoneda() {} async function cargarFichaOrdenesPago() {} async function abrirOrdenPago() {}
+  var turnoFacturasPago = 0, errorFacturasPago = null
 
   // Los let del módulo que estas funciones usan.
   var creditoAAplicar = null
   var facturasParaCredito = []
-  var medioPagoSeleccionado = 'cheque'
+  var medioPagoSeleccionado = 'efectivo'
   var facturasParaPago = []
   var carteraPago = []
   var estado = {
@@ -197,20 +201,23 @@ const FUNCIONES = [
   'esc', 'formatearImporte', 'importeHtml', 'formatearImporteCentavosSuaves', 'enlazarCamposMonto', 'montoDeCampo',
   'tieneTarea', 'nombreUnidad', 'badgeEstadoFactura', 'esSinImporte', 'textoCantidadInsumo', 'productoUnicoConCantidad', 'decimalesImporteSin', 'totalImporteFormulario',
   'htmlFilaSinImporte', 'renderizarFichaMovimientos', 'enlazarCampoImporteSin', 'confirmarImporteSinImporte',
-  'actualizarSugerenciasPago', 'renderizarFilasFifo', 'actualizarResumenAplicacion', 'confirmarPago',
+  'actualizarSugerenciasPago', 'renderizarFilasFifo', 'confirmarPago',
+  'monedaPago', 'esPagoEnPesos', 'centavosDe', 'totalesPago', 'totalesPagoActuales', 'estadoDiferencia', 'htmlBarraPago',
+  'textoResumenPago', 'pintarPiePago', 'refrescarPago', 'aplicacionesPago', 'validarPago', 'parametrosPagoMixto',
+  'textoExitoPago', 'recargarFichaDespuesDePago', 'sumaCheques', 'agruparChequesPorEmpresa',
   'abrirModalPago', 'fechaISO', 'seleccionarCreditoParaAplicar', 'cerrarModalAplicarCredito', 'confirmarAplicarCredito',
   // La barra de unidad (28/09/2026): el modal de pago usa los saldos DE la
   // unidad de la ficha y la lista de movimientos la filtra por unidad.
   'saldosFichaDeUnidad', 'pasaFiltroUnidad', 'etiquetaUnidad',
   // los cheques en un pago (05/10/2026): confirmarPago y abrirModalPago
-  'esMedioCheque', 'puedeUsarCartera', 'hoyCC', 'parametrosPagoCartera',
+  'esMedioCheque', 'puedeUsarCartera', 'hoyCC',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
 ]
 
 function sandbox() {
   const S = construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'NUMERO_SALDO_INICIAL', 'MEDIOS_CHEQUE'],
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['IDS_CAMPOS_MONTO', 'ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'NUMERO_SALDO_INICIAL', 'MEDIOS_CHEQUE', 'NOMBRE_MEDIO'],
     retorno: `estado, __els, __errores, __doc: document, IDS_CAMPOS_MONTO,
       __llamadas(){ return __llamadas }, __limpiar(){ __llamadas = []; __errores.length = 0 },
       __setFrom(r){ __from = r }, __setRpc(n, d){ __rpcData[n] = d }, __opciones(){ return __opciones },
@@ -233,6 +240,15 @@ const CASOS = [
   ['teclear 0,50', (el) => el.teclear('0,50'), '0,50', 0.5],
 ]
 
+// Lo que hace falta para poder pagar en pesos: efectivo, una cuenta y la fecha.
+function listoParaPagar(S, moneda = 'ARS') {
+  S.__medio('efectivo')
+  S.__doc.getElementById('campo-moneda-pago').value = moneda
+  S.__doc.getElementById('campo-fecha-pago-cc').value = '2026-09-21'
+  S.__doc.getElementById('campo-cuenta-pago-cc').value = 'cta-1'
+}
+const errorPegado = (S) => S.__els.get('error-confirmar-pago')?.textContent ?? ''
+
 function fichaBase(S) {
   S.estado.ficha = { proveedorId: 'p1', unidadId: 'u1', formImporte: null, filtros: { tipo: '', orden: '' },
     estadoPorFactura: {}, movimientosRaw: [], cantidadesSinImporte: new Map() }
@@ -247,28 +263,29 @@ async function main() {
     chk('campo-monto-pago queda type=text con teclado decimal', el.type === 'text' && el.atributos.inputmode === 'decimal', [el.type, el.atributos])
     accion(el)
     chk(`pago (${nombre}): el campo muestra ${visto}`, el.value === visto, el.value)
-    S.__doc.getElementById('campo-moneda-pago').value = 'ARS'
-    S.__doc.getElementById('campo-fecha-pago-cc').value = '2026-09-21'
+    listoParaPagar(S)
     S.__setFrom({ data: [], error: null })
-    S.__setRpc('sugerir_facturas_fifo', [])
     await S.actualizarSugerenciasPago()
-    const sug = rpc(S, 'sugerir_facturas_fifo')
-    chk(`pago (${nombre}): sugerir_facturas_fifo recibe p_monto = ${numero}`, sug.length === 1 && sug[0].params.p_monto === numero, sug)
     S.__limpiar()
     await S.confirmarPago()
-    const ll = rpc(S, 'registrar_pago_proveedor')
-    chk(`pago (${nombre}): registrar_pago_proveedor con p_monto = ${numero}`, ll.length === 1 && ll[0].params.p_monto === numero, ll)
-    chk(`pago (${nombre}): sin errores`, S.__errores.length === 0, S.__errores)
+    const ll = rpc(S, 'pagar_proveedor_mixto')
+    chk(`pago (${nombre}): pagar_proveedor_mixto con p_monto_resto = ${numero}`, ll.length === 1 && ll[0].params.p_monto_resto === numero, ll)
+    chk(`pago (${nombre}): sin errores`, S.__errores.length === 0 && errorPegado(S) === '', [S.__errores, errorPegado(S)])
+    // En otra moneda, el mismo número va como p_monto de registrar_pago_proveedor.
+    listoParaPagar(S, 'USD')
+    S.__limpiar()
+    await S.confirmarPago()
+    const usd = rpc(S, 'registrar_pago_proveedor')
+    chk(`pago en USD (${nombre}): registrar_pago_proveedor con p_monto = ${numero}`, usd.length === 1 && usd[0].params.p_monto === numero, usd)
   }
   for (const texto of ['', '0', '0,00']) {
     const S = sandbox()
     fichaBase(S)
     S.__els.get('campo-monto-pago').escribirCrudo(texto)
-    S.__doc.getElementById('campo-moneda-pago').value = 'ARS'
-    S.__doc.getElementById('campo-fecha-pago-cc').value = '2026-09-21'
+    listoParaPagar(S)
     S.__limpiar()
     await S.confirmarPago()
-    chk(`pago con monto "${texto}": no llama y avisa`, S.__llamadas().length === 0 && S.__errores.includes('Ingresá un monto válido.'), [S.__llamadas(), S.__errores])
+    chk(`pago con monto "${texto}": no llama y avisa`, S.__llamadas().length === 0 && errorPegado(S) === 'Elegí con qué se paga: cheques de la cartera, efectivo, transferencia o QR.', [S.__llamadas(), errorPegado(S)])
   }
 
   // Abrir el modal de pago limpia el monto (y el estado del enlace).
@@ -281,11 +298,10 @@ async function main() {
     chk('abrir el modal de pago deja el monto vacío', el.value === '', el.value)
     el.teclear('7')
     chk('después de abrir, tipear "7" da "7" (el enlace no arrastra lo anterior)', el.value === '7', el.value)
-    S.__medio('cheque')
-    S.__doc.getElementById('campo-moneda-pago').value = 'ARS'
+    listoParaPagar(S)
     S.__limpiar()
     await S.confirmarPago()
-    chk('después de abrir, p_monto = 7', rpc(S, 'registrar_pago_proveedor')[0]?.params.p_monto === 7, S.__llamadas())
+    chk('después de abrir, p_monto_resto = 7', rpc(S, 'pagar_proveedor_mixto')[0]?.params.p_monto_resto === 7, S.__llamadas())
   }
 
   // ══ 2. FIFO ══════════════════════════════════════════════════════════════
@@ -293,29 +309,46 @@ async function main() {
     const S = sandbox()
     fichaBase(S)
     S.__els.get('campo-monto-pago').escribirCrudo(textoPago)
-    S.__doc.getElementById('campo-moneda-pago').value = 'ARS'
-    S.__doc.getElementById('campo-fecha-pago-cc').value = '2026-09-21'
+    listoParaPagar(S)
     S.__setFrom({ data: [
-      { id: 'f1', numero_comprobante: '0001-1', fecha_factura: '2026-09-01', saldo_pendiente: 500000 },
+      { id: 'f1', numero_comprobante: '0001-1', fecha_factura: '2026-09-01', saldo_pendiente: 5000000 },
       { id: 'f2', numero_comprobante: '0001-2', fecha_factura: '2026-09-02', saldo_pendiente: 1234.5 },
     ], error: null })
-    S.__setRpc('sugerir_facturas_fifo', [{ factura_pendiente_id: 'f1', monto_a_aplicar: 500000 }])
     await S.actualizarSugerenciasPago()
     const cont = S.__els.get('lista-fifo')
     const monto = (i) => cont.querySelector(`.monto-fifo[data-index="${i}"]`)
     const check = (i) => cont.querySelectorAll('.check-fifo').find(c => c.dataset.index === String(i))
-    return { S, cont, monto, check }
+    const tildar = (i) => { const c = check(i); c.checked = true; c.dispatchEvent({ type: 'change', target: c }) }
+    return { S, cont, monto, check, tildar }
   }
   {
-    const { S, cont, monto, check } = await prepararFifo('2.000.000')
+    const { S, cont, monto, check, tildar } = await prepararFifo('9.999.999')
     chk('FIFO: la plantilla de los montos NO lleva value (lo escribe ponerNumero)', cont.hijos.filter(h => h.clases.includes('monto-fifo')).every(h => h.atributos.valueEnPlantilla == null), cont.innerHTML)
     chk('FIFO: los montos quedan enlazados (type=text, decimal)', cont.querySelectorAll('.monto-fifo').every(h => h.type === 'text' && h.atributos.inputmode === 'decimal'))
-    chk('FIFO: la sugerida muestra 500.000', monto(0).value === '500.000', monto(0).value)
-    chk('FIFO: la no sugerida queda vacía (0 = vacío)', monto(1).value === '', monto(1).value)
+    chk('FIFO: sin tildar, los montos quedan vacíos (0 = vacío)', monto(0).value === '' && monto(1).value === '', [monto(0).value, monto(1).value])
+    tildar(0)
+    chk('FIFO: tildar la primera escribe su saldo (5.000.000)', monto(0).value === '5.000.000', monto(0).value)
+    // Al redibujar la lista (p. ej. "Aplicar a las más viejas"), cada monto se
+    // repone con ponerNumero: con coma decimal y punto de miles.
+    S.__fifo()[1].checked = true
+    S.__fifo()[1].monto = 1234.5
+    S.renderizarFilasFifo()
+    chk('FIFO: al redibujar, los montos se reponen con formato (5.000.000 y 1.234,50)', monto(0).value === '5.000.000' && monto(1).value === '1.234,50', [monto(0).value, monto(1).value])
+    S.__fifo()[1].checked = false
+    S.__fifo()[1].monto = 0
+    S.renderizarFilasFifo()
     S.__limpiar()
     await S.confirmarPago()
-    let ll = rpc(S, 'registrar_pago_proveedor')
-    chk('FIFO: sin tocar, viaja la sugerida', ll[0] && JSON.stringify(ll[0].params.p_aplicaciones) === JSON.stringify([{ factura_pendiente_id: 'f1', monto_aplicado: 500000 }]), ll[0] && ll[0].params)
+    let ll = rpc(S, 'pagar_proveedor_mixto')
+    chk('FIFO: viaja la tildada', ll[0] && JSON.stringify(ll[0].params.p_aplicaciones) === JSON.stringify([{ factura_pendiente_id: 'f1', monto_aplicado: 5000000 }]), ll[0] && ll[0].params)
+    // Escribir más que el saldo no escribe nada (el saldo es el máximo).
+    monto(1).teclear('9')
+    monto(1).teclear('9')
+    monto(1).teclear('9')
+    monto(1).teclear('9')
+    monto(1).teclear('9')
+    chk('FIFO: más que el saldo no se escribe', monto(1).value === '999', monto(1).value)
+    monto(1).escribirCrudo('')
     // tildar la otra: se escribe su saldo con ponerNumero
     const c2 = check(1)
     c2.checked = true
@@ -323,7 +356,7 @@ async function main() {
     chk('FIFO: tildar escribe el saldo con coma decimal (1.234,50)', monto(1).value === '1.234,50', monto(1).value)
     S.__limpiar()
     await S.confirmarPago()
-    ll = rpc(S, 'registrar_pago_proveedor')
+    ll = rpc(S, 'pagar_proveedor_mixto')
     chk('FIFO: tildada, viaja 1234.5', ll[0] && ll[0].params.p_aplicaciones.some(a => a.factura_pendiente_id === 'f2' && a.monto_aplicado === 1234.5), ll[0] && ll[0].params)
   }
   for (const [nombre, accion, visto, numero] of CASOS) {
@@ -331,27 +364,34 @@ async function main() {
     const el = monto(0)
     el.escribirCrudo('')
     accion(el)
+    S.__fifo()[0].checked = true
     chk(`FIFO (${nombre}): el campo muestra ${visto}`, el.value === visto, el.value)
     chk(`FIFO (${nombre}): el estado de la factura queda en ${numero}`, S.__fifo()[0].monto === numero, S.__fifo()[0])
     S.__limpiar()
     await S.confirmarPago()
-    const ll = rpc(S, 'registrar_pago_proveedor')
+    const ll = rpc(S, 'pagar_proveedor_mixto')
     chk(`FIFO (${nombre}): p_aplicaciones[0].monto_aplicado = ${numero}`, ll[0] && ll[0].params.p_aplicaciones[0] && ll[0].params.p_aplicaciones[0].monto_aplicado === numero && ll[0].params.p_aplicaciones[0].factura_pendiente_id === 'f1', ll[0] && ll[0].params)
-    chk(`FIFO (${nombre}): p_monto = 9999999`, ll[0] && ll[0].params.p_monto === 9999999, ll[0] && ll[0].params)
+    chk(`FIFO (${nombre}): p_monto_resto = 9999999`, ll[0] && ll[0].params.p_monto_resto === 9999999, ll[0] && ll[0].params)
   }
   {
-    const { S, monto } = await prepararFifo('2.000.000')
+    const { S, monto, tildar } = await prepararFifo('2.000.000')
+    tildar(0)
     monto(0).escribirCrudo('')
     chk('FIFO: borrar el monto lo deja en 0 (no null ni NaN)', S.__fifo()[0].monto === 0, S.__fifo()[0])
     S.__limpiar()
     await S.confirmarPago()
-    const ll = rpc(S, 'registrar_pago_proveedor')
+    chk('FIFO: una tildada sin monto frena y lo dice', rpc(S, 'pagar_proveedor_mixto').length === 0 && errorPegado(S) === 'Poné cuánto se aplica a la factura 0001-1 (o destildala).', errorPegado(S))
+    S.__fifo()[0].checked = false
+    S.__limpiar()
+    await S.confirmarPago()
+    const ll = rpc(S, 'pagar_proveedor_mixto')
     chk('FIFO: un monto vacío no viaja como aplicación', ll[0] && ll[0].params.p_aplicaciones.length === 0, ll[0] && ll[0].params)
     const S2 = (await prepararFifo('100')).S
+    S2.__fifo()[0].checked = true
     S2.__fifo()[0].monto = 500000
     S2.__limpiar()
     await S2.confirmarPago()
-    chk('FIFO: aplicar más que el pago frena', S2.__errores.includes('La suma aplicada no puede superar el monto a pagar.') && rpc(S2, 'registrar_pago_proveedor').length === 0, S2.__errores)
+    chk('FIFO: aplicar más que lo que se paga frena', errorPegado(S2) === 'Faltan $ 499.900,00 para cubrir las facturas elegidas.' && rpc(S2, 'pagar_proveedor_mixto').length === 0, errorPegado(S2))
   }
 
   // ══ 3. Crédito ═══════════════════════════════════════════════════════════
@@ -562,7 +602,7 @@ async function main() {
     chk('los montos se enlazan con 2 decimales', /enlazarCampoNumero\(document\.getElementById\(id\), \{ decimales: 2 \}\)/.test(codigo))
     const enlaces = codigo.split('\n').filter(l => /enlazarCampoNumero\(/.test(l)).map(l => l.trim())
     chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo)',
-      enlaces.length === 3 && enlaces.filter(a => /decimales: 2 \}/.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)), enlaces)
+      enlaces.length === 3 && enlaces.filter(a => /decimales: 2 \}|decimales: 2, max: /.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)), enlaces)
     chk('los CUIT NO se enlazan', !/enlazarCampoNumero\([^)]*cuit/i.test(codigo) && !/IDS_CAMPOS_MONTO = \[[^\]]*cuit/.test(codigo))
     const iEnlace = codigo.indexOf('\n    enlazarCamposMonto()\n'), iListener = codigo.indexOf("document.getElementById('campo-monto-pago').addEventListener('input'")
     chk('el enlace corre al iniciar, ANTES del listener de sugerencias', iEnlace !== -1 && iListener !== -1 && iEnlace < iListener, [iEnlace, iListener])

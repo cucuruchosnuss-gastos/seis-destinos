@@ -374,8 +374,9 @@ esperas.push((async () => {
 {
   chk('fuente: importa de js/cuenta-unica.js', /from '\.\.\/js\/cuenta-unica\.js'/.test(FUENTE))
   chk('fuente: la ficha tiene sus dos contenedores', /<div id="ficha-clasificacion"><\/div>/.test(FUENTE) && /<div id="ficha-cuenta-unica" hidden><\/div>/.test(FUENTE))
-  chk('fuente: abrir la ficha lee los vínculos y pinta', /cargarFichaRemitos\(\), cargarVinculosFicha\(\)\]\)/.test(FUENTE) && /renderizarFichaBanner\(\)\n\s+renderizarClasificacionProveedor\(\)\n\s+prepararCuentaUnicaFicha\(\)/.test(FUENTE))
-  chk('fuente: cambiar de unidad repinta la clasificación y la cuenta', /renderizarFichaRemitos\(\)\n\s+renderizarClasificacionProveedor\(\)\n\s+prepararCuentaUnicaFicha\(\)/.test(FUENTE))
+  // (Las órdenes de pago, 20/10/2026, se leen y se pintan al lado.)
+  chk('fuente: abrir la ficha lee los vínculos y pinta', /cargarFichaRemitos\(\), cargarVinculosFicha\(\)(, cargarFichaOrdenesPago\(\))?\]\)/.test(FUENTE) && /renderizarFichaBanner\(\)\n\s+renderizarClasificacionProveedor\(\)\n\s+prepararCuentaUnicaFicha\(\)/.test(FUENTE))
+  chk('fuente: cambiar de unidad repinta la clasificación y la cuenta', /renderizarFichaRemitos\(\)\n\s+(renderizarFichaOrdenesPago\(\)\n\s+)?renderizarClasificacionProveedor\(\)\n\s+prepararCuentaUnicaFicha\(\)/.test(FUENTE))
   chk('fuente: los toques de la clasificación y de la cuenta', /getElementById\('ficha-clasificacion'\)\.addEventListener\('click'/.test(FUENTE) && /unicaCC\.addEventListener\('click'/.test(FUENTE))
   chk('fuente: el chip se lee al arrancar', /cargarClientesProveedores\(\),\n\s+\]\)/.test(FUENTE))
   // Los dos confirm() viejos (eliminar una factura, rechazar un proveedor) son

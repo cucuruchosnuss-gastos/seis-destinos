@@ -65,39 +65,42 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     await page.locator('#btn-registrar-pago').click();
     await expect(page.locator('#modal-pago')).toBeVisible();
 
-    // Tres medios, sin el cheque propio (11/10/2026), y sin hueco: Efectivo y
-    // Transferencia en una fila, la cartera abajo a todo el ancho.
+    // Desde el 20/10/2026: Efectivo, Transferencia y QR en una fila (sin el
+    // cheque propio, 11/10/2026) y "Cheques de la cartera" como botón propio a
+    // todo el ancho, que abre la lista.
     const medios = page.locator('#grilla-medio-pago-cc [data-valor]');
     await expect(medios).toHaveCount(3);
-    expect(await medios.evaluateAll(bs => bs.map(b => b.dataset.valor))).toEqual(['efectivo', 'transferencia', 'cartera']);
-    await expect(page.locator('#grilla-medio-pago-cc [data-valor="propio"]')).toHaveCount(0);
+    expect(await medios.evaluateAll(bs => bs.map(b => b.dataset.valor))).toEqual(['efectivo', 'transferencia', 'qr']);
+    await expect(page.locator('[data-valor="propio"]')).toHaveCount(0);
     await expect(page.locator('#grupo-propio-pago')).toHaveCount(0);
-    const grilla = await page.locator('#grilla-medio-pago-cc').boundingBox();
-    const [bEf, bTr, bCa] = await Promise.all(['efectivo', 'transferencia', 'cartera'].map(v => page.locator(`#grilla-medio-pago-cc [data-valor="${v}"]`).boundingBox()));
-    expect(Math.abs(bEf.y - bTr.y), 'Efectivo y Transferencia en la misma fila').toBeLessThan(2);
-    expect(bCa.y, 'la cartera abajo').toBeGreaterThan(bEf.y + bEf.height - 1);
-    expect(Math.abs(bCa.width - grilla.width), 'la cartera ocupa la fila entera').toBeLessThan(2);
+    const [bEf, bTr, bQr] = await Promise.all(['efectivo', 'transferencia', 'qr'].map(v => page.locator(`#grilla-medio-pago-cc [data-valor="${v}"]`).boundingBox()))
+    expect(Math.abs(bEf.y - bTr.y) < 2 && Math.abs(bTr.y - bQr.y) < 2, 'Efectivo, Transferencia y QR en la misma fila').toBe(true);
+    const cartera = page.locator('#btn-medio-cartera');
+    await expect(cartera).toBeVisible();
+    const [bCa, valores] = await Promise.all([cartera.boundingBox(), page.locator('#grupo-valores-pago').boundingBox()]);
+    expect(bCa.width, 'la cartera a todo el ancho del bloque').toBeGreaterThan(valores.width * 0.8);
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
     await captura(page, `cc-pago-medios-${ancho}`, info);
 
-    // Cheques de la cartera: la suma de los tildados es el monto.
-    await page.locator('#grilla-medio-pago-cc [data-valor="cartera"]').click();
+    // Cheques de la cartera: la suma de los tildados son los valores.
+    await cartera.click();
+    await expect(cartera).toHaveAttribute('aria-pressed', 'true');
     const casillas = page.locator('[data-cheque-cartera]');
     await expect(casillas).toHaveCount(2);
     await casillas.nth(0).check();
     await casillas.nth(1).check();
     await expect(page.locator('#total-cartera-pago')).toHaveText(/2 cheques tildados · total \$\s537\.300,50/);
-    await expect(page.locator('#campo-monto-pago')).toHaveValue('537.300,50');
+    await expect(page.locator('#resumen-aplicacion')).toHaveText(/Valores \$\s537\.300,50/);
+    await expect(page.locator('#campo-monto-pago'), 'los cheques no escriben el monto de efectivo / transferencia').toHaveValue('');
     await captura(page, `cc-pago-cartera-${ancho}`, info);
     const confirmar = page.locator('#btn-confirmar-pago');
-    await confirmar.scrollIntoViewIfNeeded();
     await expect(confirmar).toBeInViewport();
     await confirmar.click();
-    await expect.poll(() => rpc.find(r => r.nombre === 'pagar_proveedor_con_cheques_cartera')).toBeTruthy();
-    const pc = rpc.find(r => r.nombre === 'pagar_proveedor_con_cheques_cartera').params;
+    await expect.poll(() => rpc.find(r => r.nombre === 'pagar_proveedor_mixto')).toBeTruthy();
+    const pc = rpc.find(r => r.nombre === 'pagar_proveedor_mixto').params;
     expect(pc.p_cheque_ids.sort()).toEqual(['chq-1', 'chq-2']);
-    expect(pc, 'no mueve caja: sin cuenta').not.toHaveProperty('p_cuenta_id');
-    expect(rpc.some(r => r.nombre === 'registrar_pago_proveedor')).toBe(false);
+    expect(pc, 'no mueve caja: sin resto ni cuenta').toMatchObject({ p_monto_resto: 0, p_medio_resto: null, p_cuenta_resto: null });
+    expect(rpc.some(r => r.nombre === 'registrar_pago_proveedor' || r.nombre === 'pagar_proveedor_con_cheques_cartera'), 'una sola llamada').toBe(false);
 
     expect(errores, errores.join('\n')).toEqual([]);
   });

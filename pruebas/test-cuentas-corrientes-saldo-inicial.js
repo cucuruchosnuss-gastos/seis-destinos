@@ -188,7 +188,7 @@ async function main() {
   }
   chk('el importe es un campo de texto con teclado decimal (nunca type=number)',
     /<input type="text" id="campo-saldo-inicial-importe" placeholder="0,00" inputmode="decimal">/.test(FUENTE))
-  chk('el importe se enlaza con los demás montos (2 decimales)', /const IDS_CAMPOS_MONTO = \[[^\]]*'campo-saldo-inicial-importe'\]/.test(FUENTE))
+  chk('el importe se enlaza con los demás montos (2 decimales)', /const IDS_CAMPOS_MONTO = \[[^\]]*'campo-saldo-inicial-importe'[^\]]*\]/.test(FUENTE))
   chk('el botón de confirmar NO nace deshabilitado en el HTML', /<button type="button" class="btn btn-cc-accion" id="btn-confirmar-saldo-inicial">Cargar saldo inicial<\/button>/.test(FUENTE))
   chk('el error va pegado al botón (justo antes de la fila de botones) y se lee como alerta',
     /<p class="saldo-inicial__error" id="saldo-inicial-error" role="alert" hidden><\/p>\s*<div style="display:flex; gap:0\.75rem; padding:1rem 0 0;">\s*<button type="button" class="btn btn--secundario" id="btn-cancelar-saldo-inicial">/.test(FUENTE))
@@ -477,7 +477,7 @@ async function main() {
     const d = html(S, 'detalle-pago-contenido')
     chk('detalle del pago: "Saldo inicial", nunca "Factura SALDO-INICIAL"', /fila-fifo__numero">Saldo inicial</.test(d) && !/SALDO-INICIAL/.test(d), d.slice(0, 600))
     chk('detalle del pago: el crédito "se aplicó a: Saldo inicial"', /se aplicó a: Saldo inicial/.test(d))
-    chk('la lista para pagar usa numeroParaMostrar', /numero: numeroParaMostrar\(f\.numero_comprobante\),/.test(FUENTE))
+    chk('la lista para pagar usa numeroParaMostrar', /numero: numeroParaMostrar\((f|x)\.numero_comprobante\),/.test(FUENTE))
     chk('la lista para aplicar un crédito también', /\$\{formatearFecha\(f\.fecha_factura\)\} — \$\{numeroParaMostrar\(f\.numero_comprobante\)\} — saldo/.test(FUENTE))
   }
 
