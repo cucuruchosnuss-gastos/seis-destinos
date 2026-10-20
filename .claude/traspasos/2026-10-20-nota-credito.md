@@ -119,6 +119,21 @@ grant execute on function public.registrar_nota_credito_proveedor(uuid, uuid, te
 - "Aplicar a las más viejas" reparte desde la factura más vieja; tildar una factura propone lo que falta del importe, hasta su saldo.
 - El ajuste ofrece los dos sentidos: "Sale del stock (se devolvió)" (cantidad negativa) y "Entra al stock (se contó de menos)" (positiva).
 
+## Al integrar con `ci-prueba/pago-mixto`
+
+`npm run ensayo` (masa → pago-mixto → faltante → nota) dice que esta rama CHOCA con pago-mixto en **un solo archivo**: `pruebas/test-cuentas-corrientes-numeros.js`, la prueba "hay exactamente 3 enlazarCampoNumero…" (las dos ramas la cambiaron). `modulos/cuentas-corrientes.html` se une solo. La resolución, quedándose con lo de las dos:
+
+```js
+    const deLaNota = enlaces.filter(a => /importeNotaEnlazado|max: f \? Number\(f\.saldo\)|decimales: 3 \}/.test(a))
+    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo), más los 3 de la nota de crédito',
+      enlaces.length === 6 && deLaNota.length === 3 &&
+      enlaces.filter(a => !deLaNota.includes(a)).filter(a => /decimales: 2 \}|decimales: 2, max: /.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)) &&
+      deLaNota.some(a => /enlazarCampoNumero\(imp, \{ decimales: 2 \}\)/.test(a)) && deLaNota.some(a => /\{ decimales: 2, max: f \? Number\(f\.saldo\) : undefined \}/.test(a)) &&
+      deLaNota.some(a => /enlazarCampoNumero\(input, \{ decimales: 3 \}\)/.test(a)), enlaces)
+```
+
+(El "FIFO" de pago-mixto ahora es `{ decimales: 2, max: … }` del monto de cada factura; por eso la regex de los dos lados.) Después de resolver, correr `test-cuentas-corrientes-numeros.js` y `mut-cuentas-corrientes-numeros.js`.
+
 ## Lo que no se pudo probar
 
 - Nada contra la base real (la función no existe). Todo con un doble y la maqueta con la función simulada.
