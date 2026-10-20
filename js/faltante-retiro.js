@@ -425,7 +425,7 @@ export function escribirMotivoFaltante(ctx, valor) {
 // (productos_terminados.origen_tipo, verificado el 20/10/2026):
 //  - 'fabrica': una planilla abierta (planillas_en_curso); sin ninguna,
 //    "Se produjo antes y no está cargado" con una nota (queda pendiente para
-//    Administración, como antes).
+//    Administración, con la nota en ESE renglón: anotar_faltante_retiro).
 //  - 'unidad' / 'proveedor': "Vienen de Mengui" (de su origen habitual) u
 //    "Otro origen" (otra fábrica o un proveedor).
 //  - null: las dos cosas.
@@ -436,7 +436,10 @@ export function escribirMotivoFaltante(ctx, valor) {
 //    reintento no duplica el ingreso) y después faltante_a_lote(item, lote,
 //    'Viene de <origen>'). Pide materia_prima:cargar o
 //    stock:ajustar_inventario: sin eso queda pendiente con la nota
-//    "Viene de <origen>, falta cargar el ingreso".
+//    "Viene de <origen>, falta cargar el ingreso" (anotar_faltante_retiro).
+// La nota de lo que queda pendiente va al renglón (orden_retiro_items.
+// revision_motivo, con anotar_faltante_retiro, 20/10/2026) y NO a las
+// observaciones de la orden, que salen impresas en la hoja.
 // Si una falla, la orden ya está confirmada: ese renglón queda para el cartel
 // de siempre (reintentar, o Administración) y se sigue con los demás.
 
@@ -510,13 +513,10 @@ export function textoOrigenElegido(o) {
   return ''
 }
 
-// Lo que va a las observaciones de la orden (lo ve Administración): el
-// renglón que queda pendiente, con su nota.
-export function notaObservacionOrigen(numero, producto, o, puedeIngresar) {
-  const cual = `Renglón ${numero}${limpioFr(producto) ? ` (${limpioFr(producto)})` : ''}`
-  if (o?.tipo === 'antes' && origenCompleto(o)) return `${cual}: ${TEXTO_PRODUJO_ANTES.toLowerCase()} — ${limpioFr(o.nota)}`
-  if (o?.tipo === 'afuera' && origenCompleto(o) && !puedeIngresar) return `${cual}: ${notaFaltaIngreso(o)}`
-  return null
+// La nota de un renglón que queda pendiente (lo ve Administración en
+// «Retiros por revisar»): "Se produjo antes y no está cargado: <nota>".
+export function notaProdujoAntes(o) {
+  return `${TEXTO_PRODUJO_ANTES}: ${limpioFr(o?.nota)}`
 }
 export function notaFaltaIngreso(o) {
   return `Viene de ${limpioFr(o?.nombre) || 'otro lado'}, falta cargar el ingreso`
@@ -540,8 +540,8 @@ export function parametrosIngresoOrigen({ unidadId, hoy, origen, x, codigo }) {
 
 // Resuelve UN faltante con la respuesta del formulario. Devuelve el resultado
 // para la orden ({ revision, planilla?, lote?, mensaje, nota? }) o tira un
-// error con el mensaje de la base tal cual (y `paso`: 'planilla', 'ingreso'
-// o 'lote').
+// error con el mensaje de la base tal cual (y `paso`: 'planilla', 'ingreso',
+// 'lote' o 'nota').
 export async function resolverOrigen(sb, { x, origen, unidadId, hoy, codigo, puedeIngresar }) {
   const item = x?.item_id
   if (!item || !origenCompleto(origen)) return null
@@ -553,8 +553,15 @@ export async function resolverOrigen(sb, { x, origen, unidadId, hoy, codigo, pue
     const planilla = { maquina: origen.maquina ?? null, lote: origen.lote ?? null, turno: origen.turno ?? null }
     return { revision, planilla, mensaje: mensajeProduccion(revision, planilla) }
   }
-  if (origen.tipo === 'antes') return { revision: 'pendiente', nota: `${TEXTO_PRODUJO_ANTES}: ${limpioFr(origen.nota)}` }
-  if (!puedeIngresar) return { revision: 'pendiente', nota: notaFaltaIngreso(origen) }
+  // Lo que queda pendiente: la nota va al renglón (orden_retiro_items.
+  // revision_motivo). Si falla, el error de la base tal cual.
+  const anotar = async (nota) => {
+    const { error } = await sb.rpc('anotar_faltante_retiro', { p_item_id: item, p_nota: nota })
+    if (error) tirar('nota', error)
+    return { revision: 'pendiente', nota }
+  }
+  if (origen.tipo === 'antes') return anotar(notaProdujoAntes(origen))
+  if (!puedeIngresar) return anotar(notaFaltaIngreso(origen))
   const params = parametrosIngresoOrigen({ unidadId, hoy, origen, x, codigo })
   const ing = await sb.rpc('ingresar_producto_terminado', params)
   if (ing.error) tirar('ingreso', ing.error)

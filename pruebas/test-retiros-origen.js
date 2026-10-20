@@ -10,7 +10,11 @@
 //     saber de dónde: las dos cosas); no se puede confirmar sin contestar; al
 //     confirmar se resuelve cada faltante con lo contestado; una falla deja el
 //     renglón en el cartel (que dice "Cerrar", no "Dejarlo pendiente") y
-//     "Volver a intentar" manda el MISMO uuid de ingreso.
+//     "Volver a intentar" manda el MISMO uuid de ingreso. Lo que queda
+//     pendiente se anota EN EL RENGLÓN (anotar_faltante_retiro) y no en las
+//     observaciones de la orden; un reintento de la orden entera usa el día
+//     en que se confirmó; mientras se leen los orígenes no se ofrecen
+//     planillas ("Cargando…").
 //
 //   ARCHIVO_TEST=<copia de js/faltante-retiro.js>
 //   ARCHIVO_RETIROS=<copia de modulos/retiros.html>
@@ -79,10 +83,9 @@ function sbFalso(respuestas = {}) {
   chk('afuera: el nombre y UNA de las dos (fábrica o proveedor)', F.origenCompleto({ tipo: 'afuera', unidadId: 'u', nombre: 'X' }) &&
     !F.origenCompleto({ tipo: 'afuera', unidadId: 'u', proveedorId: 'p', nombre: 'X' }) && !F.origenCompleto({ tipo: 'afuera', nombre: 'X' }) && !F.origenCompleto({ tipo: 'afuera', unidadId: 'u', nombre: '' }))
   chk('sin respuesta, incompleta', !F.origenCompleto(null) && !F.origenCompleto({ tipo: 'otra' }))
-  chk('la nota para Administración: se produjo antes', F.notaObservacionOrigen(2, 'Mini', { tipo: 'antes', nota: 'se hizo el lunes' }, true) === 'Renglón 2 (Mini): se produjo antes y no está cargado — se hizo el lunes')
-  chk('la nota sin permiso para el ingreso', F.notaObservacionOrigen(1, '', { tipo: 'afuera', unidadId: 'u', nombre: 'Mengui' }, false) === 'Renglón 1: Viene de Mengui, falta cargar el ingreso')
-  chk('con permiso, afuera no deja nota (se carga el ingreso)', F.notaObservacionOrigen(1, '', { tipo: 'afuera', unidadId: 'u', nombre: 'Mengui' }, true) === null)
-  chk('una planilla no deja nota', F.notaObservacionOrigen(1, '', { tipo: 'planilla', turnoId: 't' }, true) === null)
+  chk('la nota del renglón: se produjo antes', F.notaProdujoAntes({ tipo: 'antes', nota: '  se hizo el lunes ' }) === 'Se produjo antes y no está cargado: se hizo el lunes')
+  chk('la nota sin permiso para el ingreso', F.notaFaltaIngreso({ tipo: 'afuera', unidadId: 'u', nombre: 'Mengui' }) === 'Viene de Mengui, falta cargar el ingreso')
+  chk('ya no hay nota para las observaciones de la orden', typeof F.notaObservacionOrigen === 'undefined' && !/notaObservacionOrigen/.test(src))
 }
 
 // Los parámetros EXACTOS del ingreso.
@@ -109,17 +112,34 @@ esperas.push((async () => {
   chk('faltante_a_lote con el mismo lote y "Viene de <origen>"', JSON.stringify(sb.llamadas[1][1]) === JSON.stringify({ p_item_id: 'it-1', p_lote: 'MENGUI-2010', p_motivo: 'Viene de Mengui' }))
   chk('queda aceptada en ese lote', r.revision === 'aceptada' && r.lote === 'MENGUI-2010')
 
-  const sb2 = sbFalso()
+  const sb2 = sbFalso({ anotar_faltante_retiro: { data: null, error: null } })
   const r2 = await F.resolverOrigen(sb2, { x, origen, unidadId: 'u-n', hoy: '2026-10-20', codigo: 'N-0042', puedeIngresar: false })
-  chk('sin permiso para el ingreso: no llama a nada y queda pendiente con su nota', sb2.llamadas.length === 0 && r2.revision === 'pendiente' && r2.nota === 'Viene de Mengui, falta cargar el ingreso')
+  chk('sin permiso para el ingreso: solo anota la nota en el renglón y queda pendiente',
+    JSON.stringify(sb2.llamadas) === JSON.stringify([['anotar_faltante_retiro', { p_item_id: 'it-1', p_nota: 'Viene de Mengui, falta cargar el ingreso' }]]) &&
+    r2.revision === 'pendiente' && r2.nota === 'Viene de Mengui, falta cargar el ingreso', sb2.llamadas)
 
   const sb3 = sbFalso({ faltante_en_produccion: { data: 'en_produccion', error: null } })
   const r3 = await F.resolverOrigen(sb3, { x, origen: { tipo: 'planilla', turnoId: 't-2', maquina: 'Máquina 2', lote: 6237 }, unidadId: 'u-n', hoy: '2026-10-20', codigo: 'N', puedeIngresar: true })
   chk('planilla: faltante_en_produccion(item, turno)', JSON.stringify(sb3.llamadas) === JSON.stringify([['faltante_en_produccion', { p_item_id: 'it-1', p_turno_id: 't-2' }]]) && r3.revision === 'en_produccion')
 
-  const sb4 = sbFalso()
+  const sb4 = sbFalso({ anotar_faltante_retiro: { data: null, error: null } })
   const r4 = await F.resolverOrigen(sb4, { x, origen: { tipo: 'antes', nota: 'se hizo ayer' }, unidadId: 'u-n', hoy: '2026-10-20', codigo: 'N', puedeIngresar: true })
-  chk('se produjo antes: no llama a nada, queda pendiente con la nota', sb4.llamadas.length === 0 && r4.revision === 'pendiente' && /se hizo ayer/.test(r4.nota))
+  chk('se produjo antes: anota la nota en ESE renglón y queda pendiente',
+    JSON.stringify(sb4.llamadas) === JSON.stringify([['anotar_faltante_retiro', { p_item_id: 'it-1', p_nota: 'Se produjo antes y no está cargado: se hizo ayer' }]]) &&
+    r4.revision === 'pendiente' && r4.nota === 'Se produjo antes y no está cargado: se hizo ayer', sb4.llamadas)
+
+  // Si anotar falla: el error de la base tal cual, con el paso 'nota', y los
+  // demás siguen.
+  const sb6 = sbFalso({
+    anotar_faltante_retiro: { data: null, error: { message: 'Ese renglón ya no está pendiente.' } },
+    faltante_en_produccion: { data: 'en_produccion', error: null },
+  })
+  const out6 = await F.resolverOrigenes(sb6, [
+    { x, origen: { tipo: 'antes', nota: 'se hizo ayer' }, unidadId: 'u-n', hoy: '2026-10-20', codigo: 'N', puedeIngresar: true },
+    { x: { ...x, item_id: 'it-2' }, origen: { tipo: 'planilla', turnoId: 't-2' }, unidadId: 'u-n', hoy: '2026-10-20', codigo: 'N', puedeIngresar: true },
+  ])
+  chk('si anotar falla: el error de la base tal cual (paso "nota")', out6[0].ok === false && out6[0].error === 'Ese renglón ya no está pendiente.' && out6[0].paso === 'nota')
+  chk('y se sigue con el siguiente', out6[1].ok === true && out6[1].resultado.revision === 'en_produccion')
 
   // Una falla no frena a los demás; el error va tal cual, con el paso.
   const sb5 = sbFalso({
@@ -247,16 +267,18 @@ esperas.push((async () => {
   chk('con 2 letras sigue faltando', S.faltaOrigen(r))
   S.escribirOrigen({ dataset: { rOrigenNota: '0' }, value: 'se hizo el lunes' })
   chk('con la nota, contestado', !S.faltaOrigen(r))
-  chk('la nota va a las observaciones (la ve Administración)', S.parametrosRegistrar(S.estado.form).p_observaciones === 'Renglón 1 (Cucurucho Mini · Caja x 600): se produjo antes y no está cargado — se hizo el lunes')
+  chk('la nota NO va a las observaciones de la orden (salen impresas)', S.parametrosRegistrar(S.estado.form).p_observaciones === null)
   S.estado.form.observaciones = 'Retira el lunes'
-  chk('debajo de lo que se escribió', S.parametrosRegistrar(S.estado.form).p_observaciones.startsWith('Retira el lunes\nRenglón 1'))
+  chk('las observaciones son solo lo que se escribió', S.parametrosRegistrar(S.estado.form).p_observaciones === 'Retira el lunes')
   S.__setRpc(async (n) => {
     if (n === 'registrar_orden_retiro') return { data: { orden_id: 'o-1', codigo: 'N-0043', stock_insuficiente: [{ renglon: 1, item_id: 'it-1', presentacion_id: 'pr-mini', faltaron: 5, producto: 'Cucurucho Mini', presentacion: 'Caja x 600' }] }, error: null }
     return { data: [], error: null }
   })
   await S.confirmar()
   await esperar()
-  chk('no llama a nada más que la orden', !S.__llamadas.rpc.some(x => ['faltante_en_produccion', 'ingresar_producto_terminado', 'faltante_a_lote'].includes(x[0])))
+  chk('no llama a nada más que la orden y la nota', !S.__llamadas.rpc.some(x => ['faltante_en_produccion', 'ingresar_producto_terminado', 'faltante_a_lote'].includes(x[0])))
+  const an = S.__llamadas.rpc.filter(x => x[0] === 'anotar_faltante_retiro')
+  chk('anota la nota en el renglón que faltó', an.length === 1 && an[0][1].p_item_id === 'it-1' && an[0][1].p_nota === 'Se produjo antes y no está cargado: se hizo el lunes', an)
   chk('queda pendiente para Administración, con la nota', /Pendiente para Administración: Se produjo antes y no está cargado: se hizo el lunes/.test(S.__els.get('rt-hecho').innerHTML))
   chk('y el cartel no se abre', S.estado.falt === null)
 })())
@@ -306,7 +328,7 @@ esperas.push((async () => {
   const r = await renglon(S, 0, 'p-mini', 'pr-mini', 15)
   S.accionOrigen(0, 'habitual', BTN('habitual'))
   chk('lo avisa antes de confirmar', /Con tu usuario no se puede cargar el ingreso: el renglón queda pendiente con la nota «Viene de Mengui, falta cargar el ingreso»\./.test(S.htmlOrigenRenglon(r, 0)))
-  chk('y la nota va a las observaciones', S.parametrosRegistrar(S.estado.form).p_observaciones === 'Renglón 1 (Cucurucho Mini · Caja x 600): Viene de Mengui, falta cargar el ingreso')
+  chk('y la nota NO va a las observaciones', S.parametrosRegistrar(S.estado.form).p_observaciones === null)
   S.__setRpc(async (n) => {
     if (n === 'registrar_orden_retiro') return { data: { orden_id: 'o-1', codigo: 'N-0045', stock_insuficiente: [{ renglon: 1, item_id: 'it-1', presentacion_id: 'pr-mini', faltaron: 5, producto: 'Cucurucho Mini', presentacion: 'Caja x 600' }] }, error: null }
     return { data: [], error: null }
@@ -315,6 +337,8 @@ esperas.push((async () => {
   await esperar()
   chk('sin permiso no se intenta el ingreso (ningún error feo)', !S.__llamadas.rpc.some(x => x[0] === 'ingresar_producto_terminado' || x[0] === 'faltante_a_lote') && S.__llamadas.errores.length === 0)
   chk('queda pendiente con la nota', /Pendiente para Administración: Viene de Mengui, falta cargar el ingreso/.test(S.__els.get('rt-hecho').innerHTML))
+  const an = S.__llamadas.rpc.filter(x => x[0] === 'anotar_faltante_retiro')
+  chk('la nota se anota en el renglón', an.length === 1 && an[0][1].p_item_id === 'it-1' && an[0][1].p_nota === 'Viene de Mengui, falta cargar el ingreso', an)
   // Con stock:ajustar_inventario también se puede.
   const S2 = nuevo({ tareas: [['retiros:cargar', { unidades: ['u-n'] }], ['stock:ajustar_inventario', { todas: true }]] })
   chk('con stock:ajustar_inventario también se puede cargar el ingreso', S2.puedeIngresarEn('u-n') === true)
@@ -434,7 +458,7 @@ esperas.push((async () => {
   S.accionOrigen(0, 'habitual', BTN('habitual'))
   S.__setRpc(async (n) => {
     if (n === 'registrar_orden_retiro') return { data: { orden_id: 'o-1', codigo: 'N-0048', reintento: true }, error: null }
-    if (n === 'mis_ordenes_retiro') return { data: [{ orden_id: 'o-1', codigo: 'N-0048', renglones: [
+    if (n === 'mis_ordenes_retiro') return { data: [{ orden_id: 'o-1', codigo: 'N-0048', fecha: '2026-10-17', renglones: [
       { orden: 1, item_id: 'it-1', presentacion_id: 'pr-mini', marca_id: null, revision: 'pendiente', faltante: 5, producto: 'Cucurucho Mini', presentacion: 'Caja x 600', cajas: 15,
         lotes: [{ lote: '7001-1', cajas: 10 }, { lote: 'SIN STOCK', cajas: 5 }] }] }], error: null }
     if (n === 'ingresar_producto_terminado') return { data: { ok: true }, error: null }
@@ -445,6 +469,95 @@ esperas.push((async () => {
   const ing = S.__llamadas.rpc.filter(x => x[0] === 'ingresar_producto_terminado')
   chk('en un reintento se carga el ingreso al leer la orden, con el uuid del renglón', ing.length === 1 && ing[0][1].p_client_uuid === r.uuidIngreso && ing[0][1].p_items[0].cajas === 5)
   chk('y faltante_a_lote', S.__llamadas.rpc.some(x => x[0] === 'faltante_a_lote' && x[1].p_item_id === 'it-1'))
+  // La orden se había confirmado el 17/10: el lote y el ingreso con ESE día,
+  // no el de hoy (como el reintento de un renglón).
+  chk('reintento de la orden: el lote del día en que se confirmó', ing[0]?.[1].p_items[0].lote === 'MENGUI-1710' && ing[0][1].p_fecha === '2026-10-17', ing[0]?.[1])
+  chk('y faltante_a_lote con ese lote', S.__llamadas.rpc.some(x => x[0] === 'faltante_a_lote' && x[1].p_lote === 'MENGUI-1710'))
+  chk('y el día queda para "Volver a intentar"', S.estado.hecho.hoy === '2026-10-17')
+})())
+
+esperas.push((async () => {
+  // Un reintento de la orden sin la fecha en lo que devolvió la base: queda el
+  // día de la confirmación (hoy).
+  const S = nuevo({ tareas: [['retiros:cargar', { unidades: ['u-n'] }], ['materia_prima:cargar', { unidades: ['u-n'] }]], origenes: [MENGUI] })
+  await renglon(S, 0, 'p-mini', 'pr-mini', 15)
+  S.accionOrigen(0, 'habitual', BTN('habitual'))
+  S.__setRpc(async (n) => {
+    if (n === 'registrar_orden_retiro') return { data: { orden_id: 'o-1', codigo: 'N-0049', reintento: true }, error: null }
+    if (n === 'mis_ordenes_retiro') return { data: [{ orden_id: 'o-1', codigo: 'N-0049', fecha: 'cualquiera', renglones: [
+      { orden: 1, item_id: 'it-1', presentacion_id: 'pr-mini', marca_id: null, revision: 'pendiente', producto: 'Cucurucho Mini', presentacion: 'Caja x 600', cajas: 15,
+        lotes: [{ lote: 'SIN STOCK', cajas: 5 }] }] }], error: null }
+    if (n === 'ingresar_producto_terminado') return { data: { ok: true }, error: null }
+    return { data: null, error: null }
+  })
+  await S.confirmar()
+  await esperar()
+  const hoy = S.hoyArgentina()
+  const ing = S.__llamadas.rpc.filter(x => x[0] === 'ingresar_producto_terminado')
+  chk('una fecha que no se entiende no se usa: queda la de la confirmación', ing.length === 1 && ing[0][1].p_fecha === hoy)
+  // Una orden NUEVA (no reintento) usa hoy aunque la base mande otra fecha.
+  const S2 = nuevo({ tareas: [['retiros:cargar', { unidades: ['u-n'] }], ['materia_prima:cargar', { unidades: ['u-n'] }]], origenes: [MENGUI] })
+  await renglon(S2, 0, 'p-mini', 'pr-mini', 15)
+  S2.accionOrigen(0, 'habitual', BTN('habitual'))
+  S2.__setRpc(async (n) => {
+    if (n === 'registrar_orden_retiro') return { data: { orden_id: 'o-2', codigo: 'N-0050', stock_insuficiente: [{ renglon: 1, item_id: 'it-1', presentacion_id: 'pr-mini', marca_id: null, faltaron: 5 }] }, error: null }
+    if (n === 'mis_ordenes_retiro') return { data: [{ orden_id: 'o-2', codigo: 'N-0050', fecha: '2026-01-01', renglones: [] }], error: null }
+    if (n === 'ingresar_producto_terminado') return { data: { ok: true }, error: null }
+    return { data: null, error: null }
+  })
+  await S2.confirmar()
+  await esperar()
+  const ing2 = S2.__llamadas.rpc.filter(x => x[0] === 'ingresar_producto_terminado')
+  chk('una orden nueva usa el día de hoy', ing2.length === 1 && ing2[0][1].p_fecha === S2.hoyArgentina() && S2.estado.hecho.hoy === S2.hoyArgentina())
+})())
+
+esperas.push((async () => {
+  // Mientras se leen los orígenes: "Cargando…" y ninguna planilla.
+  const S = nuevo({ origenes: [] })
+  const r = await renglon(S, 0, 'p-mini', 'pr-mini', 15)
+  S.estado.origenes.cargando = true
+  S.estado.planillasForm = null
+  const antes = S.__llamadas.rpc.filter(x => x[0] === 'planillas_en_curso').length
+  const h = S.htmlOrigenRenglon(r, 0)
+  chk('leyendo los orígenes: dice "Cargando…"', /data-r-origen-cargando[^>]*>Cargando…</.test(h) && /¿De dónde salen\?/.test(h))
+  chk('y no ofrece planillas ni otras respuestas', !/data-r-origen="/.test(h) && !/Buscando las planillas/.test(h))
+  S.pedirLoQueFaltaDelOrigen(r)
+  chk('y no pide las planillas todavía', S.__llamadas.rpc.filter(x => x[0] === 'planillas_en_curso').length === antes)
+  chk('cuenta para "falta decir de dónde salen"', S.faltaOrigen(r))
+  // Los orígenes de OTRA empresa cargando no frenan esta.
+  S.estado.origenes.unidad = 'u-otra'
+  chk('si lo que se lee es de otra empresa, no dice "Cargando…"', !S.origenesCargando() && !/data-r-origen-cargando/.test(S.htmlOrigenRenglon(r, 0)))
+  S.estado.origenes.unidad = 'u-n'
+  S.estado.origenes.cargando = false
+  S.estado.planillasForm = { unidad: 'u-n', cargando: false, error: null, lista: PLANILLAS }
+  chk('leídos: ofrece las planillas', /data-r-origen="planilla"/.test(S.htmlOrigenRenglon(r, 0)))
+})())
+
+esperas.push((async () => {
+  // La lectura de verdad (asegurarDatosEmpresa): "Cargando…" mientras tanto,
+  // y al terminar se dibuja la pregunta con lo que se leyó.
+  const S = nuevo({ origenes: [] })
+  const r = await renglon(S, 0, 'p-mini', 'pr-mini', 15)
+  S.estado.origenes = null
+  let soltar
+  const pendiente = new Promise(res => { soltar = res })
+  S.__tablas.productos_terminados = () => pendiente
+  S.__tablas.producto_presentaciones = [{ id: 'pr-mini', producto_id: 'p-mini' }]
+  S.__tablas.unidades_negocio = [{ id: 'u-m', nombre: 'Mengui' }]
+  const carga = S.asegurarDatosEmpresa()
+  await esperar()
+  chk('mientras se leen los orígenes: cargando', S.origenesCargando() && /data-r-origen-cargando/.test(S.htmlOrigenRenglon(r, 0)))
+  soltar({ data: [{ id: 'p-mini', origen_tipo: 'unidad', origen_unidad_id: 'u-m', origen_proveedor_id: null }], error: null })
+  await carga
+  await esperar()
+  const h = S.htmlOrigenRenglon(r, 0)
+  chk('leídos: deja de cargar y ofrece el origen habitual', !S.origenesCargando() && !/data-r-origen-cargando/.test(h) && /data-r-origen="habitual"[^>]*>Vienen de Mengui</.test(h))
+  // Si la lectura falla, también deja de cargar (ofrece las dos cosas).
+  S.estado.origenes = null
+  S.__tablas.productos_terminados = () => ({ data: null, error: { message: 'sin red' } })
+  await S.asegurarDatosEmpresa()
+  await esperar()
+  chk('si falla: deja de cargar igual', !S.origenesCargando() && S.estado.origenes.error === true && !/data-r-origen-cargando/.test(S.htmlOrigenRenglon(r, 0)))
 })())
 
 // ── 3. Lo de la base va escapado ────────────────────────────────────────────

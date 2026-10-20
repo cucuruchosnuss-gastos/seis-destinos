@@ -48,7 +48,7 @@ const FUNCIONES_BASE = [
   'puedeIngresarEn', 'leerOrigenes', 'origenHabitualDe', 'asegurarPlanillasForm', 'asegurarOtrosOrigenes', 'repintarOrigenes',
   'faltanteProducto', 'origenDe', 'faltaOrigen', 'conOrigenAfuera', 'htmlFaltanteRenglon', 'htmlOrigenRenglon', 'htmlOtroOrigen',
   'htmlResultadosOtro', 'pintarOrigenCaja', 'pedirLoQueFaltaDelOrigen', 'accionOrigen', 'escribirOrigen', 'textoOrigenTarjeta',
-  'notasDeOrigen', 'nombreCortoRenglon', 'origenDeFaltante', 'resolverOrigenesDeHecho', 'reintentarOrigen',
+  'origenesCargando', 'origenDeFaltante', 'resolverOrigenesDeHecho', 'reintentarOrigen',
   // de js/faltante-retiro.js
   ...FUNCIONES_FR,
   'htmlHecho', 'pintarHecho', 'mostrarHecho', 'cargarOrdenHecha', 'faltantesDeLotes', 'htmlAvisoEmpresa',
