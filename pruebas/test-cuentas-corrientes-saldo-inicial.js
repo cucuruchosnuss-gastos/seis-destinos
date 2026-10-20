@@ -477,7 +477,7 @@ async function main() {
     const d = html(S, 'detalle-pago-contenido')
     chk('detalle del pago: "Saldo inicial", nunca "Factura SALDO-INICIAL"', /fila-fifo__numero">Saldo inicial</.test(d) && !/SALDO-INICIAL/.test(d), d.slice(0, 600))
     chk('detalle del pago: el crédito "se aplicó a: Saldo inicial"', /se aplicó a: Saldo inicial/.test(d))
-    chk('la lista para pagar usa numeroParaMostrar', /numero: numeroParaMostrar\(f\.numero_comprobante\),/.test(FUENTE))
+    chk('la lista para pagar usa numeroParaMostrar', /numero: numeroParaMostrar\((f|x)\.numero_comprobante\),/.test(FUENTE))
     chk('la lista para aplicar un crédito también', /\$\{formatearFecha\(f\.fecha_factura\)\} — \$\{numeroParaMostrar\(f\.numero_comprobante\)\} — saldo/.test(FUENTE))
   }
 

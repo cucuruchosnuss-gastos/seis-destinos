@@ -28,7 +28,7 @@ correrMutacionesEnVarios([
     { nombre: 'el efectivo sin puntos de miles', de: "enlazarCampoNumero(document.getElementById('cob-efectivo'), { decimales: 2 })", a: "(document.getElementById('cob-efectivo'), { decimales: 2 })" },
   ]),
   tanda('ARCHIVO_CC', 'modulos/cuentas-corrientes.html', [
-    { nombre: 'los montos del pago repartido sin puntos de miles', de: "cont.querySelectorAll('.monto-fifo').forEach(inp => {\n        enlazarCampoNumero(inp, { decimales: 2 })", a: "cont.querySelectorAll('.monto-fifo').forEach(inp => {\n        (inp, { decimales: 2 })" },
+    { nombre: 'los montos del pago repartido sin puntos de miles', de: "        enlazarCampoNumero(inp, { decimales: 2, max: facturasParaPago[i].saldo > 0 ? facturasParaPago[i].saldo : undefined })", a: "        ;(inp, { decimales: 2, max: facturasParaPago[i].saldo > 0 ? facturasParaPago[i].saldo : undefined })" },
   ]),
   tanda('ARCHIVO_MP', 'modulos/materia-prima.html', [
     { nombre: 'el total de la factura sin puntos de miles', de: 'enlazarCampoNumero(campoTotal, { decimales: 2 })', a: '(campoTotal, { decimales: 2 })' },

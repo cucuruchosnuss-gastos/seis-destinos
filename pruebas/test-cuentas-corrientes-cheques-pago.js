@@ -84,6 +84,8 @@ const PRELUDIO = `
   function cerrarModalPago() {} async function cargarFichaSaldos() {} async function cargarFichaMovimientos() {}
   async function cargarFichaCreditos() {} function renderizarFichaBanner() {} function cargarSaldos() {}
   function ajustarMarcoClientes() {}
+  async function cargarFichaOrdenesPago() {} async function abrirOrdenPago() {}
+  var estadoPago = null
   var medioPagoSeleccionado = null, carteraPago = [], facturasParaPago = [], bancosBcra = null, turnoCartera = 0
   var estado = { miRolApp: 'usuario', miEmpleadoId: 'yo', misTareas: new Set(['cuentas_corrientes:registrar_pago']),
     ficha: { proveedorId: 'p1', unidadId: 'u-n', nombre: 'DIMAFLO S.A.' },
@@ -95,12 +97,14 @@ const FUNCIONES = [
   'puedeVerClientes', 'renderizarPrimerNivel', 'mostrarSeccionCC', 'abrirMarcoClientes',
   'esMedioCheque', 'puedeUsarCartera', 'fechaCobroCheque', 'libradorDe', 'sumaCheques',
   'chequesParaPagar', 'htmlFilaCartera', 'renderizarCarteraPago', 'pintarTotalCartera', 'tildarChequeCartera',
-  'htmlListaCartera', 'agruparChequesPorEmpresa', 'avisosOtraEmpresa', 'textoAvisoOtraEmpresa', 'montoTotalCartera',
-  'pintarResumenPagoMixto', 'textoResumenPagoMixto', 'nombreUnidad', 'repartirAplicacionesPagoMixto',
-  'parametrosPagoCartera', 'asegurarMonedaPesos', 'pintarAvisoPesos', 'confirmarPago',
+  'htmlListaCartera', 'agruparChequesPorEmpresa', 'avisosOtraEmpresa', 'textoAvisoOtraEmpresa', 'nombreUnidad',
+  // El pago en los dos sentidos (20/10/2026): el pie y la confirmación.
+  'monedaPago', 'esPagoEnPesos', 'centavosDe', 'totalesPago', 'totalesPagoActuales', 'estadoDiferencia', 'htmlBarraPago',
+  'textoResumenPago', 'pintarPiePago', 'refrescarPago', 'aplicacionesPago', 'validarPago', 'parametrosPagoMixto',
+  'textoExitoPago', 'recargarFichaDespuesDePago', 'pintarMedioPorMoneda', 'pintarCarteraPago', 'confirmarPago',
   'etiquetaPagoDeGasto',
 ]
-const CONSTANTES = ['MEDIOS_CHEQUE', 'URL_CLIENTES', 'NOMBRE_COMPLETAR']
+const CONSTANTES = ['MEDIOS_CHEQUE', 'URL_CLIENTES', 'NOMBRE_MEDIO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -180,8 +184,10 @@ async function main() {
 
   // ══ 2. LOS TRES MEDIOS ═════════════════════════════════════════════════════
   const medios = [...FUENTE.matchAll(/<div class="grilla-medio-pago" id="grilla-medio-pago-cc">([\s\S]*?)<\/div>/g)][0]?.[1] ?? ''
-  chk('tres medios: efectivo, transferencia y cartera (y nada más)',
-    JSON.stringify([...medios.matchAll(/data-valor="([^"]+)"/g)].map(m => m[1])) === '["efectivo","transferencia","cartera"]',
+  // 20/10/2026: la grilla es efectivo, transferencia y QR; los cheques de la
+  // cartera tienen su propio botón (abre la lista).
+  chk('tres medios en la grilla: efectivo, transferencia y QR (y nada más)',
+    JSON.stringify([...medios.matchAll(/data-valor="([^"]+)"/g)].map(m => m[1])) === '["efectivo","transferencia","qr"]',
     JSON.stringify([...medios.matchAll(/data-valor="([^"]+)"/g)].map(m => m[1])))
   // 11/10/2026: la empresa NO emite cheques propios. Que no vuelva nada de eso.
   chk('sin cheque propio: no vuelve el medio "propio"', !/data-valor="propio"/.test(FUENTE))
@@ -193,18 +199,19 @@ async function main() {
   chk('sin cheque propio: no vuelve su lógica',
     !/function (validarChequePropio|cargarCuentasPropio|textoDebitoPropio|parametrosPagoPropio|elegirTipoPropio|pintarAvisoDebito)\b/.test(FUENTE))
   chk('MEDIOS_CHEQUE es solo la cartera', /const MEDIOS_CHEQUE = \['cartera'\]/.test(FUENTE))
-  chk('la cartera, cuando está, ocupa la fila entera (no queda un hueco con tres botones)',
-    /#grilla-medio-pago-cc \{ grid-template-columns: repeat\(2, 1fr\); \}/.test(FUENTE) &&
-    /#grilla-medio-pago-cc \[data-valor="cartera"\] \{ grid-column: 1 \/ -1; \}/.test(FUENTE))
+  chk('la grilla en tres columnas (en otra moneda, sin QR, dos) y la cartera a todo el ancho',
+    /#grilla-medio-pago-cc \{ grid-template-columns: repeat\(3, 1fr\); \}/.test(FUENTE) &&
+    /#grilla-medio-pago-cc\.grilla-medio-pago--dos \{ grid-template-columns: repeat\(2, 1fr\); \}/.test(FUENTE) &&
+    /\.btn-cartera-pago \{ display: block; width: 100%;/.test(FUENTE))
   chk('"Cheque" suelto ya no se ofrece (iba por registrar_pago_proveedor y no movía nada)', !/data-valor="cheque"/.test(FUENTE))
-  chk('"Cheques de la cartera" nace escondido', /data-valor="cartera" id="btn-medio-cartera" hidden>/.test(FUENTE))
+  chk('"Cheques de la cartera" nace escondido', /data-valor="cartera" id="btn-medio-cartera" aria-pressed="false" hidden>/.test(FUENTE))
   {
     const S = sandbox()
     chk('la cartera pide cobranzas:procesar', S.puedeUsarCartera() === false)
     S.estado.misTareas.add('cobranzas:procesar')
     chk('con cobranzas:procesar, sí', S.puedeUsarCartera() === true)
   }
-  chk('al abrir el modal, el botón de la cartera sigue al permiso', /document\.getElementById\('btn-medio-cartera'\)\.hidden = !puedeUsarCartera\(\)/.test(FUENTE))
+  chk('el botón de la cartera sigue al permiso (y solo en pesos)', /document\.getElementById\('btn-medio-cartera'\)\.hidden = !\(puedeUsarCartera\(\) && enPesos\)/.test(FUENTE))
 
   // ══ 3. LOS CHEQUES DE LA CARTERA ═══════════════════════════════════════════
   {
@@ -233,14 +240,15 @@ async function main() {
     chk('la lista dice número, cuándo se cobra, banco, librador e importe',
       h.includes('N° 00000111 · a la vista · 01/10/2026') && h.includes('N° 00000222 · paga 10/11/2026') && h.includes('GALICIA · PEREZ JUAN y GOMEZ ANA') && h.includes('$ 100.000,10'), h)
     chk('una casilla por cheque', (h.match(/data-cheque-cartera="/g) || []).length === 2)
-    chk('sin tildar, no hay total ni monto', el(S, 'total-cartera-pago').hidden === true && S.__puesto.at(-1) === null)
+    S.estado.pagoCheques = true
+    chk('sin tildar, no hay total', el(S, 'total-cartera-pago').hidden === true)
     S.tildarChequeCartera(0, true)
     S.tildarChequeCartera(1, true)
-    chk('el monto del pago es la SUMA de los tildados', S.__puesto.at(-1) === 150000.3, S.__puesto.at(-1))
+    chk('los cheques NO escriben el monto (el monto es el de efectivo / transferencia / QR)', S.__puesto.length === 0, JSON.stringify(S.__puesto))
     chk('el total se ve con la cantidad', el(S, 'total-cartera-pago').hidden === false && el(S, 'total-cartera-pago').textContent === '2 cheques tildados · total $ 150.000,30', el(S, 'total-cartera-pago').textContent)
-    chk('cambiar lo tildado recalcula la sugerencia de facturas', S.__sugerencias() >= 2)
+    chk('la barra cuenta los cheques tildados como valores', /Valores <strong>\$ 150\.000,30<\/strong>/.test(el(S, 'resumen-aplicacion').innerHTML), el(S, 'resumen-aplicacion').innerHTML)
     S.tildarChequeCartera(0, false)
-    chk('destildar resta', S.__puesto.at(-1) === 100000.1 && el(S, 'total-cartera-pago').textContent === '1 cheque tildado · total $ 100.000,10')
+    chk('destildar resta', el(S, 'total-cartera-pago').textContent === '1 cheque tildado · total $ 100.000,10' && /Valores <strong>\$ 100\.000,10<\/strong>/.test(el(S, 'resumen-aplicacion').innerHTML))
     S.__setVar('carteraPago', [])
     S.renderizarCarteraPago()
     chk('sin cheques en cartera, se dice', /No hay cheques en cartera de ninguna empresa/.test(el(S, 'lista-cartera-pago').innerHTML))
@@ -252,70 +260,81 @@ async function main() {
     chequearMarcas(chk, 'lista de la cartera', el(S, 'lista-cartera-pago').innerHTML, ['num', 'banco', 'lib', 'emp'])
   }
 
-  // Confirmar con cheques de la cartera.
+  // Confirmar con cheques de la cartera: desde el 20/10/2026 va por
+  // pagar_proveedor_mixto (UNA llamada, atómica, con su orden de pago).
   {
     const S = sandbox()
+    S.estado.pagoCheques = true
     S.__setVar('carteraPago', S.chequesParaPagar(CHEQUES, COBRANZAS, 'u-n', new Map()).map(c => ({ ...c, tildado: true })))
-    S.__setVar('facturasParaPago', [{ id: 'f1', checked: true, monto: 100000 }, { id: 'f2', checked: false, monto: 5 }])
-    await confirmar(S, { medio: 'cartera', monto: 150000.3 })
+    S.__setVar('facturasParaPago', [{ id: 'f1', numero: 'A-1', saldo: 100000, checked: true, monto: 100000 }, { id: 'f2', numero: 'A-2', saldo: 5, checked: false, monto: 5 }])
+    await confirmar(S, { medio: null, monto: null })
     const ll = S.__rpc
-    chk('cartera: llama a pagar_proveedor_con_cheques_cartera, y a nada más', ll.length === 1 && ll[0].nombre === 'pagar_proveedor_con_cheques_cartera', JSON.stringify(ll.map(x => x.nombre)))
+    chk('cartera: llama a pagar_proveedor_mixto, y a nada más', ll.length === 1 && ll[0].nombre === 'pagar_proveedor_mixto', JSON.stringify(ll.map(x => x.nombre)))
     const p = ll[0]?.params ?? {}
     chk('cartera: los ids de los tildados (también el de otra empresa)', JSON.stringify(p.p_cheque_ids) === '["c2","c4","c1"]', JSON.stringify(p.p_cheque_ids))
     chk('cartera: proveedor, empresa, fecha y aplicaciones', p.p_proveedor_id === 'p1' && p.p_unidad_negocio_id === 'u-n' && p.p_fecha === HOY &&
       JSON.stringify(p.p_aplicaciones) === '[{"factura_pendiente_id":"f1","monto_aplicado":100000}]', JSON.stringify(p))
-    chk('cartera: NO MUEVE CAJA — no viaja ninguna cuenta ni medio de pago', !('p_cuenta_id' in p) && !('p_medio_pago' in p) && !('p_monto' in p), Object.keys(p).join(','))
-    chk('cartera: el aviso de éxito dice a quién quedaron endosados', S.__exitos.at(-1) === '¡Pago registrado! Los cheques quedaron endosados a DIMAFLO S.A.', S.__exitos.at(-1))
+    chk('cartera sola: NO MUEVE CAJA — sin resto, sin medio y sin cuenta', p.p_monto_resto === 0 && p.p_medio_resto === null && p.p_cuenta_resto === null, JSON.stringify(p))
+    chk('cartera: el aviso de éxito', S.__exitos.at(-1) === '¡Pago registrado!', S.__exitos.at(-1))
     chk('cartera: el modal no lee ni escribe la caja', !S.__consultas.includes('caja_movimientos') && !S.__consultas.includes('cuentas_caja'))
   }
   {
     const S = sandbox()
+    S.estado.pagoCheques = true
     S.__setVar('carteraPago', S.chequesParaPagar(CHEQUES, COBRANZAS, 'u-n', new Map()))
-    await confirmar(S, { medio: 'cartera', monto: 5 })
-    chk('cartera sin tildar: no llama y avisa', S.__rpc.length === 0 && S.__errores.includes('Tildá al menos un cheque de la cartera.'), JSON.stringify(S.__errores))
+    const error = () => el(S, 'error-confirmar-pago').textContent
+    await confirmar(S, { medio: null, monto: null })
+    chk('cartera sin tildar: no llama y lo dice pegado al botón', S.__rpc.length === 0 && error() === 'Elegí con qué se paga: cheques de la cartera, efectivo, transferencia o QR.', error())
     S.__getVar('carteraPago')[0].tildado = true
-    await confirmar(S, { medio: 'cartera', monto: 5, fecha: '2026-10-06' })
-    chk('cartera con fecha futura: no llama y avisa', S.__rpc.length === 0 && S.__errores.includes('La fecha del pago no puede ser futura.'))
-    await confirmar(S, { medio: 'cartera', monto: 5, moneda: 'USD' })
-    chk('cartera en dólares: no llama y avisa', S.__rpc.length === 0 && S.__errores.includes('Los cheques son solo en pesos: elegí ARS.'))
+    await confirmar(S, { medio: null, monto: null, fecha: '2026-10-06' })
+    chk('cartera con fecha futura: no llama y avisa', S.__rpc.length === 0 && error() === 'La fecha del pago no puede ser futura.', error())
+    await confirmar(S, { medio: null, monto: null, moneda: 'USD' })
+    chk('cartera en dólares: no llama y avisa', S.__rpc.length === 0 && error() === 'Los cheques son solo en pesos: elegí ARS.', error())
     S.__rpcFalla({ message: 'El cheque N° 00000111 no está en cartera (está endosado).' })
-    await confirmar(S, { medio: 'cartera', monto: 5 })
-    chk('cartera: el error de la base, tal cual', S.__errores.at(-1) === 'Error al registrar el pago: El cheque N° 00000111 no está en cartera (está endosado).', S.__errores.at(-1))
+    await confirmar(S, { medio: null, monto: null })
+    chk('cartera: viajan solo los tildados', JSON.stringify(S.__rpc.at(-1)?.params?.p_cheque_ids) === JSON.stringify([S.__getVar('carteraPago')[0].id]), JSON.stringify(S.__rpc.at(-1)?.params?.p_cheque_ids))
+    chk('cartera: el error de la base, tal cual (pegado y en el aviso)', error() === 'El cheque N° 00000111 no está en cartera (está endosado).' &&
+      S.__errores.at(-1) === 'El cheque N° 00000111 no está en cartera (está endosado).', S.__errores.at(-1))
   }
 
-  // ══ 4. LOS PARÁMETROS DE LA CARTERA ════════════════════════════════════════
+  // ══ 4. LOS PARÁMETROS DE LA BASE ═══════════════════════════════════════════
   // (El cheque / e-cheque propio se sacó el 11/10/2026: ver la sección 2.)
   {
     const S = sandbox()
-    const c = S.parametrosPagoCartera({ proveedorId: 'p', unidadId: 'u', chequeIds: ['a'], fecha: 'f', aplicaciones: [] })
-    chk('los parámetros de la cartera son los de la función de la base',
-      JSON.stringify(Object.keys(c).sort()) === JSON.stringify(['p_aplicaciones', 'p_cheque_ids', 'p_fecha', 'p_proveedor_id', 'p_unidad_negocio_id']))
+    const c = S.parametrosPagoMixto({ proveedorId: 'p', unidadId: 'u', chequeIds: ['a'], fecha: 'f', t: { cResto: 0 }, facturas: [] })
+    chk('los parámetros son los de pagar_proveedor_mixto (verificada el 20/10/2026)',
+      JSON.stringify(Object.keys(c).sort()) === JSON.stringify(['p_aplicaciones', 'p_cheque_ids', 'p_cuenta_resto', 'p_fecha', 'p_medio_resto', 'p_monto_resto', 'p_observaciones', 'p_proveedor_id', 'p_unidad_negocio_id']))
   }
 
-  // Los cheques son solo en pesos.
+  // Los cheques y el QR son solo en pesos.
   {
     const S = sandbox()
+    S.estado.misTareas.add('cobranzas:procesar')
     const doc = S.__getVar('document')
     const sel = doc.getElementById('campo-moneda-pago')
-    sel.options = [{ value: 'USD' }]
     sel.value = 'USD'
-    S.__setVar('medioPagoSeleccionado', 'cartera')
-    S.asegurarMonedaPesos()
-    chk('al elegir un cheque, la moneda pasa a ARS (y se agrega si no estaba)', sel.value === 'ARS' && sel.options.some(o => o.value === 'ARS'))
-    sel.value = 'USD'
-    S.pintarAvisoPesos()
-    chk('con otra moneda y un cheque, se avisa', el(S, 'aviso-medio-pesos').hidden === false && el(S, 'aviso-medio-pesos').textContent === 'Los cheques son solo en pesos: elegí ARS.')
-    S.__setVar('medioPagoSeleccionado', 'efectivo')
-    S.pintarAvisoPesos()
-    chk('en efectivo, no', el(S, 'aviso-medio-pesos').hidden === true)
+    S.__setVar('medioPagoSeleccionado', 'qr')
+    S.estado.pagoCheques = true
+    S.pintarMedioPorMoneda()
+    chk('en otra moneda se avisa, sin QR ni cartera', el(S, 'aviso-medio-pesos').hidden === false && /los cheques de la cartera y el QR son solo en pesos/.test(el(S, 'aviso-medio-pesos').textContent) &&
+      el(S, 'btn-medio-qr').hidden === true && el(S, 'btn-medio-cartera').hidden === true && S.__getVar('medioPagoSeleccionado') === null && S.estado.pagoCheques === false)
+    sel.value = 'ARS'
+    S.pintarMedioPorMoneda()
+    chk('en pesos, no', el(S, 'aviso-medio-pesos').hidden === true && el(S, 'btn-medio-qr').hidden === false && el(S, 'btn-medio-cartera').hidden === false)
   }
 
-  // Efectivo y transferencia, como siempre.
+  // Efectivo, transferencia y QR.
   {
     const S = sandbox()
     await confirmar(S, { medio: 'transferencia', monto: 10, campos: { 'campo-cuenta-pago-cc': 'cta-1' } })
-    chk('transferencia: sigue por registrar_pago_proveedor con su cuenta',
-      S.__rpc.length === 1 && S.__rpc[0].nombre === 'registrar_pago_proveedor' && S.__rpc[0].params.p_cuenta_id === 'cta-1' && S.__rpc[0].params.p_medio_pago === 'transferencia')
+    chk('transferencia en pesos: por pagar_proveedor_mixto, con su cuenta',
+      S.__rpc.length === 1 && S.__rpc[0].nombre === 'pagar_proveedor_mixto' && S.__rpc[0].params.p_cuenta_resto === 'cta-1' &&
+      S.__rpc[0].params.p_medio_resto === 'transferencia' && S.__rpc[0].params.p_monto_resto === 10 && JSON.stringify(S.__rpc[0].params.p_cheque_ids) === '[]', JSON.stringify(S.__rpc))
+    const T = sandbox()
+    await confirmar(T, { medio: 'transferencia', moneda: 'USD', monto: 10, campos: { 'campo-cuenta-pago-cc': 'cta-usd' } })
+    chk('en dólares sigue el pago simple (registrar_pago_proveedor), sin orden',
+      T.__rpc.length === 1 && T.__rpc[0].nombre === 'registrar_pago_proveedor' && T.__rpc[0].params.p_cuenta_id === 'cta-usd' &&
+      T.__rpc[0].params.p_medio_pago === 'transferencia' && T.__rpc[0].params.p_moneda === 'USD' && T.__rpc[0].params.p_monto === 10, JSON.stringify(T.__rpc))
   }
 
   // ══ 5. LA ETIQUETA DEL PAGO EN LA CUENTA ═══════════════════════════════════

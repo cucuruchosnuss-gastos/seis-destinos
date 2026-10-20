@@ -79,6 +79,9 @@ const PRELUDIO = `
   function eliminarFactura() { return false } function abrirModalDetallePago() {} function abrirModalAsignarProveedor() {}
   function abrirModalEditarProveedor() {} function abrirFichaDesdePadron() {}
   async function cargarCuentasParaPago() {} function seleccionarMedioPagoCC() {} function renderizarFilasFifo() {}
+  // El pago en los dos sentidos y la orden de pago (20/10/2026).
+  function pintarMedioPorMoneda() {} async function actualizarSugerenciasPago() {}
+  async function cargarFichaOrdenesPago() {} function renderizarFichaOrdenesPago() {}
   function abrirModalAplicarCredito() {}
   var __creditoElegido = null
   async function seleccionarCreditoParaAplicar(c) { __creditoElegido = c }

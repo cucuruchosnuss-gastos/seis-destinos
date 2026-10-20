@@ -75,6 +75,9 @@ const PRELUDIO = `
   async function recargarTrasImporte() { __recargas++ }
   function renderizarFilasFifo() { __fifo++ }
   var facturasParaPago = []
+  // El pago en los dos sentidos (20/10/2026): las facturas se leen con turno.
+  var turnoFacturasPago = 0, errorFacturasPago = null
+  function monedaPago() { return document.getElementById('campo-moneda-pago').value || 'ARS' }
   var estado = {
     miRolApp: 'usuario', miEmpleadoId: 'yo',
     misTareas: new Set(['cuentas_corrientes:ver_todo', 'cuentas_corrientes:registrar_pago']),

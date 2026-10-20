@@ -60,7 +60,7 @@ const RETIRADOS_PROPIO = [
 const MENOS_COPIAS = [
   ['control:button[data-valor][type=button]', 2,
     'Efectivo y Transferencia / QR (la cartera tiene id propio, #btn-medio-cartera): el "Cheque" suelto se fue el 05/10/2026 y el "Cheque / e-cheque propio" el 11/10/2026 (la empresa no emite cheques propios)'],
-  ['data:data-valor', 3, `los tres medios de Registrar pago: ${SIN_PROPIO}`],
+  ['data:data-valor', 4, `los medios de Registrar pago: Efectivo, Transferencia, QR (20/10/2026) y la cartera; ${SIN_PROPIO}`],
 ]
 
 let ok = 0

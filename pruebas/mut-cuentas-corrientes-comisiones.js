@@ -30,11 +30,11 @@ correrMutaciones({
     { nombre: 'pagar con cualquier factura', de: "      if (!m || info?.modulo_origen !== 'comision') return\n", a: '      if (!m) return\n' },
     { nombre: 'pagar sin registrar_pago', de: "      if (!f || !tieneTarea('cuentas_corrientes', 'registrar_pago')) return\n      const m = (f.movimientosRaw", a: '      if (!f) return\n      const m = (f.movimientosRaw' },
     { nombre: 'pagar sin el monto', de: "      ponerNumero(document.getElementById('campo-monto-pago'), saldo)\n", a: '' },
-    { nombre: 'pagar deja el FIFO', de: '      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, monto)\n', a: '' },
+    { nombre: 'pagar deja el FIFO', de: "      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, montoDeCampo('campo-monto-pago'))\n", a: '' },
     { nombre: 'pagar no recuerda la factura', de: '      estado.pagoFacturaElegida = facturaId\n', a: '' },
     { nombre: 'la más vieja queda tildada', de: '        : { ...f, checked: false, monto: 0 })', a: '        : f)' },
     { nombre: 'se paga el saldo aunque el monto sea menor', de: '? { ...f, checked: true, monto: Number.isFinite(m) && m > 0 ? Math.min(f.saldo, m) : f.saldo }', a: '? { ...f, checked: true, monto: f.saldo }' },
-    { nombre: 'abrir el modal no limpia la factura elegida', de: '      estado.pagoFacturaElegida = null\n      await cargarCuentasParaPago()', a: '      await cargarCuentasParaPago()' },
+    { nombre: 'abrir el modal no limpia la factura elegida', de: '      estado.pagoFacturaElegida = null\n      estado.pagoError = null\n      estado.pagoEnviando = false\n      await cargarCuentasParaPago()', a: '      estado.pagoError = null\n      estado.pagoEnviando = false\n      await cargarCuentasParaPago()' },
     { nombre: 'cerrar el modal no limpia la factura elegida', de: "      document.getElementById('modal-pago').hidden = true\n      estado.pagoFacturaElegida = null\n", a: "      document.getElementById('modal-pago').hidden = true\n" },
     // Se la queda la empresa
     { nombre: 'quedarse sin registrar_pago', de: "      if (!estado.ficha || !tieneTarea('cuentas_corrientes', 'registrar_pago') || estado.ficha.quedarse?.enCurso) return", a: '      if (!estado.ficha) return' },

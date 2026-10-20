@@ -1,26 +1,26 @@
-// PAGAR A UN PROVEEDOR CON CHEQUES DE CUALQUIER EMPRESA Y CON MEDIOS
-// COMBINADOS (15/10/2026, rama ci-prueba/pago-mixto). En la maqueta
-// (cc-cheques), sin credenciales, a 1280, 390 y 360 px y en la tablet
-// (1000 × 540):
-//  - "Cheques de la cartera" lista los en cartera de TODAS las empresas,
-//    agrupados (Cucuruchos Nuss, la del proveedor, primero; después Dolce
-//    Pasta). El de Dolce dice "de Dolce Pasta" y al tildarlo avisa la deuda
-//    entre empresas.
-//  - "Completar con" Efectivo: el resto, la cuenta, el monto total y el
-//    resumen ("Cheques $ X (2 cheques, 1 de Dolce Pasta) + Efectivo $ Y = …").
-//  - Confirmar: primero pagar_proveedor_con_cheques_cartera (los cheques
-//    cubren la factura más vieja) y después registrar_pago_proveedor por el
-//    resto, en ese orden y con esos parámetros.
-//  - Si el segundo pago falla: el aviso de que los cheques ya quedaron pagados
-//    y el error de la base; "Registrar el resto" reintenta SOLO el resto.
+// PAGO A PROVEEDORES EN LOS DOS SENTIDOS Y ORDEN DE PAGO (20/10/2026, rama
+// ci-prueba/pago-mixto; antes, 15/10/2026: cheques de cualquier empresa).
+// En la maqueta (cc-cheques), sin credenciales, a 1280, 390 y 360 px y en la
+// tablet (1000 × 540):
+//  - De las FACTURAS a los valores: se tildan las facturas, faltan valores
+//    (no deja confirmar), "Completar con efectivo/transferencia" pone la
+//    diferencia y se confirma.
+//  - De los VALORES a las facturas: cheques + transferencia, "Aplicar a las
+//    facturas más viejas" tilda de la más vieja a la más nueva con la última
+//    parcial.
+//  - UNA sola llamada a pagar_proveedor_mixto con los parámetros exactos, y
+//    después la ORDEN DE PAGO (datos_orden_pago) sin la empresa del cheque ni
+//    la cuenta, con el total en letras con centavos.
+//  - Saldo a favor, el error de la base tal cual (sin orden) y reimprimir
+//    desde la ficha.
 //  - Sin scroll horizontal y sin errores de JS.
 // Los datos se suman con 'maqueta.cambios' (no se tocan los de otras pruebas).
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
 const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
+test.describe.configure({ timeout: 90000 });
 
-// Lo que la maqueta anota de cada rpc ('[maqueta] rpc', nombre, params).
 function anotarRpc(page) {
   const rpc = [];
   page.on('console', async (m) => {
@@ -31,16 +31,28 @@ function anotarRpc(page) {
   return rpc;
 }
 const sinScrollHorizontal = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
-const pagos = (rpc) => rpc.filter(r => r.nombre === 'pagar_proveedor_con_cheques_cartera' || r.nombre === 'registrar_pago_proveedor');
+const pagos = (rpc) => rpc.filter(r => ['pagar_proveedor_mixto', 'pagar_proveedor_con_cheques_cartera', 'registrar_pago_proveedor'].includes(r.nombre));
 
-const ERROR_RESTO = 'El monto aplicado a la factura fp-2 supera su saldo pendiente';
+// Lo que devolvería datos_orden_pago (con la empresa del cheque y la cuenta,
+// que la hoja NO tiene que mostrar).
+const ORDEN = {
+  id: 'op-1', numero: 1, numero_texto: 'N-OP-00001', fecha: '2026-10-15', total: 650000.5,
+  observaciones: 'Entregado en mano', creada_por: 'Usuario Maqueta',
+  emisor: { empresa: 'Cucuruchos Nuss', razon_social: 'PAZ MIRTA', cuit: '20924106795', domicilio: 'Unión 843, Córdoba', logo_url: 'logo-cucuruchos-nuss.png' },
+  proveedor: { razon_social: 'ANATOLIA SRL', cuit: '30712345678', direccion: 'Ruta 9 km 5' },
+  facturas: [
+    { tipo: 'Factura A', numero: '0003-00001201', fecha: '2026-08-20', importe: 250000, aplicado: 250000, saldo_actual: 0 },
+    { tipo: 'Factura A', numero: '0003-00001245', fecha: '2026-09-05', importe: 400000, aplicado: 400000, saldo_actual: 0 },
+  ],
+  cheques: [{ banco: 'BANCO MACRO', numero: '55443322', fecha_pago: '2026-10-10', librador: [{ nombre: 'Heladería Sol', cuit: '30699999999' }], es_echeq: true, importe: 120000, de_empresa: 'Dolce Pasta', otra_empresa: true }],
+  otros_medios: [{ medio: 'transferencia', cuenta: 'Banco Galicia · mía', importe: 530000.5 }],
+  a_favor: 0.5,
+};
 
-// Un cheque de Dolce Pasta en cartera (de una cobranza asentada) y la
-// sugerencia de facturas para el total ($ 570.000): fp-1 entera y 320.000 de fp-2.
-async function abrir(page, { fallaResto = false } = {}) {
+async function abrir(page, { fallaPago = false, ordenes = [] } = {}) {
   await page.clock.setFixedTime(new Date('2026-10-15T10:30:00-03:00'));
   await page.goto(`${MAQUETA}/modulos/cuentas-corrientes.html?maqueta=cc-cheques`, { waitUntil: 'domcontentloaded' });
-  await page.evaluate(async (fallaResto) => {
+  await page.evaluate(async ({ fallaPago, ordenes, ORDEN }) => {
     const datos = await fetch('/maqueta/datos/cc-cheques.json').then(r => r.json());
     const cheques = [...datos.tablas.cobranza_cheques, {
       id: 'chq-dolce', cobranza_id: 'cob-dolce', banco_codigo: '285', numero: '55443322', estado: 'en_cartera',
@@ -52,146 +64,193 @@ async function abrir(page, { fallaResto = false } = {}) {
       unidad_negocio_id: 'u-d', unidad_negocio_nombre: 'Dolce Pasta',
     }];
     const rpc = {
-      sugerir_facturas_fifo: {
-        __segun: [{ si: { p_monto: 570000 }, r: [
-          { factura_pendiente_id: 'fp-1', fecha_factura: '2026-08-20', numero_comprobante: '0003-00001201', saldo_pendiente: 250000, monto_a_aplicar: 250000 },
-          { factura_pendiente_id: 'fp-2', fecha_factura: '2026-09-05', numero_comprobante: '0003-00001245', saldo_pendiente: 400000, monto_a_aplicar: 320000 },
-        ] }],
-        __defecto: [],
-      },
+      pagar_proveedor_mixto: fallaPago
+        ? 'ERROR:La cuenta no existe, está inactiva o no es en pesos.'
+        : { orden_pago_id: 'op-1', numero: 1, numero_texto: 'N-OP-00001', total: 650000, aplicado: 650000, a_favor: 0, gasto_cheques_id: 'g-1', gasto_resto_id: 'g-2' },
+      datos_orden_pago: ORDEN,
     };
-    if (fallaResto) rpc.registrar_pago_proveedor = 'ERROR:El monto aplicado a la factura fp-2 supera su saldo pendiente';
-    sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas: { cobranza_cheques: cheques, v_cobranzas: cobranzas }, rpc }));
+    // Dos cuentas de banco propias (la de la maqueta es de la Empresa).
+    const cuentas = [...datos.tablas.cuentas_caja,
+      { id: 'cta-banco-yo', nombre: 'Banco Galicia · mía', unidad_negocio_id: null, medio: 'banco', moneda: 'ARS', activa: true, empleado_id: 'emp-1' },
+      { id: 'cta-banco-yo2', nombre: 'Banco Nación · mía', unidad_negocio_id: null, medio: 'banco', moneda: 'ARS', activa: true, empleado_id: 'emp-1' }];
+    sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas: { cobranza_cheques: cheques, v_cobranzas: cobranzas, ordenes_pago: ordenes, cuentas_caja: cuentas }, rpc }));
     localStorage.setItem('barraUnidad.elegida', 'u-n');
-  }, fallaResto);
+  }, { fallaPago, ordenes, ORDEN });
   await page.goto(`${MAQUETA}/modulos/cuentas-corrientes.html?proveedor=pv1&unidad=u-n`);
-  await page.locator('#btn-registrar-pago').click();
-  await expect(page.locator('#modal-pago')).toBeVisible();
 }
 
-// Tilda el cheque de Nuss ($ 150.000) y el de Dolce ($ 120.000) y completa
-// con $ 300.000 en efectivo.
-async function armarPagoMixto(page, nombre, info) {
-  await page.locator('#grilla-medio-pago-cc [data-valor="cartera"]').click();
+async function abrirPago(page) {
+  await page.locator('#btn-registrar-pago').click();
+  await expect(page.locator('#modal-pago')).toBeVisible();
+  await expect(page.locator('#lista-fifo .check-fifo')).toHaveCount(2);
+}
+
+const fila = (page, numero) => page.locator('#lista-fifo .fila-fifo', { hasText: numero });
+
+async function tildarCheque(page, numero) {
   const lista = page.locator('#lista-cartera-pago');
+  if (await page.locator('#grupo-cartera-pago').isHidden()) await page.locator('#btn-medio-cartera').click();
   await expect(lista.locator('[data-cheque-cartera]')).toHaveCount(3);
-  // Agrupados: la empresa del proveedor primero.
-  expect(await lista.locator('.cartera-pago__grupo').allTextContents()).toEqual(['Cucuruchos Nuss', 'Dolce Pasta']);
-  const filaDolce = lista.locator('.cartera-pago__fila', { hasText: '55443322' });
-  await expect(filaDolce.locator('.cartera-pago__empresa')).toHaveText('de Dolce Pasta');
-  await expect(lista.locator('.cartera-pago__empresa')).toHaveCount(1);
-  // El de Dolce va DESPUÉS del título de Dolce (y los de Nuss antes).
-  const orden = await lista.evaluate(l => [...l.children].map(c => c.classList.contains('cartera-pago__grupo') ? 'T:' + c.textContent : c.textContent.match(/N° (\d+)/)?.[1]));
-  expect(orden).toEqual(['T:Cucuruchos Nuss', '12345678', '66259862', 'T:Dolce Pasta', '55443322']);
+  await lista.locator('.cartera-pago__fila', { hasText: numero }).locator('input').check();
+}
 
-  // Nada se monta sobre el importe y "de Dolce Pasta" se ve entero.
-  for (const fila of await lista.locator('.cartera-pago__fila').all()) {
-    const imp = await fila.locator('.cartera-pago__importe').boundingBox();
-    for (const sel of ['.cartera-pago__linea1', '.cartera-pago__linea2']) {
-      const b = await fila.locator(sel).boundingBox();
-      expect(b.x + b.width, `${sel} no se monta sobre el importe`).toBeLessThanOrEqual(imp.x + 1);
-    }
-  }
-  const chip = filaDolce.locator('.cartera-pago__empresa');
-  expect(await chip.evaluate(e => e.scrollWidth <= e.clientWidth + 1), '"de Dolce Pasta" entero').toBe(true);
-
-  await lista.locator('.cartera-pago__fila', { hasText: '12345678' }).locator('input').check();
-  await expect(page.locator('#aviso-cartera-otra-empresa')).toBeHidden();
-  await filaDolce.locator('input').check();
-  await expect(page.locator('#aviso-cartera-otra-empresa')).toHaveText('Este cheque es de Dolce Pasta: queda como deuda de Cucuruchos Nuss con Dolce Pasta (Entre empresas)');
-  await expect(page.locator('#total-cartera-pago')).toHaveText(/2 cheques tildados · total \$\s270\.000,00/);
-  await expect(page.locator('#campo-monto-pago')).toHaveValue('270.000');
-  await captura(page, `pago-mixto-cheques-${nombre}`, info);
-
-  // Completar con efectivo.
-  await expect(page.locator('#grupo-completar-pago')).toBeVisible();
-  await expect(page.locator('#grupo-resto-pago')).toBeHidden();
-  const efectivo = page.locator('#grilla-completar-pago [data-completar="efectivo"]');
-  await efectivo.click();
-  await expect(page.locator('#grupo-resto-pago')).toBeVisible();
-  // Elegido y con el mouse encima: naranja lleno (antes quedaba claro con la letra blanca).
-  await efectivo.hover();
-  await expect(efectivo).toHaveCSS('background-color', 'rgb(194, 65, 12)');
-  await page.locator('#campo-resto-pago').fill('300000');
-  await expect(page.locator('#campo-resto-pago')).toHaveValue('300.000');
-  await expect(page.locator('#campo-monto-pago')).toHaveValue('570.000');
-  await expect(page.locator('#grupo-cuenta-pago-cc')).toBeVisible();
-  await page.locator('#campo-cuenta-pago-cc').selectOption('cta-efectivo-yo');
-  // Las facturas para el total: las dos tildadas.
-  await expect(page.locator('#lista-fifo .check-fifo:checked')).toHaveCount(2);
-  await expect(page.locator('#resumen-pago-mixto')).toHaveText(
-    /^Cheques \$\s270\.000,00 \(2 cheques, 1 de Dolce Pasta\) \+ Efectivo \$\s300\.000,00 = \$\s570\.000,00 aplicado a facturas 0003-00001201, 0003-00001245$/);
-  expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
-  await captura(page, `pago-mixto-resumen-${nombre}`, info);
+async function confirmar(page) {
+  const b = page.locator('#btn-confirmar-pago');
+  await expect(b).toBeInViewport();
+  await b.click();
 }
 
 for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['360', 360, 780], ['tablet', 1000, 540]]) {
-  test(`${nombre}: cheques de dos empresas + efectivo, en dos pagos y en orden`, async ({ page }, info) => {
+  test(`${nombre}: de las facturas a los valores — faltan, "Completar", una sola llamada y la orden`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrir(page);
-    await armarPagoMixto(page, nombre, info);
+    await abrirPago(page);
 
-    const confirmar = page.locator('#btn-confirmar-pago');
-    await confirmar.scrollIntoViewIfNeeded();
-    await expect(confirmar).toBeInViewport();
-    await confirmar.click();
-    await expect.poll(() => pagos(rpc).length).toBe(2);
-    const [p1, p2] = pagos(rpc);
-    expect(p1.nombre, 'primero los cheques').toBe('pagar_proveedor_con_cheques_cartera');
-    expect(p2.nombre, 'después el resto').toBe('registrar_pago_proveedor');
-    expect(p1.params.p_cheque_ids.sort()).toEqual(['chq-2', 'chq-dolce']);
-    expect(p1.params).toMatchObject({ p_proveedor_id: 'pv1', p_unidad_negocio_id: 'u-n', p_fecha: '2026-10-15' });
-    expect(p1.params, 'los cheques no mueven caja').not.toHaveProperty('p_cuenta_id');
-    expect(p1.params.p_aplicaciones, 'los cheques cubren la factura más vieja').toEqual([
-      { factura_pendiente_id: 'fp-1', monto_aplicado: 250000 },
-      { factura_pendiente_id: 'fp-2', monto_aplicado: 20000 },
-    ]);
-    expect(p2.params).toMatchObject({
-      p_proveedor_id: 'pv1', p_unidad_negocio_id: 'u-n', p_moneda: 'ARS', p_monto: 300000,
-      p_medio_pago: 'efectivo', p_cuenta_id: 'cta-efectivo-yo', p_fecha_pago: '2026-10-15',
-    });
-    expect(p2.params.p_aplicaciones, 'el resto, a lo que quedó').toEqual([{ factura_pendiente_id: 'fp-2', monto_aplicado: 300000 }]);
-    await expect(page.locator('#modal-pago')).toBeHidden();
+    // Las dos facturas, la más vieja arriba; tildar pone su saldo.
+    expect(await page.locator('#lista-fifo .fila-fifo__numero').allTextContents()).toEqual(['0003-00001201 · 20/08/2026', '0003-00001245 · 05/09/2026']);
+    await fila(page, '0003-00001201').locator('.check-fifo').check();
+    await expect(fila(page, '0003-00001201').locator('.monto-fifo')).toHaveValue('250.000');
+    await fila(page, '0003-00001245').locator('.check-fifo').check();
+    await expect(page.locator('#resumen-aplicacion')).toHaveText(/^Facturas \$\s650\.000,00 · Valores \$\s0,00 · Diferencia \$\s650\.000,00$/);
+
+    // Un cheque de Dolce: faltan valores y no deja confirmar.
+    await tildarCheque(page, '55443322');
+    await expect(page.locator('#aviso-cartera-otra-empresa')).toHaveText(/Este cheque es de Dolce Pasta/);
+    await expect(page.locator('#aviso-diferencia-pago')).toHaveText(/^Faltan \$\s530\.000,00 para cubrir las facturas elegidas$/);
+    await confirmar(page);
+    await expect(page.locator('#error-confirmar-pago')).toHaveText(/^Faltan \$\s530\.000,00 para cubrir las facturas elegidas\.$/);
+    expect(pagos(rpc), 'faltando valores no se manda nada').toEqual([]);
+
+    // "Completar con efectivo/transferencia" pone la diferencia en el monto.
+    await page.locator('#btn-completar-diferencia').click();
+    await expect(page.locator('#campo-monto-pago')).toHaveValue('530.000');
+    await page.locator('#grilla-medio-pago-cc [data-valor="transferencia"]').click();
+    await page.locator('#campo-cuenta-pago-cc').selectOption('cta-banco-yo');
+    await expect(page.locator('#resumen-aplicacion')).toHaveText(/Diferencia \$\s0,00$/);
+    await expect(page.locator('#aviso-diferencia-pago')).toBeHidden();
+    await expect(page.locator('#resumen-pago-mixto')).toHaveText(
+      /^Cheques \$\s120\.000,00 \(1 cheque, 1 de Dolce Pasta\) \+ Transferencia \$\s530\.000,00 = \$\s650\.000,00, aplicado a facturas 0003-00001201, 0003-00001245\.$/);
+    await page.locator('#campo-observaciones-orden').fill('Entregado en mano');
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
+    await captura(page, `pago-facturas-a-valores-${nombre}`, info);
+
+    await confirmar(page);
+    await expect.poll(() => pagos(rpc).length).toBe(1);
+    expect(pagos(rpc)[0]).toEqual({ nombre: 'pagar_proveedor_mixto', params: {
+      p_proveedor_id: 'pv1', p_unidad_negocio_id: 'u-n', p_fecha: '2026-10-15', p_cheque_ids: ['chq-dolce'],
+      p_monto_resto: 530000, p_medio_resto: 'transferencia', p_cuenta_resto: 'cta-banco-yo',
+      p_aplicaciones: [{ factura_pendiente_id: 'fp-1', monto_aplicado: 250000 }, { factura_pendiente_id: 'fp-2', monto_aplicado: 400000 }],
+      p_observaciones: 'Entregado en mano',
+    } });
+    await expect(page.locator('#modal-pago')).toBeHidden();
+
+    // La orden de pago.
+    const hoja = page.locator('#orden-pago-hoja');
+    await expect(page.locator('#modal-orden-pago')).toBeVisible();
+    await expect(hoja).toContainText('ORDEN DE PAGO');
+    await expect(hoja).toContainText('N-OP-00001');
+    await expect(hoja).toContainText('PAZ MIRTA');
+    await expect(hoja).toContainText('CUIT 20-92410679-5');
+    await expect(hoja).toContainText('Se cancelan los siguientes comprobantes');
+    await expect(hoja).toContainText('eCheq');
+    await expect(hoja).toContainText('SEISCIENTOS CINCUENTA MIL PESOS CON CINCUENTA CENTAVOS');
+    await expect(hoja).toContainText('Saldo a favor del proveedor');
+    await expect(hoja).toContainText('Recibí conforme (proveedor)');
+    await expect(hoja).toContainText('Generada por Usuario Maqueta');
+    const texto = await hoja.textContent();
+    expect(texto, 'la orden NO dice de qué empresa venía el cheque').not.toContain('Dolce Pasta');
+    expect(texto, 'la orden NO imprime la cuenta').not.toContain('Banco Galicia · mía');
+    expect(rpc.filter(r => r.nombre === 'datos_orden_pago').map(r => r.params)).toEqual([{ p_orden_id: 'op-1' }]);
+    await expect(page.locator('#btn-imprimir-orden')).toBeVisible();
+    expect(await sinScrollHorizontal(page), 'sin scroll horizontal con la orden abierta').toBe(true);
+    await captura(page, `orden-pago-${nombre}`, info);
+    // Al imprimir se ve SOLO la hoja.
+    await page.evaluate(() => document.documentElement.classList.add('op-imprimiendo'));
+    await page.emulateMedia({ media: 'print' });
+    expect(await page.locator('#vista-ficha').isVisible(), 'la ficha no se imprime').toBe(false);
+    await expect(hoja).toBeVisible();
+    await expect(page.locator('#btn-imprimir-orden')).toBeHidden();
+    await page.emulateMedia({ media: 'screen' });
+    await page.locator('#btn-cerrar-orden').click();
+    await expect(page.locator('#modal-orden-pago')).toBeHidden();
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`${nombre}: si el resto falla, los cheques ya quedaron pagados y se reintenta solo el resto`, async ({ page }, info) => {
+  test(`${nombre}: de los valores a las facturas — "Aplicar a las más viejas" con la última parcial`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
-    await abrir(page, { fallaResto: true });
-    await armarPagoMixto(page, `${nombre}-falla`, info);
+    await abrir(page);
+    await abrirPago(page);
 
-    const confirmar = page.locator('#btn-confirmar-pago');
-    await confirmar.scrollIntoViewIfNeeded();
-    await confirmar.click();
-    const aviso = page.locator('#aviso-resto-pendiente');
-    await expect(aviso).toBeVisible();
-    await expect(aviso).toHaveText(new RegExp(`^Los cheques ya quedaron pagados \\(gasto g-nuevo\\)\\. Falta registrar el resto de \\$\\s300\\.000,00: ${ERROR_RESTO}$`));
-    expect(pagos(rpc).map(r => r.nombre)).toEqual(['pagar_proveedor_con_cheques_cartera', 'registrar_pago_proveedor']);
-    // El formulario queda para el resto: sin los cheques ni las facturas.
-    await expect(page.locator('#modal-pago')).toBeVisible();
-    await expect(page.locator('#grupo-cartera-pago')).toBeHidden();
-    await expect(page.locator('#grupo-facturas-pago')).toBeHidden();
-    await expect(page.locator('#resumen-pago-mixto')).toBeHidden();
-    await expect(page.locator('#grilla-medio-pago-cc [data-valor="cartera"]')).toBeDisabled();
-    await expect(page.locator('#grilla-completar-pago [data-completar="transferencia"]')).toBeDisabled();
-    await expect(confirmar).toHaveText('Registrar el resto');
-    await aviso.scrollIntoViewIfNeeded();
-    await expect(aviso).toBeInViewport();
+    await tildarCheque(page, '12345678');
+    await page.locator('#grilla-medio-pago-cc [data-valor="efectivo"]').click();
+    await page.locator('#campo-monto-pago').fill('200000');
+    await page.locator('#campo-cuenta-pago-cc').selectOption('cta-efectivo-yo');
+    await expect(page.locator('#aviso-diferencia-pago')).toHaveText('Pago a cuenta: queda todo a favor');
+    await page.locator('#btn-aplicar-viejas').click();
+    await expect(fila(page, '0003-00001201').locator('.check-fifo')).toBeChecked();
+    await expect(fila(page, '0003-00001201').locator('.monto-fifo')).toHaveValue('250.000');
+    await expect(fila(page, '0003-00001245').locator('.check-fifo')).toBeChecked();
+    await expect(fila(page, '0003-00001245').locator('.monto-fifo'), 'la última, parcial').toHaveValue('100.000');
+    await expect(page.locator('#resumen-aplicacion')).toHaveText(/Valores \$\s350\.000,00 · Diferencia \$\s0,00$/);
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
-    await captura(page, `pago-mixto-falla-${nombre}`, info);
+    await captura(page, `pago-valores-a-facturas-${nombre}`, info);
 
-    // Reintentar: SOLO el resto (la maqueta sigue fallando: el aviso se queda).
-    await confirmar.scrollIntoViewIfNeeded();
-    await confirmar.click();
-    await expect.poll(() => pagos(rpc).length).toBe(3);
-    expect(pagos(rpc).map(r => r.nombre), 'los cheques se mandaron UNA sola vez').toEqual(['pagar_proveedor_con_cheques_cartera', 'registrar_pago_proveedor', 'registrar_pago_proveedor']);
-    expect(pagos(rpc)[2].params).toMatchObject({ p_monto: 300000, p_medio_pago: 'efectivo', p_cuenta_id: 'cta-efectivo-yo' });
-    await expect(aviso).toHaveText(new RegExp(`${ERROR_RESTO}$`));
+    await confirmar(page);
+    await expect.poll(() => pagos(rpc).length).toBe(1);
+    expect(pagos(rpc)[0].params).toEqual({
+      p_proveedor_id: 'pv1', p_unidad_negocio_id: 'u-n', p_fecha: '2026-10-15', p_cheque_ids: ['chq-2'],
+      p_monto_resto: 200000, p_medio_resto: 'efectivo', p_cuenta_resto: 'cta-efectivo-yo',
+      p_aplicaciones: [{ factura_pendiente_id: 'fp-1', monto_aplicado: 250000 }, { factura_pendiente_id: 'fp-2', monto_aplicado: 100000 }],
+      p_observaciones: null,
+    });
+    await expect(page.locator('#modal-orden-pago')).toBeVisible();
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+}
+
+for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844]]) {
+  test(`${nombre}: solo transferencia, lo que sobra queda a favor, y el error de la base tal cual sin orden`, async ({ page }) => {
+    const errores = vigilarErrores(page);
+    const rpc = anotarRpc(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await abrir(page, { fallaPago: true });
+    await abrirPago(page);
+    await fila(page, '0003-00001201').locator('.check-fifo').check();
+    await page.locator('#grilla-medio-pago-cc [data-valor="qr"]').click();
+    await page.locator('#campo-monto-pago').fill('300000');
+    await page.locator('#campo-cuenta-pago-cc').selectOption('cta-banco-yo2');
+    await expect(page.locator('#aviso-diferencia-pago')).toHaveText(/^Quedan \$\s50\.000,00 a favor del proveedor$/);
+    await confirmar(page);
+    await expect.poll(() => pagos(rpc).length).toBe(1);
+    expect(pagos(rpc)[0].params).toMatchObject({ p_cheque_ids: [], p_monto_resto: 300000, p_medio_resto: 'qr', p_cuenta_resto: 'cta-banco-yo2',
+      p_aplicaciones: [{ factura_pendiente_id: 'fp-1', monto_aplicado: 250000 }] });
+    await expect(page.locator('#error-confirmar-pago')).toHaveText('La cuenta no existe, está inactiva o no es en pesos.');
+    await expect(page.locator('#modal-pago')).toBeVisible();
+    await expect(page.locator('#modal-orden-pago')).toBeHidden();
+    expect(rpc.some(r => r.nombre === 'datos_orden_pago'), 'sin orden').toBe(false);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
+  test(`${nombre}: la ficha lista las órdenes de pago y se reimprimen`, async ({ page }) => {
+    const errores = vigilarErrores(page);
+    const rpc = anotarRpc(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await abrir(page, { ordenes: [
+      { id: 'op-1', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 1, fecha: '2026-10-14', total: 650000.5, creada_en: '2026-10-14T12:00:00Z' },
+      { id: 'op-2', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 2, fecha: '2026-10-15', total: 1000, creada_en: '2026-10-15T12:00:00Z' },
+    ] });
+    const seccion = page.locator('#ficha-ordenes-pago');
+    await expect(seccion).toContainText('Órdenes de pago (2)');
+    expect(await seccion.locator('.orden-pago-cc__numero').allTextContents(), 'la más nueva arriba').toEqual([
+      expect.stringContaining('N-OP-00002'), expect.stringContaining('N-OP-00001')]);
+    await seccion.locator('[data-reimprimir-orden="op-1"]').click();
+    await expect(page.locator('#orden-pago-hoja')).toContainText('N-OP-00001');
+    expect(rpc.filter(r => r.nombre === 'datos_orden_pago').map(r => r.params)).toEqual([{ p_orden_id: 'op-1' }]);
+    expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 }

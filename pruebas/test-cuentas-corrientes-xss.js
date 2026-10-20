@@ -78,7 +78,9 @@ const RENDERS = [
   'renderizarListaHistorial', 'renderizarFichaUnidad', 'htmlFichaUnidad', 'htmlDesgloseResumen', 'sincronizarUrlFicha', 'renderizarFichaBanner',
   'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'crearSelectorOrdenFicha', 'abrirModalAplicarCreditoDesdeFicha', 'seleccionarCreditoParaAplicar',
-  'actualizarSelectorCuentaPago', 'renderizarFilasFifo', 'actualizarResumenAplicacion',
+  'actualizarSelectorCuentaPago', 'renderizarFilasFifo',
+  // el pago en los dos sentidos y la orden de pago (20/10/2026)
+  'pintarPiePago', 'htmlOrdenPago', 'htmlOrdenesPagoFicha', 'renderizarFichaOrdenesPago',
   'renderizarPreviewImportacion', 'mostrarErroresImportacion',
   // La barra de unidad (28/09/2026): viene de js/barra-unidad.js por el import
   // del módulo (extraer.js la encuentra ahí), con su código real.
@@ -173,6 +175,7 @@ const PRELUDIO = `
   var facturasParaCredito = [], medioPagoSeleccionado = null, facturasParaPago = [], proveedorAEditar = null
   var carteraPago = []
   var fichaOrigen = 'lista', importacionPendiente = null, debounceFifo = null
+  var turnoFacturasPago = 0, errorFacturasPago = null, turnoOrdenPago = 0, turnoCartera = 0, bancosBcra = null
 `
 
 const RETORNO = 'estado, __els, __el(id){ return document.getElementById(id) }, __llamadas, __navegacion, __historial, ' +
@@ -447,7 +450,29 @@ async function correrRenders(S) {
   S.renderizarCarteraPago()
   chequearMarcas(chk, 'cheques de la cartera para pagar', html('lista-cartera-pago'), ['car_num', 'car_banco', 'car_lib', 'car_emp'])
   chequearMarcas(chk, 'aviso del cheque de otra empresa', html('aviso-cartera-otra-empresa'), ['car_emp'])
-  chk('resumen de aplicación: sin marcas (solo importes en ARS)', !/data-xss/.test(html('resumen-aplicacion')))
+  chk('la barra del pie: sin marcas (solo importes en ARS)', !/data-xss/.test(html('resumen-aplicacion')))
+  el('campo-moneda-pago').value = marca('pie_moneda')
+  S.pintarPiePago()
+  chequearMarcas(chk, 'la barra del pie con la moneda de la base', html('resumen-aplicacion'), ['pie_moneda'])
+  el('campo-moneda-pago').value = 'ARS'
+
+  // La orden de pago (20/10/2026): todo lo que viene de datos_orden_pago.
+  const hojaOrden = S.htmlOrdenPago({
+    numero_texto: marca('op_num'), fecha: '2026-10-15', total: 10, observaciones: marca('op_obs'), creada_por: marca('op_quien'),
+    emisor: { empresa: marca('op_emp'), razon_social: marca('op_razon'), cuit: marca('op_cuit'), domicilio: marca('op_dom'), logo_url: '"><b data-xss="op_logo">.png' },
+    proveedor: { razon_social: marca('op_prov'), cuit: marca('op_pcuit'), direccion: marca('op_pdir') },
+    facturas: [{ tipo: marca('op_ftipo'), numero: marca('op_fnum'), fecha: '2026-10-01', importe: 1, aplicado: 1, saldo_actual: 0 }],
+    cheques: [{ banco: marca('op_cbanco'), numero: marca('op_cnum'), fecha_pago: '2026-10-01', librador: [{ nombre: marca('op_clib'), cuit: marca('op_ccuit') }], es_echeq: true, importe: 5, de_empresa: marca('op_cemp'), otra_empresa: true }],
+    otros_medios: [{ medio: marca('op_medio'), cuenta: marca('op_cuenta'), importe: 5 }],
+    a_favor: 1,
+  })
+  chequearMarcas(chk, 'la orden de pago', hojaOrden, ['op_num', 'op_obs', 'op_quien', 'op_razon', 'op_cuit', 'op_dom', 'op_prov', 'op_pcuit', 'op_pdir',
+    'op_ftipo', 'op_fnum', 'op_cbanco', 'op_cnum', 'op_clib', 'op_ccuit', 'op_medio'])
+  chk('la orden de pago: un logo con comillas no entra (ni crudo ni escapado)', !hojaOrden.includes('op_logo') && !/<img/.test(hojaOrden))
+  chk('la orden de pago: NO se imprime la empresa del cheque ni la cuenta', !hojaOrden.includes('op_cemp') && !hojaOrden.includes('op_cuenta'))
+  const fichaOrdenes = S.htmlOrdenesPagoFicha([{ id: marca('ofp_id'), unidad_negocio_id: 'u-x', numero: 3, fecha: '2026-10-15', total: 5, creada_en: '2026-10-15' }], { unidadId: null })
+  chequearMarcas(chk, 'las órdenes de pago de la ficha', fichaOrdenes, ['ofp_id'])
+  chequearMarcas(chk, 'las órdenes de pago de la ficha (el error)', S.htmlOrdenesPagoFicha([], { error: marca('ofp_err') }), ['ofp_err'])
 
   // La moneda del pago (abrirModalPago está stubeada para que ningún render
   // lo abra): se afirman sus dos ramas sobre el cuerpo real.
@@ -587,11 +612,24 @@ const SEGURAS = {
     'htmlListaCartera(carteraPago)': 'htmlListaCartera() escapa el nombre de la empresa y cada fila va por htmlFilaCartera() (ejecutadas con marcas)',
   },
   renderizarFilasFifo: {
-    i: 'índice del map', 'formatearFecha(f.fecha)': fecha('sugerir_facturas_fifo() devuelve fecha_factura date'), 'importeHtml(f.saldo)': IMPORTE,
+    i: 'índice del map', 'formatearFecha(f.fecha)': fecha('facturas_pendientes.fecha_factura date'), 'importeHtml(f.saldo, moneda)': IMPORTE,
   },
-  actualizarResumenAplicacion: {
-    'importeHtml(sumaAplicada)': IMPORTE, 'importeHtml(monto)': IMPORTE, 'importeHtml(excedente)': IMPORTE,
-    html: HTML_PROPIO,
+  // El pago en los dos sentidos (20/10/2026): la barra del pie.
+  htmlBarraPago: {
+    'importeHtml(t.cFacturas / 100, moneda)': IMPORTE, 'importeHtml(t.cValores / 100, moneda)': IMPORTE,
+    'importeHtml(Math.abs(t.cDiferencia) / 100, moneda)': IMPORTE, 'clase.trim()': 'una de dos clases literales del código',
+  },
+  pintarPiePago: { 'htmlBarraPago(t, moneda)': 'htmlBarraPago(): importes por importeHtml() y una clase del código (ejecutada con la moneda marcada)' },
+  // La orden de pago (20/10/2026).
+  htmlOrdenPago: {
+    'importeHtml(f.importe)': IMPORTE, 'importeHtml(f.aplicado)': IMPORTE, 'importeHtml(f.saldo_actual)': IMPORTE,
+    'importeHtml(c.importe)': IMPORTE, 'importeHtml(o.importe)': IMPORTE, 'importeHtml(d?.total)': IMPORTE, 'importeHtml(favor)': IMPORTE,
+    filasFacturas: HTML_PROPIO, filasCheques: HTML_PROPIO, filasOtros: HTML_PROPIO,
+  },
+  abrirOrdenPago: { 'htmlOrdenPago(res.data)': 'htmlOrdenPago() escapa cada dato de la base (ejecutada con marcas)' },
+  htmlOrdenesPagoFicha: { 'filas.length': 'un número (la cantidad de órdenes)', 'importeHtml(o.total)': IMPORTE },
+  renderizarFichaOrdenesPago: {
+    'htmlOrdenesPagoFicha(estado.ficha.ordenesPago, { unidadId: estado.ficha.unidadId, error: estado.ficha.errorOrdenesPago })': 'htmlOrdenesPagoFicha() escapa cada dato (ejecutada con marcas)',
   },
   '(top-level)': {
     'importeHtml(total, moneda)': IMPORTE + ' — la línea de "Total a cargar" del listener de input de "Cargar importe"',

@@ -1148,14 +1148,106 @@
       background: var(--color-superficie);
     }
 
-    /* ── Registrar pago: los tres medios ──────────────────────────────── */
-    /* Efectivo y Transferencia / QR en una fila; "Cheques de la cartera"
-       (solo con cobranzas:procesar) abajo, a todo el ancho: así con dos o
-       con tres botones no queda un hueco. Desde el 11/10/2026 no hay
-       "Cheque / e-cheque propio": la empresa no emite cheques propios. */
-    #grilla-medio-pago-cc { grid-template-columns: repeat(2, 1fr); }
-    #grilla-medio-pago-cc [data-valor="cartera"] { grid-column: 1 / -1; }
+    /* ── Registrar pago (20/10/2026): facturas arriba, valores abajo ───── */
+    /* Efectivo, Transferencia y QR en una fila (en otra moneda, sin QR: dos).
+       "Cheques de la cartera" es un botón propio, a todo el ancho, que abre
+       la lista. Desde el 11/10/2026 no hay "Cheque / e-cheque propio". */
+    #grilla-medio-pago-cc { grid-template-columns: repeat(3, 1fr); }
+    #grilla-medio-pago-cc.grilla-medio-pago--dos { grid-template-columns: repeat(2, 1fr); }
     #grilla-medio-pago-cc .btn-tipo-doc { min-height: 44px; font-size: 0.8125rem; }
+    .btn-cartera-pago { display: block; width: 100%; min-height: 44px; font-size: 0.8125rem; margin-bottom: 0.5rem; }
+    .btn-cartera-pago[hidden] { display: none; }
+    .pago-bloque {
+      border: 1px solid var(--color-borde); border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+    }
+    .pago-bloque > label { font-size: 0.9375rem; font-weight: 700; }
+    .pago-bloque__ayuda { margin: 0 0 0.25rem; }
+    .pago-bloque__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+    .pago-bloque__acciones:empty { display: none; }
+    .btn-pago-ayuda {
+      min-height: 40px; padding: 0.375rem 0.875rem;
+      border: 1.5px solid var(--color-acento); border-radius: 10px;
+      background: var(--color-fondo); color: var(--color-acento-hover);
+      font-family: var(--fuente); font-size: 0.8125rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-pago-ayuda[hidden] { display: none; }
+    .fila-fifo--tildada { background: var(--color-acento-fila); }
+    .fila-fifo__error { flex-basis: 100%; font-size: 0.75rem; font-weight: 600; color: var(--bordo-oscuro); }
+    #lista-fifo .fila-fifo { flex-wrap: wrap; }
+    /* El pie del formulario: la barra de totales, los avisos y los botones,
+       siempre a la vista (pegado abajo mientras se recorre el formulario). */
+    .pago-pie {
+      position: sticky; bottom: -1.5rem; z-index: 2;
+      margin: 0.75rem -1.25rem -1.5rem; padding: 0.5rem 1.25rem 1.25rem;
+      background: var(--color-fondo); border-top: 1px solid var(--color-borde);
+    }
+    .pago-pie .resumen-aplicacion { margin-top: 0; font-weight: 600; overflow-wrap: anywhere; }
+    .resumen-aplicacion__dif--falta { color: var(--bordo-oscuro); }
+    .resumen-aplicacion__dif--sobra { color: var(--amarillo-oscuro); }
+    .pago-pie__botones { display: flex; gap: 0.75rem; padding-top: 0.75rem; }
+    .pago-aviso, .pago-error {
+      margin: 0.5rem 0 0; padding: 0.5rem 0.75rem; border-radius: 8px;
+      font-size: 0.8125rem; font-weight: 600; overflow-wrap: anywhere;
+    }
+    .pago-aviso { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    .pago-aviso--falta { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pago-error { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pago-aviso[hidden], .pago-error[hidden] { display: none; }
+    #campo-observaciones-orden {
+      width: 100%; padding: 0.5rem 0.875rem; border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input); font-family: var(--fuente); font-size: 0.9375rem; resize: vertical;
+    }
+
+    /* ── La orden de pago (20/10/2026): una hoja A4 vertical ──────────── */
+    @media (min-width: 641px) { #modal-orden-pago .modal-cc__panel { max-width: 860px; } }
+    .op-acciones { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .op-acciones h2 { margin: 0; }
+    .op-acciones__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .op-hoja-marco { overflow-x: auto; }
+    .op-hoja {
+      box-sizing: border-box; width: 100%; max-width: 194mm; margin: 0 auto;
+      padding: 6mm; background: #fff; color: #111;
+      font-family: var(--fuente); font-size: 10.5pt; line-height: 1.35;
+      border: 1px solid var(--color-borde);
+    }
+    .op-cab { display: flex; justify-content: space-between; gap: 6mm; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 3mm; }
+    .op-cab__emisor { display: flex; gap: 4mm; align-items: flex-start; min-width: 0; }
+    .op-cab__logo { max-height: 16mm; max-width: 30mm; object-fit: contain; }
+    .op-cab__razon { font-size: 13pt; font-weight: 800; }
+    .op-cab__dato { font-size: 9.5pt; }
+    .op-cab__titulo { text-align: right; flex-shrink: 0; }
+    .op-cab__titulo-texto { font-size: 15pt; font-weight: 800; letter-spacing: 0.02em; }
+    .op-cab__numero { font-size: 13pt; font-weight: 700; }
+    .op-seccion { margin-top: 4mm; }
+    .op-seccion__titulo { font-size: 10pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.5mm; }
+    .op-tabla { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+    .op-tabla th, .op-tabla td { border: 1px solid #555; padding: 1.2mm 1.6mm; text-align: left; vertical-align: top; }
+    .op-tabla th { background: #eee; font-weight: 700; }
+    .op-tabla .op-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: #111; }
+    .op-total { margin-top: 4mm; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; border-top: 2px solid #111; padding-top: 2mm; }
+    .op-total__numero { font-size: 14pt; font-weight: 800; white-space: nowrap; }
+    .op-letras { font-size: 9.5pt; margin-top: 1mm; }
+    .op-favor { margin-top: 2mm; font-weight: 700; }
+    .op-firmas { display: flex; gap: 12mm; margin-top: 18mm; }
+    .op-firma { flex: 1; border-top: 1px solid #111; padding-top: 1.5mm; font-size: 9pt; text-align: center; }
+    .op-pie { margin-top: 4mm; font-size: 8pt; color: #555; }
+    @media print {
+      @page { size: A4 portrait; margin: 8mm; }
+      html.op-imprimiendo body > *:not(#modal-orden-pago) { display: none !important; }
+      html.op-imprimiendo, html.op-imprimiendo body { background: #fff !important; margin: 0 !important; }
+      html.op-imprimiendo #modal-orden-pago { position: static; display: block; }
+      html.op-imprimiendo #modal-orden-pago .modal-cc__backdrop,
+      html.op-imprimiendo #modal-orden-pago .op-acciones { display: none !important; }
+      html.op-imprimiendo #modal-orden-pago .modal-cc__panel { max-height: none; overflow: visible; padding: 0; box-shadow: none; border-radius: 0; max-width: none; }
+      html.op-imprimiendo .op-hoja { border: 0; padding: 0; max-width: none; }
+    }
+    /* Las órdenes de pago del proveedor, en la ficha. */
+    .ordenes-pago-cc { margin-top: 1.25rem; }
+    .orden-pago-cc { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid var(--color-divisor); }
+    .orden-pago-cc__info { min-width: 0; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .orden-pago-cc__numero { font-weight: 700; }
+    .orden-pago-cc__meta { font-size: 0.75rem; color: var(--color-texto-2); }
     .cartera-pago { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-borde); border-radius: 10px; }
     .cartera-pago:empty { display: none; }
     .cartera-pago__fila {
@@ -1205,24 +1297,14 @@
       background: var(--amarillo-suave); color: var(--amarillo-oscuro);
       font-size: 0.8125rem; font-weight: 600; overflow-wrap: anywhere;
     }
-    /* Pago mixto: "Completar con" en tres botones iguales. */
-    #grilla-completar-pago { grid-template-columns: repeat(3, 1fr); }
-    #grilla-completar-pago .btn-tipo-doc { min-height: 44px; font-size: 0.8125rem; }
-    #grilla-completar-pago .btn-tipo-doc:disabled,
     #grilla-medio-pago-cc .btn-tipo-doc:disabled { opacity: 0.55; cursor: not-allowed; }
-    #grupo-resto-pago { margin-top: 0.75rem; }
-    #grupo-resto-pago[hidden] { display: none; }
+    #grilla-medio-pago-cc .btn-tipo-doc[hidden] { display: none; }
     .resumen-pago-mixto {
       margin: 0.75rem 0 0; padding: 0.75rem 0.875rem; border-radius: 10px;
       background: var(--verde-suave); color: var(--verde-oscuro);
       font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere;
     }
-    .resto-pendiente-pago {
-      margin: 0.75rem 0 0; padding: 0.75rem 0.875rem; border-radius: 10px;
-      background: var(--bordo-suave); color: var(--bordo-oscuro);
-      font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere;
-    }
-    .resumen-pago-mixto[hidden], .resto-pendiente-pago[hidden] { display: none; }
+    .resumen-pago-mixto[hidden] { display: none; }
     /* Los <select> del modal de pago (la cuenta de caja) con el mismo
        aspecto que los campos de texto: sin esto quedaban con el control chico
        del sistema. */
@@ -1459,6 +1541,10 @@
       <!-- Remitos de este proveedor que todavía no tienen factura
            (remitos_sin_facturar). Informativo: NO suma al saldo. -->
       <div id="ficha-remitos-sin-facturar"></div>
+
+      <!-- Las órdenes de pago de este proveedor (20/10/2026), para
+           reimprimirlas. La más nueva arriba. -->
+      <div id="ficha-ordenes-pago"></div>
     </div>
   </div><!-- /vista-ficha -->
 
@@ -1520,60 +1606,66 @@
           <select id="campo-moneda-pago"></select>
         </div>
 
-        <div class="grupo-campo">
-          <label for="campo-monto-pago" id="etiqueta-monto-pago">Monto a pagar</label>
-          <input type="text" id="campo-monto-pago" placeholder="0,00" inputmode="decimal">
-          <p class="etiqueta-opcional" id="nota-monto-pago" hidden></p>
-        </div>
-
-        <!-- Tres medios. "Cheque" ya no va por registrar_pago_proveedor (no
-             movía ni la caja ni la cartera): los cheques de la cartera van por
-             pagar_proveedor_con_cheques_cartera. El cheque / e-cheque propio
-             se sacó el 11/10/2026: la empresa no emite cheques propios. -->
-        <div class="grupo-campo">
-          <label>Medio de pago</label>
-          <div class="grilla-medio-pago" id="grilla-medio-pago-cc">
-            <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
-            <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia / QR</button>
-            <button type="button" class="btn-tipo-doc" data-valor="cartera" id="btn-medio-cartera" hidden>Cheques de la cartera</button>
-          </div>
-          <p class="etiqueta-opcional" id="aviso-medio-pesos" hidden></p>
-        </div>
-
-        <!-- Cheques de la cartera: los EN CARTERA de TODAS las empresas
-             (15/10/2026), de cobranzas asentadas, agrupados por empresa (la
-             que paga primero). Se tildan; la suma es lo que pagan los
-             cheques. Uno de otra empresa queda como deuda entre empresas. -->
-        <div class="grupo-campo" id="grupo-cartera-pago" hidden>
-          <label>Cheques de la cartera</label>
-          <p class="etiqueta-opcional" id="nota-cartera-pago" hidden></p>
-          <div class="cartera-pago" id="lista-cartera-pago"></div>
-          <div class="cartera-pago__total" id="total-cartera-pago" hidden></div>
-          <div class="cartera-pago__avisos" id="aviso-cartera-otra-empresa" aria-live="polite" hidden></div>
-        </div>
-
-        <!-- PAGO MIXTO (15/10/2026): los cheques más efectivo o transferencia
-             por el resto, en un solo formulario. Son DOS pagos en la base:
-             primero los cheques y después el resto. -->
-        <div class="grupo-campo" id="grupo-completar-pago" hidden>
-          <label>Completar con</label>
-          <div class="grilla-medio-pago" id="grilla-completar-pago">
-            <button type="button" class="btn-tipo-doc" data-completar="">Solo cheques</button>
-            <button type="button" class="btn-tipo-doc" data-completar="efectivo">Efectivo</button>
-            <button type="button" class="btn-tipo-doc" data-completar="transferencia">Transferencia / QR</button>
-          </div>
-          <div class="grupo-campo" id="grupo-resto-pago" hidden>
-            <label for="campo-resto-pago" id="etiqueta-resto-pago">El resto</label>
-            <input type="text" id="campo-resto-pago" placeholder="0,00" inputmode="decimal">
+        <!-- PAGO A PROVEEDOR EN LOS DOS SENTIDOS (20/10/2026). Dos bloques
+             que se llenan en cualquier orden: las FACTURAS que se pagan (con
+             cuánto se aplica a cada una) y los VALORES con que se paga
+             (cheques de la cartera de cualquier empresa + efectivo,
+             transferencia o QR). En pesos va UNA sola llamada a
+             pagar_proveedor_mixto, que es atómica, reparte entre cheques y
+             resto y deja una ORDEN DE PAGO numerada. En otra moneda: un pago
+             simple por registrar_pago_proveedor, sin orden. -->
+        <div class="grupo-campo pago-bloque" id="grupo-facturas-pago">
+          <label>Facturas que se pagan</label>
+          <p class="etiqueta-opcional pago-bloque__ayuda">Tildá las que se pagan. Por defecto se aplica su saldo; se puede bajar para pagar una parte.</p>
+          <div id="lista-fifo"></div>
+          <p class="etiqueta-opcional" id="fifo-vacio" hidden>Este proveedor no tiene facturas pendientes en esta empresa.</p>
+          <div class="pago-bloque__acciones">
+            <button type="button" class="btn-pago-ayuda" id="btn-aplicar-viejas" hidden>Aplicar a las facturas más viejas</button>
           </div>
         </div>
 
-        <div class="grupo-campo" id="grupo-cuenta-pago-cc" style="display:none;">
-          <label for="campo-cuenta-pago-cc">Cuenta</label>
-          <select id="campo-cuenta-pago-cc">
-            <option value="">— Seleccioná —</option>
-          </select>
-          <p class="etiqueta-opcional" id="aviso-sin-cuentas-pago" hidden></p>
+        <div class="grupo-campo pago-bloque" id="grupo-valores-pago">
+          <label>Con qué se paga</label>
+
+          <!-- Cheques de la cartera: los EN CARTERA de TODAS las empresas
+               (15/10/2026), de cobranzas asentadas, agrupados por empresa (la
+               que paga primero). Se tildan. Uno de otra empresa queda como
+               deuda entre empresas. Se abren con su botón (solo con
+               cobranzas:procesar). -->
+          <button type="button" class="btn-tipo-doc btn-cartera-pago" data-valor="cartera" id="btn-medio-cartera" aria-pressed="false" hidden>Cheques de la cartera</button>
+          <div class="grupo-campo" id="grupo-cartera-pago" hidden>
+            <p class="etiqueta-opcional" id="nota-cartera-pago" hidden></p>
+            <div class="cartera-pago" id="lista-cartera-pago"></div>
+            <div class="cartera-pago__total" id="total-cartera-pago" hidden></div>
+            <div class="cartera-pago__avisos" id="aviso-cartera-otra-empresa" aria-live="polite" hidden></div>
+          </div>
+
+          <div class="grupo-campo">
+            <label>Efectivo, transferencia o QR</label>
+            <div class="grilla-medio-pago" id="grilla-medio-pago-cc">
+              <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
+              <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia</button>
+              <button type="button" class="btn-tipo-doc" data-valor="qr" id="btn-medio-qr">QR</button>
+            </div>
+            <p class="etiqueta-opcional" id="aviso-medio-pesos" hidden></p>
+          </div>
+
+          <div class="grupo-campo">
+            <label for="campo-monto-pago" id="etiqueta-monto-pago">Monto</label>
+            <input type="text" id="campo-monto-pago" placeholder="0,00" inputmode="decimal">
+            <p class="etiqueta-opcional" id="nota-monto-pago" hidden></p>
+            <div class="pago-bloque__acciones">
+              <button type="button" class="btn-pago-ayuda" id="btn-completar-diferencia" hidden>Completar con efectivo/transferencia</button>
+            </div>
+          </div>
+
+          <div class="grupo-campo" id="grupo-cuenta-pago-cc" style="display:none;">
+            <label for="campo-cuenta-pago-cc">Cuenta</label>
+            <select id="campo-cuenta-pago-cc">
+              <option value="">— Seleccioná —</option>
+            </select>
+            <p class="etiqueta-opcional" id="aviso-sin-cuentas-pago" hidden></p>
+          </div>
         </div>
 
         <div class="grupo-campo" id="grupo-fecha-pago-cc">
@@ -1581,26 +1673,46 @@
           <input type="date" id="campo-fecha-pago-cc">
         </div>
 
-        <div class="grupo-campo" id="grupo-facturas-pago">
-          <label>Facturas a aplicar</label>
-          <div id="lista-fifo"></div>
-          <p class="etiqueta-opcional" id="fifo-vacio" hidden>Ingresá moneda y monto para ver las facturas.</p>
+        <div class="grupo-campo" id="grupo-observaciones-orden">
+          <label for="campo-observaciones-orden">Observaciones de la orden <span class="etiqueta-opcional">(opcional)</span></label>
+          <textarea id="campo-observaciones-orden" rows="2" maxlength="300" placeholder="Van impresas en la orden de pago"></textarea>
         </div>
 
-        <div class="resumen-aplicacion" id="resumen-aplicacion" hidden></div>
-        <!-- El resumen del pago con cheques, antes de confirmar. -->
+        <!-- El resumen antes de confirmar. -->
         <p class="resumen-pago-mixto" id="resumen-pago-mixto" hidden></p>
-        <!-- Si el segundo pago (el resto) falla: los cheques YA quedaron
-             pagados y solo falta el resto. -->
-        <p class="resto-pendiente-pago" id="aviso-resto-pendiente" role="alert" hidden></p>
       </div>
 
-      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
-        <button type="button" class="btn btn--secundario" id="btn-cancelar-pago">Cancelar</button>
-        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-pago">Confirmar pago</button>
+      <!-- Siempre a la vista, abajo: Facturas · Valores · Diferencia. -->
+      <div class="pago-pie">
+        <div class="resumen-aplicacion" id="resumen-aplicacion" aria-live="polite"></div>
+        <p class="pago-aviso" id="aviso-diferencia-pago" hidden></p>
+        <p class="pago-error" id="error-confirmar-pago" role="alert" hidden></p>
+        <div class="pago-pie__botones">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-pago">Cancelar</button>
+          <button type="button" class="btn btn-cc-accion" id="btn-confirmar-pago">Confirmar pago</button>
+        </div>
       </div>
     </div>
   </div><!-- /modal-pago -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       LA ORDEN DE PAGO (20/10/2026): lo que dejó pagar_proveedor_mixto, leído
+       con datos_orden_pago. A4 vertical; al imprimir se ve SOLO la hoja
+       (html.op-imprimiendo). Hijo directo de <body> a propósito.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc modal-orden-pago" id="modal-orden-pago" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel" role="dialog" aria-modal="true" aria-labelledby="titulo-orden-pago">
+      <div class="op-acciones">
+        <h2 id="titulo-orden-pago">Orden de pago</h2>
+        <div class="op-acciones__botones">
+          <button type="button" class="btn btn-cc-accion" id="btn-imprimir-orden">Imprimir / Guardar PDF</button>
+          <button type="button" class="btn btn--secundario" id="btn-cerrar-orden">Cerrar</button>
+        </div>
+      </div>
+      <div class="op-hoja-marco"><div class="op-hoja" id="orden-pago-hoja"></div></div>
+    </div>
+  </div><!-- /modal-orden-pago -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — APLICAR CRÉDITO A FACTURA
@@ -1915,7 +2027,9 @@
     // los de medio_pago ('efectivo'/'transferencia'/'cheque') — mismo criterio
     // que gastos.html.
     const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
-    const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
+    // QR sale de una cuenta de banco, como la transferencia (lo exige
+    // pagar_proveedor_mixto, verificado el 20/10/2026).
+    const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco', qr: 'banco' }
     const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', interes: 'Interés' }
     // Estados de facturas_pendientes que llevan badge. 'anulada' no está a
     // propósito: esas facturas no aparecen en v_cuenta_corriente_movimientos.
@@ -2082,7 +2196,7 @@
     // viejo borraba TODOS los puntos, así que un "387300.50" pegado se leía
     // como 38.730.050. Todos son importes: 2 decimales.
     // El tercero es el importe del saldo inicial de un proveedor (30/09/2026).
-    const IDS_CAMPOS_MONTO = ['campo-monto-pago', 'campo-monto-credito', 'campo-saldo-inicial-importe', 'campo-resto-pago']
+    const IDS_CAMPOS_MONTO = ['campo-monto-pago', 'campo-monto-credito', 'campo-saldo-inicial-importe']
 
     function enlazarCamposMonto() {
       for (const id of IDS_CAMPOS_MONTO) enlazarCampoNumero(document.getElementById(id), { decimales: 2 })
@@ -2321,7 +2435,7 @@
 
       // cargarFabricaDePruebas nunca tira: si falla, no saca nada.
       const [unids, , fabrica] = await Promise.all([
-        supabase.from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre'),
+        supabase.from('unidades_negocio').select('id, nombre, prefijo').eq('activo', true).order('nombre'),
         recargarProveedoresMaestros(),
         cargarFabricaDePruebas(supabase),
         unidadesDeLaBarra().catch(() => null),
@@ -3954,7 +4068,7 @@
       estado.ficha.unidades = unidadesDeFicha(ids)
       renderizarFichaUnidad()
 
-      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos(), cargarVinculosFicha()])
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos(), cargarVinculosFicha(), cargarFichaOrdenesPago()])
       if (estado.ficha !== ficha) return
       renderizarFichaBanner()
       renderizarClasificacionProveedor()
@@ -3969,6 +4083,7 @@
       renderizarFichaBanner()
       renderizarFichaMovimientos()
       renderizarFichaRemitos()
+      renderizarFichaOrdenesPago()
       renderizarClasificacionProveedor()
       prepararCuentaUnicaFicha()
     }
@@ -3982,6 +4097,8 @@
       // El panel de vincular o separar era de la unidad de antes.
       if (!estado.ficha.panelVinculo?.enviando) estado.ficha.panelVinculo = null
       renderizarFicha()
+      // Las órdenes de pago se leen por empresa (20/10/2026).
+      cargarFichaOrdenesPago()
     }
 
     // REGLA f (28/09/2026): registrar un pago o aplicar un crédito necesitan
@@ -4064,6 +4181,7 @@
       document.getElementById(destino).removeAttribute('hidden')
       estado.ficha = null
       renderizarFichaUnidad()
+      renderizarFichaOrdenesPago()
       renderizarClasificacionProveedor()
       pintarCuentaUnicaFicha()
       history.replaceState(null, '', location.pathname)
@@ -5279,31 +5397,68 @@
       estado.cuentasPago.empresa = empresa ?? []
     }
 
-    function seleccionarMedioPagoCC(valor) {
-      medioPagoSeleccionado = valor || null
-      // "Completar con" es solo de la cartera.
-      if (medioPagoSeleccionado !== 'cartera') estado.pagoCompletar = null
-      document.querySelectorAll('#grilla-medio-pago-cc .btn-tipo-doc').forEach(btn => {
-        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
-      })
-      actualizarSelectorCuentaPago()
-      pintarMedioCheque()
+    // ═══ PAGO A PROVEEDOR EN LOS DOS SENTIDOS (20/10/2026) ═══════════════
+    // Una sola pantalla con dos bloques que se llenan en CUALQUIER orden:
+    //  A) las FACTURAS que se pagan (tilde + cuánto se aplica a cada una, por
+    //     defecto su saldo; se puede bajar para pagar una parte), y
+    //  B) los VALORES con que se paga: cheques de la cartera de cualquier
+    //     empresa + efectivo, transferencia o QR con su cuenta.
+    // Abajo, siempre a la vista: "Facturas $ X · Valores $ Y · Diferencia $ Z".
+    // En pesos va UNA sola llamada a pagar_proveedor_mixto (verificada con
+    // pg_get_functiondef el 20/10/2026): es ATÓMICA, la base reparte las
+    // facturas entre los cheques (las más viejas) y el resto, lo que sobra
+    // queda a favor y deja una ORDEN DE PAGO numerada por empresa. En otra
+    // moneda sigue el pago simple de siempre (registrar_pago_proveedor, sin
+    // orden de pago).
+    const NOMBRE_MEDIO = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR' }
+
+    function monedaPago() {
+      return document.getElementById('campo-moneda-pago').value || 'ARS'
+    }
+    function esPagoEnPesos() {
+      return monedaPago() === 'ARS'
     }
 
-    // ═══ LOS CHEQUES EN UN PAGO A PROVEEDOR (05/10/2026) ═════════════════
-    // Un medio con su propia función de la base (verificada con
-    // pg_get_functiondef el 05/10/2026):
-    //  - 'cartera': cheques EN CARTERA de esta empresa, de cobranzas
-    //    asentadas y en pesos. pagar_proveedor_con_cheques_cartera los deja
-    //    endosados a este proveedor y el monto es la SUMA de los cheques. NO
-    //    mueve caja (la plata no sale de ninguna cuenta: sale el papel). Pide
-    //    cuentas_corrientes:registrar_pago y cobranzas:procesar.
-    // Es SOLO en pesos. "Cheque" ya no va por registrar_pago_proveedor: ahí no
-    // movía ni la caja ni la cartera. El cheque / e-cheque PROPIO
-    // (pagar_proveedor_con_cheque_propio) se sacó el 11/10/2026: la empresa
-    // no emite cheques propios.
+    function seleccionarMedioPagoCC(valor) {
+      medioPagoSeleccionado = valor || null
+      document.querySelectorAll('#grilla-medio-pago-cc .btn-tipo-doc').forEach(btn => {
+        const si = btn.dataset.valor === medioPagoSeleccionado
+        btn.classList.toggle('btn-tipo-doc--seleccionado', si)
+        btn.setAttribute('aria-pressed', String(si))
+      })
+      document.getElementById('etiqueta-monto-pago').textContent = medioPagoSeleccionado
+        ? `Monto en ${NOMBRE_MEDIO[medioPagoSeleccionado].toLowerCase()}`
+        : (esPagoEnPesos() ? 'Monto en efectivo, transferencia o QR' : 'Monto en efectivo o transferencia')
+      actualizarSelectorCuentaPago()
+      refrescarPago()
+    }
+
+    // Lo que depende de la moneda: los cheques y el QR son solo en pesos; la
+    // orden de pago, también (en otra moneda no hay orden).
+    function pintarMedioPorMoneda() {
+      const enPesos = esPagoEnPesos()
+      if (!enPesos && medioPagoSeleccionado === 'qr') medioPagoSeleccionado = null
+      document.getElementById('btn-medio-qr').hidden = !enPesos
+      document.getElementById('grilla-medio-pago-cc').classList.toggle('grilla-medio-pago--dos', !enPesos)
+      if (!enPesos && estado.pagoCheques) { estado.pagoCheques = false; carteraPago.forEach(c => { c.tildado = false }) }
+      document.getElementById('btn-medio-cartera').hidden = !(puedeUsarCartera() && enPesos)
+      document.getElementById('grupo-observaciones-orden').hidden = !enPesos
+      const aviso = document.getElementById('aviso-medio-pesos')
+      aviso.hidden = enPesos
+      aviso.textContent = enPesos ? '' : `En ${monedaPago()} se paga con efectivo o transferencia (los cheques de la cartera y el QR son solo en pesos) y no queda orden de pago.`
+      pintarCarteraPago()
+    }
+
+    // ═══ LOS CHEQUES DE LA CARTERA (05/10/2026; de cualquier empresa desde
+    // el 15/10/2026) ════════════════════════════════════════════════════════
+    // Cheques EN CARTERA de cobranzas asentadas y en pesos. La base los deja
+    // endosados a este proveedor y NO mueve caja (sale el papel). Pide
+    // cuentas_corrientes:registrar_pago y cobranzas:procesar. Un cheque de
+    // otra empresa queda como deuda entre empresas (movimientos_entre_
+    // unidades, lo anota la base). El cheque / e-cheque PROPIO se sacó el
+    // 11/10/2026: la empresa no emite cheques propios.
     const MEDIOS_CHEQUE = ['cartera']
-    let carteraPago = []     // [{id, numero, banco, librador, cobra, comun, importe, tildado}]
+    let carteraPago = []     // [{id, numero, banco, librador, cobra, comun, importe, unidadId, unidadNombre, otraEmpresa, tildado}]
     let turnoCartera = 0
     let bancosBcra = null
 
@@ -5338,11 +5493,8 @@
 
     // Puro: los cheques que se pueden ofrecer para pagar, con las MISMAS
     // reglas que la base (en cartera, cobranza asentada, en pesos), del que se
-    // cobra primero al último. DESDE EL 15/10/2026 DE CUALQUIER EMPRESA:
-    // pagar_proveedor_con_cheques_cartera acepta cheques de otra empresa y los
-    // deja como deuda entre empresas (movimientos_entre_unidades: acreedora =
-    // la dueña del cheque, deudora = la que paga). Un cheque cuya cobranza no
-    // tiene empresa no se ofrece: no se sabría de quién es (la base no lo
+    // cobra primero al último, de CUALQUIER empresa. Un cheque cuya cobranza
+    // no tiene empresa no se ofrece: no se sabría de quién es (la base no lo
     // anotaría entre empresas; el 15/10/2026 no había ninguno en cartera).
     function chequesParaPagar(cheques, cobranzas, unidadId, bancos) {
       return (cheques ?? [])
@@ -5388,65 +5540,6 @@
     function avisosOtraEmpresa(cheques, unidadPagaId, nombrePaga) {
       return agruparChequesPorEmpresa((cheques ?? []).filter(c => c.tildado && c.unidadId !== unidadPagaId), unidadPagaId)
         .map(g => textoAvisoOtraEmpresa(g.cheques.length, g.nombre, nombrePaga))
-    }
-
-    // Puro: EL REPARTO DEL PAGO MIXTO. Las aplicaciones elegidas (la misma
-    // lista de facturas de siempre) se parten entre los dos pagos: los
-    // cheques cubren primero las facturas MÁS VIEJAS, hasta su total; lo que
-    // queda de cada factura va al segundo pago (efectivo o transferencia).
-    // Cada factura recibe entre los dos exactamente lo que se le aplicó (nunca
-    // más que su saldo, que se valida antes), en centavos.
-    function repartirAplicacionesPagoMixto(aplicaciones, montoCheques) {
-      let quedan = Math.round(Number(montoCheques) * 100)
-      const cheques = [], resto = []
-      const orden = (aplicaciones ?? []).map((a, i) => ({ a, i }))
-        .sort((x, y) => String(x.a.fecha ?? '').localeCompare(String(y.a.fecha ?? '')) || x.i - y.i)
-      for (const { a } of orden) {
-        const total = Math.round(Number(a.monto_aplicado) * 100)
-        if (!(total > 0)) continue
-        const conCheques = Math.min(total, Math.max(quedan, 0))
-        quedan -= conCheques
-        if (conCheques > 0) cheques.push({ factura_pendiente_id: a.factura_pendiente_id, monto_aplicado: conCheques / 100 })
-        if (total - conCheques > 0) resto.push({ factura_pendiente_id: a.factura_pendiente_id, monto_aplicado: (total - conCheques) / 100 })
-      }
-      return { cheques, resto }
-    }
-
-    const NOMBRE_COMPLETAR = { efectivo: 'Efectivo', transferencia: 'Transferencia' }
-
-    // Puro: el resumen antes de confirmar. "Cheques $ X (N cheques, 1 de
-    // Dolce Pasta) + Efectivo $ Y = $ Z aplicado a facturas A, B".
-    function textoResumenPagoMixto({ cheques, unidadPagaId, completar, montoResto, aplicaciones }) {
-      const tildados = (cheques ?? []).filter(c => c.tildado)
-      if (!tildados.length) return ''
-      const cCheques = Math.round(sumaCheques(tildados) * 100)
-      const cResto = completar && Number(montoResto) > 0 ? Math.round(Number(montoResto) * 100) : 0
-      const otras = agruparChequesPorEmpresa(tildados.filter(c => c.unidadId !== unidadPagaId), unidadPagaId)
-      const detalle = [`${tildados.length} ${tildados.length === 1 ? 'cheque' : 'cheques'}`, ...otras.map(g => `${g.cheques.length} de ${g.nombre}`)].join(', ')
-      let t = `Cheques ${formatearImporte(cCheques / 100)} (${detalle})`
-      if (cResto > 0) t += ` + ${NOMBRE_COMPLETAR[completar] ?? completar} ${formatearImporte(cResto / 100)}`
-      const cTotal = cCheques + cResto
-      const aplicadas = (aplicaciones ?? []).filter(a => Number(a.monto) > 0)
-      const cAplicado = aplicadas.reduce((acc, a) => acc + Math.round(Number(a.monto) * 100), 0)
-      if (!aplicadas.length) return `${t} = ${formatearImporte(cTotal / 100)}, sin aplicar a facturas: queda a favor.`
-      const facturas = aplicadas.map(a => a.numero ?? '—').join(', ')
-      if (cAplicado >= cTotal) return `${t} = ${formatearImporte(cTotal / 100)} aplicado a ${aplicadas.length === 1 ? 'la factura' : 'facturas'} ${facturas}`
-      return `${t} = ${formatearImporte(cTotal / 100)}: ${formatearImporte(cAplicado / 100)} aplicado a ${aplicadas.length === 1 ? 'la factura' : 'facturas'} ${facturas} y ${formatearImporte((cTotal - cAplicado) / 100)} queda a favor`
-    }
-
-    // Puro: el aviso cuando el segundo pago falla.
-    function textoRestoPendiente(pend, mensaje) {
-      const gasto = pend?.gastoCheques ? ` (gasto ${String(pend.gastoCheques).slice(0, 8)})` : ''
-      return `Los cheques ya quedaron pagados${gasto}. Falta registrar el resto de ${formatearImporte(pend?.monto)}: ${mensaje}`
-    }
-
-    // Puro: los parámetros del segundo pago (el resto), con su cuenta.
-    function parametrosPagoResto(pend, { proveedorId, unidadId, cuentaId, empleadoId }) {
-      return {
-        p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_moneda: 'ARS', p_monto: pend.monto,
-        p_medio_pago: pend.medio, p_cuenta_id: cuentaId, p_empleado_id: empleadoId,
-        p_fecha_pago: pend.fecha, p_aplicaciones: pend.aplicaciones,
-      }
     }
 
     async function asegurarBancos() {
@@ -5541,15 +5634,7 @@
       pintarTotalCartera()
     }
 
-    // Lo que paga el formulario con la cartera: los cheques tildados más el
-    // resto (si se completa con efectivo o transferencia), en centavos.
-    function montoTotalCartera() {
-      const cheques = Math.round(sumaCheques(carteraPago) * 100)
-      const resto = estado.pagoCompletar ? Math.round((montoDeCampo('campo-resto-pago') ?? 0) * 100) : 0
-      return (cheques + Math.max(resto, 0)) / 100
-    }
-
-    // El total de lo tildado, y el monto del pago = esa suma (más el resto).
+    // El total de lo tildado y el aviso de los cheques de otra empresa.
     function pintarTotalCartera() {
       const tildados = carteraPago.filter(c => c.tildado)
       const total = document.getElementById('total-cartera-pago')
@@ -5557,16 +5642,11 @@
       total.textContent = tildados.length
         ? `${tildados.length} ${tildados.length === 1 ? 'cheque tildado' : 'cheques tildados'} · total ${formatearImporte(sumaCheques(carteraPago))}`
         : ''
-      // Los de otra empresa: el aviso de la deuda entre empresas.
       const avisos = avisosOtraEmpresa(carteraPago, estado.ficha?.unidadId, nombreUnidad(estado.ficha?.unidadId))
       const caja = document.getElementById('aviso-cartera-otra-empresa')
       caja.hidden = !avisos.length
       caja.innerHTML = avisos.map(t => `<p class="cartera-pago__aviso">${esc(t)}</p>`).join('')
-      if (medioPagoSeleccionado === 'cartera') {
-        ponerNumero(document.getElementById('campo-monto-pago'), tildados.length ? montoTotalCartera() : null)
-        programarActualizarSugerenciasPago()
-      }
-      pintarResumenPagoMixto()
+      refrescarPago()
     }
 
     function tildarChequeCartera(i, tildado) {
@@ -5575,137 +5655,217 @@
       pintarTotalCartera()
     }
 
-    // ── PAGO MIXTO (15/10/2026) ───────────────────────────────────────────
-    // "Completar con": nada (solo cheques), efectivo o transferencia por el
-    // resto. Con algo elegido aparecen el campo del resto y la cuenta.
-    function pintarCompletarPago() {
-      const enCartera = medioPagoSeleccionado === 'cartera'
-      const c = enCartera ? (estado.pagoCompletar || '') : ''
-      document.getElementById('grupo-completar-pago').hidden = !enCartera
-      document.querySelectorAll('#grilla-completar-pago [data-completar]').forEach(b => {
-        b.classList.toggle('btn-tipo-doc--seleccionado', b.dataset.completar === c)
-        b.setAttribute('aria-pressed', String(b.dataset.completar === c))
+    // El botón "Cheques de la cartera" abre y cierra la lista. Cerrarla
+    // destilda todo (lo que no se ve, no se paga).
+    function pintarCarteraPago() {
+      const b = document.getElementById('btn-medio-cartera')
+      b.classList.toggle('btn-tipo-doc--seleccionado', !!estado.pagoCheques)
+      b.setAttribute('aria-pressed', String(!!estado.pagoCheques))
+      document.getElementById('grupo-cartera-pago').hidden = !estado.pagoCheques
+    }
+    function alternarCarteraPago() {
+      if (!puedeUsarCartera() || !esPagoEnPesos() || estado.pagoEnviando) return
+      estado.pagoCheques = !estado.pagoCheques
+      if (!estado.pagoCheques) carteraPago.forEach(c => { c.tildado = false })
+      pintarCarteraPago()
+      if (estado.pagoCheques && !carteraPago.length && estado.ficha?.unidadId) cargarCarteraParaPago(estado.ficha.unidadId)
+      else renderizarCarteraPago()
+    }
+
+    // ── Las cuentas: en centavos, nunca con decimales sueltos ────────────
+    function centavosDe(n) {
+      if (n === null || n === undefined || n === '') return 0
+      const x = Number(n)
+      return Number.isFinite(x) ? Math.round(x * 100) : 0
+    }
+
+    // Puro: Facturas (lo aplicado a las tildadas), Valores (cheques tildados
+    // + el monto en efectivo / transferencia / QR) y la diferencia.
+    function totalesPago({ facturas, cheques, montoResto }) {
+      const cFacturas = (facturas ?? []).filter(f => f.checked).reduce((a, f) => a + Math.max(centavosDe(f.monto), 0), 0)
+      const cCheques = (cheques ?? []).filter(c => c.tildado).reduce((a, c) => a + centavosDe(c.importe), 0)
+      const cResto = Math.max(centavosDe(montoResto), 0)
+      const cValores = cCheques + cResto
+      return { cFacturas, cCheques, cResto, cValores, cDiferencia: cValores - cFacturas }
+    }
+    function totalesPagoActuales() {
+      return totalesPago({
+        facturas: facturasParaPago,
+        cheques: estado.pagoCheques ? carteraPago : [],
+        montoResto: montoDeCampo('campo-monto-pago'),
       })
-      document.getElementById('grupo-resto-pago').hidden = !c
-      document.getElementById('etiqueta-resto-pago').textContent = c ? `El resto, en ${NOMBRE_COMPLETAR[c].toLowerCase()}` : 'El resto'
-      document.getElementById('etiqueta-monto-pago').textContent = enCartera
-        ? (c ? 'Monto total (los cheques tildados más el resto)' : 'Monto (la suma de los cheques tildados)')
-        : 'Monto a pagar'
     }
 
-    function elegirCompletarPago(valor) {
-      if (estado.pagoRestoPendiente) return
-      estado.pagoCompletar = valor || null
-      if (!estado.pagoCompletar) ponerNumero(document.getElementById('campo-resto-pago'), null)
-      pintarCompletarPago()
-      actualizarSelectorCuentaPago()
-      pintarTotalCartera()
+    // Puro: qué dice la diferencia. Facturas > Valores no deja confirmar;
+    // Valores > Facturas deja, con el aviso de lo que queda a favor.
+    function estadoDiferencia(t, moneda = 'ARS') {
+      if (!t.cFacturas && !t.cValores) return { tipo: 'vacio', texto: null }
+      if (t.cFacturas > t.cValores) return { tipo: 'faltan', texto: `Faltan ${formatearImporte((t.cFacturas - t.cValores) / 100, moneda)} para cubrir las facturas elegidas` }
+      if (!t.cFacturas) return { tipo: 'a_cuenta', texto: 'Pago a cuenta: queda todo a favor' }
+      if (t.cValores > t.cFacturas) return { tipo: 'a_favor', texto: `Quedan ${formatearImporte((t.cValores - t.cFacturas) / 100, moneda)} a favor del proveedor` }
+      return { tipo: 'justo', texto: null }
     }
 
-    function pintarResumenPagoMixto() {
-      const el = document.getElementById('resumen-pago-mixto')
-      const texto = medioPagoSeleccionado === 'cartera' && !estado.pagoRestoPendiente
-        ? textoResumenPagoMixto({
-          cheques: carteraPago, unidadPagaId: estado.ficha?.unidadId, completar: estado.pagoCompletar,
-          montoResto: estado.pagoCompletar ? montoDeCampo('campo-resto-pago') : null,
-          aplicaciones: facturasParaPago.filter(f => f.checked).map(f => ({ numero: f.numero, monto: f.monto })),
-        })
-        : ''
-      el.hidden = !texto
-      el.textContent = texto
+    function htmlBarraPago(t, moneda = 'ARS') {
+      const clase = t.cDiferencia < 0 ? ' resumen-aplicacion__dif--falta' : (t.cDiferencia > 0 ? ' resumen-aplicacion__dif--sobra' : '')
+      return `Facturas <strong>${importeHtml(t.cFacturas / 100, moneda)}</strong> · Valores <strong>${importeHtml(t.cValores / 100, moneda)}</strong> · Diferencia <strong class="${clase.trim()}">${importeHtml(Math.abs(t.cDiferencia) / 100, moneda)}</strong>`
     }
 
-    // Con el resto pendiente (los cheques ya se pagaron y el segundo pago
-    // falló), el formulario queda para registrar SOLO el resto: no se pueden
-    // tocar los cheques, el medio ni las facturas; sí la cuenta y reintentar.
-    function pintarRestoPendiente(mensaje) {
-      const pend = estado.pagoRestoPendiente
-      // El error se guarda con lo pendiente: un repintado sin mensaje no lo
-      // borra.
-      if (pend && mensaje != null) pend.error = mensaje
-      const aviso = document.getElementById('aviso-resto-pendiente')
-      aviso.hidden = !pend
-      aviso.textContent = pend ? textoRestoPendiente(pend, pend.error ?? '') : ''
-      document.querySelectorAll('#grilla-medio-pago-cc .btn-tipo-doc, #grilla-completar-pago .btn-tipo-doc').forEach(b => { b.disabled = !!pend })
-      document.getElementById('grupo-cartera-pago').hidden = !!pend || medioPagoSeleccionado !== 'cartera'
-      document.getElementById('grupo-facturas-pago').hidden = !!pend
-      if (pend) document.getElementById('resumen-aplicacion').hidden = true
-      document.getElementById('campo-resto-pago').readOnly = !!pend
-      document.getElementById('campo-fecha-pago-cc').readOnly = !!pend
-      document.getElementById('btn-confirmar-pago').textContent = pend ? 'Registrar el resto' : 'Confirmar pago'
-      pintarResumenPagoMixto()
-    }
-
-    // El segundo pago: registrar_pago_proveedor por el resto, con la cuenta
-    // elegida y las aplicaciones que quedaron. Si falla, el formulario queda
-    // con el resto pendiente (los cheques NO se vuelven a mandar).
-    async function registrarRestoPendiente() {
-      const pend = estado.pagoRestoPendiente
-      const cuentaId = document.getElementById('campo-cuenta-pago-cc').value || null
-      if (!cuentaId) { mostrarError('Seleccioná la cuenta.'); return false }
-      let error
-      try {
-        ({ error } = await supabase.rpc('registrar_pago_proveedor', parametrosPagoResto(pend, {
-          proveedorId: estado.ficha.proveedorId, unidadId: estado.ficha.unidadId, cuentaId, empleadoId: estado.miEmpleadoId,
-        })))
-      } catch (e) {
-        error = { message: e?.message ?? String(e) }
+    // Puro: "Aplicar a las facturas más viejas". Tilda de la más vieja a la
+    // más nueva hasta cubrir los valores; la última, por lo que alcance (una
+    // parte). Las que no entran quedan sin tildar. Todo sigue editable.
+    function aplicarAFacturasViejas(facturas, cValores) {
+      let quedan = Math.max(Math.round(Number(cValores) || 0), 0)
+      const res = (facturas ?? []).map(f => ({ ...f, checked: false, monto: 0 }))
+      const orden = res.map((f, i) => ({ f, i }))
+        .sort((a, b) => String(a.f.fecha ?? '9999').localeCompare(String(b.f.fecha ?? '9999')) || a.i - b.i)
+      for (const { i } of orden) {
+        if (quedan <= 0) break
+        const saldo = Math.max(centavosDe(res[i].saldo), 0)
+        if (!saldo) continue
+        const parte = Math.min(saldo, quedan)
+        res[i].checked = true
+        res[i].monto = parte / 100
+        quedan -= parte
       }
-      if (error) {
-        pintarRestoPendiente(error.message)
-        mostrarError(textoRestoPendiente(pend, error.message))
-        return false
-      }
-      estado.pagoRestoPendiente = null
-      return true
+      return res
     }
 
-    function parametrosPagoCartera({ proveedorId, unidadId, chequeIds, fecha, aplicaciones }) {
-      return { p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_cheque_ids: chequeIds, p_fecha: fecha, p_aplicaciones: aplicaciones }
-    }
-    // Los cheques son solo en pesos: al elegirlos, la moneda pasa a ARS.
-    function asegurarMonedaPesos() {
-      const sel = document.getElementById('campo-moneda-pago')
-      if (![...sel.options].some(o => o.value === 'ARS')) {
-        const o = document.createElement('option')
-        o.value = 'ARS'; o.textContent = 'ARS'
-        sel.appendChild(o)
-      }
-      if (sel.value !== 'ARS') { sel.value = 'ARS'; actualizarSelectorCuentaPago(); programarActualizarSugerenciasPago() }
-    }
-    function pintarAvisoPesos() {
-      const el = document.getElementById('aviso-medio-pesos')
-      const mal = esMedioCheque(medioPagoSeleccionado) && document.getElementById('campo-moneda-pago').value !== 'ARS'
-      el.hidden = !mal
-      el.textContent = mal ? 'Los cheques son solo en pesos: elegí ARS.' : ''
+    // Puro: "Completar con efectivo/transferencia": el monto que hace que los
+    // valores cubran las facturas (lo que ya hay escrito + lo que falta).
+    function montoParaCompletar(t, montoActual) {
+      const falta = t.cFacturas - t.cValores
+      if (falta <= 0) return null
+      return (Math.max(centavosDe(montoActual), 0) + falta) / 100
     }
 
-    // Qué se ve según el medio elegido.
-    function pintarMedioCheque() {
-      const m = medioPagoSeleccionado
-      document.getElementById('grupo-cartera-pago').hidden = m !== 'cartera'
-      const monto = document.getElementById('campo-monto-pago')
-      monto.readOnly = m === 'cartera'
-      document.getElementById('etiqueta-monto-pago').textContent =
-        m === 'cartera' ? 'Monto (la suma de los cheques tildados)' : 'Monto a pagar'
-      if (esMedioCheque(m)) asegurarMonedaPesos()
-      pintarAvisoPesos()
-      pintarCompletarPago()
-      pintarRestoPendiente(null)
-      if (!estado.ficha?.unidadId) return
-      if (m === 'cartera') { ponerNumero(monto, null); cargarCarteraParaPago(estado.ficha.unidadId) }
+    // Puro: lo que viaja como p_aplicaciones: UNA lista, tal como la eligió la
+    // persona (la base la reparte entre cheques y resto).
+    function aplicacionesPago(facturas) {
+      return (facturas ?? [])
+        .filter(f => f.checked && centavosDe(f.monto) > 0)
+        .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: centavosDe(f.monto) / 100 }))
+    }
+
+    // Puro: lo que frena antes de mandar (con los textos de la base cuando
+    // los tiene). null = se puede confirmar.
+    function validarPago({ moneda, t, chequeIds, medio, cuentaId, fecha, hoy, facturas }) {
+      const enPesos = moneda === 'ARS'
+      if (!fecha) return 'Completá la fecha de pago.'
+      if (fecha > hoy) return 'La fecha del pago no puede ser futura.'
+      if (!enPesos && (chequeIds ?? []).length) return 'Los cheques son solo en pesos: elegí ARS.'
+      if (!enPesos && medio === 'qr') return 'El QR es solo en pesos.'
+      if (t.cValores <= 0) return enPesos
+        ? 'Elegí con qué se paga: cheques de la cartera, efectivo, transferencia o QR.'
+        : 'Ingresá el monto y elegí efectivo o transferencia.'
+      if (t.cResto > 0 && !medio) return enPesos
+        ? 'Elegí si el monto es en efectivo, transferencia o QR.'
+        : 'Elegí si el monto es en efectivo o transferencia.'
+      if (t.cResto > 0 && !cuentaId) return 'Seleccioná la cuenta.'
+      for (const f of facturas ?? []) {
+        if (!f.checked) continue
+        if (centavosDe(f.monto) <= 0) return `Poné cuánto se aplica a la factura ${f.numero ?? '—'} (o destildala).`
+        if (centavosDe(f.monto) > centavosDe(f.saldo)) return `Lo aplicado a la factura ${f.numero ?? '—'} supera su saldo pendiente.`
+      }
+      if (t.cFacturas > t.cValores) return `Faltan ${formatearImporte((t.cFacturas - t.cValores) / 100, moneda)} para cubrir las facturas elegidas.`
+      return null
+    }
+
+    // Puro: los parámetros EXACTOS de pagar_proveedor_mixto.
+    function parametrosPagoMixto({ proveedorId, unidadId, fecha, chequeIds, t, medio, cuentaId, facturas, observaciones }) {
+      const conResto = t.cResto > 0
+      return {
+        p_proveedor_id: proveedorId,
+        p_unidad_negocio_id: unidadId,
+        p_fecha: fecha,
+        p_cheque_ids: chequeIds ?? [],
+        p_monto_resto: conResto ? t.cResto / 100 : 0,
+        p_medio_resto: conResto ? medio : null,
+        p_cuenta_resto: conResto ? cuentaId : null,
+        p_aplicaciones: aplicacionesPago(facturas),
+        p_observaciones: String(observaciones ?? '').trim() || null,
+      }
+    }
+
+    // Puro: el resumen antes de confirmar. "Cheques $ X (N cheques, 1 de
+    // Dolce Pasta) + Efectivo $ Y = $ Z aplicado a facturas A, B".
+    function textoResumenPago({ cheques, unidadPagaId, medio, montoResto, aplicaciones, moneda = 'ARS' }) {
+      const tildados = (cheques ?? []).filter(c => c.tildado)
+      const cCheques = Math.round(sumaCheques(tildados) * 100)
+      const cResto = Math.max(centavosDe(montoResto), 0)
+      const partes = []
+      if (tildados.length) {
+        const otras = agruparChequesPorEmpresa(tildados.filter(c => c.unidadId !== unidadPagaId), unidadPagaId)
+        const detalle = [`${tildados.length} ${tildados.length === 1 ? 'cheque' : 'cheques'}`, ...otras.map(g => `${g.cheques.length} de ${g.nombre}`)].join(', ')
+        partes.push(`Cheques ${formatearImporte(cCheques / 100)} (${detalle})`)
+      }
+      if (cResto > 0) partes.push(`${NOMBRE_MEDIO[medio] ?? 'Efectivo, transferencia o QR'} ${formatearImporte(cResto / 100, moneda)}`)
+      if (!partes.length) return ''
+      const cTotal = cCheques + cResto
+      const t = partes.length > 1 ? `${partes.join(' + ')} = ${formatearImporte(cTotal / 100, moneda)}` : partes[0]
+      const aplicadas = (aplicaciones ?? []).filter(a => centavosDe(a.monto) > 0)
+      const cAplicado = aplicadas.reduce((acc, a) => acc + centavosDe(a.monto), 0)
+      if (!aplicadas.length) return `${t}, sin aplicar a facturas: pago a cuenta, queda todo a favor.`
+      const cuales = `${aplicadas.length === 1 ? 'la factura' : 'facturas'} ${aplicadas.map(a => a.numero ?? '—').join(', ')}`
+      if (cAplicado >= cTotal) return `${t}, aplicado a ${cuales}.`
+      return `${t}: ${formatearImporte(cAplicado / 100, moneda)} aplicado a ${cuales} y ${formatearImporte((cTotal - cAplicado) / 100, moneda)} queda a favor.`
+    }
+
+    // Cada cambio repinta el pie: la barra, el aviso, los botones de ayuda,
+    // el resumen y el error (que vive en el estado, no en el DOM).
+    function pintarPiePago() {
+      const moneda = monedaPago()
+      const t = totalesPagoActuales()
+      document.getElementById('resumen-aplicacion').innerHTML = htmlBarraPago(t, moneda)
+      const d = estadoDiferencia(t, moneda)
+      const aviso = document.getElementById('aviso-diferencia-pago')
+      aviso.hidden = !d.texto
+      aviso.textContent = d.texto ?? ''
+      aviso.classList.toggle('pago-aviso--falta', d.tipo === 'faltan')
+      document.getElementById('btn-completar-diferencia').hidden = d.tipo !== 'faltan'
+      document.getElementById('btn-aplicar-viejas').hidden =
+        !(t.cValores > 0 && t.cDiferencia !== 0 && facturasParaPago.some(f => centavosDe(f.saldo) > 0))
+      const resumen = document.getElementById('resumen-pago-mixto')
+      const texto = textoResumenPago({
+        cheques: estado.pagoCheques ? carteraPago : [], unidadPagaId: estado.ficha?.unidadId,
+        medio: medioPagoSeleccionado, montoResto: montoDeCampo('campo-monto-pago'), moneda,
+        aplicaciones: facturasParaPago.filter(f => f.checked).map(f => ({ numero: f.numero, monto: f.monto })),
+      })
+      resumen.hidden = !texto
+      resumen.textContent = texto
+      const err = document.getElementById('error-confirmar-pago')
+      err.hidden = !estado.pagoError
+      err.textContent = estado.pagoError ?? ''
+    }
+    // Cualquier cambio de la persona borra el error viejo.
+    function refrescarPago() {
+      estado.pagoError = null
+      pintarPiePago()
+    }
+
+    function aplicarValoresAFacturas() {
+      if (estado.pagoEnviando) return
+      facturasParaPago = aplicarAFacturasViejas(facturasParaPago, totalesPagoActuales().cValores)
+      renderizarFilasFifo()
+    }
+    function completarDiferencia() {
+      if (estado.pagoEnviando) return
+      const nuevo = montoParaCompletar(totalesPagoActuales(), montoDeCampo('campo-monto-pago'))
+      if (nuevo == null) return
+      ponerNumero(document.getElementById('campo-monto-pago'), nuevo)
+      refrescarPago()
     }
 
     function actualizarSelectorCuentaPago() {
       const grupo = document.getElementById('grupo-cuenta-pago-cc')
-      // Con la cartera, la cuenta es la del resto ("Completar con", 15/10/2026).
-      const medio = medioPagoSeleccionado === 'cartera' ? estado.pagoCompletar : medioPagoSeleccionado
-      if (medio !== 'efectivo' && medio !== 'transferencia') {
+      const medio = medioPagoSeleccionado
+      if (!MEDIO_PAGO_A_MEDIO_CUENTA[medio]) {
         grupo.style.display = 'none'
         return
       }
-      const moneda = document.getElementById('campo-moneda-pago').value
+      const moneda = monedaPago()
       const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medio]
+      // Efectivo: solo cajas de efectivo. Transferencia y QR: solo bancos.
       // El filtro por medio y moneda se aplica DENTRO de cada grupo, para que
       // un grupo sin candidatas en esa moneda no se dibuje vacío. Caso real:
       // "Macro Paz Mirta USD" es la única cuenta en USD del sistema y es de
@@ -5717,12 +5877,16 @@
       grupo.style.display = 'flex'
 
       // A mano y no con poblarSelect(), que no sabe de <optgroup>. Los grupos
-      // existen para que se vea de qué caja sale la plata.
+      // existen para que se vea de qué caja sale la plata. Lo elegido se
+      // conserva si sigue estando (de transferencia a QR, por ejemplo).
+      const sel = document.getElementById('campo-cuenta-pago-cc')
+      const antes = sel.value
       const opciones = c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(MEDIO_CUENTA_LABEL[c.medio])} ${esc(c.moneda)})</option>`
-      document.getElementById('campo-cuenta-pago-cc').innerHTML =
+      sel.innerHTML =
         `<option value="">— Seleccioná —</option>` +
         (propias.length ? `<optgroup label="Mis cuentas">${propias.map(opciones).join('')}</optgroup>` : '') +
         (empresa.length ? `<optgroup label="Cuenta de Empresa">${empresa.map(opciones).join('')}</optgroup>` : '')
+      if (antes && [...propias, ...empresa].some(c => c.id === antes)) sel.value = antes
 
       // Sin candidatas el selector quedaba mudo, con solo "— Seleccioná —" y
       // nada más: fue el síntoma exacto que se reportó (transferencia sin
@@ -5737,12 +5901,14 @@
 
     async function abrirModalPago() {
       // Misma guarda de fondo que abrirModalAplicarCreditoDesdeFicha(): la
-      // unidad llega hasta p_unidad_negocio_id de registrar_pago_proveedor.
+      // unidad llega hasta p_unidad_negocio_id.
       if (!estado.ficha?.unidadId) {
         mostrarError('Elegí una unidad de negocio para registrar un pago.')
         return
       }
       estado.pagoFacturaElegida = null
+      estado.pagoError = null
+      estado.pagoEnviando = false
       await cargarCuentasParaPago()
 
       // Solo los saldos de la unidad de la ficha: se paga en UNA unidad.
@@ -5759,90 +5925,64 @@
 
       ponerNumero(document.getElementById('campo-monto-pago'), null)
       document.getElementById('campo-fecha-pago-cc').value = fechaISO(new Date())
-      // Los cheques de la cartera, solo con cobranzas:procesar (la base lo exige).
-      document.getElementById('btn-medio-cartera').hidden = !puedeUsarCartera()
+      document.getElementById('campo-observaciones-orden').value = ''
       carteraPago = []
-      // El pago mixto arranca sin completar y sin nada pendiente.
-      estado.pagoCompletar = null
-      estado.pagoRestoPendiente = null
-      ponerNumero(document.getElementById('campo-resto-pago'), null)
+      estado.pagoCheques = false
+      pintarMedioPorMoneda()
       seleccionarMedioPagoCC(null)
       facturasParaPago = []
       renderizarFilasFifo()
 
       document.getElementById('modal-pago').hidden = false
+      await actualizarSugerenciasPago()
     }
 
     function cerrarModalPago() {
       document.getElementById('modal-pago').hidden = true
       estado.pagoFacturaElegida = null
+      estado.pagoError = null
       facturasParaPago = []
-      // Cerrar con el resto pendiente: los cheques ya están pagados (la ficha
-      // ya se recargó); se recuerda lo que falta.
-      const pend = estado.pagoRestoPendiente
-      estado.pagoRestoPendiente = null
-      if (pend) mostrarError(`Quedó sin registrar el resto de ${formatearImporte(pend.monto)}: registralo con "Registrar pago".`)
+      turnoFacturasPago++
     }
 
-    let debounceFifo = null
-    function programarActualizarSugerenciasPago() {
-      clearTimeout(debounceFifo)
-      debounceFifo = setTimeout(actualizarSugerenciasPago, 400)
-    }
-
-    // Trae TODAS las facturas abiertas del proveedor+unidad+moneda (para poder
-    // tildar manualmente cualquiera, no solo las sugeridas) y las cruza con lo
-    // que devuelve sugerir_facturas_fifo() para pre-tildar/pre-completar monto.
-    //
-    // Firma real confirmada de sugerir_facturas_fifo(): RETURNS TABLE
-    // (factura_pendiente_id uuid, fecha_factura date, numero_comprobante text,
-    // saldo_pendiente numeric, monto_a_aplicar numeric) — se usan esos 5
-    // nombres tal cual, sin fallback a otras variantes.
+    // Las facturas abiertas (pendientes o parciales) del proveedor en la
+    // empresa de la ficha y en la moneda del pago, la más vieja arriba. Todas
+    // arrancan sin tildar (salvo la de una comisión, desde "Pagar").
+    let turnoFacturasPago = 0
+    let errorFacturasPago = null
     async function actualizarSugerenciasPago() {
-      const moneda = document.getElementById('campo-moneda-pago').value
-      const monto  = montoDeCampo('campo-monto-pago')
-
-      if (!moneda || monto == null || monto <= 0) {
-        facturasParaPago = []
-        renderizarFilasFifo()
-        return
-      }
-
-      const { data: abiertas, error: errorAbiertas } = await supabase.from('facturas_pendientes')
-        .select('id, numero_comprobante, fecha_factura, saldo_pendiente')
-        .eq('proveedor_id', estado.ficha.proveedorId)
-        .eq('unidad_negocio_id', estado.ficha.unidadId)
-        .eq('moneda', moneda)
-        .in('estado', ['pendiente', 'parcial'])
-        .order('fecha_factura', { ascending: true })
-
-      if (errorAbiertas) console.error(errorAbiertas)
-
-      const { data: sugeridas, error: errorSugeridas } = await supabase.rpc('sugerir_facturas_fifo', {
-        p_proveedor_id: estado.ficha.proveedorId,
-        p_unidad_negocio_id: estado.ficha.unidadId,
-        p_moneda: moneda,
-        p_monto: monto,
-      })
-      if (errorSugeridas) console.error(errorSugeridas)
-
-      const sugeridasPorId = new Map()
-      ;(sugeridas || []).forEach(s => {
-        sugeridasPorId.set(s.factura_pendiente_id, Number(s.monto_a_aplicar) || 0)
-      })
-
-      facturasParaPago = (abiertas || []).map(f => ({
-        id: f.id,
-        numero: numeroParaMostrar(f.numero_comprobante),
-        fecha: f.fecha_factura,
-        saldo: Number(f.saldo_pendiente) || 0,
-        checked: sugeridasPorId.has(f.id),
-        monto: sugeridasPorId.has(f.id) ? sugeridasPorId.get(f.id) : 0,
+      const turno = ++turnoFacturasPago
+      const f = estado.ficha
+      if (!f?.unidadId) { facturasParaPago = []; renderizarFilasFifo(); return }
+      const moneda = monedaPago()
+      let data = null, error = null
+      try {
+        ({ data, error } = await supabase.from('facturas_pendientes')
+          .select('id, numero_comprobante, fecha_factura, saldo_pendiente')
+          .eq('proveedor_id', f.proveedorId)
+          .eq('unidad_negocio_id', f.unidadId)
+          .eq('moneda', moneda)
+          .in('estado', ['pendiente', 'parcial'])
+          .order('fecha_factura', { ascending: true }))
+      } catch (e) { error = e }
+      if (turno !== turnoFacturasPago || estado.ficha !== f) return
+      if (error) console.error(error)
+      errorFacturasPago = error ? 'No se pudieron leer las facturas pendientes. Cerrá y probá de nuevo.' : null
+      facturasParaPago = (data ?? []).map(x => ({
+        id: x.id,
+        numero: numeroParaMostrar(x.numero_comprobante),
+        fecha: x.fecha_factura,
+        saldo: Number(x.saldo_pendiente) || 0,
+        checked: false,
+        monto: 0,
       }))
-      // Desde "Pagar" de una comisión: esa factura sola, no las más viejas.
-      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, monto)
-
+      // Desde "Pagar" de una comisión: esa factura sola.
+      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, montoDeCampo('campo-monto-pago'))
       renderizarFilasFifo()
+    }
+    // Lo llaman los que ya existían (cambiar la moneda): sin espera.
+    function programarActualizarSugerenciasPago() {
+      actualizarSugerenciasPago()
     }
 
     function renderizarFilasFifo() {
@@ -5852,20 +5992,21 @@
       if (!facturasParaPago.length) {
         cont.innerHTML = ''
         vacioEl.hidden = false
-        document.getElementById('resumen-aplicacion').hidden = true
-        pintarResumenPagoMixto()
+        vacioEl.textContent = errorFacturasPago ?? 'Este proveedor no tiene facturas pendientes en esta empresa: el pago queda a cuenta, a favor del proveedor.'
+        refrescarPago()
         return
       }
       vacioEl.hidden = true
 
+      const moneda = monedaPago()
       cont.innerHTML = facturasParaPago.map((f, i) => `
-        <div class="fila-fifo">
-          <input type="checkbox" data-index="${i}" class="check-fifo" ${f.checked ? 'checked' : ''}>
+        <div class="fila-fifo${f.checked ? ' fila-fifo--tildada' : ''}">
+          <input type="checkbox" data-index="${i}" class="check-fifo" aria-label="Pagar la factura ${esc(f.numero)}" ${f.checked ? 'checked' : ''}>
           <div class="fila-fifo__info">
             <div class="fila-fifo__numero">${esc(f.numero)} · ${formatearFecha(f.fecha)}</div>
-            <div class="fila-fifo__meta">Saldo pendiente: ${importeHtml(f.saldo)}</div>
+            <div class="fila-fifo__meta">Saldo: ${importeHtml(f.saldo, moneda)}</div>
           </div>
-          <input type="text" class="fila-fifo__monto monto-fifo" data-index="${i}" placeholder="0,00" inputmode="decimal">
+          <input type="text" class="fila-fifo__monto monto-fifo" data-index="${i}" placeholder="0,00" inputmode="decimal" aria-label="Monto a aplicar a la factura ${esc(f.numero)}">
         </div>
       `).join('')
 
@@ -5873,191 +6014,374 @@
         chk.addEventListener('change', (e) => {
           const i = Number(e.target.dataset.index)
           facturasParaPago[i].checked = e.target.checked
-          if (e.target.checked && !facturasParaPago[i].monto) {
+          if (e.target.checked && !centavosDe(facturasParaPago[i].monto)) {
             facturasParaPago[i].monto = facturasParaPago[i].saldo
             ponerNumero(cont.querySelector(`.monto-fifo[data-index="${i}"]`), facturasParaPago[i].monto)
           }
-          actualizarResumenAplicacion()
+          e.target.closest('.fila-fifo')?.classList.toggle('fila-fifo--tildada', e.target.checked)
+          refrescarPago()
         })
       })
-      // Cada monto se dibuja SIN value: se enlaza, se escribe con ponerNumero
-      // (0 = vacío, como antes) y recién después se escucha, así el listener
-      // lee lo que el enlace ya formateó.
+      // Cada monto se dibuja SIN value: se enlaza (nunca más que el saldo),
+      // se escribe con ponerNumero (0 = vacío) y recién después se escucha,
+      // así el listener lee lo que el enlace ya formateó. Escribir un monto
+      // tilda la factura.
       cont.querySelectorAll('.monto-fifo').forEach(inp => {
-        enlazarCampoNumero(inp, { decimales: 2 })
-        ponerNumero(inp, facturasParaPago[Number(inp.dataset.index)].monto || null)
+        const i = Number(inp.dataset.index)
+        enlazarCampoNumero(inp, { decimales: 2, max: facturasParaPago[i].saldo > 0 ? facturasParaPago[i].saldo : undefined })
+        ponerNumero(inp, facturasParaPago[i].monto || null)
         inp.addEventListener('input', (e) => {
-          const i = Number(e.target.dataset.index)
-          facturasParaPago[i].monto = leerCampoNumero(e.target) || 0
-          actualizarResumenAplicacion()
+          const j = Number(e.target.dataset.index)
+          facturasParaPago[j].monto = leerCampoNumero(e.target) || 0
+          if (centavosDe(facturasParaPago[j].monto) > 0 && !facturasParaPago[j].checked) {
+            facturasParaPago[j].checked = true
+            const chk = cont.querySelector(`.check-fifo[data-index="${j}"]`)
+            if (chk) chk.checked = true
+            e.target.closest('.fila-fifo')?.classList.add('fila-fifo--tildada')
+          }
+          refrescarPago()
         })
       })
 
-      actualizarResumenAplicacion()
+      refrescarPago()
     }
 
-    function actualizarResumenAplicacion() {
-      // El resumen del pago con cheques sigue a las facturas tildadas.
-      pintarResumenPagoMixto()
-      const resumenEl = document.getElementById('resumen-aplicacion')
-      const monto = montoDeCampo('campo-monto-pago')
-      if (monto == null || monto <= 0) { resumenEl.hidden = true; return }
+    // Lo dicen el aviso y la orden: "¡Pago registrado! Orden de pago N-OP-00001."
+    function textoExitoPago(r) {
+      const favor = Number(r?.a_favor)
+      const numero = typeof r?.numero_texto === 'string' && r.numero_texto.trim() ? ` Orden de pago ${r.numero_texto.trim()}.` : ''
+      return `¡Pago registrado!${numero}` + (favor > 0 ? ` Quedan ${formatearImporte(favor)} a favor del proveedor.` : '')
+    }
 
-      const sumaAplicada = facturasParaPago.filter(f => f.checked).reduce((acc, f) => acc + (f.monto || 0), 0)
-      const excedente = monto - sumaAplicada
-
-      let html = `Aplicado: <strong>${importeHtml(sumaAplicada)}</strong> de <strong>${importeHtml(monto)}</strong>`
-      if (excedente > 0.009) {
-        html += `<div class="resumen-aplicacion__excedente">${importeHtml(excedente)} va a quedar como saldo a favor.</div>`
-      } else if (excedente < -0.009) {
-        html += `<div class="resumen-aplicacion__error">Lo aplicado supera el monto a pagar — ajustá los montos.</div>`
-      }
-      resumenEl.innerHTML = html
-      resumenEl.hidden = false
+    async function recargarFichaDespuesDePago() {
+      try {
+        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaOrdenesPago()])
+        renderizarFichaBanner()
+        cargarSaldos()
+      } catch (e) { console.error(e) }
     }
 
     async function confirmarPago() {
-      // Los cheques ya se pagaron y el resto falló: solo se reintenta el
-      // resto (nunca se vuelven a mandar los cheques).
-      if (estado.pagoRestoPendiente) {
-        const btnResto = document.getElementById('btn-confirmar-pago')
-        btnResto.classList.add('btn--cargando')
-        btnResto.disabled = true
-        try {
-          const monto = estado.pagoRestoPendiente.monto
-          if (await registrarRestoPendiente()) {
-            mostrarExito(`¡Listo! Se registró el resto de ${formatearImporte(monto)}.`)
-            cerrarModalPago()
-            await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
-            renderizarFichaBanner()
-            cargarSaldos()
-          }
-        } catch (err) {
-          console.error(err)
-          if (estado.pagoRestoPendiente) {
-            pintarRestoPendiente(err.message)
-            mostrarError(textoRestoPendiente(estado.pagoRestoPendiente, err.message))
-          }
-        } finally {
-          btnResto.classList.remove('btn--cargando')
-          btnResto.disabled = false
-        }
+      if (estado.pagoEnviando) return
+      const moneda = monedaPago()
+      const enPesos = moneda === 'ARS'
+      const t = totalesPagoActuales()
+      // Los tildados aunque la moneda no sea pesos: así validarPago lo dice
+      // ("los cheques son solo en pesos") en vez de ignorarlos.
+      const chequeIds = estado.pagoCheques ? carteraPago.filter(c => c.tildado).map(c => c.id) : []
+      const cuentaId = document.getElementById('campo-cuenta-pago-cc').value || null
+      const fecha = document.getElementById('campo-fecha-pago-cc').value
+      const medio = medioPagoSeleccionado
+      const falla = validarPago({ moneda, t, chequeIds, medio, cuentaId, fecha, hoy: hoyCC(), facturas: facturasParaPago })
+      if (falla) {
+        estado.pagoError = falla
+        pintarPiePago()
         return
       }
-      const moneda = document.getElementById('campo-moneda-pago').value
-      const monto = montoDeCampo('campo-monto-pago')
-      if (!moneda) return mostrarError('Seleccioná la moneda.')
-      if (monto == null || monto <= 0) return mostrarError('Ingresá un monto válido.')
-      if (!medioPagoSeleccionado) return mostrarError('Seleccioná el medio de pago.')
-      const medio = medioPagoSeleccionado
-      if (esMedioCheque(medio) && moneda !== 'ARS') return mostrarError('Los cheques son solo en pesos: elegí ARS.')
-
-      const hoy = hoyCC()
-      const fecha = document.getElementById('campo-fecha-pago-cc').value
-      if (!fecha) return mostrarError('Completá la fecha de pago.')
-      const chequeIds = carteraPago.filter(c => c.tildado).map(c => c.id)
-      // Pago mixto: los cheques más efectivo o transferencia por el resto.
-      const completar = medio === 'cartera' ? (estado.pagoCompletar || null) : null
-      const montoResto = completar ? montoDeCampo('campo-resto-pago') : null
-      if (medio === 'cartera') {
-        if (!chequeIds.length) return mostrarError('Tildá al menos un cheque de la cartera.')
-        if (fecha > hoy) return mostrarError('La fecha del pago no puede ser futura.')
-        if (completar && !(Number.isFinite(montoResto) && montoResto > 0))
-          return mostrarError(`Ingresá el resto a pagar en ${NOMBRE_COMPLETAR[completar].toLowerCase()}.`)
-      }
-
-      const requiereCuenta = medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia' || !!completar
-      const cuentaId = requiereCuenta ? (document.getElementById('campo-cuenta-pago-cc').value || null) : null
-      if (requiereCuenta && !cuentaId) return mostrarError('Seleccioná la cuenta.')
-
-      const aplicaciones = facturasParaPago
-        .filter(f => f.checked && f.monto > 0)
-        .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: f.monto }))
-      // En el pago mixto, lo que la base rechazaría recién en el SEGUNDO pago
-      // (con los cheques ya pagados) se frena antes: nada por encima del saldo
-      // de una factura.
-      if (completar) {
-        const pasada = facturasParaPago.find(f => f.checked && f.monto > 0 && Math.round(f.monto * 100) > Math.round(Number(f.saldo) * 100))
-        if (pasada) return mostrarError(`Lo aplicado a la factura ${pasada.numero} supera su saldo pendiente.`)
-      }
-
-      // Defensa en profundidad: nunca mandar un monto no numérico al RPC,
-      // sea cual sea la causa (esto no reemplaza el fix de la clave de
-      // arriba, es un chequeo aparte para que este tipo de bug no vuelva a
-      // llegar al servidor en silencio).
-      if (!Number.isFinite(monto) || monto <= 0)
-        return mostrarError('El monto a pagar no es válido.')
-      if (aplicaciones.some(a => !Number.isFinite(a.monto_aplicado) || a.monto_aplicado <= 0))
-        return mostrarError('Uno de los montos aplicados a una factura no es válido.')
-
-      const sumaAplicada = aplicaciones.reduce((acc, a) => acc + a.monto_aplicado, 0)
-      if (sumaAplicada > monto + 0.01) return mostrarError('La suma aplicada no puede superar el monto a pagar.')
 
       const btn = document.getElementById('btn-confirmar-pago')
+      estado.pagoEnviando = true
+      estado.pagoError = null
+      pintarPiePago()
       btn.classList.add('btn--cargando')
       btn.disabled = true
-
       try {
-        // Pago mixto: las facturas más viejas las cubren los cheques; lo que
-        // queda, el resto. Sin completar, todo va con los cheques (como antes).
-        const reparto = completar
-          ? repartirAplicacionesPagoMixto(facturasParaPago.filter(f => f.checked && f.monto > 0)
-            .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: f.monto, fecha: f.fecha })), sumaCheques(carteraPago))
-          : { cheques: aplicaciones, resto: [] }
-        const base = { proveedorId: estado.ficha.proveedorId, unidadId: estado.ficha.unidadId, aplicaciones: reparto.cheques }
-        const { data: gastoCheques, error } = medio === 'cartera'
-          ? await supabase.rpc('pagar_proveedor_con_cheques_cartera', parametrosPagoCartera({ ...base, chequeIds, fecha }))
-          : await supabase.rpc('registrar_pago_proveedor', {
-          p_proveedor_id: estado.ficha.proveedorId,
-          p_unidad_negocio_id: estado.ficha.unidadId,
-          p_moneda: moneda,
-          p_monto: monto,
-          p_medio_pago: medioPagoSeleccionado,
-          p_cuenta_id: cuentaId,
-          // A quién se le atribuye el gasto: quien registra el pago. Antes iba
-          // Pablo fijo, así que TODOS los pagos a proveedores quedaban a su
-          // nombre sin importar quién los hiciera. La caja NO se descuenta por
-          // este campo — fn_sincronizar_caja_gasto() resuelve el dueño desde
-          // cuentas_caja.empleado_id de p_cuenta_id, así que pagar con una
-          // cuenta de Empresa golpea la caja de Empresa igual.
-          p_empleado_id: estado.miEmpleadoId,
-          p_fecha_pago: fecha,
-          p_aplicaciones: aplicaciones,
-        })
-        if (error) throw new Error(error.message)
-
-        // Los cheques ya quedaron pagados: ahora el resto. Si falla, NO se
-        // vuelven a mandar los cheques: el formulario queda para el resto.
-        if (completar) {
-          estado.pagoRestoPendiente = { gastoCheques, medio: completar, monto: montoResto, aplicaciones: reparto.resto, fecha }
-          if (!(await registrarRestoPendiente())) {
-            // La ficha ya muestra el pago de los cheques.
-            try {
-              await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
-              renderizarFichaBanner()
-              cargarSaldos()
-            } catch (e) { console.error(e) }
-            return
-          }
+        if (enPesos) {
+          // UNA sola llamada, atómica: si algo falla no queda nada a medias.
+          const { data, error } = await supabase.rpc('pagar_proveedor_mixto', parametrosPagoMixto({
+            proveedorId: estado.ficha.proveedorId, unidadId: estado.ficha.unidadId, fecha, chequeIds, t,
+            medio, cuentaId, facturas: facturasParaPago,
+            observaciones: document.getElementById('campo-observaciones-orden').value,
+          }))
+          if (error) throw error
+          mostrarExito(textoExitoPago(data))
+          cerrarModalPago()
+          await recargarFichaDespuesDePago()
+          if (data?.orden_pago_id) await abrirOrdenPago(data.orden_pago_id)
+        } else {
+          // Otra moneda: el pago simple de siempre, sin orden de pago.
+          const { error } = await supabase.rpc('registrar_pago_proveedor', {
+            p_proveedor_id: estado.ficha.proveedorId,
+            p_unidad_negocio_id: estado.ficha.unidadId,
+            p_moneda: moneda,
+            p_monto: t.cResto / 100,
+            p_medio_pago: medio,
+            p_cuenta_id: cuentaId,
+            // A quién se le atribuye el gasto: quien registra el pago. La caja
+            // NO se descuenta por este campo — fn_sincronizar_caja_gasto()
+            // resuelve el dueño desde cuentas_caja.empleado_id de p_cuenta_id.
+            p_empleado_id: estado.miEmpleadoId,
+            p_fecha_pago: fecha,
+            p_aplicaciones: aplicacionesPago(facturasParaPago),
+          })
+          if (error) throw error
+          mostrarExito('¡Pago registrado!')
+          cerrarModalPago()
+          await recargarFichaDespuesDePago()
         }
-
-        const endosados = `${chequeIds.length === 1 ? 'El cheque quedó endosado' : 'Los cheques quedaron endosados'} a ${String(estado.ficha.nombre ?? 'este proveedor').replace(/\.$/, '')}`
-        mostrarExito(medio === 'cartera'
-          ? (completar
-            ? `¡Pago registrado! ${endosados} y el resto (${formatearImporte(montoResto)}) se pagó en ${NOMBRE_COMPLETAR[completar].toLowerCase()}.`
-            : `¡Pago registrado! ${endosados}.`)
-          : '¡Pago registrado!')
-        cerrarModalPago()
-        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
-        renderizarFichaBanner()
-        cargarSaldos()
       } catch (err) {
         console.error(err)
-        mostrarError(`Error al registrar el pago: ${err.message}`)
+        // El error de la base, TAL CUAL, pegado al botón.
+        estado.pagoError = err?.message || String(err)
+        mostrarError(estado.pagoError)
       } finally {
+        estado.pagoEnviando = false
         btn.classList.remove('btn--cargando')
         btn.disabled = false
+        if (!document.getElementById('modal-pago').hidden) pintarPiePago()
       }
+    }
+
+    // ═══ LA ORDEN DE PAGO (20/10/2026) ═══════════════════════════════════
+    // datos_orden_pago (verificada el 20/10/2026) trae todo lo que va
+    // impreso. NO se imprime de qué empresa venía cada cheque ni la cuenta
+    // de la que salió el efectivo / la transferencia.
+
+    // El logo: un archivo de la raíz del repo, nada de esquemas ni carpetas
+    // (la misma regla que logoSeguro() de js/retiros-comun.js).
+    function logoSeguroCC(nombre) {
+      const n = String(nombre ?? '').trim()
+      return /^[a-z0-9][a-z0-9._-]*\.(png|jpe?g|webp)$/i.test(n) && !n.includes('..') ? n : null
+    }
+
+    function cuitConGuiones(cuit) {
+      const d = String(cuit ?? '').replace(/\D/g, '')
+      return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : String(cuit ?? '').trim()
+    }
+
+    // Una fecha 'aaaa-mm-dd' (o con hora) como dd/mm/aaaa; sin fecha, "—".
+    function fechaOrden(f) {
+      const s = String(f ?? '').slice(0, 10)
+      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? formatearFecha(s) : '—'
+    }
+
+    // EL TOTAL EN LETRAS, pesos y centavos: "UN MILLÓN DOSCIENTOS MIL PESOS
+    // CON CINCUENTA CENTAVOS". Hasta 999.999 millones.
+    const LETRAS_UNIDAD = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve',
+      'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve',
+      'veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve']
+    const LETRAS_DECENA = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa']
+    const LETRAS_CENTENA = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos']
+
+    // De 1 a 999; con `corto`, "uno" va como "un" (antes de mil, millones o
+    // pesos: "veintiún mil", "treinta y un pesos").
+    function letrasMenorDeMil(n, corto) {
+      const c = Math.floor(n / 100), r = n % 100
+      const partes = []
+      if (c) partes.push(n === 100 ? 'cien' : LETRAS_CENTENA[c])
+      if (r) {
+        let t
+        if (r < 30) t = LETRAS_UNIDAD[r]
+        else t = LETRAS_DECENA[Math.floor(r / 10)] + (r % 10 ? ' y ' + LETRAS_UNIDAD[r % 10] : '')
+        if (corto) t = t.replace(/veintiuno$/, 'veintiún').replace(/(^|\s)uno$/, '$1un')
+        partes.push(t)
+      }
+      return partes.join(' ')
+    }
+    // De 0 a 999.999 (con `corto` para el último "uno").
+    function letrasMenorDeMillon(n, corto) {
+      const miles = Math.floor(n / 1000), resto = n % 1000
+      const partes = []
+      if (miles === 1) partes.push('mil')
+      else if (miles > 1) partes.push(letrasMenorDeMil(miles, true) + ' mil')
+      if (resto) partes.push(letrasMenorDeMil(resto, corto))
+      return partes.join(' ')
+    }
+    function enteroEnLetras(n) {
+      if (!n) return 'cero'
+      const millones = Math.floor(n / 1e6), resto = n % 1e6
+      const partes = []
+      if (millones === 1) partes.push('un millón')
+      else if (millones > 1) partes.push(letrasMenorDeMillon(millones, true) + ' millones')
+      if (resto) partes.push(letrasMenorDeMillon(resto, true))
+      return partes.join(' ')
+    }
+    function importeEnLetras(importe) {
+      const c = Math.round(Math.abs(Number(importe)) * 100)
+      if (!Number.isFinite(c)) return '—'
+      const pesos = Math.floor(c / 100), cent = c % 100
+      const millonesJustos = pesos >= 1e6 && pesos % 1e6 === 0
+      const textoPesos = enteroEnLetras(pesos) + (millonesJustos ? ' de' : '') + (pesos === 1 ? ' peso' : ' pesos')
+      const textoCent = cent === 1 ? 'un centavo' : `${cent ? enteroEnLetras(cent).replace(/(^|\s)uno$/, '$1un').replace(/veintiuno$/, 'veintiún') : 'cero'} centavos`
+      return `${textoPesos} con ${textoCent}`.toUpperCase()
+    }
+
+    const NOMBRE_MEDIO_ORDEN = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR' }
+
+    function textoLibrador(librador) {
+      const lista = Array.isArray(librador) ? librador : []
+      const partes = lista.map(l => {
+        const nombre = String(l?.nombre ?? '').trim()
+        const cuit = String(l?.cuit ?? '').trim()
+        return [nombre, cuit ? `CUIT ${cuitConGuiones(cuit)}` : ''].filter(Boolean).join(' · ')
+      }).filter(Boolean)
+      return partes.length ? partes.join('; ') : '—'
+    }
+
+    // Puro: la hoja entera. Todo texto de la base pasa por esc().
+    function htmlOrdenPago(d) {
+      const e = d?.emisor ?? {}
+      const p = d?.proveedor ?? {}
+      const facturas = Array.isArray(d?.facturas) ? d.facturas : []
+      const cheques = Array.isArray(d?.cheques) ? d.cheques : []
+      const otros = Array.isArray(d?.otros_medios) ? d.otros_medios : []
+      const logo = logoSeguroCC(e.logo_url)
+      const favor = Number(d?.a_favor)
+
+      const filasFacturas = facturas.length
+        ? `<table class="op-tabla"><thead><tr><th>Tipo</th><th>Número</th><th>Fecha</th><th class="op-num">Importe</th><th class="op-num">Aplicado</th><th class="op-num">Saldo que queda</th></tr></thead><tbody>${
+            facturas.map(f => `<tr><td>${esc(f.tipo ?? '—')}</td><td>${esc(numeroParaMostrar(f.numero) || '—')}</td><td>${esc(fechaOrden(f.fecha))}</td><td class="op-num">${importeHtml(f.importe)}</td><td class="op-num">${importeHtml(f.aplicado)}</td><td class="op-num">${importeHtml(f.saldo_actual)}</td></tr>`).join('')
+          }</tbody></table>`
+        : '<p>Pago a cuenta</p>'
+
+      const filasCheques = cheques.length
+        ? `<table class="op-tabla"><thead><tr><th>Banco</th><th>N°</th><th>Fecha de pago</th><th>Librador</th><th class="op-num">Importe</th></tr></thead><tbody>${
+            cheques.map(c => `<tr><td>${esc(c.banco ?? '—')}${c.es_echeq ? ' <strong>eCheq</strong>' : ''}</td><td>${esc(c.numero ?? '—')}</td><td>${esc(fechaOrden(c.fecha_pago))}</td><td>${esc(textoLibrador(c.librador))}</td><td class="op-num">${importeHtml(c.importe)}</td></tr>`).join('')
+          }</tbody></table>`
+        : ''
+      const filasOtros = otros.length
+        ? `<table class="op-tabla"${cheques.length ? ' style="margin-top:2mm"' : ''}><thead><tr><th>Medio</th><th class="op-num">Importe</th></tr></thead><tbody>${
+            otros.map(o => `<tr><td>${esc(NOMBRE_MEDIO_ORDEN[o.medio] ?? o.medio ?? '—')}</td><td class="op-num">${importeHtml(o.importe)}</td></tr>`).join('')
+          }</tbody></table>`
+        : ''
+
+      return `
+        <div class="op-cab">
+          <div class="op-cab__emisor">
+            ${logo ? `<img class="op-cab__logo" src="../${encodeURIComponent(logo)}" alt="">` : ''}
+            <div>
+              <div class="op-cab__razon">${esc(e.razon_social || e.empresa || '—')}</div>
+              ${e.cuit ? `<div class="op-cab__dato">CUIT ${esc(cuitConGuiones(e.cuit))}</div>` : ''}
+              ${e.domicilio ? `<div class="op-cab__dato">${esc(e.domicilio)}</div>` : ''}
+            </div>
+          </div>
+          <div class="op-cab__titulo">
+            <div class="op-cab__titulo-texto">ORDEN DE PAGO</div>
+            <div class="op-cab__numero">${esc(d?.numero_texto ?? '—')}</div>
+            <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>
+          </div>
+        </div>
+        <div class="op-seccion">
+          <div class="op-seccion__titulo">Proveedor</div>
+          <div><strong>${esc(p.razon_social ?? '—')}</strong></div>
+          ${p.cuit ? `<div>CUIT ${esc(cuitConGuiones(p.cuit))}</div>` : ''}
+          ${p.direccion ? `<div>${esc(p.direccion)}</div>` : ''}
+        </div>
+        <div class="op-seccion">
+          <div class="op-seccion__titulo">Se cancelan los siguientes comprobantes</div>
+          ${filasFacturas}
+        </div>
+        <div class="op-seccion">
+          <div class="op-seccion__titulo">Valores entregados</div>
+          ${filasCheques}${filasOtros}${!cheques.length && !otros.length ? '<p>—</p>' : ''}
+        </div>
+        <div class="op-total">
+          <div>Total</div>
+          <div class="op-total__numero">${importeHtml(d?.total)}</div>
+        </div>
+        <div class="op-letras">Son ${esc(importeEnLetras(d?.total))}</div>
+        ${favor > 0 ? `<div class="op-favor">Saldo a favor del proveedor: ${importeHtml(favor)}</div>` : ''}
+        ${String(d?.observaciones ?? '').trim() ? `<div class="op-seccion"><div class="op-seccion__titulo">Observaciones</div><div>${esc(d.observaciones)}</div></div>` : ''}
+        <div class="op-firmas">
+          <div class="op-firma">Recibí conforme (proveedor) — firma y aclaración</div>
+          <div class="op-firma">Autorizó</div>
+        </div>
+        ${d?.creada_por ? `<div class="op-pie">Generada por ${esc(d.creada_por)}</div>` : ''}`
+    }
+
+    let turnoOrdenPago = 0
+    async function abrirOrdenPago(ordenId) {
+      const turno = ++turnoOrdenPago
+      const modal = document.getElementById('modal-orden-pago')
+      const hoja = document.getElementById('orden-pago-hoja')
+      hoja.innerHTML = '<p>Cargando la orden de pago…</p>'
+      modal.hidden = false
+      let res
+      try {
+        res = await supabase.rpc('datos_orden_pago', { p_orden_id: ordenId })
+      } catch (e) {
+        res = { data: null, error: { message: e?.message ?? String(e) } }
+      }
+      if (turno !== turnoOrdenPago) return
+      if (res?.error || !res?.data) {
+        hoja.innerHTML = `<p class="pago-error">No se pudo leer la orden de pago: ${esc(res?.error?.message ?? 'no vino nada')}. Reimprimila desde la ficha del proveedor.</p>`
+        return
+      }
+      hoja.innerHTML = htmlOrdenPago(res.data)
+      document.getElementById('btn-imprimir-orden').focus?.()
+    }
+    function cerrarOrdenPago() {
+      turnoOrdenPago++
+      document.getElementById('modal-orden-pago').hidden = true
+      document.documentElement.classList.remove('op-imprimiendo')
+    }
+    function imprimirOrdenPago() {
+      const raiz = document.documentElement
+      raiz.classList.add('op-imprimiendo')
+      const quitar = () => { raiz.classList.remove('op-imprimiendo'); window.removeEventListener('afterprint', quitar) }
+      window.addEventListener('afterprint', quitar)
+      window.print()
+    }
+
+    // ── Las órdenes de pago en la ficha del proveedor ───────────────────
+    // Se leen por proveedor y por la empresa de la ficha (en "todas las
+    // unidades", todas las del proveedor). La policy pide
+    // cuentas_corrientes:registrar_pago o ver_todo (20/10/2026).
+    function numeroTextoOrden(unidadId, numero) {
+      const prefijo = estado.maestros?.unidades?.find(u => u.id === unidadId)?.prefijo ?? ''
+      return `${prefijo}-OP-${String(numero ?? '').padStart(5, '0')}`
+    }
+
+    async function cargarFichaOrdenesPago() {
+      const f = estado.ficha
+      if (!f) return
+      f.ordenesPago = null
+      f.errorOrdenesPago = null
+      if (!(tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'ver_todo'))) {
+        renderizarFichaOrdenesPago()
+        return
+      }
+      const unidadId = f.unidadId
+      let q = supabase.from('ordenes_pago').select('id, unidad_negocio_id, numero, fecha, total, creada_en')
+        .eq('proveedor_id', f.proveedorId)
+      if (unidadId) q = q.eq('unidad_negocio_id', unidadId)
+      let data = null, error = null
+      try {
+        ({ data, error } = await q.order('creada_en', { ascending: false }))
+      } catch (e) { error = e }
+      if (estado.ficha !== f || f.unidadId !== unidadId) return
+      if (error) {
+        console.error('ordenes_pago:', error)
+        f.errorOrdenesPago = 'No se pudieron leer las órdenes de pago.'
+      } else {
+        f.ordenesPago = data ?? []
+      }
+      renderizarFichaOrdenesPago()
+    }
+
+    function htmlOrdenesPagoFicha(ordenes, { unidadId = null, error = null } = {}) {
+      if (error) return `<div class="ordenes-pago-cc"><h3 class="titulo-seccion-cc">Órdenes de pago</h3><div class="cargar-importe-cc__error">${esc(error)}</div></div>`
+      const filas = [...(ordenes ?? [])].sort((a, b) => String(b.creada_en ?? '').localeCompare(String(a.creada_en ?? '')))
+      if (!filas.length) return ''
+      return `
+        <div class="ordenes-pago-cc">
+          <h3 class="titulo-seccion-cc">Órdenes de pago (${filas.length})</h3>
+          ${filas.map(o => `
+            <div class="orden-pago-cc">
+              <div class="orden-pago-cc__info">
+                <div class="orden-pago-cc__numero">${esc(numeroTextoOrden(o.unidad_negocio_id, o.numero))} · ${importeHtml(o.total)}</div>
+                <div class="orden-pago-cc__meta">${esc(fechaOrden(o.fecha))}${unidadId ? '' : ` · ${esc(etiquetaUnidad(o.unidad_negocio_id))}`}</div>
+              </div>
+              <button type="button" class="btn-pago-ayuda" data-reimprimir-orden="${esc(o.id)}">Reimprimir</button>
+            </div>`).join('')}
+        </div>`
+    }
+
+    function renderizarFichaOrdenesPago() {
+      const cont = document.getElementById('ficha-ordenes-pago')
+      if (!cont) return
+      if (!estado.ficha) { cont.innerHTML = ''; return }
+      cont.innerHTML = htmlOrdenesPagoFicha(estado.ficha.ordenesPago, { unidadId: estado.ficha.unidadId, error: estado.ficha.errorOrdenesPago })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -6343,30 +6667,39 @@
 
     // ── Modal: Registrar pago ─────────────────────────────────────────────
     document.getElementById('campo-moneda-pago').addEventListener('change', () => {
-      actualizarSelectorCuentaPago()
-      programarActualizarSugerenciasPago()
+      pintarMedioPorMoneda()
+      seleccionarMedioPagoCC(medioPagoSeleccionado)
+      actualizarSugerenciasPago()
     })
     // Primero el enlace y después el listener: así lee el valor ya formateado.
     enlazarCamposMonto()
-    document.getElementById('campo-monto-pago').addEventListener('input', programarActualizarSugerenciasPago)
+    document.getElementById('campo-monto-pago').addEventListener('input', refrescarPago)
     document.getElementById('grilla-medio-pago-cc').addEventListener('click', (e) => {
       const btn = e.target.closest('.btn-tipo-doc')
-      if (!btn) return
+      if (!btn || btn.disabled || estado.pagoEnviando) return
       seleccionarMedioPagoCC(btn.dataset.valor === medioPagoSeleccionado ? null : btn.dataset.valor)
     })
-    document.getElementById('campo-moneda-pago').addEventListener('change', pintarAvisoPesos)
+    document.getElementById('btn-medio-cartera').addEventListener('click', alternarCarteraPago)
     document.getElementById('lista-cartera-pago').addEventListener('change', (e) => {
       const chk = e.target.closest?.('[data-cheque-cartera]')
       if (!chk) return
       chk.closest('.cartera-pago__fila')?.classList.toggle('cartera-pago__fila--tildada', chk.checked)
       tildarChequeCartera(Number(chk.dataset.chequeCartera), chk.checked)
     })
-    // Pago mixto: "Completar con" y el resto.
-    document.getElementById('grilla-completar-pago').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-completar]')
-      if (b && !b.disabled) elegirCompletarPago(b.dataset.completar)
+    // Los dos sentidos: de los valores a las facturas, y al revés.
+    document.getElementById('btn-aplicar-viejas').addEventListener('click', aplicarValoresAFacturas)
+    document.getElementById('btn-completar-diferencia').addEventListener('click', completarDiferencia)
+    document.getElementById('campo-cuenta-pago-cc').addEventListener('change', refrescarPago)
+    document.getElementById('campo-fecha-pago-cc').addEventListener('change', refrescarPago)
+    // La orden de pago.
+    document.getElementById('btn-imprimir-orden').addEventListener('click', imprimirOrdenPago)
+    document.getElementById('btn-cerrar-orden').addEventListener('click', cerrarOrdenPago)
+    document.querySelector('#modal-orden-pago .modal-cc__backdrop').addEventListener('click', cerrarOrdenPago)
+    document.getElementById('modal-orden-pago').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); cerrarOrdenPago() } })
+    document.getElementById('ficha-ordenes-pago').addEventListener('click', (e) => {
+      const b = e.target.closest?.('[data-reimprimir-orden]')
+      if (b) abrirOrdenPago(b.dataset.reimprimirOrden)
     })
-    document.getElementById('campo-resto-pago').addEventListener('input', () => { if (!estado.pagoRestoPendiente) pintarTotalCartera() })
     document.getElementById('cc-primer').addEventListener('click', (e) => {
       const b = e.target.closest('[data-cc-seccion]')
       if (b) mostrarSeccionCC(b.dataset.ccSeccion)

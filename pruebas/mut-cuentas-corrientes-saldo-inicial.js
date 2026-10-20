@@ -75,7 +75,7 @@ correrMutacionesEn({
     { nombre: 'la referencia vuelve a SALDO-INICIAL', de: "        return (m.tipo === 'factura' && observaciones?.get(m.factura_pendiente_id)) || 'Saldo inicial'", a: "        return (m.tipo === 'factura' && observaciones?.get(m.factura_pendiente_id)) || m.referencia" },
     { nombre: 'nombreFactura no conoce el saldo inicial', de: "      return numero === NUMERO_SALDO_INICIAL ? 'Saldo inicial' : `Factura ${numero || '—'}`", a: "      return `Factura ${numero || '—'}`" },
     { nombre: 'numeroParaMostrar no conoce el saldo inicial', de: "      return numero === NUMERO_SALDO_INICIAL ? 'Saldo inicial' : (numero || '(sin número)')", a: "      return numero || '(sin número)'" },
-    { nombre: 'la lista para pagar con el número crudo', de: '        numero: numeroParaMostrar(f.numero_comprobante),', a: "        numero: f.numero_comprobante || '(sin número)'," },
+    { nombre: 'la lista para pagar con el número crudo', de: '        numero: numeroParaMostrar(x.numero_comprobante),', a: "        numero: x.numero_comprobante || '(sin número)'," },
     { nombre: 'la lista de créditos con el número crudo', de: '${numeroParaMostrar(f.numero_comprobante)} — saldo', a: "${f.numero_comprobante || '(sin número)'} — saldo" },
     { nombre: 'el detalle del pago dice "Factura SALDO-INICIAL"', de: '<div class="fila-fifo__numero">${esc(nombreFactura(fp?.numero_comprobante))}</div>', a: '<div class="fila-fifo__numero">Factura ${esc(fp?.numero_comprobante || \'—\')}</div>' },
     { nombre: 'el crédito "se aplicó a la Factura SALDO-INICIAL"', de: 'se aplicó a: ${esc(nombreFactura(ac.facturas_pendientes?.numero_comprobante))}', a: "se aplicó a la Factura ${esc(ac.facturas_pendientes?.numero_comprobante || '—')}" },
