@@ -289,7 +289,11 @@ const SEGURAS_REGEX_PRODUCCION = [
   [/^LARGO_MAXIMO_LOTE$/, 'constante numérica del código (40)'],
   [/^attrs$/, "atributos literales del código (' disabled', ' readonly …', ' required …')"],
   [/^campo\(' disabled', '', 'Primero el producto'\)$/, 'HTML armado por campo(), que escapa el valor y el placeholder (acá literales)'],
-  [/^(pregunta|input)$/, 'HTML armado en htmlLoteIngreso(): la pregunta escapa el lote vigente; input sale de campo(), que escapa el valor'],
+  // Salidas entre fábricas (21/10/2026): celda(rot, html) de htmlSalidas()
+  // recibe un rótulo LITERAL del código y HTML que el que llama ya escapó.
+  [/^rot$/, "rótulo literal del código ('Fecha', 'Lote', 'Cajas'…) que pasa htmlSalidas() a celda()"],
+  [/^html$/, 'HTML que htmlSalidas() le pasa a celda() ya escapado con esc()'],
+  [/^(pregunta|input)$/,'HTML armado en htmlLoteIngreso(): la pregunta escapa el lote vigente; input sale de campo(), que escapa el valor'],
 ]
 
 module.exports = { SEGURAS_PRODUCCION, SEGURAS_REGEX_PRODUCCION }

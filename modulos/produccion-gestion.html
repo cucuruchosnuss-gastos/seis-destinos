@@ -2541,6 +2541,46 @@
     .pr-ing__lote .pr-ing__origen { max-width: 32rem; }
     .pr-ing__lote input[readonly] { background: var(--color-superficie); color: var(--color-texto-2); }
     .pr-ing__lote input { text-transform: uppercase; }
+
+    /* Salidas entre fábricas (21/10/2026). Lo decide el ANCHO DE LA SECCIÓN y
+       no el de la pantalla (container query): a 1280 px, con la barra lateral
+       y el menú de la gestión, quedan unos 740 px y siete columnas no entran.
+       Angosta, cada salida es una tarjeta con el rótulo de cada dato (la
+       cabecera se esconde); desde 900 px de sección, la tabla de 7 columnas.
+       Sin scroll de costado. */
+    .pr-sal { container-type: inline-size; }
+    .pr-sal__abrir { width: 100%; min-height: 48px; margin-top: 0.5rem; }
+    .pr-sal .pr-input, .pr-sal .pr-select { font-size: 16px; min-height: 44px; width: 100%; box-sizing: border-box; }
+    .pr-sal__filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 0.75rem; margin-top: 0.75rem; align-items: end; }
+    .pr-sal__exportar { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+    .pr-sal__exportar .pr-btn { min-height: 48px; }
+    @container (min-width: 600px) { .pr-sal__exportar .pr-btn { align-self: flex-start; } }
+    .pr-sal__lote { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .pr-of-salida > span, .pr-of-sal-total > span { min-width: 0; overflow-wrap: anywhere; }
+    .pr-sal .pr-of-cab { display: none; }
+    .pr-of-salida, .pr-of-sal-total { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.25rem 1rem; padding: 0.625rem 1rem; }
+    .pr-of-salida .pr-sal__producto, .pr-of-sal-total .pr-sal__producto { grid-column: 1 / -1; }
+    .pr-sal .pr-of-num { text-align: left; }
+    .pr-sal__rot { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--color-texto-suave); }
+    /* Intermedio: los totales ya entran como tabla de 3 columnas y cada
+       salida en 4 (producto arriba; fecha, lote, cajas y unidades; destino y remito). */
+    @container (min-width: 500px) {
+      .pr-sal .pr-sal__totales .pr-of-cab { display: grid; }
+      .pr-of-sal-total { grid-template-columns: minmax(0, 1fr) 7rem 8rem; gap: 1rem; padding: 0.5rem 1.25rem; }
+      .pr-of-sal-total .pr-sal__producto { grid-column: auto; }
+      .pr-sal__totales .pr-of-num { text-align: right; }
+      .pr-sal__totales .pr-sal__rot { display: none; }
+      .pr-of-salida { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @container (min-width: 900px) {
+      .pr-sal .pr-of-cab { display: grid; }
+      .pr-of-salida { grid-template-columns: 6rem minmax(0, 2fr) minmax(0, 1fr) 4.5rem 6rem minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; padding: 0.5rem 1.25rem; }
+      .pr-of-sal-total { grid-template-columns: minmax(0, 1fr) 7rem 8rem; gap: 1rem; padding: 0.5rem 1.25rem; }
+      .pr-of-salida .pr-sal__producto, .pr-of-sal-total .pr-sal__producto { grid-column: auto; }
+      .pr-sal .pr-of-num { text-align: right; }
+      .pr-sal__rot { display: none; }
+    }
     .pr-ing__obs { margin: 0.75rem 0; }
     .pr-ing__pie { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem; }
     .pr-ing__guardar { min-height: 52px; font-size: 1.0625rem; }
@@ -2797,6 +2837,8 @@
                otra fábrica. Solo con materia_prima:cargar o
                stock:ajustar_inventario en alguna fábrica (lo decide la base). -->
           <button type="button" class="pr-btn pr-btn--primario pr-ing__abrir" id="pr-stock-ingresar" hidden>Cargar ingreso</button>
+          <!-- Salidas entre fábricas (21/10/2026): lo ve quien ve el stock terminado. -->
+          <button type="button" class="pr-btn pr-btn--secundario pr-sal__abrir" id="pr-stock-salidas">Salidas entre fábricas</button>
         </div>
         <div id="pr-stock-aviso"></div>
         <div id="pr-stock-lista"></div>
@@ -2818,6 +2860,32 @@
           <p class="pr-texto-suave">Cajas que entran de un proveedor o de otra fábrica del grupo.</p>
         </div>
         <div id="pr-ing-cuerpo"></div>
+      </section>
+
+      <!-- SALIDAS ENTRE FÁBRICAS (21/10/2026): lo que una fábrica del grupo
+           le mandó a otra (v_salidas_entre_fabricas). Solo lectura. Ver el
+           bloque del mismo nombre en el script. -->
+      <section id="pr-salidas" class="pr-of pr-sal" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-sal-volver">‹ Stock terminado</button>
+            <h1 class="pr-titulo">Salidas entre fábricas</h1>
+          </div>
+          <p class="pr-texto-suave">Lo que una fábrica del grupo le mandó a otra. Mengui no lleva stock de producto terminado: esto es su registro de salidas.</p>
+          <div class="pr-campos pr-sal__filtros">
+            <label class="pr-campo"><span class="pr-campo__rotulo">Fábrica de origen</span><select id="pr-sal-origen" class="pr-select"></select></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-sal-desde" class="pr-input"></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-sal-hasta" class="pr-input"></label>
+            <label class="pr-campo"><span class="pr-campo__rotulo">Producto</span><select id="pr-sal-producto" class="pr-select"></select></label>
+          </div>
+          <div class="pr-sal__exportar">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-sal-exportar">Exportar a Excel</button>
+            <p class="pr-ing__error" id="pr-sal-exportar-error" role="alert" hidden></p>
+          </div>
+        </div>
+        <div id="pr-sal-aviso"></div>
+        <div id="pr-sal-totales"></div>
+        <div id="pr-sal-lista"></div>
       </section>
 
     </main>
@@ -3060,7 +3128,7 @@
 
     // La gestión: todas sus pantallas son "de oficina". La tablet quedó en
     // produccion.html.
-    const VISTAS = ['pr-inicio', 'pr-config', 'pr-tabla', 'pr-historial', 'pr-stock', 'pr-ingreso']
+    const VISTAS = ['pr-inicio', 'pr-config', 'pr-tabla', 'pr-historial', 'pr-stock', 'pr-ingreso', 'pr-salidas']
     function mostrarVista(id) {
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -3105,7 +3173,7 @@
     function seccionActual() {
       if (estado.vista === 'pr-config') return `config:${estado.config?.tab ?? ''}`
       if (estado.vista === 'pr-historial') return estado.historial?.estado === 'pendiente_completar' && estado.historial?.desdePendientes ? 'pendientes' : 'historial'
-      if (estado.vista === 'pr-stock' || estado.vista === 'pr-ingreso') return 'stock'
+      if (estado.vista === 'pr-stock' || estado.vista === 'pr-ingreso' || estado.vista === 'pr-salidas') return 'stock'
       if (estado.vista === 'pr-tabla') return 'tabla'
       return 'inicio'
     }
@@ -9843,6 +9911,7 @@
       document.getElementById('pr-historial-volver').addEventListener('click', abrirMenu)
       document.getElementById('pr-stock-volver').addEventListener('click', alVolverDelStock)
       conectarIngreso()
+      conectarSalidas()
       document.getElementById('pr-historial-detalle-volver').addEventListener('click', () => {
         document.getElementById('pr-historial-detalle').hidden = true
         document.getElementById('pr-historial-listado').hidden = false
@@ -10381,6 +10450,257 @@
       sec.addEventListener('click', alTocarIngreso)
       document.getElementById('pr-stock-ingresar')?.addEventListener('click', abrirIngreso)
       document.getElementById('pr-ing-volver')?.addEventListener('click', () => { estado.ing = null; mostrarStockTerminado() })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALIDAS ENTRE FÁBRICAS (21/10/2026, pedido de Facu)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Lo que una fábrica del grupo le mandó a otra: los ingresos de producto
+    // terminado que vinieron de OTRA fábrica (v_salidas_entre_fabricas,
+    // security_invoker: cada uno ve los de las fábricas DESTINO donde puede
+    // ver el stock terminado). Mengui no lleva stock de producto terminado:
+    // esto es su registro de salidas. SOLO LECTURA. Se ofrece en el stock
+    // terminado, así que lo ve quien ve el stock terminado. Filtros: fábrica
+    // de origen (Mengui de entrada), fechas (el mes actual de entrada) y
+    // producto (este último en la pantalla, sin volver a pedir).
+
+    const COLUMNAS_SALIDAS = 'id, fecha, created_at, unidad_origen_id, origen, destino_id, destino, producto, presentacion, marca, lote, cajas, unidades, remito, ingreso_id, motivo'
+    // SheetJS, de cdnjs, cargado recién al exportar.
+    const LIBRERIA_XLSX_SALIDAS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+
+    // Las fábricas que se ofrecen como origen: las de la barra de unidades
+    // (activas, sin la fábrica de pruebas para una cuenta real).
+    function origenesSalidas() {
+      return [...estado.unidades].map(([id, nombre]) => ({ id, nombre }))
+    }
+
+    // Mengui de entrada (por su nombre); si no está, la primera.
+    function origenPorDefectoSalidas(origenes) {
+      const mengui = origenes.find(u => normalizarBusqueda(u.nombre).includes('mengui'))
+      return (mengui ?? origenes[0])?.id ?? ''
+    }
+
+    // El mes actual: del 1º a hoy (hoy de Argentina).
+    function periodoMesSalidas(hoy) {
+      return { desde: hoy.slice(0, 8) + '01', hasta: hoy }
+    }
+
+    function nuevasSalidas(hoy) {
+      const origenes = origenesSalidas()
+      return {
+        origenId: origenPorDefectoSalidas(origenes), ...periodoMesSalidas(hoy), producto: '',
+        filas: null, error: false, recortado: false, turno: 0, exportarError: '',
+      }
+    }
+
+    // Los productos que aparecen en lo leído, para el filtro.
+    function productosDeSalidas(filas) {
+      return [...new Set((filas ?? []).map(f => String(f.producto ?? '')).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
+    }
+
+    function filtrarSalidas(filas, producto) {
+      return producto ? (filas ?? []).filter(f => String(f.producto ?? '') === producto) : (filas ?? [])
+    }
+
+    // Por producto: cajas y unidades del período. Un número que no se pudo
+    // sumar queda en null ("—"), nunca en cero.
+    function totalesSalidas(filas) {
+      const mapa = new Map()
+      for (const f of filas ?? []) {
+        const k = String(f.producto ?? '') || 'Producto'
+        const t = mapa.get(k) ?? { producto: k, cajas: 0, unidades: 0, renglones: 0 }
+        t.cajas = sumarMedido(t.cajas, f.cajas)
+        t.unidades = sumarMedido(t.unidades, f.unidades)
+        t.renglones++
+        mapa.set(k, t)
+      }
+      return [...mapa.values()].sort((a, b) => a.producto.localeCompare(b.producto, 'es'))
+    }
+
+    // "Caja x 600 · LOLO": la presentación y el cono, si hay.
+    function detalleSalida(f) {
+      return [f.presentacion, f.marca].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
+    }
+
+    function htmlTotalesSalidas(totales) {
+      if (!totales.length) return ''
+      const general = totales.reduce((a, t) => ({ cajas: sumarMedido(a.cajas, t.cajas), unidades: sumarMedido(a.unidades, t.unidades) }), { cajas: 0, unidades: 0 })
+      return `<div class="pr-of-tabla pr-of-grupo pr-sal__totales"><div class="pr-of-grupo__cab"><h2 class="pr-of-grupo__titulo">Totales del período</h2>` +
+        `<span class="pr-of-grupo__total">${esc(textoEntero(general.cajas))} cajas · ${esc(textoEntero(general.unidades))} unidades</span></div>` +
+        `<div class="pr-of-cab pr-of-sal-total"><span>Producto</span><span class="pr-of-num">Cajas</span><span class="pr-of-num">Unidades</span></div>` +
+        totales.map(t => `<div class="pr-of-fila pr-of-sal-total" data-sal-total="${esc(t.producto)}"><span class="pr-sal__producto">${esc(t.producto)}</span>` +
+          `<span class="pr-of-num"><small class="pr-sal__rot">Cajas</small>${esc(textoEntero(t.cajas))}</span>` +
+          `<span class="pr-of-num"><small class="pr-sal__rot">Unidades</small>${esc(textoEntero(t.unidades))}</span></div>`).join('') +
+        '</div>'
+    }
+
+    function htmlSalidas(filas) {
+      if (!filas.length) return '<p class="pr-of-vacio">No hay salidas en este período.</p>'
+      const celda = (rot, html, clase = '') => `<span class="${clase}"><small class="pr-sal__rot">${rot}</small>${html}</span>`
+      return `<div class="pr-of-tabla pr-of-grupo"><div class="pr-of-cab pr-of-salida"><span>Fecha</span><span>Producto</span><span>Lote</span>` +
+        `<span class="pr-of-num">Cajas</span><span class="pr-of-num">Unidades</span><span>Destino</span><span>Remito</span></div>` +
+        filas.map(f => {
+          const det = detalleSalida(f)
+          return `<div class="pr-of-fila pr-of-salida" data-salida="${esc(f.id)}">` +
+            celda('Fecha', esc(fechaDelDia(f.fecha))) +
+            `<span class="pr-sal__producto"><strong>${esc(f.producto)}</strong>${det ? `<span class="pr-texto-suave"> · ${esc(det)}</span>` : ''}</span>` +
+            celda('Lote', esc(f.lote ?? '—'), 'pr-sal__lote') +
+            celda('Cajas', esc(textoEntero(f.cajas)), 'pr-of-num') +
+            celda('Unidades', esc(textoEntero(f.unidades)), 'pr-of-num') +
+            celda('Destino', esc(f.destino ?? '—')) +
+            celda('Remito', esc(String(f.remito ?? '').trim() || '—')) +
+            '</div>'
+        }).join('') + '</div>'
+    }
+
+    async function abrirSalidas() {
+      if (!estado.salidas) estado.salidas = nuevasSalidas(hoyArgentina())
+      mostrarVista('pr-salidas')
+      pintarFiltrosSalidas()
+      await cargarSalidas()
+    }
+
+    function pintarFiltrosSalidas() {
+      const s = estado.salidas
+      if (!s) return
+      const sel = document.getElementById('pr-sal-origen')
+      if (sel) sel.innerHTML = origenesSalidas().map(u => `<option value="${esc(u.id)}"${u.id === s.origenId ? ' selected' : ''}>${esc(u.nombre)}</option>`).join('')
+      const d = document.getElementById('pr-sal-desde'), h = document.getElementById('pr-sal-hasta')
+      if (d && d.value !== s.desde) d.value = s.desde
+      if (h && h.value !== s.hasta) h.value = s.hasta
+      pintarProductosSalidas()
+    }
+
+    function pintarProductosSalidas() {
+      const s = estado.salidas
+      const sel = document.getElementById('pr-sal-producto')
+      if (!s || !sel) return
+      const productos = productosDeSalidas(s.filas)
+      // Un producto elegido que ya no está en lo leído se suelta.
+      if (s.producto && !productos.includes(s.producto)) s.producto = ''
+      sel.innerHTML = '<option value="">Todos los productos</option>' +
+        productos.map(p => `<option value="${esc(p)}"${p === s.producto ? ' selected' : ''}>${esc(p)}</option>`).join('')
+    }
+
+    async function cargarSalidas() {
+      const s = estado.salidas
+      if (!s) return
+      const turno = ++s.turno
+      s.filas = null; s.error = false; s.recortado = false
+      pintarSalidas()
+      if (!s.origenId || !s.desde || !s.hasta) { s.filas = []; pintarProductosSalidas(); pintarSalidas(); return }
+      try {
+        const { data, error } = await supabase.from('v_salidas_entre_fabricas').select(COLUMNAS_SALIDAS)
+          .eq('unidad_origen_id', s.origenId).gte('fecha', s.desde).lte('fecha', s.hasta)
+          .order('fecha', { ascending: false }).order('created_at', { ascending: false })
+        if (error) throw error
+        if (estado.salidas !== s || turno !== s.turno) return
+        s.filas = data ?? []
+        s.recortado = s.filas.length >= TOPE_FILAS
+      } catch (err) {
+        console.error('salidas entre fábricas:', err)
+        if (estado.salidas !== s || turno !== s.turno) return
+        s.filas = null; s.error = true
+      }
+      pintarProductosSalidas()
+      pintarSalidas()
+    }
+
+    function pintarSalidas() {
+      const s = estado.salidas
+      const aviso = document.getElementById('pr-sal-aviso')
+      const tot = document.getElementById('pr-sal-totales')
+      const lista = document.getElementById('pr-sal-lista')
+      if (!s || !aviso || !tot || !lista) return
+      const err = document.getElementById('pr-sal-exportar-error')
+      if (err) { err.textContent = s.exportarError; err.hidden = !s.exportarError }
+      if (s.error) {
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las salidas. Revisá la conexión.</div>'
+        tot.innerHTML = ''; lista.innerHTML = ''
+        return
+      }
+      if (s.filas === null) { aviso.innerHTML = ''; tot.innerHTML = ''; lista.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'; return }
+      aviso.innerHTML = s.recortado ? '<div class="pr-aviso pr-aviso--grave">Hay más de 1000 salidas y solo se leyeron las primeras: achicá el período.</div>' : ''
+      const filas = filtrarSalidas(s.filas, s.producto)
+      tot.innerHTML = htmlTotalesSalidas(totalesSalidas(filas))
+      lista.innerHTML = htmlSalidas(filas)
+    }
+
+    // El Excel: una hoja con cada salida y otra con los totales por producto.
+    // Los números van como números; un dato ausente, vacío.
+    function filasExcelSalidas(filas) {
+      const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : Number(v))
+      const t = v => String(v ?? '').trim()
+      return [['Fecha', 'Origen', 'Destino', 'Producto', 'Presentación', 'Cono', 'Lote', 'Cajas', 'Unidades', 'Remito', 'Motivo'],
+        ...(filas ?? []).map(f => [fechaDelDia(f.fecha), t(f.origen), t(f.destino), t(f.producto), t(f.presentacion), t(f.marca), t(f.lote),
+          num(f.cajas), num(f.unidades), t(f.remito), t(f.motivo)])]
+    }
+
+    function filasExcelTotalesSalidas(totales) {
+      const num = v => (v === null || v === undefined || !Number.isFinite(Number(v)) ? '' : Number(v))
+      return [['Producto', 'Cajas', 'Unidades'], ...(totales ?? []).map(x => [x.producto, num(x.cajas), num(x.unidades)])]
+    }
+
+    function nombreArchivoSalidas(s) {
+      const origen = String(estado.unidades.get(s.origenId) ?? '').replace(/[\\/:*?"<>|]/g, ' ').trim()
+      const f = iso => fechaDelDia(iso).replace(/\//g, '-')
+      return `Salidas entre fábricas${origen ? ' - ' + origen : ''} ${f(s.desde)} a ${f(s.hasta)}.xlsx`
+    }
+
+    let promesaXlsxSalidas = null
+    function cargarXlsxSalidas() {
+      if (window.XLSX) return Promise.resolve(window.XLSX)
+      if (!promesaXlsxSalidas) {
+        promesaXlsxSalidas = new Promise((ok, mal) => {
+          const sc = document.createElement('script')
+          sc.src = LIBRERIA_XLSX_SALIDAS
+          sc.onload = () => (window.XLSX ? ok(window.XLSX) : mal(new Error('No se pudo cargar la librería de Excel.')))
+          sc.onerror = () => mal(new Error('No se pudo bajar la librería de Excel: revisá la conexión.'))
+          document.head.appendChild(sc)
+        }).catch(e => { promesaXlsxSalidas = null; throw e })
+      }
+      return promesaXlsxSalidas
+    }
+
+    async function exportarSalidas() {
+      const s = estado.salidas
+      if (!s) return
+      const decir = (texto) => { s.exportarError = texto; const el = document.getElementById('pr-sal-exportar-error'); if (el) { el.textContent = texto; el.hidden = !texto } }
+      if (!Array.isArray(s.filas)) { decir('Todavía no se leyeron las salidas de este período.'); return }
+      const filas = filtrarSalidas(s.filas, s.producto)
+      if (!filas.length) { decir('No hay salidas en este período para exportar.'); return }
+      decir('')
+      try {
+        const XLSX = await cargarXlsxSalidas()
+        const libro = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(filasExcelSalidas(filas)), 'Salidas')
+        XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(filasExcelTotalesSalidas(totalesSalidas(filas))), 'Totales por producto')
+        XLSX.writeFile(libro, nombreArchivoSalidas(s))
+      } catch (e) {
+        console.error('exportar salidas:', e)
+        decir(e?.message || 'No se pudo armar el Excel.')
+      }
+    }
+
+    function conectarSalidas() {
+      document.getElementById('pr-stock-salidas')?.addEventListener('click', abrirSalidas)
+      document.getElementById('pr-sal-volver')?.addEventListener('click', () => mostrarStockTerminado())
+      document.getElementById('pr-sal-exportar')?.addEventListener('click', exportarSalidas)
+      const cambio = (campo) => (ev) => {
+        const s = estado.salidas; if (!s) return
+        s[campo] = ev.target.value; s.exportarError = ''
+        if (campo === 'producto') pintarSalidas()
+        else cargarSalidas()
+      }
+      document.getElementById('pr-sal-origen')?.addEventListener('change', cambio('origenId'))
+      document.getElementById('pr-sal-desde')?.addEventListener('change', cambio('desde'))
+      document.getElementById('pr-sal-hasta')?.addEventListener('change', cambio('hasta'))
+      document.getElementById('pr-sal-producto')?.addEventListener('change', cambio('producto'))
+      // El "Período" (js/periodo.js) envuelve las dos fechas: les pone el valor
+      // y les dispara el mismo 'change'. Las dos son obligatorias.
+      const d = document.getElementById('pr-sal-desde'), h = document.getElementById('pr-sal-hasta')
+      if (d && h) crearPeriodo({ desde: d, hasta: h, obligatorias: true })
     }
 
     function sinAcceso(texto) {
