@@ -104,13 +104,15 @@ for (const [ancho, alto] of TAMANOS) {
     await r2.locator('[data-ing-campo="lote"]').fill('cd-7');
     // El primer renglón conservó su lote al repintar.
     await expect(page.locator('.pr-ing__renglon').first().locator('[data-ing-campo="lote"]')).toHaveValue(' L-1014 ');
-    await expect(page.locator('[data-ing-campo="precio"]')).toBeVisible();
-    await page.locator('[data-ing-campo="precio"]').fill('1500');
+    const r1 = page.locator('.pr-ing__renglon').first();
+    await expect(r1.locator('[data-ing-campo="precio"]')).toBeVisible();
+    await r1.locator('[data-ing-campo="precio"]').fill('1500');
     await page.locator('#pr-ing-remito').fill('R-0001-123');
 
-    // Los campos a 16 px (sin zoom en el celular).
-    const fuente = await page.locator('[data-ing-campo="cajas"]').evaluate(el => getComputedStyle(el).fontSize);
+    // Los campos a 16 px (sin zoom en el celular), el lote también.
+    const fuente = await r1.locator('[data-ing-campo="cajas"]').evaluate(el => getComputedStyle(el).fontSize);
     expect(fuente).toBe('16px');
+    expect(await r1.locator('[data-ing-campo="lote"]').evaluate(el => getComputedStyle(el).fontSize)).toBe('16px');
     await sinScrollHorizontal(page);
     await captura(page, `ingreso-proveedor-${ancho}`, info);
 
