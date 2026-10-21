@@ -2,8 +2,10 @@
 // "ingreso-terminado" (Producción + materia_prima:cargar en Cucuruchos Nuss,
 // dos proveedores y el lote vigente del Mini): en el stock terminado de la
 // gestión, "Cargar ingreso" abre el formulario; de un proveedor (con precio)
-// y de otra fábrica (sin precio, y sin proveedor en el pedido); el lote viene
-// con el vigente y al cambiarlo aparece el tilde; el error de la base se ve
+// y de otra fábrica (sin precio, y sin proveedor en el pedido); el lote
+// (21/10/2026): con vigente se pregunta "Último lote: X. ¿Sigue siendo este?"
+// (Sí / "No, es otro"), sin vigente se escribe; sin lote no se guarda, y ya
+// no se llama a guardar_lote_vigente (lo hace la base); el error de la base se ve
 // tal cual y el reintento manda el MISMO client_uuid; "Listo: entraron 12
 // cajas" y vuelve al stock. Sin el permiso, el botón no aparece. A 1280, 390,
 // 360 y la tablet (1000×540), sin scroll horizontal ni errores. Corre
@@ -63,18 +65,45 @@ for (const [ancho, alto] of TAMANOS) {
     await page.locator('[data-ing-proveedor="prov-1"]').click();
     await expect(page.locator('.pr-ing__elegido')).toContainText('RODRIGO CAPELINAS SRL');
 
-    // El producto trae su única presentación y el lote vigente.
+    // El producto trae su única presentación y la pregunta del lote vigente.
     await page.locator('[data-ing-campo="productoId"]').selectOption('p1');
     await expect(page.locator('[data-ing-campo="presentacionId"]')).toHaveValue('pr1');
+    await expect(page.locator('.pr-ing__lote-pregunta')).toHaveText('Último lote: L-1013. ¿Sigue siendo este?');
+    await expect(page.locator('.pr-ing__tilde')).toHaveCount(0);
     const lote = page.locator('[data-ing-campo="lote"]');
-    await expect(lote).toHaveValue('L-1013');
-    const tilde = page.locator('.pr-ing__tilde');
-    await expect(tilde).toBeHidden();
-    await lote.fill('L-1014');
-    await expect(tilde).toBeVisible();
-    await tilde.locator('input').check();
-
+    await expect(lote).toHaveCount(0);
     await page.locator('[data-ing-campo="cajas"]').fill('12');
+    // Sin contestar no se guarda.
+    await page.locator('#pr-ing-guardar').click();
+    await expect(page.locator('#pr-ing-error')).toHaveText('Renglón 1: contestá si el lote sigue siendo L-1013.');
+    // Sí: el vigente, de solo lectura.
+    await page.locator('[data-ing-lote="si"]').click();
+    await expect(page.locator('[data-ing-lote="si"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(lote).toHaveValue('L-1013');
+    await expect(lote).toHaveAttribute('readonly', '');
+    // "No, es otro": el campo vacío, obligatorio y con el foco.
+    await page.locator('[data-ing-lote="otro"]').click();
+    await expect(lote).toHaveValue('');
+    await expect(lote).toBeFocused();
+    await expect(lote).toHaveAttribute('required', '');
+    await expect(lote).not.toHaveAttribute('readonly', '');
+    await page.locator('#pr-ing-guardar').click();
+    await expect(page.locator('#pr-ing-error')).toHaveText('Renglón 1: escribí el lote.');
+    await lote.pressSequentially(' l-1014 ');
+    await expect(lote).toHaveValue(' L-1014 ');
+    await expect(lote).toHaveAttribute('maxlength', '40');
+    // Un segundo producto sin lote vigente: el campo de entrada, obligatorio.
+    await page.locator('#pr-ing-agregar').click();
+    const r2 = page.locator('.pr-ing__renglon').nth(1);
+    await r2.locator('[data-ing-campo="productoId"]').selectOption('p2');
+    await expect(r2.locator('.pr-ing__lote-pregunta')).toHaveCount(0);
+    await expect(r2.locator('[data-ing-campo="lote"]')).toHaveAttribute('required', '');
+    await r2.locator('[data-ing-campo="cajas"]').fill('3');
+    await page.locator('#pr-ing-guardar').click();
+    await expect(page.locator('#pr-ing-error')).toHaveText('Renglón 2: escribí el lote.');
+    await r2.locator('[data-ing-campo="lote"]').fill('cd-7');
+    // El primer renglón conservó su lote al repintar.
+    await expect(page.locator('.pr-ing__renglon').first().locator('[data-ing-campo="lote"]')).toHaveValue(' L-1014 ');
     await expect(page.locator('[data-ing-campo="precio"]')).toBeVisible();
     await page.locator('[data-ing-campo="precio"]').fill('1500');
     await page.locator('#pr-ing-remito').fill('R-0001-123');
@@ -107,9 +136,12 @@ for (const [ancho, alto] of TAMANOS) {
     expect(p.p_proveedor_id).toBe('prov-1');
     expect(p.p_unidad_origen_id).toBeNull();
     expect(p.p_remito).toBe('R-0001-123');
-    expect(p.p_items).toEqual([{ presentacion_id: 'pr1', marca_id: null, cajas: 12, lote: 'L-1014', precio_caja: 1500 }]);
-    const lotes = llamadas.filter(l => l.nombre === 'guardar_lote_vigente');
-    expect(lotes.map(l => l.params)).toEqual([{ p_unidad_negocio_id: 'u-n', p_producto_id: 'p1', p_lote: 'L-1014' }]);
+    expect(p.p_items).toEqual([
+      { presentacion_id: 'pr1', marca_id: null, cajas: 12, lote: 'L-1014', precio_caja: 1500 },
+      { presentacion_id: 'pr2', marca_id: null, cajas: 3, lote: 'CD-7', precio_caja: null },
+    ]);
+    // El lote vigente lo guarda la base sola: ya no se llama a guardar_lote_vigente.
+    expect(llamadas.filter(l => l.nombre === 'guardar_lote_vigente')).toEqual([]);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
@@ -133,6 +165,8 @@ for (const [ancho, alto] of TAMANOS) {
 
     await page.locator('[data-ing-campo="productoId"]').selectOption('p1');
     await page.locator('[data-ing-campo="cajas"]').fill('12');
+    await page.locator('[data-ing-lote="si"]').click();
+    await expect(page.locator('[data-ing-campo="lote"]')).toHaveValue('L-1013');
     await expect(page.locator('[data-ing-campo="precio"]')).toHaveCount(0);
     await sinScrollHorizontal(page);
     await captura(page, `ingreso-fabrica-${ancho}`, info);
@@ -146,6 +180,7 @@ for (const [ancho, alto] of TAMANOS) {
     expect(ingresos[0].params.p_proveedor_id, 'nunca los dos').toBeNull();
     expect(ingresos[0].params.p_unidad_origen_id).toBe('u-d');
     expect(ingresos[0].params.p_items[0].precio_caja).toBeNull();
+    expect(ingresos[0].params.p_items[0].lote, 'con Sí viaja el vigente').toBe('L-1013');
     expect(llamadas.filter(l => l.nombre === 'guardar_lote_vigente')).toEqual([]);
     expect(errores, errores.join('\n')).toEqual([]);
   });

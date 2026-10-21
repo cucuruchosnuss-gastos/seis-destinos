@@ -142,7 +142,9 @@ test('Todos los conos (Mauricio, ver + recibir): ve el stock y ningún interrupt
   await page.goto(URL('conos-mauricio'));
   await expect(page.locator('#cn-tabs [data-vista]')).toHaveText(['Stock', 'Pendientes de entrega', 'Todos los conos']);
   await expect(filas(page)).toHaveCount(26);
-  await expect(page.locator(`[data-cat-cono="${ID.FIBRO}"] .cn-cat-stock`)).toHaveText('Stock-2.000');
+  // Por ahora (21/10/2026) un negativo se ve 0 y sin bordó.
+  await expect(page.locator(`[data-cat-cono="${ID.FIBRO}"] .cn-cat-stock`)).toHaveText('Stock0');
+  await expect(page.locator(`[data-cat-cono="${ID.FIBRO}"] .cn-cat-stock`)).not.toHaveClass(/cn-negativo/);
   for (const c of ['activa', 'doble_bolsa', 'papel_ilustracion']) await expect(sw(page, 'ASPEN', c)).toBeDisabled();
   await expect(page.locator('#cn-todos-lista input[data-configurar]:not([disabled])')).toHaveCount(0);
   await expect(page.locator(`[data-cat-cono="${ID.ASPEN}"] label`).first()).toHaveAttribute('title', 'Hace falta el permiso de configurar producción.');

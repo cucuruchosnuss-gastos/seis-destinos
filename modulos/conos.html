@@ -456,6 +456,11 @@
     const IVA_PCT = 21
     // Un cono que alcanza para menos de esto se avisa arriba del stock.
     const DIAS_AVISO = 30
+    // TEMPORAL (21/10/2026, pedido de Facu): no mostrar negativos hasta
+    // terminar de armar los conos. Con false, un stock negativo se muestra
+    // como 0 (sin el bordó), no hay aviso de "Stock negativo", no cuenta como
+    // "pocos" y su "Alcanza" dice "—". Para volver a como era: true.
+    const MOSTRAR_NEGATIVOS_CONOS = false
     // La O.C. tiene al menos esta cantidad de renglones de conos (como las de
     // Musumeci: los que sobran van con "-  X  -").
     const RENGLONES_MINIMOS_OC = 15
@@ -584,12 +589,30 @@
       return `~${miles(dias)} ${dias === 1 ? 'día' : 'días'}`
     }
 
+    // El stock como se muestra: con MOSTRAR_NEGATIVOS_CONOS en false, un
+    // negativo se ve 0. Es solo lo que se MUESTRA: el número de la base no se
+    // toca. ¿Se pinta en bordó? Solo si los negativos se muestran.
+    function stockVisible(stock) {
+      return !MOSTRAR_NEGATIVOS_CONOS && Number(stock) < 0 ? 0 : stock
+    }
+    function stockEnRojo(stock) {
+      return MOSTRAR_NEGATIVOS_CONOS && Number(stock) < 0
+    }
+
+    // "Alcanza" de una fila: con un negativo escondido, "—" (sin rojo).
+    function alcanzaDeFila(f) {
+      if (!MOSTRAR_NEGATIVOS_CONOS && Number(f.stock) < 0) return { texto: '—', bajo: false }
+      const dias = diasAlcanza(f.stock, f.consumo_30d)
+      return { texto: textoAlcanza(dias), bajo: Number(f.stock) < 0 || (dias !== null && dias < DIAS_AVISO) }
+    }
+
     // Los que hay que mirar: stock negativo, y los que alcanzan para menos de
-    // DIAS_AVISO (los sin consumo no se avisan).
+    // DIAS_AVISO (los sin consumo no se avisan). Con los negativos escondidos
+    // (MOSTRAR_NEGATIVOS_CONOS), un negativo no se avisa ni cuenta como pocos.
     function alertasStock(filas) {
       const negativos = [], pocos = []
       for (const f of filas ?? []) {
-        if (Number(f.stock) < 0) { negativos.push(f); continue }
+        if (Number(f.stock) < 0) { if (MOSTRAR_NEGATIVOS_CONOS) negativos.push(f); continue }
         const d = diasAlcanza(f.stock, f.consumo_30d)
         if (d !== null && d < DIAS_AVISO) pocos.push(f)
       }
@@ -713,7 +736,7 @@
       const etiqueta = ETIQUETA_ALTA[f.estado_alta]
       const chip = etiqueta ? ` <span class="cn-chip cn-chip--${f.estado_alta === 'rechazada' ? 'rechazado' : 'revisar'}">${esc(etiqueta)}</span>` : ''
       const stock = perm?.ver
-        ? `<span class="cn-cat-stock${Number(f.stock) < 0 ? ' cn-negativo' : ''}"><small>Stock</small>${esc(miles(f.stock))}</span>` : ''
+        ? `<span class="cn-cat-stock${stockEnRojo(f.stock) ? ' cn-negativo' : ''}"><small>Stock</small>${esc(miles(stockVisible(f.stock)))}</span>` : ''
       const sws = INTERRUPTORES.map(i => {
         const puede = puedeTocar(perm, i.campo)
         return `<label class="cn-sw${puede ? '' : ' cn-sw--sin-permiso'}"${puede ? '' : ` title="${esc(porQueNoSePuede(i.campo))}"`}>` +
@@ -1221,15 +1244,14 @@
       if (!filas.length) { cont.innerHTML = '<div class="cn-vacio">No hay conos para mostrar.</div>'; return }
       const cab = `<div class="cn-stock-fila cn-stock-fila--cab"><span>Cono</span><span class="cn-num">Stock</span><span class="cn-num">En camino</span><span class="cn-num">En armado</span><span class="cn-num">Consumo 30 días</span><span class="cn-num">Alcanza</span></div>`
       cont.innerHTML = cab + filas.map(f => {
-        const dias = diasAlcanza(f.stock, f.consumo_30d)
-        const bajo = Number(f.stock) < 0 || (dias !== null && dias < DIAS_AVISO)
+        const alcanza = alcanzaDeFila(f)
         return `<div class="cn-stock-fila" data-stock-cono="${esc(f.marca_id)}">
           <span class="cn-stock-nombre">${esc(f.cono)}${f.papel_ilustracion ? ' <span class="cn-chip cn-chip--ilus">Ilustración</span>' : ''}${f.activa === false ? ' <span class="cn-chip">Apagado</span>' : ''}</span>
-          <span class="cn-num${Number(f.stock) < 0 ? ' cn-negativo' : ''}"><small>Stock</small>${esc(miles(f.stock))}</span>
+          <span class="cn-num${stockEnRojo(f.stock) ? ' cn-negativo' : ''}"><small>Stock</small>${esc(miles(stockVisible(f.stock)))}</span>
           <span class="cn-num"><small>En camino</small>${esc(miles(f.en_camino))}</span>
           <span class="cn-num"><small>En armado</small>${esc(miles(f.en_armado))}</span>
           <span class="cn-num"><small>Consumo 30 días</small>${esc(miles(f.consumo_30d))}</span>
-          <span class="cn-num${bajo ? ' cn-negativo' : ''}"><small>Alcanza</small>${esc(textoAlcanza(dias))}</span>
+          <span class="cn-num${alcanza.bajo ? ' cn-negativo' : ''}"><small>Alcanza</small>${esc(alcanza.texto)}</span>
           ${estado.perm.pedir ? `<span class="cn-stock-acciones">
             <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-conteo="${esc(f.marca_id)}">Conteo</button>
             <button type="button" class="cn-btn cn-btn--suave cn-btn--chico" data-ajuste="${esc(f.marca_id)}">Ajuste</button>
@@ -1875,7 +1897,7 @@
       const f = estado.conoPorId.get(marcaId)
       const conteo = tipo === 'conteo'
       abrirModal(`${conteo ? 'Conteo' : 'Ajuste'} · ${nombreCono(marcaId)}`, `
-        <p>Stock según el sistema: <b>${esc(miles(f?.stock))}</b></p>
+        <p>Stock según el sistema: <b>${esc(miles(stockVisible(f?.stock)))}</b></p>
         <div class="cn-campo"><label for="cn-aj-cant">${conteo ? 'Cuántos hay contados' : 'Cuánto sumar (o restar con −)'}</label><input type="text" id="cn-aj-cant" inputmode="${conteo ? 'numeric' : 'text'}"></div>
         <div class="cn-campo"><label for="cn-aj-motivo">Motivo</label><input type="text" id="cn-aj-motivo" maxlength="200"></div>`, {
         textoBoton: conteo ? 'Guardar el conteo' : 'Guardar el ajuste',

@@ -22,7 +22,6 @@ correrMutacionesEnVarios([
     { nombre: 'el precio no mira la fecha', de: "p.papel === papel && String(p.vigente_desde) <= hoy)\n      cands.sort", a: "p.papel === papel)\n      cands.sort" },
     { nombre: 'el precio no mira la cantidad parecida', de: "        Math.abs(a.cantidad - cantidadTotal) - Math.abs(b.cantidad - cantidadTotal)\n        || ", a: '        ' },
     { nombre: 'sin consumo dice 0 días', de: "      if (!Number.isFinite(c) || c <= 0) return null", a: "      if (!Number.isFinite(c) || c <= 0) return 0" },
-    { nombre: 'los negativos no se avisan', de: '        if (Number(f.stock) < 0) { negativos.push(f); continue }', a: '        if (false) { negativos.push(f); continue }' },
     { nombre: 'se avisan los de 30 días o más', de: '        if (d !== null && d < DIAS_AVISO) pocos.push(f)', a: '        if (d !== null) pocos.push(f)' },
     { nombre: 'el total por papel no suma', de: '        g.total += Number(f.cantidad) || 0', a: '        g.total = Number(f.cantidad) || 0' },
     { nombre: 'la O.C. sin la versión', de: "      return String(pliego.numero) + (Number(pliego.version) > 1 ? ` · v${pliego.version}` : '')", a: '      return String(pliego.numero)' },
@@ -49,6 +48,24 @@ correrMutacionesEnVarios([
     { nombre: 'el grupo de conos no se ve sin módulo', de: '      if (grupo.siempreVisible) return true\n', a: '' },
     { nombre: 'cualquier grupo se ve siempre', de: '      if (grupo.siempreVisible) return true\n', a: '      return true\n' },
     { nombre: 'otro texto para recibir', de: "label: 'Recibir pliegos de conos'", a: "label: 'Recibir conos'" },
+  ] },
+  // Por ahora no se muestran los negativos (21/10/2026): test-conos-negativos.js
+  // prueba las dos posiciones de MOSTRAR_NEGATIVOS_CONOS.
+  { ...comunes, suite: path.join(__dirname, 'test-conos-negativos.js'), manuales: [
+    { nombre: 'la constante en true (se muestran los negativos)', de: '    const MOSTRAR_NEGATIVOS_CONOS = false', a: '    const MOSTRAR_NEGATIVOS_CONOS = true' },
+    { nombre: 'sin la constante el negativo se ve igual', de: "      return !MOSTRAR_NEGATIVOS_CONOS && Number(stock) < 0 ? 0 : stock", a: '      return stock' },
+    { nombre: 'el negativo siempre en bordó', de: '      return MOSTRAR_NEGATIVOS_CONOS && Number(stock) < 0\n', a: '      return Number(stock) < 0\n' },
+    { nombre: 'el bordó nunca vuelve', de: '      return MOSTRAR_NEGATIVOS_CONOS && Number(stock) < 0\n', a: '      return false\n' },
+    { nombre: 'los negativos se avisan siempre', de: '        if (Number(f.stock) < 0) { if (MOSTRAR_NEGATIVOS_CONOS) negativos.push(f); continue }', a: '        if (Number(f.stock) < 0) { negativos.push(f); continue }' },
+    { nombre: 'los negativos no se avisan nunca', de: '        if (Number(f.stock) < 0) { if (MOSTRAR_NEGATIVOS_CONOS) negativos.push(f); continue }', a: '        if (Number(f.stock) < 0) { continue }' },
+    { nombre: 'un negativo cuenta como pocos', de: '        if (Number(f.stock) < 0) { if (MOSTRAR_NEGATIVOS_CONOS) negativos.push(f); continue }', a: '        if (Number(f.stock) < 0) { if (MOSTRAR_NEGATIVOS_CONOS) negativos.push(f) }' },
+    { nombre: '"Alcanza" con negativo dice "no alcanza"', de: "      if (!MOSTRAR_NEGATIVOS_CONOS && Number(f.stock) < 0) return { texto: '—', bajo: false }\n", a: '' },
+    { nombre: '"Alcanza" con negativo en rojo', de: "return { texto: '—', bajo: false }", a: "return { texto: '—', bajo: true }" },
+    { nombre: 'Stock muestra el número de la base', de: '<small>Stock</small>${esc(miles(stockVisible(f.stock)))}</span>\n          <span class="cn-num"><small>En camino</small>', a: '<small>Stock</small>${esc(miles(f.stock))}</span>\n          <span class="cn-num"><small>En camino</small>' },
+    { nombre: 'Todos los conos muestra el número de la base', de: '<span class="cn-cat-stock${stockEnRojo(f.stock) ? \' cn-negativo\' : \'\'}"><small>Stock</small>${esc(miles(stockVisible(f.stock)))}', a: '<span class="cn-cat-stock${stockEnRojo(f.stock) ? \' cn-negativo\' : \'\'}"><small>Stock</small>${esc(miles(f.stock))}' },
+    { nombre: 'el conteo muestra el número de la base', de: 'Stock según el sistema: <b>${esc(miles(stockVisible(f?.stock)))}</b>', a: 'Stock según el sistema: <b>${esc(miles(f?.stock))}</b>' },
+    { nombre: 'Stock en bordó por el valor y no por la constante', de: '<span class="cn-num${stockEnRojo(f.stock) ? \' cn-negativo\' : \'\'}"><small>Stock</small>', a: '<span class="cn-num${Number(f.stock) < 0 ? \' cn-negativo\' : \'\'}"><small>Stock</small>' },
+    { nombre: 'Alcanza sin el texto de la fila', de: '<small>Alcanza</small>${esc(alcanza.texto)}', a: '<small>Alcanza</small>${esc(textoAlcanza(diasAlcanza(f.stock, f.consumo_30d)))}' },
   ] },
   { ...comunes, suite: path.join(__dirname, 'test-conos-xss.js'), manuales: [
     { nombre: 'el nombre del cono sin escapar en la lista de stock', de: '<span class="cn-stock-nombre">${esc(f.cono)}', a: '<span class="cn-stock-nombre">${f.cono}' },

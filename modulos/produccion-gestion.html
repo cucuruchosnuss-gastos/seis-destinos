@@ -2534,8 +2534,13 @@
     .pr-ing__num { font-weight: 700; }
     .pr-ing__grilla { display: grid; grid-template-columns: 1fr; gap: 0.625rem; }
     @media (min-width: 900px) { .pr-ing__grilla { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    .pr-ing__tilde { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.625rem; min-height: 44px; }
-    .pr-ing__tilde input { width: 22px; height: 22px; }
+    /* El lote del renglón (21/10/2026): la pregunta "¿Sigue siendo este?" y
+       el campo ocupan el ancho entero de la grilla. */
+    .pr-ing__lote { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .pr-ing__lote-pregunta { margin: 0; overflow-wrap: anywhere; }
+    .pr-ing__lote .pr-ing__origen { max-width: 32rem; }
+    .pr-ing__lote input[readonly] { background: var(--color-superficie); color: var(--color-texto-2); }
+    .pr-ing__lote input { text-transform: uppercase; }
     .pr-ing__obs { margin: 0.75rem 0; }
     .pr-ing__pie { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem; }
     .pr-ing__guardar { min-height: 52px; font-size: 1.0625rem; }
@@ -9900,11 +9905,39 @@
     // todos los renglones y un p_client_uuid por formulario: dos toques en
     // Guardar no duplican. La base pide materia_prima:cargar O
     // stock:ajustar_inventario en la fábrica que recibe (leído el 14/10/2026).
-    // El lote viene puesto con el vigente del producto en esa fábrica
-    // (producto_lote_vigente, que lee cualquiera); si se cambia, el tilde
-    // "Guardar como lote vigente" llama a guardar_lote_vigente después.
+    // EL LOTE (21/10/2026, cambió): cada renglón LLEVA lote, siempre. Si el
+    // producto tiene lote vigente en esa fábrica (producto_lote_vigente, que
+    // lee cualquiera) se pregunta "Último lote: X. ¿Sigue siendo este?": Sí
+    // usa ese (el campo queda de solo lectura) y "No, es otro" pide escribirlo.
+    // Sin vigente, el campo es obligatorio de entrada. El lote viaja en
+    // mayúsculas, sin espacios en los bordes y con 40 caracteres como mucho.
+    // La BASE guarda sola el lote de cada renglón como vigente del producto
+    // (ingresar_producto_terminado, desde el 21/10/2026, salvo 'SIN LOTE'):
+    // ya no hay tilde ni llamada a guardar_lote_vigente después.
 
     const TAREAS_INGRESO = ['materia_prima:cargar', 'stock:ajustar_inventario']
+    const LARGO_MAXIMO_LOTE = 40
+
+    // Mayúsculas y sin espacios en los bordes (los de adentro quedan).
+    function normalizarLoteIngreso(texto) {
+      return String(texto ?? '').trim().toUpperCase()
+    }
+
+    // En qué está el lote de un renglón: 'sin-producto'; 'pregunta' (tiene
+    // vigente y todavía no se contestó); 'si' (es el vigente); 'otro' (hay
+    // que escribirlo: "No, es otro", o el producto no tiene vigente).
+    function modoLoteIngreso(r) {
+      if (!r?.productoId) return 'sin-producto'
+      if (!r.loteVigente) return 'otro'
+      if (r.loteResp === 'si') return 'si'
+      if (r.loteResp === 'otro') return 'otro'
+      return 'pregunta'
+    }
+
+    // El lote que viaja: el vigente si se contestó Sí; si no, lo escrito.
+    function loteDeRenglon(r) {
+      return normalizarLoteIngreso(modoLoteIngreso(r) === 'si' ? r.loteVigente : r.lote)
+    }
 
     // estado.ingresoAlcances: Map 'modulo:tarea' → alcance; undefined = no se
     // pudo leer (el botón no aparece: no se ofrece algo que no se sabe).
@@ -9943,7 +9976,7 @@
 
     function nuevoRenglonIngreso() {
       estado.ingresoSeq = (estado.ingresoSeq ?? 0) + 1
-      return { id: `r${estado.ingresoSeq}`, productoId: '', presentacionId: '', marcaId: '', cajas: null, lote: '', loteVigente: '', guardarVigente: false, precio: null }
+      return { id: `r${estado.ingresoSeq}`, productoId: '', presentacionId: '', marcaId: '', cajas: null, lote: '', loteVigente: '', loteResp: '', precio: null }
     }
 
     function nuevoIngreso(unidadId, hoy) {
@@ -9975,12 +10008,12 @@
 
     // El renglón como lo espera la base. El precio solo de un proveedor (de
     // otra fábrica no se pide: la deuda entre fábricas no se carga acá); un
-    // cono solo en una presentación con cono; el lote como se escribió (vacío
-    // = null: la base pone el vigente o 'SIN LOTE').
+    // cono solo en una presentación con cono; el lote normalizado (faltaIngreso
+    // no deja mandar un renglón sin lote).
     function itemsParaBase(ing, cat) {
       return ing.renglones.filter(r => r.presentacionId).map(r => {
         const pr = presentacionDe(cat, r.presentacionId)
-        const lote = String(r.lote ?? '').trim()
+        const lote = loteDeRenglon(r)
         return {
           presentacion_id: r.presentacionId,
           marca_id: pr?.con_cono && r.marcaId ? r.marcaId : null,
@@ -10008,6 +10041,10 @@
         const pr = presentacionDe(cat, r.presentacionId)
         if (pr?.con_cono && !r.marcaId) return `Renglón ${n}: elegí el cono (si es común, elegí la presentación sin cono).`
         if (!Number.isInteger(r.cajas) || r.cajas <= 0) return `Renglón ${n}: las cajas tienen que ser un número entero mayor que cero.`
+        if (modoLoteIngreso(r) === 'pregunta') return `Renglón ${n}: contestá si el lote sigue siendo ${r.loteVigente}.`
+        const lote = loteDeRenglon(r)
+        if (!lote) return `Renglón ${n}: escribí el lote.`
+        if (lote.length > LARGO_MAXIMO_LOTE) return `Renglón ${n}: el lote puede tener ${LARGO_MAXIMO_LOTE} caracteres como mucho.`
         if (ing.origen === 'proveedor' && r.precio != null && r.precio < 0) return `Renglón ${n}: el precio no puede ser negativo.`
       }
       return null
@@ -10025,18 +10062,6 @@
         p_observaciones: obs || null,
         p_client_uuid: ing.clientUuid,
       }
-    }
-
-    // Los lotes vigentes a guardar: uno por producto (el último que se marcó),
-    // solo si cambió y no está vacío.
-    function lotesVigentesAGuardar(ing) {
-      const porProducto = new Map()
-      for (const r of ing.renglones) {
-        const lote = String(r.lote ?? '').trim().toUpperCase()
-        if (!r.guardarVigente || !r.productoId || !lote || lote === String(r.loteVigente ?? '').toUpperCase()) continue
-        porProducto.set(r.productoId, lote)
-      }
-      return [...porProducto].map(([productoId, lote]) => ({ productoId, lote }))
     }
 
     function textoListoIngreso(res, ing) {
@@ -10116,7 +10141,6 @@
       const cat = ing.catalogo
       const pres = (cat?.presentaciones ?? []).filter(p => p.producto_id === r.productoId)
       const pr = presentacionDe(cat, r.presentacionId)
-      const loteCambio = r.productoId && String(r.lote ?? '').trim() !== '' && String(r.lote).trim().toUpperCase() !== String(r.loteVigente ?? '').toUpperCase()
       return `<div class="pr-ing__renglon" data-ing-renglon="${esc(r.id)}">
         <div class="pr-ing__renglon-cab"><span class="pr-ing__num">Renglón ${i + 1}</span>
           ${ing.renglones.length > 1 ? `<button type="button" class="pr-btn pr-btn--secundario pr-ing__quitar" data-ing-quitar="${esc(r.id)}">Quitar</button>` : ''}</div>
@@ -10129,13 +10153,30 @@
             <select class="pr-select" data-ing-campo="marcaId">${opcionesIngreso(cat?.marcas ?? [], r.marcaId, 'Elegí el cono')}</select></label>` : ''}
           <label class="pr-campo"><span class="pr-campo__rotulo">Cajas</span>
             <input class="pr-input" data-ing-campo="cajas" inputmode="numeric" autocomplete="off"></label>
-          <label class="pr-campo"><span class="pr-campo__rotulo">Lote</span>
-            <input class="pr-input" data-ing-campo="lote" autocomplete="off" value="${esc(r.lote)}" placeholder="${esc(r.loteVigente ? '' : 'Sin lote vigente')}"></label>
           ${ing.origen === 'proveedor' ? `<label class="pr-campo"><span class="pr-campo__rotulo">Precio por caja (opcional)</span>
             <input class="pr-input" data-ing-campo="precio" inputmode="decimal" autocomplete="off"></label>` : ''}
+          ${htmlLoteIngreso(r)}
         </div>
-        <label class="pr-ing__tilde" data-ing-tilde="${esc(r.id)}"${loteCambio ? '' : ' hidden'}><input type="checkbox" data-ing-campo="guardarVigente"${r.guardarVigente ? ' checked' : ''}> Guardar como lote vigente${r.loteVigente ? ` (hoy es ${esc(r.loteVigente)})` : ''}</label>
       </div>`
+    }
+
+    // El lote del renglón: la pregunta con Sí / "No, es otro" si hay vigente,
+    // y el campo (de solo lectura con Sí; obligatorio con "No, es otro" o sin
+    // vigente). Sin producto, el campo apagado.
+    function htmlLoteIngreso(r) {
+      const modo = modoLoteIngreso(r)
+      const campo = (attrs, valor, placeholder) => `<label class="pr-campo"><span class="pr-campo__rotulo">Lote</span>
+              <input class="pr-input" data-ing-campo="lote" autocomplete="off" autocapitalize="characters" maxlength="${LARGO_MAXIMO_LOTE}" value="${esc(valor)}" placeholder="${esc(placeholder)}"${attrs}></label>`
+      if (modo === 'sin-producto') return `<div class="pr-ing__lote">${campo(' disabled', '', 'Primero el producto')}</div>`
+      const pregunta = r.loteVigente ? `<p class="pr-ing__lote-pregunta">Último lote: <strong>${esc(r.loteVigente)}</strong>. ¿Sigue siendo este?</p>
+            <div class="pr-ing__origen" role="group" aria-label="¿Sigue siendo el último lote?">
+              <button type="button" class="pr-ing__op" data-ing-lote="si" aria-pressed="${modo === 'si' ? 'true' : 'false'}">Sí</button>
+              <button type="button" class="pr-ing__op" data-ing-lote="otro" aria-pressed="${modo === 'otro' ? 'true' : 'false'}">No, es otro</button>
+            </div>` : ''
+      const input = modo === 'si' ? campo(' readonly aria-readonly="true"', r.loteVigente, '')
+        : modo === 'otro' ? campo(' required aria-required="true"', r.lote, 'Escribí el lote')
+        : ''
+      return `<div class="pr-ing__lote" data-ing-lote-modo="${modo}">${pregunta}${input}</div>`
     }
 
     function pintarProveedoresIngreso() {
@@ -10220,11 +10261,15 @@
       if (campo === 'cajas') r.cajas = leerCampoNumero(t)
       else if (campo === 'precio') r.precio = leerCampoNumero(t)
       else if (campo === 'lote') {
+        if (t.readOnly) return
+        // En mayúsculas mientras se escribe, sin que el cursor salte.
+        const may = String(t.value).toUpperCase()
+        if (may !== t.value) {
+          const a = t.selectionStart, b = t.selectionEnd
+          t.value = may
+          try { t.setSelectionRange(a, b) } catch { /* sin selección: no pasa nada */ }
+        }
         r.lote = t.value
-        const cambio = String(r.lote).trim() !== '' && String(r.lote).trim().toUpperCase() !== String(r.loteVigente ?? '').toUpperCase()
-        const tilde = fila.querySelector('[data-ing-tilde]')
-        if (tilde) tilde.hidden = !cambio
-        if (!cambio) r.guardarVigente = false
       }
     }
 
@@ -10246,8 +10291,9 @@
       const campo = t.dataset?.ingCampo
       if (campo === 'productoId') {
         r.productoId = t.value; r.presentacionId = ''; r.marcaId = ''
+        // El lote se pregunta de nuevo (o se escribe) con cada producto.
         r.loteVigente = ing.catalogo?.vigentes.get(r.productoId) ?? ''
-        r.lote = r.loteVigente; r.guardarVigente = false
+        r.lote = ''; r.loteResp = ''
         const pres = (ing.catalogo?.presentaciones ?? []).filter(p => p.producto_id === r.productoId)
         if (pres.length === 1) r.presentacionId = pres[0].id
         pintarIngreso()
@@ -10256,7 +10302,17 @@
         if (!presentacionDe(ing.catalogo, r.presentacionId)?.con_cono) r.marcaId = ''
         pintarIngreso()
       } else if (campo === 'marcaId') r.marcaId = t.value
-      else if (campo === 'guardarVigente') r.guardarVigente = t.checked
+    }
+
+    // Sí / "No, es otro" del lote: Sí usa el vigente; "No, es otro" vacía el
+    // campo y le da el foco (hay que escribirlo).
+    function contestarLoteIngreso(ing, r, resp) {
+      if (!r || !r.loteVigente || (resp !== 'si' && resp !== 'otro')) return
+      r.loteResp = resp
+      r.lote = resp === 'si' ? r.loteVigente : ''
+      ing.error = ''
+      pintarIngreso()
+      if (resp === 'otro') document.querySelector?.(`[data-ing-renglon="${r.id}"] [data-ing-campo="lote"]`)?.focus?.()
     }
 
     function alTocarIngreso(ev) {
@@ -10269,6 +10325,11 @@
         const p = (estado.ingresoProveedores ?? []).find(x => x.id === b.dataset.ingProveedor)
         if (p) { ing.proveedorId = p.id; ing.proveedorNombre = p.razon_social; ing.busqueda = '' }
         pintarIngreso(); return
+      }
+      if (b.dataset.ingLote) {
+        const fila = b.closest('[data-ing-renglon]')
+        contestarLoteIngreso(ing, fila ? renglonIngreso(fila.dataset.ingRenglon) : null, b.dataset.ingLote)
+        return
       }
       if (b.id === 'pr-ing-cambiar-prov') { ing.proveedorId = null; ing.proveedorNombre = ''; pintarIngreso(); document.getElementById('pr-ing-buscar')?.focus?.(); return }
       if (b.id === 'pr-ing-agregar') { ing.renglones.push(nuevoRenglonIngreso()); pintarIngreso(); return }
@@ -10304,17 +10365,11 @@
         pintarIngreso()
         return
       }
-      const lotes = lotesVigentesAGuardar(ing)
-      const fallaron = []
-      for (const l of lotes) {
-        const { error } = await supabase.rpc('guardar_lote_vigente', { p_unidad_negocio_id: ing.unidadId, p_producto_id: l.productoId, p_lote: l.lote })
-        if (error) { console.error('guardar_lote_vigente:', error); fallaron.push(error.message) }
-      }
+      // El lote vigente lo guarda la base sola (desde el 21/10/2026).
       const texto = textoListoIngreso(res, ing)
       estado.stockUnidad = ing.unidadId
       estado.ing = null
-      if (fallaron.length) mostrarError(`${texto} Pero no se pudo guardar el lote vigente: ${fallaron[0]}`)
-      else mostrarExito(texto)
+      mostrarExito(texto)
       await mostrarStockTerminado()
     }
 

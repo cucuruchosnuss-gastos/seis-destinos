@@ -283,6 +283,13 @@ const SEGURAS_REGEX_PRODUCCION = [
   // texto vacío, cada id y cada nombre; htmlRenglonIngreso() escapa adentro.
   [/^opcionesIngreso\(/, 'HTML armado por opcionesIngreso(), que escapa el texto vacío, cada id y cada nombre'],
   [/^(ing\.renglones\.map\(\(r, i\) => )?htmlRenglonIngreso\(r, i, ing\)\)?(\.join\(''\))?$/, 'HTML armado por htmlRenglonIngreso(), que escapa todo dato adentro'],
+  // El lote del ingreso (21/10/2026): htmlLoteIngreso() arma la pregunta y el
+  // campo; campo() escapa el valor y el placeholder; attrs son literales.
+  [/^htmlLoteIngreso\(r\)$/, 'HTML armado por htmlLoteIngreso(), que escapa el lote vigente y lo escrito'],
+  [/^LARGO_MAXIMO_LOTE$/, 'constante numérica del código (40)'],
+  [/^attrs$/, "atributos literales del código (' disabled', ' readonly …', ' required …')"],
+  [/^campo\(' disabled', '', 'Primero el producto'\)$/, 'HTML armado por campo(), que escapa el valor y el placeholder (acá literales)'],
+  [/^(pregunta|input)$/, 'HTML armado en htmlLoteIngreso(): la pregunta escapa el lote vigente; input sale de campo(), que escapa el valor'],
 ]
 
 module.exports = { SEGURAS_PRODUCCION, SEGURAS_REGEX_PRODUCCION }

@@ -35,8 +35,8 @@ const { chk, esperas, fin } = arnes()
 
 const FUNCIONES = ['esc', 'miles', 'normalizarBusqueda', 'permisosDe', 'vistasDe', 'mensajeDe', 'pasaFiltroTodos',
   'conosDeTodos', 'cuentaTodos', 'puedeTocar', 'porQueNoSePuede', 'paramsConfigurarCono', 'aplicarRespuestaCono',
-  'guardarInterruptor', 'textoGuardado', 'htmlFilaTodos', 'htmlAvisoRevisar']
-const CONSTANTES = ['FILTROS_TODOS', 'INTERRUPTORES', 'ETIQUETA_ALTA', 'DONDE_SE_APRUEBA']
+  'guardarInterruptor', 'textoGuardado', 'stockVisible', 'stockEnRojo', 'htmlFilaTodos', 'htmlAvisoRevisar']
+const CONSTANTES = ['FILTROS_TODOS', 'INTERRUPTORES', 'ETIQUETA_ALTA', 'DONDE_SE_APRUEBA', 'MOSTRAR_NEGATIVOS_CONOS']
 const S = construirCon(ARCHIVO, {
   preludio: fuenteNumeros(), funciones: FUNCIONES, constantes: CONSTANTES, retorno: CONSTANTES.join(', '),
 })
@@ -161,7 +161,8 @@ const nombres = l => l.map(f => f.cono)
   chk('sin conos:ver: NO se muestra (la base manda 0, no null)', !/Stock/.test(sinVer) && !/cn-cat-stock/.test(sinVer) && /cn-cat-fila--sin-stock/.test(sinVer))
   const sinVerConDato = S.htmlFilaTodos(fila, S.permisosDe(['pedir'], false, ['configurar']))
   chk('se decide por el permiso, no por el valor: con stock 42.000 y sin conos:ver tampoco', !/42\.000/.test(sinVerConDato))
-  chk('stock negativo en bordó', /cn-cat-stock cn-negativo"><small>Stock<\/small>-2\.000/.test(S.htmlFilaTodos({ ...fila, stock: -2000 }, { ver: true })))
+  // Por ahora (21/10/2026) un negativo se ve 0 y sin bordó (test-conos-negativos.js prueba las dos posiciones).
+  chk('stock negativo: se ve 0, sin bordó', /class="cn-cat-stock"><small>Stock<\/small>0</.test(S.htmlFilaTodos({ ...fila, stock: -2000 }, { ver: true })))
   chk('stock ausente: "—", nunca 0', />Stock<\/small>—</.test(S.htmlFilaTodos({ ...fila, stock: null }, { ver: true })))
 }
 
