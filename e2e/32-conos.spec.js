@@ -169,7 +169,10 @@ for (const ancho of [1280, 390]) {
     const errores = vigilarErrores(page);
     await page.goto(URL('conos-mauricio'));
     await expect(page.locator('#cn-tabs [data-vista]')).toHaveText(['Stock', 'Pendientes de entrega', 'Todos los conos']);
-    await expect(page.locator('#cn-stock-alertas')).toContainText('FIBRO');
+    // Por ahora (21/10/2026) los negativos no se muestran: FIBRO no se avisa.
+    await expect(page.locator('#cn-stock-alertas')).toContainText('CASERATO');
+    await expect(page.locator('#cn-stock-alertas')).not.toContainText('Stock negativo');
+    await expect(page.locator('#cn-stock-alertas')).not.toContainText('FIBRO');
     expect(await page.locator('[data-conteo], [data-ajuste]').count()).toBe(0);
     await page.locator('[data-vista="entregas"]').click();
     await expect(page.locator('#cn-pliegos-lista')).toContainText('N° 323');

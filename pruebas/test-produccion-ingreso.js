@@ -37,12 +37,12 @@ const PRELUDIO = `
   var estado = { miRolApp: 'usuario', unidades: new Map([['u-n', 'Nuss'], ['u-d', 'Dolce Pasta'], ['u-m', 'Mengui']]) }
 `
 const FUNCIONES = ['esc', 'textoPlano', 'normalizarBusqueda', 'puedeIngresarEn', 'unidadesDeIngreso', 'nuevoRenglonIngreso', 'nuevoIngreso',
-  'elegirOrigenIngreso', 'origenParaBase', 'presentacionDe', 'itemsParaBase', 'faltaIngreso', 'parametrosIngreso', 'lotesVigentesAGuardar',
+  'elegirOrigenIngreso', 'origenParaBase', 'presentacionDe', 'itemsParaBase', 'faltaIngreso', 'parametrosIngreso', 'normalizarLoteIngreso', 'modoLoteIngreso', 'loteDeRenglon', 'htmlLoteIngreso', 'contestarLoteIngreso',
   'textoListoIngreso', 'proveedoresQueCoinciden', 'opcionesIngreso', 'htmlRenglonIngreso', 'mostrarErrorIngreso', 'guardarIngreso']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['TAREAS_INGRESO'],
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['TAREAS_INGRESO', 'LARGO_MAXIMO_LOTE'],
     retorno: `TAREAS_INGRESO, estado, __rpc, __exitos, __errores, __stock: () => __stock, __setRespuesta(f){ __respuesta = f }`,
   })
 }
@@ -61,7 +61,7 @@ const esperar = () => new Promise(r => setTimeout(r, 5))
 function armado(S, cambios = {}) {
   const ing = S.nuevoIngreso('u-n', '2026-10-14')
   ing.catalogo = CAT
-  Object.assign(ing.renglones[0], { productoId: 'p1', presentacionId: 'pr1', cajas: 12, lote: 'L-77', loteVigente: 'L-77' })
+  Object.assign(ing.renglones[0], { productoId: 'p1', presentacionId: 'pr1', cajas: 12, lote: 'L-77', loteVigente: 'L-77', loteResp: 'si' })
   Object.assign(ing, cambios)
   return ing
 }
@@ -187,22 +187,98 @@ function armado(S, cambios = {}) {
     chk('cada formulario nuevo tiene su propio uuid', a.clientUuid !== b.clientUuid)
   }
 
-  // ── El lote vigente ────────────────────────────────────────────────────
+  // ── El lote: "¿Sigue siendo este?" (21/10/2026) ─────────────────────────
+  {
+    const S = sandbox()
+    const r = { ...S.nuevoRenglonIngreso() }
+    chk('sin producto: sin-producto', S.modoLoteIngreso(r) === 'sin-producto')
+    Object.assign(r, { productoId: 'p1', loteVigente: 'L-77' })
+    chk('con vigente y sin contestar: pregunta', S.modoLoteIngreso(r) === 'pregunta')
+    const hp = S.htmlLoteIngreso(r)
+    chk('la pregunta dice el último lote', /Último lote: <strong>L-77<\/strong>\. ¿Sigue siendo este\?/.test(hp), hp)
+    chk('… con los botones Sí y "No, es otro"', /data-ing-lote="si"[^>]*>Sí</.test(hp) && /data-ing-lote="otro"[^>]*>No, es otro</.test(hp))
+    chk('… y sin el campo hasta contestar', !/data-ing-campo="lote"/.test(hp))
+    r.loteResp = 'si'
+    chk('Sí: el lote es el vigente', S.modoLoteIngreso(r) === 'si' && S.loteDeRenglon(r) === 'L-77')
+    const hs = S.htmlLoteIngreso(r)
+    chk('Sí: el campo de solo lectura con el vigente', /data-ing-campo="lote"[^>]*value="L-77"[^>]* readonly/.test(hs), hs)
+    chk('Sí: el botón Sí queda marcado', /data-ing-lote="si" aria-pressed="true"/.test(hs) && /data-ing-lote="otro" aria-pressed="false"/.test(hs))
+    r.loteResp = 'otro'; r.lote = ''
+    const ho = S.htmlLoteIngreso(r)
+    chk('No, es otro: el campo editable, obligatorio y vacío', /data-ing-campo="lote"[^>]*value=""[^>]* required/.test(ho) && !/readonly/.test(ho), ho)
+    chk('… con largo máximo 40', /maxlength="40"/.test(ho))
+    chk('"No, es otro" queda marcado', /data-ing-lote="otro" aria-pressed="true"/.test(ho))
+    r.loteVigente = ''; r.loteResp = ''
+    chk('sin vigente: se escribe directamente', S.modoLoteIngreso(r) === 'otro')
+    const hv = S.htmlLoteIngreso(r)
+    chk('sin vigente: sin pregunta y con el campo obligatorio', !/Último lote/.test(hv) && /required/.test(hv))
+    const hn = S.htmlLoteIngreso({ ...S.nuevoRenglonIngreso() })
+    chk('sin producto: el campo apagado', /disabled/.test(hn) && /Primero el producto/.test(hn))
+    const ing = armado(S)
+    Object.assign(ing.renglones[0], { loteResp: '' })
+    chk('el renglón dibuja la pregunta del lote', /¿Sigue siendo este\?/.test(S.htmlRenglonIngreso(ing.renglones[0], 0, ing)))
+  }
   {
     const S = sandbox()
     const ing = armado(S, { origen: 'proveedor', proveedorId: 'prov-1' })
-    Object.assign(ing.renglones[0], { lote: 'l-90', guardarVigente: true })
-    ing.renglones.push({ ...S.nuevoRenglonIngreso(), productoId: 'p2', presentacionId: 'pr2', marcaId: 'm1', cajas: 1, lote: 'X', loteVigente: '', guardarVigente: false })
-    chk('se guarda solo el tildado y cambiado (en mayúsculas)', JSON.stringify(S.lotesVigentesAGuardar(ing)) === JSON.stringify([{ productoId: 'p1', lote: 'L-90' }]), JSON.stringify(S.lotesVigentesAGuardar(ing)))
-    Object.assign(ing.renglones[0], { lote: 'L-77' })
-    chk('igual al vigente: no se guarda', S.lotesVigentesAGuardar(ing).length === 0)
-    Object.assign(ing.renglones[0], { lote: 'L-90' })
+    const r = ing.renglones[0]
+    S.contestarLoteIngreso(ing, r, 'otro')
+    chk('contestar "No, es otro" vacía el lote', r.loteResp === 'otro' && r.lote === '')
+    chk('"No, es otro" y sin escribir NO se puede guardar', S.faltaIngreso(ing, CAT) === 'Renglón 1: escribí el lote.', S.faltaIngreso(ing, CAT))
+    r.lote = '   '
+    chk('… solo espacios tampoco', S.faltaIngreso(ing, CAT) === 'Renglón 1: escribí el lote.')
+    r.lote = '  l-90 b '
+    chk('escrito: se puede guardar', S.faltaIngreso(ing, CAT) === null)
+    chk('el lote viaja en mayúsculas y sin espacios en los bordes', S.itemsParaBase(ing, CAT)[0].lote === 'L-90 B', S.itemsParaBase(ing, CAT)[0].lote)
+    r.lote = 'x'.repeat(41)
+    chk('más de 40 caracteres no se guarda', /40 caracteres como mucho/.test(S.faltaIngreso(ing, CAT) ?? ''), S.faltaIngreso(ing, CAT))
+    r.lote = 'x'.repeat(40)
+    chk('40 caracteres sí', S.faltaIngreso(ing, CAT) === null)
+    r.lote = '  ' + 'x'.repeat(40) + '  '
+    chk('40 caracteres con espacios en los bordes también (se recortan)', S.faltaIngreso(ing, CAT) === null)
+    S.contestarLoteIngreso(ing, r, 'si')
+    chk('contestar Sí pone el vigente', r.loteResp === 'si' && r.lote === 'L-77' && S.itemsParaBase(ing, CAT)[0].lote === 'L-77')
+    S.contestarLoteIngreso(ing, r, 'cualquiera')
+    chk('una respuesta que no existe no cambia nada', r.loteResp === 'si')
+    // Sí con algo escrito antes: viaja el vigente, no lo escrito.
+    r.lote = 'OTRO'
+    chk('con Sí viaja el vigente aunque quede algo escrito', S.itemsParaBase(ing, CAT)[0].lote === 'L-77')
+    r.loteResp = ''
+    chk('con vigente y sin contestar NO se puede guardar', S.faltaIngreso(ing, CAT) === 'Renglón 1: contestá si el lote sigue siendo L-77.', S.faltaIngreso(ing, CAT))
+    // Sin vigente: el lote es obligatorio directamente.
+    Object.assign(r, { loteVigente: '', loteResp: '', lote: '' })
+    chk('sin vigente y sin lote NO se puede guardar', S.faltaIngreso(ing, CAT) === 'Renglón 1: escribí el lote.')
+    S.contestarLoteIngreso(ing, r, 'si')
+    chk('sin vigente, "Sí" no hace nada', r.loteResp === '')
+    // El segundo renglón también se controla.
+    Object.assign(r, { lote: 'A1' })
+    ing.renglones.push({ ...S.nuevoRenglonIngreso(), productoId: 'p1', presentacionId: 'pr1', cajas: 2, loteVigente: 'L-77' })
+    chk('cada renglón tiene su pregunta', S.faltaIngreso(ing, CAT) === 'Renglón 2: contestá si el lote sigue siendo L-77.', S.faltaIngreso(ing, CAT))
+  }
+  {
+    // Guardar: una sola llamada (ingresar_producto_terminado) y NUNCA
+    // guardar_lote_vigente: el vigente lo guarda la base sola.
+    const S = sandbox()
+    const ing = armado(S, { origen: 'proveedor', proveedorId: 'prov-1' })
+    Object.assign(ing.renglones[0], { loteResp: 'otro', lote: 'l-90' })
     S.estado.ing = ing
     await S.guardarIngreso()
-    const g = S.__rpc.find(x => x[0] === 'guardar_lote_vigente')
-    chk('después del ingreso llama a guardar_lote_vigente con la fábrica, el producto y el lote', g && JSON.stringify(g[1]) === JSON.stringify({ p_unidad_negocio_id: 'u-n', p_producto_id: 'p1', p_lote: 'L-90' }), JSON.stringify(g))
-    chk('… y DESPUÉS del ingreso (no antes)', S.__rpc[0][0] === 'ingresar_producto_terminado')
+    chk('ya no se llama a guardar_lote_vigente', !S.__rpc.some(x => x[0] === 'guardar_lote_vigente'), JSON.stringify(S.__rpc.map(x => x[0])))
+    chk('una sola llamada a la base', S.__rpc.length === 1 && S.__rpc[0][0] === 'ingresar_producto_terminado')
+    chk('el lote nuevo viaja en el renglón', S.__rpc[0][1].p_items[0].lote === 'L-90')
+    chk('"Listo" sin hablar del lote vigente', S.__exitos.length === 1 && !/lote vigente/.test(S.__exitos[0]) && S.__errores.length === 0)
+    const S2 = sandbox()
+    const ing2 = armado(S2, { origen: 'proveedor', proveedorId: 'prov-1' })
+    ing2.renglones[0].loteResp = ''
+    S2.estado.ing = ing2
+    await S2.guardarIngreso()
+    chk('sin contestar la pregunta no llama a la base', S2.__rpc.length === 0 && /contestá si el lote/.test(ing2.error))
   }
+  chk('el HTML ya no tiene el tilde "Guardar como lote vigente"', !/Guardar como lote vigente/.test(HTML) && !/data-ing-tilde/.test(HTML) && !/guardarVigente/.test(HTML))
+  chk('el HTML ya no llama a guardar_lote_vigente', !/rpc\('guardar_lote_vigente'/.test(HTML))
+  chk('ni el mensaje "no se pudo guardar el lote vigente"', !/no se pudo guardar el lote vigente/i.test(HTML))
+  chk('al elegir producto el lote se pregunta de nuevo', /r\.lote = ''; r\.loteResp = ''/.test(HTML))
+  chk('el lote se pasa a mayúsculas al escribir', /const may = String\(t\.value\)\.toUpperCase\(\)/.test(HTML))
 
   // ── El permiso ─────────────────────────────────────────────────────────
   {

@@ -25,7 +25,7 @@ const FUNCIONES = ['esc', 'nombrePapel', 'miles', 'plata', 'precio3', 'hoyAr', '
   'precioVigente', 'precioDeCelda', 'cuentasPliego', 'asignadoDe', 'chequeoAsignar', 'textoAsignado', 'numeroOC',
   'nombreArchivoOC', 'renglones', 'itemsOrdenados', 'htmlOrdenCompra']
 const CONSTANTES = ['NOMBRE_PAPEL', 'ORDEN_PAPELES', 'TAMANOS_PLIEGO', 'BOTONES_ANOTAR', 'BOTONES_PLIEGO', 'IVA_PCT',
-  'DIAS_AVISO', 'RENGLONES_MINIMOS_OC', 'ZONA_AR']
+  'DIAS_AVISO', 'MOSTRAR_NEGATIVOS_CONOS', 'RENGLONES_MINIMOS_OC', 'ZONA_AR']
 const S = construirCon(ARCHIVO, {
   preludio: fuenteNumeros(), funciones: FUNCIONES, constantes: CONSTANTES,
   retorno: CONSTANTES.join(', '),
@@ -108,7 +108,9 @@ const S = construirCon(ARCHIVO, {
   chk('sin consumo: null ("sin consumo")', S.diasAlcanza(10000, 0) === null && S.textoAlcanza(null) === 'sin consumo')
   chk('stock negativo: 0 ("no alcanza")', S.diasAlcanza(-2000, 4000) === 0 && S.textoAlcanza(0) === 'no alcanza')
   const { negativos, pocos } = S.alertasStock(DATOS.rpc.conos_stock)
-  chk('arriba: FIBRO en negativo', negativos.map(f => f.cono).join() === 'FIBRO')
+  // Por ahora (21/10/2026) los negativos NO se muestran: FIBRO no se avisa.
+  // Lo de las dos posiciones de la constante está en test-conos-negativos.js.
+  chk('arriba: FIBRO (negativo) NO se avisa mientras no se muestren los negativos', negativos.length === 0 && S.MOSTRAR_NEGATIVOS_CONOS === false)
   chk('arriba: CASERATO alcanza para menos de 30 días', pocos.map(f => f.cono).join() === 'CASERATO', pocos.map(f => f.cono).join())
   chk('un cono apagado y en cero no se lista; uno con stock sí', !S.conoEnUso({ activa: false, stock: 0, en_camino: 0, en_armado: 0, consumo_30d: 0 }) && S.conoEnUso({ activa: false, stock: 5 }))
 }

@@ -204,7 +204,7 @@ const NUEVAS_GESTION = [
   // El ingreso de producto terminado (14/10/2026)
   'cargarPermisoIngreso', 'puedeIngresarEn', 'unidadesDeIngreso', 'pintarBotonIngreso', 'nuevoRenglonIngreso', 'nuevoIngreso',
   'elegirOrigenIngreso', 'origenParaBase', 'presentacionDe', 'itemsParaBase', 'faltaIngreso', 'parametrosIngreso',
-  'lotesVigentesAGuardar', 'textoListoIngreso', 'proveedoresQueCoinciden', 'leerCatalogoIngreso', 'leerProveedoresIngreso',
+  'normalizarLoteIngreso', 'modoLoteIngreso', 'loteDeRenglon', 'htmlLoteIngreso', 'contestarLoteIngreso', 'textoListoIngreso', 'proveedoresQueCoinciden', 'leerCatalogoIngreso', 'leerProveedoresIngreso',
   'abrirIngreso', 'cargarCatalogoIngreso', 'opcionesIngreso', 'htmlRenglonIngreso', 'pintarProveedoresIngreso', 'pintarIngreso',
   'renglonIngreso', 'alEscribirIngreso', 'alCambiarIngreso', 'alTocarIngreso', 'mostrarErrorIngreso', 'guardarIngreso', 'conectarIngreso',
   // Parte 2 (25/09/2026): la unidad de la gestión y los indicadores
