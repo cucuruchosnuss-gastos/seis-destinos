@@ -476,6 +476,44 @@
       body > *:not(#ad-impresion) { display: none !important; }
       .ad-impresion { display: block !important; }
     }
+    /* ── Dividir para facturar (21/10/2026) ───────────────────────────────
+       La ventana: abajo y casi a pantalla completa en el celular, centrada
+       desde 640 px. La hoja (.ad-dvh) se ve igual en la vista previa y en el
+       papel; en la ventana angosta cada renglón de la tabla va apilado. */
+    .ad-dv { position: fixed; inset: 0; z-index: 85; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
+    .ad-dv[hidden] { display: none; }
+    .ad-dv__caja { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 760px; max-height: 94vh; overflow-y: auto; min-width: 0; }
+    .ad-dv__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .ad-dv__titulo { font-size: 1.125rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+    .ad-dv__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--color-texto); }
+    .ad-dv__vista { min-width: 0; margin: 0.5rem 0; }
+    .ad-dv-factura { border: 1px solid var(--borde-tarjeta); border-radius: 12px; padding: 0.75rem; margin: 0 0 0.5rem; min-width: 0; }
+    .ad-dv-factura__cab { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; align-items: baseline; margin: 0 0 0.5rem; min-width: 0; }
+    .ad-dv-factura__rotulo { font-weight: 800; overflow-wrap: anywhere; }
+    .ad-dv-factura__archivo { max-width: 100%; min-height: 44px; }
+    .ad-facturas-orden__numero { font-weight: 700; color: var(--verde-oscuro); overflow-wrap: anywhere; min-width: 0; }
+    @media (min-width: 640px) { .ad-dv { align-items: center; padding: 1rem; } }
+    .ad-dvh { color: #1c1917; font-size: 0.9375rem; min-width: 0; }
+    .ad-dvh__bloque { background: #fff; border: 1px solid #a8a29e; border-radius: 8px; padding: 0.75rem; margin: 0 0 0.75rem; break-inside: avoid; min-width: 0; }
+    .ad-dvh__titulo { font-size: 1.125rem; font-weight: 800; margin: 0 0 0.25rem; overflow-wrap: anywhere; }
+    .ad-dvh__factura { font-weight: 600; font-size: 0.9375rem; }
+    .ad-dvh__datos { margin: 0 0 0.5rem; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .ad-dvh__tabla { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.875rem; }
+    .ad-dvh__c-prod { width: 40%; }
+    .ad-dvh__tabla th, .ad-dvh__tabla td { border-bottom: 1px solid #d6d3d1; padding: 0.25rem 0.375rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+    .ad-dvh__tabla .ad-dvh__num { text-align: right; }
+    .ad-dvh__totales { margin: 0.5rem 0 0; text-align: right; }
+    .ad-dvh__totales p { margin: 0.125rem 0; }
+    .ad-dvh__total { font-weight: 800; font-size: 1.0625rem; }
+    .ad-dvh__pie { font-size: 0.75rem; color: #57534e; margin: 0.25rem 0 0; }
+    @media (max-width: 559px) {
+      .ad-dv .ad-dvh__tabla, .ad-dv .ad-dvh__tabla tbody, .ad-dv .ad-dvh__tabla tr, .ad-dv .ad-dvh__tabla td { display: block; width: auto; }
+      .ad-dv .ad-dvh__tabla thead, .ad-dv .ad-dvh__tabla colgroup { display: none; }
+      .ad-dv .ad-dvh__tabla tr { border-bottom: 1px solid #d6d3d1; padding: 0.375rem 0; }
+      .ad-dv .ad-dvh__tabla td { border: 0; padding: 0.0625rem 0; text-align: left; }
+      .ad-dv .ad-dvh__tabla td:first-child { font-weight: 700; }
+      .ad-dv .ad-dvh__tabla td[data-rotulo]::before { content: attr(data-rotulo) ": "; color: #57534e; font-weight: 400; }
+    }
     /* ── Importar ─────────────────────────────────────────────────────────
        Cada fila de la vista previa: verde bien, bordó con errores, neutra la
        que se ignora. El color acompaña al texto del sello, nunca va solo. */
@@ -674,6 +712,7 @@
       <div class="ad-barra-acciones" id="ad-orden-acciones">
         <button type="button" class="ad-btn" id="ad-btn-valorizar" hidden>Valorizar</button>
         <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-corregir-valor" hidden>Corregir valorización</button>
+        <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-dividir" hidden>Dividir para facturar</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-imprimir" hidden>Imprimir</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-enviar" hidden>Enviar</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-anular" hidden>Anular</button>
@@ -851,6 +890,19 @@
           <div class="ad-campo"><label for="ad-f-plazo_pago_dias">Plazo de pago (días)</label><input type="text" class="ad-input" id="ad-f-plazo_pago_dias" data-ficha="plazo_pago_dias" autocomplete="off"></div>
           <div class="ad-campo"><label for="ad-f-comision_habitual">Comisión habitual (%)</label><input type="text" class="ad-input" id="ad-f-comision_habitual" data-ficha="comision_habitual" autocomplete="off"><span class="ad-campo__ayuda">Se propone al cargar la comisión de sus órdenes.</span></div>
         </div>
+        <!-- LA CONDICIÓN DE VENTA (21/10/2026): qué % de cada orden se factura
+             como parte A (con su comisión aparte) y qué % como parte B. Se
+             guarda con su propio botón (guardar_condicion_venta_cliente), NO
+             con "Guardar la ficha". Ver guardarCondicionVenta() en el script. -->
+        <h2 class="ad-subtitulo">Condición de venta</h2>
+        <p class="ad-texto-suave">Al facturar, cada orden se divide en dos partes. Vacío: sus órdenes no se dividen (factura única).</p>
+        <div class="ad-fila-campos">
+          <div class="ad-campo"><label for="ad-f-pct-a">Parte A %</label><input type="text" class="ad-input" id="ad-f-pct-a" autocomplete="off"></div>
+          <div class="ad-campo"><label for="ad-f-pct-b">Parte B %</label><input type="text" class="ad-input" id="ad-f-pct-b" autocomplete="off"><span class="ad-campo__ayuda">Se completa sola con lo que falta para 100.</span></div>
+          <div class="ad-campo"><label for="ad-f-comision-a">Comisión parte A %</label><input type="text" class="ad-input" id="ad-f-comision-a" autocomplete="off"><span class="ad-campo__ayuda">Se suma aparte a la parte A (21 por defecto).</span></div>
+        </div>
+        <p class="ad-error-pegado" id="ad-f-condicion-error" hidden></p>
+        <button type="button" class="ad-btn ad-btn--secundario" id="ad-f-condicion-guardar">Guardar la condición de venta</button>
         <!-- LA CLASIFICACIÓN (06/10/2026): Cliente / Cliente y proveedor.
              Vincular y separar se guardan AL MOMENTO con sus funciones
              (vincular_cliente_proveedor / desvincular_cliente_proveedor), no
@@ -1222,6 +1274,34 @@
     <div class="ad-visor__lienzo"><img class="ad-visor__img" id="ad-visor-img" alt="Foto de los cheques"></div>
   </div>
 
+  <!-- DIVIDIR PARA FACTURAR (21/10/2026): la ventana de una orden valorizada.
+       Los porcentajes se escriben acá (el otro % se completa solo); la vista
+       previa, las facturas de ARCA y la hoja las arma el script
+       (pintarDivision, htmlHojaDivision). -->
+  <div class="ad-dv" id="ad-dv" hidden role="dialog" aria-modal="true" aria-labelledby="ad-dv-titulo">
+    <div class="ad-dv__caja">
+      <div class="ad-dv__barra">
+        <h2 class="ad-dv__titulo" id="ad-dv-titulo">Dividir para facturar</h2>
+        <button type="button" class="ad-dv__cerrar" id="ad-dv-cerrar" aria-label="Cerrar">&times;</button>
+      </div>
+      <p class="ad-texto-suave">La orden no cambia: esto arma los dos montos para facturar en ARCA.</p>
+      <div class="ad-fila-campos">
+        <div class="ad-campo"><label for="ad-dv-pct-a">Parte A %</label><input type="text" class="ad-input" id="ad-dv-pct-a" autocomplete="off"></div>
+        <div class="ad-campo"><label for="ad-dv-pct-b">Parte B %</label><input type="text" class="ad-input" id="ad-dv-pct-b" autocomplete="off"></div>
+        <div class="ad-campo"><label for="ad-dv-comision">Comisión parte A %</label><input type="text" class="ad-input" id="ad-dv-comision" autocomplete="off"></div>
+      </div>
+      <div id="ad-dv-aviso"></div>
+      <div class="ad-dv__vista" id="ad-dv-vista"></div>
+      <p class="ad-error-pegado" id="ad-dv-error" hidden></p>
+      <div class="ad-panel__acciones">
+        <button type="button" class="ad-btn" id="ad-dv-guardar">Guardar e imprimir</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-dv-cancelar">Cerrar</button>
+      </div>
+      <h3 class="ad-subtitulo">Facturas de ARCA</h3>
+      <div id="ad-dv-facturas"></div>
+    </div>
+  </div>
+
   <!-- La hoja para imprimir, CON precios: la arma htmlHoja() de
        js/retiros-comun.js justo antes de imprimir. -->
   <div class="ad-impresion" id="ad-impresion"></div>
@@ -1557,6 +1637,8 @@
       if (PILA_NAV.length && PILA_NAV[PILA_NAV.length - 1].destino !== id) PILA_NAV.length = 0
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       if (id !== 'ad-sin-acceso') document.getElementById('ad-sin-acceso').hidden = true
+      // La ventana "Dividir para facturar" es de la orden abierta.
+      if (id !== 'ad-vista-orden' && estado.division) cerrarDivision()
       estado.vista = id
       pintarEmpresas()
       pintarPestanas()
@@ -1843,7 +1925,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, comision_habitual, apodos, provisorio')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, pct_parte_a, comision_parte_a_pct, comision_habitual, apodos, provisorio')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -2698,7 +2780,7 @@
 
     async function leerOrden(id) {
       const { data: o, error } = await supabase.from('ordenes_retiro')
-        .select('id, numero, codigo, unidad_negocio_id, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en, comision_modo, comision_valor, comision_importe, comision_factura_id, comision_cargada_por, comision_cargada_en')
+        .select('id, numero, codigo, unidad_negocio_id, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en, comision_modo, comision_valor, comision_importe, comision_factura_id, comision_cargada_por, comision_cargada_en, division_pct_a, division_comision_pct')
         .eq('id', id).maybeSingle()
       if (error) throw error
       if (!o) return null
@@ -2721,7 +2803,8 @@
         if (!r.error) lotesInsumos = r.data ?? []
       }
       const planillas = await leerPlanillasDeOrden(o, items)
-      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas }
+      const facturas = await leerFacturasDeOrden(o)
+      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas, facturas }
     }
 
     // Los lotes de un renglón: los movimientos 'despacho' de esa presentación
@@ -2812,6 +2895,23 @@
       }
     }
 
+    // Los números de factura de ARCA de la orden (21/10/2026; orden_facturas
+    // se lee con retiros:precios o retiros:ver), con la forma de
+    // datos_division_orden: { parte, numero, archivo_url }. Solo de una
+    // valorizada. No es fatal: null = no se pudieron leer (no "sin facturas").
+    async function leerFacturasDeOrden(o) {
+      if (o?.estado_valorizacion !== 'valorizada') return []
+      try {
+        const { data, error } = await supabase.from('orden_facturas')
+          .select('parte, numero_factura, archivo_url').eq('orden_retiro_id', o.id)
+        if (error) throw error
+        return (data ?? []).map(f => ({ parte: f.parte, numero: f.numero_factura, archivo_url: f.archivo_url ?? null }))
+      } catch (err) {
+        console.error('No se pudieron leer las facturas de la orden:', err)
+        return null
+      }
+    }
+
     function htmlDetalleOrden(d, cat) {
       const o = d.orden
       const cli = clienteDe(o.cliente_id)
@@ -2834,7 +2934,8 @@
         total = o.estado === 'anulada' ? `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>` : htmlComisionOrden(d)
       }
       return `<div class="ad-tarjeta"><div class="ad-fila__linea">${htmlSelloOrden(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
-        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>`
+        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>` +
+        (d.valorizar ? '' : htmlFacturasOrden(d))
     }
 
     function pintarOrden() {
@@ -2871,6 +2972,7 @@
       const precios = activa && puedeEn('retiros', 'precios', u)
       document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar && !d.faltaLista)
       document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar)
+      document.getElementById('ad-btn-dividir').hidden = !(puedeDividir(o) && !d.valorizar)
       document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))
       document.getElementById('ad-btn-imprimir').hidden = !o
       document.getElementById('ad-btn-enviar').hidden = !o
@@ -2946,6 +3048,7 @@
 
     async function abrirOrden(id) {
       const turno = ++turnoOrden
+      if (estado.division) cerrarDivision()
       estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, comision: null, anular: null, aviso: null, errorHoja: null }
       mostrarVista('ad-vista-orden')
       pintarOrden()
@@ -3343,6 +3446,470 @@
         estado.trabajando = false
       }
       pintarAccionesOrden()
+    }
+
+    // ── DIVIDIR PARA FACTURAR (21/10/2026) ────────────────────────────────
+    //
+    // Cada cliente puede tener una CONDICIÓN DE VENTA (clientes.pct_parte_a y
+    // comision_parte_a_pct): un % de cada orden va a la PARTE A y el resto a
+    // la PARTE B, y a la A se le suma APARTE una comisión (21 % por defecto).
+    // Se factura todo en ARCA, fuera de la app: la hoja le da a quien factura
+    // los dos montos, y después se pegan acá los números que dio ARCA
+    // (guardar_factura_orden). LA ORDEN NO CAMBIA (una sola, con sus lotes,
+    // su stock y su total) y la comisión no es plata en la app.
+    // La base calcula TODO (datos_division_orden: cantidades, subtotales,
+    // comisión y totales); la pantalla nunca reparte por su cuenta. Sin
+    // guardar, datos_division_orden sirve de vista previa con otros %.
+
+    const COMISION_PARTE_A_DEFECTO = 21
+    const PARTES_DIVISION = ['A', 'B']
+    const PARTE_UNICA = 'UNICA'
+    // Lo que se espera después de la última tecla para pedir la vista previa.
+    const ESPERA_VISTA_DIVISION = 400
+
+    // El otro % de la condición: lo que falta para 100, con 2 decimales.
+    // Vacío o fuera de 0 a 100 → null (el otro campo queda vacío).
+    function complementoPct(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      if (!Number.isFinite(n) || n < 0 || n > 100) return null
+      return Math.round((100 - n) * 100) / 100
+    }
+
+    // "30", "33,33": un porcentaje como se escribe.
+    function textoPct(n) {
+      return formatearNumeroAr(n, { decimales: 2, minimos: 0 })
+    }
+
+    // Las reglas de guardar_condicion_venta_cliente, con sus textos: el % de
+    // la A puede quedar vacío (la orden no se divide); la comisión, no.
+    function validarCondicionVenta(pctA, comision) {
+      if (pctA !== null && pctA !== undefined && !(Number(pctA) >= 0 && Number(pctA) <= 100)) return 'El % de la parte A va de 0 a 100.'
+      if (comision === null || comision === undefined || !(Number(comision) >= 0 && Number(comision) <= 100)) return 'La comisión va de 0 a 100.'
+      return null
+    }
+
+    // Las de guardar_division_orden: ahí el % de la A es obligatorio.
+    function validarDivision(pctA, comision) {
+      if (pctA === null || pctA === undefined) return 'El % de la parte A va de 0 a 100.'
+      return validarCondicionVenta(pctA, comision)
+    }
+
+    function parametrosDivision(ordenId, pctA, comision) {
+      return { p_orden_id: ordenId, p_pct_a: pctA ?? null, p_comision_pct: comision ?? null }
+    }
+
+    // "N-0015-A", "N-0015-B" o "Factura única".
+    function rotuloParte(codigo, parte) {
+      return parte === PARTE_UNICA ? 'Factura única' : `${codigo ?? ''}-${parte}`
+    }
+
+    // { A: { numero, archivo_url }, … } desde la lista que manda la base.
+    function facturasPorParte(facturas) {
+      const r = {}
+      for (const f of Array.isArray(facturas) ? facturas : []) {
+        if (f?.parte) r[f.parte] = { numero: f.numero ?? null, archivo_url: f.archivo_url ?? null }
+      }
+      return r
+    }
+
+    // Si la orden se divide: con la división ya guardada en la orden, o con
+    // la condición de venta del cliente. Si no, va en una factura única.
+    function seDivideOrden(o, cli) {
+      const hay = (v) => v !== null && v !== undefined && v !== ''
+      return hay(o?.division_pct_a) || hay(cli?.pct_parte_a)
+    }
+
+    // Las partes que se facturan (A y B, o la única), y además la que ya
+    // tenga un número guardado: una factura única de antes de dividir no se
+    // esconde.
+    function partesFacturaOrden(seDivide, facturas) {
+      const base = seDivide ? PARTES_DIVISION : [PARTE_UNICA]
+      return [...PARTES_DIVISION, PARTE_UNICA].filter(p => base.includes(p) || !!facturas?.[p]?.numero)
+    }
+
+    // La regla de guardar_factura_orden, con su texto: de 3 a 40 letras.
+    function validarNumeroFactura(numero) {
+      const n = String(numero ?? '').trim()
+      return n.length < 3 || n.length > 40 ? 'Pegá el número de la factura de ARCA.' : null
+    }
+
+    function validarPdfFactura(archivo) {
+      if (!archivo) return null
+      const esPdf = archivo.type === 'application/pdf' || /\.pdf$/i.test(String(archivo.name ?? ''))
+      return esPdf ? null : 'El archivo tiene que ser un PDF.'
+    }
+
+    // "12 cajas", "1 caja", "25,5 kg".
+    function cantidadDivision(n, unidad) {
+      if (unidad === 'cajas') return enteroHoja(n) + (Number(n) === 1 ? ' caja' : ' cajas')
+      return cantidadInsumoHoja(n, unidad)
+    }
+
+    // Los renglones de una parte: SOLO los que llevan algo en esa parte (un
+    // renglón con 0 en la A no se imprime en la A, y lo mismo en la B).
+    function renglonesParte(datos, parte) {
+      const k = parte === 'A' ? 'a' : 'b'
+      return (Array.isArray(datos?.items) ? datos.items : [])
+        .filter(it => Number(it?.['cant_' + k]) > 0)
+        .map(it => ({ descripcion: it.descripcion, cantidad: Number(it['cant_' + k]), unidad: it.unidad, precio: it.precio, subtotal: it['subtotal_' + k] }))
+    }
+
+    // Un bloque de la hoja: "N-0015-A" (con el número de ARCA si ya está),
+    // el cliente, la fecha y el % de la parte, la tabla de productos y,
+    // DEBAJO de la tabla (no como un renglón), los totales: en la A, Total
+    // productos, la comisión y el TOTAL; en la B, el TOTAL.
+    function htmlBloqueParte(datos, parte, factura, moneda = 'ARS') {
+      const esA = parte === 'A'
+      const filas = renglonesParte(datos, parte)
+      const plata = (n) => importeHoja(n, moneda)
+      const cuerpo = filas.length
+        ? filas.map(r => `<tr><td>${esc(r.descripcion)}</td>` +
+            `<td class="ad-dvh__num" data-rotulo="Cantidad">${esc(cantidadDivision(r.cantidad, r.unidad))}</td>` +
+            `<td class="ad-dvh__num" data-rotulo="Precio">${esc(plata(r.precio))}</td>` +
+            `<td class="ad-dvh__num" data-rotulo="Subtotal">${esc(plata(r.subtotal))}</td></tr>`).join('')
+        : '<tr><td colspan="4">Sin productos en esta parte.</td></tr>'
+      const totales = esA
+        ? `<p>${esc('Total productos: ' + plata(datos.subtotal_a))}</p>` +
+          `<p>${esc('Comisión ' + textoPct(datos.comision_pct) + '%: ' + plata(datos.comision_a))}</p>` +
+          `<p class="ad-dvh__total">${esc('TOTAL: ' + plata(datos.total_a))}</p>`
+        : `<p class="ad-dvh__total">${esc('TOTAL: ' + plata(datos.total_b))}</p>`
+      const cliente = [limpio(datos.cliente) || 'Cliente', limpio(datos.cliente_cuit) ? 'CUIT ' + limpio(datos.cliente_cuit) : null].filter(Boolean).join(' · ')
+      const pct = esA ? datos.pct_a : datos.pct_b
+      return `<section class="ad-dvh__bloque" data-parte="${esc(parte)}">` +
+        `<h2 class="ad-dvh__titulo">${esc(rotuloParte(datos.codigo, parte))}` +
+        (factura?.numero ? ` <span class="ad-dvh__factura">${esc('· Factura ' + factura.numero)}</span>` : '') + '</h2>' +
+        `<p class="ad-dvh__datos">${esc(cliente)}<br>${esc('Fecha ' + fechaCorta(datos.fecha) + ' · Parte ' + parte + ': ' + textoPct(pct) + ' %')}</p>` +
+        '<table class="ad-dvh__tabla"><colgroup><col class="ad-dvh__c-prod"><col><col><col></colgroup>' +
+        '<thead><tr><th>Producto</th><th class="ad-dvh__num">Cantidad</th><th class="ad-dvh__num">Precio</th><th class="ad-dvh__num">Subtotal</th></tr></thead>' +
+        `<tbody>${cuerpo}</tbody></table><div class="ad-dvh__totales">${totales}</div></section>`
+    }
+
+    // La hoja entera: el bloque A, el B y un pie chico con la orden. Se ve
+    // igual en la vista previa de la ventana y en el papel.
+    function htmlHojaDivision(datos, facturas, moneda = 'ARS') {
+      const f = facturas ?? facturasPorParte(datos?.facturas)
+      return '<div class="ad-dvh">' + htmlBloqueParte(datos, 'A', f.A, moneda) + htmlBloqueParte(datos, 'B', f.B, moneda) +
+        `<p class="ad-dvh__pie">${esc('Orden ' + (datos.codigo ?? '') + ' · total de la orden ' + importeHoja(datos.total_orden, moneda))}</p></div>`
+    }
+
+    // A4 vertical: la regla va DENTRO de la hoja (en el body, después de la
+    // de js/retiros-comun.js), así gana solo mientras está esta hoja.
+    function imprimirDivision(datos) {
+      const dv = estado.division
+      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +
+        htmlHojaDivision(datos, dv?.facturas, dv?.moneda)
+      window.print()
+    }
+
+    // En el detalle de una orden valorizada: cómo se factura y los números
+    // de ARCA ya cargados (la carga va en la ventana).
+    function htmlFacturasOrden(d) {
+      const o = d?.orden
+      if (!o || o.estado === 'anulada' || o.estado_valorizacion !== 'valorizada') return ''
+      const cli = clienteDe(o.cliente_id)
+      const divide = seDivideOrden(o, cli)
+      let como
+      if (o.division_pct_a !== null && o.division_pct_a !== undefined) {
+        como = `Dividida para facturar: parte A ${textoPct(o.division_pct_a)} % (más la comisión de ${textoPct(o.division_comision_pct)} %) · parte B ${textoPct(complementoPct(o.division_pct_a))} %.`
+      } else if (divide) {
+        como = `Su condición de venta: parte A ${textoPct(cli.pct_parte_a)} % · parte B ${textoPct(complementoPct(cli.pct_parte_a))} %. Todavía no se guardó en esta orden.`
+      } else como = 'No se divide: va en una factura única.'
+      const f = facturasPorParte(d.facturas)
+      const lineas = d.facturas === null
+        ? '<p class="ad-texto-suave">No se pudieron leer las facturas de esta orden.</p>'
+        : partesFacturaOrden(divide, f).map(p => `<div class="ad-fila__linea" data-factura-parte="${esc(p)}">` +
+            `<span class="ad-renglon__desc">${esc(rotuloParte(o.codigo, p))}</span>` +
+            `<span class="${f[p]?.numero ? 'ad-facturas-orden__numero' : 'ad-texto-suave'}">${esc(f[p]?.numero ? 'Factura ' + f[p].numero : 'sin factura cargada')}</span></div>`).join('')
+      return `<div class="ad-tarjeta ad-facturas-orden" id="ad-facturas-orden"><h2 class="ad-subtitulo">Facturas de ARCA</h2>` +
+        `<p class="ad-texto-suave">${esc(como)}</p>${lineas}</div>`
+    }
+
+    // Con retiros:precios en la empresa de la orden (la regla de las cuatro
+    // funciones), y la orden valorizada y no anulada.
+    function puedeDividir(o) {
+      return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' && puedeEn('retiros', 'precios', o.unidad_negocio_id)
+    }
+
+    function camposDivision() {
+      return { a: document.getElementById('ad-dv-pct-a'), b: document.getElementById('ad-dv-pct-b'), com: document.getElementById('ad-dv-comision') }
+    }
+
+    // Abre la ventana con lo que diga datos_division_orden (el % de la orden
+    // si ya se guardó, si no el del cliente). Sin condición de venta la base
+    // lo dice ("poné el % de la parte A"): los % quedan vacíos para
+    // completarlos, y mientras tanto se puede cargar la factura única.
+    async function abrirDivision() {
+      const d = estado.orden
+      const o = d?.orden
+      if (!puedeDividir(o) || d.valorizar) return
+      const cli = clienteDe(o.cliente_id)
+      const dv = estado.division = {
+        ordenId: o.id, codigo: o.codigo, unidad: o.unidad_negocio_id, fecha: o.fecha, moneda: o.moneda || 'ARS',
+        datos: null, aviso: null, cargando: true, errorGuardar: null, guardando: false, turno: 0, reloj: null,
+        seDivide: seDivideOrden(o, cli), facturas: facturasPorParte(d.facturas), cargas: {},
+      }
+      const { a, b, com } = camposDivision()
+      for (const c of [a, b, com]) { enlazarCampoNumero(c, { decimales: 2, max: 100 }); ponerNumero(c, null) }
+      document.getElementById('ad-dv').hidden = false
+      pintarDivision()
+      pintarFacturasDivision()
+      const turno = ++dv.turno
+      try {
+        const { data, error } = await supabase.rpc('datos_division_orden', parametrosDivision(o.id, null, null))
+        if (error) throw error
+        if (estado.division !== dv || turno !== dv.turno) return
+        dv.datos = data
+        if (Array.isArray(data?.facturas)) dv.facturas = facturasPorParte(data.facturas)
+        ponerNumero(a, data?.pct_a ?? null)
+        ponerNumero(b, data?.pct_b ?? complementoPct(data?.pct_a))
+        ponerNumero(com, data?.comision_pct ?? COMISION_PARTE_A_DEFECTO)
+      } catch (err) {
+        if (estado.division !== dv || turno !== dv.turno) return
+        console.error('No se pudo leer la división de la orden:', err)
+        dv.aviso = err?.message || 'No se pudo leer la división de la orden. Probá de nuevo.'
+        const comCliente = cli?.comision_parte_a_pct
+        ponerNumero(com, comCliente === null || comCliente === undefined ? COMISION_PARTE_A_DEFECTO : Number(comCliente))
+      }
+      dv.cargando = false
+      pintarDivision()
+      pintarFacturasDivision()
+    }
+
+    function cerrarDivision() {
+      const dv = estado.division
+      if (dv?.reloj) clearTimeout(dv.reloj)
+      estado.division = null
+      document.getElementById('ad-dv').hidden = true
+    }
+
+    // Escribir uno de los dos % completa el otro con la diferencia a 100, y
+    // la vista previa se pide un rato después de la última tecla.
+    function cambiarPctDivision(cual) {
+      const dv = estado.division
+      if (!dv) return
+      const { a, b } = camposDivision()
+      if (cual === 'a') ponerNumero(b, complementoPct(leerCampoNumero(a)))
+      else if (cual === 'b') ponerNumero(a, complementoPct(leerCampoNumero(b)))
+      if (dv.reloj) clearTimeout(dv.reloj)
+      dv.reloj = setTimeout(() => pedirVistaDivision(), ESPERA_VISTA_DIVISION)
+    }
+
+    // La vista previa con los % de la ventana, SIN guardar
+    // (datos_division_orden con p_pct_a y p_comision_pct). Una respuesta
+    // vieja no pisa a una más nueva (dv.turno).
+    async function pedirVistaDivision() {
+      const dv = estado.division
+      if (!dv) return
+      dv.reloj = null
+      const { a, com } = camposDivision()
+      const pctA = leerCampoNumero(a)
+      const comision = leerCampoNumero(com)
+      const turno = ++dv.turno
+      const invalido = pctA === null ? 'Poné el % de la parte A para ver cómo queda.' : validarDivision(pctA, comision)
+      if (invalido) { dv.datos = null; dv.aviso = invalido; dv.cargando = false; pintarDivision(); return }
+      dv.cargando = true
+      pintarDivision()
+      try {
+        const { data, error } = await supabase.rpc('datos_division_orden', parametrosDivision(dv.ordenId, pctA, comision))
+        if (error) throw error
+        if (estado.division !== dv || turno !== dv.turno) return
+        dv.datos = data
+        dv.aviso = null
+      } catch (err) {
+        if (estado.division !== dv || turno !== dv.turno) return
+        console.error('No se pudo calcular la vista previa:', err)
+        dv.datos = null
+        dv.aviso = err?.message || 'No se pudo calcular la división. Probá de nuevo.'
+      }
+      dv.cargando = false
+      pintarDivision()
+    }
+
+    function pintarDivision() {
+      const dv = estado.division
+      if (!dv) return
+      document.getElementById('ad-dv-titulo').textContent = ('Dividir para facturar · ' + (dv.codigo ?? '')).trim()
+      document.getElementById('ad-dv-aviso').innerHTML = dv.aviso ? `<div class="ad-aviso">${esc(dv.aviso)}</div>` : ''
+      document.getElementById('ad-dv-vista').innerHTML = dv.datos
+        ? htmlHojaDivision(dv.datos, dv.facturas, dv.moneda)
+        : (dv.cargando ? '<div class="ad-vacio">Calculando…</div>' : '')
+      const e = document.getElementById('ad-dv-error')
+      e.textContent = dv.errorGuardar ?? ''
+      e.hidden = !dv.errorGuardar
+      const g = document.getElementById('ad-dv-guardar')
+      g.disabled = dv.guardando
+      g.textContent = dv.guardando ? 'Guardando…' : 'Guardar e imprimir'
+    }
+
+    // Guarda la división en la orden (guardar_division_orden devuelve lo
+    // mismo que datos_division_orden) y después imprime la hoja. El error de
+    // la base va tal cual, pegado al botón; un doble toque manda una vez.
+    async function guardarEImprimirDivision() {
+      const dv = estado.division
+      if (!dv || dv.guardando) return
+      const { a, com } = camposDivision()
+      const pctA = leerCampoNumero(a)
+      const comision = leerCampoNumero(com)
+      dv.errorGuardar = validarDivision(pctA, comision)
+      if (dv.errorGuardar) { pintarDivision(); return }
+      if (dv.reloj) { clearTimeout(dv.reloj); dv.reloj = null }
+      dv.guardando = true
+      dv.turno++  // una vista previa en camino ya no pisa lo guardado
+      pintarDivision()
+      try {
+        const { data, error } = await supabase.rpc('guardar_division_orden', parametrosDivision(dv.ordenId, pctA, comision))
+        if (error) throw error
+        if (estado.division !== dv) return
+        dv.datos = data
+        dv.aviso = null
+        dv.cargando = false
+        if (Array.isArray(data?.facturas)) dv.facturas = facturasPorParte(data.facturas)
+        const cambianLasPartes = !dv.seDivide
+        dv.seDivide = true
+        // La orden abierta se entera sin releerla: su bloque de facturas lo dice.
+        const o = estado.orden?.orden
+        if (o?.id === dv.ordenId) {
+          o.division_pct_a = data?.pct_a ?? pctA
+          o.division_comision_pct = data?.comision_pct ?? comision
+          if (Array.isArray(data?.facturas)) estado.orden.facturas = data.facturas
+          pintarOrden()
+        }
+        if (cambianLasPartes) pintarFacturasDivision()
+        dv.guardando = false
+        pintarDivision()
+        imprimirDivision(data)
+      } catch (err) {
+        console.error('No se pudo guardar la división:', err)
+        if (estado.division === dv) dv.errorGuardar = err?.message || 'No se pudo guardar la división. Probá de nuevo.'
+      } finally {
+        dv.guardando = false
+        if (estado.division === dv) pintarDivision()
+      }
+    }
+
+    // ── Los números de factura de ARCA ──────────────────────────────────
+
+    // Una parte en la ventana: su número guardado, el campo para pegar el
+    // de ARCA (3 a 40 letras), el PDF opcional y "Guardar la factura".
+    function htmlFacturaDivision(dv, parte) {
+      const f = dv.facturas?.[parte]
+      const c = dv.cargas?.[parte] ?? {}
+      const id = parte.toLowerCase()
+      return `<div class="ad-dv-factura" data-dv-parte="${esc(parte)}">` +
+        `<div class="ad-dv-factura__cab"><span class="ad-dv-factura__rotulo">${esc(rotuloParte(dv.codigo, parte))}</span>` +
+        `<span class="${f?.numero ? 'ad-facturas-orden__numero' : 'ad-texto-suave'}" data-dv-guardada="${esc(parte)}">${esc(f?.numero ? 'Factura ' + f.numero : 'Sin factura cargada')}</span>` +
+        (f?.archivo_url ? `<button type="button" class="ad-link" data-dv-ver-pdf="${esc(parte)}">Ver el PDF</button>` : '') + '</div>' +
+        `<div class="ad-campo"><label for="ad-dv-numero-${esc(id)}">N° de factura ARCA</label>` +
+        `<input type="text" class="ad-input" id="ad-dv-numero-${esc(id)}" maxlength="40" autocomplete="off" placeholder="Pegá el número que dio ARCA" value="${esc(f?.numero ?? '')}"></div>` +
+        `<div class="ad-campo"><label for="ad-dv-pdf-${esc(id)}">${f?.archivo_url ? 'Cambiar el PDF (opcional)' : 'Subir PDF (opcional)'}</label>` +
+        `<input type="file" class="ad-dv-factura__archivo" id="ad-dv-pdf-${esc(id)}" accept="application/pdf,.pdf"></div>` +
+        `<p class="ad-error-pegado" data-dv-factura-error="${esc(parte)}"${c.error ? '' : ' hidden'}>${esc(c.error ?? '')}</p>` +
+        `<button type="button" class="ad-btn ad-btn--secundario" data-dv-factura="${esc(parte)}"${c.enviando ? ' disabled' : ''}>${c.enviando ? 'Guardando…' : 'Guardar la factura'}</button></div>`
+    }
+
+    function pintarFacturasDivision() {
+      const dv = estado.division
+      if (!dv) return
+      const aviso = dv.seDivide ? '' : '<p class="ad-texto-suave">Esta orden no se divide: va en una factura única. Para dividirla, completá los % de arriba y tocá «Guardar e imprimir».</p>'
+      document.getElementById('ad-dv-facturas').innerHTML = aviso + partesFacturaOrden(dv.seDivide, dv.facturas).map(p => htmlFacturaDivision(dv, p)).join('')
+    }
+
+    // Repinta SOLO el error y el botón de una parte: repintar todo borraría
+    // lo que se pegó en las otras.
+    function pintarFacturaParte(parte) {
+      const c = estado.division?.cargas?.[parte]
+      const caja = document.querySelector(`#ad-dv-facturas [data-dv-parte="${parte}"]`)
+      if (!c || !caja) return
+      const e = caja.querySelector('[data-dv-factura-error]')
+      if (e) { e.textContent = c.error ?? ''; e.hidden = !c.error }
+      const b = caja.querySelector('[data-dv-factura]')
+      if (b) { b.disabled = !!c.enviando; b.textContent = c.enviando ? 'Guardando…' : 'Guardar la factura' }
+    }
+
+    // La ruta del PDF en el bucket 'comprobantes'. La policy de Storage deja
+    // subir SOLO adentro de la carpeta del usuario (<uid>/…), así que
+    // facturas-venta/<empresa>/<año>/<codigo>-<parte>.pdf va debajo de esa
+    // carpeta. Se guarda la RUTA, nunca una URL firmada (ver Gastos).
+    function rutaPdfFactura(uid, unidadId, fecha, codigo, parte) {
+      const anio = /^\d{4}/.test(String(fecha ?? '')) ? String(fecha).slice(0, 4) : String(new Date().getFullYear())
+      return `${uid}/facturas-venta/${unidadId}/${anio}/${codigo}-${parte}.pdf`
+    }
+
+    async function subirPdfFactura(dv, parte, archivo) {
+      const uid = estado.sesion?.user?.id
+      if (!uid) throw new Error('No se pudo identificar tu usuario para subir el PDF.')
+      const ruta = rutaPdfFactura(uid, dv.unidad, dv.fecha, dv.codigo, parte)
+      const subir = (r) => supabase.storage.from('comprobantes').upload(r, archivo, { contentType: 'application/pdf', upsert: false })
+      let { error } = await subir(ruta)
+      if (!error) return ruta
+      // Ya hay un PDF con ese nombre (se cambió la factura) y Storage no deja
+      // pisarlo: el nuevo va con la hora al lado.
+      if (/exist|duplicate/i.test(String(error.message ?? '')) || String(error.statusCode) === '409') {
+        const otra = ruta.replace(/\.pdf$/, `-${Date.now()}.pdf`)
+        ;({ error } = await subir(otra))
+        if (!error) return otra
+      }
+      throw new Error('No se pudo subir el PDF: ' + (error.message || 'probá de nuevo.'))
+    }
+
+    async function guardarFacturaDivision(parte) {
+      const dv = estado.division
+      if (!dv || !partesFacturaOrden(dv.seDivide, dv.facturas).includes(parte)) return
+      const c = dv.cargas[parte] ??= { error: null, enviando: false }
+      if (c.enviando) return
+      const id = parte.toLowerCase()
+      const numero = String(document.getElementById(`ad-dv-numero-${id}`).value ?? '').trim()
+      const archivo = document.getElementById(`ad-dv-pdf-${id}`).files?.[0] ?? null
+      c.error = validarNumeroFactura(numero) ?? validarPdfFactura(archivo)
+      if (c.error) { pintarFacturaParte(parte); return }
+      c.enviando = true
+      pintarFacturaParte(parte)
+      try {
+        const ruta = archivo ? await subirPdfFactura(dv, parte, archivo) : null
+        const { error } = await supabase.rpc('guardar_factura_orden', { p_orden_id: dv.ordenId, p_parte: parte, p_numero: numero, p_archivo_url: ruta })
+        if (error) throw error
+        // La base deja el PDF de antes si no vino uno nuevo (coalesce).
+        const nueva = { numero, archivo_url: ruta ?? dv.facturas[parte]?.archivo_url ?? null }
+        dv.facturas[parte] = nueva
+        c.enviando = false
+        c.error = null
+        const d = estado.orden
+        if (d?.orden?.id === dv.ordenId && Array.isArray(d.facturas)) {
+          d.facturas = [...d.facturas.filter(f => f.parte !== parte), { parte, ...nueva }]
+          pintarOrden()
+        }
+        mostrarExito(`${rotuloParte(dv.codigo, parte)}: se guardó la factura ${numero}.`)
+        if (estado.division === dv) { pintarFacturasDivision(); pintarDivision() }
+      } catch (err) {
+        console.error('No se pudo guardar la factura:', err)
+        // Los mensajes de guardar_factura_orden vienen escritos para una persona: tal cual.
+        c.error = err?.message || 'No se pudo guardar la factura. Probá de nuevo.'
+        c.enviando = false
+        if (estado.division === dv) pintarFacturaParte(parte)
+      }
+    }
+
+    // El PDF se firma al mirarlo, por 5 minutos (pasa por la policy del
+    // bucket). La pestaña se abre ANTES de esperar a la base: si no, el
+    // navegador la toma por una ventana emergente y la frena.
+    async function verPdfFactura(parte) {
+      const dv = estado.division
+      const ruta = dv?.facturas?.[parte]?.archivo_url
+      if (!ruta) return
+      const c = dv.cargas[parte] ??= { error: null, enviando: false }
+      const pestana = window.open ? window.open('', '_blank') : null
+      try {
+        const { data, error } = await supabase.storage.from('comprobantes').createSignedUrl(ruta, 300)
+        if (error || !data?.signedUrl) throw error ?? new Error('sin firma')
+        if (pestana) { pestana.opener = null; pestana.location.href = data.signedUrl }
+        c.error = null
+      } catch (err) {
+        console.error('No se pudo abrir el PDF de la factura:', err)
+        if (pestana) pestana.close()
+        c.error = 'No se pudo abrir el PDF con tu usuario.'
+      }
+      if (estado.division === dv) pintarFacturaParte(parte)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4718,7 +5285,7 @@
 
     async function leerFicha(clienteId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, apodos, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, comision_habitual, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior')
+        .select('id, nombre, apodos, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, comision_habitual, pct_parte_a, comision_parte_a_pct, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior')
         .eq('id', clienteId).maybeSingle()
       if (error) throw error
       return data
@@ -4967,7 +5534,7 @@
       // proveedorActual: con quién está vinculado hoy; proveedorId: el que se
       // elige en el panel de vincular (null = que lo busque la base).
       estado.ficha = { id: clienteId, original: null, proveedorActual: null, proveedorId: null, busquedaProveedor: '', error: null,
-        vinculo: { panel: null, error: null, enviando: false } }
+        vinculo: { panel: null, error: null, enviando: false }, condicion: { error: null, enviando: false } }
       mostrarVista('ad-vista-ficha')
       document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-vacio">Cargando la ficha…</div>'
       try {
@@ -4979,6 +5546,7 @@
         document.getElementById('ad-ficha-titulo').textContent = 'Ficha de ' + (c.nombre ?? 'cliente')
         document.getElementById('ad-ficha-aviso').innerHTML = ''
         llenarFicha(c)
+        llenarCondicionVenta(c)
         estado.ficha.apodos = (Array.isArray(c.apodos) ? c.apodos : []).map(limpio).filter(Boolean)
         document.getElementById('ad-f-apodo-nuevo').value = ''
         pintarApodosFicha()
@@ -5156,6 +5724,74 @@
         f.error = err?.message || 'No se pudo guardar la ficha. Probá de nuevo.'
         estado.trabajando = false
         pintarPieFicha()
+      }
+    }
+
+    // ── LA CONDICIÓN DE VENTA DE LA FICHA (21/10/2026) ───────────────────
+    // Parte A % / Parte B % (escribir uno completa el otro con la diferencia
+    // a 100; vacío = sus órdenes no se dividen) y la comisión de la A (21 por
+    // defecto). Va por su propio botón y su propia función,
+    // guardar_condicion_venta_cliente; nunca viaja con "Guardar la ficha".
+    // Ver "DIVIDIR PARA FACTURAR" en las órdenes.
+
+    // Escribe los valores SOLO al abrir la ficha (repintar en cada tecla
+    // movería el cursor).
+    function llenarCondicionVenta(c) {
+      const a = document.getElementById('ad-f-pct-a')
+      const b = document.getElementById('ad-f-pct-b')
+      const com = document.getElementById('ad-f-comision-a')
+      for (const el of [a, b, com]) enlazarCampoNumero(el, { decimales: 2, max: 100 })
+      const pct = c?.pct_parte_a === null || c?.pct_parte_a === undefined || c?.pct_parte_a === '' ? null : Number(c.pct_parte_a)
+      ponerNumero(a, pct)
+      ponerNumero(b, complementoPct(pct))
+      ponerNumero(com, c?.comision_parte_a_pct === null || c?.comision_parte_a_pct === undefined ? COMISION_PARTE_A_DEFECTO : Number(c.comision_parte_a_pct))
+      pintarCondicionVenta()
+    }
+
+    // Escribir uno de los dos % completa el otro.
+    function completarOtroPct(idCampo, idOtro) {
+      ponerNumero(document.getElementById(idOtro), complementoPct(leerCampoNumero(document.getElementById(idCampo))))
+    }
+
+    function pintarCondicionVenta() {
+      const c = estado.ficha?.condicion
+      if (!c) return
+      const e = document.getElementById('ad-f-condicion-error')
+      e.textContent = c.error ?? ''
+      e.hidden = !c.error
+      const b = document.getElementById('ad-f-condicion-guardar')
+      b.disabled = !!c.enviando
+      b.textContent = c.enviando ? 'Guardando…' : 'Guardar la condición de venta'
+    }
+
+    async function guardarCondicionVenta() {
+      const f = estado.ficha
+      if (!f?.original) return
+      const c = f.condicion ??= { error: null, enviando: false }
+      if (c.enviando) return
+      const pctA = leerCampoNumero(document.getElementById('ad-f-pct-a'))
+      const comision = leerCampoNumero(document.getElementById('ad-f-comision-a'))
+      c.error = validarCondicionVenta(pctA, comision)
+      if (c.error) { pintarCondicionVenta(); return }
+      c.enviando = true
+      pintarCondicionVenta()
+      try {
+        const { error } = await supabase.rpc('guardar_condicion_venta_cliente', { p_cliente_id: f.id, p_pct_a: pctA, p_comision_pct: comision })
+        if (error) throw error
+        if (estado.ficha !== f) return
+        f.original = { ...f.original, pct_parte_a: pctA, comision_parte_a_pct: comision }
+        // Las órdenes leen la condición de la lista de clientes: que la relea.
+        estado.clientes = null
+        mostrarExito(pctA === null
+          ? 'Condición de venta guardada: sus órdenes no se dividen.'
+          : `Condición de venta guardada: parte A ${textoPct(pctA)} % · parte B ${textoPct(complementoPct(pctA))} % · comisión ${textoPct(comision)} %.`)
+      } catch (err) {
+        console.error('No se pudo guardar la condición de venta:', err)
+        // Los mensajes de guardar_condicion_venta_cliente vienen escritos para una persona: tal cual.
+        c.error = err?.message || 'No se pudo guardar la condición de venta. Probá de nuevo.'
+      } finally {
+        c.enviando = false
+        if (estado.ficha === f) pintarCondicionVenta()
       }
     }
 
@@ -10322,6 +10958,20 @@
       document.getElementById('ad-btn-anular').addEventListener('click', () => pedirAnular())
       document.getElementById('ad-anular-si').addEventListener('click', () => confirmarAnular())
       document.getElementById('ad-anular-no').addEventListener('click', () => cancelarAnular())
+      // Dividir para facturar (21/10/2026): la ventana, sus % y las facturas.
+      document.getElementById('ad-btn-dividir').addEventListener('click', () => abrirDivision())
+      document.getElementById('ad-dv-cerrar').addEventListener('click', () => cerrarDivision())
+      document.getElementById('ad-dv-cancelar').addEventListener('click', () => cerrarDivision())
+      document.getElementById('ad-dv-guardar').addEventListener('click', () => guardarEImprimirDivision())
+      document.getElementById('ad-dv-pct-a').addEventListener('input', () => cambiarPctDivision('a'))
+      document.getElementById('ad-dv-pct-b').addEventListener('input', () => cambiarPctDivision('b'))
+      document.getElementById('ad-dv-comision').addEventListener('input', () => cambiarPctDivision('comision'))
+      document.getElementById('ad-dv-facturas').addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-dv-factura]'))) guardarFacturaDivision(b.dataset.dvFactura)
+        else if ((b = e.target.closest('[data-dv-ver-pdf]'))) verPdfFactura(b.dataset.dvVerPdf)
+      })
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('ad-dv').hidden) cerrarDivision() })
       const cuerpo = document.getElementById('ad-orden-cuerpo')
       cuerpo.addEventListener('input', (e) => {
         const t = e.target
@@ -10396,6 +11046,9 @@
       // La ficha
       document.getElementById('ad-ficha-volver').addEventListener('click', () => { if (estado.ficha) abrirCliente(estado.ficha.id) })
       document.getElementById('ad-ficha-guardar').addEventListener('click', () => guardarFicha())
+      document.getElementById('ad-f-pct-a').addEventListener('input', () => completarOtroPct('ad-f-pct-a', 'ad-f-pct-b'))
+      document.getElementById('ad-f-pct-b').addEventListener('input', () => completarOtroPct('ad-f-pct-b', 'ad-f-pct-a'))
+      document.getElementById('ad-f-condicion-guardar').addEventListener('click', () => guardarCondicionVenta())
       const ficha = document.getElementById('ad-vista-ficha')
       ficha.addEventListener('input', (e) => {
         if (e.target.id === 'ad-f-proveedor-buscar') {
