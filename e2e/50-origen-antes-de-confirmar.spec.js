@@ -6,7 +6,8 @@
 //  - Viene de Mengui (su origen habitual), con permiso de ingreso →
 //    ingresar_producto_terminado (lote MENGUI-1310) y faltante_a_lote.
 //  - "Otro origen": un proveedor, SIN permiso de ingreso → queda pendiente con
-//    la nota, en las observaciones, sin ningún error.
+//    la nota EN EL RENGLÓN (anotar_faltante_retiro), sin ningún error. Las
+//    observaciones de la orden no la llevan (salen impresas en la hoja).
 //  - Se hace en la fábrica sin planillas: "Se produjo antes y no está
 //    cargado" con la nota obligatoria.
 // Los datos se suman con 'maqueta.cambios' (no se tocan los de otras pruebas).
@@ -190,7 +191,9 @@ for (const [ancho, alto] of TAMANOS) {
     await confirmar(page);
     expect(rpc.some(r => r.nombre === 'ingresar_producto_terminado' || r.nombre === 'faltante_a_lote'), 'sin permiso no se intenta el ingreso').toBe(false);
     const orden = rpc.find(r => r.nombre === 'registrar_orden_retiro').params;
-    expect(orden.p_observaciones).toBe('Renglón 1 (Cucurucho grande · Caja x 100): Viene de RODRIGO ARRASCAETA, falta cargar el ingreso');
+    expect(orden.p_observaciones, 'la nota no va a las observaciones').toBeNull();
+    await expect.poll(() => rpc.filter(r => r.nombre === 'anotar_faltante_retiro').map(r => r.params))
+      .toEqual([{ p_item_id: 'it-1', p_nota: 'Viene de RODRIGO ARRASCAETA, falta cargar el ingreso' }]);
     await expect(page.locator('#rt-hecho')).toContainText('Pendiente para Administración: Viene de RODRIGO ARRASCAETA, falta cargar el ingreso');
     await expect(page.locator('#rt-falt')).toBeHidden();
     expect(errores, 'sin errores de JavaScript').toEqual([]);
@@ -213,7 +216,9 @@ for (const [ancho, alto] of TAMANOS) {
     await captura(page, `origen-antes-${ancho}`, info);
     await confirmar(page);
     const orden = rpc.find(r => r.nombre === 'registrar_orden_retiro').params;
-    expect(orden.p_observaciones).toBe('Renglón 1 (Cucurucho grande · Caja x 100): se produjo antes y no está cargado — Se hizo el lunes y no se cargó');
+    expect(orden.p_observaciones, 'la nota no va a las observaciones').toBeNull();
+    await expect.poll(() => rpc.filter(r => r.nombre === 'anotar_faltante_retiro').map(r => r.params))
+      .toEqual([{ p_item_id: 'it-1', p_nota: 'Se produjo antes y no está cargado: Se hizo el lunes y no se cargó' }]);
     await expect(page.locator('#rt-hecho')).toContainText('Pendiente para Administración: Se produjo antes y no está cargado: Se hizo el lunes y no se cargó');
     expect(rpc.some(r => /^faltante_|ingresar_/.test(r.nombre))).toBe(false);
     expect(errores, 'sin errores de JavaScript').toEqual([]);

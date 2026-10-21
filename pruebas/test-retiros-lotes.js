@@ -313,7 +313,9 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   })
   esperas.push(S.confirmar().then(() => {
     chk('contestado, confirmar con faltante LLAMA a la base', !!p && p.p_items[0].lotes.length === 4)
-    chk('lo que queda para Administración va en las observaciones', /Renglón 1 \(Cucurucho Mini · Caja x 600\): se produjo antes y no está cargado — se produjo ayer/.test(p?.p_observaciones ?? ''))
+    // 21/10/2026: la nota va al renglón (anotar_faltante_retiro, lo prueba
+    // test-retiros-origen.js), no a las observaciones (salen impresas).
+    chk('lo que queda para Administración NO va en las observaciones', !!p && p.p_observaciones === null && !/se produjo ayer/.test(p.p_observaciones ?? ''))
     const h = S.__els.get('rt-hecho').innerHTML
     chk('la orden sale y dice que quedó pendiente de revisión en Administración', S.estado.vista === 'rt-vista-hecho' && /queda para revisar en Administración/.test(h) && /faltaban 5 cajas/.test(h))
   }))

@@ -28,7 +28,7 @@ Para cargar el ingreso de lo que vino de afuera hace falta `materia_prima:cargar
 
 ## Decisiones tomadas sin consultar
 
-1. **La nota de "Se produjo antes" y la de "falta cargar el ingreso" van a las OBSERVACIONES de la orden** ("Renglón 1 (Cucurucho grande · Caja x 100): …"), debajo de lo que se escribió. Es el único lugar donde Administración la ve, porque `registrar_orden_retiro` no recibe una nota por renglón. **Consecuencia: sale impresa en la hoja de la orden** (la hoja imprime las observaciones). Si molesta, hace falta un hueco de base: una nota por renglón (`p_items[].nota` que vaya a `revision_motivo`) o una RPC para anotar el faltante pendiente.
+1. **La nota de "Se produjo antes" y la de "falta cargar el ingreso" van a las OBSERVACIONES de la orden** ("Renglón 1 (Cucurucho grande · Caja x 100): …"), debajo de lo que se escribió. Es el único lugar donde Administración la ve, porque `registrar_orden_retiro` no recibe una nota por renglón. **Consecuencia: sale impresa en la hoja de la orden** (la hoja imprime las observaciones). Si molesta, hace falta un hueco de base: una nota por renglón (`p_items[].nota` que vaya a `revision_motivo`) o una RPC para anotar el faltante pendiente. **CERRADO el 21/10/2026 (rama `ci-prueba/faltante-nota-renglon`):** la base creó `anotar_faltante_retiro(p_item_id, p_nota)` y la nota va al renglón; las observaciones de la orden ya no la llevan.
 2. Un producto que se hace en la fábrica NO ofrece "Otro origen" (el pedido decía solo planillas o "se produjo antes"). Con origen null sí.
 3. "Agregar" (cerrar el renglón) también pide la respuesta, no solo "Confirmar".
 4. Si los lotes del producto no se pudieron leer, no se pregunta (no se sabe si falta): queda el cartel de siempre al confirmar.

@@ -856,7 +856,7 @@
       nuevoFaltante, htmlFaltante, accionFaltante, escribirMotivoFaltante, asegurarEstilosFaltante,
       textoEsperando, textoCajasFr,
       TEXTO_PRODUJO_ANTES, LARGO_MINIMO_MOTIVO_FALTANTE, origenHabitual, origenCompleto, textoOrigenElegido,
-      textoVienenDe, textoPlanillaBoton, loteDeOrigen, notaObservacionOrigen, notaFaltaIngreso, resolverOrigenes,
+      textoVienenDe, textoPlanillaBoton, loteDeOrigen, notaFaltaIngreso, resolverOrigenes,
     } from '../js/faltante-retiro.js'
     import { supabase } from '../js/supabase.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
@@ -1576,9 +1576,12 @@
       // El origen habitual de cada producto: si no se puede leer, la carga
       // sigue y la pregunta ofrece las dos alternativas.
       if (estado.origenes?.unidad !== unidad) {
-        estado.origenes = { unidad, mapa: new Map(), error: null }
+        // Mientras se leen, la pregunta dice "Cargando…" y no ofrece planillas
+        // (un producto que viene de afuera no las ofrece).
+        estado.origenes = { unidad, mapa: new Map(), error: null, cargando: true }
         tareas.push(leerOrigenes(unidad).then(mapa => { if (estado.origenes?.unidad === unidad) estado.origenes.mapa = mapa })
-          .catch(err => { console.error('No se pudo leer de dónde viene cada producto:', err); if (estado.origenes?.unidad === unidad) estado.origenes.error = true }))
+          .catch(err => { console.error('No se pudo leer de dónde viene cada producto:', err); if (estado.origenes?.unidad === unidad) estado.origenes.error = true })
+          .finally(() => { if (estado.origenes?.unidad === unidad) { estado.origenes.cargando = false; repintarOrigenes() } }))
       }
       await Promise.all(tareas)
     }
@@ -1617,6 +1620,11 @@
       const porProducto = new Map((prods ?? []).map(p => [p.id, origenHabitual(p, { unidades, proveedores })]))
       for (const pr of pres ?? []) if (porProducto.has(pr.producto_id)) mapa.set(pr.id, porProducto.get(pr.producto_id))
       return mapa
+    }
+
+    // ¿Todavía se están leyendo los orígenes de la empresa de la orden?
+    function origenesCargando() {
+      return estado.origenes?.unidad === estado.empresaId && estado.origenes?.cargando === true
     }
 
     // El origen habitual de un renglón (o el "no se sabe": null).
@@ -1982,25 +1990,15 @@
 
     // UNA sola llamada, con el uuid de la orden: el mismo en cada reintento.
     // Lo que queda pendiente para Administración (se produjo antes y no está
-    // cargado; viene de afuera sin permiso para cargar el ingreso) va en las
-    // observaciones de la orden, con el número de renglón (20/10/2026).
-    function notasDeOrigen(f) {
-      const puede = puedeIngresarEn(estado.empresaId)
-      return (f?.renglones ?? []).map((r, i) => faltanteProducto(r) > 0
-        ? notaObservacionOrigen(i + 1, nombreCortoRenglon(r), origenDe(r), puede) : null).filter(Boolean)
-    }
-
-    function nombreCortoRenglon(r) {
-      const cat = estado.catalogo
-      return cat && r?.productoId ? nombreProductoPresentacion(cat, r.productoId, r.presentacionId) : ''
-    }
-
+    // cargado; viene de afuera sin permiso para cargar el ingreso) NO va en
+    // las observaciones (salen impresas en la hoja): se anota en el renglón
+    // después de confirmar (anotar_faltante_retiro, js/faltante-retiro.js).
     function parametrosRegistrar(f) {
       return {
         p_cliente_id: f.clienteId,
         p_fecha: hoyArgentina(),
         p_transporte: limpio(f.transporte) || null,
-        p_observaciones: [String(f.observaciones ?? '').trim(), ...notasDeOrigen(f)].filter(Boolean).join('\n') || null,
+        p_observaciones: String(f.observaciones ?? '').trim() || null,
         p_items: f.renglones.map(itemParaBase),
         p_client_uuid: f.uuid,
       }
@@ -2675,6 +2673,9 @@
       if (!(falta > 0)) return ''
       const a = asignacion(r, listaLotesDe(r))
       const hay = r3(a.porLote.reduce((s, l) => s + l.saldo, 0))
+      const titulo = `<p class="rt-origen__titulo"><strong>Hay ${esc(cantidadRenglon(r, hay))}, faltan ${esc(cantidadRenglon(r, falta))}.</strong> ¿De dónde salen?</p>`
+      // Sin saber todavía de dónde viene el producto, no se ofrece nada.
+      if (origenesCargando()) return `<div class="rt-origen" data-r-origen-caja>${titulo}<p class="rt-texto-suave" data-r-origen-cargando>Cargando…</p></div>`
       const o = origenDe(r)
       const hab = origenHabitualDe(r)
       const afueraHabitual = conOrigenAfuera(hab)
@@ -2724,8 +2725,7 @@
         partes.push('<p class="rt-origen__despues">Al confirmar quedan esperando esa planilla: cuando se cargue lo producido, salen de su lote.</p>')
       }
       const sinContestar = !origenCompleto(o) && (r.pedirOrigen || estado.form?.intentado)
-      return `<div class="rt-origen${sinContestar ? ' rt-origen--falta' : ''}" data-r-origen-caja>` +
-        `<p class="rt-origen__titulo"><strong>Hay ${esc(cantidadRenglon(r, hay))}, faltan ${esc(cantidadRenglon(r, falta))}.</strong> ¿De dónde salen?</p>` +
+      return `<div class="rt-origen${sinContestar ? ' rt-origen--falta' : ''}" data-r-origen-caja>` + titulo +
         partes.join('') +
         (sinContestar ? '<p class="rt-error-pegado">Falta decir de dónde salen las cajas.</p>' : '') + '</div>'
     }
@@ -2777,6 +2777,7 @@
     const ultimoOrigenDibujado = new WeakMap()
 
     function pedirLoQueFaltaDelOrigen(r) {
+      if (origenesCargando()) return
       if (faltanteProducto(r) > 0 && !conOrigenAfuera(origenHabitualDe(r))) asegurarPlanillasForm()
     }
 
@@ -3870,6 +3871,10 @@
         const o = lista.find(x => x.orden_id === h.ordenId)
         if (!o) { h.error = 'La orden se confirmó pero no se pudo leer para imprimirla. Buscala en «Mis retiros».'; pintarHecho(); return }
         h.orden = o
+        // Un reintento de la orden entera (se había confirmado, quizás otro
+        // día): el lote y el ingreso llevan el día en que se confirmó, como el
+        // reintento de un renglón (h.hoy), no el de hoy.
+        if (h.reintento && /^\d{4}-\d{2}-\d{2}/.test(String(o.fecha ?? ''))) h.hoy = String(o.fecha).slice(0, 10)
         // Si fue un reintento, lo que faltó no vino: se deduce de los lotes.
         if (h.reintento && !h.faltantes) {
           h.faltantes = faltantesDeLotes(o)
