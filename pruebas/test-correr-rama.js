@@ -59,6 +59,7 @@ const PRUEBAN_OTRA = {
   'mut-produccion-maquinas.js': 'muta produccion-gestion.html',
   'test-produccion-tabla.js': 'la tabla de producción es de produccion-gestion.html (09/10/2026)',
   'mut-produccion-tabla.js': 'muta produccion-gestion.html',
+  'test-produccion-salidas.js': 'las salidas entre fábricas son de produccion-gestion.html (21/10/2026)',
 }
 const suites = fs.readdirSync(__dirname).filter(f => /^(test|mut|controles)-.*\.js$/.test(f))
 const escapadas = []
