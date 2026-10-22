@@ -1160,6 +1160,14 @@
     .pr-ag__nuevo { border: 0; background: none; color: var(--p-acento); font-size: 14px; font-weight: 800; min-height: 36px; padding: 0; }
     .pr-ag__alta { display: flex; gap: 8px; flex: 1; min-width: 240px; }
     .pr-ag__alta .pr-input { flex: 1; }
+    /* "¿Quisiste decir…?" (21/10/2026): botones grandes, para el dedo. */
+    .pr-ag__alta { flex-wrap: wrap; }
+    .pr-ag__parecidos { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .pr-ag__parecidos[hidden] { display: none; }
+    .pr-ag__parecidos-titulo { margin: 0; font-size: 15px; font-weight: 800; color: var(--p-tinta); }
+    .pr-ag__parecidos-lista { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+    .pr-ag__parecido { min-height: 56px; padding: 0 20px; border-radius: 14px; border: 2px solid var(--p-acento); background: var(--p-acento-zona); color: var(--p-tinta); font: inherit; font-size: 18px; font-weight: 800; max-width: 100%; overflow-wrap: anywhere; }
+    .pr-ag__parecido--otro { border-color: var(--p-linea); background: #fff; font-size: 15px; }
     .pr-ag__nota { margin: 0; font-size: 12.5px; color: var(--p-suave); flex: 1; min-width: 200px; }
     .pr-ag__presentaciones { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 12px; }
     @media (orientation: portrait) { .pr-ag__presentaciones { grid-template-columns: minmax(0, 1fr); } }
@@ -2194,6 +2202,10 @@
               <div class="pr-ag__cono-pie">
                 <button type="button" class="pr-ag__nuevo" id="pr-agregar-cono-nuevo">+ Agregar cono nuevo</button>
                 <div class="pr-ag__alta" id="pr-agregar-cono-form" hidden>
+                  <!-- "¿Quisiste decir…?" (21/10/2026): los parecidos de la
+                       base (conos_parecidos) mientras se escribe. Lo arma
+                       pintarParecidos(). -->
+                  <div class="pr-ag__parecidos" id="pr-agregar-cono-parecidos" hidden></div>
                   <input type="text" id="pr-agregar-cono-nombre" class="pr-input" maxlength="80" placeholder="Nombre del cono" autocomplete="off" aria-label="Nombre del cono nuevo">
                   <button type="button" class="pr-btn pr-btn--accion" id="pr-agregar-cono-confirmar">Agregarlo</button>
                 </div>
@@ -9167,6 +9179,7 @@
       document.getElementById('pr-agregar-cono-form').hidden = true
       document.getElementById('pr-agregar-cono-nombre').value = ''
       document.getElementById('pr-agregar-cono-error').hidden = true
+      pintarParecidos()
       document.getElementById('pr-agregar-error').hidden = true
       ponerNumero(document.getElementById('pr-agregar-cajas'), null)
       // Un producto que quedó a medio cargar al recargar, en esta máquina.
@@ -9507,20 +9520,165 @@
       pintarAgregar()
     }
 
+    // ── "¿QUISISTE DECIR…?" (21/10/2026) ─────────────────────────────────
+    // En producción se creó "CASERATTO" cuando ya existía "CASERATO". Mientras
+    // se escribe el nombre (3 letras o más, 300 ms después de la última
+    // tecla) se le piden a la base los parecidos (conos_parecidos, hasta 5,
+    // sin los rechazados): tocar uno ELIGE ese cono y no se crea nada. Si uno
+    // es "igual" (el mismo nombre salvo letras repetidas, tildes o espacios),
+    // el botón dice "Es otro cono, crearlo igual", pide confirmación y recién
+    // ahí manda p_es_otro = true. Sin internet no se buscan: todo como antes
+    // (la base frena igual al crear, con "Ya existe el cono X…").
+    const ESPERA_PARECIDOS_MS = 300
+    const MIN_LETRAS_PARECIDOS = 3
+
+    // Lo que devolvió la base, limpio: [{ marca_id, nombre, igual }].
+    function listaParecidos(data) {
+      return (Array.isArray(data) ? data : []).filter(p => p && p.marca_id && p.nombre)
+        .map(p => ({ marca_id: p.marca_id, nombre: String(p.nombre), igual: p.igual === true }))
+    }
+
+    function parecidoIgual(lista) {
+      return (lista ?? []).find(p => p.igual) ?? null
+    }
+
+    // "Ya existe el cono CASERATO: elegí ese. Si de verdad es otro cono,
+    // confirmalo." (proponer_marca) → "CASERATO"; otro mensaje → null.
+    function conoQueYaExiste(mensaje) {
+      const m = /^Ya existe el cono (.+?): elegí ese\./.exec(String(mensaje ?? ''))
+      return m ? m[1] : null
+    }
+
+    function htmlParecidos(lista, yaExiste) {
+      let h = ''
+      if (lista?.length) {
+        h += '<p class="pr-ag__parecidos-titulo">¿Quisiste decir…?</p><div class="pr-ag__parecidos-lista">' +
+          lista.map(p => `<button type="button" class="pr-ag__parecido" data-parecido="${esc(p.marca_id)}">${esc(p.nombre)}</button>`).join('') + '</div>'
+      }
+      // Después de "Ya existe el cono X…": elegir ese, o confirmar que es otro.
+      if (yaExiste) {
+        h += '<div class="pr-ag__parecidos-lista">' +
+          (yaExiste.marcaId ? `<button type="button" class="pr-ag__parecido" data-parecido="${esc(yaExiste.marcaId)}">${esc('Elegir ' + yaExiste.nombre)}</button>` : '') +
+          '<button type="button" class="pr-ag__parecido pr-ag__parecido--otro" data-cono-es-otro>Es otro cono, crearlo igual</button></div>'
+      }
+      return h
+    }
+
+    function estadoParecidos() {
+      const a = estado.agregar
+      if (!a) return null
+      return a.parecidos ??= { lista: [], turno: 0, reloj: null, yaExiste: null }
+    }
+
+    function pintarParecidos() {
+      const p = estadoParecidos()
+      const caja = document.getElementById('pr-agregar-cono-parecidos')
+      caja.innerHTML = htmlParecidos(p?.lista, p?.yaExiste)
+      caja.hidden = !caja.innerHTML
+      document.getElementById('pr-agregar-cono-confirmar').textContent = parecidoIgual(p?.lista) ? 'Es otro cono, crearlo igual' : 'Agregarlo'
+    }
+
+    function programarParecidos() {
+      const p = estadoParecidos()
+      if (!p) return
+      if (p.reloj) clearTimeout(p.reloj)
+      p.yaExiste = null
+      p.reloj = setTimeout(() => buscarParecidos(), ESPERA_PARECIDOS_MS)
+    }
+
+    // Una respuesta vieja no pisa a una más nueva (p.turno). Si la base no
+    // contesta, no hay sugerencias: crear sigue andando como siempre.
+    async function buscarParecidos() {
+      const p = estadoParecidos()
+      if (!p) return
+      p.reloj = null
+      const texto = document.getElementById('pr-agregar-cono-nombre').value.trim()
+      const turno = ++p.turno
+      if (texto.length < MIN_LETRAS_PARECIDOS || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+        p.lista = []
+        pintarParecidos()
+        return
+      }
+      try {
+        const { data, error } = await supabase.rpc('conos_parecidos', { p_nombre: texto })
+        if (error) throw error
+        if (estadoParecidos() !== p || turno !== p.turno) return
+        p.lista = listaParecidos(data)
+      } catch (e) {
+        if (estadoParecidos() !== p || turno !== p.turno) return
+        console.error('conos_parecidos:', e)
+        p.lista = []
+      }
+      pintarParecidos()
+    }
+
+    // El id de un cono por su nombre: del catálogo de la tablet o de los parecidos.
+    function idDeConoPorNombre(nombre) {
+      const n = String(nombre ?? '').trim().toUpperCase()
+      return (estado.catalogo?.marcas ?? []).find(m => String(m.nombre ?? '').trim().toUpperCase() === n)?.id ??
+        (estadoParecidos()?.lista ?? []).find(p => p.nombre.trim().toUpperCase() === n)?.marca_id ?? null
+    }
+
+    // Cierra el formulario de "cono nuevo" y lo deja vacío.
+    function cerrarConoNuevo() {
+      document.getElementById('pr-agregar-cono-form').hidden = true
+      document.getElementById('pr-agregar-cono-nombre').value = ''
+      document.getElementById('pr-agregar-cono-error').hidden = true
+      const p = estadoParecidos()
+      if (p) {
+        if (p.reloj) clearTimeout(p.reloj)
+        p.reloj = null
+        p.turno++
+        p.lista = []
+        p.yaExiste = null
+      }
+      pintarParecidos()
+      if (estado.agregar) estado.agregar.busqueda = ''
+      document.getElementById('pr-agregar-marca-buscar').value = ''
+    }
+
+    // Tocar un parecido ELIGE ese cono existente: no se crea nada.
+    function elegirParecido(marcaId) {
+      if (!marcaId || !estado.agregar) return
+      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === marcaId)) {
+        // Fuera del catálogo (que trae todos los activos): está dado de baja.
+        const err = document.getElementById('pr-agregar-cono-error')
+        err.textContent = 'Ese cono existe pero está dado de baja. Pedile a quien configura producción que lo reactive, o elegí otro.'
+        err.hidden = false
+        return
+      }
+      cerrarConoNuevo()
+      elegirCono(marcaId)
+    }
+
+    // "¿Seguro que no es CASERATO?": Sí crea con p_es_otro; No elige ese.
+    function confirmarEsOtroCono(existente, marcaId) {
+      const nombre = document.getElementById('pr-agregar-cono-nombre').value.trim()
+      pedirConfirmacion({
+        titulo: `¿Seguro que no es ${existente}?`,
+        texto: `Ya existe el cono ${existente}. Si «${nombre.toUpperCase()}» es otro cono distinto, se crea igual y queda para revisar.`,
+        si: 'Sí, es otro cono', no: marcaId ? `No, elegir ${existente}` : 'No, seguir',
+      }, () => crearConoNuevo({ esOtro: true }), marcaId ? () => elegirParecido(marcaId) : null)
+    }
+
     // proponer_marca guarda el nombre en MAYÚSCULAS y, con solo `cargar`, lo
     // deja 'pendiente_revision': se puede usar igual. Un nombre ya RECHAZADO
     // hace que la función LANCE, y ese mensaje ya viene escrito para una
-    // persona, así que se muestra tal cual.
-    async function crearConoNuevo() {
+    // persona, así que se muestra tal cual. Desde el 21/10/2026 también lanza
+    // si ya hay uno "igual" ("Ya existe el cono X…"): se ofrece elegir ese.
+    async function crearConoNuevo({ esOtro = false } = {}) {
       const campo = document.getElementById('pr-agregar-cono-nombre')
       const err = document.getElementById('pr-agregar-cono-error')
       const nombre = campo.value.trim()
       err.hidden = true
       if (!nombre) { err.textContent = 'Escribí el nombre del cono.'; err.hidden = false; return }
+      const p = estadoParecidos()
+      const igual = esOtro ? null : parecidoIgual(p?.lista)
+      if (igual) return confirmarEsOtroCono(igual.nombre, igual.marca_id)
       const btn = document.getElementById('pr-agregar-cono-confirmar')
       btn.disabled = true
       try {
-        const { data, error } = await supabase.rpc('proponer_marca', { p_nombre: nombre })
+        const { data, error } = await supabase.rpc('proponer_marca', esOtro ? { p_nombre: nombre, p_es_otro: true } : { p_nombre: nombre })
         if (error) throw error
         const id = data?.marca_id
         if (!id) throw new Error('No se pudo agregar el cono.')
@@ -9535,15 +9693,17 @@
             { id, nombre: nombre.toUpperCase(), estado_alta: tieneTarea('configurar') ? 'aprobada' : 'pendiente_revision' }]
             .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre), 'es'))
         }
-        document.getElementById('pr-agregar-cono-form').hidden = true
-        campo.value = ''
-        estado.agregar.busqueda = ''
-        document.getElementById('pr-agregar-marca-buscar').value = ''
+        cerrarConoNuevo()
         elegirCono(id)
       } catch (e) {
         console.error('proponer_marca:', e)
         err.textContent = e?.message || 'No se pudo agregar el cono.'
         err.hidden = false
+        const existente = conoQueYaExiste(e?.message)
+        if (existente && p) {
+          p.yaExiste = { nombre: existente, marcaId: idDeConoPorNombre(existente) }
+          pintarParecidos()
+        }
       } finally {
         btn.disabled = false
       }
@@ -10200,7 +10360,16 @@
         f.hidden = false
         document.getElementById('pr-agregar-cono-nombre').focus()
       })
-      document.getElementById('pr-agregar-cono-confirmar').addEventListener('click', crearConoNuevo)
+      document.getElementById('pr-agregar-cono-confirmar').addEventListener('click', () => crearConoNuevo())
+      // "¿Quisiste decir…?" (21/10/2026)
+      document.getElementById('pr-agregar-cono-nombre').addEventListener('input', () => programarParecidos())
+      document.getElementById('pr-agregar-cono-parecidos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-parecido]'); if (b) return elegirParecido(b.dataset.parecido)
+        if (ev.target.closest('[data-cono-es-otro]')) {
+          const y = estadoParecidos()?.yaExiste
+          if (y) confirmarEsOtroCono(y.nombre, y.marcaId)
+        }
+      })
       document.getElementById('pr-agregar-cajas-panel').addEventListener('click', ev => {
         const b = ev.target.closest('[data-cajas-paso]'); if (b) return cambiarCajas(Number(b.dataset.cajasPaso))
         const p = ev.target.closest('[data-paso-ag]'); if (p) irAPasoAgregar(p.dataset.pasoAg)
