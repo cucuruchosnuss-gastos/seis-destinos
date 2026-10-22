@@ -165,6 +165,12 @@ const FUNCIONES_BASE = [
   'abrirDivision', 'cerrarDivision', 'cambiarPctDivision', 'pedirVistaDivision', 'pintarDivision', 'guardarEImprimirDivision',
   'htmlFacturaDivision', 'pintarFacturasDivision', 'pintarFacturaParte', 'rutaPdfFactura', 'subirPdfFactura', 'guardarFacturaDivision',
   'verPdfFactura', 'llenarCondicionVenta', 'completarOtroPct', 'pintarCondicionVenta', 'guardarCondicionVenta',
+  // Los 3 vendedores y la configuración de comisiones (21/10/2026, tarde)
+  'numeroONulo', 'leerVendedores', 'leerComisionesCliente', 'sumaPcts', 'parametrosComisiones', 'validarComisiones', 'htmlVendedoresPct',
+  'llenarVendedoresPct', 'comisionesDeDatos', 'comisionesSinDatos', 'pintarVendedoresDivision', 'cambiarVendedorDivision', 'programarVistaDivision',
+  'filasVendedoresFicha', 'cargarVendedoresFicha', 'pintarVendedoresFicha', 'cambiarVendedorFicha', 'volverVendedorAConfig', 'comisionesFicha',
+  'contenidoSeccionComisiones', 'mostrarComisiones', 'cargarComisiones', 'textoTotalComisiones', 'pintarComisiones', 'cambiarComisionConfig',
+  'guardarComisionConfig',
   ...FUNCIONES_CU,
 ]
 
@@ -199,7 +205,7 @@ const CONSTANTES_BASE = [
   // Entre empresas (13/10/2026)
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
   // Dividir para facturar (21/10/2026)
-  'COMISION_PARTE_A_DEFECTO', 'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
+  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
 ]
 
 const PRELUDIO = `

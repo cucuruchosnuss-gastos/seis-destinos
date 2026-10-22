@@ -108,6 +108,8 @@ const SEGURAS_ADMINISTRACION = [
   // Dividir para facturar (21/10/2026): lo ejecuta con texto malicioso
   // test-administracion-division-orden.js.
   ['totales', 'HTML ya escapado: htmlBloqueParte() arma cada línea de totales con esc() de los importes y del %'],
+  ['vendedores', 'HTML ya escapado: htmlBloqueParte() arma una línea por vendedor con esc() del nombre, el % y el monto'],
+  ['origen', 'HTML ya escapado: htmlVendedoresPct() arma los rótulos con esc() del id del vendedor y del % de la configuración, o vacío'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

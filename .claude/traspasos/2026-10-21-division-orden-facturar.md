@@ -1,37 +1,39 @@
-# Traspaso — 21/10/2026: dividir una orden para facturar (condición de venta y facturas de ARCA)
+# Traspaso — 21/10/2026: dividir una orden para facturar (condición de venta, 3 vendedores y facturas de ARCA)
 
-Rama `ci-prueba/division-orden-facturar` (desde `origin/main` 2bc7d23). **Sin integrar**: la audita el chat de la base.
-Pedido: `.claude/pedidos/2026-10-21-division-orden.md`. Documentación: `docs/memoria/administracion.md` (entrada nueva arriba de todo, "DIVIDIR PARA FACTURAR").
+Rama `ci-prueba/division-orden-facturar` (desde `origin/main` 2bc7d23; con `main` f32b687 —el arnés— traído por merge). **Sin integrar**: la audita el chat de la base.
+Pedidos: `.claude/pedidos/2026-10-21-division-orden.md` (el primero y el segundo, de la noche). Documentación: `docs/memoria/administracion.md` (entrada de arriba de todo, "DIVIDIR PARA FACTURAR, LA CONDICIÓN DE VENTA Y LAS COMISIONES DE LOS 3 VENDEDORES").
 
 ## Qué se hizo
-1. **Ficha del cliente** (Administración → Clientes → Ficha): bloque "Condición de venta" con Parte A %, Parte B % (escribir uno completa el otro hasta 100; vacío = no se divide) y Comisión parte A % (21 por defecto). Botón propio "Guardar la condición de venta" → `guardar_condicion_venta_cliente`.
-2. **Orden valorizada**: bloque "Facturas de ARCA" (cómo se factura y los números ya cargados) y botón "Dividir para facturar" (con `retiros:precios` en la empresa de la orden). La ventana trae los % de `datos_division_orden`, la vista previa se pide 400 ms después de escribir (sin guardar), y "Guardar e imprimir" llama a `guardar_division_orden` y después imprime la hoja A4 (bloques -A y -B, comisión debajo de la tabla, renglones en 0 afuera, pie con el total de la orden).
-3. **Facturas de ARCA**: en la ventana, A y B (o "Factura única" si no se divide), número para pegar (3 a 40) y PDF opcional → `guardar_factura_orden`. El número sale al lado de "<codigo>-A/-B" en la ventana, en la orden y en la hoja.
+1. **Configuración de comisiones** (sección nueva de Administración, con `retiros:precios`): los 3 vendedores en orden con su % y un "Guardar" cada uno (`guardar_comision_vendedor`); abajo el total, que cambia al tipear. Tarjeta en la portada con el total.
+2. **Ficha del cliente → "Condición de venta"**: Parte A % / Parte B % (uno completa el otro; vacío = no se divide) y los 3 vendedores, cada uno "De la configuración" o "Propio de este cliente" con "Volver al de la configuración". Botón propio → `guardar_condicion_venta_cliente(p_comisiones)`: el % de los propios y null los de la configuración.
+3. **Orden valorizada → "Dividir para facturar"**: la ventana trae A, B y los 3 vendedores de `datos_division_orden`; cualquier cambio (también uno puntual de un vendedor, solo para esa orden) pide la vista previa 400 ms después, sin guardar, con `p_comisiones` de los 3; "Guardar e imprimir" → `guardar_division_orden` y después la hoja A4.
+4. **La hoja**: bloques -A y -B; en la A, debajo de la tabla, Total productos, una línea por vendedor, Total comisiones (con el % total) y TOTAL PARTE A; en la B, TOTAL PARTE B.
+5. **Facturas de ARCA**: A, B o única, con PDF opcional (`guardar_factura_orden`), visibles en la ventana, en la orden y en la hoja.
 
 ## Decisiones tomadas sin consultar
-- **La ruta del PDF lleva `<uid>/` adelante**: `<uid>/facturas-venta/<unidad_negocio_id>/<año>/<codigo>-<parte>.pdf`. La policy de Storage del bucket `comprobantes` (leída el 21/10/2026) solo deja SUBIR dentro de la carpeta del usuario; con la ruta pedida tal cual, toda subida fallaba. `<empresa>` es el id de la unidad y `<año>` el de la fecha de la orden.
-- **El PDF solo lo puede abrir quien lo subió**: la policy de LECTURA de `comprobantes` deja ver la carpeta propia (o las de `mp` y gastos). A otra persona "Ver el PDF" le dice "No se pudo abrir el PDF con tu usuario." → **para el chat de la base**: una policy de SELECT para `*/facturas-venta/<unidad>/…` con `retiros:precios` o `retiros:ver` en esa unidad.
-- Un PDF que ya existe con ese nombre (se cambió la factura) se sube con la hora al lado (Storage no deja pisar sin policy de UPDATE).
-- La condición de venta se guarda con su propio botón, no con "Guardar la ficha" (como apodos y la clasificación).
-- Una factura única ya cargada no se esconde si después la orden se divide (se ve junto a A y B).
-- Una parte sin renglones (p. ej. 100 % / 0 %) igual se imprime, con "Sin productos en esta parte.".
-- Sin condición de venta, la ventana muestra el error de la base tal cual, los % vacíos y la comisión del cliente (o 21); mientras tanto se puede cargar la factura única.
-- Los % se validan antes de mandar con los MISMOS textos de la base ("El % de la parte A va de 0 a 100.", "La comisión va de 0 a 100.", "Pegá el número de la factura de ARCA.").
+- **"Volver al de la configuración" y los cambios de % en la ficha se guardan con el botón "Guardar la condición de venta"** (como todo el bloque), no al tocarlos.
+- **Cambiar un % de vendedor en la ficha lo deja propio aunque el número quede igual al de la configuración** ("si se cambia, queda propio"). Un propio que se vacía vuelve a la configuración.
+- En la ventana, sin condición de venta (la base no devuelve datos), los vendedores se llenan con el propio del cliente o el de la configuración (se lee `vendedores_comision` y `cliente_comisiones`), que es lo que la base usaría.
+- En la ventana un % de vendedor vacío no se acepta ("Las comisiones van de 0 a 100.", el texto de la base); en la ficha sí (vuelve a la configuración).
+- La sección de configuración se ve con `retiros:precios` en CUALQUIER empresa, porque `guardar_comision_vendedor` usa `tiene_tarea` sin alcance. La pestaña se llama "Comisiones" y va al final.
+- La ruta del PDF sigue con `<uid>/` adelante (la policy de SUBIDA lo exige); la de LECTURA nueva ya deja abrirlo a quien tenga `retiros:precios/ver` en la empresa: se sacó el aviso de la documentación.
+- Lo del primer pedido sigue igual: una factura única cargada no se esconde al dividir; una parte sin renglones dice "Sin productos en esta parte."; un PDF repetido va con la hora al lado.
 
 ## Lo que no se pudo probar
-- **Contra la base real**: todo se probó con la maqueta y el sandbox (Claude Code no escribe en la base). En particular, que la subida a Storage pase con la ruta `<uid>/facturas-venta/…`: se dedujo de la policy, no se subió un archivo real.
-- La impresión real (el diálogo del navegador): se probó la hoja con `emulateMedia('print')`, no en papel.
+- **Contra la base real**: todo con la maqueta y el sandbox (Claude Code no escribe en la base). En particular, una subida real a Storage y abrir el PDF con otro usuario.
+- La impresión en papel: la hoja se probó con `emulateMedia('print')`.
 
-## Guion para Facu (2 minutos)
-1. Administración → Clientes → un cliente → Ficha → "Condición de venta": poné 30 en Parte A (B dice 70) → "Guardar la condición de venta".
-2. Órdenes → una orden valorizada de ese cliente → "Dividir para facturar": cambiá A a 40 y mirá cómo cambian los montos; "Guardar e imprimir".
-3. En la misma ventana, pegá un número en "N° de factura ARCA" de la A → "Guardar la factura": aparece en la orden.
+## Guion para Facu (3 minutos)
+1. Administración → pestaña **Comisiones**: cambiá el Vendedor 2 a 3,5 → "Guardar" (el total dice 9,5 %).
+2. Clientes → un cliente → Ficha → "Condición de venta": poné 30 en Parte A (B dice 70); cambiá el Vendedor 1 a 2,5 (dice "Propio de este cliente") → "Guardar la condición de venta".
+3. Órdenes → una orden valorizada de ese cliente → **Dividir para facturar**: cambiá A a 40 y el Vendedor 3 a 5 y mirá la hoja; "Guardar e imprimir".
+4. En la misma ventana, pegá un número en "N° de factura ARCA" de la A → "Guardar la factura".
 
 ## Resultado de las pruebas
-- `npm run pruebas` 269/269 en verde (incluye check-bytes); `node pruebas/check-scripts.js` OK.
-- `test-administracion-division-orden.js` 159/159; `mut-administracion-division-orden.js` 66/66 (+19 equivalentes).
-- `e2e/53-division-orden.spec.js` 12/12 (390, 360, 768 y 1280 px).
+- `npm run pruebas` 270/270 en verde (incluye check-bytes); `node pruebas/check-scripts.js` OK.
+- `test-administracion-division-orden.js` 210/210; `mut-administracion-division-orden.js` 96/96 (+25 equivalentes); `test-administracion-diseno.js` 46/46 (con la pestaña Comisiones).
+- `e2e/53-division-orden.spec.js` 16/16 (dividir e imprimir, factura única, ficha y configuración, a 390, 360, 768 y 1280 px).
 
 ## Qué automatizaría ahora
-- **El arnés de las suites termina en verde si una promesa queda colgada**: si una rama async nunca resuelve, node sale con código 0 sin imprimir el resultado, y el runner de mutaciones lo cuenta como "escapó" (o peor, una suite podría pasar sin afirmar). Pasó acá con las pruebas de doble toque. Arreglo barato: en `arnes()` de `pruebas/circuito-comun.js`, un `process.on('beforeExit')` que, si `fin()` no cerró, imprima "ROJO: quedaron ramas sin terminar" y salga con 1.
-- **Leer las policies de Storage antes de codificar una ruta**: un `pruebas/test-rutas-storage.js` que tome cada `storage.from('<bucket>').upload(<ruta>)` de los módulos y verifique contra un snapshot de `pg_policies` de `storage.objects` que el primer tramo sea el uid cuando el bucket lo exige.
+- **Una prueba que compare las firmas de las RPC que usa cada pantalla con las de la base**: la base cambió la misma tarde (de `p_comision_pct` a `p_comisiones`) y la rama quedó llamando funciones que ya no existían, sin que nada lo avisara. Un script que tome cada `supabase.rpc('<nombre>', { … })` de `modulos/` y compare los nombres de los parámetros con un snapshot de `pg_get_function_identity_arguments` (que el chat de la base actualice al cambiar una función) daría rojo en `npm run pruebas` apenas una pantalla quede desfasada.
+- Llevar la guarda de "suite colgada" a los arneses propios (`controles-*.js` y las suites que no usan `arnes()`), como quedó anotado en `2026-10-21-arnes-ramas-colgadas.md`.
