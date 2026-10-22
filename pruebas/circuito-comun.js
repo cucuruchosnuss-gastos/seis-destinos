@@ -21,6 +21,16 @@ function arnes() {
     if (condicion) ok++
     else fallas.push(nombre + (detalle ? ` — ${detalle}` : ''))
   }
+  // UNA SUITE COLGADA ES ROJO (21/10/2026). Si una rama async espera una
+  // promesa que nunca se resuelve (pasó con una prueba de "doble toque" que
+  // guardaba solo la última respuesta), node se queda sin trabajo y SALE CON
+  // CÓDIGO 0 sin imprimir el resultado: la suite parecía verde y el runner de
+  // mutaciones contaba "escapó" sin que nada se hubiera afirmado. 'beforeExit'
+  // salta justo ahí, y nunca después de cerrar(), que sale con process.exit.
+  process.on('beforeExit', () => {
+    chk('la suite cierra: ninguna rama async quedó colgada esperando una promesa que nunca se resuelve, y se llamó a fin()', false)
+    cerrar()
+  })
   function cerrar() {
     const total = ok + fallas.length
     for (const f of fallas) console.log('  ✗ ' + f)
