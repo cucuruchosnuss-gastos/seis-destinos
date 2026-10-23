@@ -158,6 +158,19 @@ const FUNCIONES_BASE = [
   'htmlFilaEntre', 'entregadorasEntre', 'puedeLeerListasEntre', 'puedeValorizarProductoEntre', 'textoEstadoValorEntre',
   'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'leerListasEntre', 'valorizarEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
   'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
+  // Dividir para facturar y la condición de venta (21/10/2026)
+  'leerFacturasDeOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'validarDivision', 'parametrosDivision', 'rotuloParte',
+  'facturasPorParte', 'seDivideOrden', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura', 'cantidadDivision',
+  'renglonesParte', 'htmlBloqueParte', 'htmlHojaDivision', 'imprimirDivision', 'htmlFacturasOrden', 'puedeDividir', 'camposDivision',
+  'abrirDivision', 'cerrarDivision', 'cambiarPctDivision', 'pedirVistaDivision', 'pintarDivision', 'guardarEImprimirDivision',
+  'htmlFacturaDivision', 'pintarFacturasDivision', 'pintarFacturaParte', 'rutaPdfFactura', 'subirPdfFactura', 'guardarFacturaDivision',
+  'verPdfFactura', 'llenarCondicionVenta', 'completarOtroPct', 'pintarCondicionVenta', 'guardarCondicionVenta',
+  // Los 3 vendedores y la configuración de comisiones (21/10/2026, tarde)
+  'numeroONulo', 'leerVendedores', 'leerComisionesCliente', 'sumaPcts', 'parametrosComisiones', 'validarComisiones', 'htmlVendedoresPct',
+  'llenarVendedoresPct', 'comisionesDeDatos', 'comisionesSinDatos', 'pintarVendedoresDivision', 'cambiarVendedorDivision', 'programarVistaDivision',
+  'filasVendedoresFicha', 'cargarVendedoresFicha', 'pintarVendedoresFicha', 'cambiarVendedorFicha', 'volverVendedorAConfig', 'comisionesFicha',
+  'contenidoSeccionComisiones', 'mostrarComisiones', 'cargarComisiones', 'textoTotalComisiones', 'pintarComisiones', 'cambiarComisionConfig',
+  'guardarComisionConfig',
   ...FUNCIONES_CU,
 ]
 
@@ -191,6 +204,8 @@ const CONSTANTES_BASE = [
   'MONEDAS_PRESTAMO_AD', 'NOMBRE_MONEDA_AD', 'NOMBRE_MEDIO_PRESTAMO', 'MAX_CUOTAS_PRESTAMO', 'LARGO_MINIMO_MOTIVO_PAGO',
   // Entre empresas (13/10/2026)
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
+  // Dividir para facturar (21/10/2026)
+  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
 ]
 
 const PRELUDIO = `
