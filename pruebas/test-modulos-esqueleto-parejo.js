@@ -13,7 +13,7 @@
 // también encima de la barra de abajo).
 //
 // Lo que se fija acá (lo que se ve en un navegador lo fija
-// e2e/53-esqueleto-parejo.spec.js):
+// e2e/54-esqueleto-parejo.spec.js):
 //  1. NINGÚN módulo (menos la planta, produccion.html) tiene una regla
 //     "position: fixed" a pantalla completa con fondo LLENO: eso es una
 //     pantalla encima de todo. Los modales (fondo transparente u oscurecido)

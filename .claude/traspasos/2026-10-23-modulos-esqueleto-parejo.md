@@ -39,7 +39,7 @@ Se buscó cada regla con `position: fixed` en el CSS de cada módulo y en los es
 - **Las 2 barras fijas de abajo** (Cobranzas y cheques) arrancan después de la barra lateral en la compu; la de cheques va arriba de la barra de abajo en el celular.
 - **El encabezado de los módulos** (`.cab-modulo` en `css/main.css`): "‹ Volver", el ícono del módulo (los trazos de la barra lateral) en su color (`PALETA_MODULO`), el nombre en Bricolage y la vista al lado ("Cobranzas / Listado"). En el celular, una franja blanca de lado a lado, como Órdenes de retiro. Lo llevan Gastos (lista, wizard y los dos detalles), Caja (lista, ficha con las iniciales y el nombre, directorio), Cobranzas, Cuentas corrientes (lista, ficha, padrón), Ingreso, Stock, Pedidos, Conos, Accesos y Empleados. Se borró el CSS de los encabezados viejos.
 - Cero cambios de lógica, RPC o permisos. Lo único de JS: anotar la altura de la lista y `window.scrollTo` al abrir/cerrar (Gastos, Caja, el menú de la gestión).
-- Pruebas: `pruebas/test-modulos-esqueleto-parejo.js` + `mut-modulos-esqueleto-parejo.js` y `e2e/53-esqueleto-parejo.spec.js` (las 7 pantallas a 1280, 768, 390 y 360; los 10 encabezados a 1280 y 390). Se actualizaron `test-cobranzas-escritorio.js` (el CSS de abajo de 1100 px declara que salió `.cob-header` y entró `.cab-modulo`) y `test-cuentas-corrientes-proveedores.js` + su mutación (la cabecera y su color ahora en `.cab-modulo`; mutación nueva para el color).
+- Pruebas: `pruebas/test-modulos-esqueleto-parejo.js` + `mut-modulos-esqueleto-parejo.js` y `e2e/54-esqueleto-parejo.spec.js` (las 7 pantallas a 1280, 768, 390 y 360; los 10 encabezados a 1280 y 390). Se actualizaron `test-cobranzas-escritorio.js` (el CSS de abajo de 1100 px declara que salió `.cob-header` y entró `.cab-modulo`) y `test-cuentas-corrientes-proveedores.js` + su mutación (la cabecera y su color ahora en `.cab-modulo`; mutación nueva para el color).
 
 ## Decisiones tomadas sin consultar
 - **La hoja de PINes queda encima de todo** (ver la tabla). La prueba la tiene como única excepción, con el motivo.
@@ -53,6 +53,8 @@ Se buscó cada regla con `position: fixed` en el CSS de cada módulo y en los es
 - Todo se miró en la maqueta (sin sesión real) a 1280, 768, 390 y 360 px. No se probó en un celular de verdad.
 - Las pantallas de un usuario sin permisos de admin (por ejemplo la entrada directa a la ficha propia en Caja, rol `usuario`) usan el mismo código; no se miraron con esa cuenta.
 - No se tocó la base: no hubo nada que verificar en ella.
+- Números: `npm run pruebas` 271/271 (después de traer main); suite nueva 146/146, mutaciones 44/44; `mut-cuentas-corrientes-proveedores` 53/53, `mut-cobranzas-escritorio` 45/45, `mut-produccion-gestion-diseno` en verde; `e2e/54-esqueleto-parejo.spec.js` 30/30 (y rojo contra el código de antes, servido desde el tag: Gastos, Caja y el menú de la gestión, a todos los anchos). La e2e entera en local dio 720 pasadas y 19 caídas: 3 de `27-planta-sin-internet` (usa el puerto 4173 fijo, no el de esta carpeta) y 16 de `detalles-dispositivos` / `filtros-dispositivos` por un corte de internet ("lucide is not defined", el CDN); vueltas a correr con internet, esas dos más la 53 y la 54: 230/230.
+- Se trajo `origin/main` (df19453, la división de órdenes) con merge; el spec nuevo pasó a llamarse `54-…` porque main trajo un `53-division-orden`.
 
 ## Guion para Facu
 1. Gastos → "+": el wizard se abre y la barra de la izquierda (o la de abajo en el celular) y la de las fábricas siguen ahí. "‹ Volver" vuelve a la lista.
