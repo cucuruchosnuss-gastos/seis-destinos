@@ -25,7 +25,7 @@
 
 const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
-const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_CARGA } = require('./cantidades-comun')
+const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_CARGA, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 const { arnes, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
 const { fuenteNumeros } = require('./numeros-comun')
@@ -46,7 +46,9 @@ const RENDERS = ['esc', 'pasaFiltroUnidad', 'sinUnidadesDePrueba', 'alCambiarBar
   'cargarValorizado', 'pintarValorizado', 'resumenValorizado', 'puedeVerCostosAlgo', 'puedeCostosEn',
   'abrirCostos', 'cargarCostos', 'renderizarCostos', 'abrirCosto', 'cerrarModalCosto', 'cambiarModoCosto',
   'guardarCosto', 'anularCosto', 'pintarModalCosto', 'pintarHistorialCosto', 'costoUnitarioDe', 'htmlVariacion',
-  ...FUNCIONES_CANTIDADES, 'unidadCorta']
+  ...FUNCIONES_CANTIDADES, 'unidadCorta',
+  // El costo por bulto (23/10/2026): textoCostoUnitario usa js/cantidades.js
+  ...FUNCIONES_PRECIO]
 
 function clausura(src) {
   const nombresFn = new Set([...src.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]))
@@ -306,6 +308,10 @@ async function correr() {
     chk('dice "Sin costo"', /chip-sin-costo">Sin costo</.test(h))
     chk('cuenta los sin costo', /1 insumo sin costo/.test(h))
     chk('el costo por kg con 4 decimales', /\$ 1\.000,00 por kg/.test(h), h)
+    // Por bulto (23/10/2026): la harina va por bulto de 50 kg, con el kilo al
+    // lado; el azúcar de este stock es 'base' y sigue por kg.
+    chk('la harina (bulto de 50 kg): "$ 50.000,00 el bulto de 50 kg · $ 1.000,00 por kg"', /\$ 50\.000,00 el bulto de 50 kg · \$ 1\.000,00 por kg/.test(h), h)
+    chk('el azúcar (vista base) sigue solo por kg', /fila-costo__costo">\$ 2,00 por kg</.test(h), h)
     chk('desde y quién', /desde 01\/10\/2026 · cargó Facundo/.test(h))
     chk('subió: ↑ en bordó', /variacion-costo--sube[^>]*>↑ 11,1 %/.test(h))
     chk('bajó: ↓ en verde', /variacion-costo--baja[^>]*>↓ 20 %/.test(h))
@@ -441,7 +447,9 @@ async function correr() {
     chk('sin confirmar: no llama', S.__llamadas.filter(l => l.n === 'anular_costo_insumo').length === 0)
     S.estado.costo.anulando = 'c2'
     S.pintarHistorialCosto()
-    chk('la confirmación propia en la fila', /¿Anular el costo de \$ 1\.000,00 por kg desde el 01\/10\/2026\?/.test(S.__el('costo-historial').innerHTML))
+    // La harina va por bulto de 50 kg (23/10/2026): el costo se dice por
+    // bulto y, al lado, por kg.
+    chk('la confirmación propia en la fila', /¿Anular el costo de \$ 50\.000,00 el bulto de 50 kg · \$ 1\.000,00 por kg desde el 01\/10\/2026\?/.test(S.__el('costo-historial').innerHTML), S.__el('costo-historial').innerHTML.slice(0, 300))
     S.__setRpc('anular_costo_insumo', () => ({ data: null, error: null }))
     const a = S.anularCosto('c2'), b = S.anularCosto('c2')
     await Promise.all([a, b])

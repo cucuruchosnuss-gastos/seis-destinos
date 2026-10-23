@@ -359,7 +359,9 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   const cuerpoPoner = (src2.match(/function ponerCantidadLote\([^)]*\) \{[\s\S]*?\n    \}/) || [''])[0]
   chk('tipear en un lote redibuja SOLO el resumen (no el renglón)', /pintarResumenLotes\(i\)/.test(cuerpoPoner) && !/pintarRenglones/.test(cuerpoPoner))
   chk('los campos de lote se enlazan con los decimales del renglón y se escriben con ponerNumero', /querySelectorAll\('\[data-r-lote-cant\]'\)/.test(src2) &&
-    /enlazarCampoNumero\(input, \{ decimales: x\?\.insumoId \? decimalesDeUnidad\(x\.unidad\) : DECIMALES_CAJAS \}\)/.test(src2))
+    // Desde el 23/10/2026 un insumo por bulto usa los decimales de su modo
+    // (modoDeCarga: 3 en bultos), y si no, los de su unidad.
+    /enlazarCampoNumero\(input, \{ decimales: x\?\.insumoId \? \(modo \? modo\.decimales : decimalesDeUnidad\(x\.unidad\)\) : DECIMALES_CAJAS \}\)/.test(src2))
 }
 {
   // Un borrador de antes (con UN lote elegido) pasa a la forma nueva.

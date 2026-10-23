@@ -582,6 +582,15 @@ const LISTA_INS = [...LISTA, { presentacion_id: null, insumo_id: 'ins-h', precio
   const valorizada = { ...d, valorizar: null, orden: { ...ORDEN, estado_valorizacion: 'valorizada', total: 2 } }
   chequearMarcas(chk, 'insumo valorizado', S2.htmlDetalleOrden(valorizada, S2.estado.catalogo), ['ins-unidad'])
   chequearMarcas(chk, 'fila de orden con insumos', S2.htmlFilaOrden({ ...ORDEN, cliente_id: 'c1', cajas: 0, insumos: 2, codigo: marca('codigo-ins') }), ['codigo-ins'])
+  // 23/10/2026: un insumo POR BULTO con la unidad marcada: el precio por
+  // unidad base chico debajo ("$ X por <unidad>") la lleva.
+  const S3 = nuevo()
+  S3.estado.catalogo = { ...CAT, insumos: [{ id: 'ins-b', nombre: 'Harina', marca: null, unidad_medida: marca('unidad-bulto'), vista_preferida: 'bulto', contenido: 25 }] }
+  S3.estado.clientes = CLIENTES
+  const db = { orden: ORDEN, items: [{ id: 'ib', insumo_id: 'ins-b', cantidad: 50, precio_caja: 700, subtotal: 35000 }], lotes: [], lotesInsumos: [], valorizar: null }
+  chequearMarcas(chk, 'insumo por bulto valorizado', S3.htmlDetalleOrden({ ...db, orden: { ...ORDEN, estado_valorizacion: 'valorizada', total: 35000 } }, S3.estado.catalogo), ['unidad-bulto'])
+  db.valorizar = { precios: { ib: 700 }, escritos: { ib: 17500 }, modos: {}, desdeLista: new Set(), sinLista: false, saldo: null, limite: null }
+  chequearMarcas(chk, 'valorizar un insumo por bulto', S3.htmlDetalleOrden(db, S3.estado.catalogo), ['unidad-bulto'])
 }
 
 fin()

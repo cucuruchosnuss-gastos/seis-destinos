@@ -97,7 +97,7 @@ correrMutaciones({
     { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id')" },
     { nombre: 'los lotes de los insumos sin stock:ver', de: "      if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {", a: "      if ((items ?? []).some(it => it.insumo_id)) {" },
     { nombre: 'el insumo se dibuja como producto', de: '      if (it.insumo_id) {\n        // Un INSUMO de reventa', a: '      if (false) {\n        // Un INSUMO de reventa' },
-    { nombre: 'el precio del insumo se pide x caja', de: "        porQue = unidadHoja(pi.unidad) || 'unidad'", a: "        porQue = 'caja'" },
+    { nombre: 'el precio del insumo se pide x caja', de: "        porQue = modo.porBulto ? modo.rotulo : (unidadHoja(pi.unidad) || 'unidad')", a: "        porQue = 'caja'" },
     { nombre: 'la hoja dibuja el insumo como producto', de: '          if (it.insumo_id) {\n            const pi = partesInsumo(estado.catalogo, it)', a: '          if (false) {\n            const pi = partesInsumo(estado.catalogo, it)' },
     { nombre: 'corregir arranca de la lista', de: "      const vigente = (it) => o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined", a: '      const vigente = (it) => false' },
     // Valorizar con precio_venta() (30/09/2026)

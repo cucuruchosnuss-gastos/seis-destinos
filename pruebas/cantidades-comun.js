@@ -13,4 +13,9 @@ module.exports = {
   CONSTANTES_CANTIDADES: ['DECIMALES_CANTIDAD', 'FRACCIONES'],
   FUNCIONES_CARGA: ['unidadCorta', 'modoDeCarga', 'aUnidadBase', 'equivalenteDeCarga'],
   CONSTANTES_CARGA: ['DECIMALES_BULTOS_CARGA'],
+  // FUNCIONES_PRECIO (23/10/2026): cómo se pide y se muestra el PRECIO de un
+  // insumo por bulto. redondezCentavos no se exporta, pero precioDesdeBase la
+  // llama: el sandbox la necesita.
+  FUNCIONES_PRECIO: ['contenidoUnico', 'modoDePrecio', 'precioABase', 'precioDesdeBase', 'redondezCentavos'],
+  CONSTANTES_PRECIO: ['DECIMALES_PRECIO_BASE'],
 }

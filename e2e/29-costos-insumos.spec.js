@@ -77,7 +77,9 @@ for (const ancho of [390, 1280]) {
     // Anular pide la confirmación propia (nunca confirm()).
     page.on('dialog', d => { throw new Error('apareció un diálogo del navegador: ' + d.message()) });
     await page.locator('#costo-historial [data-costo-anular="ic-2"]').click();
-    await expect(page.locator('#costo-historial .costo-hist__confirmar')).toContainText('¿Anular el costo de $ 980,00 por kg');
+    // La harina va por bulto de 25 kg (23/10/2026): el costo se dice por
+    // bulto y, al lado, por kg.
+    await expect(page.locator('#costo-historial .costo-hist__confirmar')).toContainText('¿Anular el costo de $ 24.500,00 el bulto de 25 kg · $ 980,00 por kg');
     await page.locator('#costo-historial [data-costo-anular-no]').click();
     await expect(page.locator('#costo-historial .costo-hist__confirmar')).toHaveCount(0);
 

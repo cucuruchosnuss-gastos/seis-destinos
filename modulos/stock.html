@@ -3745,7 +3745,7 @@
     // UNA vez y que la pantalla muestre solo lo de ella. Es el mismo archivo que
     // el <head> carga para dibujarla, así que el navegador lo ejecuta una vez.
     import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
-    import { DECIMALES_CANTIDAD, formatearCantidadStock, equivalenteEnBultos, cabezaBultos, textoBultos, cantidadSegunVista, modoDeCarga, aUnidadBase, equivalenteDeCarga, unidadCorta } from '../js/cantidades.js'
+    import { DECIMALES_CANTIDAD, formatearCantidadStock, equivalenteEnBultos, cabezaBultos, textoBultos, cantidadSegunVista, modoDeCarga, aUnidadBase, equivalenteDeCarga, unidadCorta, modoDePrecio, precioDesdeBase } from '../js/cantidades.js'
 
     mostrarBannerVersion()
 
@@ -9179,9 +9179,18 @@
       return `por ${u === 'u' || u === 'unidades' ? 'unidad' : u}`
     }
 
-    function textoCostoUnitario(costo, unidad) {
+    // Con `pres` ({ contenido, vista } de presentacionCosto) y un insumo que se
+    // muestra por bulto (23/10/2026): "$ 17.500,00 el bulto de 25 kg ·
+    // $ 700,0000 por kg". El costo se guarda por unidad con 4 decimales
+    // (costoUnitarioDe) y el del bulto sale de ahí sin perder centavos
+    // (precioDesdeBase de js/cantidades.js).
+    function textoCostoUnitario(costo, unidad, pres = null) {
       const v = numeroCosto(costo)
-      return v === null ? 'Sin costo' : `${plataCosto(v, 4)} ${porUnidadDeMedida(unidad)}`
+      if (v === null) return 'Sin costo'
+      const porUnidad = `${plataCosto(v, 4)} ${porUnidadDeMedida(unidad)}`
+      const modo = modoDePrecio({ unidad, vista: pres?.vista, contenido: pres?.contenido ?? null })
+      if (!modo.porBulto) return porUnidad
+      return `${plataCosto(precioDesdeBase(v, modo, { decimalesBase: 4 }))} el ${modo.rotulo} · ${porUnidad}`
     }
 
     // Hoy en Argentina, 'AAAA-MM-DD' (la base usa _cobranza_hoy_ar()).
@@ -9355,7 +9364,7 @@
         : [f.vigente_desde ? `desde ${formatearFecha(String(f.vigente_desde))}` : '', f.cargado_por ? `cargó ${f.cargado_por}` : ''].filter(Boolean).join(' · ')
       const derecha = costo === null
         ? '<span class="chip-sin-costo">Sin costo</span>'
-        : `<span class="fila-costo__costo">${esc(textoCostoUnitario(costo, f.unidad_medida))}</span>${htmlVariacion(f.variacion_pct)}`
+        : `<span class="fila-costo__costo">${esc(textoCostoUnitario(costo, f.unidad_medida, presentacionCosto(estado.costos?.unidad, f.insumo_id)))}</span>${htmlVariacion(f.variacion_pct)}`
       return `
         <button type="button" class="tarjeta-lista fila-costo${costo === null ? ' fila-costo--sin' : ''}" data-costo="${esc(f.insumo_id)}">
           <span class="fila-costo__info">
@@ -9470,7 +9479,7 @@
       const { contenido, vista } = presentacionCosto(c.unidad, insumoId)
       estado.costo = {
         unidad: c.unidad, fila: f, unidadMedida: f.unidad_medida,
-        contenido, modo: contenido && vista === 'bulto' ? 'bulto' : 'unidad',
+        contenido, vista, modo: contenido && vista === 'bulto' ? 'bulto' : 'unidad',
         historial: null, errorHistorial: null, nombres: new Map(),
         enviando: false, error: null, anulando: null, errorAnular: null, anulandoEnvio: false,
       }
@@ -9496,7 +9505,7 @@
     function pintarModalCosto() {
       const m = estado.costo
       if (!m) return
-      document.getElementById('costo-actual').textContent = textoCostoUnitario(m.fila.costo_unitario, m.unidadMedida)
+      document.getElementById('costo-actual').textContent = textoCostoUnitario(m.fila.costo_unitario, m.unidadMedida, { contenido: m.contenido, vista: m.vista })
       const puedeCargar = puedeCostosEn('cargar_costos', m.unidad)
       document.getElementById('costo-carga').hidden = !puedeCargar
       if (puedeCargar) {
@@ -9583,7 +9592,7 @@
         const acciones = h.anulado || !puedeAnular ? ''
           : confirmando
             ? `<div class="costo-hist__confirmar">
-                <p>¿Anular el costo de ${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida))}${h.vigente_desde ? ` desde el ${esc(formatearFecha(String(h.vigente_desde)))}` : ''}? Deja de contar y vuelve a regir el anterior.</p>
+                <p>¿Anular el costo de ${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida, { contenido: m.contenido, vista: m.vista }))}${h.vigente_desde ? ` desde el ${esc(formatearFecha(String(h.vigente_desde)))}` : ''}? Deja de contar y vuelve a regir el anterior.</p>
                 ${m.errorAnular ? `<div class="rec-aviso">${esc(m.errorAnular)}</div>` : ''}
                 <div class="rec-acciones">
                   <button type="button" class="btn-stock btn-stock--alerta btn-stock--chico" data-costo-anular-si="${esc(h.id)}"${m.anulandoEnvio ? ' disabled' : ''}>${m.anulandoEnvio ? 'Anulando…' : 'Sí, anular'}</button>
@@ -9594,7 +9603,7 @@
         return `
           <div class="costo-hist${h.anulado ? ' costo-hist--anulado' : ''}">
             <div class="costo-hist__fila">
-              <span class="costo-hist__valor">${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida))}</span>
+              <span class="costo-hist__valor">${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida, { contenido: m.contenido, vista: m.vista }))}</span>
               ${confirmando ? '' : acciones}
             </div>
             <div class="costo-hist__meta">${esc(meta)}</div>

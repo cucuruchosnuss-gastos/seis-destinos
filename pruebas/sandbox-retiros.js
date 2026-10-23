@@ -14,6 +14,7 @@
 const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
+const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'fechaCorta', 'nuevoUuid',
@@ -70,6 +71,12 @@ const FUNCIONES_BASE = [
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf',
   'enviarOrden', 'compartirTextoOrden',
+  // Los insumos por bulto (23/10/2026): de este archivo, de js/retiros-comun.js
+  // y de js/cantidades.js
+  'leerContenidosInsumos', 'conBultosDeInsumos', 'modoInsumoRenglon', 'contenidoParaHoja', 'cantidadEnCampo', 'cantidadDesdeCampo',
+  'textoEquivaleRenglon', 'ponerCantidadInsumo', 'partesCantidadInsumo',
+  'modoPrecioHoja', 'cantidadInsumoBultoHoja', 'precioInsumoHoja',
+  ...FUNCIONES_CANTIDADES, 'modoDeCarga', 'aUnidadBase', 'desdeUnidadBase', ...FUNCIONES_PRECIO,
 ]
 
 const CONSTANTES_BASE = [
@@ -78,6 +85,8 @@ const CONSTANTES_BASE = [
   'MARCA_A_ELEGIR', 'TEXTO_FALTA_CONO', 'PASOS_RETIRO', 'COLOR_TAMANO_RETIRO', 'COLOR_INSUMO_RETIRO', 'TONOS_RETIRO', 'PALETA_CONO_RETIRO', 'TEXTO_SIN_SENAL', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
   'LINK_TRASPASO', 'ultimoOrigenDibujado', ...CONSTANTES_FR,
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
+  // Los insumos por bulto (23/10/2026), de js/cantidades.js
+  ...CONSTANTES_CANTIDADES, 'DECIMALES_BULTOS_CARGA', ...CONSTANTES_PRECIO,
 ]
 
 const PRELUDIO = `

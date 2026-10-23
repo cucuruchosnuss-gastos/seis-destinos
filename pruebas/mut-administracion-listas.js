@@ -23,7 +23,7 @@ correrMutaciones({
     { expr: 'esc(f.grupo)', motivo: 'el grupo es una constante del código (CATEGORIAS_PRODUCTO, TITULO_OTROS_PRODUCTOS, TITULO_INSUMOS)' },
     { expr: 'esc(actual + prox)', motivo: 'importes formateados y fechas dd/mm/aaaa' },
     { expr: 'esc(importeHoja(v.precio_caja, moneda))', motivo: 'un importe formateado por importeHoja()' },
-    { expr: "esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda) : importeHoja(v.precio_caja, moneda))", motivo: 'un importe formateado por importeHoja() o "costo + N %" con un número formateado (09/10/2026)' },
+    { expr: "esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda, modoPrecioClave(clave)) : importeHoja(v.precio_caja, moneda))", motivo: 'un importe formateado por importeHoja() o "costo + N %" con un número formateado (09/10/2026; por bulto, "… el bulto de 25 kg" desde el 23/10/2026: el rótulo sale de la unidad del catálogo y un número)' },
     { expr: "esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))", motivo: 'una fecha dd/mm/aaaa y texto constante' },
   ],
   manuales: [

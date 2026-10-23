@@ -87,7 +87,7 @@ correrMutaciones({
     { nombre: 'la hoja toma todo renglón como producto', de: "      return (o?.renglones ?? []).map(r => r?.tipo === 'insumo'", a: "      return (o?.renglones ?? []).map(r => false" },
     { nombre: 'el insumo de la hoja sin su marca', de: 'producto: r.insumo, marca: r.marca_insumo, cantidad', a: 'producto: r.insumo, marca: null, cantidad' },
     { nombre: 'el insumo de la hoja sin su unidad', de: 'cantidad: r.cantidad, unidad: r.unidad_medida, lotes', a: 'cantidad: r.cantidad, unidad: null, lotes' },
-    { nombre: 'el insumo de la hoja sin sus lotes', de: "unidad: r.unidad_medida, lotes: r.lotes ?? [] }", a: "unidad: r.unidad_medida, lotes: [] }" },
+    { nombre: 'el insumo de la hoja sin sus lotes', de: "unidad: r.unidad_medida, lotes: r.lotes ?? [],", a: "unidad: r.unidad_medida, lotes: []," },
     { nombre: 'la fila no cuenta los insumos de la base', de: "      const insumos = (o.renglones ?? []).filter(r => r?.tipo === 'insumo').length", a: '      const insumos = 0' },
     { nombre: 'lo que faltó de un insumo se cuenta en cajas', de: "          .reduce((s, l) => s + (Number(insumo ? l.cantidad : l.cajas) || 0), 0)", a: "          .reduce((s, l) => s + (Number(l.cajas) || 0), 0)" },
     { nombre: 'lo que faltó de un insumo se dice como producto', de: "        if (insumo) out.push({ renglon: i + 1, insumo: r.insumo,", a: "        if (false) out.push({ renglon: i + 1, insumo: r.insumo," },

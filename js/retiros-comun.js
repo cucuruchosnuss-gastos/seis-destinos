@@ -15,6 +15,9 @@
 // detrás del script del módulo y le saca los `export`.
 
 import { formatearNumeroAr } from './utils.js'
+// Los insumos por bulto (23/10/2026): la regla de cómo se dice una cantidad y
+// un precio por bulto vive UNA vez en js/cantidades.js.
+import { cantidadSegunVista, modoDePrecio, precioDesdeBase } from './cantidades.js'
 
 // El escape de la hoja. La hoja se arma ENTERA acá, así que el escape que
 // usa vive acá también (cada módulo conserva el suyo para sus pantallas).
@@ -113,6 +116,37 @@ export function cantidadInsumoHoja(n, unidad) {
   const texto = formatearNumeroAr(Number(n), { decimales: decimalesDeUnidad(unidad), minimos: 0 })
   const u = unidadHoja(unidad)
   return u ? `${texto} ${u}` : texto
+}
+
+// UN INSUMO POR BULTO EN LA HOJA (23/10/2026). Un renglón de insumo puede
+// traer `contenido`: lo que trae UN bulto, SOLO si el insumo se muestra por
+// bulto (insumos.vista_preferida = 'bulto') y se sabe cuánto trae; cada
+// pantalla lo decide con js/cantidades.js y, si no, lo manda null. Con
+// contenido, la cantidad dice "4 bultos de 25 kg (100 kg)" y el precio "por
+// bulto"; sin contenido, todo sigue en su unidad.
+export function modoPrecioHoja(r) {
+  return modoDePrecio({ unidad: r?.unidad, vista: r?.contenido ? 'bulto' : 'base', contenido: r?.contenido ?? null })
+}
+
+// "4 bultos de 25 kg (100 kg)", o "100 kg" si no va por bulto.
+export function cantidadInsumoBultoHoja(n, unidad, contenido) {
+  const kilos = cantidadInsumoHoja(n, unidad)
+  if (!contenido || kilos === '—') return kilos
+  const r = cantidadSegunVista({ cantidad: n, unidad, vista: 'bulto', contenido })
+  return r.enBultos ? `${r.cabeza} ${r.cola} (${kilos})` : kilos
+}
+
+// El precio de un renglón de insumo en la hoja: "$ 17.500,00 / bulto" (sale
+// de lo guardado y de su subtotal, así no dice 17.499,90) o "$ 700,00 / kg".
+export function precioInsumoHoja(r, moneda) {
+  const modo = modoPrecioHoja(r)
+  if (!modo.porBulto) {
+    const p = importeHoja(r?.precio, moneda)
+    const u = unidadHoja(r?.unidad)
+    return p === '—' || !u ? p : p + ' / ' + u
+  }
+  const p = importeHoja(precioDesdeBase(r?.precio, modo, { decimalesBase: 2, subtotal: r?.subtotal, cantidad: r?.cantidad }), moneda)
+  return p === '—' ? p : p + ' / bulto'
 }
 
 export function tieneInsumos(orden) {
@@ -255,16 +289,15 @@ export function descripcionHoja(r) {
 }
 
 function cantidadHoja(r) {
-  return r?.esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad) : enteroHoja(r?.cajas)
+  return r?.esInsumo ? cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido) : enteroHoja(r?.cajas)
 }
 
 function htmlFilaHoja(r, conPrecios, moneda) {
   const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)
   let precio = ''
   if (conPrecios) {
-    const u = r?.esInsumo ? unidadHoja(r.unidad) : ''
-    const p = importeHoja(r?.precio, moneda)
-    precio = `<td class="rh-num rh-plata">${escHoja(p === '—' || !u ? p : p + ' / ' + u)}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
+    const p = r?.esInsumo ? precioInsumoHoja(r, moneda) : importeHoja(r?.precio, moneda)
+    precio = `<td class="rh-num rh-plata">${escHoja(p)}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
   }
   return `<tr class="rh-fila${r?.esInsumo ? ' rh-insumo' : ''}"><td class="rh-num rh-cajas">${escHoja(cantidadHoja(r))}</td>` +
     `<td class="rh-producto">${escHoja(descripcionHoja(r))}</td><td class="rh-lote">${escHoja(lotes)}</td>${precio}</tr>`
@@ -531,7 +564,7 @@ export function textoOrden(orden) {
     if (r?.esInsumo) {
       insumos++
       const lotesI = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes, r.unidad)})` : ''
-      lineas.push(`- ${cantidadInsumoHoja(r.cantidad, r.unidad)} · ${nombreInsumoHoja(r)}${lotesI}`)
+      lineas.push(`- ${cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido)} · ${nombreInsumoHoja(r)}${lotesI}`)
       continue
     }
     const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')

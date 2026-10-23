@@ -53,7 +53,7 @@ correrMutaciones({
     { nombre: 'las opciones no miran los conos del catálogo', de: "    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = cat?.conos ?? null) {", a: "    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = null) {" },
     { nombre: 'los insumos sin stock no se suman', de: '        if (!i?.id || conStock.has(i.id)) continue', a: '        continue' },
     { nombre: 'el insumo con stock se duplica', de: '        if (!i?.id || conStock.has(i.id)) continue', a: '        if (!i?.id) continue' },
-    { nombre: 'los insumos sin stock se leen también los inactivos', de: ".select('id, nombre, marca, categoria, unidad_medida').eq('activo', true)", a: ".select('id, nombre, marca, categoria, unidad_medida')" },
+    { nombre: 'los insumos sin stock se leen también los inactivos', de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida').eq('activo', true)", a: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida')" },
     { nombre: 'si fallan los insumos sin stock, se cae el catálogo', de: '      if (t.error) console.error', a: '      if (t.error) throw t.error\n      if (t.error) console.error' },
     // Completar con los más viejos
     { nombre: 'completar no respeta el stock del lote', de: '        const toma = r3(Math.min(resta, l.saldo))', a: '        const toma = r3(resta)' },
@@ -94,7 +94,7 @@ correrMutaciones({
     { nombre: 'tocar un renglón no lee sus lotes', de: '      guardarBorrador()\n      asegurarLotesDeRenglones()\n    }', a: '      guardarBorrador()\n    }' },
     { nombre: 'tipear en un lote redibuja el renglón', de: '      else delete r.lotes[lote]\n      pintarResumenLotes(i)', a: '      else delete r.lotes[lote]\n      pintarRenglones()' },
     { nombre: 'borrar un lote deja el cero', de: '      else delete r.lotes[lote]\n', a: '      else r.lotes[lote] = 0\n' },
-    { nombre: 'los campos de lote se enlazan sin decimales', de: 'enlazarCampoNumero(input, { decimales: x?.insumoId ? decimalesDeUnidad(x.unidad) : DECIMALES_CAJAS })', a: 'enlazarCampoNumero(input, { decimales: DECIMALES_CAJAS })' },
+    { nombre: 'los campos de lote se enlazan sin decimales', de: 'enlazarCampoNumero(input, { decimales: x?.insumoId ? (modo ? modo.decimales : decimalesDeUnidad(x.unidad)) : DECIMALES_CAJAS })', a: 'enlazarCampoNumero(input, { decimales: DECIMALES_CAJAS })' },
     // El borrador viejo
     { nombre: 'el borrador viejo pierde su lote', de: '        if (r.lote && !Object.keys(r.lotes).length && cantidadPedida(r) !== null) r.lotes[r.lote] = cantidadPedida(r)\n', a: '' },
     { nombre: 'el borrador viejo conserva "lote"', de: '        delete r.lote\n        delete r.eligiendoLote\n', a: '' },
