@@ -1219,6 +1219,11 @@
       font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;
     }
     .pr-seg-rec__op[aria-pressed="true"], .pr-como[aria-pressed="true"] { background: var(--p-acento); color: #fff; font-weight: 800; }
+    /* Tamaño sin elegir (16/10/2026): el aviso arriba y Simple / Doble con
+       borde de aviso hasta que se toque uno. box-shadow y no border: no
+       cambia el alto de la fila de segmentos. */
+    .pr-receta__tamano-aviso { margin: 0; flex-shrink: 0; padding: 6px 12px; font-size: 16px; font-weight: 800; }
+    .pr-receta__tamano--falta { box-shadow: 0 0 0 3px var(--p-mal-borde); background: var(--p-mal-suave); }
     .pr-como:disabled { opacity: 0.4; }
     .pr-como__detalle { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
     /* "Anterior (última)" con cuándo fue debajo, en chico. */
@@ -2483,6 +2488,8 @@
         <div class="pr-receta">
           <!-- Arriba, en una fila: Simple / Doble y de dónde sale la masa
                (Original / Anterior / Modificar). -->
+          <!-- Sin tamaño elegido no se registra: se dice arriba de los botones. -->
+          <p class="pr-aviso pr-aviso--grave pr-receta__tamano-aviso" id="pr-receta-tamano-aviso" role="alert" hidden>Elegí SIMPLE o DOBLE</p>
           <div class="pr-receta__opciones" id="pr-receta-opciones"></div>
           <!-- Con Modificar: de qué se trata (Modificada, Chocolate), el
                motivo y "+ Ingrediente". -->
@@ -2694,7 +2701,7 @@
       cerrando: false,
       // Sala de masa
       salaTurno: null,     // { id, lote, maquinaId, maquinaNombre, nro } de la máquina elegida
-      salaDoble: false,    // el tamaño elegido en 6b, antes de que exista el borrador
+      salaDoble: null,     // el tamaño elegido: null (sin elegir) | false (Simple) | true (Doble)
       masa: null,          // el borrador de la masa en curso (con su client_uuid)
       datosMasa: null,     // lo que devolvió datos_para_masa: { original, anterior, insumos }
       tiposMasa: null,     // los tipos de masa de esa máquina (uno solo = no se pregunta)
@@ -10453,9 +10460,13 @@
           tipos.map(x => `<button type="button" class="pr-seg-rec__op" data-tipo-masa="${esc(x)}" aria-pressed="${x === b.tipo ? 'true' : 'false'}">${esc(x)}</button>`).join('') +
           '</span>'
         : ''
-      const tamanoReceta = '<span class="pr-seg-rec pr-receta__tamano" role="group" aria-label="Tamaño">' +
-        `<button type="button" class="pr-seg-rec__op" data-doble="no" aria-pressed="${b.doble ? 'false' : 'true'}">Simple</button>` +
-        `<button type="button" class="pr-seg-rec__op" data-doble="si" aria-pressed="${b.doble ? 'true' : 'false'}">Doble</button></span>`
+      // TAMAÑO SIN ELEGIR (16/10/2026, recuento del 15/10: faltaron 8 bolsas
+      // de harina): ninguno viene marcado. Con null, ningún botón presionado
+      // y el grupo resaltado hasta que el masero elija.
+      const tam = tamanoElegido(b.doble)
+      const tamanoReceta = `<span class="pr-seg-rec pr-receta__tamano${tam === null ? ' pr-receta__tamano--falta' : ''}" role="group" aria-label="Tamaño">` +
+        `<button type="button" class="pr-seg-rec__op" data-doble="no" aria-pressed="${tam === false ? 'true' : 'false'}">Simple</button>` +
+        `<button type="button" class="pr-seg-rec__op" data-doble="si" aria-pressed="${tam === true ? 'true' : 'false'}">Doble</button></span>`
       const como = b.como ?? 'original'
       const hayAnterior = !!d?.anterior
       const comos = '<span class="pr-seg-rec pr-receta__comos" role="group" aria-label="De dónde sale la masa">' +
@@ -10528,7 +10539,7 @@
         client_uuid: crypto.randomUUID(),
         turnoId: turno.id, lote: turno.lote, maquinaId: turno.maquinaId, maquinaNombre: turno.maquinaNombre,
         nro: turno.nro ?? null,
-        tipo: null, doble: false,
+        tipo: null, doble: null, // null hasta que el masero elige Simple o Doble
         como: null,          // 'original' | 'anterior' | 'modificar': lo que eligió el masero
         partida: null,       // 'original' | 'anterior': de dónde salieron las cantidades
         cambiada: false,     // se le tocó algo después de cargarla
@@ -10601,6 +10612,20 @@
     // Kilos con hasta 3 decimales, sin ruido de coma flotante.
     function redondearKg(n) {
       return Math.round(n * 1000) / 1000
+    }
+
+    // El tamaño de una masa es tri-estado: null (sin elegir), false (Simple)
+    // o true (Doble). Nada de !!: convertiría el "sin elegir" en Simple, que
+    // es justo lo que hacía registrar dobles como simples sin darse cuenta.
+    function tamanoElegido(v) {
+      return v === true ? true : v === false ? false : null
+    }
+
+    // Por cuánto se multiplica UNA masa simple para saber cuánto se lleva del
+    // lote. Sin tamaño elegido se calcula como simple (no se puede registrar
+    // así: faltanParaRegistrar lo pide primero).
+    function factorTamano(b) {
+      return tamanoElegido(b?.doble) === true ? 2 : 1
     }
 
     // Paso de los botones − / +: 100 g en agua, harina, azúcar y grasa; 10 g
@@ -10862,7 +10887,7 @@
       const l = b.lotes[it.ingrediente_id] ?? null
       const ops = opcionesLote(datos, it.ingrediente_id)
       const ins = l && l.insumo_id ? insumosDe(datos, it.ingrediente_id).find(x => x.insumo_id === l.insumo_id) ?? null : null
-      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))
+      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * factorTamano(b))
       const base = { pide, l, ops, ins, consumo, terminado: false, falta: false, sinIngreso: false, quedaAntes: null, noAlcanza: false }
       if (!pide) return base
       if (l && l.terminado) return { ...base, terminado: true, falta: true }
@@ -10882,6 +10907,8 @@
     // receta. Lista vacía = se puede mandar.
     function faltanParaRegistrar(b, datos) {
       const faltan = []
+      // Lo primero: el tamaño. Sin elegir no se registra (16/10/2026).
+      if (tamanoElegido(b.doble) === null) faltan.push('elegir SIMPLE o DOBLE')
       for (const it of datos.original.items) {
         const e = estadoLote(it, b, datos)
         const nombre = String(it.ingrediente ?? '').toLowerCase()
@@ -10995,7 +11022,10 @@
       return {
         p_turno_id: b.turnoId,
         p_tipo_masa: b.tipo,
-        p_doble: !!b.doble,
+        // true o false de verdad, nunca null: registrarMasa no llega acá sin
+        // tamaño elegido (faltanParaRegistrar), y un borrador viejo con
+        // true/false sale tal cual.
+        p_doble: tamanoElegido(b.doble) === true,
         p_masero_id: maseroId,
         p_items: items,
         p_client_uuid: b.client_uuid,
@@ -11096,7 +11126,10 @@
       // Una masa empezada antes (se recargó la tablet, se fue a otra pantalla)
       // se retoma con SU borrador y SU uuid.
       estado.masa = borradorEnCurso(turnoId)
-      estado.salaDoble = !!estado.masa?.doble
+      // El tamaño que el masero ya eligió en ESE borrador; sin borrador, o si
+      // todavía no lo había elegido, sigue sin elegir (null).
+      if (estado.masa) estado.masa.doble = tamanoElegido(estado.masa.doble)
+      estado.salaDoble = tamanoElegido(estado.masa?.doble)
       estado.datosMasa = null
       estado.tiposMasa = null
       estado.tipoMasa = estado.masa?.tipo ?? null
@@ -11229,8 +11262,9 @@
     }
 
     function elegirTamano(doble) {
-      estado.salaDoble = !!doble
-      if (estado.masa) { estado.masa.doble = !!doble; estado.masa.payload = null; guardarBorradorMasa(estado.masa) }
+      // Se llama solo desde los botones Simple / Doble: siempre true o false.
+      estado.salaDoble = doble === true
+      if (estado.masa) { estado.masa.doble = doble === true; estado.masa.payload = null; guardarBorradorMasa(estado.masa) }
       if (estado.vista === 'pr-receta') pintarReceta()
       else pintarSala()
     }
@@ -11248,7 +11282,7 @@
       const b = estado.masa ?? nuevoBorradorMasa(t)
       const primeraVez = !b.como
       b.tipo = estado.tipoMasa
-      b.doble = !!estado.salaDoble
+      b.doble = tamanoElegido(estado.salaDoble)
       b.nro = t.nro
       b.como = como
       b.partida = como === 'modificar' ? partidaDeModificar(d) : como
@@ -11454,6 +11488,7 @@
       if (!b || !d) return
       document.getElementById('pr-receta-cab').innerHTML = htmlCabeceraReceta(b, d)
       document.getElementById('pr-receta-opciones').innerHTML = htmlOpcionesReceta(b, d)
+      document.getElementById('pr-receta-tamano-aviso').hidden = tamanoElegido(b.doble) !== null
       const cont = document.getElementById('pr-receta-filas')
       cont.innerHTML = htmlFilasReceta(b, d)
       cont.classList.toggle('pr-receta__tabla--modificar', b.como === 'modificar')
@@ -11866,7 +11901,7 @@
       const b = estado.masa, d = estado.datosMasa
       const it = d?.original.items.find(x => x.ingrediente_id === ingredienteId)
       if (!b || !d || !it) return null
-      const consumo = redondearKg((b.cantidades[ingredienteId] ?? 0) * (b.doble ? 2 : 1))
+      const consumo = redondearKg((b.cantidades[ingredienteId] ?? 0) * factorTamano(b))
       return insumosDe(d, ingredienteId).map(ins => {
         const lotes = [...(ins.lotes ?? [])].sort((a, z) => {
           const fa = String(fechaLote(ins.insumo_id, a.lote) ?? ''), fz = String(fechaLote(ins.insumo_id, z.lote) ?? '')
@@ -12122,7 +12157,9 @@
       try { await cargarDatosMasa(); leida = !sinRed } catch (err) { console.error('masa siguiente:', err) }
       if (!estado.datosMasa) { soltarMaquinaSala(); return mostrarSala() }
       if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)
-      estado.salaDoble = !!prev.doble
+      // El tamaño NO se copia de la anterior (16/10/2026): cada masa nueva
+      // arranca sin elegir y el masero tiene que tocar Simple o Doble.
+      estado.salaDoble = null
       const como = prev.como === 'modificar' ? 'anterior' : (prev.como ?? 'original')
       elegirComo(como === 'anterior' && !estado.datosMasa.anterior ? 'original' : como)
     }
@@ -12131,7 +12168,7 @@
     // "anterior": sus cantidades de UNA masa simple, y sus insumos y lotes.
     function anteriorDesdeBorrador(b) {
       return {
-        masa_id: null, lote: b.lote, nro: b.nro, hora: new Date().toISOString(), doble: !!b.doble, es_de_hoy: true,
+        masa_id: null, lote: b.lote, nro: b.nro, hora: new Date().toISOString(), doble: tamanoElegido(b.doble), es_de_hoy: true,
         es_chocolate: esChocolate(b, estado.defineChocolate),
         items: Object.keys(b.cantidades ?? {}).map(id => {
           const l = b.lotes?.[id]

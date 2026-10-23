@@ -78,7 +78,7 @@ correrMutacionesProduccion({
 
     // ── "Queda" y el bloqueo de Registrar ────────────────────────────────
     { nombre: "\"quedan\" descuenta esta masa (tiene que ser lo que hay ANTES)", de: "      return { ...e, quedaAntes: q, noAlcanza:", a: "      return { ...e, quedaAntes: q == null ? null : redondearKg(q - e.consumo), noAlcanza:" },
-    { nombre: 'una doble descuenta como una simple', de: "      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))", a: '      const consumo = redondearKg(b.cantidades[it.ingrediente_id] ?? 0)' },
+    { nombre: 'una doble descuenta como una simple', de: "      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * factorTamano(b))", a: '      const consumo = redondearKg(b.cantidades[it.ingrediente_id] ?? 0)' },
     { nombre: "nunca avisa que el lote no alcanza", de: "noAlcanza: q != null && q + 1e-9 < e.consumo,", a: "noAlcanza: false," },
     // Terminar la tablet, parte 3: "terminado" ya no lo deduce la pantalla (un lote que no está en stock queda elegido con "sin ingreso cargado"); lo dice la persona con "Se terminó".
     { nombre: 'un lote que se terminó pasa como bueno', de: '      if (l && l.terminado) return { ...base, terminado: true, falta: true }', a: '      if (l && l.terminado) return base' },
