@@ -15,6 +15,7 @@
 // detrás del script del módulo y le saca los `export`.
 
 import { formatearNumeroAr } from './utils.js'
+import { registrarError } from './salud.js'
 // Los insumos por bulto (23/10/2026): la regla de cómo se dice una cantidad y
 // un precio por bulto vive UNA vez en js/cantidades.js.
 import { cantidadSegunVista, modoDePrecio, precioDesdeBase } from './cantidades.js'
@@ -394,9 +395,21 @@ export const CORTE_HOJA = '<div class="rh-corte" aria-hidden="true"></div>'
 // (total, notas, pie y leyenda); lo que va en una hoja que sigue ("Sigue en
 // la hoja…" y leyenda); y el alto de cada renglón. Todo en mm.
 // → { modo: 'media' } o { modo: 'entera', paginas: [[desde, hasta), …] }.
+//
+// SIN CORTES DE MÁS (23/10/2026, caso N-0025: 5 renglones salieron en "HOJA 1
+// DE 2" con 4 y "HOJA 2 DE 2" con 1, y entraban en media hoja):
+//  - si la copia ENTERA entra en una hoja, va en UNA hoja por copia, sin
+//    "Sigue en la hoja…": se parte solo lo que de verdad no entra;
+//  - si una medida no puede ser (medidasRaras: una parte más alta que la hoja
+//    entera, algo que no es un número o la hoja medida sin sus estilos), no se
+//    confía en las partes: media hoja si la copia entra, si no UNA hoja entera.
 export function planHoja(medidas, { media = ALTO_MEDIA_HOJA_MM, entera = ALTO_UTIL_A4_MM } = {}) {
-  const filas = Array.isArray(medidas?.filas) ? medidas.filas : []
-  if (Number(medidas?.copiaEntera) <= media) return { modo: 'media' }
+  const filas = Array.isArray(medidas?.filas) ? medidas.filas.map(Number) : []
+  const copia = Number(medidas?.copiaEntera)
+  if (copia <= media) return { modo: 'media' }
+  const una = { modo: 'entera', paginas: [[0, filas.length]] }
+  if (medidasRaras(medidas, { entera })) return copia > 0 ? una : { modo: 'media' }
+  if (copia <= entera) return una
   const fijo = Number(medidas?.fijo) || 0, final = Number(medidas?.final) || 0, inter = Number(medidas?.intermedio) || 0
   const paginas = []
   let desde = 0
@@ -416,6 +429,27 @@ export function planHoja(medidas, { media = ALTO_MEDIA_HOJA_MM, entera = ALTO_UT
     desde = k
   }
   return { modo: 'entera', paginas }
+}
+
+// ¿Alguna medida que no puede ser? Devuelve el motivo (para el registro de
+// errores) o null. Una parte fija (cabecera, final, lo de una hoja que sigue)
+// más alta que la hoja entera, o la cabecera y el final que no entran juntos,
+// es una medida mal tomada (pasó en Safari: la hoja se midió antes de tener
+// sus estilos). Un RENGLÓN muy alto no es raro: va solo en su hoja.
+export function medidasRaras(medidas, { entera = ALTO_UTIL_A4_MM } = {}) {
+  if (!medidas) return 'no hay medidas'
+  if (medidas.estilos === false) return 'la hoja se midió sin sus estilos'
+  const copia = Number(medidas.copiaEntera)
+  if (!Number.isFinite(copia) || copia <= 0) return 'la copia entera no se pudo medir'
+  for (const k of ['fijo', 'final', 'intermedio']) {
+    const v = Number(medidas[k])
+    if (!Number.isFinite(v) || v < 0) return `${k} no es una medida`
+    if (v > entera) return `${k} mide más que una hoja entera`
+  }
+  if (Number(medidas.fijo) + Number(medidas.final) > entera) return 'la cabecera y el final no entran juntos en una hoja'
+  const filas = Array.isArray(medidas.filas) ? medidas.filas : []
+  if (filas.some(f => !Number.isFinite(Number(f)) || Number(f) < 0)) return 'un renglón no es una medida'
+  return null
 }
 
 // La hoja con un plan ya hecho. Sin plan (o 'media'): las copias juntas en
@@ -446,16 +480,49 @@ export function paginasHoja(plan, copias = COPIAS_IMPRESION) {
 // ancho útil de la A4 y la letra ya cargada) y después pone la que corresponde.
 // Devuelve el plan. Si no se puede medir (sin DOM), media hoja.
 const MM = 96 / 25.4
+// ¿La hoja ya tiene SUS estilos? (la copia en columna y el logo de su tamaño).
+// Sin ellos el logo sale del tamaño de la imagen (~160 mm) y todo mide mal.
+function hojaConEstilos(caja, doc) {
+  const copia = caja.querySelector('.rh-copia'), logo = caja.querySelector('.rh-logo')
+  const vista = doc.defaultView || globalThis
+  if (!copia || !logo || !vista?.getComputedStyle) return false
+  return vista.getComputedStyle(copia).display === 'flex' && Math.abs(logo.getBoundingClientRect().height - ALTO_LOGO_HOJA_PX) < 2
+}
+// Espera, con tope, a que la hoja que ya está en la caja tenga sus estilos y
+// su letra. La LETRA se pide recién con el texto puesto (antes de ponerlo,
+// fonts.ready no espera nada: nadie la pidió todavía).
+async function esperarHojaLista(caja, doc, tope = 3000) {
+  // Sin una hoja de verdad en la caja (sin navegador) no hay nada que esperar.
+  if (!caja.querySelector('.rh-copia')) return false
+  const vista = doc.defaultView || globalThis
+  const reloj = typeof vista?.setTimeout === 'function' ? vista.setTimeout.bind(vista) : setTimeout
+  const hasta = Date.now() + tope
+  const dormir = (ms) => new Promise(r => reloj(r, Math.max(0, ms)))
+  const resto = () => dormir(hasta - Date.now())
+  const fuente = doc.getElementById?.('rh-fuente')
+  if (fuente && 'sheet' in fuente && !fuente.sheet && typeof fuente.addEventListener === 'function') {
+    await Promise.race([new Promise(r => { fuente.addEventListener('load', r, { once: true }); fuente.addEventListener('error', r, { once: true }) }), resto()])
+  }
+  try {
+    if (typeof doc.fonts?.load === 'function') {
+      const pesos = ['400', '600', '700', '800']
+      await Promise.race([Promise.all(pesos.map(p => doc.fonts.load(`${p} 14px Archivo`))), resto()])
+      await Promise.race([doc.fonts.ready, resto()])
+    }
+  } catch { /* sin fuentes: la de respaldo */ }
+  await Promise.all([...caja.querySelectorAll('img')].map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; reloj(r, Math.max(0, hasta - Date.now())) })))
+  while (!hojaConEstilos(caja, doc) && Date.now() < hasta) await dormir(50)
+  return hojaConEstilos(caja, doc)
+}
 export async function medirHoja(orden, { conPrecios = false, doc = document } = {}) {
   asegurarEstilosHoja(doc)
   const caja = doc.createElement('div')
   caja.style.cssText = `position:fixed;left:-10000px;top:0;width:${ANCHO_UTIL_A4_MM}mm;background:#fff`
   doc.body.appendChild(caja)
   try {
-    try { await Promise.race([doc.fonts?.ready, new Promise(r => setTimeout(r, 1500))]) } catch { /* sin fuentes */ }
     const una = [COPIAS_IMPRESION[0]]
     caja.innerHTML = htmlHoja(orden, { conPrecios, copias: una })
-    await Promise.all([...caja.querySelectorAll('img')].map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 1500) })))
+    const estilos = await esperarHojaLista(caja, doc)
     const alto = (el) => el ? el.getBoundingClientRect().height / MM : 0
     const copia = caja.querySelector('.rh-copia')
     // La copia con TODO, sin el alto mínimo de la media hoja.
@@ -465,10 +532,32 @@ export async function medirHoja(orden, { conPrecios = false, doc = document } = 
     const fijo = alto(copia.querySelector('.rh-cab')) + alto(copia.querySelector('.rh-cliente')) + alto(tabla?.querySelector('thead')) + 6
     const final = alto(tabla?.querySelector('tfoot')) + alto(copia.querySelector('.rh-notas')) + alto(copia.querySelector('.rh-pie')) + alto(copia.querySelector('.rh-legal')) + 8
     const intermedio = 8 + alto(copia.querySelector('.rh-legal')) + 4
-    return { copiaEntera: alto(copia), fijo, final, intermedio, filas }
+    const medidas = { copiaEntera: alto(copia), fijo, final, intermedio, filas, estilos }
+    const rara = medidasRaras(medidas)
+    if (rara) registrarMedidaRara(orden, medidas, rara, conPrecios)
+    return medidas
   } finally {
     caja.remove()
   }
+}
+
+// Una medida que no puede ser va al registro de errores (Administración →
+// Errores de la app) con las medidas en mm ENTEROS (el registro tapa los
+// números de 4 cifras: 129,2 saldría "#"). Nunca rompe la impresión.
+export function textoMedidaRara(orden, medidas, motivo, conPrecios = false) {
+  const r = (x) => Number.isFinite(Number(x)) ? Math.round(Number(x)) : String(x)
+  return JSON.stringify({
+    orden: String(orden?.codigo ?? ''), conPrecios: conPrecios === true, motivo, estilos: medidas?.estilos !== false,
+    copiaEntera: r(medidas?.copiaEntera), fijo: r(medidas?.fijo), final: r(medidas?.final), intermedio: r(medidas?.intermedio),
+    // Los renglones separados con espacios: "12,8,12" el registro lo taparía.
+    filas: (Array.isArray(medidas?.filas) ? medidas.filas : []).map(r).join(' '), plan: planHoja(medidas),
+  })
+}
+function registrarMedidaRara(orden, medidas, motivo, conPrecios) {
+  try {
+    console.warn('medir la hoja: medida rara,', motivo)
+    registrarError({ evento: 'hoja', mensaje: `Hoja de la orden: medida rara (${motivo})`, detalle: textoMedidaRara(orden, medidas, motivo, conPrecios) })
+  } catch { /* el registro nunca rompe la hoja */ }
 }
 
 export async function armarHoja(contenedor, orden, { conPrecios = false, copias = COPIAS_IMPRESION, doc = document } = {}) {
@@ -483,45 +572,53 @@ export async function armarHoja(contenedor, orden, { conPrecios = false, copias 
 // líneas de 1 px o más) y la letra Archivo, con respaldo sans-serif. Los
 // tamaños son los del diseño en px (a 96 por pulgada: 1 px = 0,26 mm). La
 // media hoja tiene alto fijo: dos copias + la línea punteada = una A4.
+// MÁS LUGAR EN MEDIA HOJA (23/10/2026): la cabecera y el logo de 56 px (antes
+// 70), los espacios entre bloques de 3 px (antes 8), los renglones en 14 px y
+// las cajas en 18 px (antes 16 y 22) con menos relleno y renglón más justo,
+// el margen de la copia de 1 mm y las firmas de 26 px (antes 34). Mismo
+// diseño, en blanco y negro.
+// LA LETRA VA EN SU PROPIO <link> (23/10/2026): con un @import adentro de
+// estos estilos, Safari no aplicaba NINGUNA regla de la hoja hasta que Google
+// Fonts contestaba, y la hoja se medía sin estilos (caso N-0025).
 export const FUENTE_HOJA = 'https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap'
+export const ALTO_LOGO_HOJA_PX = 56
 export const ESTILOS_HOJA = `
-@import url('${FUENTE_HOJA}');
 .rh-hoja { font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; width: ${ANCHO_UTIL_A4_MM}mm; font-size: 14px; line-height: 1.25; }
 .rh-hoja * { color: #000; }
 .rh-pagina + .rh-pagina { break-before: page; page-break-before: always; }
-.rh-copia { position: relative; box-sizing: border-box; padding: 2mm 1mm; display: flex; flex-direction: column; gap: 8px; break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
+.rh-copia { position: relative; box-sizing: border-box; padding: 1mm 1mm; display: flex; flex-direction: column; gap: 3px; break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
 .rh-hoja--media .rh-copia { height: ${ALTO_MEDIA_HOJA_MM}mm; }
 .rh-hoja--entera .rh-copia { min-height: ${ALTO_UTIL_A4_MM - 2}mm; }
-.rh-cab { display: flex; align-items: center; gap: 10px; min-height: 70px; }
+.rh-cab { display: flex; align-items: center; gap: 10px; min-height: ${ALTO_LOGO_HOJA_PX}px; }
 .rh-empresa { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 260px; }
-.rh-logo { width: 70px; height: 70px; border-radius: 50%; border: 1px solid #000; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; }
+.rh-logo { width: ${ALTO_LOGO_HOJA_PX}px; height: ${ALTO_LOGO_HOJA_PX}px; border-radius: 50%; border: 1px solid #000; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; }
 .rh-logo img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(1); }
-.rh-empresa__datos { display: flex; flex-direction: column; font-size: 12px; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+.rh-empresa__datos { display: flex; flex-direction: column; font-size: 12px; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
 .rh-empresa__nombre { font-size: 16px; font-weight: 800; }
 .rh-titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
 .rh-titulo__grande { font-size: 23px; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; }
 .rh-titulo__copia { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
 .rh-titulo__anulada { font-size: 14px; font-weight: 800; letter-spacing: 0.1em; }
-.rh-orden { width: 128px; box-sizing: border-box; border: 2px solid #000; padding: 4px 6px; display: flex; flex-direction: column; align-items: center; text-align: center; flex-shrink: 0; }
+.rh-orden { width: 128px; box-sizing: border-box; border: 2px solid #000; padding: 2px 6px; display: flex; flex-direction: column; align-items: center; text-align: center; flex-shrink: 0; }
 .rh-orden__rotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
 .rh-codigo { font-size: 28px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rh-orden__fecha { font-size: 12px; font-weight: 600; white-space: nowrap; }
-.rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+.rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 3px; }
 .rh-cliente__izq { display: flex; flex-direction: column; min-width: 0; }
 .rh-rotulo { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
 .rh-cliente__nombre { font-size: 26px; font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
 .rh-cliente__der { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 14px; flex-shrink: 0; max-width: 45%; }
 .rh-tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .rh-col-cajas { width: 74px; } .rh-col-producto { width: auto; } .rh-col-lote { width: 120px; } .rh-col-precio { width: 96px; }
-.rh-tabla th { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-align: left; border-bottom: 1px solid #000; padding: 2px 6px 3px; }
-.rh-tabla td { font-size: 16px; padding: 3px 6px; border-bottom: 1px solid #000; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
+.rh-tabla th { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-align: left; border-bottom: 1px solid #000; padding: 1px 6px 2px; }
+.rh-tabla td { font-size: 14px; padding: 2px 6px; border-bottom: 1px solid #000; line-height: 1.15; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
 .rh-tabla tr { break-inside: avoid; page-break-inside: avoid; }
 .rh-num { text-align: right !important; font-variant-numeric: tabular-nums; }
-.rh-cajas { font-size: 22px !important; font-weight: 800; line-height: 1.1; white-space: nowrap; }
-.rh-insumo .rh-cajas { font-size: 16px !important; white-space: normal; }
+.rh-cajas { font-size: 18px !important; font-weight: 800; line-height: 1 !important; white-space: nowrap; }
+.rh-insumo .rh-cajas { font-size: 14px !important; white-space: normal; }
 .rh-producto { font-weight: 600; }
 .rh-plata { font-size: 14px !important; white-space: nowrap; }
-.rh-total td { border-bottom: 0; padding-top: 4px; }
+.rh-total td { border-bottom: 0; padding-top: 2px; }
 .rh-total__rotulo { font-size: 14px !important; font-weight: 800; letter-spacing: 0.08em; vertical-align: middle !important; }
 .rh-total__insumos { font-weight: 600; letter-spacing: 0; }
 .rh-total__plata { font-size: 16px !important; font-weight: 800; }
@@ -529,7 +626,7 @@ export const ESTILOS_HOJA = `
 .rh-pie { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
 .rh-entrego { font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .rh-firmas { width: 440px; max-width: 70%; display: grid; grid-template-columns: 1.3fr 1.3fr 1fr; gap: 12px; flex-shrink: 0; }
-.rh-firma { border-top: 1px solid #000; padding-top: 3px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; height: 34px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; }
+.rh-firma { border-top: 1px solid #000; padding-top: 3px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; height: 26px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; }
 .rh-sigue { margin: auto 0 0; font-size: 14px; font-weight: 700; }
 .rh-legal { margin: 0; font-size: 12px; text-align: center; white-space: nowrap; }
 .rh-corte { height: 0; border-top: 1.5px dotted #000; margin: 3.5mm 0; }
@@ -546,6 +643,15 @@ export function asegurarEstilosHoja(doc = document) {
   s.id = 'rh-estilos'
   s.textContent = ESTILOS_HOJA
   doc.head.appendChild(s)
+  // La letra, aparte y DESPUÉS: si Google Fonts tarda o no contesta, la hoja
+  // igual tiene todos sus estilos (con la letra de respaldo). En Safari una
+  // hoja de estilos que todavía está bajando frena a las que se agregan
+  // después: por eso los estilos de la hoja van primero.
+  const f = doc.createElement('link')
+  f.id = 'rh-fuente'
+  f.rel = 'stylesheet'
+  f.href = FUENTE_HOJA
+  doc.head.appendChild(f)
 }
 
 // ── Compartir como texto (sin precios, siempre) ────────────────────────────

@@ -114,12 +114,17 @@ const ORDEN = {
   }
   const h = S.htmlHoja({ ...ORDEN, empresa: { ...EMPRESA, logo_url: 'javascript:alert(1)' } })
   chk('un logo raro no genera ninguna imagen', !/<img/.test(h))
-  chk('el logo en un círculo de 70 px', /\.rh-logo \{[^}]*width: 70px; height: 70px; border-radius: 50%/.test(S.ESTILOS_HOJA))
+  // 23/10/2026 (pedido "hoja sin cortes"): la cabecera un poco más chica, 56 px (antes 70).
+  chk('el logo en un círculo de 56 px', /\.rh-logo \{[^}]*width: 56px; height: 56px; border-radius: 50%/.test(S.ESTILOS_HOJA))
   chk('A4 con márgenes de impresión', /@page \{ size: A4; margin: 8mm/.test(S.ESTILOS_HOJA))
   chk('la hoja no usa el naranja ni colores de la app', !/#C2410C|var\(--naranja|--verde|--bordo/i.test(S.ESTILOS_HOJA))
   chk('SOLO NEGRO: ningún color que no sea #000 o #fff', (S.ESTILOS_HOJA.match(/#[0-9a-f]{3,6}\b/gi) || []).every(c => /^#(000|000000|fff|ffffff)$/i.test(c)))
   chk('el logo pasa a blanco y negro', /\.rh-logo img \{[^}]*grayscale\(1\)/.test(S.ESTILOS_HOJA))
-  chk('la letra Archivo de Google Fonts, con respaldo sans-serif', /@import url\('https:\/\/fonts\.googleapis\.com\/css2\?family=Archivo/.test(S.ESTILOS_HOJA) && /font-family: Archivo,[^;]*sans-serif/.test(S.ESTILOS_HOJA))
+  // 23/10/2026: la letra va en su PROPIO <link> (con un @import adentro de los
+  // estilos, Safari no aplicaba ninguna regla hasta que Google Fonts contestaba).
+  chk('la letra Archivo de Google Fonts, con respaldo sans-serif', /^https:\/\/fonts\.googleapis\.com\/css2\?family=Archivo/.test(S.FUENTE_HOJA) &&
+    /f\.rel = 'stylesheet'\s+f\.href = FUENTE_HOJA/.test(comun) && /font-family: Archivo,[^;]*sans-serif/.test(S.ESTILOS_HOJA))
+  chk('… y NO con @import adentro de los estilos de la hoja', !/@import/.test(S.ESTILOS_HOJA))
   chk('ninguna línea de menos de 1 px', !/(border[a-z-]*):\s*0\.\d+px/.test(S.ESTILOS_HOJA) && !/0\.\d+mm solid/.test(S.ESTILOS_HOJA))
   chk('el texto nunca se corta con "…" (sin ellipsis ni nowrap en el producto)', !/text-overflow: ellipsis/.test(S.ESTILOS_HOJA) && /\.rh-tabla td \{[^}]*white-space: normal/.test(S.ESTILOS_HOJA))
 }
@@ -132,7 +137,7 @@ const ORDEN = {
   const css = S.ESTILOS_HOJA
   chk('la media hoja: dos copias y la línea punteada en los 281 mm útiles', 2 * S.ALTO_MEDIA_HOJA_MM + 7.4 <= S.ALTO_UTIL_A4_MM && /\.rh-hoja--media \.rh-copia \{ height: \$\{?|\.rh-hoja--media \.rh-copia \{ height: 136mm/.test(css))
   chk('la línea punteada de 1,5 px', /\.rh-corte \{[^}]*border-top: 1\.5px dotted #000/.test(css))
-  chk('la cabecera de unos 70 px', /\.rh-cab \{[^}]*min-height: 70px/.test(css))
+  chk('la cabecera de unos 56 px (23/10/2026; antes 70)', /\.rh-cab \{[^}]*min-height: 56px/.test(css))
   chk('la fábrica en 16 px negrita y sus datos en 12 px', /\.rh-empresa__nombre \{ font-size: 16px; font-weight: 800/.test(css) && /\.rh-empresa__datos \{[^}]*font-size: 12px/.test(css))
   chk('"ORDEN DE PEDIDO" en 800 y 23 px, sin fondo', /\.rh-titulo__grande \{ font-size: 23px; font-weight: 800/.test(css) && !/\.rh-titulo[^{]*\{[^}]*background/.test(css))
   chk('la copia en 12 px con espaciado', /\.rh-titulo__copia \{ font-size: 12px;[^}]*letter-spacing/.test(css))
@@ -140,8 +145,9 @@ const ORDEN = {
   chk('el número de orden en 28 px negrita y la fecha en 12 px', /\.rh-codigo \{ font-size: 28px; font-weight: 800/.test(css) && /\.rh-orden__fecha \{ font-size: 12px/.test(css))
   chk('el cliente en 26 px negrita, con la línea negra de 2 px', /\.rh-cliente__nombre \{ font-size: 26px; font-weight: 800/.test(css) && /\.rh-cliente \{[^}]*border-bottom: 2px solid #000/.test(css))
   chk('CAJAS de 74 px y LOTE de 120 px', /\.rh-col-cajas \{ width: 74px; \}/.test(css) && /\.rh-col-lote \{ width: 120px; \}/.test(css))
-  chk('las cajas en 22 px negrita, alineadas a la derecha', /\.rh-cajas \{ font-size: 22px !important; font-weight: 800/.test(css))
-  chk('producto y lote en 16 px, con líneas de 1 px', /\.rh-tabla td \{ font-size: 16px;[^}]*border-bottom: 1px solid #000/.test(css))
+  // 23/10/2026 (pedido de Facu): renglones de 16 a 14 px y cajas de 22 a 18 px.
+  chk('las cajas en 18 px negrita, alineadas a la derecha', /\.rh-cajas \{ font-size: 18px !important; font-weight: 800/.test(css))
+  chk('producto y lote en 14 px, con líneas de 1 px', /\.rh-tabla td \{ font-size: 14px;[^}]*border-bottom: 1px solid #000/.test(css))
   chk('el encabezado de la tabla en 12 px negrita con espaciado', /\.rh-tabla th \{ font-size: 12px; font-weight: 800; letter-spacing/.test(css))
   chk('"Entregó" en 14 px y las firmas de unos 440 px', /\.rh-entrego \{ font-size: 14px/.test(css) && /\.rh-firmas \{ width: 440px/.test(css))
   chk('cada firma con su línea de 1 px y el rótulo en 12 px negrita', /\.rh-firma \{ border-top: 1px solid #000;[^}]*font-size: 12px; font-weight: 700/.test(css))
