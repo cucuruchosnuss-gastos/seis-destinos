@@ -467,7 +467,9 @@ async function correrRenders(S) {
     a_favor: 1,
   })
   chequearMarcas(chk, 'la orden de pago', hojaOrden, ['op_num', 'op_obs', 'op_quien', 'op_razon', 'op_cuit', 'op_dom', 'op_prov', 'op_pcuit', 'op_pdir',
-    'op_ftipo', 'op_fnum', 'op_cbanco', 'op_cnum', 'op_clib', 'op_ccuit', 'op_medio'])
+    'op_ftipo', 'op_fnum', 'op_cbanco', 'op_cnum', 'op_medio'])
+  // 23/10/2026: el librador del cheque ya no se imprime.
+  chk('la orden de pago: NO se imprime el librador', !hojaOrden.includes('op_clib') && !hojaOrden.includes('op_ccuit'))
   chk('la orden de pago: un logo con comillas no entra (ni crudo ni escapado)', !hojaOrden.includes('op_logo') && !/<img/.test(hojaOrden))
   chk('la orden de pago: NO se imprime la empresa del cheque ni la cuenta', !hojaOrden.includes('op_cemp') && !hojaOrden.includes('op_cuenta'))
   const fichaOrdenes = S.htmlOrdenesPagoFicha([{ id: marca('ofp_id'), unidad_negocio_id: 'u-x', numero: 3, fecha: '2026-10-15', total: 5, creada_en: '2026-10-15' }], { unidadId: null })
@@ -625,6 +627,12 @@ const SEGURAS = {
     'importeHtml(f.importe)': IMPORTE, 'importeHtml(f.aplicado)': IMPORTE, 'importeHtml(f.saldo_actual)': IMPORTE,
     'importeHtml(c.importe)': IMPORTE, 'importeHtml(o.importe)': IMPORTE, 'importeHtml(d?.total)': IMPORTE, 'importeHtml(favor)': IMPORTE,
     filasFacturas: HTML_PROPIO, filasCheques: HTML_PROPIO, filasOtros: HTML_PROPIO,
+    // 23/10/2026: las dos copias. El rótulo sale de COPIAS_ORDEN_PAGO
+    // (ORIGINAL / DUPLICADO, del código) y copia() es la hoja ya escapada.
+    rotulo: 'ORIGINAL o DUPLICADO, de COPIAS_ORDEN_PAGO (del código)',
+    'r.toLowerCase()': 'ORIGINAL o DUPLICADO, de COPIAS_ORDEN_PAGO (del código), en minúscula',
+    r: 'ORIGINAL o DUPLICADO, de COPIAS_ORDEN_PAGO (del código)',
+    'copia(r)': 'la hoja de esta misma función: cada dato de la base ya pasó por esc() (ejecutada con marcas)',
   },
   abrirOrdenPago: { 'htmlOrdenPago(res.data)': 'htmlOrdenPago() escapa cada dato de la base (ejecutada con marcas)' },
   htmlOrdenesPagoFicha: { 'filas.length': 'un número (la cantidad de órdenes)', 'importeHtml(o.total)': IMPORTE },
