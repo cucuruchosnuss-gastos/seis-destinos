@@ -2,8 +2,10 @@
 // medida en Chromium de verdad, en modo impresión (A4 con 8 mm de margen):
 //  - una orden de 3 renglones sale en UNA hoja con las DOS copias (original
 //    arriba, duplicado abajo, la línea punteada en el medio);
-//  - una de 25 sale en hojas ENTERAS (cada copia en las suyas, "ORIGINAL ·
-//    HOJA 1 DE N"), sin cortar ningún renglón entre páginas;
+//  - una de 40 sale en hojas ENTERAS (cada copia en las suyas, "ORIGINAL ·
+//    HOJA 1 DE N"). Hasta el 23/10/2026 eran 25: con la letra de los
+//    renglones más chica (14 px) 25 renglones ya entran en UNA hoja entera.
+//    Ningún renglón se corta entre páginas;
 //  - ningún nombre termina en "…" ni queda cortado; el pie sale entero;
 //  - solo negro sobre blanco; la letra Archivo.
 // Deja los dos PDF (page.pdf) y una captura de cada uno en los resultados.
@@ -112,8 +114,8 @@ test('3 renglones: UNA hoja con el original y el duplicado', async ({ page }, in
   expect(await guardarPdf(page, 'hoja-3-renglones', info), 'el PDF tiene UNA página').toBe(1);
 });
 
-test('25 renglones: hojas enteras, sin cortar renglones', async ({ page }, info) => {
-  const { plan, m } = await armarYMedir(page, 25);
+test('40 renglones: hojas enteras, sin cortar renglones', async ({ page }, info) => {
+  const { plan, m } = await armarYMedir(page, 40);
   expect(plan.modo).toBe('entera');
   const n = plan.paginas.length;
   expect(n).toBeGreaterThan(1);
@@ -122,7 +124,7 @@ test('25 renglones: hojas enteras, sin cortar renglones', async ({ page }, info)
   expect(m.rotulos[0]).toBe(`ORIGINAL · HOJA 1 DE ${n}`);
   expect(m.rotulos[n]).toBe(`DUPLICADO · HOJA 1 DE ${n}`);
   for (const [k, alto] of m.paginas.entries()) expect(alto, `la hoja ${k + 1} mide ${alto.toFixed(1)} mm`).toBeLessThanOrEqual(ALTO_UTIL_A4_MM);
-  expect(m.filas, 'los 25 renglones en cada copia').toBe(50);
+  expect(m.filas, 'los 40 renglones en cada copia').toBe(80);
   expect(m.cortes, 'sin la línea punteada').toBe(0);
   expect(m.cortados, m.cortados.join('\n')).toEqual([]);
   expect(m.afuera, 'ningún renglón ni el pie se cortan: ' + m.afuera.join(', ')).toEqual([]);
@@ -130,8 +132,8 @@ test('25 renglones: hojas enteras, sin cortar renglones', async ({ page }, info)
   expect(m.legales, 'la leyenda entera en cada hoja').toBe(2 * n);
   expect(m.firmas, 'el pie de firmas en la última hoja de cada copia').toBe(6);
   expect(m.colores, 'solo negro').toEqual(['rgb(0, 0, 0)']);
-  await page.screenshot({ path: info.outputPath('hoja-25-renglones.png'), fullPage: true });
-  expect(await guardarPdf(page, 'hoja-25-renglones', info), 'el PDF tiene una página por hoja').toBe(2 * n);
+  await page.screenshot({ path: info.outputPath('hoja-40-renglones.png'), fullPage: true });
+  expect(await guardarPdf(page, 'hoja-40-renglones', info), 'el PDF tiene una página por hoja').toBe(2 * n);
 });
 
 test('con precios (Administración): también entra y suma PRECIO y SUBTOTAL', async ({ page }) => {

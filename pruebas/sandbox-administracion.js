@@ -95,6 +95,8 @@ const FUNCIONES_BASE = [
   'textoLotesHoja', 'faltanteDeRenglon', 'descripcionHoja', 'cantidadHoja', 'totalInsumosHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La impresión nueva (07/10/2026): medida, media hoja u hojas enteras.
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
+  // Sin cortes de más (23/10/2026): las medidas que no pueden ser.
+  'medidasRaras', 'textoMedidaRara', 'registrarMedidaRara', 'hojaConEstilos', 'esperarHojaLista',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf', 'enviarOrden',
   // Importar (26/09/2026)
   'normalizarEncabezado', 'mapearColumnas', 'textoCelda', 'fechaIsoLocal', 'numeroCelda', 'fechaCelda', 'cuitValido', 'cbuValido',
@@ -158,6 +160,19 @@ const FUNCIONES_BASE = [
   'htmlFilaEntre', 'entregadorasEntre', 'puedeLeerListasEntre', 'puedeValorizarProductoEntre', 'textoEstadoValorEntre',
   'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'leerListasEntre', 'valorizarEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
   'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
+  // Dividir para facturar y la condición de venta (21/10/2026)
+  'leerFacturasDeOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'validarDivision', 'parametrosDivision', 'rotuloParte',
+  'facturasPorParte', 'seDivideOrden', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura', 'cantidadDivision',
+  'renglonesParte', 'htmlBloqueParte', 'htmlHojaDivision', 'imprimirDivision', 'htmlFacturasOrden', 'puedeDividir', 'camposDivision',
+  'abrirDivision', 'cerrarDivision', 'cambiarPctDivision', 'pedirVistaDivision', 'pintarDivision', 'guardarEImprimirDivision',
+  'htmlFacturaDivision', 'pintarFacturasDivision', 'pintarFacturaParte', 'rutaPdfFactura', 'subirPdfFactura', 'guardarFacturaDivision',
+  'verPdfFactura', 'llenarCondicionVenta', 'completarOtroPct', 'pintarCondicionVenta', 'guardarCondicionVenta',
+  // Los 3 vendedores y la configuración de comisiones (21/10/2026, tarde)
+  'numeroONulo', 'leerVendedores', 'leerComisionesCliente', 'sumaPcts', 'parametrosComisiones', 'validarComisiones', 'htmlVendedoresPct',
+  'llenarVendedoresPct', 'comisionesDeDatos', 'comisionesSinDatos', 'pintarVendedoresDivision', 'cambiarVendedorDivision', 'programarVistaDivision',
+  'filasVendedoresFicha', 'cargarVendedoresFicha', 'pintarVendedoresFicha', 'cambiarVendedorFicha', 'volverVendedorAConfig', 'comisionesFicha',
+  'contenidoSeccionComisiones', 'mostrarComisiones', 'cargarComisiones', 'textoTotalComisiones', 'pintarComisiones', 'cambiarComisionConfig',
+  'guardarComisionConfig',
   ...FUNCIONES_CU,
 ]
 
@@ -169,7 +184,7 @@ const CONSTANTES_BASE = [
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
   'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'DIAS_ERRORES', 'GRAVEDAD_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
-  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
+  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
   // La etiqueta de la empresa y "Todas" que no cambia nada (30/09/2026)
@@ -191,6 +206,8 @@ const CONSTANTES_BASE = [
   'MONEDAS_PRESTAMO_AD', 'NOMBRE_MONEDA_AD', 'NOMBRE_MEDIO_PRESTAMO', 'MAX_CUOTAS_PRESTAMO', 'LARGO_MINIMO_MOTIVO_PAGO',
   // Entre empresas (13/10/2026)
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
+  // Dividir para facturar (21/10/2026)
+  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
 ]
 
 const PRELUDIO = `

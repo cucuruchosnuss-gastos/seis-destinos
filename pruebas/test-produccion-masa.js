@@ -209,7 +209,9 @@ esperas.push((async () => {
     chk('… (irASeccion("sala-inicio") abre el inicio de la sala)', IN.estado.vista === 'pr-sala')
   }
   chk('con UNA sola receta no se pregunta el tipo de masa', !/data-tipo-masa/.test(opciones))
-  chk('tamaño: Simple marcado por defecto', /data-doble="no" aria-pressed="true"/.test(opciones) && /data-doble="si" aria-pressed="false"/.test(opciones))
+  // 16/10/2026: el tamaño ya no viene elegido (los maseros registraban
+  // dobles como simples). La suite test-produccion-masa-tamano.js lo cubre.
+  chk('tamaño: ninguno marcado por defecto', /data-doble="no" aria-pressed="false"/.test(opciones) && /data-doble="si" aria-pressed="false"/.test(opciones) && S.estado.masa.doble === null)
   chk('Original / Anterior / Modificar, con la elegida marcada', ['original', 'anterior', 'modificar'].every(x => opciones.includes(`data-base="${x}"`)) &&
     /data-base="anterior" aria-pressed="true"/.test(opciones))
   chk('no hay selector Común / Chocolate', !/data-chocolate|>Chocolate</.test(opciones))

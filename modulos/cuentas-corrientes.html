@@ -1235,35 +1235,43 @@
     .op-acciones h2 { margin: 0; }
     .op-acciones__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .op-hoja-marco { overflow-x: auto; }
+    /* 23/10/2026: letra y tabla al ~80% (entran más comprobantes) y DOS
+       copias iguales, ORIGINAL y DUPLICADO, cada una en su hoja. En la
+       pantalla se ve solo el ORIGINAL; al imprimir (o guardar el PDF), las dos. */
     .op-hoja {
       box-sizing: border-box; width: 100%; max-width: 194mm; margin: 0 auto;
-      padding: 6mm; background: #fff; color: #111;
-      font-family: var(--fuente); font-size: 10.5pt; line-height: 1.35;
+      padding: 5mm; background: #fff; color: #111;
+      font-family: var(--fuente); font-size: 8.5pt; line-height: 1.25;
       border: 1px solid var(--color-borde);
     }
-    .op-cab { display: flex; justify-content: space-between; gap: 6mm; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 3mm; }
-    .op-cab__emisor { display: flex; gap: 4mm; align-items: flex-start; min-width: 0; }
-    .op-cab__logo { max-height: 16mm; max-width: 30mm; object-fit: contain; }
-    .op-cab__razon { font-size: 13pt; font-weight: 800; }
-    .op-cab__dato { font-size: 9.5pt; }
+    .op-nota-copias { margin: 0 0 0.5rem; font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .op-copia--duplicado { display: none; }
+    .op-cab { display: flex; justify-content: space-between; gap: 5mm; align-items: flex-start; border-bottom: 1.5px solid #111; padding-bottom: 2.4mm; }
+    .op-cab__emisor { display: flex; gap: 3mm; align-items: flex-start; min-width: 0; }
+    .op-cab__logo { max-height: 13mm; max-width: 24mm; object-fit: contain; }
+    .op-cab__razon { font-size: 10.5pt; font-weight: 800; }
+    .op-cab__dato { font-size: 7.5pt; }
     .op-cab__titulo { text-align: right; flex-shrink: 0; }
-    .op-cab__titulo-texto { font-size: 15pt; font-weight: 800; letter-spacing: 0.02em; }
-    .op-cab__numero { font-size: 13pt; font-weight: 700; }
-    .op-seccion { margin-top: 4mm; }
-    .op-seccion__titulo { font-size: 10pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.5mm; }
-    .op-tabla { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-    .op-tabla th, .op-tabla td { border: 1px solid #555; padding: 1.2mm 1.6mm; text-align: left; vertical-align: top; }
+    .op-cab__titulo-texto { font-size: 12pt; font-weight: 800; letter-spacing: 0.02em; }
+    .op-cab__numero { font-size: 10.5pt; font-weight: 700; }
+    .op-cab__copia { display: inline-block; margin-top: 1mm; padding: 0.3mm 2mm; border: 1px solid #111; font-size: 8pt; font-weight: 800; letter-spacing: 0.1em; }
+    .op-seccion { margin-top: 3mm; }
+    .op-seccion__titulo { font-size: 8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.2mm; }
+    .op-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+    .op-tabla th, .op-tabla td { border: 1px solid #555; padding: 0.6mm 1.2mm; text-align: left; vertical-align: top; }
     .op-tabla th { background: #eee; font-weight: 700; }
     .op-tabla .op-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: #111; }
-    .op-total { margin-top: 4mm; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; border-top: 2px solid #111; padding-top: 2mm; }
-    .op-total__numero { font-size: 14pt; font-weight: 800; white-space: nowrap; }
-    .op-letras { font-size: 9.5pt; margin-top: 1mm; }
-    .op-favor { margin-top: 2mm; font-weight: 700; }
-    .op-firmas { display: flex; gap: 12mm; margin-top: 18mm; }
-    .op-firma { flex: 1; border-top: 1px solid #111; padding-top: 1.5mm; font-size: 9pt; text-align: center; }
-    .op-pie { margin-top: 4mm; font-size: 8pt; color: #555; }
+    .op-total { margin-top: 3mm; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; border-top: 1.5px solid #111; padding-top: 1.6mm; }
+    .op-total__numero { font-size: 11pt; font-weight: 800; white-space: nowrap; }
+    .op-letras { font-size: 7.5pt; margin-top: 0.8mm; }
+    .op-favor { margin-top: 1.6mm; font-weight: 700; }
+    .op-firmas { display: flex; gap: 10mm; margin-top: 15mm; }
+    .op-firma { flex: 1; border-top: 1px solid #111; padding-top: 1.2mm; font-size: 7.5pt; text-align: center; }
+    .op-pie { margin-top: 3mm; font-size: 6.5pt; color: #555; }
     @media print {
       @page { size: A4 portrait; margin: 8mm; }
+      html.op-imprimiendo .op-copia--duplicado { display: block; break-before: page; page-break-before: always; }
+      html.op-imprimiendo .op-nota-copias { display: none !important; }
       html.op-imprimiendo body > *:not(#modal-orden-pago) { display: none !important; }
       html.op-imprimiendo, html.op-imprimiendo body { background: #fff !important; margin: 0 !important; }
       html.op-imprimiendo #modal-orden-pago { position: static; display: block; }
@@ -1740,6 +1748,7 @@
           <button type="button" class="btn btn--secundario" id="btn-cerrar-orden">Cerrar</button>
         </div>
       </div>
+      <p class="op-nota-copias" id="nota-copias-orden">Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO, las dos con las firmas.</p>
       <div class="op-hoja-marco"><div class="op-hoja" id="orden-pago-hoja"></div></div>
     </div>
   </div><!-- /modal-orden-pago -->
@@ -6699,17 +6708,12 @@
 
     const NOMBRE_MEDIO_ORDEN = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR' }
 
-    function textoLibrador(librador) {
-      const lista = Array.isArray(librador) ? librador : []
-      const partes = lista.map(l => {
-        const nombre = String(l?.nombre ?? '').trim()
-        const cuit = String(l?.cuit ?? '').trim()
-        return [nombre, cuit ? `CUIT ${cuitConGuiones(cuit)}` : ''].filter(Boolean).join(' · ')
-      }).filter(Boolean)
-      return partes.length ? partes.join('; ') : '—'
-    }
+    // Las dos copias que se imprimen (23/10/2026), en este orden.
+    const COPIAS_ORDEN_PAGO = ['ORIGINAL', 'DUPLICADO']
 
-    // Puro: la hoja entera. Todo texto de la base pasa por esc().
+    // Puro: la hoja entera, DOS copias iguales (ORIGINAL y DUPLICADO, cada
+    // una en su página al imprimir). Todo texto de la base pasa por esc().
+    // 23/10/2026: los cheques ya NO dicen el librador (quién nos lo dio).
     function htmlOrdenPago(d) {
       const e = d?.emisor ?? {}
       const p = d?.proveedor ?? {}
@@ -6726,8 +6730,8 @@
         : '<p>Pago a cuenta</p>'
 
       const filasCheques = cheques.length
-        ? `<table class="op-tabla"><thead><tr><th>Banco</th><th>N°</th><th>Fecha de pago</th><th>Librador</th><th class="op-num">Importe</th></tr></thead><tbody>${
-            cheques.map(c => `<tr><td>${esc(c.banco ?? '—')}${c.es_echeq ? ' <strong>eCheq</strong>' : ''}</td><td>${esc(c.numero ?? '—')}</td><td>${esc(fechaOrden(c.fecha_pago))}</td><td>${esc(textoLibrador(c.librador))}</td><td class="op-num">${importeHtml(c.importe)}</td></tr>`).join('')
+        ? `<table class="op-tabla"><thead><tr><th>Banco</th><th>N°</th><th>Fecha de pago</th><th class="op-num">Importe</th></tr></thead><tbody>${
+            cheques.map(c => `<tr><td>${esc(c.banco ?? '—')}${c.es_echeq ? ' <strong>eCheq</strong>' : ''}</td><td>${esc(c.numero ?? '—')}</td><td>${esc(fechaOrden(c.fecha_pago))}</td><td class="op-num">${importeHtml(c.importe)}</td></tr>`).join('')
           }</tbody></table>`
         : ''
       const filasOtros = otros.length
@@ -6736,7 +6740,7 @@
           }</tbody></table>`
         : ''
 
-      return `
+      const copia = (rotulo) => `
         <div class="op-cab">
           <div class="op-cab__emisor">
             ${logo ? `<img class="op-cab__logo" src="../${encodeURIComponent(logo)}" alt="">` : ''}
@@ -6750,6 +6754,7 @@
             <div class="op-cab__titulo-texto">ORDEN DE PAGO</div>
             <div class="op-cab__numero">${esc(d?.numero_texto ?? '—')}</div>
             <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>
+            <div class="op-cab__copia">${rotulo}</div>
           </div>
         </div>
         <div class="op-seccion">
@@ -6778,6 +6783,8 @@
           <div class="op-firma">Autorizó</div>
         </div>
         ${d?.creada_por ? `<div class="op-pie">Generada por ${esc(d.creada_por)}</div>` : ''}`
+
+      return COPIAS_ORDEN_PAGO.map(r => `<div class="op-copia op-copia--${r.toLowerCase()}" data-copia="${r}">${copia(r)}</div>`).join('')
     }
 
     let turnoOrdenPago = 0
