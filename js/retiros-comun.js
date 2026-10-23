@@ -119,13 +119,50 @@ export function tieneInsumos(orden) {
   return (orden?.renglones ?? []).some(r => r?.esInsumo === true)
 }
 
+// ── DEVOLUCIONES Y REPOSICIONES (22/10/2026) ───────────────────────────────
+// Un renglón puede ser, además de un retiro, una DEVOLUCIÓN (el cliente trae
+// cajas y se le descuentan: el subtotal es negativo) o una REPOSICIÓN (trae
+// cajas y se le reponen las mismas a $ 0, sacadas de un lote). El renglón de
+// la hoja lo dice en `movimiento` ('retiro' por defecto, 'devolucion' o
+// 'reposicion'), con `motivo`, `loteDevuelto` y `destino` ('descarte' o
+// 'stock': qué se hizo con las cajas que trajo).
+export function esDevolucionHoja(r) {
+  return r?.movimiento === 'devolucion' || r?.movimiento === 'reposicion'
+}
+
+// Los retiros primero y las devoluciones después (en su sección), cada grupo
+// en el orden de la orden.
+export function ordenarRenglonesHoja(renglones) {
+  const lista = Array.isArray(renglones) ? renglones : []
+  return [...lista.filter(r => !esDevolucionHoja(r)), ...lista.filter(esDevolucionHoja)]
+}
+
+export function textoDestinoDevuelto(destino) {
+  return destino === 'stock' ? 'vuelven al stock' : 'se descartan'
+}
+
+// "Devolución · Rotura · lote 6249 · se descartan" (el motivo y el lote, tal
+// cual: son texto de la base).
+export function detalleDevolucionHoja(r) {
+  if (!esDevolucionHoja(r)) return ''
+  const lote = String(r?.loteDevuelto ?? '').trim()
+  return [r.movimiento === 'reposicion' ? 'Reposición' : 'Devolución', String(r?.motivo ?? '').trim(),
+    lote ? `lote ${lote}` : '', textoDestinoDevuelto(r?.destino)].filter(Boolean).join(' · ')
+}
+
+// Las cajas que SE LLEVA (retiros y reposiciones): una devolución no sale.
 export function totalCajasOrden(orden) {
-  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo ? 0 : (Number(r.cajas) || 0)), 0)
+  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo || r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0)), 0)
+}
+
+// Las cajas que TRAJO el cliente (devoluciones y reposiciones).
+export function totalCajasDevueltas(orden) {
+  return (orden?.renglones ?? []).reduce((s, r) => s + (esDevolucionHoja(r) ? (Number(r.cajas) || 0) : 0), 0)
 }
 
 // Las unidades de los renglones de PRODUCTO (los de insumo no tienen).
 export function totalUnidadesOrden(orden) {
-  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo)
+  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo && r?.movimiento !== 'devolucion')
   if (rs.some(r => r.unidades === null || r.unidades === undefined || r.unidades === '')) return null
   return rs.reduce((s, r) => s + (Number(r.unidades) || 0), 0)
 }
@@ -255,10 +292,32 @@ export function descripcionHoja(r) {
 }
 
 function cantidadHoja(r) {
+  if (r?.movimiento === 'devolucion') return enteroHoja(r?.cajas) === '—' ? '—' : `−${enteroHoja(r.cajas)}`
   return r?.esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad) : enteroHoja(r?.cajas)
 }
 
-function htmlFilaHoja(r, conPrecios, moneda) {
+// Una devolución o reposición: la cantidad (en negativo la devolución), el
+// producto con el motivo debajo y, en la columna del lote, el lote que trajo
+// (la devolución) o los lotes de los que salió (la reposición). La primera de
+// la tabla lleva el título "DEVOLUCIONES" adentro de su celda: así la hoja se
+// mide renglón por renglón igual que siempre.
+function htmlFilaDevolucionHoja(r, conPrecios, moneda, primera) {
+  const repone = r.movimiento === 'reposicion'
+  const q = cantidadHoja(r)
+  const lote = repone ? textoLotesHoja(r?.lotes) : (String(r?.loteDevuelto ?? '').trim() || '—')
+  let precio = ''
+  if (conPrecios) {
+    precio = repone
+      ? `<td class="rh-num rh-plata">${escHoja('Se repone')}</td><td class="rh-num rh-plata">${escHoja(importeHoja(0, moneda))}</td>`
+      : `<td class="rh-num rh-plata">${escHoja(importeHoja(r?.precio, moneda))}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
+  }
+  return `<tr class="rh-fila rh-devuelto${primera ? ' rh-devuelto--primera' : ''}"><td class="rh-num rh-cajas">${escHoja(q)}</td>` +
+    `<td class="rh-producto">${primera ? '<span class="rh-devuelto__titulo">DEVOLUCIONES</span>' : ''}${escHoja(descripcionHoja(r))}` +
+    `<span class="rh-devuelto__motivo">${escHoja(detalleDevolucionHoja(r))}</span></td><td class="rh-lote">${escHoja(lote)}</td>${precio}</tr>`
+}
+
+function htmlFilaHoja(r, conPrecios, moneda, primeraDevolucion = false) {
+  if (esDevolucionHoja(r)) return htmlFilaDevolucionHoja(r, conPrecios, moneda, primeraDevolucion)
   const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)
   let precio = ''
   if (conPrecios) {
@@ -288,12 +347,17 @@ function htmlTablaHoja(renglones, conPrecios, moneda, { conTotal, orden }) {
   const hayInsumo = (orden?.renglones ?? []).some(r => r?.esInsumo)
   const cab = '<tr><th class="rh-num">CAJAS</th><th>PRODUCTO</th><th>LOTE</th>' +
     (conPrecios ? `<th class="rh-num">${hayInsumo ? 'PRECIO' : 'PRECIO X CAJA'}</th><th class="rh-num">SUBTOTAL</th>` : '') + '</tr>'
-  const filas = renglones.map(r => htmlFilaHoja(r, conPrecios, moneda)).join('')
+  const primeraDev = renglones.findIndex(esDevolucionHoja)
+  const filas = renglones.map((r, k) => htmlFilaHoja(r, conPrecios, moneda, k === primeraDev)).join('')
   let pie = ''
   if (conTotal) {
     const insumos = totalInsumosHoja(orden)
+    const devueltas = totalCajasDevueltas(orden)
+    const aFavor = conPrecios && Number(orden?.total) < 0
+    const extra = (devueltas ? ` · devueltas ${enteroHoja(devueltas)}` : '') + (aFavor ? ' · a favor del cliente' : '')
     pie = `<tfoot><tr class="rh-total"><td class="rh-num rh-cajas">${escHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
-      `<td colspan="2" class="rh-total__rotulo">TOTAL DE CAJAS${insumos ? ` <span class="rh-total__insumos">+ ${escHoja(insumos)}</span>` : ''}</td>` +
+      `<td colspan="2" class="rh-total__rotulo">TOTAL DE CAJAS${insumos ? ` <span class="rh-total__insumos">+ ${escHoja(insumos)}</span>` : ''}` +
+      `${extra ? `<span class="rh-total__insumos">${escHoja(extra)}</span>` : ''}</td>` +
       (conPrecios ? `<td></td><td class="rh-num rh-plata rh-total__plata">${escHoja(importeHoja(orden?.total, moneda))}</td>` : '') + '</tr></tfoot>'
   }
   return `<table class="rh-tabla">${col}<thead>${cab}</thead><tbody>${filas}</tbody>${pie}</table>`
@@ -487,6 +551,10 @@ export const ESTILOS_HOJA = `
 .rh-cajas { font-size: 22px !important; font-weight: 800; line-height: 1.1; white-space: nowrap; }
 .rh-insumo .rh-cajas { font-size: 16px !important; white-space: normal; }
 .rh-producto { font-weight: 600; }
+.rh-devuelto--primera td { border-top: 2px solid #000; }
+.rh-devuelto__titulo, .rh-devuelto__motivo { display: block; font-size: 12px; }
+.rh-devuelto__titulo { font-weight: 800; letter-spacing: 0.12em; }
+.rh-devuelto__motivo { font-weight: 400; }
 .rh-plata { font-size: 14px !important; white-space: nowrap; }
 .rh-total td { border-bottom: 0; padding-top: 4px; }
 .rh-total__rotulo { font-size: 14px !important; font-weight: 800; letter-spacing: 0.08em; vertical-align: middle !important; }
@@ -527,7 +595,9 @@ export function textoOrden(orden) {
   if (orden?.estado === 'anulada') lineas.push('ANULADA')
   lineas.push('')
   let insumos = 0
+  const devoluciones = (orden?.renglones ?? []).filter(esDevolucionHoja)
   for (const r of orden?.renglones ?? []) {
+    if (esDevolucionHoja(r)) continue
     if (r?.esInsumo) {
       insumos++
       const lotesI = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes, r.unidad)})` : ''
@@ -538,8 +608,16 @@ export function textoOrden(orden) {
     const lotes = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes)})` : ''
     lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)
   }
+  if (devoluciones.length) {
+    lineas.push('', 'Devoluciones:')
+    for (const r of devoluciones) {
+      const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
+      lineas.push(`- ${r.movimiento === 'devolucion' ? '−' : ''}${enteroHoja(r.cajas)} cajas · ${desc} (${detalleDevolucionHoja(r)})`)
+    }
+  }
   lineas.push('', `Total: ${enteroHoja(totalCajasOrden(orden))} cajas` +
-    (insumos ? ` y ${insumos} ${insumos === 1 ? 'renglón' : 'renglones'} de materia prima e insumos` : ''))
+    (insumos ? ` y ${insumos} ${insumos === 1 ? 'renglón' : 'renglones'} de materia prima e insumos` : '') +
+    (devoluciones.length ? ` · devueltas ${enteroHoja(totalCajasDevueltas(orden))}` : ''))
   if (String(orden?.observaciones ?? '').trim()) lineas.push(`Observaciones: ${String(orden.observaciones).trim()}`)
   return lineas.join('\n')
 }

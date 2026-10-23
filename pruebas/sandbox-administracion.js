@@ -96,6 +96,9 @@ const FUNCIONES_BASE = [
   // La impresión nueva (07/10/2026): medida, media hoja u hojas enteras.
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf', 'enviarOrden',
+  // Devoluciones y reposiciones (22/10/2026)
+  'esDevolucionHoja', 'ordenarRenglonesHoja', 'textoDestinoDevuelto', 'detalleDevolucionHoja', 'totalCajasDevueltas', 'htmlFilaDevolucionHoja',
+  'tipoItem', 'esItemDev', 'textoDevolucionItem', 'cajasQueSalen', 'textoAFavor',
   // Importar (26/09/2026)
   'normalizarEncabezado', 'mapearColumnas', 'textoCelda', 'fechaIsoLocal', 'numeroCelda', 'fechaCelda', 'cuitValido', 'cbuValido',
   'condicionIvaDe', 'claveNombreCliente', 'filasDeHoja', 'estadoFila', 'filaPrevia', 'marcarRepetidas', 'textoFilas',

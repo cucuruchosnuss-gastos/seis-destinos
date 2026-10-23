@@ -25,7 +25,8 @@ correrMutaciones({
     { expr: 'esc(importeHoja(o.total, moneda))', motivo: FORMATEADO },
     { expr: 'esc(rotuloComision(o))', motivo: FORMATEADO },
     { expr: 'esc(importeHoja(imp, moneda))', motivo: FORMATEADO },
-    { expr: 'esc(importeHoja(totalConComision(o.total, imp), moneda))', motivo: FORMATEADO },
+    { expr: 'esc(importeHoja(totalConComision(o.total, imp), moneda) + textoAFavor(totalConComision(o.total, imp)))', motivo: FORMATEADO + ' ("a favor del cliente" es texto fijo)' },
+    { expr: 'esc(importeHoja(o.total, moneda) + textoAFavor(o.total))', motivo: FORMATEADO + ' ("a favor del cliente" es texto fijo)' },
     { expr: 'esc(texto)', motivo: 'texto constante del código con un número formateado' },
   ],
   manuales: [
@@ -46,7 +47,7 @@ correrMutaciones({
     { nombre: 'la lista no se filtra por cliente', de: '      const ordenes = filtros.sinComision ? ordenesComisionSinCargar(data ?? [], clientes) : (data ?? [])', a: '      const ordenes = data ?? []' },
     { nombre: 'sin clientes el filtro inventa', de: "      if (filtros.sinComision && !Array.isArray(clientes)) throw new Error('Sin la lista de clientes no se sabe quién tiene comisión.')\n", a: '' },
     { nombre: 'los dos filtros conviven', de: "      if (origen === 'ad-filtro-comision' && sinComision.checked) sinValorizar.checked = false\n", a: '' },
-    { nombre: 'la fila no suma la comisión', de: '        ? importeHoja(conComision ? totalConComision(o.total, o.comision_importe) : o.total, o.moneda) : \'sin valorizar\'', a: "        ? importeHoja(o.total, o.moneda) : 'sin valorizar'" },
+    { nombre: 'la fila no suma la comisión', de: '      const totalFila = conComision ? totalConComision(o.total, o.comision_importe) : o.total', a: '      const totalFila = o.total' },
     { nombre: 'la fila de una anulada suma la comisión', de: "      const conComision = o.estado !== 'anulada' && Number(o.comision_importe) > 0", a: '      const conComision = Number(o.comision_importe) > 0' },
     // El detalle
     { nombre: 'sin Subtotal / Comisión / Total', de: '      if (conImporte) {\n        partes.push', a: '      if (false) {\n        partes.push' },

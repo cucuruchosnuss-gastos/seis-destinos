@@ -612,8 +612,10 @@ export async function cargarRetiros(ctx) {
   const deHoy = ordenes.filter(o => o.fecha === hoy).map(o => o.id)
   let cajas = 0
   if (deHoy.length) {
-    const items = await consulta(sb.from('orden_retiro_items').select('orden_id, cajas').in('orden_id', deHoy))
-    cajas = (items ?? []).reduce((s, i) => s + (num(i.cajas) ?? 0), 0)
+    // Despachadas = las que SALIERON: una devolución (22/10/2026) no sale
+    // (la reposición sí, sin cargo).
+    const items = await consulta(sb.from('orden_retiro_items').select('orden_id, cajas, tipo').in('orden_id', deHoy))
+    cajas = (items ?? []).reduce((s, i) => s + (i.tipo === 'devolucion' ? 0 : (num(i.cajas) ?? 0)), 0)
   }
   return {
     estado: cajas > 0 ? 'ok' : 'vacio', etiqueta: 'Cajas despachadas hoy', valor: entero(cajas), unidad: plural(cajas, 'caja', 'cajas'),

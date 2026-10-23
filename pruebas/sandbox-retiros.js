@@ -70,6 +70,11 @@ const FUNCIONES_BASE = [
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf',
   'enviarOrden', 'compartirTextoOrden',
+  // Devoluciones y reposiciones (22/10/2026)
+  'esDevolucionHoja', 'ordenarRenglonesHoja', 'textoDestinoDevuelto', 'detalleDevolucionHoja', 'totalCajasDevueltas', 'htmlFilaDevolucionHoja',
+  'devolucionVacia', 'renglonDevolucion', 'esRenglonDev', 'tipoRenglon', 'saleDelStock', 'letrasDe', 'motivoDevolucion', 'faltaDevolucion',
+  'textoDevolucionRenglon', 'totalDevueltasForm', 'htmlTituloDevolucion', 'htmlDevolucionRenglon', 'agregarDevolucion',
+  'elegirMotivoDevolucion', 'elegirTratoDevolucion', 'elegirDestinoDevolucion', 'escribirDevolucion', 'devueltasDeOrden',
 ]
 
 const CONSTANTES_BASE = [
@@ -78,6 +83,7 @@ const CONSTANTES_BASE = [
   'MARCA_A_ELEGIR', 'TEXTO_FALTA_CONO', 'PASOS_RETIRO', 'COLOR_TAMANO_RETIRO', 'COLOR_INSUMO_RETIRO', 'TONOS_RETIRO', 'PALETA_CONO_RETIRO', 'TEXTO_SIN_SENAL', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
   'LINK_TRASPASO', 'ultimoOrigenDibujado', ...CONSTANTES_FR,
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
+  'MOTIVOS_DEVOLUCION', 'LARGO_LOTE_DEVUELTO',
 ]
 
 const PRELUDIO = `

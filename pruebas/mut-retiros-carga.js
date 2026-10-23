@@ -16,6 +16,9 @@ correrMutaciones({
     'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon', 'htmlRenglon',
     'htmlResumen', 'htmlDatoRt', 'htmlEstadoFaltantes', 'htmlHecho', 'htmlEleccionRenglon'],
   equivalentes: [
+    { expr: 'esc(ayuda)', motivo: 'texto constante del código: el placeholder del buscador (devolución o retiro)' },
+    { expr: 'esc(titulo)', motivo: 'texto constante del código: el título de los lotes (retiro o reposición)' },
+    { expr: 'esc(devs.length)', motivo: 'un conteo (número) de devoluciones' },
     { expr: 'esc(textoCajasFr(d.faltan))', motivo: '"N cajas" (un número formateado), del código' },
     { expr: 'esc(total.slice(0, k))', motivo: 'lo de antes del primer " + " es siempre "N cajas" (enteroHoja), del código' },
     { expr: 'esc(estado.errorClientes)', motivo: 'texto constante del código: lo pone asegurarDatosEmpresa()' },
