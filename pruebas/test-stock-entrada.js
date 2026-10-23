@@ -1,6 +1,7 @@
 // Stock con dos entradas (14/10/2026, pedido del 13/10, paso 4): al entrar a
-// Stock, "Producto terminado" (la gestión de Producción en su vista de stock)
-// e "Insumos y materias primas" (la pantalla de siempre). Cada una con su
+// Stock, "Producto terminado" (desde el 23/10/2026 la vista #vista-terminado de
+// Stock; antes, la gestión de Producción) e "Insumos y materias primas" (la
+// pantalla de siempre). Cada una con su
 // permiso; con una sola, derecho; sin ninguna, el aviso. ?vista=terminado e
 // ?vista=insumos saltean la elección. En la gestión, ?vista=stock&desde=stock
 // dice "‹ Stock" y vuelve; con stock:ver y sin Producción entra "solo stock".
@@ -44,7 +45,7 @@ const PRELUDIO = `
   var __busqueda = ''
   var __reemplazo = null
   var window = { scrollTo(){}, location: { get search() { return __busqueda }, pathname: '/modulos/stock.html', hash: '', replace(u) { __reemplazo = u } } }
-  var history = { state: null, replaceState() {} }
+  var history = { state: null, replaceState(s, t, u) { __llamadas.push(['replaceState', u]) } }
   function setTimeout() {}
   var __tareas = []
   var __rol = 'usuario'
@@ -75,19 +76,22 @@ const PRELUDIO = `
   function puedeVerCostosAlgo() { return true }
   function puedeDarBaja() { return tieneTarea('stock', 'dar_baja') }
   function abrirTraspaso() { __llamadas.push(['abrirTraspaso']) }
+  // La vista de producto terminado (23/10/2026): la de verdad la prueba
+  // test-stock-terminado.js; acá alcanza con saber que se abre.
+  async function abrirTerminado() { __llamadas.push(['abrirTerminado']); if (estado.enEleccion) salirDeEleccion(); mostrarVista('terminado') }
   var estado = {
     sesion: null, miRolApp: 'usuario', misTareas: new Set(), alcancesTareas: new Map(), vista: 'stock',
     barraLista: Promise.resolve(), fabrica: null, cargados: new Set(),
   }
 `
 const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'puedeVerTerminado', 'decidirEntrada', 'entradaPedida', 'urlTerminado',
-  'mostrarEleccion', 'salirDeEleccion', 'alVolverDelEncabezado', 'init']
+  'mostrarEleccion', 'salirDeEleccion', 'elegirInsumos', 'alVolverDelEncabezado', 'init']
 const CONSTANTES = ['puedeVerStock', 'puedeAjustar', 'puedeEnviar', 'puedeGestionar', 'VISTAS_DESDE_URL', 'PESTANA_DE_VISTA', 'SUBTITULO_VISTA', 'VISTAS_DE_INSUMOS']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
     preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-    retorno: `estado, __els, __llamadas, __clasesBody, __reemplazo: () => __reemplazo, __setTareas(t){ __tareas = t }, __setRol(r){ __rol = r }, __setBusqueda(s){ __busqueda = s }`,
+    retorno: `estado, __els, __llamadas, __clasesBody, __reemplazo: () => __reemplazo, __setTareas(t){ __tareas = t }, __setRol(r){ __rol = r }, __setBusqueda(s){ __busqueda = s }, __abrirTerminado: () => abrirTerminado()`,
   })
 }
 
@@ -152,10 +156,15 @@ function sandboxG() {
   }
   {
     const S = await correr([PROD_VER])
-    chk('solo producto terminado (Producción, sin nada de stock): derecho a la gestión', S.__reemplazo() === 'produccion-gestion.html?vista=stock', S.__reemplazo())
-    chk('… sin &desde=stock (volver rebotaría a la gestión)', !/desde=stock/.test(S.__reemplazo() ?? ''))
+    // 23/10/2026: el producto terminado es una vista de Stock, ya no la gestión.
+    chk('solo producto terminado (Producción, sin nada de stock): la vista de producto terminado de acá', S.__llamadas.some(l => l[0] === 'abrirTerminado') && S.estado.vista === 'terminado', S.estado.vista)
+    chk('… sin ir a ningún lado', S.__reemplazo() === null, S.__reemplazo())
     chk('… sin la elección ni el aviso', !enEleccion(S) && S.__els.get('sin-acceso')?.hidden !== false)
-    chk('… y no carga nada de insumos', !S.__llamadas.some(l => l[0] === 'cargarStock' || l[0] === 'cargarInsumos'))
+    chk('… sin pestañas', S.__els.get('pestanas-stock')?.hidden === true)
+    chk('… y no carga nada de insumos', !S.__llamadas.some(l => ['cargarStock', 'cargarInsumos', 'cargarUnidadesRecuento', 'cargarCostos', 'cargarUnidadesBaja'].includes(l[0])))
+    chk('… y abre el terminado UNA vez', S.__llamadas.filter(l => l[0] === 'abrirTerminado').length === 1)
+    chk('… y "‹ Volver" va al inicio (no hay elección)', (() => { let p = false; S.alVolverDelEncabezado({ preventDefault() { p = true } }); return !p })())
+    chk('… con el link a la gestión de Producción, con &desde=stock', S.__els.get('ptm-link-gestion')?.href === 'produccion-gestion.html?vista=stock&desde=stock', S.__els.get('ptm-link-gestion')?.href)
   }
   {
     const S = await correr([{ modulo: 'stock', tarea: 'cargar_costos', alcance: { todas: true } }])
@@ -177,7 +186,23 @@ function sandboxG() {
   }
   {
     const S = await correr([VER], '?vista=terminado')
-    chk('?vista=terminado va derecho a la gestión, con &desde=stock (acá hay insumos)', S.__reemplazo() === 'produccion-gestion.html?vista=stock&desde=stock', S.__reemplazo())
+    chk('?vista=terminado abre el producto terminado de acá, sin elección', S.__reemplazo() === null && S.estado.vista === 'terminado' && !enEleccion(S), S.estado.vista)
+    chk('… y los insumos se cargan igual abajo (para "Insumos" desde la elección)', S.__llamadas.some(l => l[0] === 'cargarStock'))
+    chk('… y ?vista=terminado se queda en la dirección (recargar vuelve al terminado)', !S.__llamadas.some(l => l[0] === 'replaceState'))
+    let prevenido = false
+    S.alVolverDelEncabezado({ preventDefault() { prevenido = true } })
+    chk('… y "‹ Volver" lleva a la elección, sin navegar', prevenido && enEleccion(S))
+    S.elegirInsumos()
+    chk('… y desde ahí "Insumos" abre el stock de insumos (no el terminado)', !enEleccion(S) && S.estado.vista === 'stock', S.estado.vista)
+  }
+  {
+    const S = await correr([VER])
+    // La elección → "Producto terminado" → "‹ Volver" → "Insumos".
+    S.__abrirTerminado()
+    chk('"Producto terminado" en la elección abre la vista y saca la elección', S.estado.vista === 'terminado' && !enEleccion(S))
+    S.alVolverDelEncabezado({ preventDefault() {} })
+    S.elegirInsumos()
+    chk('"Insumos" después del terminado vuelve a la vista de insumos con la que se entró', S.estado.vista === 'stock', S.estado.vista)
   }
   {
     const S = await correr([CATALOGO], '?vista=terminado')
@@ -185,7 +210,7 @@ function sandboxG() {
   }
   {
     const S = await correr([PROD_VER], '?vista=insumos')
-    chk('?vista=insumos sin poder ver insumos: el terminado', S.__reemplazo() === 'produccion-gestion.html?vista=stock')
+    chk('?vista=insumos sin poder ver insumos: el terminado (de acá)', S.__reemplazo() === null && S.estado.vista === 'terminado', S.estado.vista)
   }
   {
     const S = await correr([VER, CATALOGO], '?vista=catalogo')
@@ -214,9 +239,11 @@ function sandboxG() {
   }
 
   // ── El HTML ────────────────────────────────────────────────────────────
-  chk('el botón "Producto terminado" lleva a la gestión con &desde=stock', /id="btn-entrada-terminado" href="produccion-gestion\.html\?vista=stock&amp;desde=stock"/.test(HTML))
+  chk('el botón "Producto terminado" es un botón de acá (ya no un link a la gestión)', /<button type="button" class="stock-eleccion__opcion" id="btn-entrada-terminado">/.test(HTML) && !/id="btn-entrada-terminado" href=/.test(HTML))
+  chk('la vista de producto terminado tiene el link a la gestión con &desde=stock', /id="ptm-link-gestion" href="produccion-gestion\.html\?vista=stock&amp;desde=stock"/.test(HTML))
   chk('el botón "Insumos y materias primas" existe', /id="btn-entrada-insumos"/.test(HTML))
-  chk('los listeners están conectados', /getElementById\('btn-entrada-insumos'\)\.addEventListener\('click', salirDeEleccion\)/.test(HTML) &&
+  chk('los listeners están conectados', /getElementById\('btn-entrada-insumos'\)\.addEventListener\('click', elegirInsumos\)/.test(HTML) &&
+    /getElementById\('btn-entrada-terminado'\)\.addEventListener\('click', \(\) => abrirTerminado\(\)\)/.test(HTML) &&
     /querySelector\('\.stock-header__volver'\)\.addEventListener\('click', alVolverDelEncabezado\)/.test(HTML))
   chk('en el celular una arriba de la otra, en la compu lado a lado', /\.stock-eleccion \{[^}]*grid-template-columns: 1fr;/.test(HTML) && /@media \(min-width: 640px\) \{\s*\.stock-eleccion \{ grid-template-columns: 1fr 1fr; \}/.test(HTML))
   chk('en la elección no se ven las vistas, las pestañas ni "Actualizado"', /body\.stock-en-eleccion \.vista-stock,\s*body\.stock-en-eleccion \.pestanas-stock,\s*body\.stock-en-eleccion \.stock-actualizado \{ display: none !important; \}/.test(HTML))

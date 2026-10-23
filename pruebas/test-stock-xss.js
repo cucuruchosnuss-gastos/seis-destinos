@@ -451,6 +451,7 @@ const H_MARCA = 'HTML de htmlMarca(), que escapa adentro (ejecutado arriba con l
 const H_COB = 'HTML de htmlCobertura(), que escapa adentro (solo números y texto fijo; ejecutado en test-stock-dias-habiles.js)'
 const NUM = 'número: largo de un array o conteo calculado en el código'
 const H_COSTOS = 'HTML de un html* de costos, que escapa adentro (ejecutado con texto malicioso en test-stock-costos.js)'
+const H_PTM = 'HTML de un html*Terminado, que escapa adentro (ejecutado con texto malicioso en test-stock-terminado.js)'
 const SEGURAS = {
   htmlAgrupado: {
     'c.filas.length': NUM,
@@ -567,6 +568,17 @@ const SEGURAS = {
   pintarElegirListaTrp: { 'htmlElegirTrp(t)': 'HTML de htmlElegirTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
   pintarPreviaTrp: { 'htmlPreviaTrp(t)': 'HTML de htmlPreviaTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
   refrescarRenglonTrp: { 'htmlResumenLotesTrp(t, r, lista)': 'HTML de htmlResumenLotesTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  // Producto terminado (23/10/2026): los html*Terminado escapan adentro y
+  // test-stock-terminado.js los EJECUTA con una marca distinta en cada dato
+  // de la base (producto, presentación, cono, fábrica, lote, tipo, motivo).
+  htmlFormTerminado: { titulo: HTML_PROPIO, opciones: HTML_PROPIO },
+  htmlHistorialTerminado: { motivo: HTML_PROPIO, filas: HTML_PROPIO, mas: HTML_PROPIO },
+  htmlDetalleTerminado: {
+    'htmlFormTerminado(f, l)': H_PTM, exito: HTML_PROPIO, lotes: HTML_PROPIO, otro: HTML_PROPIO, hist: HTML_PROPIO,
+  },
+  htmlLineaTerminado: { aviso: HTML_PROPIO, derecha: HTML_PROPIO, 'htmlDetalleTerminado(l, t)': H_PTM },
+  htmlTerminado: { "p.lineas.map(l => htmlLineaTerminado(l, t)).join('')": H_PTM, productos: HTML_PROPIO },
+  pintarTerminado: { 'htmlTerminado(t, fabricas)': H_PTM },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo
 // no tiene sentido copiar: el callback que recibe htmlAgrupado().
