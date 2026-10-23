@@ -1,0 +1,67 @@
+# Traspaso — 23/10/2026: el esqueleto parejo (ninguna pantalla tapa las barras)
+
+Rama `ci-prueba/modulos-esqueleto-parejo` (desde `origin/main` f32b687). **No se integra**: queda pusheada para auditoría. Tag de seguridad `antes-de-modulos-esqueleto-parejo-2026-10-23` (pusheado).
+Documentación: `docs/memoria/estilo-visual.md` (entrada "EL ESQUELETO PAREJO") y una entrada corta en `gastos.md`, `caja.md` y `produccion.md`.
+
+## La auditoría (todos los módulos menos `produccion.html`)
+Se buscó cada regla con `position: fixed` en el CSS de cada módulo y en los estilos que pone el JS, y se confirmó en el navegador (maqueta, `document.elementFromPoint` en el centro de cada barra).
+
+| Módulo | Selector | Qué es | ¿Tapaba? | Convertida |
+|---|---|---|---|---|
+| gastos | `#vista-wizard` | el wizard "Nuevo gasto" | sí, las tres barras | **sí**, vista dentro de la página |
+| gastos | `#modal-detalle-gasto` | el detalle de un gasto | sí, las tres | **sí** |
+| gastos | `#modal-detalle-factura` | el detalle de una factura pendiente (`?factura=`) | sí, las tres | **sí** |
+| caja | `#vista-detalle-persona` | la ficha de una persona | sí, las tres | **sí** |
+| produccion-gestion | `body.pg-menu-abierto .pg-menu` | el menú del celular (debajo de 900 px) | sí, la de arriba y la de abajo | **sí**, ocupa el lugar del contenido |
+| cobranzas | `.cob-barra-fija` | la barra de abajo ("+ Nueva cobranza", el total) | en la compu, el pie de la barra lateral | **sí** (arranca después de la lateral) |
+| administracion | `.chq-barra` | la barra de lo elegido en la cartera de cheques | en la compu el pie de la lateral; en el celular, la barra de abajo | **sí** (las dos) |
+| produccion-gestion | `.pr-hoja` | la hoja de PINes para imprimir | sí | **no, a propósito**: se muestra una sola vez y los PINes se borran al cerrarla; tapando todo, nadie se va sin imprimirla |
+| administracion / cobranzas | `.ad-visor` / `.cob-visor` | el visor de la foto de un cheque | sí (fondo oscuro) | no: es un visor de foto (como un modal), se cierra con ✕ o Escape |
+| main.css (Gastos, CC…) | `.amp-fondo` | "Ampliar" (la ventana grande de la compu) | sí (fondo oscurecido) | no: es un modal grande a pedido |
+| accesos | `#modal-permisos` | Aprobar / Editar permisos | modal | no: modal con el estilo de los de Stock |
+| empleados | `#modal-ficha` | la ficha del empleado | modal | no: modal (bottom sheet) igual a Stock |
+| caja | `#modal-movimiento`, `#modal-traspaso`, `#modal-desactivar-cuenta`, `#modal-rechazo`, `#modal-cuenta-nueva`, `#modal-renombrar-cuenta`, datos bancarios | formularios cortos y confirmaciones | modal | no: modales |
+| gastos | `#modal-proveedor-nuevo`, `#modal-anular-gasto` | proveedor nuevo, anular | modal | no: modales |
+| cuentas-corrientes | `.modal-cc` | los modales del módulo | modal | no |
+| materia-prima | `.modal-mp` | el detalle de un ingreso | modal | no |
+| stock | `.modal-stock` | los modales de Stock (la referencia) | modal | no |
+| conos | `.cn-modal-fondo` | la ventana de cada acción | modal | no |
+| taller | `.tl-velo` | facturar, cargar a la fábrica, valor de la hora | modal | no |
+| retiros | `.rt-falt-fondo` | "¿De dónde salen?" | modal | no |
+| retiros | `.rt-editor .rt-accion` | la acción del renglón (celular) | no: ya iba arriba de la barra de abajo | no hacía falta |
+| produccion-gestion | (línea ~1001) el elegir lote | modal centrado | modal | no |
+| caja / cc / gastos | `.multiselect__panel` | el desplegable de un filtro | no (popover chico) | no hacía falta |
+| gastos | `.btn-fab` | el "+" | no (ya iba arriba de la barra de abajo) | no hacía falta |
+| conos | `cont.style.cssText = 'position:fixed;left:-10000px…'` | el armado del PDF, fuera de la pantalla | no | no hacía falta |
+
+## Qué se hizo
+- **Las 5 pantallas, vistas dentro de la página**: sin `fixed`, ocupan el lugar de la lista (que el JS ya escondía), scrollea la página, arrancan arriba y al volver la lista queda a la altura donde estaba. En Gastos los pasos del wizard ya no tienen scroll propio (los botones de cada paso quedan al final, en su tarjeta). Los ids no cambiaron (`modal-detalle-gasto` sigue llamándose así, con la clase `.vista-en-pagina`).
+- **Las 2 barras fijas de abajo** (Cobranzas y cheques) arrancan después de la barra lateral en la compu; la de cheques va arriba de la barra de abajo en el celular.
+- **El encabezado de los módulos** (`.cab-modulo` en `css/main.css`): "‹ Volver", el ícono del módulo (los trazos de la barra lateral) en su color (`PALETA_MODULO`), el nombre en Bricolage y la vista al lado ("Cobranzas / Listado"). En el celular, una franja blanca de lado a lado, como Órdenes de retiro. Lo llevan Gastos (lista, wizard y los dos detalles), Caja (lista, ficha con las iniciales y el nombre, directorio), Cobranzas, Cuentas corrientes (lista, ficha, padrón), Ingreso, Stock, Pedidos, Conos, Accesos y Empleados. Se borró el CSS de los encabezados viejos.
+- Cero cambios de lógica, RPC o permisos. Lo único de JS: anotar la altura de la lista y `window.scrollTo` al abrir/cerrar (Gastos, Caja, el menú de la gestión).
+- Pruebas: `pruebas/test-modulos-esqueleto-parejo.js` + `mut-modulos-esqueleto-parejo.js` y `e2e/53-esqueleto-parejo.spec.js` (las 7 pantallas a 1280, 768, 390 y 360; los 10 encabezados a 1280 y 390). Se actualizaron `test-cobranzas-escritorio.js` (el CSS de abajo de 1100 px declara que salió `.cob-header` y entró `.cab-modulo`) y `test-cuentas-corrientes-proveedores.js` + su mutación (la cabecera y su color ahora en `.cab-modulo`; mutación nueva para el color).
+
+## Decisiones tomadas sin consultar
+- **La hoja de PINes queda encima de todo** (ver la tabla). La prueba la tiene como única excepción, con el motivo.
+- **Los visores de foto y "Ampliar" quedan encima**: son modales grandes (fondo oscurecido), no pantallas.
+- **No se tocaron los encabezados de Órdenes de retiro, Administración, Taller ni la gestión de producción**: tienen el suyo, de su handoff de diseño, y los comparan `e2e/1x-comparar-*`. Los "nuevos" de referencia son esos.
+- **El "‹ Volver" se quedó con texto** (no la flecha sola de Retiros): así lo pedía el pedido ("← Volver" en el header) y los controles de cada módulo no cambian (el chequeo de controles los nombra por su texto).
+- Los encabezados de las pantallas de adentro de Ingreso (`.wz-header`, "Ingresos internos", etc.) y los "‹ Volver al stock" de Stock **no se tocaron**: son renglones de volver dentro del contenido, debajo del encabezado del módulo, que sigue a la vista.
+- En Accesos y Empleados el encabezado dejó de ser la barra pegajosa con blur: ahora va adentro del contenedor, como en el resto.
+
+## Lo que no se pudo probar
+- Todo se miró en la maqueta (sin sesión real) a 1280, 768, 390 y 360 px. No se probó en un celular de verdad.
+- Las pantallas de un usuario sin permisos de admin (por ejemplo la entrada directa a la ficha propia en Caja, rol `usuario`) usan el mismo código; no se miraron con esa cuenta.
+- No se tocó la base: no hubo nada que verificar en ella.
+
+## Guion para Facu
+1. Gastos → "+": el wizard se abre y la barra de la izquierda (o la de abajo en el celular) y la de las fábricas siguen ahí. "‹ Volver" vuelve a la lista.
+2. Gastos → tocá un gasto: el detalle, con las barras. Volver deja la lista donde estaba.
+3. Caja → tocá una persona: la ficha, con las barras; arriba dice "Caja / (iniciales) Nombre".
+4. Producción (gestión) en el celular → "Menú": el menú ocupa la pantalla del contenido y la barra de abajo sigue.
+5. Cobranzas en la compu: la barra naranja de abajo ya no tapa "Personalizar".
+6. Mirá los encabezados de Gastos, Caja, Cobranzas, Cuentas corrientes, Ingreso, Stock, Pedidos, Conos, Accesos y Empleados: el mismo dibujo que Órdenes de retiro (ícono del color del módulo + nombre).
+
+## Qué automatizaría ahora
+- **La regla "ninguna pantalla tapa las barras" ya corre sola** sobre todos los módulos (`test-modulos-esqueleto-parejo.js`, sección 1 y 2): un módulo nuevo con un `position: fixed` a pantalla completa y fondo lleno, o una barra fija de abajo sin revisar, da rojo sin que nadie lo pida. Lo próximo: **un recorrido del navegador que abra cada botón de cada módulo en la maqueta y mida las barras** (hoy la e2e conoce 7 pantallas por nombre); con el inventario de controles de `controles-comun.js` se puede generar la lista de botones, tocarlos de a uno y fallar si alguno deja una barra tapada.
+- **El encabezado de los módulos viejos se escribió 17 veces a mano** (el mismo HTML con otro ícono y otro nombre). Una función `htmlCabeceraModulo(clave, titulo, sub)` no conviene (cada módulo duplica sus helpers y el HTML está estático), pero sí **un generador** en `pruebas/` que, a partir de `ICONOS` y `PALETA_MODULO`, reescriba el bloque `<header class="cab-modulo">` de cada módulo y la regla de color: así, cambiar un ícono en la barra lateral se propaga con un comando y la suite ya avisa si quedó distinto.
