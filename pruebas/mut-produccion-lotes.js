@@ -13,6 +13,7 @@ correrMutacionesProduccion({
     { expr: 'esc(textoStockLote(o.insumo_id, o.lote, f.queda))', motivo: 'textoStockLote() (02/10/2026): textoCantidad() de un número finito, o "N bultos + ½" de js/cantidades.js: dígitos, la coma, la fracción y texto fijo: sin esc() sale idéntico' },
     { expr: 'esc(textoFechaLote(f.desde))', motivo: 'textoFechaLote() solo produce "dd/mm/aaaa" (dígitos y barras) o vacío: sin esc() sale idéntico' },
     { expr: 'esc(pl.errorEscribir)', motivo: 'errorEscribir solo toma el texto fijo "Escribí el lote." (usarLoteEscrito): sin esc() sale idéntico' },
+    { expr: 'esc(TEXTO_LOTE_NO_REGISTRADO)', motivo: 'constante del código "Lote no registrado por administración" (23/10/2026): sin esc() sale idéntico' },
   ],
   manuales: [
     // b) Una sola opción vacía.
@@ -21,7 +22,7 @@ correrMutacionesProduccion({
     { nombre: 'el terminado no va en bordó', de: "      if (e.terminado) clases.push('pr-rec__lote--terminado')\n      else if (vacio)", a: "      if (vacio)" },
     // c) El lote sin ingreso cargado.
     { nombre: 'vuelve el bug: el lote que no está en stock se da por terminado', de: '      if (!enLista) return conQuedan({ ...base, sinIngreso: true }, ins.insumo_id, l.lote)', a: '      if (!enLista) return { ...base, terminado: true, falta: true }' },
-    { nombre: 'sin la nota "sin ingreso cargado"', de: "      const nota = e.sinIngreso ? '<span class=\"pr-rec__lote-nota\">sin ingreso cargado</span>' : htmlCeldaQueda(e)", a: "      const nota = htmlCeldaQueda(e)" },
+    { nombre: 'sin la nota "Lote no registrado por administración"', de: '      const nota = e.sinIngreso ? `<span class="pr-rec__lote-nota">${esc(TEXTO_LOTE_NO_REGISTRADO)}</span>` : htmlCeldaQueda(e)', a: "      const nota = htmlCeldaQueda(e)" },
     { nombre: 'el escrito a mano no dice "sin ingreso cargado"', de: "sinIngreso: !(ins.lotes ?? []).some(x => x.lote === texto) }", a: 'sinIngreso: false }' },
     { nombre: 'el lote de la anterior no viaja en el payload', de: "? b.lotes[it.ingrediente_id] : null\n        const lote = l && !l.sinLote ? String(l.lote ?? '').trim() : ''", a: "? b.lotes[it.ingrediente_id] : null\n        const lote = l && !l.sinLote && !l.manual && false ? String(l.lote ?? '').trim() : ''" },
     // "Se terminó".
@@ -55,7 +56,7 @@ correrMutacionesProduccion({
     { nombre: 'el foco no da la vuelta', de: "      const focos = [...panel.querySelectorAll('button:not([disabled]), input')]\n      if (!focos.length) return\n      const i = focos.indexOf(document.activeElement)\n      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }\n", a: "      const focos = [...panel.querySelectorAll('button:not([disabled]), input')]\n      if (!focos.length) return\n      const i = focos.indexOf(document.activeElement)\n" },
     { nombre: 'el foco no vuelve al renglón', de: '`[data-lote="${pl.ingredienteId}"]`', a: "'body'" },
     { nombre: 'el renglón no abre el panel', de: "const b = ev.target.closest('[data-lote]'); if (b) abrirPanelLote(b.dataset.lote)", a: "const b = ev.target.closest('[data-lote]'); void b" },
-    { nombre: 'con el campo abierto y sin lotes, la lista vacía se sigue mostrando', de: "        tarjetas: pl.escribir && !todas.length ? '' : filtrosHtml + listaHtml,", a: "        tarjetas: filtrosHtml + listaHtml," },
+    { nombre: 'con el campo abierto y sin lotes, la lista vacía se sigue mostrando', de: "        tarjetas: pl.escribir && !todas.length && !noReg.some(r => !r.puesto) ? '' : filtrosHtml + listaHtml,", a: "        tarjetas: filtrosHtml + listaHtml," },
     { nombre: 'renglones chicos', de: '    .pr-lp__tarjeta { display: flex; align-items: center; gap: 12px; min-height: 54px;', a: '    .pr-lp__tarjeta { display: flex; align-items: center; gap: 12px; min-height: 30px;' },
     { nombre: 'renglones pegados (4 px, como el diseño)', de: 'border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }', a: 'border-radius: 12px; padding: 4px; display: flex; flex-direction: column; gap: 4px; }' },
     { nombre: 'sin scroll interno de la lista', de: 'class="pr-lp__filas" data-scroll-propio>', a: 'class="pr-lp__filas">' },

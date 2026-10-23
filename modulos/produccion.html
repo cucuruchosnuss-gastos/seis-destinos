@@ -1200,6 +1200,8 @@
     .pr-ag__opcion[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); }
     .pr-ag__opcion:disabled { opacity: 0.45; }
     .pr-ag__opcion-nota { font-size: 12px; font-weight: 600; color: var(--p-gris); }
+    /* "La caja sigue siendo la …" (23/10/2026): la bolsa no cambia la caja. */
+    .pr-ag__ojo-caja { margin: 0; padding: 6px 10px; font-size: 13.5px; }
     .pr-ag__consumo { margin: 0; font-size: 13px; color: var(--p-gris); }
     .pr-ag__seguir { align-self: flex-start; }
     .pr-ag__motivo { flex-shrink: 0; }
@@ -1285,6 +1287,12 @@
     .pr-rec__queda--poco { color: var(--p-mal); font-weight: 700; }
     .pr-rec__lote--vacio { border-color: var(--p-acento); background: var(--p-acento-zona); color: var(--p-acento-osc); }
     .pr-rec__lote--terminado { border-color: var(--p-mal); background: var(--p-mal-suave); color: var(--p-mal-txt); }
+    /* Lote no registrado por administración (23/10/2026): en rojo, pero se
+       puede usar igual. La nota puede ir en dos renglones (entra en 64 px). */
+    .pr-rec__lote--no-registrado { border-color: var(--p-mal); }
+    .pr-rec__lote--no-registrado .pr-rec__lote-nota { font-weight: 800; line-height: 1.15; }
+    .pr-lp__fila--no-registrado { border-color: var(--p-mal-borde); background: var(--p-mal-renglon); }
+    .pr-lp__fila--no-registrado .pr-lp__fila-fecha { color: var(--p-mal); font-weight: 800; }
     .pr-rec__nota { font-size: 14px; color: var(--p-suave); }
     .pr-rec__accion { display: flex; justify-content: flex-end; }
     .pr-rec__otro, .pr-rec__quitar { min-height: 32px; width: 64px; border-radius: 9px; border: 1.5px solid var(--p-borde); background: #fff; font-size: 14px; font-weight: 700; color: var(--p-tinta-2); }
@@ -8771,6 +8779,17 @@
         (forzado ? '<div class="pr-aviso">Este cono va con doble bolsa: van la bolsa grande y las bolsitas individuales.</div>' : '')
     }
 
+    // Cambiar la bolsa NO cambia la caja (23/10/2026, el sublote 6254-2 quedó
+    // con la Caja N°1 Nuss y bolsitas individuales). Si la bolsa elegida no es
+    // la que trae esa caja, se dice cuál caja queda, sin frenar nada: hay
+    // combinaciones de verdad (un cono de doble bolsa en la caja Nuss).
+    function htmlOjoCaja(a, cat) {
+      if (!a?.cajaId || !a.cajaElegida || conoDobleBolsa(cat, a.marcaId)) return ''
+      if (embolsadoEfectivo(a, cat) === embolsadoSugerido(cat, a.presentacionId, a.cajaId)) return ''
+      return `<p class="pr-aviso pr-ag__ojo-caja" role="status">La caja sigue siendo la <strong>${esc(textoInsumoEmpaque(insumoDe(cat, a.cajaId)))}</strong>: ` +
+        'cambiar la bolsa no cambia la caja. Si es otra, tocala arriba.</p>'
+    }
+
     // El paso de la caja: las habilitadas, el embolsado y lo que consume una caja.
     function htmlPasoCaja(a, cat) {
       const cajas = cajasDe(cat, a.presentacionId)
@@ -8781,11 +8800,17 @@
       if (!cajas.length) {
         h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
       } else {
+        // CAJA N°1 DOLCE PASTA (23/10/2026): el 21/10 se cargó un sublote con
+        // "Bolsitas individuales" y la Caja N°1 Nuss, queriendo la Dolce Pasta.
+        // Las tres "Caja N°1" decían lo mismo en grande y la marca en chico
+        // gris. Ahora lo grande es nombre Y marca, y la nota dice con qué
+        // bolsa va cada caja (la que trae al tocarla).
         h += '<div class="pr-ag__grilla">' + cajas.map(c => {
           const ins = insumoDe(cat, c.insumo_id)
-          const nota = [ins?.marca || 'sin marca', c.insumo_id === cat?.cajaPredeterminadaId ? 'la de la unidad' : ''].filter(Boolean).join(' · ')
+          const bolsa = c.embolsado_sugerido && c.embolsado_sugerido !== 'ninguno' ? `con ${TEXTO_EMBOLSADO[c.embolsado_sugerido] ?? c.embolsado_sugerido}` : ''
+          const nota = [bolsa, c.insumo_id === cat?.cajaPredeterminadaId ? 'la de la unidad' : ''].filter(Boolean).join(' · ')
           return `<button type="button" class="pr-ag__opcion" data-ag-caja="${esc(c.insumo_id)}" aria-pressed="${c.insumo_id === a.cajaId ? 'true' : 'false'}">` +
-            `${esc(ins?.nombre ?? 'Caja')}<span class="pr-ag__opcion-nota">${esc(nota)}</span></button>`
+            `${esc(ins ? textoInsumoEmpaque(ins) : 'Caja')}${nota ? `<span class="pr-ag__opcion-nota">${esc(nota)}</span>` : ''}</button>`
         }).join('') + '</div>'
       }
       if (!cajas.length) {
@@ -8793,7 +8818,7 @@
         return h + htmlAvisoStockEmpaque(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
       }
       if (a.faltaCaja) h += '<p class="pr-error">Elegí una caja.</p>'
-      if (a.cajaElegida) h += htmlEmbolsado(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+      if (a.cajaElegida) h += htmlEmbolsado(a, cat) + htmlOjoCaja(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
       // Lo que consume una caja y el aviso de stock se siguen viendo acá; el
       // embolsado se elige al lado de las cajas (tocar una caja ya avanza).
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
@@ -10971,15 +10996,97 @@
     // En la PRIMERA MASA DEL DÍA de esa máquina llegan VACÍOS y hay que
     // cargarlos: la anterior es de otro día y sus lotes no dicen nada de lo
     // que hay hoy en la sala.
-    function lotesIniciales(datos) {
+    //
+    // LOTES NO REGISTRADOS (23/10/2026, pedido de Facu): un lote que no está
+    // cargado (masa_items.lote_fuera_de_stock) había que escribirlo a mano en
+    // la primera masa de cada día. Ahora, al quedar un ingrediente sin lote,
+    // viene puesto el ÚLTIMO lote no registrado que se usó en ESA máquina para
+    // ese insumo (lotesNoRegistradosDe), en rojo, y se puede usar igual.
+    function lotesIniciales(datos, maquinaId) {
       const ant = datos?.anterior
-      if (!ant || ant.es_de_hoy === false) return {}
       const out = {}
-      for (const it of ant.items ?? []) {
-        if (!it.ingrediente_id || !it.insumo_id) continue
-        out[it.ingrediente_id] = { insumo_id: it.insumo_id, lote: it.lote ?? null, manual: false, sinLote: it.lote == null }
+      if (ant && ant.es_de_hoy !== false) {
+        for (const it of ant.items ?? []) {
+          if (!it.ingrediente_id || !it.insumo_id) continue
+          out[it.ingrediente_id] = { insumo_id: it.insumo_id, lote: it.lote ?? null, manual: false, sinLote: it.lote == null }
+        }
+      }
+      for (const it of datos?.original?.items ?? []) {
+        if (out[it.ingrediente_id]) continue
+        const r = lotesNoRegistradosDe(datos, it.ingrediente_id, maquinaId)[0]
+        if (r) out[it.ingrediente_id] = { insumo_id: r.insumo_id, lote: r.lote, manual: false, sinLote: false }
       }
       return out
+    }
+
+    // ── La memoria de lotes no registrados, en esta tablet ─────────────────
+    // localStorage, junto a los borradores (no toca la base): por máquina y
+    // por insumo, el último lote usado que NO figuraba con stock.
+    //   { [maquinaId]: { [insumoId]: { lote, en } } }
+    // La clave NO empieza con PREFIJO_BORRADOR_MASA: borradoresPendientes la
+    // leería como una masa.
+    const CLAVE_LOTES_NO_REGISTRADOS = 'produccion.lotes-no-registrados'
+    const TEXTO_LOTE_NO_REGISTRADO = 'Lote no registrado por administración'
+
+    function leerLotesNoRegistrados() {
+      try {
+        const o = JSON.parse(leerPreferencia(CLAVE_LOTES_NO_REGISTRADOS) || '{}')
+        return o && typeof o === 'object' && !Array.isArray(o) ? o : {}
+      } catch { return {} }
+    }
+
+    function guardarLotesNoRegistrados(m) {
+      guardarPreferencia(CLAVE_LOTES_NO_REGISTRADOS, Object.keys(m).length ? JSON.stringify(m) : null)
+    }
+
+    // ¿El lote figura con stock en lo que trajo datos_para_masa?
+    function loteConStock(datos, insumoId, lote) {
+      const ins = (datos?.insumos ?? []).find(x => x.insumo_id === insumoId)
+      return !!ins && (ins.lotes ?? []).some(x => x.lote === lote)
+    }
+
+    // Los lotes recordados de ESTE ingrediente en esa máquina que siguen sin
+    // figurar con stock, el más reciente primero. Uno que administración ya
+    // cargó (aparece con stock) deja de proponerse: es un lote más de la lista.
+    function lotesNoRegistradosDe(datos, ingredienteId, maquinaId) {
+      if (!maquinaId) return []
+      const deMaquina = leerLotesNoRegistrados()[maquinaId]
+      if (!deMaquina) return []
+      return insumosDe(datos, ingredienteId)
+        .map(ins => ({ insumo_id: ins.insumo_id, lote: String(deMaquina[ins.insumo_id]?.lote ?? '').trim(), en: Number(deMaquina[ins.insumo_id]?.en) || 0 }))
+        .filter(r => r.lote && !loteConStock(datos, r.insumo_id, r.lote))
+        .sort((a, z) => z.en - a.en)
+    }
+
+    // Al registrar una masa: por cada renglón con lote, si ese lote no figura
+    // con stock queda recordado para esa máquina e insumo; si figura, se
+    // olvida el que había (el último usado ya es uno registrado).
+    function recordarLotesNoRegistrados(b, datos) {
+      if (!b?.maquinaId || !datos) return
+      const m = leerLotesNoRegistrados()
+      const deMaquina = m[b.maquinaId] && typeof m[b.maquinaId] === 'object' ? { ...m[b.maquinaId] } : {}
+      for (const it of ingredientesConLote(datos, b.cantidades)) {
+        const l = b.lotes?.[it.ingrediente_id]
+        if (!l || !l.insumo_id || l.sinLote || l.terminado) continue
+        const lote = String(l.lote ?? '').trim()
+        if (!lote) continue
+        if (loteConStock(datos, l.insumo_id, lote)) delete deMaquina[l.insumo_id]
+        else deMaquina[l.insumo_id] = { lote, en: Date.now() }
+      }
+      if (Object.keys(deMaquina).length) m[b.maquinaId] = deMaquina
+      else delete m[b.maquinaId]
+      guardarLotesNoRegistrados(m)
+    }
+
+    // "Se terminó" sobre un lote recordado: no se vuelve a proponer.
+    function olvidarLoteNoRegistrado(maquinaId, insumoId, lote) {
+      if (!maquinaId || !insumoId) return
+      const m = leerLotesNoRegistrados()
+      const r = m[maquinaId]?.[insumoId]
+      if (!r || (lote != null && String(r.lote ?? '').trim() !== String(lote).trim())) return
+      delete m[maquinaId][insumoId]
+      if (!Object.keys(m[maquinaId]).length) delete m[maquinaId]
+      guardarLotesNoRegistrados(m)
     }
 
     // Las opciones del desplegable de lote de un ingrediente. El insumo NO
@@ -11461,7 +11568,7 @@
       // Los lotes se CONSERVAN al pasar de Original a Anterior o a Modificar:
       // son los envases que hay en la sala, no dependen de la receta. Solo al
       // empezar la masa vienen de la anterior.
-      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d)
+      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d, b.maquinaId ?? t.maquinaId)
       b.agregados = []
       // Lo que es nuevo en la receta vigente (ver nuevosEnReceta) y lo que la
       // masa anterior llevaba de más ("otro", escrito a mano) vienen solo
@@ -11545,9 +11652,11 @@
       const clases = ['pr-rec__lote']
       if (e.terminado) clases.push('pr-rec__lote--terminado')
       else if (vacio) clases.push('pr-rec__lote--vacio')
-      const nota = e.sinIngreso ? '<span class="pr-rec__lote-nota">sin ingreso cargado</span>' : htmlCeldaQueda(e)
+      else if (e.sinIngreso) clases.push('pr-rec__lote--no-registrado')
+      // 23/10/2026: "sin ingreso cargado" pasó a decir lo que Facu pidió, en rojo.
+      const nota = e.sinIngreso ? `<span class="pr-rec__lote-nota">${esc(TEXTO_LOTE_NO_REGISTRADO)}</span>` : htmlCeldaQueda(e)
       return `<button type="button" class="${clases.join(' ')}" data-lote="${esc(it.ingrediente_id)}" aria-haspopup="dialog" ` +
-        `aria-label="Lote de ${esc(it.ingrediente)}: ${esc(texto)}${e.sinIngreso ? ', sin ingreso cargado' : ''}">` +
+        `aria-label="Lote de ${esc(it.ingrediente)}: ${esc(texto)}${e.sinIngreso ? esc(', ' + TEXTO_LOTE_NO_REGISTRADO.toLowerCase()) : ''}">` +
         `<span class="pr-rec__lote-texto">${esc(texto)}</span>${nota}</button>`
     }
 
@@ -11766,6 +11875,8 @@
       const b = estado.masa
       if (!b) return
       const antes = b.lotes[ingredienteId]
+      // Un lote no registrado que se terminó no se vuelve a proponer (23/10/2026).
+      if (antes?.lote != null) olvidarLoteNoRegistrado(b.maquinaId, antes.insumo_id, antes.lote)
       b.lotes[ingredienteId] = { insumo_id: antes?.insumo_id || '', lote: null, manual: false, sinLote: false, terminado: true }
       b.payload = null
       estado.errorReceta = null
@@ -11927,6 +12038,51 @@
         '</button>'
     }
 
+    // LOS LOTES NO REGISTRADOS DEL PANEL (23/10/2026): el que está puesto si
+    // no figura con stock, y el último no registrado que se usó en esta
+    // máquina para cada insumo del ingrediente (si sigue sin figurar). Sin
+    // repetir. Van arriba, en rojo, y se eligen igual que cualquier lote.
+    function filasNoRegistradas(e, d, ingredienteId, maquinaId) {
+      const out = [], ya = new Set()
+      const agregar = (insumoId, lote, puesto) => {
+        const l = String(lote ?? '').trim()
+        if (!insumoId || !l || ya.has(`${insumoId}|${l}`)) return
+        ya.add(`${insumoId}|${l}`)
+        out.push({ insumo_id: insumoId, lote: l, puesto })
+      }
+      if (e?.sinIngreso && !e.terminado && e.l?.insumo_id) agregar(e.l.insumo_id, e.l.lote, true)
+      for (const r of lotesNoRegistradosDe(d, ingredienteId, maquinaId)) agregar(r.insumo_id, r.lote, false)
+      return out
+    }
+
+    function htmlFilaNoRegistrada(r, i, d, marcado) {
+      const ins = (d?.insumos ?? []).find(x => x.insumo_id === r.insumo_id) ?? null
+      const sub = TEXTO_LOTE_NO_REGISTRADO + (r.puesto ? '' : ' · el último que se usó en esta máquina')
+      return `<button type="button" class="pr-lp__tarjeta pr-lp__fila pr-lp__fila--no-registrado" data-lote-no-reg="${i}" aria-pressed="${marcado ? 'true' : 'false'}">` +
+        '<span class="pr-lp__radio" aria-hidden="true"></span>' +
+        `<span class="pr-lp__fila-col"><span class="pr-lp__fila-texto"><strong>${esc(marcaDeInsumo(ins))}</strong> lote ${esc(r.lote)}</span>` +
+        `<span class="pr-lp__fila-fecha">${esc(sub)}</span></span></button>`
+    }
+
+    // Tocar un lote no registrado lo PONE y cierra (no hay "Usar …": no está
+    // en la lista de stock). Viaja como escrito a mano: la base lo marca
+    // lote_fuera_de_stock.
+    function elegirLoteNoRegistrado(indice) {
+      const pl = estado.panelLote, b = estado.masa, d = estado.datosMasa
+      if (!pl || !b || !d) return
+      const it = d.original.items.find(x => x.ingrediente_id === pl.ingredienteId)
+      if (!it) return
+      const i = indice === '' || indice == null ? -1 : Number(indice)
+      const r = Number.isInteger(i) && i >= 0 ? filasNoRegistradas(estadoLote(it, b, d), d, pl.ingredienteId, b.maquinaId)[i] : undefined
+      if (!r) return
+      b.lotes[pl.ingredienteId] = { insumo_id: r.insumo_id, lote: r.lote, manual: true, sinLote: false }
+      b.payload = null
+      estado.errorReceta = null
+      guardarBorradorMasa(b)
+      pintarReceta()
+      cerrarPanelLote()
+    }
+
     function htmlPanelLote(ingredienteId) {
       const b = estado.masa, d = estado.datosMasa
       const it = d?.original.items.find(x => x.ingrediente_id === ingredienteId)
@@ -11950,8 +12106,12 @@
       // El lote puesto viene de la masa anterior de esa máquina (salvo que se
       // haya escrito a mano): se dice.
       const notaElegido = elegido >= 0 && d.anterior && !e.l?.manual ? `El de la masa anterior (${esc(d.anterior.nro)})` : ''
-      const listaHtml = filas.length
-        ? `<div class="pr-lp__filas" data-scroll-propio>${filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')}</div>`
+      // Arriba de todo, en rojo, los lotes no registrados (23/10/2026): el
+      // puesto y el último que se usó en esta máquina. Se eligen de un toque.
+      const noReg = filasNoRegistradas(e, d, ingredienteId, b.maquinaId)
+      const noRegHtml = noReg.map((r, i) => htmlFilaNoRegistrada(r, i, d, r.puesto && !Number.isInteger(pl.sel))).join('')
+      const listaHtml = filas.length || noReg.length
+        ? `<div class="pr-lp__filas" data-scroll-propio>${noRegHtml}${filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')}</div>`
         : '<p class="pr-lp__vacio">No hay lotes con stock cargado de este insumo.</p>'
       const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote
       const sel = todas.find(f => f.i === marcado) ?? null
@@ -11964,8 +12124,8 @@
         sub: `para la masa ${b.nro ?? '—'} · ${b.maquinaNombre ?? 'Máquina'}`,
         terminado: usar || termino ? `${termino}${usar}` : '',
         // Sin lotes con stock, la lista vacía no dice nada útil: la ventana
-        // abre directo con el campo.
-        tarjetas: pl.escribir && !todas.length ? '' : filtrosHtml + listaHtml,
+        // abre directo con el campo (salvo que haya uno no registrado).
+        tarjetas: pl.escribir && !todas.length && !noReg.some(r => !r.puesto) ? '' : filtrosHtml + listaHtml,
         otros: htmlEscribirLote(it, e, d),
       }
     }
@@ -12009,7 +12169,7 @@
         `<label class="pr-lp__escribir-rotulo" for="pr-lote-panel-escribir">Escribí el lote${ins ? ` de ${esc(marcaDeInsumo(ins))}` : ''}</label>` +
         insumosHtml +
         `<input type="text" class="pr-input pr-lp__escribir-campo" id="pr-lote-panel-escribir" data-lote-manual="${esc(it.ingrediente_id)}" maxlength="80" autocomplete="off" enterkeyhint="done">` +
-        '<p class="pr-lp__escribir-nota">Queda anotado como "sin ingreso cargado" y le llega un aviso a administración. Podés registrar la masa igual.</p>' +
+        `<p class="pr-lp__escribir-nota">Queda anotado como "${esc(TEXTO_LOTE_NO_REGISTRADO)}" y administración lo ve en Stock para cargar el ingreso. Podés registrar la masa igual.</p>` +
         error +
         '<button type="button" class="pr-btn pr-btn--accion" id="pr-lote-panel-usar">Usar este lote</button>' +
         '</div>'
@@ -12140,7 +12300,12 @@
       const b = estado.masa, d = estado.datosMasa
       const l = b.lotes[ingredienteId]
       const conStock = opcionesLote(d, ingredienteId).some(o => !o.manual && !o.sinLote)
-      const escribir = modo === 'lote' && !conStock
+      // Con un lote no registrado para elegir que NO es el puesto, la ventana
+      // muestra la lista (ese lote en rojo) y no abre directo el campo
+      // (23/10/2026). Si el único es el puesto, como antes: el campo.
+      const it = d.original.items.find(x => x.ingrediente_id === ingredienteId)
+      const hayNoReg = !!it && filasNoRegistradas(estadoLote(it, b, d), d, ingredienteId, b.maquinaId).some(r => !r.puesto)
+      const escribir = modo === 'lote' && !conStock && !hayNoReg
       estado.panelLote = { ingredienteId, modo, escribir, texto: l?.manual ? String(l.lote ?? '') : '' }
       pintarPanelLote()
       const panel = document.getElementById('pr-lote-panel')
@@ -12288,6 +12453,10 @@
         // Un lote que no alcanza ya se está avisando pegado al botón: el
         // toque registra igual (Parte 0: aviso, nunca bloqueo).
         b.payload = parametrosRegistrarMasa(b, d, estado.persona?.id ?? null)
+        // Los lotes no registrados de esta masa quedan recordados en la
+        // tablet para la próxima de esta máquina (23/10/2026). Una vez, al
+        // congelar el payload: un reintento no vuelve a pasar por acá.
+        recordarLotesNoRegistrados(b, d)
       }
       estado.enviandoMasa = true
       pintarPieReceta()
@@ -12983,6 +13152,7 @@
         if (ev.target.closest('#pr-lote-panel-usar-lista')) { usarLoteDeLista(); return }
         const mf = ev.target.closest('[data-lote-marca]')
         if (mf && estado.panelLote) { estado.panelLote.marca = mf.dataset.loteMarca; pintarPanelLote(); return }
+        const nr = ev.target.closest('[data-lote-no-reg]'); if (nr) { elegirLoteNoRegistrado(nr.dataset.loteNoReg); return }
         const t = ev.target.closest('[data-lote-op]'); if (t) elegirTarjetaLote(t.dataset.loteOp)
       })
       panelLote.addEventListener('keydown', teclaPanelLote)

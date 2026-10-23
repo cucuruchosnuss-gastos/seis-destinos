@@ -337,7 +337,7 @@ esperas.push((async () => {
 
   // Terminar la tablet, parte 3: el lote de la anterior que NO figura con
   // stock (S-VIEJO) queda elegido, con "sin ingreso cargado".
-  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
+  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">S-VIEJO<\/span><span class="pr-rec__lote-nota">Lote no registrado por administración<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
   chk('… y NO frena Registrar', R.__doc.getElementById('pr-receta-error').hidden === true)
   R.marcarLoteTerminado('i-sal')
   const filasTerm = R.__doc.getElementById('pr-receta-filas').innerHTML

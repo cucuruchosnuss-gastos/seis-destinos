@@ -129,11 +129,13 @@ esperas.push((async () => {
   // Planta v2 (28/09/2026): el recuadro dice el lote solo, sin "Lote"; la
   // palabra va en el aria-label ("Lote de Azúcar: A-MANO-1").
   chk('el lote a mano de la anterior queda elegido', /<span class="pr-rec__lote-texto">A-MANO-1<\/span>/.test(bC) &&
-    /aria-label="Lote de Azúcar: A-MANO-1, sin ingreso cargado"/.test(bC), bC)
-  chk('… con "sin ingreso cargado"', /pr-rec__lote-nota">sin ingreso cargado</.test(bC))
+    /aria-label="Lote de Azúcar: A-MANO-1, lote no registrado por administración"/.test(bC), bC)
+  // 23/10/2026: "sin ingreso cargado" pasó a "Lote no registrado por administración", en rojo.
+  chk('… con "Lote no registrado por administración"', /pr-rec__lote-nota">Lote no registrado por administración</.test(bC))
+  chk('… en rojo', /pr-rec__lote--no-registrado/.test(bC))
   chk('… no como terminado ni vacío', !/pr-rec__lote--terminado|pr-rec__lote--vacio/.test(bC))
   chk('… y no bloquea Registrar', C.__doc.getElementById('pr-receta-registrar').disabled === false, C.__doc.getElementById('pr-receta-error').textContent)
-  chk('el que SÍ está en stock no lleva la nota', !/sin ingreso cargado/.test(botonLote(C, 'i-harina')))
+  chk('el que SÍ está en stock no lleva la nota', !/no registrado/.test(botonLote(C, 'i-harina')))
   await C.registrarMasa()
   const pm = llamadasMasa(C)[0]
   const az = pm?.p_items.find(x => x.ingrediente_id === 'i-azucar')
@@ -157,7 +159,7 @@ esperas.push((async () => {
   chk('"Usar este lote" pone el lote escrito, sin espacios en los bordes', M.estado.masa.lotes['i-azucar'].lote === 'B-22' &&
     M.estado.masa.lotes['i-azucar'].manual === true && M.estado.masa.lotes['i-azucar'].insumo_id === 'ins-az')
   chk('… y cierra la ventana', M.estado.panelLote === null && M.__doc.getElementById('pr-lote-panel').hidden === true)
-  chk('el lote escrito a mano dice "sin ingreso cargado"', /sin ingreso cargado/.test(botonLote(M, 'i-azucar')) && /pr-rec__lote-texto">B-22</.test(botonLote(M, 'i-azucar')))
+  chk('el lote escrito a mano dice "Lote no registrado por administración"', /Lote no registrado por administración/.test(botonLote(M, 'i-azucar')) && /pr-rec__lote-texto">B-22</.test(botonLote(M, 'i-azucar')))
   chk('… y el lote va UNA sola vez: sin un campo abajo del botón', (filas(M).match(/>B-22</g) || []).length === 1 && !/data-lote-manual/.test(filas(M)), filas(M))
 
   // "Se terminó" lo suelta y pide otro.

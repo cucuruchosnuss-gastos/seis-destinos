@@ -32,6 +32,13 @@ try {
   }
 } catch { /* sin sessionStorage: sin cambios */ }
 
+// Un filtro sobre una tabla EMBEBIDA ('masas.anulada', 23/10/2026) mira
+// adentro del objeto embebido de la fila, como PostgREST con !inner.
+function valor(r, a) {
+  if (!String(a).includes('.') || Object.prototype.hasOwnProperty.call(r, a)) return r[a]
+  return String(a).split('.').reduce((o, k) => (o == null ? undefined : o[k]), r)
+}
+
 function consulta(tabla) {
   const filtros = []
   const q = {
@@ -39,9 +46,10 @@ function consulta(tabla) {
     // de las filas (30/09/2026: el saldo corriente de Caja lo exige para saber
     // que leyó toda la historia). Los que piden head siguen como antes.
     select(_c, o) { if (o?.count && !o?.head) q._contar = true; return q }, order() { return q }, limit() { return q }, range() { return q },
-    eq(a, b) { filtros.push(r => r[a] === b); return q }, neq(a, b) { filtros.push(r => r[a] !== b); return q },
-    in(a, b) { filtros.push(r => b.includes(r[a])); return q }, is(a, b) { filtros.push(r => (r[a] ?? null) === b); return q },
-    gte(a, b) { filtros.push(r => r[a] >= b); return q }, lte(a, b) { filtros.push(r => r[a] <= b); return q },
+    eq(a, b) { filtros.push(r => valor(r, a) === b); return q }, neq(a, b) { filtros.push(r => valor(r, a) !== b); return q },
+    in(a, b) { filtros.push(r => b.includes(valor(r, a))); return q }, is(a, b) { filtros.push(r => (valor(r, a) ?? null) === b); return q },
+    gte(a, b) { filtros.push(r => valor(r, a) >= b); return q }, lte(a, b) { filtros.push(r => valor(r, a) <= b); return q },
+    gt(a, b) { filtros.push(r => valor(r, a) > b); return q }, lt(a, b) { filtros.push(r => valor(r, a) < b); return q },
     like() { return q }, ilike() { return q }, not() { return q }, or() { return q },
     maybeSingle() { q._uno = true; return q }, single() { q._uno = true; return q },
     then(res, rej) {
