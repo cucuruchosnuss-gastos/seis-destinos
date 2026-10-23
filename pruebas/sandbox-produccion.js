@@ -442,6 +442,11 @@ const NUEVAS_PLANTA = [
   'irAlCierreDe', 'finParadaFormulario', 'loteNuevoFormulario', 'loteNuevoVentana', 'puedeAnularPorError', 'htmlAnularPorError',
   'abrirAnularPorError', 'cerrarAnularPorError', 'pintarAnularPorError', 'confirmarAnularPorError', 'avisoScrapMiles',
   'preguntaScrapMiles', 'preguntarScrapMiles',
+  // Lotes no registrados (23/10/2026): la memoria de la tablet por máquina e
+  // insumo, sus filas del panel; y "la caja sigue siendo…" del paso de la caja.
+  'leerLotesNoRegistrados', 'guardarLotesNoRegistrados', 'loteConStock', 'lotesNoRegistradosDe',
+  'recordarLotesNoRegistrados', 'olvidarLoteNoRegistrado', 'filasNoRegistradas', 'htmlFilaNoRegistrada',
+  'elegirLoteNoRegistrado', 'htmlOjoCaja',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -463,6 +468,8 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // La hora de largada con la regla de las 2 horas de la base (05/10/2026)
   'MARGEN_LARGADA_MS',
   'VISTAS_CON_PESTANAS',
+  // Lotes no registrados (23/10/2026)
+  'CLAVE_LOTES_NO_REGISTRADOS', 'TEXTO_LOTE_NO_REGISTRADO',
   // De js/cantidades.js (02/10/2026)
   'DECIMALES_CANTIDAD', 'FRACCIONES',
   // Sin internet (06/10/2026): de js/sin-internet.js y de la planta

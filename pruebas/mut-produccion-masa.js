@@ -16,6 +16,7 @@ correrMutacionesProduccion({
     'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima', 'htmlOpcionAgregar', 'htmlPanelOtroInsumo'],
   equivalentes: [
     { expr: 'esc(textoMasas(e.masas))', motivo: 'un conteo con "masa"/"masas"' },
+    { expr: 'esc(TEXTO_LOTE_NO_REGISTRADO)', motivo: 'constante del código "Lote no registrado por administración" (23/10/2026)' },
     { expr: "esc(horaArgentina(e.ultimaMasa) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
     { expr: "esc(horaArgentina(a.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
     { expr: "esc(horaArgentina(m.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
@@ -67,8 +68,8 @@ correrMutacionesProduccion({
     { nombre: 'el borrador se guarda bajo el turno y la siguiente lo pisa', de: '      return PREFIJO_BORRADOR_MASA + uuid', a: '      return PREFIJO_BORRADOR_MASA' },
 
     // ── LOS LOTES VIENEN PUESTOS ─────────────────────────────────────────
-    { nombre: "los lotes NO vienen de la anterior", de: "      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d)", a: "      if (primeraVez || !b.lotes) b.lotes = {}" },
-    { nombre: 'la primera masa del día igual copia los lotes de otro día', de: '      if (!ant || ant.es_de_hoy === false) return {}', a: '      if (!ant) return {}' },
+    { nombre: "los lotes NO vienen de la anterior", de: "      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d, b.maquinaId ?? t.maquinaId)", a: "      if (primeraVez || !b.lotes) b.lotes = {}" },
+    { nombre: 'la primera masa del día igual copia los lotes de otro día', de: '      if (ant && ant.es_de_hoy !== false) {', a: '      if (ant) {' },
 
     // ── El 10% ───────────────────────────────────────────────────────────
     { nombre: 'cualquier diferencia va en bordó', de: '      if (!(base > 0)) return false\n      return Math.abs(Number(kg ?? 0) - base) > base * UMBRAL_ALEJADA + 1e-9', a: '      return Math.abs(Number(kg ?? 0) - base) > 0' },
