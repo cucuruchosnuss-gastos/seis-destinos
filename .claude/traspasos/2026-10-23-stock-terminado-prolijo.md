@@ -47,6 +47,13 @@ Para el chat de arquitectura, además de lo de arriba:
 - e2e (maqueta, puertos 4320/4321): `56-tablet-lote-y-caja` (390, 360, 768×1024, 1000×540, 1280), `53-stock-terminado` (360, 390, 768, 1280 y la recarga) y `39-stock-entrada`: 24/24.
 - `check-scripts` y `check-bytes`: verde. `npm run pruebas`: 278/278 en verde (862 s), sobre el merge con el `main` de `3fd2abe`.
 
+### Segundo merge (24/10/2026, después de devoluciones-retiro y modulos-esqueleto-parejo)
+
+- `git merge origin/main` (`94f2b4f`, "Integra ci-prueba/modulos-esqueleto-parejo"): sin choques de texto. El encabezado nuevo de Stock (`.cab-modulo`) conserva `.stock-header__volver` y `#stock-subtitulo`, que usa la vista de producto terminado.
+- Choque de comportamiento: `pruebas/test-modulos-esqueleto-parejo.js` (de la rama de esqueleto) compara los controles de cada módulo contra el commit fijo `f32b687` y daba rojo porque `#btn-entrada-terminado` dejó de ser `<a href="produccion-gestion.html…">` (ahora es un `<button>`, a propósito, en esta rama). Se agregó en esa suite una lista `CAMBIADOS_A_PROPOSITO` con ese único control y su motivo (el id sigue y lo miran `test-stock-entrada.js` / `test-stock-terminado.js`). `mut-modulos-esqueleto-parejo.js`: 7/7.
+- Con el `main` nuevo, "Devolución de cliente" ya está en `produccion-gestion.html`: Stock usa el mismo texto.
+- Números después de este merge: `mut-stock-lotes-sin-ingreso` 46/46 (+2 eq.), `mut-stock-terminado` 74/74 (+19 eq.), `mut-modulos-esqueleto-parejo` 7/7; `test-modulos-esqueleto-parejo` 166/166; e2e `56`, `53`, `39` y `58-esqueleto-parejo`: 58/58; `npm run pruebas` 282/282 en verde (702 s); `check-scripts` y `check-bytes` en verde.
+
 ### Qué automatizaría ahora (24/10/2026)
 
 - **El doble de supabase de cada suite de Stock se reescribe a mano cada vez que una lectura pasa a RPC** (acá: `__rpc` por fábrica, retener/soltar para ver que salen todas a la vez y que una respuesta vieja no pisa). Un `pruebas/supabase-doble.js` común con tablas, rpc por parámetros (como el `__segun` de la maqueta), errores, rechazos y "retener hasta soltar" sacaría ~80 renglones de cada suite nueva y haría que la suite y la maqueta usen los mismos datos.
