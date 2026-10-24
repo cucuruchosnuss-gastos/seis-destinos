@@ -78,6 +78,8 @@ const OPCIONALES = [
   'elegirEnBanco', 'elegirGrupoEnBanco', 'abrirAcreditar', 'armarFilasAcreditar', 'alRepartir', 'pintarResumenAcreditar',
   'confirmarAcreditar', 'abrirNoTomo', 'confirmarNoTomo', 'conectarEnBanco', 'prepararBanco', 'pintarBanco', 'alEscribirVenta', 'cargarCuentasBanco',
   'textoVolverACartera',
+  // importe completo: los gastos del banco, aparte (24/10/2026)
+  'htmlGastosBanco', 'entradasPorCuenta', 'unidadUnicaDe',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
@@ -85,7 +87,9 @@ const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADO
   // depositar y vender al banco (13/10/2026)
   'TIPOS_BANCO', 'BOTONES_LOTE',
   // En el banco (13/10/2026)
-  'TEXTO_MOTIVO_NO_TOMO', 'bancoUI']
+  'TEXTO_MOTIVO_NO_TOMO', 'bancoUI',
+  // importe completo (24/10/2026)
+  'CATEGORIA_GASTOS_BANCARIOS']
 
 const PRELUDIO = `
   ${fuenteNumeros()}
