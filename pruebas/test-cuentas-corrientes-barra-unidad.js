@@ -120,7 +120,7 @@ const FUNCIONES = [
   // la ficha
   'abrirFicha', 'sincronizarUrlFicha', 'renderizarFicha', 'cambiarUnidadFicha', 'htmlFichaUnidad', 'renderizarFichaUnidad',
   'saldosFichaVisibles', 'saldosFichaDeUnidad', 'creditosFichaDeUnidad',
-  'cargarFichaSaldos', 'cargarFichaMovimientos', 'cargarFichaCreditos', 'cargarFichaRemitos',
+  'cargarFichaSaldos', 'cargarFichaMovimientos', 'cargarNotasDebitoFicha', 'cargarFichaCreditos', 'cargarFichaRemitos',
   'renderizarFichaBanner', 'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'abrirModalPago', 'abrirModalAplicarCreditoDesdeFicha',
   // los cheques en un pago (05/10/2026): lo que abrirModalPago reinicia

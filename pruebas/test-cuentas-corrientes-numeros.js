@@ -605,8 +605,12 @@ async function main() {
     // aplicado a cada factura (2, hasta su saldo) y la cantidad de un ajuste (3).
     // El "FIFO" del pago mixto es `{ decimales: 2, max: … }` del monto de cada factura.
     const deLaNota = enlaces.filter(a => /importeNotaEnlazado|max: f \? Number\(f\.saldo\)|decimales: 3 \}/.test(a))
-    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo), más los 3 de la nota de crédito',
-      enlaces.length === 6 && deLaNota.length === 3 &&
+    // Y el de cada renglón de la nota de débito de un proveedor (24/10/2026),
+    // con DECIMALES_ND = 2.
+    const deLaNotaDebito = enlaces.filter(a => /decimales: DECIMALES_ND \}/.test(a))
+    chk('la nota de débito enlaza sus importes con 2 decimales', deLaNotaDebito.length === 1 && /const DECIMALES_ND = 2\n/.test(codigo))
+    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo), más los 3 de la nota de crédito y el de la de débito',
+      enlaces.length === 7 && deLaNota.length === 3 &&
       enlaces.filter(a => !deLaNota.includes(a)).filter(a => /decimales: 2 \}|decimales: 2, max: /.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)) &&
       deLaNota.some(a => /enlazarCampoNumero\(imp, \{ decimales: 2 \}\)/.test(a)) && deLaNota.some(a => /\{ decimales: 2, max: f \? Number\(f\.saldo\) : undefined \}/.test(a)) &&
       deLaNota.some(a => /enlazarCampoNumero\(input, \{ decimales: 3 \}\)/.test(a)), enlaces)

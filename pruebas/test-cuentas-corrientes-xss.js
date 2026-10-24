@@ -67,7 +67,7 @@ const STUBS = new Set([
   'formatearNumeroAr', 'leerNumeroAr', 'enlazarCampoNumero', 'ponerNumero', 'leerCampoNumero',
   'abrirFicha', 'abrirFichaDesdePadron', 'abrirModalEditarProveedor', 'aprobarProveedor', 'rechazarProveedor',
   'eliminarFactura', 'abrirModalAsignarProveedor', 'cargarSinProveedor', 'cargarSaldos',
-  'cargarFichaSaldos', 'cargarFichaMovimientos', 'cargarFichaCreditos', 'abrirModalPago',
+  'cargarFichaSaldos', 'cargarFichaMovimientos', 'cargarNotasDebitoFicha', 'cargarFichaCreditos', 'abrirModalPago',
   'confirmarImporteSinImporte', 'recargarTrasImporte',
 ])
 
@@ -579,6 +579,8 @@ const SEGURAS = {
     'importeHtml(Math.abs(saldoAcum), m.moneda)': IMPORTE, badgeEstado: BADGE,
     'formatearFecha(m.fecha)': fecha('v_cuenta_corriente_movimientos.fecha'), claseMonto: CLASE,
     'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, lineaSaldo: HTML_PROPIO, iconos: HTML_PROPIO,
+    // 24/10/2026: "Anular" de una nota de débito recibida, con esc() del id de la nota.
+    botonAnularNd: HTML_PROPIO,
   },
   htmlSinImporte: { n: 'número: la función devuelve "" si n no es > 0; los call sites pasan contarSinImporte() (.length)' },
   // Las comisiones (06/10/2026): las ejecuta con marcas test-cuentas-corrientes-comisiones.js.
@@ -660,6 +662,11 @@ const SEGURAS = {
   },
   escribirNota: {
     'htmlResultadosInsumoNota(n, a, k)': 'htmlResultadosInsumoNota() escapa el id, el nombre y la marca de cada insumo',
+  },
+  // 24/10/2026: la nota de débito de un proveedor (lo ejecuta con marcas
+  // test-cuentas-corrientes-nota-debito.js).
+  pintarRenglonesNd: {
+    'htmlRenglonesNd(n.renglones)': 'htmlRenglonesNd() escapa la clave y el concepto de cada renglón',
   },
 }
 const SEGURAS_REGEX = {}
