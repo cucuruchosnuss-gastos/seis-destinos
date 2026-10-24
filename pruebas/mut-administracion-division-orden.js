@@ -93,7 +93,7 @@ correrMutaciones({
     { nombre: 'la hoja sin una línea por vendedor', de: "plata(datos.subtotal_a))}</p>${vendedores}`", a: "plata(datos.subtotal_a))}</p>`" },
     { nombre: 'el total de comisiones con otro monto', de: "plata(datos.comision_total))", a: "plata(datos.subtotal_a))" },
     { nombre: 'el % total de comisiones mal', de: 'textoPct(datos.comision_pct_total)', a: 'textoPct(datos.pct_a)' },
-    { nombre: 'los renglones en 0 se imprimen', de: ".filter(it => Number(it?.['cant_' + k]) > 0)", a: ".filter(it => Number(it?.['cant_' + k]) >= 0)" },
+    { nombre: 'los renglones en 0 se imprimen', de: 'return Number.isFinite(n) && n !== 0 })', a: 'return Number.isFinite(n) })' },
     { nombre: 'la B con las cantidades de la A', de: "      const k = parte === 'A' ? 'a' : 'b'", a: "      const k = 'a'" },
     { nombre: 'el TOTAL PARTE A sin las comisiones', de: "esc('TOTAL PARTE A: ' + plata(datos.total_a))", a: "esc('TOTAL PARTE A: ' + plata(datos.subtotal_a))" },
     { nombre: 'la B con el total de la A', de: "esc('TOTAL PARTE B: ' + plata(datos.total_b))", a: "esc('TOTAL PARTE B: ' + plata(datos.total_a))" },

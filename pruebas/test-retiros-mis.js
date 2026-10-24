@@ -142,6 +142,12 @@ function preparar(S) {
     renglones: [{ producto: marca('producto'), presentacion: marca('presentacion'), marca: marca('cono'), cajas: 1, unidades: 1, lotes: [{ lote: marca('lote'), cajas: 1 }] }] }
   chequearMarcas(chk, 'fila de mis retiros', S.htmlFilaMia(mala), ['id', 'codigo', 'cliente'])
   chequearMarcas(chk, 'detalle mío', S.htmlDetalleMio(mala), ['cliente', 'transporte', 'obs', 'producto', 'presentacion', 'cono', 'lote'])
+  // Una devolución y una reposición (22/10/2026): el motivo y el lote devuelto son texto de la base.
+  const malaDev = { ...mala, renglones: [
+    { producto: marca('dev-producto'), presentacion: 'P', cajas: 2, movimiento: 'devolucion', motivo_devolucion: marca('dev-motivo'), lote_devuelto: marca('dev-lote'), destino_devuelto: 'stock', lotes: null },
+    { producto: 'X', presentacion: marca('rep-presentacion'), cajas: 1, movimiento: 'reposicion', motivo_devolucion: marca('rep-motivo'), destino_devuelto: 'descarte', lotes: [{ lote: marca('rep-lote'), cajas: 1 }] },
+  ] }
+  chequearMarcas(chk, 'detalle mío con devoluciones', S.htmlDetalleMio(malaDev), ['dev-producto', 'dev-motivo', 'dev-lote', 'rep-presentacion', 'rep-motivo', 'rep-lote'])
   // Un renglón de insumo de la base, con texto malicioso.
   const conInsumo = { ...mala, renglones: [...mala.renglones, { tipo: 'insumo', insumo: marca('ins-nombre'), marca_insumo: marca('ins-marca'), cantidad: 3, unidad_medida: marca('ins-unidad'), lotes: [{ lote: marca('ins-lote'), cantidad: 3 }] }] }
   chequearMarcas(chk, 'detalle mío con un insumo', S.htmlDetalleMio(conInsumo), ['ins-nombre', 'ins-marca', 'ins-unidad', 'ins-lote'])

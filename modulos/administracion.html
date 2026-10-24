@@ -368,6 +368,9 @@
     /* LOS CLIENTES PROVISORIOS (06/10/2026): los que cargó el depósito desde
        Órdenes de retiro. Van arriba, con su chip y dos acciones debajo. */
     .ad-sello--provisorio { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); }
+    /* Devoluciones y reposiciones de una orden (22/10/2026). */
+    .ad-sello--dev { background: var(--color-superficie); color: var(--color-texto); border-color: var(--color-borde-fuerte); }
+    .ad-subtitulo--dev { margin-top: 0.75rem; }
     .ad-provisorio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: -0.25rem 0 0.25rem; padding: 0 0.25rem; }
     .ad-provisorio .ad-btn { flex: 1 1 12rem; }
     .ad-provisorio .ad-bloqueado-todas { text-align: left; }
@@ -1348,6 +1351,7 @@
       armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
       cantidadInsumoHoja, unidadHoja, cargarScript,
+      ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -2611,10 +2615,10 @@
       if (conImporte) {
         partes.push(`<p class="ad-comision__linea"><span>Subtotal</span><span>${esc(importeHoja(o.total, moneda))}</span></p>`)
         partes.push(`<p class="ad-comision__linea"><span>${esc(rotuloComision(o))}</span><span>${esc(importeHoja(imp, moneda))}</span></p>`)
-        partes.push(`<p class="ad-total">Total ${esc(importeHoja(totalConComision(o.total, imp), moneda))}</p>`)
+        partes.push(`<p class="ad-total">Total ${esc(importeHoja(totalConComision(o.total, imp), moneda) + textoAFavor(totalConComision(o.total, imp)))}</p>`)
         if (comisionDesactualizada(o)) partes.push('<div class="ad-aviso">La valorización cambió después de cargar la comisión: volvé a cargarla para que el porcentaje se calcule sobre el total nuevo.</div>')
       } else {
-        partes.push(`<p class="ad-total">Total ${esc(importeHoja(o.total, moneda))}</p>`)
+        partes.push(`<p class="ad-total">Total ${esc(importeHoja(o.total, moneda) + textoAFavor(o.total))}</p>`)
         const habitual = comisionHabitualDe(clienteDe(o.cliente_id))
         const texto = modo === 'ninguna' ? 'Comisión: sin comisión'
           : 'Comisión: sin cargar' + (habitual !== null ? ' (la habitual de este cliente es ' + textoPorcentaje(habitual) + ')' : '')
@@ -2729,25 +2733,29 @@
       // una sola consulta.
       const cajas = new Map()
       const insumos = new Map()
+      const devueltas = new Map()
       if (ordenes.length) {
-        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas, insumo_id').in('orden_id', ordenes.map(o => o.id))
+        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas, insumo_id, tipo').in('orden_id', ordenes.map(o => o.id))
         if (r.error) throw r.error
         for (const it of r.data ?? []) {
           if (it.insumo_id) insumos.set(it.orden_id, (insumos.get(it.orden_id) ?? 0) + 1)
-          else cajas.set(it.orden_id, (cajas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))
+          else cajas.set(it.orden_id, (cajas.get(it.orden_id) ?? 0) + cajasQueSalen(it))
+          // Las devoluciones y reposiciones (22/10/2026): lo que trajo.
+          if (esItemDev(it)) devueltas.set(it.orden_id, (devueltas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))
         }
       }
-      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : (insumos.has(o.id) ? 0 : null), insumos: insumos.get(o.id) ?? 0 }))
+      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : (insumos.has(o.id) ? 0 : null), insumos: insumos.get(o.id) ?? 0, devueltas: devueltas.get(o.id) ?? 0 }))
     }
 
     function htmlFilaOrden(o) {
       const cli = clienteDe(o.cliente_id)
       const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + enteroHoja(o.cajas) + ' cajas' +
-        (o.insumos ? ` · ${o.insumos} de materia prima e insumos` : '')
+        (o.insumos ? ` · ${o.insumos} de materia prima e insumos` : '') + (o.devueltas ? ` · devolvió ${enteroHoja(o.devueltas)}` : '')
       // Con la comisión cargada, el importe es el total con la comisión.
       const conComision = o.estado !== 'anulada' && Number(o.comision_importe) > 0
+      const totalFila = conComision ? totalConComision(o.total, o.comision_importe) : o.total
       const valor = o.estado_valorizacion === 'valorizada'
-        ? importeHoja(conComision ? totalConComision(o.total, o.comision_importe) : o.total, o.moneda) : 'sin valorizar'
+        ? importeHoja(totalFila, o.moneda) + textoAFavor(totalFila) : 'sin valorizar'
       const pendiente = o.estado === 'confirmada' && o.estado_valorizacion !== 'valorizada'
       const selloComision = faltaComision(o, cli) ? '<span class="ad-sello">Comisión sin cargar</span>' : ''
       return `<button type="button" class="ad-fila${o.estado === 'anulada' ? ' ad-fila--anulada' : ''}${pendiente ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
@@ -2832,13 +2840,13 @@
       if (error) throw error
       if (!o) return null
       const { data: items, error: e2 } = await supabase.from('orden_retiro_items')
-        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id')
+        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')
         .eq('orden_id', id).order('orden')
       if (e2) throw e2
       let lotes = null
       if (puedeVerLotes(o.unidad_negocio_id)) {
         const r = await supabase.from('stock_terminado_movimientos')
-          .select('presentacion_id, marca_id, lote, cajas').eq('orden_retiro_id', id).eq('tipo', 'despacho')
+          .select('presentacion_id, marca_id, lote, cajas, orden_retiro_item_id').eq('orden_retiro_id', id).eq('tipo', 'despacho')
         if (!r.error) lotes = r.data ?? []
       }
       // Los lotes de los INSUMOS salen de stock_movimientos, que se lee con
@@ -2863,14 +2871,46 @@
           .map(l => ({ lote: l.lote ?? 'sin lote', cantidad: -Number(l.cantidad) }))
       }
       if (!Array.isArray(lotes)) return null
-      return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))
+      // Con el renglón anotado en el movimiento (desde el 22/10/2026), por
+      // renglón: un retiro y una reposición del mismo producto no se mezclan.
+      // Los movimientos viejos (sin renglón), por presentación y cono.
+      return lotes.filter(l => l.orden_retiro_item_id
+        ? l.orden_retiro_item_id === it.id
+        : l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))
         .map(l => ({ lote: l.lote, cajas: -Number(l.cajas) }))
     }
 
+    // ── DEVOLUCIONES Y REPOSICIONES (22/10/2026) ───────────────────────────
+    // orden_retiro_items.tipo: 'retiro' (por defecto), 'devolucion' (el
+    // cliente trae cajas y se le descuentan: precio de lista positivo y
+    // subtotal NEGATIVO) o 'reposicion' (se le reponen las mismas a $ 0, de un
+    // lote del stock; la base ignora el precio que se mande). Con motivo,
+    // lote_devuelto y destino_devuelto ('descarte' | 'stock').
+    function tipoItem(it) {
+      return it?.tipo === 'devolucion' || it?.tipo === 'reposicion' ? it.tipo : 'retiro'
+    }
+
+    function esItemDev(it) {
+      return tipoItem(it) !== 'retiro'
+    }
+
+    // Las cajas que SALIERON en el renglón: una devolución no sale.
+    function cajasQueSalen(it) {
+      return tipoItem(it) === 'devolucion' ? 0 : (Number(it?.cajas) || 0)
+    }
+
+    // "Devolución · Rotura · lote 6249 · se descartan".
+    function textoDevolucionItem(it) {
+      return [tipoItem(it) === 'reposicion' ? 'Se repone' : 'Devolución', limpio(it?.motivo_devolucion),
+        limpio(it?.lote_devuelto) ? 'lote ' + limpio(it.lote_devuelto) : '', textoDestinoDevuelto(it?.destino_devuelto)].filter(Boolean).join(' · ')
+    }
+
     // La cantidad que se valoriza de un renglón: las cajas, o la cantidad de
-    // un insumo (en su unidad). La base hace lo mismo en valorizar_orden_retiro.
+    // un insumo (en su unidad). La base hace lo mismo en valorizar_orden_retiro:
+    // una devolución va en NEGATIVO (resta) y una reposición no se cobra.
     function cantidadValorizable(it) {
-      return it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)
+      const n = it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)
+      return tipoItem(it) === 'devolucion' ? -n : n
     }
 
     function htmlDatoAd(rotulo, valor) {
@@ -2890,13 +2930,22 @@
       } else {
         const p = partesRenglon(cat, it)
         const lotes = lotesDeRenglon(d.lotes, it)
-        desc = enteroHoja(it.cajas) + ' cajas · ' + [p.producto, p.presentacion, p.cono].join(' · ')
-        detalle = enteroHoja(it.unidades) + ' unidades · ' + (lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes))
+        const tipo = tipoItem(it)
+        desc = (tipo === 'devolucion' ? '−' : '') + enteroHoja(it.cajas) + ' cajas · ' + [p.producto, p.presentacion, p.cono].join(' · ')
+        const textoLotesIt = lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes)
+        // Devolución: el motivo, el lote que trajo y qué se hizo con las cajas
+        // (no sale de ningún lote). Reposición: eso y de qué lotes salió.
+        if (tipo === 'devolucion') detalle = textoDevolucionItem(it)
+        else if (tipo === 'reposicion') detalle = textoDevolucionItem(it) + ' · sale de ' + textoLotesIt
+        else detalle = enteroHoja(it.unidades) + ' unidades · ' + textoLotesIt
         porQue = 'caja'
       }
       const moneda = d.orden.moneda || 'ARS'
       let plata = ''
-      if (d.valorizar) {
+      if (tipoItem(it) === 'reposicion' && (d.valorizar || d.orden.estado_valorizacion === 'valorizada')) {
+        // Una reposición no se cobra: sin campo de precio (la base la pone en 0).
+        plata = `<div class="ad-renglon__plata"><div>Se repone</div><div class="ad-fila__importe">${esc(importeHoja(0, moneda))}</div></div>`
+      } else if (d.valorizar) {
         plata = `<div class="ad-renglon__plata"><label class="ad-dato__rotulo" for="ad-precio-${esc(it.id)}">${esc('Precio x ' + porQue)}</label>` +
           `<input type="text" class="ad-input ad-renglon__precio" id="ad-precio-${esc(it.id)}" data-precio="${esc(it.id)}" autocomplete="off">` +
           `<div class="ad-texto-suave" data-subtotal="${esc(it.id)}">${esc(importeHoja(subtotalValorizar(d, it), moneda))}</div>` +
@@ -2904,7 +2953,8 @@
       } else if (d.orden.estado_valorizacion === 'valorizada') {
         plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
       }
-      return `<div class="ad-renglon"><div><div class="ad-renglon__desc">${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div>${htmlFaltanteRenglon(it, d)}</div>${plata}</div>`
+      const sello = esItemDev(it) ? `<span class="ad-sello ad-sello--dev">${tipoItem(it) === 'reposicion' ? 'Reposición' : 'Devolución'}</span> ` : ''
+      return `<div class="ad-renglon${esItemDev(it) ? ' ad-renglon--dev' : ''}"><div><div class="ad-renglon__desc">${sello}${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div>${htmlFaltanteRenglon(it, d)}</div>${plata}</div>`
     }
 
     // Lo que no estaba en stock de un renglón (13/10/2026): "Esperando la
@@ -2974,7 +3024,10 @@
       const hayInsumos = d.items.some(it => it.insumo_id)
       const sinLotes = (hayProductos && d.lotes === null) || (hayInsumos && d.lotesInsumos === null)
         ? `<div class="ad-aviso">Con tu usuario no se pueden ver los lotes de cada renglón (hace falta un permiso de ${hayInsumos && !(hayProductos && d.lotes === null) ? 'Stock' : 'Producción o de Stock'}).</div>` : ''
-      const renglones = d.items.map(it => htmlRenglonOrden(it, d, cat)).join('')
+      // Las devoluciones y reposiciones (22/10/2026), en su sección, después.
+      const devs = d.items.filter(esItemDev)
+      const renglones = d.items.filter(it => !esItemDev(it)).map(it => htmlRenglonOrden(it, d, cat)).join('') +
+        (devs.length ? `<h3 class="ad-subtitulo ad-subtitulo--dev">${esc('Devoluciones · ' + devs.length)}</h3>` + devs.map(it => htmlRenglonOrden(it, d, cat)).join('') : '')
       let total = ''
       if (d.valorizar) total = `<p class="ad-total" id="ad-valorizar-total">${esc(textoTotalValorizar(d))}</p>`
       else if (o.estado_valorizacion === 'valorizada') {
@@ -3223,9 +3276,11 @@
       d.valorizar = v
       pintarOrden()
       const vigente = (it) => o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined
-      for (const it of d.items) v.precios[it.id] = vigente(it) ? Number(it.precio_caja) : null
+      // Una reposición va siempre en 0 (la base ignora lo que se mande).
+      for (const it of d.items) v.precios[it.id] = tipoItem(it) === 'reposicion' ? 0 : vigente(it) ? Number(it.precio_caja) : null
       // Una llamada por renglón DISTINTO (presentación + cono), en paralelo.
-      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it)) : []
+      // Una devolución se propone al precio de la lista (positivo: resta).
+      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it) && tipoItem(it) !== 'reposicion') : []
       const porClave = new Map()
       for (const it of productos) {
         const k = it.presentacion_id + '|' + (it.marca_id ?? '')
@@ -3291,7 +3346,12 @@
 
     function textoTotalValorizar(d) {
       const t = totalValorizar(d)
-      return t === null ? 'Total: faltan precios' : 'Total ' + importeHoja(t, d.orden.moneda)
+      return t === null ? 'Total: faltan precios' : 'Total ' + importeHoja(t, d.orden.moneda) + textoAFavor(t)
+    }
+
+    // Un total negativo (devolvió más de lo que se llevó, 22/10/2026).
+    function textoAFavor(total) {
+      return Number(total) < 0 ? ' · a favor del cliente' : ''
     }
 
     // El saldo que le quedaría al cliente con esta valorización. Si ya estaba
@@ -3323,7 +3383,7 @@
       const partes = []
       if (v.error) partes.push(`<div class="ad-aviso ad-aviso--grave">${esc(v.error)}</div>`)
       if (v.sinLista) partes.push('<div class="ad-aviso">Este cliente no tiene una lista de precios asignada: cargá cada precio.</div>')
-      else if (d.items.some(it => !v.desdeLista.has(it.id)) && d.orden.estado_valorizacion !== 'valorizada') partes.push('<div class="ad-aviso">Algunos productos no están en la lista del cliente: cargá su precio.</div>')
+      else if (d.items.some(it => !v.desdeLista.has(it.id) && tipoItem(it) !== 'reposicion') && d.orden.estado_valorizacion !== 'valorizada') partes.push('<div class="ad-aviso">Algunos productos no están en la lista del cliente: cargá su precio.</div>')
       const aviso = avisoLimite(saldoProyectado(d), v.limite, d.orden.moneda)
       partes.push(`<div id="ad-valorizar-limite">${aviso ? `<div class="ad-aviso ad-aviso--grave">${esc(aviso)}</div>` : ''}</div>`)
       partes.push(`<p class="ad-error-pegado" id="ad-valorizar-error"${v.errorGuardar ? '' : ' hidden'}>${esc(v.errorGuardar ?? '')}</p>`)
@@ -3441,7 +3501,8 @@
         total: o.estado_valorizacion === 'valorizada' ? o.total : null,
         empresa: (estado.empresas ?? []).find(e => e.id === o.unidad_negocio_id) ?? empresaActual(),
         cliente: cli,
-        renglones: d.items.map(it => {
+        // Los retiros primero y las devoluciones en su sección (22/10/2026).
+        renglones: ordenarRenglonesHoja(d.items.map(it => {
           if (it.insumo_id) {
             const pi = partesInsumo(estado.catalogo, it)
             return { esInsumo: true, producto: pi.nombre, marca: pi.marca, cantidad: it.cantidad, unidad: pi.unidad,
@@ -3452,8 +3513,9 @@
           const p = partesRenglon(estado.catalogo, it)
           return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],
             precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,
-            subtotal: o.estado_valorizacion === 'valorizada' ? it.subtotal : null }
-        }),
+            subtotal: o.estado_valorizacion === 'valorizada' ? it.subtotal : null,
+            movimiento: tipoItem(it), motivo: it.motivo_devolucion ?? null, loteDevuelto: it.lote_devuelto ?? null, destino: it.destino_devuelto ?? null }
+        })),
       }
     }
 
@@ -3671,11 +3733,13 @@
     }
 
     // Los renglones de una parte: SOLO los que llevan algo en esa parte (un
-    // renglón con 0 en la A no se imprime en la A, y lo mismo en la B).
+    // renglón con 0 en la A no se imprime en la A, y lo mismo en la B). Una
+    // DEVOLUCIÓN viene en negativo (22/10/2026) y sale igual, restando; una
+    // reposición sale en $ 0 (la descripción de la base ya dice cuál es).
     function renglonesParte(datos, parte) {
       const k = parte === 'A' ? 'a' : 'b'
       return (Array.isArray(datos?.items) ? datos.items : [])
-        .filter(it => Number(it?.['cant_' + k]) > 0)
+        .filter(it => { const n = Number(it?.['cant_' + k]); return Number.isFinite(n) && n !== 0 })
         .map(it => ({ descripcion: it.descripcion, cantidad: Number(it['cant_' + k]), unidad: it.unidad, precio: it.precio, subtotal: it['subtotal_' + k] }))
     }
 
@@ -3717,7 +3781,7 @@
     function htmlHojaDivision(datos, facturas, moneda = 'ARS') {
       const f = facturas ?? facturasPorParte(datos?.facturas)
       return '<div class="ad-dvh">' + htmlBloqueParte(datos, 'A', f.A, moneda) + htmlBloqueParte(datos, 'B', f.B, moneda) +
-        `<p class="ad-dvh__pie">${esc('Orden ' + (datos.codigo ?? '') + ' · total de la orden ' + importeHoja(datos.total_orden, moneda))}</p></div>`
+        `<p class="ad-dvh__pie">${esc('Orden ' + (datos.codigo ?? '') + ' · total de la orden ' + importeHoja(datos.total_orden, moneda) + textoAFavor(datos.total_orden))}</p></div>`
     }
 
     // A4 vertical: la regla va DENTRO de la hoja (en el body, después de la
@@ -10345,6 +10409,15 @@
         `<button type="button" class="ad-btn ad-btn--suave" data-revisar-aceptar="${esc(f.item_id)}">Otro / ajustar</button></div>`
     }
 
+    // Una REPOSICIÓN (24/10/2026): retiros_por_revisar() devuelve el 'tipo'
+    // del renglón ('retiro' | 'devolucion' | 'reposicion', el de
+    // orden_retiro_items). Lo que se le repone al cliente también sale del
+    // stock y, si no estaba, queda por revisar como cualquier retiro: la
+    // tarjeta lo marca para que no se lea como una venta.
+    function esReposicionRevisar(f) {
+      return f?.tipo === 'reposicion'
+    }
+
     function htmlFilaRevisar(f, rv) {
       const abierto = rv.aceptando?.itemId === f.item_id ? rv.aceptando : null
       const falt = rv.falt?.itemId === f.item_id ? rv.falt : null
@@ -10364,7 +10437,7 @@
       return `<div class="ad-tarjeta ad-fila--atencion" data-revisar="${esc(f.item_id)}">` +
         `<div class="ad-fila__linea"><span class="ad-fila__codigo">${esc(f.codigo || '—')}</span><span class="ad-sello ad-sello--anulada">Sin stock</span></div>` +
         `<div class="ad-fila__meta">${esc(meta)}</div>` +
-        `<div class="ad-error-app__mensaje">${esc(f.que || '—')}</div>` +
+        `<div class="ad-error-app__mensaje">${esReposicionRevisar(f) ? '<span class="ad-sello ad-sello--dev">Reposición</span> ' : ''}${esc(f.que || '—')}</div>` +
         `<p class="ad-error-pegado">${esc(cuanto)}</p>` +
         `${motivoBase ? `<p class="ad-texto-suave">${esc(motivoBase)}</p>` : ''}${acciones}</div>`
     }

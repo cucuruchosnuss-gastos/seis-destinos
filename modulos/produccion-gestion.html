@@ -9752,7 +9752,9 @@
     // Los movimientos de un retiro: el despacho (salió) y, si la orden se
     // anuló, el ajuste que lo devolvió. Lo más nuevo primero.
     function salidasPorRetiro(movs) {
-      return (movs ?? []).filter(m => m.orden_retiro_id && (m.tipo === 'despacho' || m.tipo === 'ajuste'))
+      // Desde el 22/10/2026 también la DEVOLUCIÓN: las cajas que trajo el
+      // cliente y volvieron al stock.
+      return (movs ?? []).filter(m => m.orden_retiro_id && (m.tipo === 'despacho' || m.tipo === 'ajuste' || m.tipo === 'devolucion'))
         .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
     }
 
@@ -9777,13 +9779,17 @@
         const queRetiro = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].filter(Boolean).join(' · ')
         const r = codigoRetiro(m.orden_retiro_id, info)
         const vuelve = m.tipo === 'ajuste'
-        const titulo = vuelve
-          ? (r.codigo ? `Anulación del retiro ${r.codigo}` : 'Anulación de un retiro')
-          : (r.codigo ? `Retiro ${r.codigo}${r.anulada ? ' · anulado' : ''}` : 'Retiro')
+        const devuelta = m.tipo === 'devolucion'
+        const titulo = devuelta
+          ? `${textoTipoStockTerminado(m.tipo)}${r.codigo ? ' · retiro ' + r.codigo : ''}`
+          : vuelve
+            ? (r.codigo ? `Anulación del retiro ${r.codigo}` : 'Anulación de un retiro')
+            : (r.codigo ? `Retiro ${r.codigo}${r.anulada ? ' · anulado' : ''}` : 'Retiro')
         const n = numeroInd(m.cajas)
-        const cuenta = `${vuelve ? 'volvieron' : 'salieron'} ${n === null ? '—' : textoEntero(Math.abs(n))} ${n !== null && Math.abs(n) === 1 ? 'caja' : 'cajas'}`
+        // Entran (+) o salen (−) según el signo: anular una devolución saca.
+        const cuenta = `${n !== null && n > 0 ? (devuelta ? 'entraron' : 'volvieron') : 'salieron'} ${n === null ? '—' : textoEntero(Math.abs(n))} ${n !== null && Math.abs(n) === 1 ? 'caja' : 'cajas'}`
         const notaRetiro = r.nota ? `<span class="pr-texto-suave"> · ${esc(r.nota)}</span>` : ''
-        const motivoRetiro = vuelve && m.motivo ? `<div class="pr-texto-suave">${esc(m.motivo)}</div>` : ''
+        const motivoRetiro = (vuelve || devuelta) && m.motivo ? `<div class="pr-texto-suave">${esc(m.motivo)}</div>` : ''
         return `<div class="pr-of-fila pr-of-retiro">` +
           `<span>${esc(fechaDelDia(m.fecha))}</span>` +
           `<span><strong>${esc(titulo)}</strong>${notaRetiro}${motivoRetiro}</span>` +
@@ -9837,6 +9843,8 @@
       despacho: 'Despacho',
       traspaso_salida: 'Traspaso a otra fábrica',
       traspaso_entrada: 'Traspaso desde otra fábrica',
+      // Las cajas que trajo un cliente y volvieron al stock (22/10/2026).
+      devolucion: 'Devolución de cliente',
     }
     function textoTipoStockTerminado(tipo) {
       const t = String(tipo ?? '').trim()
