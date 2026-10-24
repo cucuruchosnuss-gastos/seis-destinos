@@ -304,6 +304,15 @@ for (const [f, clave, titulo] of VIEJOS) {
 // ══ 5. Ningún control ni id se perdió (contra el commit fijo) ═════════════
 const TOCADOS = ['gastos.html', 'caja.html', 'cobranzas.html', 'conos.html', 'pedidos.html', 'stock.html', 'materia-prima.html',
   'cuentas-corrientes.html', 'accesos.html', 'empleados.html', 'produccion-gestion.html', 'administracion.html']
+const CAMBIADOS_A_PROPOSITO = {
+  'stock.html': {
+    // Rama stock-terminado-prolijo (23/10/2026): "Producto terminado" dejó de
+    // ser un link a la gestión de Producción y es un <button> que abre la
+    // vista #vista-terminado de Stock (test-stock-entrada.js y
+    // test-stock-terminado.js miran el botón nuevo).
+    'control:a#btn-entrada-terminado[href=produccion-gestion.html?vista=stock&amp;desde=stock]': 'pasó a <button id="btn-entrada-terminado">',
+  },
+}
 for (const f of TOCADOS) {
   let viejo = null
   try {
@@ -316,6 +325,9 @@ for (const f of TOCADOS) {
   const faltan = []
   for (const [k, n] of antes.cuenta) {
     if (!k.startsWith('control:') && !k.startsWith('id:')) continue
+    // Un control que otra rama cambió A PROPÓSITO después del commit fijo
+    // (con su motivo); el id sigue y lo mira la suite de esa rama.
+    if (CAMBIADOS_A_PROPOSITO[f]?.[k]) continue
     if ((ahora.cuenta.get(k) || 0) < n) faltan.push(`${k} (${ahora.cuenta.get(k) || 0} de ${n})`)
   }
   chk(`${f}: ningún control ni id se perdió`, faltan.length === 0, faltan.join(' · '))

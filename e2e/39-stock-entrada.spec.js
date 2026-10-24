@@ -3,7 +3,9 @@
 // dos botones (en la compu lado a lado, en el celular uno arriba del otro);
 // "Insumos y materias primas" abre la pantalla de siempre y "‹ Volver" vuelve
 // a los dos botones sin recargar; ?vista=insumos los saltea; "Producto
-// terminado" abre la gestión de Producción en "solo stock" con "‹ Stock".
+// terminado" (desde el 23/10/2026) abre la vista de producto terminado de
+// Stock, y su link "Producción › Stock terminado" la gestión de Producción en
+// "solo stock" con "‹ Stock".
 // A 1280, 390 y 360 px, sin scroll horizontal ni errores. Corre SIEMPRE, sin
 // credenciales.
 const { test, expect } = require('@playwright/test');
@@ -30,7 +32,6 @@ for (const ancho of [1280, 390, 360]) {
     await expect(insumos).toBeVisible();
     await expect(page.locator('#vista-stock')).toBeHidden();
     await expect(page.locator('#stock-subtitulo')).toHaveText('Elegí qué mirar');
-    await expect(terminado).toHaveAttribute('href', 'produccion-gestion.html?vista=stock&desde=stock');
 
     const a = await terminado.boundingBox();
     const b = await insumos.boundingBox();
@@ -74,11 +75,16 @@ for (const ancho of [1280, 390, 360]) {
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`producto terminado con solo stock:ver: la gestión en "solo stock", a ${ancho} px`, async ({ page }, info) => {
+  test(`producto terminado con solo stock:ver: la vista de Stock y, por su link, la gestión en "solo stock", a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: 860 });
     await page.goto(`${MAQUETA}/modulos/stock.html?maqueta=stock`);
     await page.locator('#btn-entrada-terminado').click();
+    await expect(page.locator('#vista-terminado')).toBeVisible();
+    await expect(page.locator('#stock-eleccion')).toBeHidden();
+    await expect(page.locator('#stock-subtitulo')).toHaveText('Producto terminado');
+    await expect(page).toHaveURL(/modulos\/stock\.html/);
+    await page.locator('#ptm-link-gestion').click();
     await expect(page).toHaveURL(/produccion-gestion\.html\?vista=stock&desde=stock/);
     await expect(page.locator('#pr-stock')).toBeVisible();
     await expect(page.locator('#pr-sin-acceso')).toBeHidden();
