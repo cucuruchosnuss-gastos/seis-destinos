@@ -126,9 +126,9 @@ const copias = (html) => html.split('<div class="ndh-copia ').slice(1).map(t => 
 chk('css: en la pantalla se ve solo el ORIGINAL', /#ad-nd-hoja \.ndh-copia--duplicado \{ display: none; \}/.test(src))
 chk('css: al imprimir, el duplicado empieza en otra hoja', /\.ndh--papel \.ndh-copia--duplicado \{ break-before: page; page-break-before: always; \}/.test(src))
 chk('css: blanco y negro (fondo blanco, letra casi negra)', /\.ndh \{[^}]*background: #fff; color: #111;/.test(src))
-chk('css: la ventana de la nota va por encima de la cartera (z 80)', /\.ad-nd \{ z-index: 90; \}/.test(src))
+chk('css: la ventana de la nota va por encima de la cartera (z 80)', /\.ad-nd \{ position: fixed; inset: 0; z-index: 90;/.test(src))
 chk('markup: la ventana es hija directa de <body> (fuera de .ad-contenedor) y con Imprimir y Compartir PDF',
-  /<div class="ad-dv ad-nd" id="ad-nd" hidden role="dialog"/.test(src) && /id="ad-nd-imprimir"[^>]*>Imprimir</.test(src) && /id="ad-nd-compartir"[^>]*>Compartir PDF</.test(src))
+  /<div class="ad-nd" id="ad-nd" hidden role="dialog"/.test(src) && !/class="ad-dv[ _]/.test(src.slice(src.indexOf('id="ad-nd"'), src.indexOf('id="ad-nd-hoja"'))) && /id="ad-nd-imprimir"[^>]*>Imprimir</.test(src) && /id="ad-nd-compartir"[^>]*>Compartir PDF</.test(src))
 chk('markup: avisa que salen dos hojas', /Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO\./.test(src))
 chk('markup: "+ Nota de débito" en la cuenta del cliente', /id="ad-btn-nota-debito" hidden>\+ Nota de débito</.test(src))
 

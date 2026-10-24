@@ -499,8 +499,14 @@
        vertical, blanco y negro, el mismo estilo que la orden de pago de
        Cuentas corrientes. En la pantalla se ve solo el ORIGINAL; al imprimir
        (#ad-impresion) y en el PDF, las dos copias, cada una en su hoja. */
-    .ad-nd { z-index: 90; }
-    .ad-nd__caja { max-width: 860px; }
+    /* La ventana copia la de "Dividir para facturar" (.ad-dv) con clases propias. */
+    .ad-nd { position: fixed; inset: 0; z-index: 90; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
+    .ad-nd[hidden] { display: none; }
+    @media (min-width: 640px) { .ad-nd { align-items: center; padding: 1rem; } }
+    .ad-nd__caja { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 860px; max-height: 94vh; overflow-y: auto; min-width: 0; }
+    .ad-nd__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .ad-nd__titulo { font-size: 1.125rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+    .ad-nd__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--color-texto); }
     .ndh-marco { overflow-x: auto; min-width: 0; }
     .ndh { box-sizing: border-box; width: 100%; max-width: 194mm; margin: 0 auto; padding: 5mm; background: #fff; color: #111;
       font-family: var(--fuente); font-size: 8.5pt; line-height: 1.25; border: 1px solid var(--color-borde); }
@@ -1411,11 +1417,11 @@
        vertical en blanco y negro como la orden de pago, ORIGINAL y DUPLICADO.
        La abren la cuenta del cliente, la nota suelta y el cheque rechazado
        (la cartera avisa con el evento 'administracion:nota-debito'). -->
-  <div class="ad-dv ad-nd" id="ad-nd" hidden role="dialog" aria-modal="true" aria-labelledby="ad-nd-titulo">
-    <div class="ad-dv__caja ad-nd__caja">
-      <div class="ad-dv__barra">
-        <h2 class="ad-dv__titulo" id="ad-nd-titulo">Nota de débito</h2>
-        <button type="button" class="ad-dv__cerrar" id="ad-nd-cerrar" aria-label="Cerrar">&times;</button>
+  <div class="ad-nd" id="ad-nd" hidden role="dialog" aria-modal="true" aria-labelledby="ad-nd-titulo">
+    <div class="ad-nd__caja">
+      <div class="ad-nd__barra">
+        <h2 class="ad-nd__titulo" id="ad-nd-titulo">Nota de débito</h2>
+        <button type="button" class="ad-nd__cerrar" id="ad-nd-cerrar" aria-label="Cerrar">&times;</button>
       </div>
       <div class="ad-panel__acciones" id="ad-nd-acciones">
         <button type="button" class="ad-btn" id="ad-nd-imprimir" disabled>Imprimir</button>

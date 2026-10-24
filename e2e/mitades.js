@@ -31,6 +31,8 @@ const MITAD_1 = [
   '9-comparar-planta.spec.js',
   '6-planta-reanudar.spec.js',
   '30-revision-celular.spec.js',
+  // 24/10/2026: con él en la 2, la 2 pasaba del 55 % (819 de 1486 s).
+  '60-cheque-rechazado.spec.js',
 ]
 
 // Segundos de cada spec, medidos en GitHub (corrida 38493299918 de main, el
@@ -93,6 +95,8 @@ const TIEMPOS = {
   '1-planta.spec.js': 1,
   '2-gestion.spec.js': 1,
   '4-retiros.spec.js': 1,
+  // Medido en la compu el 24/10/2026 (31 s): en GitHub se estima algo más.
+  '60-cheque-rechazado.spec.js': 35,
 }
 const TIEMPO_SIN_MEDIR = 8
 

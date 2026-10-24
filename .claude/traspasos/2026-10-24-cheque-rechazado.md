@@ -30,6 +30,8 @@ El detalle técnico quedó en `docs/memoria/cheques.md`, `cuentas-corrientes.md`
 - Un renglón de gasto sin importe no viaja (así el renglón que viene puesto no molesta); uno con importe y sin concepto no deja confirmar.
 - Con "Otro", el motivo es solo lo escrito (3 letras o más); con un chip, "Chip: detalle".
 - Si el PDF del proveedor no se puede subir, no se registra el rechazo (se dice por qué). Si se sube y la base rechaza, el archivo queda huérfano en la carpeta del usuario (mismo costo aceptado que Gastos).
+- La ventana de la hoja usa clases propias (`.ad-nd*`, copia de `.ad-dv*` de "Dividir para facturar"): con `ad-dv__caja` repetida, `e2e/53-division-orden` encontraba dos cajas.
+- `e2e/60-cheque-rechazado.spec.js` va en la **mitad 1** del Navegador de GitHub (con él en la 2, la 2 pasaba del 55 % que exige `test-navegador-en-dos`), con 35 s en `TIEMPOS` (medido 31 s en la compu).
 - Las seis opciones del filtro de estados ahora bajan de renglón en el celular (a 390 se pisaban) y el link "‹ Cobranzas" no se corta.
 - Se ajustaron pruebas viejas que fijaban lo que cambió a propósito: `test-cheques-vista` (seis opciones; "Salidos" con rechazado), `test-cheques-colores` (ocho entradas en la leyenda), `test-cheques-banco` (dos regex tolerantes), `test-cuentas-corrientes-numeros` (el enlace de la nota de débito), y la lista de funciones de cinco suites de Cuentas corrientes (`cargarNotasDebitoFicha`). `sandbox-cheques.js` suma las funciones nuevas y un `retornoExtra`.
 
