@@ -2739,7 +2739,8 @@
       <!-- Lotes usados sin ingreso cargado (23/10/2026): lo que la fábrica usó
            en sus masas (masa_items.lote_fuera_de_stock) y no tiene ingreso, de
            los últimos 30 días, para que administración cargue el ingreso. Lo
-           arma pintarLotesSinIngreso(). -->
+           junta la RPC lotes_usados_sin_ingreso (24/10/2026) y lo arma
+           pintarLotesSinIngreso(). -->
       <section class="stock-sin-ingreso" id="stock-sin-ingreso" hidden></section>
 
       <div class="lista-contenido" id="lista-stock"></div>
@@ -4841,170 +4842,116 @@
     //
     // La sala de masa usa lotes que administración no cargó: registrar_masa
     // los marca masa_items.lote_fuera_de_stock (saldo del lote <= 0 en ese
-    // momento; verificado con pg_get_functiondef el 23/10/2026). Acá se
-    // juntan los de los últimos DIAS_SIN_INGRESO días por fábrica, insumo y
-    // lote, con los kg usados y la fecha de la última masa, para cargar el
-    // ingreso. Un lote que YA tiene un movimiento positivo en el libro
-    // (ingreso, inventario inicial, transferencia, ajuste) no se lista: tuvo
-    // ingreso y se terminó, no es papeleo pendiente.
+    // momento; verificado con pg_get_functiondef el 23/10/2026). Se listan
+    // los de los últimos DIAS_SIN_INGRESO días, por fábrica, insumo y lote,
+    // con los kg usados y la fecha de la última masa, para cargar el ingreso.
     //
-    // LA RLS (pg_policies, 23/10/2026): masa_items se lee con _ve_turno() =
-    // produccion:cargar, ver o configurar CON ALCANCE en la fábrica del turno
-    // (super_admin pasa). stock:ver NO alcanza. Sin ese permiso la base no da
-    // error: devuelve vacío, que se leería como "no hay nada". Por eso se
-    // decide ANTES con la misma regla (puedeVerMasasEn) y se DICE.
+    // DESDE EL 24/10/2026 LOS JUNTA LA BASE, una llamada por fábrica:
+    // lotes_usados_sin_ingreso(p_unidad_negocio_id uuid, p_dias integer
+    // DEFAULT 30) → jsonb [{insumo_id, insumo, marca, unidad_medida, lote, kg,
+    // masas, ultima_fecha, maquinas}] (pg_get_functiondef, 24/10/2026):
+    // SECURITY DEFINER, masas no anuladas de los turnos de esa fábrica con
+    // turnos_produccion.fecha >= hoy (Argentina) - p_dias, agrupado por insumo
+    // y lote, SIN los lotes que ya tienen un movimiento positivo en
+    // stock_movimientos de esa fábrica (tuvieron ingreso y se terminaron: no
+    // es papeleo). ultima_fecha es una FECHA (date, 'aaaa-mm-dd') del turno,
+    // no un instante: se muestra tal cual, sin pasarla por la zona horaria.
+    // Exige stock:ver, produccion:ver o produccion:configurar CON ALCANCE en
+    // la fábrica (tiene_tarea_alcance; si no, levanta un error). La pantalla
+    // consulta solo las fábricas donde la misma regla da
+    // (puedeVerLotesSinIngresoEn) y, si la base igual contesta un error, lo
+    // muestra tal cual para ESA fábrica: las demás se ven igual.
     const DIAS_SIN_INGRESO = 30
-    const FILAS_POR_PAGINA_SIN_INGRESO = 1000
-    const TOPE_PAGINAS_SIN_INGRESO = 10
 
-    function puedeVerMasasEn(unidadId) {
-      return ['produccion:cargar', 'produccion:ver', 'produccion:configurar'].some(c => puedeTareaEn(c, unidadId))
+    function puedeVerLotesSinIngresoEn(unidadId) {
+      return ['stock:ver', 'produccion:ver', 'produccion:configurar'].some(c => puedeTareaEn(c, unidadId))
     }
 
-    // Lee de a páginas (PostgREST corta en 1000 filas). armar(desde, hasta)
-    // devuelve la consulta de esa página. → { filas, error }
-    async function leerPaginasSinIngreso(armar) {
-      const filas = []
-      for (let pagina = 0; pagina < TOPE_PAGINAS_SIN_INGRESO; pagina++) {
-        const desde = pagina * FILAS_POR_PAGINA_SIN_INGRESO
-        const { data, error } = await armar(desde, desde + FILAS_POR_PAGINA_SIN_INGRESO - 1)
-        if (error) return { filas, error }
-        filas.push(...(data ?? []))
-        if ((data ?? []).length < FILAS_POR_PAGINA_SIN_INGRESO) break
-      }
-      return { filas, error: null }
+    // Lo que devuelve la RPC para UNA fábrica → los renglones de la pantalla.
+    function filasSinIngreso(unidadId, data) {
+      return (Array.isArray(data) ? data : []).filter(x => x && x.insumo_id).map(x => ({
+        unidad_negocio_id: unidadId, insumo_id: x.insumo_id, nombre: x.insumo ?? '', marca: x.marca ?? null,
+        lote: String(x.lote ?? '').trim(), kg: Number(x.kg) || 0, masas: Number(x.masas) || 0,
+        ultima: x.ultima_fecha ?? null, maquinas: x.maquinas ?? '',
+      }))
     }
 
-    // La fecha (dd/mm/aaaa) de un instante, en hora argentina.
-    function fechaArSinIngreso(iso) {
-      const d = new Date(iso ?? '')
-      if (Number.isNaN(d.getTime())) return ''
-      return formatearFechaCorta(d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }))
-    }
-
-    // Por fábrica, insumo y lote: kg sumados, cuántas masas y la última.
-    // `conIngreso` = Set de 'unidad|insumo|lote' que ya tienen ingreso.
-    function agruparSinIngreso(filas, conIngreso) {
-      const m = new Map()
-      for (const f of filas ?? []) {
-        const unidad = f?.masas?.turnos_produccion?.unidad_negocio_id
-        const lote = String(f?.lote ?? '').trim()
-        if (!unidad || !f.insumo_id || !lote || f.masas?.anulada === true) continue
-        const k = `${unidad}|${f.insumo_id}|${lote}`
-        let g = m.get(k)
-        if (!g) {
-          g = { unidad_negocio_id: unidad, insumo_id: f.insumo_id, nombre: f.insumos?.nombre ?? '', marca: f.insumos?.marca ?? null, lote, kg: 0, masas: new Set(), ultima: null }
-          m.set(k, g)
-        }
-        g.kg += Number(f.cantidad_kg) || 0
-        g.masas.add(f.masa_id)
-        const h = f.masas?.hora ?? null
-        if (h && (!g.ultima || new Date(h) > new Date(g.ultima))) g.ultima = h
-      }
-      return [...m.values()]
-        .filter(g => !conIngreso?.has(`${g.unidad_negocio_id}|${g.insumo_id}|${g.lote}`))
-        .map(g => ({ ...g, kg: Math.round(g.kg * 1000) / 1000, masas: g.masas.size }))
-        .sort((a, b) => (new Date(b.ultima ?? 0) - new Date(a.ultima ?? 0)) ||
-          String(a.nombre).localeCompare(String(b.nombre), 'es', { sensitivity: 'base' }) || String(a.lote).localeCompare(String(b.lote)))
+    // Las fábricas juntas: la última masa más reciente primero (las fechas
+    // 'aaaa-mm-dd' se ordenan como texto), después insumo y lote.
+    function ordenarSinIngreso(grupos) {
+      return grupos.sort((a, b) => String(b.ultima ?? '').localeCompare(String(a.ultima ?? '')) ||
+        String(a.nombre).localeCompare(String(b.nombre), 'es', { sensitivity: 'base' }) || String(a.lote).localeCompare(String(b.lote)))
     }
 
     async function cargarLotesSinIngreso() {
       const turno = ++estado.turnoSinIngreso
-      // Solo las fábricas donde se ve el stock (la pantalla) Y se pueden leer
-      // las masas. Si no hay ninguna, ni se consulta.
-      const legibles = (estado.unidadesStock ?? []).map(u => u.id).filter(puedeVerMasasEn)
-      if (!legibles.length) {
-        estado.sinIngreso = { grupos: [], error: null, errorIngresos: null }
-        return pintarLotesSinIngreso()
-      }
-      const desde = new Date(Date.now() - DIAS_SIN_INGRESO * 24 * 60 * 60 * 1000).toISOString()
-      const usados = await leerPaginasSinIngreso((a, z) => supabase.from('masa_items')
-        .select('masa_id, insumo_id, lote, cantidad_kg, insumos(nombre, marca), masas!inner(hora, anulada, turnos_produccion!inner(unidad_negocio_id))')
-        .eq('lote_fuera_de_stock', true)
-        .eq('masas.anulada', false)
-        .gte('masas.hora', desde)
-        .order('id')
-        .range(a, z))
+      // Solo las fábricas donde se ve el stock (unidadesStock ya viene SIN la
+      // fábrica de pruebas: cargarStock la pasa por sinUnidadesDePrueba) Y
+      // donde la RPC deja. Todas a la vez.
+      const legibles = (estado.unidadesStock ?? []).map(u => u.id).filter(puedeVerLotesSinIngresoEn)
+      const respuestas = await Promise.all(legibles.map(async id => {
+        try {
+          const { data, error } = await supabase.rpc('lotes_usados_sin_ingreso', { p_unidad_negocio_id: id, p_dias: DIAS_SIN_INGRESO })
+          return { id, data, error }
+        } catch (e) {
+          return { id, data: null, error: e }
+        }
+      }))
       if (turno !== estado.turnoSinIngreso) return
-      if (usados.error) {
-        console.error('lotes sin ingreso:', usados.error)
-        estado.sinIngreso = { grupos: [], error: usados.error.message || 'error de la base', errorIngresos: null }
-        return pintarLotesSinIngreso()
-      }
-      // Solo las legibles: salen de unidadesStock, que ya viene SIN la fábrica
-      // de pruebas (cargarStock la pasa por sinUnidadesDePrueba).
-      const enAlcance = new Set(legibles)
-      const filas = usados.filas.filter(f => enAlcance.has(f?.masas?.turnos_produccion?.unidad_negocio_id))
-      // ¿Cuáles ya tienen un movimiento positivo en el libro?
-      const conIngreso = new Set()
-      let errorIngresos = null
-      const insumoIds = [...new Set(filas.map(f => f.insumo_id).filter(Boolean))]
-      const lotes = [...new Set(filas.map(f => String(f.lote ?? '').trim()).filter(Boolean))]
-      if (insumoIds.length && lotes.length) {
-        const ing = await leerPaginasSinIngreso((a, z) => supabase.from('stock_movimientos')
-          .select('unidad_negocio_id, insumo_id, lote')
-          .in('insumo_id', insumoIds)
-          .in('lote', lotes)
-          .gt('cantidad', 0)
-          .order('id')
-          .range(a, z))
-        if (turno !== estado.turnoSinIngreso) return
-        if (ing.error) {
-          console.error('ingresos de los lotes:', ing.error)
-          errorIngresos = ing.error.message || 'error de la base'
+      const grupos = []
+      const errores = []
+      for (const r of respuestas) {
+        if (r.error) {
+          console.error('lotes sin ingreso:', r.error)
+          errores.push({ unidad_negocio_id: r.id, mensaje: r.error.message || 'error de la base' })
         } else {
-          for (const x of ing.filas) conIngreso.add(`${x.unidad_negocio_id}|${x.insumo_id}|${String(x.lote ?? '').trim()}`)
+          grupos.push(...filasSinIngreso(r.id, r.data))
         }
       }
-      estado.sinIngreso = { grupos: agruparSinIngreso(filas, conIngreso), error: null, errorIngresos }
+      estado.sinIngreso = { grupos: ordenarSinIngreso(grupos), errores }
       pintarLotesSinIngreso()
     }
 
     function htmlFilaSinIngreso(g, conUnidad) {
       const masas = g.masas === 1 ? '1 masa' : `${g.masas} masas`
-      const ultima = fechaArSinIngreso(g.ultima)
+      // ultima_fecha es un date ('aaaa-mm-dd'): directo a dd/mm/aaaa.
+      const ultima = formatearFechaCorta(g.ultima)
       return '<li class="stock-sin-ingreso__fila">' +
         `<div class="stock-sin-ingreso__que">${esc(g.nombre || 'Insumo sin nombre')}${g.marca ? ` · ${esc(g.marca)}` : ''}` +
         (conUnidad ? `<span class="stock-sin-ingreso__unidad"> · ${esc(nombreUnidadStock(g.unidad_negocio_id))}</span>` : '') + '</div>' +
-        `<div class="stock-sin-ingreso__lote">Lote ${esc(g.lote)}</div>` +
-        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, 'kg'))} en ${esc(masas)}${ultima ? ` · última masa el ${esc(ultima)}` : ''}</div>` +
+        `<div class="stock-sin-ingreso__lote">${g.lote ? `Lote ${esc(g.lote)}` : 'Sin número de lote'}</div>` +
+        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, 'kg'))} en ${esc(masas)}` +
+        `${g.maquinas ? ` · ${esc(g.maquinas)}` : ''}${ultima ? ` · última masa el ${esc(ultima)}` : ''}</div>` +
         '</li>'
     }
 
-    // Lo que se ve depende de la barra de arriba: las fábricas elegidas donde
-    // se ve el stock, separadas en las que se pueden leer y las que no.
+    // Lo que se ve depende de la barra de arriba (sin volver a consultar): los
+    // errores y los lotes de las fábricas elegidas.
     function pintarLotesSinIngreso() {
       const caja = document.getElementById('stock-sin-ingreso')
       const s = estado.sinIngreso
       const enBarra = (estado.unidadesStock ?? []).filter(u => pasaFiltroUnidad(u.id, estado.unidadBarra))
       if (!s || !enBarra.length || sinPermisoEnBarra(estado.unidadesStock)) { caja.hidden = true; caja.innerHTML = ''; return }
-      const sinPermiso = enBarra.filter(u => !puedeVerMasasEn(u.id))
-      const notaPermiso = sinPermiso.length
-        ? '<p class="rec-aviso rec-aviso--info">No se pueden ver los lotes usados sin ingreso cargado de ' +
-          `${esc(sinPermiso.map(u => u.nombre).join(', '))}: la base deja leer las masas solo con un permiso de Producción (ver, cargar o configurar) en esa fábrica.</p>`
-        : ''
-      if (s.error) {
-        caja.hidden = false
-        caja.innerHTML = notaPermiso + `<p class="rec-aviso">No se pudieron leer los lotes usados sin ingreso cargado: ${esc(s.error)}</p>`
-        return
-      }
+      // El error de la base, tal cual, con el nombre de SU fábrica.
+      const avisos = (s.errores ?? []).filter(e => pasaFiltroUnidad(e.unidad_negocio_id, estado.unidadBarra))
+        .map(e => `<p class="rec-aviso">No se pudieron leer los lotes usados sin ingreso cargado de ${esc(nombreUnidadStock(e.unidad_negocio_id))}: ${esc(e.mensaje)}</p>`)
+        .join('')
       const grupos = (s.grupos ?? []).filter(g => pasaFiltroUnidad(g.unidad_negocio_id, estado.unidadBarra))
       if (!grupos.length) {
-        caja.hidden = !notaPermiso
-        caja.innerHTML = notaPermiso
+        caja.hidden = !avisos
+        caja.innerHTML = avisos
         return
       }
       const n = grupos.length
       const abierto = !!estado.sinIngresoAbierto
       const conUnidad = !estado.unidadBarra && new Set(grupos.map(g => g.unidad_negocio_id)).size > 1
       caja.hidden = false
-      caja.innerHTML = notaPermiso +
+      caja.innerHTML = avisos +
         `<button type="button" class="stock-sin-ingreso__cabeza" data-sin-ingreso-alternar aria-expanded="${abierto ? 'true' : 'false'}">` +
         `<span>${n === 1 ? '1 lote usado sin ingreso cargado' : `${n} lotes usados sin ingreso cargado`}</span>` +
         `<span class="stock-sin-ingreso__accion">${abierto ? 'Ocultar' : 'Ver cuáles'}</span></button>` +
         `<div class="stock-sin-ingreso__cuerpo"${abierto ? '' : ' hidden'}>` +
         `<p class="stock-sin-ingreso__nota">Lotes que la fábrica usó en sus masas en los últimos ${DIAS_SIN_INGRESO} días y no tienen ingreso cargado. Cargá el ingreso en Insumos y salen de la lista.</p>` +
-        (s.errorIngresos ? `<p class="rec-aviso">No se pudo comprobar si alguno ya tiene ingreso: ${esc(s.errorIngresos)}</p>` : '') +
         `<ul class="stock-sin-ingreso__lista">${grupos.map(g => htmlFilaSinIngreso(g, conUnidad)).join('')}</ul></div>`
     }
 
@@ -8552,7 +8499,8 @@
       traspaso_salida: 'Pasó a otra fábrica',
       traspaso_entrada: 'Vino de otra fábrica',
       ingreso_externo: 'Ingreso',
-      devolucion: 'Devolución',
+      // El nombre que usa la gestión de Producción (rama devoluciones-retiro, 24/10/2026).
+      devolucion: 'Devolución de cliente',
     }
 
     // Por qué se corrige: los cinco valores que acepta la RPC, con las MISMAS

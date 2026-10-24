@@ -32,6 +32,8 @@ correrMutaciones({
     { expr: 'esc(f.clave)', motivo: 'tres uuid de la base unidos con "|" (la clave de la línea)' },
   ],
   manuales: [
+    // El nombre de la devolución, igual que en la gestión de Producción (24/10/2026)
+    { nombre: 'la devolución sin "de cliente"', de: "      devolucion: 'Devolución de cliente',", a: "      devolucion: 'Devolución'," },
     // El texto de la línea
     { nombre: 'el cono no va en la línea', de: '      const partes = [l?.presentacion, l?.cono].map(', a: '      const partes = [l?.presentacion].map(' },
     { nombre: 'las unidades por caja se repiten siempre', de: '        if (!numeros.includes(upc)) texto +=', a: '        if (true) texto +=' },

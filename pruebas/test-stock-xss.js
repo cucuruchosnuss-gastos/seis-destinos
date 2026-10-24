@@ -579,13 +579,14 @@ const SEGURAS = {
   htmlLineaTerminado: { aviso: HTML_PROPIO, derecha: HTML_PROPIO, 'htmlDetalleTerminado(l, t)': H_PTM },
   htmlTerminado: { "p.lineas.map(l => htmlLineaTerminado(l, t)).join('')": H_PTM, productos: HTML_PROPIO },
   pintarTerminado: { 'htmlTerminado(t, fabricas)': H_PTM },
-  // Lotes usados sin ingreso cargado (23/10/2026): htmlFilaSinIngreso escapa
-  // adentro (test-stock-lotes-sin-ingreso.js lo EJECUTA con texto malicioso).
+  // Lotes usados sin ingreso cargado (23/10/2026; RPC desde el 24/10/2026):
+  // htmlFilaSinIngreso escapa adentro (test-stock-lotes-sin-ingreso.js lo
+  // EJECUTA con texto malicioso).
   pintarLotesSinIngreso: {
     n: 'número: grupos.length',
     DIAS_SIN_INGRESO: 'constante numérica del código (30)',
     "grupos.map(g => htmlFilaSinIngreso(g, conUnidad)).join('')": 'HTML de htmlFilaSinIngreso(), que escapa adentro (ejecutado con texto malicioso en test-stock-lotes-sin-ingreso.js)',
-    notaPermiso: 'HTML armado arriba en la misma función, con esc() de los nombres de fábrica, o vacío',
+    avisos: 'HTML armado arriba en la misma función, con esc() del nombre de la fábrica y del error de la base, o vacío (ejecutado con texto malicioso en test-stock-lotes-sin-ingreso.js)',
   },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo

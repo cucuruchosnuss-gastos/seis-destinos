@@ -7,8 +7,9 @@
 //    arriba, en rojo, y se elige de un toque.
 // c) La caja: "Caja N°1 Dolce Pasta" en grande, con qué bolsa va, y si se
 //    cambia la bolsa y no la caja: "La caja sigue siendo la Caja N°1 Nuss".
-// b) Stock: "Lotes usados sin ingreso cargado" (con permiso de Producción) y,
-//    sin él, lo dice.
+// b) Stock: "Lotes usados sin ingreso cargado" (desde el 24/10/2026, de la RPC
+//    lotes_usados_sin_ingreso, con stock:ver alcanza) y el error de la base de
+//    UNA fábrica, tal cual, sin tapar lo de las demás.
 // A 390, 360, la tablet parada (768×1024), la acostada (1000×540) y 1280:
 // sin scroll horizontal y sin errores de JavaScript.
 const { test, expect } = require('@playwright/test');
@@ -18,7 +19,6 @@ const { marcarPin } = require('./pasos-planta');
 const MAQUETA = process.env.MAQUETA_URL || `http://localhost:${process.env.E2E_PUERTO_MAQUETA || 4180}`;
 const persona = (page, nombre) => page.locator('#pr-quien-lista [data-persona]', { hasText: nombre });
 const PRODUCCION = require('./maqueta/datos/produccion.json');
-const STOCK = require('./maqueta/datos/stock.json');
 
 const TAMANOS = [[390, 844], [360, 780], [768, 1024], [1000, 540], [1280, 800]];
 
@@ -126,10 +126,11 @@ for (const [ancho, alto] of TAMANOS) {
 }
 
 // ── b) Stock ───────────────────────────────────────────────────────────────
-function haceDias(d) { return new Date(Date.now() - d * 24 * 3600 * 1000).toISOString(); }
-function usado(unidad, insumo, nombre, marca, lote, kg, masa, hora, anulada = false) {
-  return { lote_fuera_de_stock: true, masa_id: masa, insumo_id: insumo, lote, cantidad_kg: String(kg), insumos: { nombre, marca },
-    masas: { hora, anulada, turnos_produccion: { unidad_negocio_id: unidad } } };
+// Desde el 24/10/2026 el aviso sale de la RPC lotes_usados_sin_ingreso (una
+// llamada por fábrica; ya sin los lotes con ingreso), como la devuelve:
+// [{insumo_id, insumo, marca, unidad_medida, lote, kg, masas, ultima_fecha, maquinas}].
+function lote(insumo_id, insumo, marca, lote, kg, masas, ultima_fecha, maquinas) {
+  return { insumo_id, insumo, marca, unidad_medida: 'kg', lote, kg, masas, ultima_fecha, maquinas };
 }
 
 for (const [ancho, alto] of TAMANOS) {
@@ -138,33 +139,31 @@ for (const [ancho, alto] of TAMANOS) {
     await page.setViewportSize({ width: ancho, height: alto });
     const errores = vigilarErrores(page);
 
-    // Sin permiso de Producción (la cuenta de la maqueta): lo dice.
+    // La cuenta de la maqueta tiene stock:ver en Nuss y Dolce (sin ninguna
+    // tarea de Producción): con la RPC ALCANZA, ya no hay nota de permiso.
+    // Nuss devuelve dos lotes; Dolce, un error de la base (se muestra tal
+    // cual, solo para Dolce).
+    const respuesta = {
+      __segun: [
+        { si: { p_unidad_negocio_id: 'u-n' }, r: [
+          lote('ins-col', 'Colorante caramelo', 'Fleibor', '35349771', 0.1, 2, '2026-10-22', 'Máquina 1, Máquina 2'),
+          lote('ins-h1', 'Harina 000', 'Júpiter', '01/10/26', 50, 1, '2026-10-19', 'Máquina 3'),
+        ] },
+        { si: { p_unidad_negocio_id: 'u-d' }, r: 'ERROR:No tenés permiso para ver el stock de esta fábrica.' },
+      ],
+      __defecto: [],
+    };
+    await page.addInitScript(([c]) => sessionStorage.setItem('maqueta.cambios', c),
+      [JSON.stringify({ rpc: { lotes_usados_sin_ingreso: respuesta } })]);
     await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=stock`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
     const caja = page.locator('#stock-sin-ingreso');
-    await expect(caja).toContainText('No se pueden ver los lotes usados sin ingreso cargado de Cucuruchos Nuss');
-    await expect(page.locator('#lista-stock [data-stock]').first()).toBeVisible();
-    await sinScrollHorizontal(page, ancho);
-
-    // Con produccion:ver: la lista.
-    const tareas = [...STOCK.tablas.empleado_tareas, { empleado_id: 'emp-stock', modulo: 'produccion', tarea: 'ver', alcance: { todas: true }, habilitado: true }];
-    const masaItems = [
-      usado('u-n', 'ins-col', 'Colorante caramelo', 'Fleibor', '35349771', 0.05, 'm1', haceDias(3)),
-      usado('u-n', 'ins-col', 'Colorante caramelo', 'Fleibor', '35349771', 0.05, 'm2', haceDias(1)),
-      usado('u-n', 'ins-h1', 'Harina 000', 'Júpiter', '01/10/26', 50, 'm3', haceDias(5)),
-      usado('u-n', 'ins-az', 'Azúcar', 'Ledesma', 'YA-CARGADO', 2.5, 'm4', haceDias(2)),
-      usado('u-n', 'ins-az', 'Azúcar', 'Ledesma', 'ANULADA', 2.5, 'm5', haceDias(2), true),
-      usado('u-n', 'ins-az', 'Azúcar', 'Ledesma', 'VIEJO', 2.5, 'm6', haceDias(45)),
-      usado('u-d', 'ins-col', 'Colorante caramelo', 'Fleibor', 'D-77', 0.04, 'm7', haceDias(1)),
-    ];
-    const movs = [{ unidad_negocio_id: 'u-n', insumo_id: 'ins-az', lote: 'YA-CARGADO', cantidad: 25 }];
-    await page.evaluate(([c]) => sessionStorage.setItem('maqueta.cambios', c),
-      [JSON.stringify({ tablas: { empleado_tareas: tareas, masa_items: masaItems, stock_movimientos: movs } })]);
-    await page.reload();
     const cabeza = caja.locator('[data-sin-ingreso-alternar]');
     await expect(cabeza).toContainText('2 lotes usados sin ingreso cargado');
+    await expect(page.locator('#lista-stock [data-stock]').first()).toBeVisible();
     await expect(caja).not.toContainText('No se pueden ver');
+    await expect(caja).not.toContainText('No se pudieron leer');
     await captura(page, `stock-sin-ingreso-${ancho}`, info);
     await cabeza.click();
     await expect(cabeza).toHaveAttribute('aria-expanded', 'true');
@@ -172,17 +171,13 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(filas).toHaveCount(2);
     await expect(filas.first()).toContainText('Colorante caramelo · Fleibor');
     await expect(filas.first()).toContainText('Lote 35349771');
-    await expect(filas.first()).toContainText('0,1 kg en 2 masas · última masa el');
-    await expect(caja).not.toContainText('YA-CARGADO');
-    await expect(caja).not.toContainText('ANULADA');
-    await expect(caja).not.toContainText('VIEJO');
-    await expect(caja).not.toContainText('D-77');
+    await expect(filas.first()).toContainText('0,1 kg en 2 masas · Máquina 1, Máquina 2 · última masa el 22/10/2026');
     await captura(page, `stock-sin-ingreso-abierto-${ancho}`, info);
     await sinScrollHorizontal(page, ancho);
-    // Dolce Pasta en la barra: lo suyo.
+    // Dolce Pasta en la barra: su error, tal cual.
     await page.locator('.barra-unidad__chip[data-unidad="u-d"]').first().click();
-    await expect(caja).toContainText('1 lote usado sin ingreso cargado');
-    await expect(caja).toContainText('D-77');
+    await expect(caja).toContainText('No se pudieron leer los lotes usados sin ingreso cargado de Dolce Pasta: No tenés permiso para ver el stock de esta fábrica.');
+    await expect(caja).not.toContainText('35349771');
     await sinScrollHorizontal(page, ancho);
     expect(errores, errores.join('\n')).toEqual([]);
   });

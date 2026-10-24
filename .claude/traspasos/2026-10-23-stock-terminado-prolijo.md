@@ -17,6 +17,40 @@ Qué tocar en la documentación:
 - `docs/memoria/pruebas-y-ensayo.md` (si lista suites): `test-stock-terminado.js` / `mut-stock-terminado.js`, `e2e/53-stock-terminado.spec.js` y la maqueta `stock-terminado`.
 - Hueco de base para anotar (ver abajo): `ajustar_stock_terminado` sin clave de idempotencia.
 
+## Agregado del 24/10/2026 (preparación para integrar; rama ya aprobada por el chat de la base)
+
+Para el chat de arquitectura, además de lo de arriba:
+
+1. **Se trajo `origin/main` con merge** (tablet-lote-y-caja y arnes-ramas-colgadas). Único choque: `pruebas/test-stock-xss.js`; quedaron los dos bloques (las seguras de `pintarLotesSinIngreso` de main y las de los `html*Terminado` de la rama).
+2. **"Devolución de cliente".** En el historial de producto terminado de Stock, el tipo `devolucion` de `stock_terminado_movimientos` ahora se llama "Devolución de cliente" (antes "Devolución"), el mismo nombre que usa la gestión de Producción en la rama `ci-prueba/devoluciones-retiro` (`produccion-gestion.html`, verificado leyendo esa rama el 24/10/2026; en `main` todavía no estaba).
+3. **El aviso "Lotes usados sin ingreso cargado" de Stock ahora sale de una RPC.** Ya no lee `masa_items` ni `stock_movimientos`: `cargarLotesSinIngreso()` llama una vez por fábrica de la pantalla, todas a la vez, a `lotes_usados_sin_ingreso(p_unidad_negocio_id uuid, p_dias integer DEFAULT 30) → jsonb` con `p_dias: 30`. Se sacó la segunda consulta que deducía qué lotes tenían ingreso (la RPC ya los excluye) y la nota "No se pueden ver… solo con un permiso de Producción": quien tiene `stock:ver` ahora lo ve. Si la base contesta un error para una fábrica, se muestra tal cual con el nombre de esa fábrica y las demás se ven igual. Las máquinas que usaron el lote se muestran en el renglón.
+   - Qué tocar en la documentación: `docs/memoria/stock.md`, entrada **"LOTES USADOS SIN INGRESO CARGADO (23/10/2026…)"**: el subagente ya agregó el sub-punto "DESDE EL 24/10/2026 LO JUNTA LA BASE" y marcó el párrafo de la RLS como historia; al integrar, se puede reescribir la entrada entera con lo nuevo y borrar lo viejo (`puedeVerMasasEn`, la paginación de `masa_items`, la lista de personas que veían la nota de permiso: ya no la ven). Si `docs/memoria/base-de-datos.md` o `produccion.md` listan RPCs, sumar `lotes_usados_sin_ingreso`.
+   - **Nada cambió en la base ni en permisos/catálogo** (la RPC la creó el chat de la base).
+
+### Lo verificado en la base (24/10/2026, solo lectura)
+
+- `pg_get_functiondef(lotes_usados_sin_ingreso)`: firma `(uuid, integer DEFAULT 30) → jsonb`, `STABLE SECURITY DEFINER`, `search_path = public`; `has_function_privilege`: `authenticated` sí, `anon` no. Exige `mi_empleado_id()` y `tiene_tarea_alcance('stock','ver', u) OR tiene_tarea_alcance('produccion','ver', u) OR tiene_tarea_alcance('produccion','configurar', u)` (si no, `raise exception 'No tenés permiso para ver el stock de esta fábrica.'`; `produccion:cargar` solo NO alcanza). Devuelve `jsonb_agg` de `{insumo_id, insumo, marca, unidad_medida, lote, kg (round 3), masas (count distinct), ultima_fecha (max turnos_produccion.fecha), maquinas (string_agg distinct de maquinas.nombre, ', ')}`, ordenado por `ultima_fecha desc, insumo`, o `[]`. Filtra `lote_fuera_de_stock`, masas no anuladas, `t.unidad_negocio_id = p_unidad_negocio_id`, `t.fecha >= _cobranza_hoy_ar() - greatest(coalesce(p_dias,30),1)` y `not exists` un `stock_movimientos` de esa fábrica, insumo y lote (`is not distinct from`) con `cantidad > 0`.
+- `information_schema.columns`: `turnos_produccion.fecha` es `date` (por eso la fecha se muestra tal cual, sin zona horaria), `masa_items.lote` acepta null (la pantalla dice "Sin número de lote"), `maquinas.nombre`, `insumos.nombre` y `insumos.unidad_medida` no nulos, `insumos.marca` nulo.
+
+### Decidido sin consultar (24/10/2026)
+
+1. **Se consultan las fábricas con `stock:ver`, `produccion:ver` o `produccion:configurar` CON ALCANCE en ellas** (la regla de la RPC, con `puedeTareaEn`), y entre las que la pantalla de Stock muestra (`v_mis_unidades_stock`, que ya viene sin la fábrica de pruebas).
+2. **El error se muestra con el nombre de la fábrica** ("…sin ingreso cargado de Dolce Pasta: <error tal cual>"), para saber de cuál es cuando la barra está en "Todas".
+3. **Se muestran las máquinas** que devuelve la RPC (el pedido listaba el campo; no decía si mostrarlo).
+4. La fecha de la última masa ahora es la **fecha del turno** (lo que devuelve la RPC), no la hora de la masa: una masa pasada la medianoche de un turno nocturno cuenta con la fecha del turno.
+
+### Números (24/10/2026, después del merge)
+
+- `test-stock-lotes-sin-ingreso.js` 55/55; `mut-stock-lotes-sin-ingreso.js` 46/46 (+2 equivalentes: los números de kg y masas).
+- `test-stock-terminado.js` 134/134 (+1: la devolución); `mut-stock-terminado.js` 74/74 (+19 equivalentes).
+- `test-stock-xss.js` 238/238; `test-stock-entrada.js` 61/61.
+- e2e (maqueta, puertos 4320/4321): `56-tablet-lote-y-caja` (390, 360, 768×1024, 1000×540, 1280), `53-stock-terminado` (360, 390, 768, 1280 y la recarga) y `39-stock-entrada`: 24/24.
+- `check-scripts` y `check-bytes`: verde. `npm run pruebas`: 278/278 en verde (862 s), sobre el merge con el `main` de `3fd2abe`.
+
+### Qué automatizaría ahora (24/10/2026)
+
+- **El doble de supabase de cada suite de Stock se reescribe a mano cada vez que una lectura pasa a RPC** (acá: `__rpc` por fábrica, retener/soltar para ver que salen todas a la vez y que una respuesta vieja no pisa). Un `pruebas/supabase-doble.js` común con tablas, rpc por parámetros (como el `__segun` de la maqueta), errores, rechazos y "retener hasta soltar" sacaría ~80 renglones de cada suite nueva y haría que la suite y la maqueta usen los mismos datos.
+
 ## Qué se hizo
 
 - `modulos/stock.html`:

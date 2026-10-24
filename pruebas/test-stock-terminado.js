@@ -322,6 +322,16 @@ const CLAVE_DOLCE = 'u-d|dp-mini|'
     chk('un movimiento que no es ajuste NO muestra el motivo (el traspaso de Dolce)', hd.includes('Vino de otra fábrica') && !hd.includes('Traspaso de Cucuruchos Nuss'))
   }
   {
+    // La devolución de un cliente (tipo 'devolucion', rama devoluciones-retiro,
+    // 24/10/2026): con el mismo nombre que en la gestión de Producción.
+    const tablas = TABLAS()
+    tablas.stock_terminado_movimientos.push({ id: 'dev1', unidad_negocio_id: 'u-n', presentacion_id: 'pp-vaso', marca_id: null, lote: 'SIN LOTE', cajas: 3, tipo: 'devolucion', fecha: '2026-10-12', created_at: '2026-10-12T10:00:00-03:00' })
+    const S = await abierto({ tablas })
+    toque(S, { ptmLinea: 'u-n|pp-vaso|' })
+    toque(S, { ptmHistorial: 'u-n|pp-vaso|' })
+    chk('la devolución se llama "Devolución de cliente"', lista(S).includes('ptm-hist__tipo">Devolución de cliente</span>'), lista(S))
+  }
+  {
     // Ver más: con más de HISTORIAL_PTM movimientos.
     const tablas = TABLAS()
     for (let i = 0; i < 20; i++) tablas.stock_terminado_movimientos.push({ id: `x${i}`, unidad_negocio_id: 'u-n', presentacion_id: 'pp-vaso', marca_id: null, lote: 'SIN LOTE', cajas: 1, tipo: 'produccion', fecha: '2026-10-11', created_at: `2026-10-11T10:${String(i).padStart(2, '0')}:00-03:00` })
