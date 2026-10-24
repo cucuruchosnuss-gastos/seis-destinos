@@ -126,11 +126,11 @@ const FUNCIONES = [
   'abrirModalPago', 'cerrarModalPago', 'actualizarSugerenciasPago', 'programarActualizarSugerenciasPago', 'renderizarFilasFifo',
   'elegirSoloFactura', 'textoExitoPago', 'recargarFichaDespuesDePago', 'confirmarPago',
   'logoSeguroCC', 'cuitConGuiones', 'fechaOrden', 'letrasMenorDeMil', 'letrasMenorDeMillon', 'enteroEnLetras', 'importeEnLetras',
-  'textoLibrador', 'htmlOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
+  'htmlOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
   'numeroTextoOrden', 'cargarFichaOrdenesPago', 'htmlOrdenesPagoFicha', 'renderizarFichaOrdenesPago',
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL',
-  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN']
+  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'COPIAS_ORDEN_PAGO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -557,7 +557,8 @@ async function main() {
     chk('el proveedor: razón social, CUIT y dirección', texto.includes('ANATOLIA SRL') && texto.includes('CUIT 30-71234567-8') && texto.includes('Ruta 9'))
     chk('los comprobantes: tipo, número, fecha, importe, aplicado y saldo que queda', texto.includes('Se cancelan los siguientes comprobantes') &&
       texto.includes('Saldo que queda') && texto.includes('Factura A 0003-00001201 20/08/2026 $ 250.000,00 $ 250.000,00 $ 0,00'), texto)
-    chk('los cheques: banco, N°, fecha de pago, librador e importe, con "eCheq"', texto.includes('GALICIA eCheq 12345678 25/10/2026 PEREZ JUAN · CUIT 20-11111111-2 $ 120.000,00'), texto)
+    // 23/10/2026: sin el librador (test-cuentas-corrientes-orden-pago-copias.js).
+    chk('los cheques: banco, N°, fecha de pago e importe, con "eCheq"', texto.includes('GALICIA eCheq 12345678 25/10/2026 $ 120.000,00') && !texto.includes('PEREZ JUAN'), texto)
     chk('NO dice de qué empresa venía el cheque', !texto.includes('Dolce Pasta'))
     chk('otros medios sin la cuenta', texto.includes('Transferencia $ 530.000,50') && !texto.includes('Macro · Nuss'))
     chk('el total en número y en letras (con centavos)', texto.includes('$ 650.000,50') && texto.includes('Son SEISCIENTOS CINCUENTA MIL PESOS CON CINCUENTA CENTAVOS'))
@@ -576,7 +577,8 @@ async function main() {
       cheques: [{ banco: marca('banco'), numero: marca('cnum'), fecha_pago: '2026-10-01', librador: [{ nombre: marca('lib'), cuit: marca('lcuit') }], importe: 5 }],
       otros_medios: [{ medio: marca('medio'), importe: 5 }], a_favor: 0,
     })
-    chequearMarcas(chk, 'la orden de pago', marcas, ['num', 'obs', 'quien', 'emp', 'ecuit', 'dom', 'prov', 'cuit', 'dir', 'ftipo', 'fnum', 'banco', 'cnum', 'lib', 'lcuit', 'medio'])
+    chequearMarcas(chk, 'la orden de pago', marcas, ['num', 'obs', 'quien', 'emp', 'ecuit', 'dom', 'prov', 'cuit', 'dir', 'ftipo', 'fnum', 'banco', 'cnum', 'medio'])
+    chk('la orden de pago: el librador no se imprime (ni escapado)', !marcas.includes('data-xss=&quot;lib&quot;') && !marcas.includes('data-xss=&quot;lcuit&quot;'))
   }
   {
     const S = sandbox()

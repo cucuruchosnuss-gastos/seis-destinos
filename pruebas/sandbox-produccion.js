@@ -79,6 +79,9 @@ const FUNCIONES_BASE = [
   'htmlPasoPresentacion', 'conoAnterior', 'marcasFiltradas', 'htmlMarcas', 'abrirAgregar', 'irAPasoAgregar',
   'elegirProductoAgregar', 'elegirConoSiNo', 'elegirPresentacionAgregar', 'elegirCono', 'cambiarCajas',
   'pintarCajasAgregar', 'pintarAgregar', 'parametrosRegistrarProducido', 'confirmarAgregar', 'crearConoNuevo',
+  // "¿Quisiste decir…?" al crear un cono (21/10/2026)
+  'listaParecidos', 'parecidoIgual', 'conoQueYaExiste', 'htmlParecidos', 'estadoParecidos', 'pintarParecidos', 'programarParecidos',
+  'buscarParecidos', 'idDeConoPorNombre', 'cerrarConoNuevo', 'elegirParecido', 'confirmarEsOtroCono',
   // Empaque (24/09/2026): la caja, el embolsado y lo que consume un renglón
   'insumoDe', 'textoInsumoEmpaque', 'cajasDe', 'cajaInicial', 'embolsadoSugerido', 'conoDobleBolsa', 'embolsadoEfectivo',
   'opcionesEmbolsado', 'consumoPorCaja', 'consumoTotal', 'textoConsumo', 'textoCajaElegida', 'htmlEmbolsado', 'htmlPasoCaja',
@@ -102,7 +105,7 @@ const FUNCIONES_BASE = [
   'htmlPanelSala', 'partidaDeModificar', 'dePartida', 'pintarSala',
   'claveBorradorMasa', 'claveMasaEnCurso', 'nuevoBorradorMasa', 'leerBorradorMasa', 'guardarBorradorMasa',
   'borrarBorradorMasa', 'marcarEnCurso', 'soltarEnCurso', 'borradorEnCurso', 'borradoresPendientes',
-  'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'textoCantidad',
+  'redondearKg', 'tamanoElegido', 'factorTamano', 'pasoDe', 'cantidadesDesde', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'textoCantidad',
   'diferenciaDeMasa', 'seAleja',
   'ingredientesConLote', 'pideLote', 'insumosDe', 'lotesIniciales', 'opcionesLote', 'indiceLote', 'estadoLote',
   'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate', 'pasaAChocolate',
@@ -442,6 +445,11 @@ const NUEVAS_PLANTA = [
   'irAlCierreDe', 'finParadaFormulario', 'loteNuevoFormulario', 'loteNuevoVentana', 'puedeAnularPorError', 'htmlAnularPorError',
   'abrirAnularPorError', 'cerrarAnularPorError', 'pintarAnularPorError', 'confirmarAnularPorError', 'avisoScrapMiles',
   'preguntaScrapMiles', 'preguntarScrapMiles',
+  // Lotes no registrados (23/10/2026): la memoria de la tablet por máquina e
+  // insumo, sus filas del panel; y "la caja sigue siendo…" del paso de la caja.
+  'leerLotesNoRegistrados', 'guardarLotesNoRegistrados', 'loteConStock', 'lotesNoRegistradosDe',
+  'recordarLotesNoRegistrados', 'olvidarLoteNoRegistrado', 'filasNoRegistradas', 'htmlFilaNoRegistrada',
+  'elegirLoteNoRegistrado', 'htmlOjoCaja',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -463,6 +471,8 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // La hora de largada con la regla de las 2 horas de la base (05/10/2026)
   'MARGEN_LARGADA_MS',
   'VISTAS_CON_PESTANAS',
+  // Lotes no registrados (23/10/2026)
+  'CLAVE_LOTES_NO_REGISTRADOS', 'TEXTO_LOTE_NO_REGISTRADO',
   // De js/cantidades.js (02/10/2026)
   'DECIMALES_CANTIDAD', 'FRACCIONES',
   // Sin internet (06/10/2026): de js/sin-internet.js y de la planta
@@ -472,7 +482,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // Un solo "sin cono" (10/10/2026)
   'TEXTO_FALTA_CONO', 'TEXTO_ELEGI_CONO',
   // El lote nuevo por error (14/10/2026)
-  'MINUTOS_SIN_LOTE_NUEVO', 'MINUTOS_ANULAR_POR_ERROR']
+  'MINUTOS_SIN_LOTE_NUEVO', 'MINUTOS_ANULAR_POR_ERROR',
+  // "¿Quisiste decir…?" (21/10/2026)
+  'ESPERA_PARECIDOS_MS', 'MIN_LETRAS_PARECIDOS']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
