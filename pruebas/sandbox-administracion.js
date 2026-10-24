@@ -46,6 +46,13 @@ const FUNCIONES_BASE = [
   'leerSaldos', 'pasaLimite', 'limiteDe', 'contarSobreLimite', 'clientesFiltrados', 'htmlFilaCliente', 'htmlListaClientes',
   'pintarClientes', 'mostrarClientes', 'abrirAlta', 'puedeDarAlta', 'parametrosAlta', 'guardarAlta', 'leerCuenta', 'detalleMovimiento',
   'tieneSaldoInicial', 'htmlCuenta', 'pintarCliente', 'abrirCliente', 'abrirPanelCliente', 'cerrarPanelCliente', 'guardarPanelCliente',
+  // Las notas de débito (24/10/2026)
+  'leerNotasDebitoCliente', 'notaDeMovimiento', 'puedeNotaDebitoCliente', 'renglonNota', 'htmlRenglonesNota', 'itemsNota', 'totalNota',
+  'erroresNotaCliente', 'parametrosNotaCliente', 'abrirNotaDebitoCliente', 'pintarRenglonesNota', 'pintarTotalNotaCliente',
+  'escribirRenglonNota', 'agregarRenglonNota', 'quitarRenglonNota', 'guardarNotaDebitoCliente',
+  'letrasMenorDeMilNd', 'letrasMenorDeMillonNd', 'enteroEnLetrasNd', 'importeEnLetrasNd', 'cuitConGuionesNd', 'fechaNd', 'htmlNotaDebito',
+  'puedeAnularNotaDebito', 'nombreArchivoNota', 'abrirNotaDebito', 'pintarNotaDebito', 'cerrarNotaDebito', 'imprimirNotaDebito',
+  'pdfNotaDebito', 'compartirNotaDebito', 'pedirAnularNotaDebito', 'cancelarAnularNotaDebito', 'confirmarAnularNotaDebito',
   // Clientes apagados y el interruptor (28/09/2026)
   'textoCodigoAnterior', 'puedePrenderApagar', 'htmlInterruptor', 'leerApagados', 'clientesDeLaLista', 'cargarApagados',
   'cambiarMostrarApagados', 'cambiarActivoCliente',
@@ -198,6 +205,8 @@ const CONSTANTES_BASE = [
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
+  // Las notas de débito (24/10/2026)
+  'TIPOS_MOVIMIENTO_NOTA', 'RE_CODIGO_NOTA', 'COPIAS_NOTA_DEBITO', 'LETRAS_UNIDAD_ND', 'LETRAS_DECENA_ND', 'LETRAS_CENTENA_ND', 'CONDICION_IVA_ND',
   // La etiqueta de la empresa y "Todas" que no cambia nada (30/09/2026)
   'NOMBRE_CORTO', 'MARCA_FABRICA', 'COLOR_EMPRESA_SIN_MARCA', 'TEXTO_ELEGI_FABRICA',
   // El diseño "Administración" (29/09/2026)
@@ -264,6 +273,8 @@ const PRELUDIO = `
   var turnoValorizar = 0
   var turnoClientes = 0
   var turnoCliente = 0
+  var claveRenglonNota = 0
+  var turnoNotaDebito = 0
   var turnoLista = 0
   var turnoCobranzas = 0
   var turnoCobranza = 0

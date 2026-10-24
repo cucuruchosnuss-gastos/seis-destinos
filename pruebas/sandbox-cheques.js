@@ -78,6 +78,15 @@ const OPCIONALES = [
   'elegirEnBanco', 'elegirGrupoEnBanco', 'abrirAcreditar', 'armarFilasAcreditar', 'alRepartir', 'pintarResumenAcreditar',
   'confirmarAcreditar', 'abrirNoTomo', 'confirmarNoTomo', 'conectarEnBanco', 'prepararBanco', 'pintarBanco', 'alEscribirVenta', 'cargarCuentasBanco',
   'textoVolverACartera',
+  // Cheque rechazado (24/10/2026).
+  'textoRechazo', 'htmlLinkNotaRechazo', 'abrirHojaNotaDebito', 'cargarNotasDeRechazados', 'motivoRechazo', 'gastosParaEnviar',
+  'totalesRechazo', 'textoSalidaRechazo', 'cuentaDeRechazo', 'textoBancoRechazo', 'htmlResultadosRechazo', 'textoBusquedaRechazo',
+  'htmlElegidoRechazo', 'htmlRenglonesRechazo', 'htmlResumenRechazo', 'erroresRechazo', 'parametrosRechazo', 'textoExitoRechazo',
+  'rutaPdfNotaProveedor', 'subirPdfNotaProveedor', 'renglonGastoRechazo', 'abrirRechazo', 'cerrarRechazo', 'alEscribirBusquedaRechazo',
+  'buscarChequesRechazo', 'elegirChequeRechazo', 'cambiarChequeRechazo', 'elegirMotivoRechazo', 'cargarClientesRechazo',
+  'htmlOpcionesClienteRechazo', 'leerCamposRechazo', 'listaRenglonesRechazo', 'escribirRenglonRechazo', 'agregarRenglonRechazo',
+  'quitarRenglonRechazo', 'pintarRenglonesRechazo', 'pintarResultadosRechazo', 'pintarMotivosRechazo', 'pintarClienteRechazo',
+  'pintarResumenRechazo', 'pintarErrorRechazo', 'pintarBotonRechazo', 'pintarRechazo', 'confirmarRechazo', 'conectarRechazo',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
@@ -85,7 +94,10 @@ const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADO
   // depositar y vender al banco (13/10/2026)
   'TIPOS_BANCO', 'BOTONES_LOTE',
   // En el banco (13/10/2026)
-  'TEXTO_MOTIVO_NO_TOMO', 'bancoUI']
+  'TEXTO_MOTIVO_NO_TOMO', 'bancoUI',
+  // Cheque rechazado (24/10/2026)
+  'ESTADOS_SALIDOS_Y_RECHAZADOS', 'MOTIVOS_RECHAZO', 'CONCEPTO_GASTO_RECHAZO', 'ESPERA_BUSQUEDA_RECHAZO', 'LARGO_MINIMO_RECHAZO',
+  'LARGO_MINIMO_MOTIVO_RECHAZO', 'TOPE_PDF_RECHAZO', 'puedeRechazar']
 
 const PRELUDIO = `
   ${fuenteNumeros()}
@@ -179,6 +191,10 @@ const PRELUDIO = `
   var turnoPreviaEndoso = 0
   var turnoEmitidos = 0
   var temporizadorBusquedaEndoso = null
+  // Cheque rechazado (24/10/2026).
+  var temporizadorRechazo = null
+  var turnoRechazo = 0
+  var claveRenglonRechazo = 0
 `
 
 function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [] } = {}) {

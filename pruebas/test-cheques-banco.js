@@ -364,7 +364,7 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk('salidos = depositado, endosado y vendido', JSON.stringify(S.ESTADOS_SALIDOS) === JSON.stringify(['depositado', 'endosado', 'vendido']))
   chk('el común: textoSalidaCheque de un vendido', /if \(estadoCheque === 'vendido'\) return `Vendido\$\{cuando\}/.test(COMUN))
   chk('cobranzas.html: un vendido cuenta como salido (no deja editar la cobranza)', /d\.cheques\.some\(ch => ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)\)/.test(COBRANZAS) &&
-    /const salido = ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)/.test(COBRANZAS) && /export const ESTADOS_FUERA_DE_CARTERA = \['en_banco', \.\.\.ESTADOS_SALIDOS\]/.test(COMUN))
+    /const salido = ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)/.test(COBRANZAS) && /export const ESTADOS_FUERA_DE_CARTERA = \['en_banco', \.\.\.ESTADOS_SALIDOS[,\]]/.test(COMUN))
   chk('cobranzas.html: el chip de un vendido tiene su estilo', /\.cob-estado--vendido \{/.test(COBRANZAS))
   chk('la lista trae la cuenta, lo acreditado y el gasto de la venta', /salida_cuenta_id, venta_neto, venta_gasto_id, /.test(JS))
 }
@@ -552,7 +552,7 @@ function armarBanco() {
   chk('… sin ninguno, sin contador', /data-estado-cheque="en_banco">En el banco<\/button>/.test(S.__doc.getElementById('chq-chips-estado').innerHTML))
   S.estado.filasResumen = null
   chk('… si no se sabe, sin contador (no inventa un cero)', S.cantidadEnBanco() === null && S.htmlCuentaEnBanco() === '')
-  chk('la lista trae el modo, la fecha y el detalle del envío', /salida_modo, envio_fecha, envio_detalle'/.test(JS))
+  chk('la lista trae el modo, la fecha y el detalle del envío', /salida_modo, envio_fecha, envio_detalle[,']/.test(JS))
   const ch = S.estado.filas[0]
   chk('en "Todos": "En el banco desde el 10/10 · Macro Paz Mirta · para vender", sin botones', S.textoEnBanco(ch) === 'En el banco desde el 10/10 · Macro Paz Mirta · para vender' &&
     !/data-volver-cartera|data-dar-salida/.test(S.htmlSalidaCheque(ch, S.estado.cobranzas.get('cn'))) && /En el banco desde el 10\/10/.test(S.htmlSalidaCheque(ch, S.estado.cobranzas.get('cn'))))
@@ -702,7 +702,7 @@ function armarBanco() {
 
 // ── Cobranzas: un cheque en el banco tampoco deja editar la cobranza ─────
 {
-  chk('el común: en el banco está fuera de la cartera', /export const ESTADOS_FUERA_DE_CARTERA = \['en_banco', \.\.\.ESTADOS_SALIDOS\]/.test(COMUN) &&
+  chk('el común: en el banco está fuera de la cartera', /export const ESTADOS_FUERA_DE_CARTERA = \['en_banco', \.\.\.ESTADOS_SALIDOS[,\]]/.test(COMUN) &&
     /en_banco: 'En el banco'/.test(COMUN) && /if \(estadoCheque === 'en_banco'\) return `En el banco/.test(COMUN))
   chk('cobranzas.html usa ESTADOS_FUERA_DE_CARTERA (no deja editar con un cheque en el banco) y tiene su chip',
     /d\.cheques\.some\(ch => ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)\)/.test(COBRANZAS) && /const salido = ESTADOS_FUERA_DE_CARTERA\.includes\(ch\.estado\)/.test(COBRANZAS) &&

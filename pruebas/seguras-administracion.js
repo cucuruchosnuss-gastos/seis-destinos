@@ -110,6 +110,10 @@ const SEGURAS_ADMINISTRACION = [
   ['totales', 'HTML ya escapado: htmlBloqueParte() arma cada línea de totales con esc() de los importes y del %'],
   ['vendedores', 'HTML ya escapado: htmlBloqueParte() arma una línea por vendedor con esc() del nombre, el % y el monto'],
   ['origen', 'HTML ya escapado: htmlVendedoresPct() arma los rótulos con esc() del id del vendedor y del % de la configuración, o vacío'],
+  // La nota de débito (24/10/2026): la ejecuta con texto malicioso
+  // test-administracion-nota-debito.js.
+  ['copia(r)', 'HTML armado por copia() adentro de htmlNotaDebito(): cada dato de la base con esc(), el logo por logoSeguro() + encodeURIComponent, y el rótulo con esc()'],
+  ['htmlNotaDebito(d)', 'HTML armado por htmlNotaDebito(), que escapa adentro (lo ejecuta con marcas test-administracion-nota-debito.js)'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

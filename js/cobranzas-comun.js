@@ -80,8 +80,11 @@ export function formatearFechaCob(iso) {
 
 // 'vendido' (13/10/2026): vendido al banco con vender_cheques (entra la plata
 // a una cuenta de la Empresa y el descuento es un gasto de interés).
+// 'rechazado' (24/10/2026): salió y el banco lo devolvió
+// (registrar_cheque_rechazado); no se edita ni vuelve a la cartera.
 export const ETIQUETA_ESTADO_CHEQUE = {
   en_cartera: 'En cartera', en_banco: 'En el banco', depositado: 'Depositado', endosado: 'Endosado', vendido: 'Vendido', anulado: 'Anulado',
+  rechazado: 'Rechazado',
 }
 
 // Los estados de un cheque que ya salió de la cartera (el papel no está más
@@ -89,9 +92,10 @@ export const ETIQUETA_ESTADO_CHEQUE = {
 export const ESTADOS_SALIDOS = ['depositado', 'endosado', 'vendido']
 
 // Los que no están en la cartera para usar: los que salieron y los que se
-// mandaron al banco y esperan que acrediten (13/10/2026). Una cobranza con
-// alguno de estos no se puede editar ni anular (lo frena la base).
-export const ESTADOS_FUERA_DE_CARTERA = ['en_banco', ...ESTADOS_SALIDOS]
+// mandaron al banco y esperan que acrediten (13/10/2026), y los rechazados
+// (24/10/2026). Una cobranza con alguno de estos no se puede editar ni
+// anular (lo frena la base).
+export const ESTADOS_FUERA_DE_CARTERA = ['en_banco', ...ESTADOS_SALIDOS, 'rechazado']
 
 // El nombre del banco por su código. Un código que no está en el catálogo se
 // DICE, con el número a la vista: inventarle un nombre o dejarlo vacío
