@@ -1366,7 +1366,7 @@
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
         supabase.from('marcas_personalizadas')
           .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
-        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida').eq('activo', true).order('nombre'),
+        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true).order('nombre'),
       ])
       if (c.error) throw c.error
       if (m.error) throw m.error
@@ -1379,8 +1379,10 @@
     // 'bulto' (insumos.vista_preferida) del que se sabe lo que trae UN bulto
     // se pide y se muestra en bultos ("¿Cuánto se lleva? (bultos de 25 kg)",
     // y debajo "= 100 kg"); lo que se guarda en el renglón y va a la base
-    // sigue SIEMPRE en su unidad. Lo que trae un bulto sale de donde lo saca
-    // Stock (v_stock_insumos.contenido_unico, de esta empresa): la vista pide
+    // sigue SIEMPRE en su unidad. Lo que trae un bulto sale PRIMERO del
+    // catálogo (insumos.contenido_bulto, 24/10/2026: lo lee cualquier usuario
+    // logueado). Solo si el catálogo no lo dice, de donde lo saca Stock
+    // (v_stock_insumos.contenido_unico, de esta empresa): la vista pide
     // stock:ver, así que sin ese permiso (o si falla) no hay contenido y todo
     // sigue en su unidad, sin romperse.
     async function leerContenidosInsumos(unidadId) {
@@ -1399,12 +1401,15 @@
       return m
     }
 
-    // Le suma a cada insumo del catálogo su vista y lo que trae un bulto.
+    // Le suma a cada insumo del catálogo su vista y lo que trae un bulto:
+    // el del catálogo (contenido_bulto) y, si no está, el del stock.
     function conBultosDeInsumos(cat, filasInsumos, contenidos) {
-      const vistas = new Map((Array.isArray(filasInsumos) ? filasInsumos : []).filter(i => i?.id).map(i => [i.id, i.vista_preferida ?? 'base']))
+      const filas = (Array.isArray(filasInsumos) ? filasInsumos : []).filter(i => i?.id)
+      const vistas = new Map(filas.map(i => [i.id, i.vista_preferida ?? 'base']))
+      const delCatalogo = new Map(filas.map(i => [i.id, contenidoUnico([i.contenido_bulto])]))
       for (const i of cat?.insumos ?? []) {
         i.vista_preferida = vistas.get(i.id) ?? 'base'
-        i.contenido = contenidos?.get(i.id) ?? null
+        i.contenido = delCatalogo.get(i.id) ?? contenidos?.get(i.id) ?? null
       }
       return cat
     }

@@ -1991,16 +1991,25 @@
       const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
       if (e3) throw e3
       const { data: insumos, error: e4 } = await supabase.from('insumos')
-        .select('id, nombre, marca, unidad_medida, categoria, activo, vista_preferida').order('categoria').order('nombre')
+        .select('id, nombre, marca, unidad_medida, categoria, activo, vista_preferida, contenido_bulto').order('categoria').order('nombre')
       if (e4) throw e4
       const contenidos = await leerContenidosInsumos(unidadId)
       return {
         productos: productos ?? [], presentaciones, marcas: marcas ?? [],
-        insumos: (insumos ?? []).map(i => ({ ...i, contenido: contenidos.get(i.id) ?? null })),
+        insumos: (insumos ?? []).map(i => ({ ...i, contenido: contenidoDelCatalogo(i) ?? contenidos.get(i.id) ?? null })),
       }
     }
 
-    // Lo que trae UN bulto de cada insumo en la empresa (23/10/2026): de donde
+    // Lo que trae UN bulto según el catálogo (24/10/2026): insumos.contenido_bulto
+    // (harina 25, azúcar 50, óleo 20…). Es lo PRIMERO que se mira: lo lee
+    // cualquier usuario logueado (la policy "leer catalogo de insumos"), así
+    // que quien valoriza sin stock:ver también ve el bulto. null si no está.
+    function contenidoDelCatalogo(ins) {
+      return contenidoUnico([ins?.contenido_bulto])
+    }
+
+    // Lo que trae UN bulto de cada insumo en la empresa (23/10/2026), para
+    // cuando el catálogo NO lo dice (insumos.contenido_bulto null): de donde
     // ya lo saca Stock, v_stock_insumos.contenido_unico (null si tiene dos
     // presentaciones o ninguna). La vista pide stock:ver en la empresa; sin
     // ese permiso (o si falla) no hay contenido y todo sigue en su unidad: es
@@ -2025,14 +2034,17 @@
 
     // CÓMO SE DICE EL PRECIO DE UN INSUMO (23/10/2026): por bulto si el
     // insumo es 'bulto' (insumos.vista_preferida) y se sabe lo que trae UN
-    // bulto —de los lotes de los que salió el renglón, si se ven, o del stock
-    // de la empresa—; si no, por su unidad. `contenidos` son los de los lotes
-    // del renglón (o null): si alguno tiene presentación, mandan ellos (con
-    // dos distintas no hay "un" bulto).
+    // bulto —PRIMERO del catálogo (insumos.contenido_bulto, 24/10/2026); si
+    // el catálogo no lo dice, de los lotes de los que salió el renglón, si se
+    // ven, o del stock de la empresa—; si no, por su unidad. `contenidos` son
+    // los de los lotes del renglón (o null): sin contenido en el catálogo, si
+    // alguno tiene presentación, mandan ellos (con dos distintas no hay "un"
+    // bulto).
     function modoPrecioInsumo(cat, insumoId, contenidos = null) {
       const ins = insumoDe(cat, insumoId)
       const propios = (Array.isArray(contenidos) ? contenidos : []).filter(c => contenidoUnico([c]) !== null)
-      const contenido = propios.length ? contenidoUnico(propios) : (ins?.contenido ?? null)
+      const delCatalogo = contenidoDelCatalogo(ins)
+      const contenido = delCatalogo !== null ? delCatalogo : propios.length ? contenidoUnico(propios) : (ins?.contenido ?? null)
       return modoDePrecio({ unidad: ins?.unidad_medida, vista: ins?.vista_preferida, contenido })
     }
 

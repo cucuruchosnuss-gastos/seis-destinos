@@ -9,8 +9,10 @@
 //
 // Exige, ejecutando las funciones REALES de modulos/retiros.html:
 //  - el catálogo de insumos se lee con vista_preferida y lo que trae un bulto
-//    de v_stock_insumos (de la empresa); si esa lectura falla, todo sigue en
-//    su unidad;
+//    PRIMERO de insumos.contenido_bulto (24/10/2026: sin stock:ver igual hay
+//    bulto; el colorante Nico, bidón de 25 kg); solo si es null, de
+//    v_stock_insumos (de la empresa); si esa lectura falla, todo sigue en su
+//    unidad;
 //  - azúcar (50 kg): "1" en el campo deja 50 kg en el renglón y en lo que va
 //    a la base; "+" suma un bulto (50 kg); el campo vuelve a decir "1";
 //  - harina (25 kg): lo de cada lote también se escribe en bultos y se guarda
@@ -78,6 +80,56 @@ const selDe = (S, tabla) => ((S.__llamadas.consultas.find(c => c[0] === tabla) |
   esperas.push(T.leerCatalogo('u-n').then(cat => {
     const a = cat.insumos.find(i => i.id === 'azucar')
     chk('si no se puede leer lo que trae un bulto, el catálogo carga igual, sin contenido', a && a.contenido === null)
+  }))
+  // El catálogo manda (24/10/2026): insumos.contenido_bulto lo lee cualquier
+  // usuario logueado; v_stock_insumos (stock:ver) solo cubre los null.
+  const U = nuevo()
+  U.__tablas.marcas_personalizadas = []
+  U.__tablas.insumos = [
+    { id: 'harina', nombre: 'Harina 000', marca: 'Júpiter', categoria: 'Harinas', unidad_medida: 'kg', vista_preferida: 'bulto', contenido_bulto: '25' },
+    { id: 'colorante', nombre: 'Colorante', marca: 'Nico', categoria: 'Aditivos', unidad_medida: 'kg', vista_preferida: 'bulto', contenido_bulto: '25' },
+    { id: 'sal', nombre: 'Sal', marca: null, categoria: 'Secos', unidad_medida: 'kg', vista_preferida: 'bulto', contenido_bulto: null },
+  ]
+  // Sin stock:ver la vista vuelve vacía (la RLS no da error): igual hay bulto.
+  U.__tablas.v_stock_insumos = []
+  U.__setRpc(async (n) => n === 'catalogo_para_retiro'
+    ? { data: { productos: [], insumos: [
+      { insumo_id: 'harina', nombre: 'Harina 000', marca: 'Júpiter', categoria: 'Harinas', unidad_medida: 'kg', stock: 250 },
+      { insumo_id: 'colorante', nombre: 'Colorante', marca: 'Nico', categoria: 'Aditivos', unidad_medida: 'kg', stock: 50 },
+      { insumo_id: 'sal', nombre: 'Sal', marca: null, categoria: 'Secos', unidad_medida: 'kg', stock: 100 },
+    ] }, error: null }
+    : { data: null, error: null })
+  esperas.push(U.leerCatalogo('u-n').then(cat => {
+    const de = id => cat.insumos.find(i => i.id === id)
+    chk('los insumos se leen con contenido_bulto', /contenido_bulto/.test(selDe(U, 'insumos')))
+    chk('sin nada en v_stock_insumos (sin stock:ver), la harina trae 25 kg del catálogo', de('harina').contenido === 25)
+    chk('el colorante Nico (bidón de 25 kg) también', de('colorante').contenido === 25 && de('colorante').vista_preferida === 'bulto')
+    chk('la sal (contenido_bulto null, sin stock) sigue sin contenido', de('sal').contenido === null)
+    U.estado.empresaId = 'u-n'
+    U.estado.catalogo = cat
+    U.estado.catalogoEmpresa = 'u-n'
+    U.estado.form = U.formVacio()
+    U.elegirInsumoRenglon(0, 'colorante')
+    const m = U.modoInsumoRenglon(U.estado.form.renglones[0])
+    chk('el colorante Nico se pide en bidones de 25 kg', m?.enBultos === true && m.contenido === 25)
+  }))
+  const V = nuevo()
+  V.__tablas.marcas_personalizadas = []
+  V.__tablas.insumos = [
+    { id: 'harina', nombre: 'Harina 000', marca: 'Júpiter', categoria: 'Harinas', unidad_medida: 'kg', vista_preferida: 'bulto', contenido_bulto: 25 },
+    { id: 'sal', nombre: 'Sal', marca: null, categoria: 'Secos', unidad_medida: 'kg', vista_preferida: 'bulto', contenido_bulto: null },
+  ]
+  V.__tablas.v_stock_insumos = [{ insumo_id: 'harina', contenido_unico: 50 }, { insumo_id: 'sal', contenido_unico: 25 }]
+  V.__setRpc(async (n) => n === 'catalogo_para_retiro'
+    ? { data: { productos: [], insumos: [
+      { insumo_id: 'harina', nombre: 'Harina 000', marca: 'Júpiter', categoria: 'Harinas', unidad_medida: 'kg', stock: 250 },
+      { insumo_id: 'sal', nombre: 'Sal', marca: null, categoria: 'Secos', unidad_medida: 'kg', stock: 100 },
+    ] }, error: null }
+    : { data: null, error: null })
+  esperas.push(V.leerCatalogo('u-n').then(cat => {
+    const de = id => cat.insumos.find(i => i.id === id)
+    chk('el catálogo (25) le gana al stock (50)', de('harina').contenido === 25)
+    chk('con contenido_bulto null, sale del stock como antes (sal 25)', de('sal').contenido === 25)
   }))
 }
 

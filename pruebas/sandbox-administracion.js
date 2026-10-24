@@ -176,7 +176,7 @@ const FUNCIONES_BASE = [
   'guardarComisionConfig',
   ...FUNCIONES_CU,
   // Los insumos por bulto (23/10/2026): de este archivo y de js/cantidades.js
-  'leerContenidosInsumos', 'modoPrecioInsumo', 'modoPrecioRenglon', 'cantidadInsumoSegunModo', 'textoPrecioPorBase',
+  'leerContenidosInsumos', 'contenidoDelCatalogo', 'modoPrecioInsumo', 'modoPrecioRenglon', 'cantidadInsumoSegunModo', 'textoPrecioPorBase',
   'prepararPreciosPorBulto', 'textoPrecioInsumoLista', 'modoPrecioFila', 'modoPrecioClave', 'bultoDeVersion', 'presentacionFilaInsumo',
   'modoPrecioHoja', 'cantidadInsumoBultoHoja', 'precioInsumoHoja',
   ...FUNCIONES_CANTIDADES, 'unidadCorta', ...FUNCIONES_PRECIO,

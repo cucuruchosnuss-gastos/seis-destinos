@@ -10,8 +10,11 @@
 //
 // Exige, ejecutando las funciones REALES de modulos/administracion.html (y de
 // js/retiros-comun.js y js/cantidades.js por los imports):
-//  - lo que trae un bulto sale de v_stock_insumos.contenido_unico, y SOLO con
-//    stock:ver en la empresa (sin él no se consulta: todo en su unidad);
+//  - lo que trae un bulto sale PRIMERO de insumos.contenido_bulto (24/10/2026:
+//    lo lee cualquier usuario logueado; quien valoriza sin stock:ver ve la
+//    harina por bolsa: $ 17.500 → 700 el kg; el catálogo le gana a los lotes
+//    y al stock); solo si es null, de v_stock_insumos.contenido_unico, y SOLO
+//    con stock:ver en la empresa (sin él no se consulta: todo en su unidad);
 //  - el catálogo de insumos se lee con vista_preferida; los movimientos de la
 //    orden, con contenido_por_bulto (manda el de los lotes del renglón);
 //  - una orden valorizada: "4 bultos de 25 kg · Harina 000 · Júpiter",
@@ -112,6 +115,70 @@ const selDe = (S, tabla) => ((S.__llamadas.consultas.find(c => c[0] === tabla) |
   esperas.push(V.leerCatalogo('u-n').then(cat => {
     chk('el catálogo de insumos se lee con vista_preferida', /vista_preferida/.test(selDe(V, 'insumos')))
     chk('y cada insumo lleva su contenido', cat.insumos[0].contenido === 25 && cat.insumos[0].vista_preferida === 'bulto')
+  }))
+}
+
+// ── El catálogo manda: insumos.contenido_bulto (24/10/2026) ──────────────
+// La columna la lee cualquier usuario logueado; v_stock_insumos pide
+// stock:ver. Quien valoriza con retiros:precios y SIN stock:ver (Yanina)
+// tiene que ver la harina por bolsa igual.
+const INSUMOS_CATALOGO = [
+  { id: 'harina', nombre: 'Harina 000', marca: 'Júpiter', unidad_medida: 'kg', categoria: 'Materia prima', activo: true, vista_preferida: 'bulto', contenido_bulto: '25' },
+  { id: 'colorante', nombre: 'Colorante', marca: 'Nico', unidad_medida: 'kg', categoria: 'Materia prima', activo: true, vista_preferida: 'bulto', contenido_bulto: '25' },
+  { id: 'lecitina', nombre: 'Lecitina de soja', marca: null, unidad_medida: 'kg', categoria: 'Materia prima', activo: true, vista_preferida: 'base', contenido_bulto: '215' },
+  { id: 'sal', nombre: 'Sal', marca: null, unidad_medida: 'kg', categoria: 'Materia prima', activo: true, vista_preferida: 'bulto', contenido_bulto: null },
+]
+function conCatalogoReal(S) {
+  S.__tablas.productos_terminados = []
+  S.__tablas.marcas_personalizadas = []
+  S.__tablas.insumos = INSUMOS_CATALOGO
+}
+{
+  // Sin stock:ver: el catálogo solo ya alcanza.
+  const S = nuevo({ stockVer: false })
+  conCatalogoReal(S)
+  S.__tablas.v_stock_insumos = [{ insumo_id: 'sal', contenido_unico: 25 }]
+  esperas.push(S.leerCatalogo('u-n').then(cat => {
+    chk('el catálogo de insumos se lee con contenido_bulto', /contenido_bulto/.test(selDe(S, 'insumos')))
+    const de = id => cat.insumos.find(i => i.id === id)
+    chk('sin stock:ver, la harina igual trae 25 kg (del catálogo)', de('harina').contenido === 25)
+    chk('el colorante Nico (bidón de 25 kg, vista bulto) trae 25', de('colorante').contenido === 25 && de('colorante').vista_preferida === 'bulto')
+    chk('sin stock:ver no se consulta v_stock_insumos', !S.__llamadas.consultas.some(c => c[0] === 'v_stock_insumos'))
+    chk('la sal (contenido_bulto null) y sin stock:ver: sin contenido, por kg', de('sal').contenido === null)
+    S.estado.catalogo = cat
+    S.__tablas.ordenes_retiro = [ORDEN()]
+    S.__tablas.orden_retiro_items = [ITEM('i1', 'harina', 100), ITEM('i2', 'colorante', 50), ITEM('i3', 'lecitina', 2), ITEM('i4', 'sal', 50)]
+    S.__tablas.stock_movimientos = []
+    return S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+      const d = S.estado.orden
+      const v = d.valorizar
+      chk('Yanina (retiros:precios, sin stock:ver): la harina se valoriza POR BOLSA (17.500)', v.escritos.i1 === 17500 && v.modos.i1?.porBulto === true, JSON.stringify(v.modos.i1))
+      chk('… el campo dice "Precio x bulto de 25 kg"', cuerpo(S).includes('Precio x bulto de 25 kg'))
+      S.cambiarPrecio('i1', 17500)
+      chk('… y $ 17.500 la bolsa manda 700 el kg', S.parametrosValorizar(d).p_precios.i1 === 700)
+      chk('el colorante Nico también va por bidón de 25 kg', v.modos.i2?.porBulto === true && v.modos.i2.contenido === 25)
+      chk('la lecitina (vista base) sigue por kg aunque el catálogo diga 215', !v.modos.i3?.porBulto && v.precios.i3 === 4200)
+      chk('la sal sin contenido en ningún lado sigue por kg', !v.modos.i4?.porBulto)
+    })
+  }))
+}
+{
+  // Con stock:ver: el catálogo va primero; el stock solo cubre los null.
+  const S = nuevo()
+  conCatalogoReal(S)
+  S.__tablas.v_stock_insumos = [{ insumo_id: 'harina', contenido_unico: 50 }, { insumo_id: 'sal', contenido_unico: 25 }]
+  esperas.push(S.leerCatalogo('u-n').then(cat => {
+    const de = id => cat.insumos.find(i => i.id === id)
+    chk('con stock:ver, el catálogo (25) le gana al stock (50)', de('harina').contenido === 25)
+    chk('con contenido_bulto null, sale del stock como antes (sal 25)', de('sal').contenido === 25)
+    S.estado.catalogo = cat
+    S.__tablas.ordenes_retiro = [ORDEN({ estado_valorizacion: 'valorizada', total: 70000 })]
+    S.__tablas.orden_retiro_items = [ITEM('i1', 'harina', 100, { precio_caja: 700, subtotal: 70000 })]
+    S.__tablas.stock_movimientos = [{ insumo_id: 'harina', lote: 'H-9', cantidad: -100, contenido_por_bulto: 50 }]
+    return S.abrirOrden('o1').then(() => {
+      const h = cuerpo(S)
+      chk('lotes de 50 kg pero el catálogo dice 25: manda el catálogo', h.includes('4 bultos de 25 kg · Harina 000') && h.includes('$ 17.500,00 x bulto de 25 kg'), h.slice(0, 300))
+    })
   }))
 }
 

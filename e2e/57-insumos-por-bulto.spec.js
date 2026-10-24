@@ -7,6 +7,9 @@
 //  - Administración, una orden valorizada con harina: "10 bultos de 25 kg",
 //    "= 250,5 kg", "$ 20.500,00 x bulto de 25 kg"; corregir la valorización
 //    muestra el campo en 20.500 y 21.000 la bolsa viaja como 840 el kg.
+//  - El catálogo manda (24/10/2026, insumos.contenido_bulto): SIN stock:ver,
+//    la Carga pide el colorante Nico en bidones de 25 kg y Administración
+//    valoriza la harina por bolsa ($ 17.500 → 700 el kg).
 //  - Stock → Costos: la harina dice "$ 27.500,00 el bulto de 25 kg · $ 1.100,00
 //    por kg"; la lecitina (vista 'base') sigue por kg.
 // Sin scroll horizontal y sin errores de JavaScript. La base responde con
@@ -129,6 +132,83 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     expect(p.y0, JSON.stringify(p)).toBe(840);
     expect(p.y2, JSON.stringify(p)).toBe(820);
     expect(p.y1, JSON.stringify(p)).toBe(95);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
+  // EL CATÁLOGO MANDA (24/10/2026): insumos.contenido_bulto lo lee cualquier
+  // usuario logueado. Sin stock:ver (v_stock_insumos vuelve vacía), igual se
+  // pide y se valoriza por bulto.
+  test(`${nombre}: la Carga sin stock:ver pide el colorante Nico en bidones de 25 kg (del catálogo)`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    page.setDefaultTimeout(15000);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await page.goto(`${MAQUETA}/modulos/retiros.html?maqueta=retiros`, { waitUntil: 'domcontentloaded' });
+    await page.evaluate(async () => {
+      const datos = await fetch('/maqueta/datos/retiros.json').then(r => r.json());
+      const colorante = { id: 'ins-col', nombre: 'Colorante', marca: 'Nico', categoria: 'Aditivos', unidad_medida: 'kg', activo: true, vista_preferida: 'bulto', contenido_bulto: 25 };
+      sessionStorage.setItem('maqueta.cambios', JSON.stringify({
+        tablas: {
+          empleado_tareas: datos.tablas.empleado_tareas.filter(t => !(t.modulo === 'stock' && t.tarea === 'ver')),
+          insumos: [...datos.tablas.insumos.map(i => ({ ...i, vista_preferida: i.id === 'ins-1' ? 'bulto' : 'base', contenido_bulto: i.id === 'ins-1' ? 25 : null })), colorante],
+          v_stock_insumos: [],
+        },
+        rpc: {
+          catalogo_para_retiro: { ...datos.rpc.catalogo_para_retiro, insumos: [...datos.rpc.catalogo_para_retiro.insumos,
+            { insumo_id: 'ins-col', nombre: 'Colorante', marca: 'Nico', categoria: 'Aditivos', unidad_medida: 'kg', stock: 75 }] },
+        },
+      }));
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.locator('[data-empresa="u-n"]').click();
+    await page.locator('#rt-cliente-buscar').fill('turco');
+    await page.locator('[data-cliente]').first().click();
+    await page.locator('[data-r-buscar="0"]').fill('colorante');
+    await page.locator('[data-r-insumo="0"]').first().click();
+    await expect(page.locator('label[for="rt-r-cantidad-0"]')).toHaveText(/¿Cuánto se lleva\? \(bultos de 25\skg\)/);
+    await page.locator('[data-r-cantidad="0"]').fill('2');
+    await expect(page.locator('[data-r-equivale="0"]')).toHaveText(/= 50\skg/);
+    await sinScroll(page, 'el renglón del colorante');
+    await captura(page, `bulto-catalogo-carga-${nombre}`, info);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
+  test(`${nombre}: Administración sin stock:ver valoriza la harina por bolsa ($ 17.500 → 700 el kg)`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    const rpc = anotarRpc(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await page.goto(`${MAQUETA}/modulos/administracion.html?maqueta=administracion`);
+    await page.evaluate(async () => {
+      localStorage.setItem('barraUnidad.elegida', 'u-n');
+      const datos = await fetch('/maqueta/datos/administracion.json').then(r => r.json());
+      sessionStorage.setItem('maqueta.cambios', JSON.stringify({
+        tablas: {
+          // Yanina: retiros:precios, sin stock:ver.
+          empleado_tareas: datos.tablas.empleado_tareas.filter(t => !(t.modulo === 'stock' && t.tarea === 'ver')),
+          insumos: [...datos.tablas.insumos.map(i => ({ ...i, vista_preferida: i.id === 'ins-1' ? 'bulto' : 'base', contenido_bulto: i.id === 'ins-1' ? 25 : null })),
+            { id: 'ins-col', nombre: 'Colorante', marca: 'Nico', unidad_medida: 'kg', categoria: 'Aditivos', activo: true, vista_preferida: 'bulto', contenido_bulto: 25 }],
+          v_stock_insumos: [],
+        },
+        rpc: { valorizar_orden_retiro: { total: 600000, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
+      }));
+    });
+    await page.reload();
+    await page.locator('[data-pestana="ordenes"]').first().click();
+    await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
+    await page.locator('#ad-ordenes-lista [data-orden="o12"]').click();
+    const cuerpo = page.locator('#ad-orden-cuerpo');
+    await expect(cuerpo).toContainText(/10 bultos de 25\skg · Harina 000/);
+    await expect(cuerpo).toContainText(/\$\s20\.500,00 x bulto de 25\skg/);
+    await page.locator('#ad-btn-corregir-valor').click();
+    await expect(page.locator('label[for="ad-precio-y0"]')).toHaveText(/Precio x bulto de 25\skg/);
+    await page.locator('#ad-precio-y0').fill('17.500');
+    await expect(page.locator('[data-precio-base="y0"]')).toHaveText(/\$\s700,00 por kg/);
+    await sinScroll(page, 'valorizar sin stock:ver');
+    await captura(page, `bulto-catalogo-valorizar-${nombre}`, info);
+    await page.locator('#ad-valorizar-guardar').click();
+    await expect.poll(() => rpc.find(r => r.nombre === 'valorizar_orden_retiro')).toBeTruthy();
+    const p = rpc.find(r => r.nombre === 'valorizar_orden_retiro').params.p_precios;
+    expect(p.y0, JSON.stringify(p)).toBe(700);
+    expect(p.y2, JSON.stringify(p)).toBe(820);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 

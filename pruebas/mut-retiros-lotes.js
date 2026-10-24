@@ -53,7 +53,7 @@ correrMutaciones({
     { nombre: 'las opciones no miran los conos del catálogo', de: "    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = cat?.conos ?? null) {", a: "    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = null) {" },
     { nombre: 'los insumos sin stock no se suman', de: '        if (!i?.id || conStock.has(i.id)) continue', a: '        continue' },
     { nombre: 'el insumo con stock se duplica', de: '        if (!i?.id || conStock.has(i.id)) continue', a: '        if (!i?.id) continue' },
-    { nombre: 'los insumos sin stock se leen también los inactivos', de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida').eq('activo', true)", a: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida')" },
+    { nombre: 'los insumos sin stock se leen también los inactivos', de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true)", a: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto')" },
     { nombre: 'si fallan los insumos sin stock, se cae el catálogo', de: '      if (t.error) console.error', a: '      if (t.error) throw t.error\n      if (t.error) console.error' },
     // Completar con los más viejos
     { nombre: 'completar no respeta el stock del lote', de: '        const toma = r3(Math.min(resta, l.saldo))', a: '        const toma = r3(resta)' },
