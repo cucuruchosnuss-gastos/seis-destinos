@@ -197,7 +197,9 @@ const PRELUDIO = `
   var claveRenglonRechazo = 0
 `
 
-function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [] } = {}) {
+// `retornoExtra` (24/10/2026): lo que el preludioExtra de una suite quiere
+// devolver además (sus dobles), con la sintaxis de un objeto literal.
+function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [], retornoExtra = '' } = {}) {
   const { scriptModulo } = require('./sandbox')
   // La cartera vive en una región de administracion.html (26/09/2026).
   const { regionCheques } = require('./fuente-cheques')
@@ -220,7 +222,7 @@ function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes
     retorno: `${[...new Set(cts)].join(", ")}, estado, __els, __doc: document, __llamadas, __consultas, __almacen, window,
       __set(d){ __datos = d }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f },
       __accionMotivo(){ return accionDelMotivo },
-      __barra, __oyentesBarra, __elegirEnBarra`,
+      __barra, __oyentesBarra, __elegirEnBarra${retornoExtra ? ', ' + retornoExtra : ''}`,
   })
 }
 

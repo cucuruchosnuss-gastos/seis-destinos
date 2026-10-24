@@ -517,7 +517,8 @@
     .ndh-cab__copia { display: inline-block; margin-top: 1mm; padding: 0.3mm 2mm; border: 1px solid #111; font-size: 8pt; font-weight: 800; letter-spacing: 0.1em; }
     .ndh-seccion { margin-top: 3mm; overflow-wrap: anywhere; }
     .ndh-seccion__titulo { font-size: 8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.2mm; }
-    .ndh-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+    /* La tabla no corta las palabras por la mitad: en el celular, si no entra, scrollea adentro de .ndh-marco. */
+    .ndh-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; overflow-wrap: normal; }
     .ndh-tabla th, .ndh-tabla td { border: 1px solid #555; padding: 0.6mm 1.2mm; text-align: left; vertical-align: top; color: #111; }
     .ndh-tabla th { background: #eee; font-weight: 700; }
     .ndh-tabla .ndh-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -13391,6 +13392,8 @@
     /* CHEQUE RECHAZADO (24/10/2026). En ROJO (--rojo-suave de fondo, el chip
        en --rojo-oscuro sobre blanco, 7,4:1) y con una franja --rojo a la
        izquierda: no se confunde con el bordó del plazo ni con el anulado. */
+    /* Con "Rechazados" son seis opciones: en el celular bajan de renglón en vez de pisarse. */
+    .chq-segmento { flex-wrap: wrap; }
     .chq-estado--rechazado { background: var(--color-fondo); color: var(--rojo-oscuro); text-transform: uppercase; letter-spacing: 0.04em; }
     .chq-tabla__fila--rechazado td { background: var(--rojo-suave); }
     .chq-tabla__fila--rechazado td:first-child { box-shadow: inset 4px 0 0 var(--rojo); }
@@ -13399,6 +13402,8 @@
     .chq-rechazo-texto { color: var(--rojo-oscuro); font-weight: 600; }
     .chq-link-nota { min-height: 40px; padding: 0 0.25rem; border: 0; background: none; font: inherit; font-size: 0.8125rem; font-weight: 700; color: var(--rojo-oscuro); text-decoration: underline; cursor: pointer; white-space: nowrap; }
     .chq-nav__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; min-width: 0; }
+    .chq-nav { flex-wrap: wrap; }
+    .chq-nav__link { white-space: nowrap; }
     .chq-rech-motivos { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.5rem; min-width: 0; }
     .chq-rech-motivos .chq-btn { flex: 1 1 7rem; }
     .chq-rech-elegido { display: flex; align-items: flex-start; gap: 0.5rem; justify-content: space-between; padding: 0.625rem 0.75rem; margin-bottom: 0.875rem;
@@ -13415,6 +13420,8 @@
     .chq-rech-renglon input { width: 100%; min-height: 44px; padding: 0.5rem 0.625rem; border: 1.5px solid var(--color-borde); border-radius: var(--radio-input);
       font-family: var(--fuente); font-size: 1rem; background: var(--color-fondo); color: var(--color-texto); min-width: 0; }
     .chq-rech-quitar { min-height: 44px; min-width: 44px; border: 1.5px solid var(--color-borde); border-radius: var(--radio-boton); background: var(--color-fondo); color: var(--color-texto); font-size: 1.125rem; cursor: pointer; }
+    #chq-rech-resumen strong { white-space: nowrap; }
+    #chq-rech-resumen span { min-width: 0; overflow-wrap: anywhere; }
     .chq-rech-bloque { border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px); padding: 0.75rem; margin-bottom: 0.875rem; min-width: 0; }
     .chq-rech-bloque__titulo { font-weight: 700; font-size: 0.9375rem; margin-bottom: 0.5rem; overflow-wrap: anywhere; }
     @media (max-width: 420px) {
@@ -13788,7 +13795,7 @@
     import { supabase } from '../js/supabase.js'
     import {
       dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
-      ETIQUETA_ESTADO_CHEQUE, ESTADOS_SALIDOS, nombreBancoDe,
+      ETIQUETA_ESTADO_CHEQUE, ESTADOS_SALIDOS, nombreBancoDe, textoSalidaCheque,
     } from '../js/cobranzas-comun.js'
     // La barra de unidad de negocio de arriba (28/09/2026): la MISMA elección
     // para toda la app. Acá solo se lee y se escucha; la barra la dibuja sola.
