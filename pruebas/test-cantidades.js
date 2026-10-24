@@ -53,6 +53,8 @@ const PRELUDIO_STOCK = `
   function stockConUnidades() { return false }
   function filasStockVisibles() { return estado.stock }
   function pintarAvisoCobertura() {}
+  // Los lotes usados sin ingreso (23/10/2026) los prueba test-stock-lotes-sin-ingreso.js.
+  function pintarLotesSinIngreso() {}
   function htmlCobertura() { return '' }
   function coberturaDe() { return null }
   function filasCoberturaDe() { return [] }

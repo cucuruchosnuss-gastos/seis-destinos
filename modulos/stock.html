@@ -404,6 +404,31 @@
     .stock-cobertura-aviso[hidden] { display: none; }
     .stock-cobertura-aviso__accion { flex-shrink: 0; font-weight: 600; text-decoration: underline; }
 
+    /* Lotes usados sin ingreso cargado (23/10/2026): en bordó, tocable para
+       ver cuáles. La lista no pisa el ancho del celular. */
+    .stock-sin-ingreso { margin: 0 0 0.75rem; min-width: 0; }
+    .stock-sin-ingreso[hidden] { display: none; }
+    .stock-sin-ingreso__cabeza {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      width: 100%; min-height: 44px; padding: 0.5rem 0.875rem;
+      border: 1px solid var(--bordo); border-radius: var(--radio-tarjeta);
+      background: var(--bordo-suave); color: var(--bordo-oscuro);
+      font-family: var(--fuente); font-size: 0.8125rem; font-weight: 700; text-align: left; cursor: pointer;
+    }
+    .stock-sin-ingreso__accion { flex-shrink: 0; font-weight: 600; text-decoration: underline; }
+    .stock-sin-ingreso__cuerpo { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .stock-sin-ingreso__cuerpo[hidden] { display: none; }
+    .stock-sin-ingreso__nota { margin: 0; font-size: 0.8125rem; color: var(--color-texto-2); }
+    .stock-sin-ingreso__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.375rem; }
+    .stock-sin-ingreso__fila {
+      padding: 0.5rem 0.75rem; border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta);
+      background: var(--color-fondo); min-width: 0; overflow-wrap: anywhere;
+    }
+    .stock-sin-ingreso__que { font-size: 0.875rem; font-weight: 700; color: var(--color-texto); }
+    .stock-sin-ingreso__unidad { font-weight: 500; color: var(--color-texto-2); }
+    .stock-sin-ingreso__lote { font-size: 0.875rem; font-weight: 700; color: var(--bordo); }
+    .stock-sin-ingreso__datos { font-size: 0.8125rem; color: var(--color-texto-2); }
+
     /* Alguien consumió mercadería que nunca se cargó. Tiene que saltar en una
        lista larga, en bordó (el rojo es el acento de Accesos). */
     .chip-saldo-negativo {
@@ -2527,6 +2552,12 @@
            esos (y otra vez, la vuelve a mostrar entera). -->
       <button type="button" class="stock-cobertura-aviso" id="stock-cobertura-aviso" hidden></button>
 
+      <!-- Lotes usados sin ingreso cargado (23/10/2026): lo que la fábrica usó
+           en sus masas (masa_items.lote_fuera_de_stock) y no tiene ingreso, de
+           los últimos 30 días, para que administración cargue el ingreso. Lo
+           arma pintarLotesSinIngreso(). -->
+      <section class="stock-sin-ingreso" id="stock-sin-ingreso" hidden></section>
+
       <div class="lista-contenido" id="lista-stock"></div>
 
       <div class="estado-vacio-stock" id="stock-cargando">Cargando stock…</div>
@@ -3892,6 +3923,12 @@
       // Turnos: una respuesta vieja no pisa la nueva (cambiar la barra).
       turnoValorizado: 0,
       turnoCostos: 0,
+
+      // ── Lotes usados sin ingreso cargado (23/10/2026) ─────────────────
+      // { grupos, error, errorIngresos } o null mientras no se leyó.
+      sinIngreso: null,
+      sinIngresoAbierto: false,
+      turnoSinIngreso: 0,
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -4589,7 +4626,187 @@
       // El stock valorizado, solo con stock:ver_costos en la fábrica (si no,
       // no se llama a la RPC).
       await cargarValorizado()
+      // Los lotes usados sin ingreso cargado: aparte, no frena el stock.
+      await cargarLotesSinIngreso()
       return true
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOTES USADOS SIN INGRESO CARGADO (23/10/2026, pedido de Facu)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // La sala de masa usa lotes que administración no cargó: registrar_masa
+    // los marca masa_items.lote_fuera_de_stock (saldo del lote <= 0 en ese
+    // momento; verificado con pg_get_functiondef el 23/10/2026). Acá se
+    // juntan los de los últimos DIAS_SIN_INGRESO días por fábrica, insumo y
+    // lote, con los kg usados y la fecha de la última masa, para cargar el
+    // ingreso. Un lote que YA tiene un movimiento positivo en el libro
+    // (ingreso, inventario inicial, transferencia, ajuste) no se lista: tuvo
+    // ingreso y se terminó, no es papeleo pendiente.
+    //
+    // LA RLS (pg_policies, 23/10/2026): masa_items se lee con _ve_turno() =
+    // produccion:cargar, ver o configurar CON ALCANCE en la fábrica del turno
+    // (super_admin pasa). stock:ver NO alcanza. Sin ese permiso la base no da
+    // error: devuelve vacío, que se leería como "no hay nada". Por eso se
+    // decide ANTES con la misma regla (puedeVerMasasEn) y se DICE.
+    const DIAS_SIN_INGRESO = 30
+    const FILAS_POR_PAGINA_SIN_INGRESO = 1000
+    const TOPE_PAGINAS_SIN_INGRESO = 10
+
+    function puedeVerMasasEn(unidadId) {
+      return ['produccion:cargar', 'produccion:ver', 'produccion:configurar'].some(c => puedeTareaEn(c, unidadId))
+    }
+
+    // Lee de a páginas (PostgREST corta en 1000 filas). armar(desde, hasta)
+    // devuelve la consulta de esa página. → { filas, error }
+    async function leerPaginasSinIngreso(armar) {
+      const filas = []
+      for (let pagina = 0; pagina < TOPE_PAGINAS_SIN_INGRESO; pagina++) {
+        const desde = pagina * FILAS_POR_PAGINA_SIN_INGRESO
+        const { data, error } = await armar(desde, desde + FILAS_POR_PAGINA_SIN_INGRESO - 1)
+        if (error) return { filas, error }
+        filas.push(...(data ?? []))
+        if ((data ?? []).length < FILAS_POR_PAGINA_SIN_INGRESO) break
+      }
+      return { filas, error: null }
+    }
+
+    // La fecha (dd/mm/aaaa) de un instante, en hora argentina.
+    function fechaArSinIngreso(iso) {
+      const d = new Date(iso ?? '')
+      if (Number.isNaN(d.getTime())) return ''
+      return formatearFechaCorta(d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }))
+    }
+
+    // Por fábrica, insumo y lote: kg sumados, cuántas masas y la última.
+    // `conIngreso` = Set de 'unidad|insumo|lote' que ya tienen ingreso.
+    function agruparSinIngreso(filas, conIngreso) {
+      const m = new Map()
+      for (const f of filas ?? []) {
+        const unidad = f?.masas?.turnos_produccion?.unidad_negocio_id
+        const lote = String(f?.lote ?? '').trim()
+        if (!unidad || !f.insumo_id || !lote || f.masas?.anulada === true) continue
+        const k = `${unidad}|${f.insumo_id}|${lote}`
+        let g = m.get(k)
+        if (!g) {
+          g = { unidad_negocio_id: unidad, insumo_id: f.insumo_id, nombre: f.insumos?.nombre ?? '', marca: f.insumos?.marca ?? null, lote, kg: 0, masas: new Set(), ultima: null }
+          m.set(k, g)
+        }
+        g.kg += Number(f.cantidad_kg) || 0
+        g.masas.add(f.masa_id)
+        const h = f.masas?.hora ?? null
+        if (h && (!g.ultima || new Date(h) > new Date(g.ultima))) g.ultima = h
+      }
+      return [...m.values()]
+        .filter(g => !conIngreso?.has(`${g.unidad_negocio_id}|${g.insumo_id}|${g.lote}`))
+        .map(g => ({ ...g, kg: Math.round(g.kg * 1000) / 1000, masas: g.masas.size }))
+        .sort((a, b) => (new Date(b.ultima ?? 0) - new Date(a.ultima ?? 0)) ||
+          String(a.nombre).localeCompare(String(b.nombre), 'es', { sensitivity: 'base' }) || String(a.lote).localeCompare(String(b.lote)))
+    }
+
+    async function cargarLotesSinIngreso() {
+      const turno = ++estado.turnoSinIngreso
+      // Solo las fábricas donde se ve el stock (la pantalla) Y se pueden leer
+      // las masas. Si no hay ninguna, ni se consulta.
+      const legibles = (estado.unidadesStock ?? []).map(u => u.id).filter(puedeVerMasasEn)
+      if (!legibles.length) {
+        estado.sinIngreso = { grupos: [], error: null, errorIngresos: null }
+        return pintarLotesSinIngreso()
+      }
+      const desde = new Date(Date.now() - DIAS_SIN_INGRESO * 24 * 60 * 60 * 1000).toISOString()
+      const usados = await leerPaginasSinIngreso((a, z) => supabase.from('masa_items')
+        .select('masa_id, insumo_id, lote, cantidad_kg, insumos(nombre, marca), masas!inner(hora, anulada, turnos_produccion!inner(unidad_negocio_id))')
+        .eq('lote_fuera_de_stock', true)
+        .eq('masas.anulada', false)
+        .gte('masas.hora', desde)
+        .order('id')
+        .range(a, z))
+      if (turno !== estado.turnoSinIngreso) return
+      if (usados.error) {
+        console.error('lotes sin ingreso:', usados.error)
+        estado.sinIngreso = { grupos: [], error: usados.error.message || 'error de la base', errorIngresos: null }
+        return pintarLotesSinIngreso()
+      }
+      // Solo las legibles: salen de unidadesStock, que ya viene SIN la fábrica
+      // de pruebas (cargarStock la pasa por sinUnidadesDePrueba).
+      const enAlcance = new Set(legibles)
+      const filas = usados.filas.filter(f => enAlcance.has(f?.masas?.turnos_produccion?.unidad_negocio_id))
+      // ¿Cuáles ya tienen un movimiento positivo en el libro?
+      const conIngreso = new Set()
+      let errorIngresos = null
+      const insumoIds = [...new Set(filas.map(f => f.insumo_id).filter(Boolean))]
+      const lotes = [...new Set(filas.map(f => String(f.lote ?? '').trim()).filter(Boolean))]
+      if (insumoIds.length && lotes.length) {
+        const ing = await leerPaginasSinIngreso((a, z) => supabase.from('stock_movimientos')
+          .select('unidad_negocio_id, insumo_id, lote')
+          .in('insumo_id', insumoIds)
+          .in('lote', lotes)
+          .gt('cantidad', 0)
+          .order('id')
+          .range(a, z))
+        if (turno !== estado.turnoSinIngreso) return
+        if (ing.error) {
+          console.error('ingresos de los lotes:', ing.error)
+          errorIngresos = ing.error.message || 'error de la base'
+        } else {
+          for (const x of ing.filas) conIngreso.add(`${x.unidad_negocio_id}|${x.insumo_id}|${String(x.lote ?? '').trim()}`)
+        }
+      }
+      estado.sinIngreso = { grupos: agruparSinIngreso(filas, conIngreso), error: null, errorIngresos }
+      pintarLotesSinIngreso()
+    }
+
+    function htmlFilaSinIngreso(g, conUnidad) {
+      const masas = g.masas === 1 ? '1 masa' : `${g.masas} masas`
+      const ultima = fechaArSinIngreso(g.ultima)
+      return '<li class="stock-sin-ingreso__fila">' +
+        `<div class="stock-sin-ingreso__que">${esc(g.nombre || 'Insumo sin nombre')}${g.marca ? ` · ${esc(g.marca)}` : ''}` +
+        (conUnidad ? `<span class="stock-sin-ingreso__unidad"> · ${esc(nombreUnidadStock(g.unidad_negocio_id))}</span>` : '') + '</div>' +
+        `<div class="stock-sin-ingreso__lote">Lote ${esc(g.lote)}</div>` +
+        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, 'kg'))} en ${esc(masas)}${ultima ? ` · última masa el ${esc(ultima)}` : ''}</div>` +
+        '</li>'
+    }
+
+    // Lo que se ve depende de la barra de arriba: las fábricas elegidas donde
+    // se ve el stock, separadas en las que se pueden leer y las que no.
+    function pintarLotesSinIngreso() {
+      const caja = document.getElementById('stock-sin-ingreso')
+      const s = estado.sinIngreso
+      const enBarra = (estado.unidadesStock ?? []).filter(u => pasaFiltroUnidad(u.id, estado.unidadBarra))
+      if (!s || !enBarra.length || sinPermisoEnBarra(estado.unidadesStock)) { caja.hidden = true; caja.innerHTML = ''; return }
+      const sinPermiso = enBarra.filter(u => !puedeVerMasasEn(u.id))
+      const notaPermiso = sinPermiso.length
+        ? '<p class="rec-aviso rec-aviso--info">No se pueden ver los lotes usados sin ingreso cargado de ' +
+          `${esc(sinPermiso.map(u => u.nombre).join(', '))}: la base deja leer las masas solo con un permiso de Producción (ver, cargar o configurar) en esa fábrica.</p>`
+        : ''
+      if (s.error) {
+        caja.hidden = false
+        caja.innerHTML = notaPermiso + `<p class="rec-aviso">No se pudieron leer los lotes usados sin ingreso cargado: ${esc(s.error)}</p>`
+        return
+      }
+      const grupos = (s.grupos ?? []).filter(g => pasaFiltroUnidad(g.unidad_negocio_id, estado.unidadBarra))
+      if (!grupos.length) {
+        caja.hidden = !notaPermiso
+        caja.innerHTML = notaPermiso
+        return
+      }
+      const n = grupos.length
+      const abierto = !!estado.sinIngresoAbierto
+      const conUnidad = !estado.unidadBarra && new Set(grupos.map(g => g.unidad_negocio_id)).size > 1
+      caja.hidden = false
+      caja.innerHTML = notaPermiso +
+        `<button type="button" class="stock-sin-ingreso__cabeza" data-sin-ingreso-alternar aria-expanded="${abierto ? 'true' : 'false'}">` +
+        `<span>${n === 1 ? '1 lote usado sin ingreso cargado' : `${n} lotes usados sin ingreso cargado`}</span>` +
+        `<span class="stock-sin-ingreso__accion">${abierto ? 'Ocultar' : 'Ver cuáles'}</span></button>` +
+        `<div class="stock-sin-ingreso__cuerpo"${abierto ? '' : ' hidden'}>` +
+        `<p class="stock-sin-ingreso__nota">Lotes que la fábrica usó en sus masas en los últimos ${DIAS_SIN_INGRESO} días y no tienen ingreso cargado. Cargá el ingreso en Insumos y salen de la lista.</p>` +
+        (s.errorIngresos ? `<p class="rec-aviso">No se pudo comprobar si alguno ya tiene ingreso: ${esc(s.errorIngresos)}</p>` : '') +
+        `<ul class="stock-sin-ingreso__lista">${grupos.map(g => htmlFilaSinIngreso(g, conUnidad)).join('')}</ul></div>`
+    }
+
+    function alternarLotesSinIngreso() {
+      estado.sinIngresoAbierto = !estado.sinIngresoAbierto
+      pintarLotesSinIngreso()
     }
 
     // Filtra por la unidad de la barra, DONDE SE ARMA LA LISTA y no en la
@@ -4828,6 +5045,8 @@
     function renderizarStock() {
       const listaEl = document.getElementById('lista-stock')
       const vacioEl = document.getElementById('stock-vacio')
+      // Sigue a la barra de arriba (no vuelve a consultar).
+      pintarLotesSinIngreso()
 
       // La barra eligió una unidad donde esta persona no puede ver stock: se
       // dice, en vez de un listado vacío que se leería como "no hay nada".
@@ -11090,6 +11309,10 @@
     document.getElementById('stock-cobertura-aviso').addEventListener('click', () => {
       estado.filtroCobertura = !estado.filtroCobertura
       renderizarStock()
+    })
+    // Lotes usados sin ingreso cargado: "Ver cuáles" / "Ocultar".
+    document.getElementById('stock-sin-ingreso').addEventListener('click', ev => {
+      if (ev.target.closest('[data-sin-ingreso-alternar]')) alternarLotesSinIngreso()
     })
     document.querySelectorAll('.pestana-stock').forEach(btn =>
       btn.addEventListener('click', () => btn.dataset.vista === 'costos' ? abrirCostos() : mostrarVista(btn.dataset.vista)))

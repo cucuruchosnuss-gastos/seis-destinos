@@ -20,7 +20,7 @@ correrMutacionesEnVarios([
     // El texto que viaja
     { nombre: 'no se colapsan los espacios del medio', de: "return String(texto ?? '').trim().replace(/\\s+/g, ' ')", a: "return String(texto ?? '').trim()" },
     { nombre: 'no se recortan los bordes', de: "return String(texto ?? '').trim().replace(/\\s+/g, ' ')", a: "return String(texto ?? '').replace(/\\s+/g, ' ')" },
-    { nombre: 'el texto viaja crudo a proponer_marca', de: "rpc('proponer_marca', { p_nombre: textoConoNuevo(nombre) })", a: "rpc('proponer_marca', { p_nombre: nombre })" },
+    { nombre: 'el texto viaja crudo a proponer_marca', de: "rpc('proponer_marca', esOtro ? { p_nombre: textoConoNuevo(nombre), p_es_otro: true } : { p_nombre: textoConoNuevo(nombre) })", a: "rpc('proponer_marca', { p_nombre: nombre })" },
     // Quién puede
     { nombre: 'proponer sin conos:pedir', de: '      return !!(perm?.pedir || perm?.configurar || perm?.cargar)', a: '      return !!(perm?.configurar || perm?.cargar)' },
     { nombre: 'proponer sin produccion:cargar', de: '      return !!(perm?.pedir || perm?.configurar || perm?.cargar)', a: '      return !!(perm?.pedir || perm?.configurar)' },
@@ -28,11 +28,11 @@ correrMutacionesEnVarios([
     { nombre: 'produccion:cargar no se lee', de: "configurar: tieneP('configurar'), cargar: tieneP('cargar'),", a: "configurar: tieneP('configurar'), cargar: false," },
     { nombre: 'el botón se ofrece a cualquiera', de: '      return puedeProponer(estado.perm) ? conoNuevoOfrecido(texto, estado.conos) : null', a: '      return conoNuevoOfrecido(texto, estado.conos)' },
     // Los buscadores
-    { nombre: 'Anotar sigue sin ofrecer crear', de: "'data-anotar-cono', ofrecerConoNuevo(ev.target.value), 'anotar')", a: "'data-anotar-cono', null, 'anotar')" },
-    { nombre: 'Anotar vuelve a Agregar', de: "'data-anotar-cono', ofrecerConoNuevo(ev.target.value), 'anotar')", a: "'data-anotar-cono', ofrecerConoNuevo(ev.target.value), 'agregar')" },
-    { nombre: 'Agregar deja de ofrecer crear', de: "htmlResultados(lista, 'data-agregar-cono', ofrecerConoNuevo(texto), 'agregar')", a: "htmlResultados(lista, 'data-agregar-cono', null, 'agregar')" },
+    { nombre: 'Anotar sigue sin ofrecer crear', de: "'data-anotar-cono', ofrecerConoNuevo(texto), 'anotar', estadoParecidos('anotar'))", a: "'data-anotar-cono', null, 'anotar', estadoParecidos('anotar'))" },
+    { nombre: 'Anotar vuelve a Agregar', de: "'data-anotar-cono', ofrecerConoNuevo(texto), 'anotar', estadoParecidos('anotar'))", a: "'data-anotar-cono', ofrecerConoNuevo(texto), 'agregar', estadoParecidos('anotar'))" },
+    { nombre: 'Agregar deja de ofrecer crear', de: "htmlResultados(lista, 'data-agregar-cono', ofrecerConoNuevo(texto), 'agregar', estadoParecidos('agregar'))", a: "htmlResultados(lista, 'data-agregar-cono', null, 'agregar', estadoParecidos('agregar'))" },
     { nombre: 'el botón no dice a qué formulario vuelve', de: ' data-cono-destino="${esc(destino)}"', a: '' },
-    { nombre: 'el botón va primero', de: '      if (textoNuevo) filas.push(', a: '      if (textoNuevo) filas.unshift(' },
+    { nombre: 'el botón va primero', de: '        const otro = vigente && !!igualDe(par)\n        filas.push(', a: '        const otro = vigente && !!igualDe(par)\n        filas.unshift(' },
     { nombre: 'el texto del botón sin escapar', de: 'data-cono-nuevo="${esc(textoNuevo)}"', a: 'data-cono-nuevo="${textoNuevo}"' },
     { nombre: 'el clic no pasa el formulario', de: 'proponerCono(el.dataset.conoNuevo, el.dataset.conoDestino); return }', a: 'proponerCono(el.dataset.conoNuevo); return }' },
     // Al crear

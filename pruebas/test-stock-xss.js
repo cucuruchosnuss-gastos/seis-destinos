@@ -567,6 +567,14 @@ const SEGURAS = {
   pintarElegirListaTrp: { 'htmlElegirTrp(t)': 'HTML de htmlElegirTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
   pintarPreviaTrp: { 'htmlPreviaTrp(t)': 'HTML de htmlPreviaTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
   refrescarRenglonTrp: { 'htmlResumenLotesTrp(t, r, lista)': 'HTML de htmlResumenLotesTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  // Lotes usados sin ingreso cargado (23/10/2026): htmlFilaSinIngreso escapa
+  // adentro (test-stock-lotes-sin-ingreso.js lo EJECUTA con texto malicioso).
+  pintarLotesSinIngreso: {
+    n: 'número: grupos.length',
+    DIAS_SIN_INGRESO: 'constante numérica del código (30)',
+    "grupos.map(g => htmlFilaSinIngreso(g, conUnidad)).join('')": 'HTML de htmlFilaSinIngreso(), que escapa adentro (ejecutado con texto malicioso en test-stock-lotes-sin-ingreso.js)',
+    notaPermiso: 'HTML armado arriba en la misma función, con esc() de los nombres de fábrica, o vacío',
+  },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo
 // no tiene sentido copiar: el callback que recibe htmlAgrupado().
