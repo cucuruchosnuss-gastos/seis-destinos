@@ -31,6 +31,10 @@ const MITAD_1 = [
   '9-comparar-planta.spec.js',
   '6-planta-reanudar.spec.js',
   '30-revision-celular.spec.js',
+  // 24/10/2026 (cheques-importe-completo): con el spec 61 la mitad 2 pasaba
+  // del 55 % (819 de 1486 s); los dos de cheques al banco vienen a la 1.
+  '37-cheques-banco.spec.js',
+  '61-cheques-importe-completo.spec.js',
 ]
 
 // Segundos de cada spec, medidos en GitHub (corrida 38493299918 de main, el
@@ -52,6 +56,9 @@ const TIEMPOS = {
   '29-planta-390.spec.js': 22,
   '25-planta-paradas.spec.js': 21,
   '37-cheques-banco.spec.js': 19,
+  // Sin medir en GitHub: 44 s en la compu (20 pruebas, 24/10/2026); se estima
+  // como el 37 (mismas pantallas) con algo más.
+  '61-cheques-importe-completo.spec.js': 20,
   '34-faltante-retiro.spec.js': 19,
   '7-barra-unidad.spec.js': 18,
   '27-planta-sin-internet.spec.js': 16,
