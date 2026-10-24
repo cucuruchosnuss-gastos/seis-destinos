@@ -1419,6 +1419,56 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 }
 @media print { .barra-unidad, .barra-arriba { display: none !important; } }
 
+/* ─── El encabezado de los módulos (23/10/2026, esqueleto parejo) ───────────
+   Los módulos viejos (Gastos, Caja, Cobranzas, Cuentas corrientes, Ingreso,
+   Stock, Pedidos, Conos, Accesos y Empleados) llevan el mismo encabezado que
+   los nuevos (Órdenes de retiro, Administración, Taller): "‹ Volver", el
+   ícono del módulo en su color (el de la barra lateral) y el nombre en la
+   letra de títulos, con la vista al lado ("Cobranzas / Listado"). Ya no hay
+   tarjeta blanca ni "Seis Destinos": eso lo dice la barra de arriba.
+   El color lo pone cada módulo en su CSS (--cab-modulo y --cab-modulo-suave,
+   de PALETA_MODULO de js/modulos.js). Las vistas de adentro (una ficha, el
+   detalle de un gasto) usan el mismo encabezado con su "‹ Volver" a la lista.
+   CELULAR: una franja blanca de lado a lado, pegada a la barra de arriba. */
+.cab-modulo {
+  --cab-modulo: oklch(0.35 0.012 60);
+  --cab-modulo-suave: oklch(0.955 0.008 60);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; box-sizing: border-box;
+  min-height: 58px; padding: 14px 0 4px; margin: 0 0 12px; font-family: var(--fuente);
+}
+.cab-modulo__volver {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-height: 40px; padding: 0 12px;
+  border: 1px solid var(--color-borde); border-radius: var(--radio-boton); background: var(--color-fondo); color: var(--color-texto);
+  font: inherit; font-size: 14px; font-weight: 600; line-height: 1; text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.cab-modulo__volver:hover { background: var(--color-fila-hover); border-color: var(--color-borde-fuerte); text-decoration: none; }
+.cab-modulo__volver:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+.cab-modulo__icono {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: var(--cab-modulo-suave); color: var(--cab-modulo); overflow: hidden;
+}
+.cab-modulo__icono svg { width: 17px; height: 17px; display: block; }
+.cab-modulo__col { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; line-height: 1.15; }
+.cab-modulo__titulo {
+  font-family: var(--fuente-titulo); font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: var(--color-texto);
+  min-width: 0; overflow-wrap: anywhere;
+}
+.cab-modulo__sub { font-size: 15px; font-weight: 600; color: var(--color-texto-2); min-width: 0; overflow-wrap: anywhere; }
+.cab-modulo__sub::before { content: '/'; color: var(--color-texto-suave); margin-right: 12px; font-weight: 500; }
+.cab-modulo__sub:empty { display: none; }
+.cab-modulo__extra { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+@media (max-width: 1023.98px) {
+  .cab-modulo {
+    background: var(--color-fondo); border-bottom: 1px solid var(--color-borde);
+    margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); padding: 8px 16px; gap: 8px 10px;
+  }
+  .cab-modulo__volver { min-height: 40px; padding: 0 10px; }
+  .cab-modulo__titulo { font-size: 19px; }
+  .cab-modulo__sub { font-size: 13.5px; }
+  .cab-modulo__sub::before { margin-right: 8px; }
+}
+@media print { .cab-modulo__volver { display: none !important; } }
+
 /* ─── El panel de detalle al lado de una lista (30/09/2026) ─────────────────
    Pedido de Facu: todo panel de detalle que va AL LADO de una lista ocupa el
    ALTO COMPLETO de la pantalla (nunca termina donde termina su contenido

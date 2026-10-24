@@ -1522,15 +1522,19 @@
       .pg-contenido { padding: 0 28px calc(2rem + env(safe-area-inset-bottom)); }
       .pg-btn-menu, .pg-volver-menu { display: none !important; }
     }
-    /* Celular: "Menú" lo abre a pantalla completa (2b); los tres bloques como
-       tarjetas y renglones de 52 px con "›". */
+    /* Celular: "Menú" lo abre en el lugar del contenido (2b); los tres bloques
+       como tarjetas y renglones de 52 px con "›". 23/10/2026: antes iba
+       "position: fixed; inset: 0; z-index: 50" encima de todo y tapaba la
+       barra de arriba y la de abajo del celular; ahora es una vista DENTRO de
+       la página (el contenido se esconde mientras está abierto) y scrollea la
+       página. */
     @media (max-width: 899px) {
       .pg-menu { display: none; }
       body.pg-menu-abierto .pg-menu {
-        display: flex; position: fixed; inset: 0; z-index: 50; overflow-y: auto; border-right: none;
+        display: flex; border-right: none; min-width: 0;
         background: var(--color-superficie); padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); gap: 12px;
       }
-      body.pg-menu-abierto { overflow: hidden; }
+      body.pg-menu-abierto .pg-contenido { display: none; }
       .pg-menu__cerrar {
         display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--radio-boton);
         border: 1px solid var(--pr-borde-boton); background: var(--color-fondo); font: inherit; font-weight: 700; cursor: pointer;
@@ -3160,6 +3164,8 @@
     function abrirMenu() {
       document.body.classList.add('pg-menu-abierto')
       document.getElementById('pr-btn-menu').setAttribute('aria-expanded', 'true')
+      // El menú ocupa el lugar del contenido (23/10/2026): arranca arriba.
+      window.scrollTo(0, 0)
       document.getElementById('pr-menu-cerrar').focus?.()
     }
 
@@ -9746,7 +9752,9 @@
     // Los movimientos de un retiro: el despacho (salió) y, si la orden se
     // anuló, el ajuste que lo devolvió. Lo más nuevo primero.
     function salidasPorRetiro(movs) {
-      return (movs ?? []).filter(m => m.orden_retiro_id && (m.tipo === 'despacho' || m.tipo === 'ajuste'))
+      // Desde el 22/10/2026 también la DEVOLUCIÓN: las cajas que trajo el
+      // cliente y volvieron al stock.
+      return (movs ?? []).filter(m => m.orden_retiro_id && (m.tipo === 'despacho' || m.tipo === 'ajuste' || m.tipo === 'devolucion'))
         .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
     }
 
@@ -9771,13 +9779,17 @@
         const queRetiro = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].filter(Boolean).join(' · ')
         const r = codigoRetiro(m.orden_retiro_id, info)
         const vuelve = m.tipo === 'ajuste'
-        const titulo = vuelve
-          ? (r.codigo ? `Anulación del retiro ${r.codigo}` : 'Anulación de un retiro')
-          : (r.codigo ? `Retiro ${r.codigo}${r.anulada ? ' · anulado' : ''}` : 'Retiro')
+        const devuelta = m.tipo === 'devolucion'
+        const titulo = devuelta
+          ? `${textoTipoStockTerminado(m.tipo)}${r.codigo ? ' · retiro ' + r.codigo : ''}`
+          : vuelve
+            ? (r.codigo ? `Anulación del retiro ${r.codigo}` : 'Anulación de un retiro')
+            : (r.codigo ? `Retiro ${r.codigo}${r.anulada ? ' · anulado' : ''}` : 'Retiro')
         const n = numeroInd(m.cajas)
-        const cuenta = `${vuelve ? 'volvieron' : 'salieron'} ${n === null ? '—' : textoEntero(Math.abs(n))} ${n !== null && Math.abs(n) === 1 ? 'caja' : 'cajas'}`
+        // Entran (+) o salen (−) según el signo: anular una devolución saca.
+        const cuenta = `${n !== null && n > 0 ? (devuelta ? 'entraron' : 'volvieron') : 'salieron'} ${n === null ? '—' : textoEntero(Math.abs(n))} ${n !== null && Math.abs(n) === 1 ? 'caja' : 'cajas'}`
         const notaRetiro = r.nota ? `<span class="pr-texto-suave"> · ${esc(r.nota)}</span>` : ''
-        const motivoRetiro = vuelve && m.motivo ? `<div class="pr-texto-suave">${esc(m.motivo)}</div>` : ''
+        const motivoRetiro = (vuelve || devuelta) && m.motivo ? `<div class="pr-texto-suave">${esc(m.motivo)}</div>` : ''
         return `<div class="pr-of-fila pr-of-retiro">` +
           `<span>${esc(fechaDelDia(m.fecha))}</span>` +
           `<span><strong>${esc(titulo)}</strong>${notaRetiro}${motivoRetiro}</span>` +
@@ -9831,6 +9843,8 @@
       despacho: 'Despacho',
       traspaso_salida: 'Traspaso a otra fábrica',
       traspaso_entrada: 'Traspaso desde otra fábrica',
+      // Las cajas que trajo un cliente y volvieron al stock (22/10/2026).
+      devolucion: 'Devolución de cliente',
     }
     function textoTipoStockTerminado(tipo) {
       const t = String(tipo ?? '').trim()

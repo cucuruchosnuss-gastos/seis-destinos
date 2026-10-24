@@ -484,53 +484,9 @@
       vertical-align: -0.15em;
     }
 
-    /* ── Header (Pantalla 1) — mismo patrón que .caja-header/.cc-header:
-       tarjeta blanca redondeada con sombra, en vez de la barra sticky con
-       blur. Volver es el primer hijo (izquierda), igual que ya estaba acá
-       y que en .caja-header — no es el orden espejado de .cc-header. ──── */
-
-    .gastos-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--color-fondo);
-      border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-suave);
-      padding: 0.875rem 1.25rem;
-      margin: 1.25rem 0 1.25rem;
-    }
-    .gastos-header__volver {
-      display: flex;
-      align-items: center;
-      padding: 0.5rem 0.875rem;
-      border-radius: 999px;
-      font-family: var(--fuente);
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--color-texto-suave);
-      background: none;
-      border: none;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .gastos-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
-    .gastos-header__marca { display: flex; align-items: center; gap: 0.625rem; }
-    .gastos-header__logo {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, var(--navy-medio), var(--color-acento));
-      flex-shrink: 0;
-    }
-    .gastos-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; }
-    .gastos-header__marca-texto {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--color-texto-suave);
-      text-transform: uppercase;
-    }
-    .gastos-header__titulo { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto); }
+    /* ── El encabezado (23/10/2026): el de todos los módulos, .cab-modulo de
+       main.css, con el color de Gastos (PALETA_MODULO de js/modulos.js). ── */
+    .cab-modulo { --cab-modulo: oklch(0.55 0.16 355); --cab-modulo-suave: oklch(0.955 0.045 355); }
 
     /* ── Layout base ───────────────────────────────────────────────────────── */
 
@@ -557,64 +513,25 @@
       width: 100%;
     }
 
-    #vista-wizard:not([hidden]) {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      background: var(--color-superficie);
+    /* EL WIZARD Y LOS DETALLES SON VISTAS DENTRO DE LA PÁGINA (23/10/2026).
+       Antes iban "position: fixed; inset: 0" con z-index 50/60, por encima de
+       la barra lateral (30), la de arriba y la de abajo del celular: las
+       tapaban. Ahora ocupan el lugar de la lista (el JS ya la esconde), con el
+       mismo ancho que ella, y la página scrollea entera, como en Stock y
+       Órdenes de retiro. */
+    #vista-wizard:not([hidden]),
+    .vista-en-pagina:not([hidden]) {
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 1.25rem 1.5rem;
+      box-sizing: border-box;
+      min-width: 0;
     }
-
-    #modal-detalle-gasto:not([hidden]),
-    #modal-detalle-factura:not([hidden]) {
-      position: fixed;
-      inset: 0;
-      z-index: 60;
-      background: var(--color-superficie);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* ── Header del wizard ─────────────────────────────────────────────────── */
-
-    .wizard-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      background: var(--color-fondo);
-      border-bottom: 1px solid var(--color-borde);
-      flex-shrink: 0;
-    }
-
-    .wizard-header__titulo {
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-
-    .wizard-header__cerrar {
-      width: 2rem;
-      height: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--color-superficie);
-      border: none;
-      border-radius: 50%;
-      font-size: 1rem;
-      cursor: pointer;
-      color: var(--color-texto-suave);
-      transition: background var(--transicion), color var(--transicion);
-    }
-
-    .wizard-header__cerrar:hover {
-      background: var(--color-borde);
-      color: var(--color-texto);
-    }
+    .vista-en-pagina > #detalle-gasto-contenido,
+    .vista-en-pagina > #detalle-factura-contenido { overflow: visible !important; padding: 0 0 1rem !important; min-width: 0; }
 
     /* ── Barra de progreso ─────────────────────────────────────────────────── */
 
@@ -623,7 +540,9 @@
       align-items: flex-start;
       padding: 1rem 1.25rem 0.875rem;
       background: var(--color-fondo);
-      border-bottom: 1px solid var(--color-borde);
+      border: 1px solid var(--color-borde);
+      border-radius: var(--radio-tarjeta);
+      margin-bottom: 0.75rem;
       flex-shrink: 0;
       gap: 0.375rem;
     }
@@ -708,16 +627,15 @@
       display: none;
       flex-direction: column;
       flex: 1;
-      overflow: hidden;
+      min-width: 0;
     }
 
     .paso--activo { display: flex; }
 
     .paso__contenido {
       flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding: 1.5rem 1.25rem;
+      min-width: 0;
+      padding: 0.5rem 0 1.5rem;
     }
 
     .paso__titulo {
@@ -736,13 +654,40 @@
 
     /* ── Navegación del wizard ─────────────────────────────────────────────── */
 
+    /* "Anterior / Siguiente" PEGADA ABAJO (24/10/2026): en un paso largo los
+       botones quedan siempre a la vista, sin bajar hasta el final. Una barra
+       de lado a lado de la vista, con el fondo del contenido y un borde y una
+       sombra suaves arriba (como la barra de Cobranzas). En el celular y la
+       tablet va ARRIBA de la barra de abajo de la app (68 px + safe-area, lo
+       mismo que deja libre el body). */
     .wizard-nav {
       display: flex;
       gap: 0.75rem;
-      padding: 1rem 1.25rem;
-      background: var(--color-fondo);
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      margin: 0 -1.25rem;
+      padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      background: var(--color-superficie);
       border-top: 1px solid var(--color-borde);
+      box-shadow: 0 -2px 12px rgba(28, 26, 23, 0.08);
       flex-shrink: 0;
+    }
+    @media (max-width: 1023.98px) {
+      body.con-barra-lateral .wizard-nav { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); padding-bottom: 0.75rem; }
+    }
+    /* El sticky necesita que el body NO sea un contenedor de scroll: con
+       "overflow-x: hidden" (main.css) lo es y nada se pega (ver Órdenes de
+       retiro y la gestión de producción). Con el wizard abierto, clip: corta
+       igual de costado, sin scroll propio. */
+    body:has(> #vista-wizard:not([hidden])) { overflow-x: clip; }
+    /* Y al tocar un campo (o traerlo a la vista con el teclado), el navegador
+       deja libre abajo el alto de la barra pegada (~72 px, con margen: 88),
+       así el campo no queda debajo de los botones. En el celular, sumado a
+       los 76 px que ya deja para la barra de abajo de la app (main.css). */
+    html:has(> body > #vista-wizard:not([hidden])) { scroll-padding-bottom: 88px; }
+    @media (max-width: 1023.98px) {
+      html:has(> body.con-barra-lateral > #vista-wizard:not([hidden])) { scroll-padding-bottom: calc(76px + 88px + env(safe-area-inset-bottom, 0px)); }
     }
 
     .wizard-nav .btn { flex: 1; }
@@ -1789,14 +1734,12 @@
 
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem;">
 
-      <header class="gastos-header">
-        <a href="../dashboard.html" class="gastos-header__volver" title="Volver al dashboard">‹ Volver</a>
-        <div class="gastos-header__marca">
-          <div class="gastos-header__logo"></div>
-          <div class="gastos-header__marca-col">
-            <span class="gastos-header__marca-texto">Seis Destinos</span>
-            <span class="gastos-header__titulo">Gastos</span>
-          </div>
+      <!-- El encabezado de todos los módulos (23/10/2026, .cab-modulo de main.css). -->
+      <header class="cab-modulo">
+        <a href="../dashboard.html" class="cab-modulo__volver" title="Volver al dashboard">‹ Volver</a>
+        <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3"/></svg></span>
+        <div class="cab-modulo__col">
+          <span class="cab-modulo__titulo">Gastos</span>
         </div>
       </header>
 
@@ -1852,10 +1795,16 @@
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-wizard" hidden>
 
-    <header class="wizard-header">
-      <button class="wizard-header__cerrar" id="btn-cancelar-wizard" title="Cancelar">✕</button>
-      <span class="wizard-header__titulo">Nuevo gasto</span>
-      <div style="width: 2rem;"></div>
+    <!-- 23/10/2026: el wizard es una vista DENTRO de la página (antes tapaba
+         la barra lateral, la de arriba y la de abajo del celular). El "‹
+         Volver" es el mismo botón de cancelar de siempre. -->
+    <header class="cab-modulo">
+      <button class="cab-modulo__volver" id="btn-cancelar-wizard" title="Cancelar y volver a la lista">‹ Volver</button>
+      <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3"/></svg></span>
+      <div class="cab-modulo__col">
+        <span class="cab-modulo__titulo">Gastos</span>
+        <span class="cab-modulo__sub">Nuevo gasto</span>
+      </div>
     </header>
 
     <!-- Barra de progreso: 5 círculos, mapean 7 sub-pasos -->
@@ -2159,13 +2108,21 @@
   <!-- ═══════════════════════════════════════════════════════════════════════
        VISTA C — DETALLE DE UN GASTO
   ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="modal-detalle-gasto" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-gasto">← Volver</button>
-      <span class="header__nombre-app">Detalle del gasto</span>
+  <!-- 23/10/2026: el detalle (y el de la factura, abajo) es una vista DENTRO
+       de la página, con el encabezado de los módulos: antes se abría encima
+       de todo y tapaba las barras. El id sigue siendo "modal-…" para no tocar
+       el JS que lo abre y lo cierra. -->
+  <div id="modal-detalle-gasto" class="vista-en-pagina" hidden>
+    <header class="cab-modulo">
+      <button type="button" class="cab-modulo__volver" id="btn-cerrar-detalle-gasto" title="Volver a la lista">‹ Volver</button>
+      <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3"/></svg></span>
+      <div class="cab-modulo__col">
+        <span class="cab-modulo__titulo">Gastos</span>
+        <span class="cab-modulo__sub">Detalle del gasto</span>
+      </div>
       <!-- "Ampliar" (06/10/2026, js/ampliar.js): en la compu, el gasto en
            una ventana grande. Nace hidden: lo muestra la pieza. -->
-      <div class="amp-barra--cabeza">
+      <div class="amp-barra--cabeza cab-modulo__extra">
         <button type="button" class="amp-boton" id="btn-ampliar-gasto" hidden>Ampliar</button>
         <div id="detalle-gasto-header-derecha" style="display:flex; gap:0.25rem; justify-content:flex-end; min-width:5rem;"></div>
       </div>
@@ -2176,11 +2133,15 @@
   <!-- ═══════════════════════════════════════════════════════════════════════
        VISTA D — DETALLE DE UNA FACTURA PENDIENTE (?factura=<id>)
   ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="modal-detalle-factura" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-factura">← Volver</button>
-      <span class="header__nombre-app">Detalle de la factura</span>
-      <div class="amp-barra--cabeza">
+  <div id="modal-detalle-factura" class="vista-en-pagina" hidden>
+    <header class="cab-modulo">
+      <button type="button" class="cab-modulo__volver" id="btn-cerrar-detalle-factura" title="Volver a la lista">‹ Volver</button>
+      <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3"/></svg></span>
+      <div class="cab-modulo__col">
+        <span class="cab-modulo__titulo">Gastos</span>
+        <span class="cab-modulo__sub">Detalle de la factura</span>
+      </div>
+      <div class="amp-barra--cabeza cab-modulo__extra">
         <button type="button" class="amp-boton" id="btn-ampliar-factura" hidden>Ampliar</button>
         <div id="detalle-factura-header-derecha" style="width:5rem;"></div>
       </div>
@@ -3216,15 +3177,34 @@
     // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN VISTAS
     // ═══════════════════════════════════════════════════════════════════════
+    // LAS VISTAS DENTRO DE LA PÁGINA (23/10/2026): el wizard y los detalles
+    // ya no se abren encima de todo (tapaban las barras), ocupan el lugar de
+    // la lista. Al abrir una, la página arranca arriba; al volver a la lista,
+    // vuelve a la altura donde estaba. Se anota ANTES de esconder la lista
+    // (después la página ya es más corta).
+    const alturaDeLaLista = { y: 0 }
+    function entrarAVista() {
+      if (!document.getElementById('vista-lista').hidden) alturaDeLaLista.y = window.scrollY || 0
+    }
+    function arribaDeLaVista() {
+      window.scrollTo(0, 0)
+    }
+    function volverALaLista() {
+      window.scrollTo(0, alturaDeLaLista.y)
+    }
+
     async function abrirWizard() {
+      entrarAVista()
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-wizard').removeAttribute('hidden')
+      arribaDeLaVista()
       await iniciarWizard()
     }
 
     function cerrarWizard() {
       document.getElementById('vista-wizard').hidden = true
       document.getElementById('vista-lista').removeAttribute('hidden')
+      volverALaLista()
       cargarLista()
     }
 
@@ -6411,8 +6391,10 @@
       })
 
       estado.gastoDetalleActualId = id
+      entrarAVista()
       document.getElementById('vista-lista').hidden = true
       document.getElementById('modal-detalle-gasto').removeAttribute('hidden')
+      arribaDeLaVista()
     }
 
     // Personas del selector de la edición: las elegibles, MÁS la del propio
@@ -6662,6 +6644,7 @@
       if (volverOrigenSiCorresponde()) return
       document.getElementById('modal-detalle-gasto').hidden = true
       document.getElementById('vista-lista').removeAttribute('hidden')
+      volverALaLista()
     }
 
     function abrirModalAnularGasto(id) {
@@ -6761,14 +6744,17 @@
 
       document.getElementById('btn-agregar-interes')?.addEventListener('click', () => mostrarFormularioInteres(id))
 
+      entrarAVista()
       document.getElementById('vista-lista').hidden = true
       document.getElementById('modal-detalle-factura').removeAttribute('hidden')
+      arribaDeLaVista()
     }
 
     function cerrarDetalleFactura() {
       if (volverOrigenSiCorresponde()) return
       document.getElementById('modal-detalle-factura').hidden = true
       document.getElementById('vista-lista').removeAttribute('hidden')
+      volverALaLista()
     }
 
     // Igual que seleccionarProveedor() del wizard pero apunta a los campos

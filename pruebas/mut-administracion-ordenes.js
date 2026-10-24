@@ -49,6 +49,9 @@ correrMutaciones({
     { expr: 'esc(l.icono)', motivo: 'el ícono es una constante del catálogo (js/modulos.js)' },
     { expr: 'esc(l.nombre)', motivo: 'el nombre es una constante del catálogo (js/modulos.js)' },
     { expr: 'esc(rotulo)', motivo: 'htmlDatoAd() recibe rótulos constantes del código ("Cliente", "Cargó"…)' },
+    // Las devoluciones (23/10/2026): lo nuevo lo prueba test-administracion-devoluciones.js.
+    { expr: 'esc(importeHoja(0, moneda))', motivo: 'la reposición: el importe constante $ 0,00 formateado por importeHoja()' },
+    { expr: "esc('Devoluciones · ' + devs.length)", motivo: 'texto constante del código más un número (cuántos renglones devueltos)' },
   ],
   manuales: [
     // Permisos
@@ -81,7 +84,7 @@ correrMutaciones({
     { nombre: 'sin valorizar no va en bordó', de: "${pendiente ? ' ad-fila__importe--pendiente' : ''}", a: '' },
     // Detalle y lotes
     { nombre: 'sin permiso se consultan los lotes', de: '      let lotes = null\n      if (puedeVerLotes(o.unidad_negocio_id)) {', a: '      let lotes = null\n      if (true) {' },
-    { nombre: 'los lotes de otro cono', de: "      return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))", a: '      return lotes.filter(l => l.presentacion_id === it.presentacion_id)' },
+    { nombre: 'los lotes de otro cono', de: '        : l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))', a: '        : l.presentacion_id === it.presentacion_id)' },
     // Valorizar
     // (09/10/2026: se fue preciosVigentes(); el precio vigente a la fecha del
     // retiro de un insumo lo elige la base en precios_insumos_lista, y la
@@ -93,8 +96,8 @@ correrMutaciones({
     { nombre: 'costo + % no dice de dónde sale', de: "          if (r.origen) v.origen[it.id] = r.origen", a: '' },
     { nombre: 'un precio null se propone igual', de: "          if (r.precio !== null) { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }", a: "          { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }" },
     { nombre: 'el % de la lista no se nombra', de: ": { texto: pct === null ? 'Sobre el costo (lista)' :", a: ": { texto: true ? 'Sobre el costo (lista)' :" },
-    { nombre: 'el insumo se valoriza por cajas', de: '      return it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)', a: '      return Number(it?.cajas)' },
-    { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id')" },
+    { nombre: 'el insumo se valoriza por cajas', de: '      const n = it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)', a: '      const n = Number(it?.cajas)' },
+    { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')" },
     { nombre: 'los lotes de los insumos sin stock:ver', de: "      if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {", a: "      if ((items ?? []).some(it => it.insumo_id)) {" },
     { nombre: 'el insumo se dibuja como producto', de: '      if (it.insumo_id) {\n        // Un INSUMO de reventa', a: '      if (false) {\n        // Un INSUMO de reventa' },
     { nombre: 'el precio del insumo se pide x caja', de: "        porQue = unidadHoja(pi.unidad) || 'unidad'", a: "        porQue = 'caja'" },
@@ -107,8 +110,8 @@ correrMutaciones({
     { nombre: 'sin_precio no se mira', de: '        if (!data || data.sin_precio) return {', a: '        if (!data) return {' },
     { nombre: 'un error de la llamada inventa un cero', de: "        return { error: 'No se pudo leer el precio de la lista.' + (limpio(err?.message) ? ' ' + limpio(err.message) : '') }", a: '        return { precio: 0, datos: {} }' },
     { nombre: 'el error no dice cuál fue', de: "        return { error: 'No se pudo leer el precio de la lista.' + (limpio(err?.message) ? ' ' + limpio(err.message) : '') }", a: "        return { error: 'No se pudo leer el precio de la lista.' }" },
-    { nombre: 'los insumos también van a precio_venta', de: '      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it)) : []', a: '      const productos = listaId ? d.items.filter(it => !vigente(it)) : []' },
-    { nombre: 'sin lista se llama igual', de: '      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it)) : []', a: '      const productos = d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it))' },
+    { nombre: 'los insumos también van a precio_venta', de: "      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it) && tipoItem(it) !== 'reposicion') : []", a: "      const productos = listaId ? d.items.filter(it => !vigente(it) && tipoItem(it) !== 'reposicion') : []" },
+    { nombre: 'sin lista se llama igual', de: "      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it) && tipoItem(it) !== 'reposicion') : []", a: "      const productos = d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it) && tipoItem(it) !== 'reposicion')" },
     { nombre: 'la lista se lee aunque no haya insumos', de: '          if (listaId && d.items.some(it => it.insumo_id && !vigente(it))) {', a: '          if (listaId) {' },
     { nombre: 'lo propuesto no cuenta como de la lista', de: '          v.desdeLista.add(it.id)\n          const conCono', a: '          const conCono' },
     { nombre: 'sin el conito en el origen', de: "      if (conCono) unidad += Number.isFinite(conito)", a: "      if (false) unidad += Number.isFinite(conito)" },

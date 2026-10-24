@@ -153,7 +153,8 @@ async function main() {
   // (Proveedores y Clientes) y vuelve a llamarse "Cuentas corrientes". Lo de
   // las pestañas lo fija test-cuentas-corrientes-cheques-pago.js.
   chk('la pestaña se llama "Cuentas corrientes"', /<title>Cuentas corrientes — Seis Destinos<\/title>/.test(FUENTE))
-  chk('la cabecera dice "Cuentas corrientes"', /<span class="cc-header__titulo">Cuentas corrientes<\/span>/.test(FUENTE))
+  // 23/10/2026: la cabecera es la de todos los módulos (.cab-modulo de main.css).
+  chk('la cabecera dice "Cuentas corrientes"', /<span class="cab-modulo__titulo">Cuentas corrientes<\/span>\n        <\/div>\n      <\/header>\n      <!-- DOS PESTAÑAS/.test(FUENTE))
   chk('el catálogo (barra lateral, tablero, accesos directos) dice el nombre nuevo',
     /clave: 'cuentas-corrientes',[\s\S]{0,400}?nombre: 'Cuentas corrientes',/.test(FUENTE_MODULOS))
   chk('y su descripción dice proveedores y clientes', /descripcion: 'Cuentas corrientes de proveedores y clientes'/.test(FUENTE_MODULOS))
@@ -205,7 +206,7 @@ async function main() {
     /var\(--bordo\)/.test(regla('.badge-estado-factura--sin_importe') ?? ''))
   chk('el interés por mora, en bordó', /var\(--bordo/.test(regla('.chip-tipo-mov--interes') ?? '') && /var\(--bordo/.test(regla('.punto-tipo-mov--interes') ?? ''))
   chk('ningún hex rojo suelto (#B91C1C) en el módulo', !/#B91C1C/i.test(CSS_SIN_COMENTARIOS))
-  chk('el ícono de la cabecera usa el color del módulo (PALETA_MODULO)', /oklch\(0\.50 0\.15 322\)/.test(regla('.cc-header__logo') ?? '') &&
+  chk('el ícono de la cabecera usa el color del módulo (PALETA_MODULO)', /--cab-modulo: oklch\(0\.50 0\.15 322\)/.test(regla('.cab-modulo') ?? '') &&
     /'cuentas-corrientes': \[0\.50, 0\.15, 322\]/.test(FUENTE_MODULOS))
   chk('los avatares ya no usan azul ni lavanda', !/#E3F0FF|#F1E7FC/i.test(FUENTE))
 

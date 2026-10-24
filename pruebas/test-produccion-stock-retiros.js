@@ -134,6 +134,15 @@ esperas.push((async () => {
   const Z = armar()
   chk('unas cajas que no se pueden leer dicen "—"', /salieron — cajas/.test(Z.htmlRetirosStock([{ ...MOVS[1], cajas: null }], { productos: [], presentaciones: [], marcas: [] }, { permiso: true, ordenes: ORDENES, error: false })))
 
+  // ── Las cajas que trajo un cliente (devolución, 22/10/2026) ─────────
+  const D = armar()
+  const devMov = { ...MOVS[1], tipo: 'devolucion', cajas: 3, motivo: 'Devolución en la orden N-0001: Rotura' }
+  chk('la devolución de cliente entra en "Lo que salió por retiros"', D.salidasPorRetiro([devMov, { ...MOVS[1], tipo: 'produccion' }]).length === 1)
+  const hd = D.htmlRetirosStock([devMov, { ...MOVS[1], tipo: 'ajuste', cajas: -3 }], { productos: [], presentaciones: [], marcas: [] }, { permiso: true, ordenes: ORDENES, error: false })
+  chk('con su nombre, "Devolución de cliente", el retiro, "entraron" y el motivo', /Devolución de cliente · retiro N-0001/.test(hd) && /entraron 3 cajas/.test(hd) && /Rotura/.test(hd), hd)
+  chk('anular una devolución SACA las cajas: "salieron"', /Anulación del retiro N-0001<\/strong>[\s\S]*salieron 3 cajas/.test(hd))
+  chk('el tipo tiene nombre', D.textoTipoStockTerminado('devolucion') === 'Devolución de cliente')
+
   // ── El permiso se carga al entrar, sin trabar la pantalla ───────────
   chk('se lee retiros:ver al entrar, junto al de stock', /await cargarPermisoStock\(\)\s*\n\s*await cargarPermisoRetiros\(\)/.test(FUENTE))
   chk('se lee de empleado_tareas con el módulo retiros y la tarea ver, habilitada', /\.eq\('modulo', 'retiros'\)\.eq\('tarea', 'ver'\)\.eq\('habilitado', true\)/.test(FUENTE))
