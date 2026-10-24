@@ -371,19 +371,17 @@ if (SOLO !== 'estatico') {
       e({ tipo: 'depositado', fecha: '2026-08-31', cuentaId: 'k' }).some(x => /anterior a la cobranza/.test(x)))
     chk('diálogo: el mismo día de la cobranza sí', e({ tipo: 'depositado', fecha: '2026-09-01', cuentaId: 'k' }).length === 0)
     chk('diálogo: sin fecha no sigue', e({ tipo: 'depositado', fecha: '', cuentaId: 'k' }).some(x => /fecha/.test(x)))
-    chk('diálogo: vender sin lo acreditado no sigue (el texto de la base)', e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k', venta: null }).includes('Poné lo que acreditó el banco.'))
-    chk('diálogo: vender con más acreditado que el total no sigue',
-      e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k', venta: { netoCent: 10001, descCent: -1, tasa: -0.01 } }).some(x => /no puede ser más que el total de los cheques \(\$\s100,00\)/.test(x)))
-    chk('diálogo: vender por el total (sin interés) sí', e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k', venta: { netoCent: 10000, descCent: 0, tasa: 0 } }).length === 0)
+    // IMPORTE COMPLETO (24/10/2026): vender ya no pide lo acreditado.
+    chk('diálogo: vender con cuenta y fecha sigue (no pide lo acreditado)', e({ tipo: 'vendido', fecha: hoy, cuentaId: 'k' }).length === 0)
     chk('diálogo: endosar no pide cuenta (va por erroresEndoso)', e({ tipo: 'endosado', fecha: hoy }).length === 0)
     chk('parámetros de depositar: ids, cuenta y fecha, nada más',
       JSON.stringify(S.parametrosBanco(['a', 'b'], { tipo: 'depositado', cuentaId: 'k', fecha: hoy, venta: null, detalle: 'x' })) ===
       JSON.stringify({ p_cheque_ids: ['a', 'b'], p_cuenta_id: 'k', p_fecha: hoy }))
-    chk('parámetros de vender: lo acreditado en pesos y un detalle vacío como null',
-      JSON.stringify(S.parametrosBanco(['a'], { tipo: 'vendido', cuentaId: 'k', fecha: hoy, venta: { netoCent: 95050 }, detalle: '   ' })) ===
+    chk('parámetros de vender: p_neto = el importe completo en pesos y un detalle vacío como null',
+      JSON.stringify(S.parametrosBanco(['a'], { tipo: 'vendido', cuentaId: 'k', fecha: hoy, brutoCent: 95050, detalle: '   ' })) ===
       JSON.stringify({ p_cheque_ids: ['a'], p_cuenta_id: 'k', p_fecha: hoy, p_neto: 950.5, p_detalle: null }))
     chk('parámetros de vender: el detalle sin espacios en los bordes',
-      S.parametrosBanco(['a'], { tipo: 'vendido', cuentaId: 'k', fecha: hoy, venta: { netoCent: 1 }, detalle: '  op 12 ' }).p_detalle === 'op 12')
+      S.parametrosBanco(['a'], { tipo: 'vendido', cuentaId: 'k', fecha: hoy, brutoCent: 1, detalle: '  op 12 ' }).p_detalle === 'op 12')
   }
 
   // ── El diálogo abierto ───────────────────────────────────────────────────
@@ -397,8 +395,8 @@ if (SOLO !== 'estatico') {
     chk('diálogo: la fecha arranca en hoy (Argentina)', doc.getElementById('chq-salida-fecha').value === hoy)
     chk('diálogo: la fecha no puede ser futura (max = hoy)', doc.getElementById('chq-salida-fecha').max === hoy)
     chk('diálogo: ni anterior a la cobranza (min)', doc.getElementById('chq-salida-fecha').min === '2026-09-01')
-    chk('diálogo: arranca sin tipo, sin la cuenta y sin la venta',
-      S.estado.salida.tipo === null && doc.getElementById('chq-salida-campo-cuenta').hidden === true && doc.getElementById('chq-venta').hidden === true)
+    chk('diálogo: arranca sin tipo y sin la cuenta',
+      S.estado.salida.tipo === null && doc.getElementById('chq-salida-campo-cuenta').hidden === true)
     chk('diálogo: el cheque se describe por textContent (no es HTML)',
       doc.getElementById('chq-salida-cheques').textContent.includes(marca('dlg_cliente')) && doc.getElementById('chq-salida-cheques').innerHTML === '')
     // Desde el 29/09/2026 el endoso ya no guarda un texto libre: elige al
@@ -412,17 +410,16 @@ if (SOLO !== 'estatico') {
     chk('diálogo: con registrar_pago, endosado abre el buscador de proveedores', doc.getElementById('chq-endoso').hidden === false &&
       doc.getElementById('chq-salida-nota-endoso').hidden === true)
     S.estado.salida.tipo = 'depositado'; S.pintarModalSalida()
-    chk('diálogo: depositar pide la cuenta de banco, sin la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === true)
+    chk('diálogo: depositar pide la cuenta de banco', doc.getElementById('chq-salida-campo-cuenta').hidden === false)
     // EN DOS PASOS (13/10/2026): sin "Ya se acreditó" se MANDA al banco.
     chk('diálogo: sin "Ya se acreditó" el botón dice "Mandar al banco"', doc.getElementById('chq-salida-confirmar').textContent === 'Mandar al banco')
     S.estado.salida.ya = true; S.pintarModalSalida()
     chk('diálogo: con "Ya se acreditó" el botón dice "Depositar"', doc.getElementById('chq-salida-confirmar').textContent === 'Depositar')
     S.estado.salida.tipo = 'vendido'; S.pintarModalSalida()
-    chk('diálogo: vender ya acreditado pide la cuenta y los tres campos de la venta', doc.getElementById('chq-salida-campo-cuenta').hidden === false && doc.getElementById('chq-venta').hidden === false)
+    chk('diálogo: vender ya acreditado pide la cuenta (lo acreditado no: entra el importe completo)', doc.getElementById('chq-salida-campo-cuenta').hidden === false)
     chk('diálogo: el botón dice "Vender"', doc.getElementById('chq-salida-confirmar').textContent === 'Vender')
     S.estado.salida.ya = false; S.pintarModalSalida()
-    chk('diálogo: vender sin acreditar NO pide lo acreditado', doc.getElementById('chq-venta').hidden === true &&
-      doc.getElementById('chq-salida-confirmar').textContent === 'Mandar al banco')
+    chk('diálogo: vender sin acreditar dice "Mandar al banco"', doc.getElementById('chq-salida-confirmar').textContent === 'Mandar al banco')
   }
 
   // ── Confirmar: validación local, error TAL CUAL y éxito ──────────────────
@@ -539,7 +536,11 @@ if (SOLO !== 'render') {
       // "Ver el gasto" de una venta (13/10/2026), a una página fija de este
       // sitio, con el id del gasto por encodeURIComponent y el atributo entre
       // comillas DOBLES.
-      const linkPago = /^href$/i.test(nombreAttr) && /href="(cuentas-corrientes\.html\?pago|gastos\.html\?gasto)=$/.test(tramo) && /^encodeURIComponent\([\w.]+\)$/.test(String(x.expr).trim())
+      // Y (24/10/2026) "Cargar el gasto del banco": gastos.html?nuevo=1 con
+      // la categoría y la fábrica, cada una por encodeURIComponent.
+      const linkPago = /^href$/i.test(nombreAttr) &&
+        (/href="(cuentas-corrientes\.html\?pago|gastos\.html\?gasto)=$/.test(tramo) || /href="gastos\.html\?nuevo=1&amp;categoria=(\u0001&amp;unidad=)?$/.test(tramo)) &&
+        /^encodeURIComponent\([\w.]+\)$/.test(String(x.expr).trim())
       if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr) && !linkPago) enUrl.push(`${x.linea} (${nombreAttr})`)
     }
   }

@@ -72,10 +72,12 @@ t.cobranza_cheques.push(
 
 base.rpc = Object.assign(base.rpc ?? {}, {
   enviar_cheques_al_banco: { cheques: 2, total: 537300.5 },
-  acreditar_cheques: [{ cuenta: 'Banco Macro · Nuss', cheques: 3, bruto: 550000, acreditado: 525000, descuento: 25000, caja_movimiento_id: 'cm-acr', gasto_id: 'g-venta-3' }],
+  // IMPORTE COMPLETO (24/10/2026): la base mete el valor completo y ya no
+  // carga el gasto de intereses (acreditado = bruto, descuento 0, sin gasto).
+  acreditar_cheques: [{ cuenta: 'Banco Macro · Nuss', cheques: 3, bruto: 550000, acreditado: 550000, descuento: 0, caja_movimiento_id: 'cm-acr', gasto_id: null }],
   cancelar_envio_cheques: 2,
   depositar_cheques: { cheques: 2, bruto: 537300.5, neto: 537300.5, descuento: 0, caja_movimiento_id: 'cm-dep', gasto_id: null },
-  vender_cheques: { cheques: 1, bruto: 387300.5, neto: 370000, descuento: 17300.5, caja_movimiento_id: 'cm-ven', gasto_id: 'g-venta-2' },
+  vender_cheques: { cheques: 1, bruto: 387300.5, neto: 387300.5, descuento: 0, caja_movimiento_id: 'cm-ven', gasto_id: null },
 });
 
 module.exports = base;

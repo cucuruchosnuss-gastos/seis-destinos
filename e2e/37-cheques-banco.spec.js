@@ -8,13 +8,13 @@
 //    cuenta viene puesta (el primer banco de Nuss), las cuentas en dólares,
 //    inactivas o de una persona no se ofrecen, no se ofrece endosar, y viaja
 //    UNA llamada a enviar_cheques_al_banco (no mueve plata);
-//  - "Ya se acreditó" → Vender: la tasa completa el descuento y lo
-//    acreditado; viaja vender_cheques (un solo paso);
+//  - "Ya se acreditó" → Vender: viaja vender_cheques (un solo paso) con el
+//    importe completo (24/10/2026: ya no se escribe lo acreditado);
 //  - un cheque de Dolce Pasta en un banco de Nuss avisa "entre empresas";
 //  - «En el banco» (con su contador): agrupados por cuenta y fecha; elegir
-//    los tres → "Cargar lo acreditado" → el total del banco se reparte →
-//    acreditar_cheques; el resultado dice "Entró $ … · gasto de intereses $ …",
-//    "Ver el gasto" y "Entre empresas";
+//    los tres → "Cargar lo acreditado" (sin campos: entra el importe
+//    completo, 24/10/2026) → acreditar_cheques; el resultado dice
+//    "Entró $ …" (sin gasto de intereses) y "Entre empresas";
 //  - "No lo tomó el banco" con motivo → cancelar_envio_cheques;
 //  - los botones a la vista; sin scroll de costado y sin errores de JS.
 const { test, expect } = require('@playwright/test');
@@ -125,26 +125,18 @@ for (const ancho of [1280, 390, 360]) {
     expect(errores).toEqual([]);
   });
 
-  test(`"Ya se acreditó": vender de una vez (tasa, descuento y acreditó atados), a ${ancho}`, async ({ page }) => {
+  // IMPORTE COMPLETO (24/10/2026): vender ya no pide lo acreditado; entra el
+  // total (el detalle de lo nuevo, en e2e/61-cheques-importe-completo.spec.js).
+  test(`"Ya se acreditó": vender de una vez por el importe completo, a ${ancho}`, async ({ page }) => {
     const errores = vigilarErrores(page);
     const llamadas = anotarRpc(page);
     await abrir(page, ancho);
     await elegir(page, ['chq-1']);
     await page.locator('#chq-sel-banco').click();
     await page.locator('[data-salida-tipo="vendido"]').click();
-    await expect(page.locator('#chq-venta')).toBeHidden();
     await page.locator('#chq-salida-ya').check();
-    await expect(page.locator('#chq-venta')).toBeVisible();
     await expect(page.locator('#chq-salida-confirmar')).toHaveText('Vender');
-
-    // 5 % de $ 387.300,50 = $ 19.365,03 de descuento → acreditó $ 367.935,47.
-    await page.locator('#chq-venta-tasa').fill('5');
-    await expect(page.locator('#chq-venta-descuento')).toHaveValue('19.365,03');
-    await expect(page.locator('#chq-venta-neto')).toHaveValue('367.935,47');
-    // Lo acreditado manda: 370.000 → descuento 17.300,50 y la tasa 4,47.
-    await page.locator('#chq-venta-neto').fill('370000');
-    await expect(page.locator('#chq-venta-descuento')).toHaveValue('17.300,50');
-    await expect(page.locator('#chq-venta-tasa')).toHaveValue('4,47');
+    await expect(page.locator('#chq-venta-neto, #chq-venta-descuento, #chq-venta-tasa')).toHaveCount(0);
     await page.locator('#chq-venta-detalle').fill('Operación 1234');
     await expect(page.locator('#chq-salida-resumen')).toBeVisible();
     await sinCostado(page, ancho);
@@ -153,7 +145,7 @@ for (const ancho of [1280, 390, 360]) {
     await expect(page.locator('#chq-modal-salida')).toBeHidden();
     const ven = llamadas.filter(l => l.nombre === 'vender_cheques');
     expect(ven).toHaveLength(1);
-    expect(ven[0].params).toEqual({ p_cheque_ids: ['chq-1'], p_cuenta_id: 'cta-banco-nuss', p_fecha: '2026-10-13', p_neto: 370000, p_detalle: 'Operación 1234' });
+    expect(ven[0].params).toEqual({ p_cheque_ids: ['chq-1'], p_cuenta_id: 'cta-banco-nuss', p_fecha: '2026-10-13', p_neto: 387300.5, p_detalle: 'Operación 1234' });
     expect(llamadas.some(l => l.nombre === 'enviar_cheques_al_banco')).toBe(false);
     await expect(page.locator('.toast')).toContainText('Se vendió 1 cheque');
     expect(errores).toEqual([]);
@@ -174,7 +166,7 @@ for (const ancho of [1280, 390, 360]) {
     expect(errores).toEqual([]);
   });
 
-  test(`«En el banco»: cargar lo acreditado (reparto, interés, Entre empresas), a ${ancho}`, async ({ page }) => {
+  test(`«En el banco»: cargar lo acreditado (importe completo, Entre empresas), a ${ancho}`, async ({ page }) => {
     const errores = vigilarErrores(page);
     const llamadas = anotarRpc(page);
     await abrir(page, ancho);
@@ -195,27 +187,23 @@ for (const ancho of [1280, 390, 360]) {
     await page.locator('#chq-banco-acreditar').click();
     await expect(page.locator('#chq-acreditar')).toBeVisible();
     await expect(page.locator('#chq-acr-fecha')).toHaveValue('2026-10-13');
-    await expect(page.locator('#chq-acr-reparto')).toBeVisible();
-    await expect(page.locator('[data-acr-cheque]')).toHaveCount(3);
-    // El total del resumen del banco: el depósito entra entero (50.000) y
-    // las ventas se reparten 475.000 proporcional (285.000 y 190.000).
-    await page.locator('#chq-acr-total').fill('525000');
-    await expect(page.locator('[data-acr-cheque="chq-b1"]')).toHaveValue('285.000');
-    await expect(page.locator('[data-acr-cheque="chq-b2"]')).toHaveValue('190.000');
-    await expect(page.locator('[data-acr-cheque="chq-b3"]')).toHaveValue('50.000');
-    await expect(page.locator('#chq-acr-resumen')).toContainText(/25\.000,00 \(4,55 %\)/);
+    // IMPORTE COMPLETO (24/10/2026): sin total, tasa ni "Acreditó $" por cheque.
+    await expect(page.locator('#chq-acr-reparto, [data-acr-cheque]')).toHaveCount(0);
+    await expect(page.locator('#chq-acr-lista .chq-acr-fila')).toHaveCount(3);
+    await expect(page.locator('#chq-acr-resumen')).toContainText(/Entran \$\s?550\.000,00 a Banco Macro · Nuss\./);
     await sinCostado(page, ancho);
     await aLaVista(page, '#chq-acr-confirmar');
     await page.locator('#chq-acr-confirmar').click();
     const acr = llamadas.filter(l => l.nombre === 'acreditar_cheques');
     expect(acr).toHaveLength(1);
     const items = [...acr[0].params.p_items].sort((a, b) => a.cheque_id.localeCompare(b.cheque_id));
-    expect(items).toEqual([{ cheque_id: 'chq-b1', acreditado: 285000 }, { cheque_id: 'chq-b2', acreditado: 190000 }, { cheque_id: 'chq-b3', acreditado: 50000 }]);
+    expect(items).toEqual([{ cheque_id: 'chq-b1' }, { cheque_id: 'chq-b2' }, { cheque_id: 'chq-b3' }]);
     expect(acr[0].params.p_fecha).toBe('2026-10-13');
     const res = page.locator('#chq-banco-resultado');
     await expect(res).toBeVisible();
-    await expect(res).toContainText(/Entró \$\s?525\.000,00 en Banco Macro · Nuss · gasto de intereses \$\s?25\.000,00/);
-    await expect(res.locator('a.chq-link-gasto')).toHaveAttribute('href', 'gastos.html?gasto=g-venta-3');
+    await expect(res).toContainText(/Entró \$\s?550\.000,00 en Banco Macro · Nuss/);
+    await expect(res).not.toContainText('gasto de intereses');
+    await expect(res.locator('a.chq-link-gasto')).toHaveCount(0);
     await expect(res).toContainText('Los cheques de Dolce Pasta');
     await expect(res).toContainText('Entre empresas');
     await sinCostado(page, ancho);

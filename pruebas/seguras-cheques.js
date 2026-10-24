@@ -36,7 +36,9 @@ const SEGURAS_CHEQUES = [
   ['n', 'un número: la cantidad de cheques del grupo (g.cheques.length)'],
   ['boton', 'HTML armado arriba en htmlGruposEnBanco: la clave con esc(), el texto fijo y un número, o vacío'],
   ['casilla', 'HTML armado arriba en htmlChequeEnBanco: el id y el número con esc(), o vacío'],
-  ['gasto', 'HTML armado arriba en htmlResultadoAcreditar: el id del gasto con encodeURIComponent entre comillas DOBLES, o vacío'],
+  // Importe completo (24/10/2026): htmlResultadoAcreditar ya no arma el link
+  // del gasto de intereses (la base no lo carga más).
+  ['destino', 'HTML constante de htmlGastosBanco(): \' target="_blank" rel="noopener"\' o vacío, sin nada de la base'],
   ['htmlGruposEnBanco(gruposEnBanco(filas, estado.cuentasBanco?.porId), bancoUI.ids, puedeProcesar(), estado.cobranzas, hoyArgentina())', 'HTML armado por htmlGruposEnBanco(), que escapa adentro'],
   ['bancoUI.resultado', 'HTML armado por htmlResultadoAcreditar(), que escapa adentro'],
 ]
@@ -51,7 +53,7 @@ const SEGURAS_REGEX_CHEQUES = [
   [/^ESTADOS_FILTRO_CHEQUES\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^g\.cuentas\.map\(c =>/s, 'HTML de una plantilla anidada (htmlOpcionesCuentas), verificada aparte'],
   [/^g\.cheques\.map\(ch => htmlChequeEnBanco\(/s, 'HTML armado por htmlChequeEnBanco(), que escapa adentro'],
-  [/^cheques\.map\(\(ch, i\) =>/s, 'HTML de una plantilla anidada (armarFilasAcreditar), verificada aparte'],
+  [/^cheques\.map\(ch =>/s, 'HTML de una plantilla anidada (armarFilasAcreditar, sin campos desde el 24/10/2026), verificada aparte'],
 ]
 
 module.exports = { SEGURAS_CHEQUES, SEGURAS_REGEX_CHEQUES }
