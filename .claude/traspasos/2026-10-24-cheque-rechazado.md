@@ -48,8 +48,15 @@ El detalle técnico quedó en `docs/memoria/cheques.md`, `cuentas-corrientes.md`
 5. En la cuenta del cliente: el renglón "Nota de débito N-ND-…" abre la hoja; "Anular" con motivo la revierte.
 6. Cuentas corrientes → la ficha de un proveedor → "+ Nota de débito": queda como comprobante pendiente; "Anular" la saca si no tiene pagos.
 
-## Pruebas (números al cierre)
-PENDIENTE
+## Pruebas (números al cierre, después de traer main con cheques-importe-completo)
+- `pruebas/test-cheques-rechazado.js` 146/146 · `mut-cheques-rechazado.js` 60/60 (+5 equivalentes; incluye 3 sobre `js/cobranzas-comun.js`).
+- `pruebas/test-administracion-nota-debito.js` 130/130 · `mut-administracion-nota-debito.js` 72/72 (+10 equivalentes).
+- `pruebas/test-cuentas-corrientes-nota-debito.js` 45/45 · `mut-cuentas-corrientes-nota-debito.js` 34/34.
+- `mut-navegador-en-dos.js` 29/29 (se tocó `e2e/mitades.js`).
+- `e2e/60-cheque-rechazado.spec.js`: 16/16 (390, 360, tablet 768 × 1024 y 1280; el PDF de dos páginas, Compartir PDF y la cuenta del cliente). Con 37, 61, 53 (las dos), 13 y 51: 79/79.
+- Navegador entero en la compu (antes del merge): 840 pasaron; fallaron los 8 de `53-division-orden` (por `.ad-dv__caja` repetida, ya arreglado: 54/54 después) y 3 de `27-planta-sin-internet`, que tiene el puerto 4173 fijo en el código y en la compu choca con otra sesión (pasan con `E2E_BASE` en mi puerto). No es de esta rama.
+- `npm run pruebas`, `check-scripts` y `check-bytes`: ver el resumen final (verde antes del push).
+- Lo que escapó en la primera vuelta y se cubrió: "Otro sin escribir nada" y el escape del selector de clientes (cheques); la hoja de una nota recibida (Administración).
 
 ## Qué automatizaría ahora
 - **El sandbox de cada módulo con TODAS sus funciones**: hoy cada suite de Cuentas corrientes (y algunas de Administración) lista a mano las funciones que extrae, y cada función nueva que llama una vieja obliga a tocar cinco o seis suites (pasó acá con `cargarNotasDebitoFicha`). Un `sandbox-cuentas-corrientes.js` como el de Cheques (con OPCIONALES que se cargan si existen) lo saca de raíz.
