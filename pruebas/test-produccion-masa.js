@@ -209,7 +209,9 @@ esperas.push((async () => {
     chk('… (irASeccion("sala-inicio") abre el inicio de la sala)', IN.estado.vista === 'pr-sala')
   }
   chk('con UNA sola receta no se pregunta el tipo de masa', !/data-tipo-masa/.test(opciones))
-  chk('tamaño: Simple marcado por defecto', /data-doble="no" aria-pressed="true"/.test(opciones) && /data-doble="si" aria-pressed="false"/.test(opciones))
+  // 16/10/2026: el tamaño ya no viene elegido (los maseros registraban
+  // dobles como simples). La suite test-produccion-masa-tamano.js lo cubre.
+  chk('tamaño: ninguno marcado por defecto', /data-doble="no" aria-pressed="false"/.test(opciones) && /data-doble="si" aria-pressed="false"/.test(opciones) && S.estado.masa.doble === null)
   chk('Original / Anterior / Modificar, con la elegida marcada', ['original', 'anterior', 'modificar'].every(x => opciones.includes(`data-base="${x}"`)) &&
     /data-base="anterior" aria-pressed="true"/.test(opciones))
   chk('no hay selector Común / Chocolate', !/data-chocolate|>Chocolate</.test(opciones))
@@ -335,7 +337,7 @@ esperas.push((async () => {
 
   // Terminar la tablet, parte 3: el lote de la anterior que NO figura con
   // stock (S-VIEJO) queda elegido, con "sin ingreso cargado".
-  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
+  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">S-VIEJO<\/span><span class="pr-rec__lote-nota">Lote no registrado por administración<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
   chk('… y NO frena Registrar', R.__doc.getElementById('pr-receta-error').hidden === true)
   R.marcarLoteTerminado('i-sal')
   const filasTerm = R.__doc.getElementById('pr-receta-filas').innerHTML

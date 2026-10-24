@@ -90,17 +90,20 @@ if (S) {
 }
 
 // ── 5. La pantalla usa la regla en los dos buscadores ──────────────────────
+// (21/10/2026: los dos buscadores suman los parecidos de la base, "¿Quisiste
+// decir…?", como quinto parámetro: test-conos-parecidos.js.)
 chk('Anotar ofrece "+ Cono nuevo" (conoNuevoOfrecido) y vuelve a anotar',
-  /htmlResultados\(buscarConos\(ev\.target\.value\), 'data-anotar-cono', ofrecerConoNuevo\(ev\.target\.value\), 'anotar'\)/.test(FUENTE))
+  /htmlResultados\(buscarConos\(texto\), 'data-anotar-cono', ofrecerConoNuevo\(texto\), 'anotar', estadoParecidos\('anotar'\)\)/.test(FUENTE) &&
+  /cn-anotar-buscar'\)\.addEventListener\('input', ev => \{\n\s+programarParecidos\('anotar', ev\.target\.value\)\n\s+pintarResultadosAnotar\(\)/.test(FUENTE))
 chk('Agregar usa la misma regla y vuelve a agregar',
-  /htmlResultados\(lista, 'data-agregar-cono', ofrecerConoNuevo\(texto\), 'agregar'\)/.test(FUENTE))
+  /htmlResultados\(lista, 'data-agregar-cono', ofrecerConoNuevo\(texto\), 'agregar', estadoParecidos\('agregar'\)\)/.test(FUENTE))
 chk('el botón solo a quien puede proponer', /function ofrecerConoNuevo\(texto\) \{\n\s+return puedeProponer\(estado\.perm\) \? conoNuevoOfrecido\(texto, estado\.conos\) : null/.test(FUENTE))
 chk('al tocarlo, proponerCono sabe a qué formulario volver', /if \(\(el = b\('\[data-cono-nuevo\]'\)\)\) \{ proponerCono\(el\.dataset\.conoNuevo, el\.dataset\.conoDestino\); return \}/.test(FUENTE))
 chk('en anotar, el cono creado queda ELEGIDO ahí (elegirConoAnotar)', /if \(destino === 'anotar'\) await elegirConoAnotar\(id\)/.test(FUENTE))
 chk('se refresca el catálogo después de crearlo', /await Promise\.allSettled\(\[cargarStock\(\), cargarCatalogo\(\)\]\)/.test(FUENTE))
 chk('el error de la base va tal cual al formulario de donde salió', /document\.getElementById\(destino === 'anotar' \? 'cn-anotar-error' : 'cn-agr-error'\)/.test(FUENTE) &&
   /if \(err\) \{ err\.textContent = mensajeDe\(e\); err\.hidden = false \} else mostrarError\(mensajeDe\(e\)\)/.test(FUENTE))
-chk('a proponer_marca viaja el texto con los espacios colapsados', /rpc\('proponer_marca', \{ p_nombre: textoConoNuevo\(nombre\) \}\)/.test(FUENTE))
+chk('a proponer_marca viaja el texto con los espacios colapsados', /rpc\('proponer_marca', esOtro \? \{ p_nombre: textoConoNuevo\(nombre\), p_es_otro: true \} : \{ p_nombre: textoConoNuevo\(nombre\) \}\)/.test(FUENTE))
 chk('ya_existia: igual queda elegido (y se avisa)', /if \(r\.ya_existia\) mostrarExito\('Ese cono ya existía: quedó elegido\.'\)/.test(FUENTE))
 chk('un segundo toque mientras crea no manda otra vez', /if \(estado\.proponiendo\) return/.test(FUENTE))
 

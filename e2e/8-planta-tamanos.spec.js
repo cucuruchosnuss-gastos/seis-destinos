@@ -144,8 +144,17 @@ for (const [ancho, alto] of TAMANOS) {
     const m1 = await page.evaluate(`(${medirPantalla.toString()})()`);
     expect(m1.scroll || m1.scrollX, `sin scroll antes de registrar: ${JSON.stringify(m1)}`).toBe(false);
     const boton = page.locator('#pr-receta-registrar');
+    // TAMAÑO SIN ELEGIR (16/10/2026): la masa nueva llega sin Simple ni Doble
+    // y con "Elegí SIMPLE o DOBLE" arriba; sin elegir, Registrar no manda.
+    // "antes" se midió así, y la masa siguiente vuelve a llegar así: la lista
+    // tiene que medir lo mismo.
+    await expect(page.locator('#pr-receta-tamano-aviso')).toBeVisible();
+    await expect(page.locator('#pr-receta-opciones [aria-pressed="true"][data-doble]')).toHaveCount(0);
+    await page.locator('#pr-receta-opciones [data-doble="no"]').click();
+    await expect(page.locator('#pr-receta-tamano-aviso')).toBeHidden();
     await boton.click();
     await expect(boton).toHaveText(/registrada ✓/);
+    await expect(page.locator('#pr-receta-tamano-aviso'), 'la masa siguiente vuelve a llegar sin tamaño').toBeVisible();
     const durante = await altoLista();
     await captura(page, `choco-registrada-${ancho}x${alto}`, info);
     const m2 = await page.evaluate(`(${medirPantalla.toString()})()`);

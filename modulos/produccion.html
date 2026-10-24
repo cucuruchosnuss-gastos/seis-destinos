@@ -1160,6 +1160,14 @@
     .pr-ag__nuevo { border: 0; background: none; color: var(--p-acento); font-size: 14px; font-weight: 800; min-height: 36px; padding: 0; }
     .pr-ag__alta { display: flex; gap: 8px; flex: 1; min-width: 240px; }
     .pr-ag__alta .pr-input { flex: 1; }
+    /* "¿Quisiste decir…?" (21/10/2026): botones grandes, para el dedo. */
+    .pr-ag__alta { flex-wrap: wrap; }
+    .pr-ag__parecidos { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .pr-ag__parecidos[hidden] { display: none; }
+    .pr-ag__parecidos-titulo { margin: 0; font-size: 15px; font-weight: 800; color: var(--p-tinta); }
+    .pr-ag__parecidos-lista { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+    .pr-ag__parecido { min-height: 56px; padding: 0 20px; border-radius: 14px; border: 2px solid var(--p-acento); background: var(--p-acento-zona); color: var(--p-tinta); font: inherit; font-size: 18px; font-weight: 800; max-width: 100%; overflow-wrap: anywhere; }
+    .pr-ag__parecido--otro { border-color: var(--p-linea); background: #fff; font-size: 15px; }
     .pr-ag__nota { margin: 0; font-size: 12.5px; color: var(--p-suave); flex: 1; min-width: 200px; }
     .pr-ag__presentaciones { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 12px; }
     @media (orientation: portrait) { .pr-ag__presentaciones { grid-template-columns: minmax(0, 1fr); } }
@@ -1192,6 +1200,8 @@
     .pr-ag__opcion[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); }
     .pr-ag__opcion:disabled { opacity: 0.45; }
     .pr-ag__opcion-nota { font-size: 12px; font-weight: 600; color: var(--p-gris); }
+    /* "La caja sigue siendo la …" (23/10/2026): la bolsa no cambia la caja. */
+    .pr-ag__ojo-caja { margin: 0; padding: 6px 10px; font-size: 13.5px; }
     .pr-ag__consumo { margin: 0; font-size: 13px; color: var(--p-gris); }
     .pr-ag__seguir { align-self: flex-start; }
     .pr-ag__motivo { flex-shrink: 0; }
@@ -1219,6 +1229,11 @@
       font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;
     }
     .pr-seg-rec__op[aria-pressed="true"], .pr-como[aria-pressed="true"] { background: var(--p-acento); color: #fff; font-weight: 800; }
+    /* Tamaño sin elegir (16/10/2026): el aviso arriba y Simple / Doble con
+       borde de aviso hasta que se toque uno. box-shadow y no border: no
+       cambia el alto de la fila de segmentos. */
+    .pr-receta__tamano-aviso { margin: 0; flex-shrink: 0; padding: 6px 12px; font-size: 16px; font-weight: 800; }
+    .pr-receta__tamano--falta { box-shadow: 0 0 0 3px var(--p-mal-borde); background: var(--p-mal-suave); }
     .pr-como:disabled { opacity: 0.4; }
     .pr-como__detalle { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
     /* "Anterior (última)" con cuándo fue debajo, en chico. */
@@ -1272,6 +1287,12 @@
     .pr-rec__queda--poco { color: var(--p-mal); font-weight: 700; }
     .pr-rec__lote--vacio { border-color: var(--p-acento); background: var(--p-acento-zona); color: var(--p-acento-osc); }
     .pr-rec__lote--terminado { border-color: var(--p-mal); background: var(--p-mal-suave); color: var(--p-mal-txt); }
+    /* Lote no registrado por administración (23/10/2026): en rojo, pero se
+       puede usar igual. La nota puede ir en dos renglones (entra en 64 px). */
+    .pr-rec__lote--no-registrado { border-color: var(--p-mal); }
+    .pr-rec__lote--no-registrado .pr-rec__lote-nota { font-weight: 800; line-height: 1.15; }
+    .pr-lp__fila--no-registrado { border-color: var(--p-mal-borde); background: var(--p-mal-renglon); }
+    .pr-lp__fila--no-registrado .pr-lp__fila-fecha { color: var(--p-mal); font-weight: 800; }
     .pr-rec__nota { font-size: 14px; color: var(--p-suave); }
     .pr-rec__accion { display: flex; justify-content: flex-end; }
     .pr-rec__otro, .pr-rec__quitar { min-height: 32px; width: 64px; border-radius: 9px; border: 1.5px solid var(--p-borde); background: #fff; font-size: 14px; font-weight: 700; color: var(--p-tinta-2); }
@@ -2194,6 +2215,10 @@
               <div class="pr-ag__cono-pie">
                 <button type="button" class="pr-ag__nuevo" id="pr-agregar-cono-nuevo">+ Agregar cono nuevo</button>
                 <div class="pr-ag__alta" id="pr-agregar-cono-form" hidden>
+                  <!-- "¿Quisiste decir…?" (21/10/2026): los parecidos de la
+                       base (conos_parecidos) mientras se escribe. Lo arma
+                       pintarParecidos(). -->
+                  <div class="pr-ag__parecidos" id="pr-agregar-cono-parecidos" hidden></div>
                   <input type="text" id="pr-agregar-cono-nombre" class="pr-input" maxlength="80" placeholder="Nombre del cono" autocomplete="off" aria-label="Nombre del cono nuevo">
                   <button type="button" class="pr-btn pr-btn--accion" id="pr-agregar-cono-confirmar">Agregarlo</button>
                 </div>
@@ -2483,6 +2508,8 @@
         <div class="pr-receta">
           <!-- Arriba, en una fila: Simple / Doble y de dónde sale la masa
                (Original / Anterior / Modificar). -->
+          <!-- Sin tamaño elegido no se registra: se dice arriba de los botones. -->
+          <p class="pr-aviso pr-aviso--grave pr-receta__tamano-aviso" id="pr-receta-tamano-aviso" role="alert" hidden>Elegí SIMPLE o DOBLE</p>
           <div class="pr-receta__opciones" id="pr-receta-opciones"></div>
           <!-- Con Modificar: de qué se trata (Modificada, Chocolate), el
                motivo y "+ Ingrediente". -->
@@ -2694,7 +2721,7 @@
       cerrando: false,
       // Sala de masa
       salaTurno: null,     // { id, lote, maquinaId, maquinaNombre, nro } de la máquina elegida
-      salaDoble: false,    // el tamaño elegido en 6b, antes de que exista el borrador
+      salaDoble: null,     // el tamaño elegido: null (sin elegir) | false (Simple) | true (Doble)
       masa: null,          // el borrador de la masa en curso (con su client_uuid)
       datosMasa: null,     // lo que devolvió datos_para_masa: { original, anterior, insumos }
       tiposMasa: null,     // los tipos de masa de esa máquina (uno solo = no se pregunta)
@@ -8752,6 +8779,17 @@
         (forzado ? '<div class="pr-aviso">Este cono va con doble bolsa: van la bolsa grande y las bolsitas individuales.</div>' : '')
     }
 
+    // Cambiar la bolsa NO cambia la caja (23/10/2026, el sublote 6254-2 quedó
+    // con la Caja N°1 Nuss y bolsitas individuales). Si la bolsa elegida no es
+    // la que trae esa caja, se dice cuál caja queda, sin frenar nada: hay
+    // combinaciones de verdad (un cono de doble bolsa en la caja Nuss).
+    function htmlOjoCaja(a, cat) {
+      if (!a?.cajaId || !a.cajaElegida || conoDobleBolsa(cat, a.marcaId)) return ''
+      if (embolsadoEfectivo(a, cat) === embolsadoSugerido(cat, a.presentacionId, a.cajaId)) return ''
+      return `<p class="pr-aviso pr-ag__ojo-caja" role="status">La caja sigue siendo la <strong>${esc(textoInsumoEmpaque(insumoDe(cat, a.cajaId)))}</strong>: ` +
+        'cambiar la bolsa no cambia la caja. Si es otra, tocala arriba.</p>'
+    }
+
     // El paso de la caja: las habilitadas, el embolsado y lo que consume una caja.
     function htmlPasoCaja(a, cat) {
       const cajas = cajasDe(cat, a.presentacionId)
@@ -8762,11 +8800,17 @@
       if (!cajas.length) {
         h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
       } else {
+        // CAJA N°1 DOLCE PASTA (23/10/2026): el 21/10 se cargó un sublote con
+        // "Bolsitas individuales" y la Caja N°1 Nuss, queriendo la Dolce Pasta.
+        // Las tres "Caja N°1" decían lo mismo en grande y la marca en chico
+        // gris. Ahora lo grande es nombre Y marca, y la nota dice con qué
+        // bolsa va cada caja (la que trae al tocarla).
         h += '<div class="pr-ag__grilla">' + cajas.map(c => {
           const ins = insumoDe(cat, c.insumo_id)
-          const nota = [ins?.marca || 'sin marca', c.insumo_id === cat?.cajaPredeterminadaId ? 'la de la unidad' : ''].filter(Boolean).join(' · ')
+          const bolsa = c.embolsado_sugerido && c.embolsado_sugerido !== 'ninguno' ? `con ${TEXTO_EMBOLSADO[c.embolsado_sugerido] ?? c.embolsado_sugerido}` : ''
+          const nota = [bolsa, c.insumo_id === cat?.cajaPredeterminadaId ? 'la de la unidad' : ''].filter(Boolean).join(' · ')
           return `<button type="button" class="pr-ag__opcion" data-ag-caja="${esc(c.insumo_id)}" aria-pressed="${c.insumo_id === a.cajaId ? 'true' : 'false'}">` +
-            `${esc(ins?.nombre ?? 'Caja')}<span class="pr-ag__opcion-nota">${esc(nota)}</span></button>`
+            `${esc(ins ? textoInsumoEmpaque(ins) : 'Caja')}${nota ? `<span class="pr-ag__opcion-nota">${esc(nota)}</span>` : ''}</button>`
         }).join('') + '</div>'
       }
       if (!cajas.length) {
@@ -8774,7 +8818,7 @@
         return h + htmlAvisoStockEmpaque(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
       }
       if (a.faltaCaja) h += '<p class="pr-error">Elegí una caja.</p>'
-      if (a.cajaElegida) h += htmlEmbolsado(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+      if (a.cajaElegida) h += htmlEmbolsado(a, cat) + htmlOjoCaja(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
       // Lo que consume una caja y el aviso de stock se siguen viendo acá; el
       // embolsado se elige al lado de las cajas (tocar una caja ya avanza).
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
@@ -9167,6 +9211,7 @@
       document.getElementById('pr-agregar-cono-form').hidden = true
       document.getElementById('pr-agregar-cono-nombre').value = ''
       document.getElementById('pr-agregar-cono-error').hidden = true
+      pintarParecidos()
       document.getElementById('pr-agregar-error').hidden = true
       ponerNumero(document.getElementById('pr-agregar-cajas'), null)
       // Un producto que quedó a medio cargar al recargar, en esta máquina.
@@ -9507,20 +9552,165 @@
       pintarAgregar()
     }
 
+    // ── "¿QUISISTE DECIR…?" (21/10/2026) ─────────────────────────────────
+    // En producción se creó "CASERATTO" cuando ya existía "CASERATO". Mientras
+    // se escribe el nombre (3 letras o más, 300 ms después de la última
+    // tecla) se le piden a la base los parecidos (conos_parecidos, hasta 5,
+    // sin los rechazados): tocar uno ELIGE ese cono y no se crea nada. Si uno
+    // es "igual" (el mismo nombre salvo letras repetidas, tildes o espacios),
+    // el botón dice "Es otro cono, crearlo igual", pide confirmación y recién
+    // ahí manda p_es_otro = true. Sin internet no se buscan: todo como antes
+    // (la base frena igual al crear, con "Ya existe el cono X…").
+    const ESPERA_PARECIDOS_MS = 300
+    const MIN_LETRAS_PARECIDOS = 3
+
+    // Lo que devolvió la base, limpio: [{ marca_id, nombre, igual }].
+    function listaParecidos(data) {
+      return (Array.isArray(data) ? data : []).filter(p => p && p.marca_id && p.nombre)
+        .map(p => ({ marca_id: p.marca_id, nombre: String(p.nombre), igual: p.igual === true }))
+    }
+
+    function parecidoIgual(lista) {
+      return (lista ?? []).find(p => p.igual) ?? null
+    }
+
+    // "Ya existe el cono CASERATO: elegí ese. Si de verdad es otro cono,
+    // confirmalo." (proponer_marca) → "CASERATO"; otro mensaje → null.
+    function conoQueYaExiste(mensaje) {
+      const m = /^Ya existe el cono (.+?): elegí ese\./.exec(String(mensaje ?? ''))
+      return m ? m[1] : null
+    }
+
+    function htmlParecidos(lista, yaExiste) {
+      let h = ''
+      if (lista?.length) {
+        h += '<p class="pr-ag__parecidos-titulo">¿Quisiste decir…?</p><div class="pr-ag__parecidos-lista">' +
+          lista.map(p => `<button type="button" class="pr-ag__parecido" data-parecido="${esc(p.marca_id)}">${esc(p.nombre)}</button>`).join('') + '</div>'
+      }
+      // Después de "Ya existe el cono X…": elegir ese, o confirmar que es otro.
+      if (yaExiste) {
+        h += '<div class="pr-ag__parecidos-lista">' +
+          (yaExiste.marcaId ? `<button type="button" class="pr-ag__parecido" data-parecido="${esc(yaExiste.marcaId)}">${esc('Elegir ' + yaExiste.nombre)}</button>` : '') +
+          '<button type="button" class="pr-ag__parecido pr-ag__parecido--otro" data-cono-es-otro>Es otro cono, crearlo igual</button></div>'
+      }
+      return h
+    }
+
+    function estadoParecidos() {
+      const a = estado.agregar
+      if (!a) return null
+      return a.parecidos ??= { lista: [], turno: 0, reloj: null, yaExiste: null }
+    }
+
+    function pintarParecidos() {
+      const p = estadoParecidos()
+      const caja = document.getElementById('pr-agregar-cono-parecidos')
+      caja.innerHTML = htmlParecidos(p?.lista, p?.yaExiste)
+      caja.hidden = !caja.innerHTML
+      document.getElementById('pr-agregar-cono-confirmar').textContent = parecidoIgual(p?.lista) ? 'Es otro cono, crearlo igual' : 'Agregarlo'
+    }
+
+    function programarParecidos() {
+      const p = estadoParecidos()
+      if (!p) return
+      if (p.reloj) clearTimeout(p.reloj)
+      p.yaExiste = null
+      p.reloj = setTimeout(() => buscarParecidos(), ESPERA_PARECIDOS_MS)
+    }
+
+    // Una respuesta vieja no pisa a una más nueva (p.turno). Si la base no
+    // contesta, no hay sugerencias: crear sigue andando como siempre.
+    async function buscarParecidos() {
+      const p = estadoParecidos()
+      if (!p) return
+      p.reloj = null
+      const texto = document.getElementById('pr-agregar-cono-nombre').value.trim()
+      const turno = ++p.turno
+      if (texto.length < MIN_LETRAS_PARECIDOS || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+        p.lista = []
+        pintarParecidos()
+        return
+      }
+      try {
+        const { data, error } = await supabase.rpc('conos_parecidos', { p_nombre: texto })
+        if (error) throw error
+        if (estadoParecidos() !== p || turno !== p.turno) return
+        p.lista = listaParecidos(data)
+      } catch (e) {
+        if (estadoParecidos() !== p || turno !== p.turno) return
+        console.error('conos_parecidos:', e)
+        p.lista = []
+      }
+      pintarParecidos()
+    }
+
+    // El id de un cono por su nombre: del catálogo de la tablet o de los parecidos.
+    function idDeConoPorNombre(nombre) {
+      const n = String(nombre ?? '').trim().toUpperCase()
+      return (estado.catalogo?.marcas ?? []).find(m => String(m.nombre ?? '').trim().toUpperCase() === n)?.id ??
+        (estadoParecidos()?.lista ?? []).find(p => p.nombre.trim().toUpperCase() === n)?.marca_id ?? null
+    }
+
+    // Cierra el formulario de "cono nuevo" y lo deja vacío.
+    function cerrarConoNuevo() {
+      document.getElementById('pr-agregar-cono-form').hidden = true
+      document.getElementById('pr-agregar-cono-nombre').value = ''
+      document.getElementById('pr-agregar-cono-error').hidden = true
+      const p = estadoParecidos()
+      if (p) {
+        if (p.reloj) clearTimeout(p.reloj)
+        p.reloj = null
+        p.turno++
+        p.lista = []
+        p.yaExiste = null
+      }
+      pintarParecidos()
+      if (estado.agregar) estado.agregar.busqueda = ''
+      document.getElementById('pr-agregar-marca-buscar').value = ''
+    }
+
+    // Tocar un parecido ELIGE ese cono existente: no se crea nada.
+    function elegirParecido(marcaId) {
+      if (!marcaId || !estado.agregar) return
+      if (!(estado.catalogo?.marcas ?? []).some(m => m.id === marcaId)) {
+        // Fuera del catálogo (que trae todos los activos): está dado de baja.
+        const err = document.getElementById('pr-agregar-cono-error')
+        err.textContent = 'Ese cono existe pero está dado de baja. Pedile a quien configura producción que lo reactive, o elegí otro.'
+        err.hidden = false
+        return
+      }
+      cerrarConoNuevo()
+      elegirCono(marcaId)
+    }
+
+    // "¿Seguro que no es CASERATO?": Sí crea con p_es_otro; No elige ese.
+    function confirmarEsOtroCono(existente, marcaId) {
+      const nombre = document.getElementById('pr-agregar-cono-nombre').value.trim()
+      pedirConfirmacion({
+        titulo: `¿Seguro que no es ${existente}?`,
+        texto: `Ya existe el cono ${existente}. Si «${nombre.toUpperCase()}» es otro cono distinto, se crea igual y queda para revisar.`,
+        si: 'Sí, es otro cono', no: marcaId ? `No, elegir ${existente}` : 'No, seguir',
+      }, () => crearConoNuevo({ esOtro: true }), marcaId ? () => elegirParecido(marcaId) : null)
+    }
+
     // proponer_marca guarda el nombre en MAYÚSCULAS y, con solo `cargar`, lo
     // deja 'pendiente_revision': se puede usar igual. Un nombre ya RECHAZADO
     // hace que la función LANCE, y ese mensaje ya viene escrito para una
-    // persona, así que se muestra tal cual.
-    async function crearConoNuevo() {
+    // persona, así que se muestra tal cual. Desde el 21/10/2026 también lanza
+    // si ya hay uno "igual" ("Ya existe el cono X…"): se ofrece elegir ese.
+    async function crearConoNuevo({ esOtro = false } = {}) {
       const campo = document.getElementById('pr-agregar-cono-nombre')
       const err = document.getElementById('pr-agregar-cono-error')
       const nombre = campo.value.trim()
       err.hidden = true
       if (!nombre) { err.textContent = 'Escribí el nombre del cono.'; err.hidden = false; return }
+      const p = estadoParecidos()
+      const igual = esOtro ? null : parecidoIgual(p?.lista)
+      if (igual) return confirmarEsOtroCono(igual.nombre, igual.marca_id)
       const btn = document.getElementById('pr-agregar-cono-confirmar')
       btn.disabled = true
       try {
-        const { data, error } = await supabase.rpc('proponer_marca', { p_nombre: nombre })
+        const { data, error } = await supabase.rpc('proponer_marca', esOtro ? { p_nombre: nombre, p_es_otro: true } : { p_nombre: nombre })
         if (error) throw error
         const id = data?.marca_id
         if (!id) throw new Error('No se pudo agregar el cono.')
@@ -9535,15 +9725,17 @@
             { id, nombre: nombre.toUpperCase(), estado_alta: tieneTarea('configurar') ? 'aprobada' : 'pendiente_revision' }]
             .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre), 'es'))
         }
-        document.getElementById('pr-agregar-cono-form').hidden = true
-        campo.value = ''
-        estado.agregar.busqueda = ''
-        document.getElementById('pr-agregar-marca-buscar').value = ''
+        cerrarConoNuevo()
         elegirCono(id)
       } catch (e) {
         console.error('proponer_marca:', e)
         err.textContent = e?.message || 'No se pudo agregar el cono.'
         err.hidden = false
+        const existente = conoQueYaExiste(e?.message)
+        if (existente && p) {
+          p.yaExiste = { nombre: existente, marcaId: idDeConoPorNombre(existente) }
+          pintarParecidos()
+        }
       } finally {
         btn.disabled = false
       }
@@ -10200,7 +10392,16 @@
         f.hidden = false
         document.getElementById('pr-agregar-cono-nombre').focus()
       })
-      document.getElementById('pr-agregar-cono-confirmar').addEventListener('click', crearConoNuevo)
+      document.getElementById('pr-agregar-cono-confirmar').addEventListener('click', () => crearConoNuevo())
+      // "¿Quisiste decir…?" (21/10/2026)
+      document.getElementById('pr-agregar-cono-nombre').addEventListener('input', () => programarParecidos())
+      document.getElementById('pr-agregar-cono-parecidos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-parecido]'); if (b) return elegirParecido(b.dataset.parecido)
+        if (ev.target.closest('[data-cono-es-otro]')) {
+          const y = estadoParecidos()?.yaExiste
+          if (y) confirmarEsOtroCono(y.nombre, y.marcaId)
+        }
+      })
       document.getElementById('pr-agregar-cajas-panel').addEventListener('click', ev => {
         const b = ev.target.closest('[data-cajas-paso]'); if (b) return cambiarCajas(Number(b.dataset.cajasPaso))
         const p = ev.target.closest('[data-paso-ag]'); if (p) irAPasoAgregar(p.dataset.pasoAg)
@@ -10453,9 +10654,13 @@
           tipos.map(x => `<button type="button" class="pr-seg-rec__op" data-tipo-masa="${esc(x)}" aria-pressed="${x === b.tipo ? 'true' : 'false'}">${esc(x)}</button>`).join('') +
           '</span>'
         : ''
-      const tamanoReceta = '<span class="pr-seg-rec pr-receta__tamano" role="group" aria-label="Tamaño">' +
-        `<button type="button" class="pr-seg-rec__op" data-doble="no" aria-pressed="${b.doble ? 'false' : 'true'}">Simple</button>` +
-        `<button type="button" class="pr-seg-rec__op" data-doble="si" aria-pressed="${b.doble ? 'true' : 'false'}">Doble</button></span>`
+      // TAMAÑO SIN ELEGIR (16/10/2026, recuento del 15/10: faltaron 8 bolsas
+      // de harina): ninguno viene marcado. Con null, ningún botón presionado
+      // y el grupo resaltado hasta que el masero elija.
+      const tam = tamanoElegido(b.doble)
+      const tamanoReceta = `<span class="pr-seg-rec pr-receta__tamano${tam === null ? ' pr-receta__tamano--falta' : ''}" role="group" aria-label="Tamaño">` +
+        `<button type="button" class="pr-seg-rec__op" data-doble="no" aria-pressed="${tam === false ? 'true' : 'false'}">Simple</button>` +
+        `<button type="button" class="pr-seg-rec__op" data-doble="si" aria-pressed="${tam === true ? 'true' : 'false'}">Doble</button></span>`
       const como = b.como ?? 'original'
       const hayAnterior = !!d?.anterior
       const comos = '<span class="pr-seg-rec pr-receta__comos" role="group" aria-label="De dónde sale la masa">' +
@@ -10528,7 +10733,7 @@
         client_uuid: crypto.randomUUID(),
         turnoId: turno.id, lote: turno.lote, maquinaId: turno.maquinaId, maquinaNombre: turno.maquinaNombre,
         nro: turno.nro ?? null,
-        tipo: null, doble: false,
+        tipo: null, doble: null, // null hasta que el masero elige Simple o Doble
         como: null,          // 'original' | 'anterior' | 'modificar': lo que eligió el masero
         partida: null,       // 'original' | 'anterior': de dónde salieron las cantidades
         cambiada: false,     // se le tocó algo después de cargarla
@@ -10601,6 +10806,20 @@
     // Kilos con hasta 3 decimales, sin ruido de coma flotante.
     function redondearKg(n) {
       return Math.round(n * 1000) / 1000
+    }
+
+    // El tamaño de una masa es tri-estado: null (sin elegir), false (Simple)
+    // o true (Doble). Nada de !!: convertiría el "sin elegir" en Simple, que
+    // es justo lo que hacía registrar dobles como simples sin darse cuenta.
+    function tamanoElegido(v) {
+      return v === true ? true : v === false ? false : null
+    }
+
+    // Por cuánto se multiplica UNA masa simple para saber cuánto se lleva del
+    // lote. Sin tamaño elegido se calcula como simple (no se puede registrar
+    // así: faltanParaRegistrar lo pide primero).
+    function factorTamano(b) {
+      return tamanoElegido(b?.doble) === true ? 2 : 1
     }
 
     // Paso de los botones − / +: 100 g en agua, harina, azúcar y grasa; 10 g
@@ -10777,15 +10996,97 @@
     // En la PRIMERA MASA DEL DÍA de esa máquina llegan VACÍOS y hay que
     // cargarlos: la anterior es de otro día y sus lotes no dicen nada de lo
     // que hay hoy en la sala.
-    function lotesIniciales(datos) {
+    //
+    // LOTES NO REGISTRADOS (23/10/2026, pedido de Facu): un lote que no está
+    // cargado (masa_items.lote_fuera_de_stock) había que escribirlo a mano en
+    // la primera masa de cada día. Ahora, al quedar un ingrediente sin lote,
+    // viene puesto el ÚLTIMO lote no registrado que se usó en ESA máquina para
+    // ese insumo (lotesNoRegistradosDe), en rojo, y se puede usar igual.
+    function lotesIniciales(datos, maquinaId) {
       const ant = datos?.anterior
-      if (!ant || ant.es_de_hoy === false) return {}
       const out = {}
-      for (const it of ant.items ?? []) {
-        if (!it.ingrediente_id || !it.insumo_id) continue
-        out[it.ingrediente_id] = { insumo_id: it.insumo_id, lote: it.lote ?? null, manual: false, sinLote: it.lote == null }
+      if (ant && ant.es_de_hoy !== false) {
+        for (const it of ant.items ?? []) {
+          if (!it.ingrediente_id || !it.insumo_id) continue
+          out[it.ingrediente_id] = { insumo_id: it.insumo_id, lote: it.lote ?? null, manual: false, sinLote: it.lote == null }
+        }
+      }
+      for (const it of datos?.original?.items ?? []) {
+        if (out[it.ingrediente_id]) continue
+        const r = lotesNoRegistradosDe(datos, it.ingrediente_id, maquinaId)[0]
+        if (r) out[it.ingrediente_id] = { insumo_id: r.insumo_id, lote: r.lote, manual: false, sinLote: false }
       }
       return out
+    }
+
+    // ── La memoria de lotes no registrados, en esta tablet ─────────────────
+    // localStorage, junto a los borradores (no toca la base): por máquina y
+    // por insumo, el último lote usado que NO figuraba con stock.
+    //   { [maquinaId]: { [insumoId]: { lote, en } } }
+    // La clave NO empieza con PREFIJO_BORRADOR_MASA: borradoresPendientes la
+    // leería como una masa.
+    const CLAVE_LOTES_NO_REGISTRADOS = 'produccion.lotes-no-registrados'
+    const TEXTO_LOTE_NO_REGISTRADO = 'Lote no registrado por administración'
+
+    function leerLotesNoRegistrados() {
+      try {
+        const o = JSON.parse(leerPreferencia(CLAVE_LOTES_NO_REGISTRADOS) || '{}')
+        return o && typeof o === 'object' && !Array.isArray(o) ? o : {}
+      } catch { return {} }
+    }
+
+    function guardarLotesNoRegistrados(m) {
+      guardarPreferencia(CLAVE_LOTES_NO_REGISTRADOS, Object.keys(m).length ? JSON.stringify(m) : null)
+    }
+
+    // ¿El lote figura con stock en lo que trajo datos_para_masa?
+    function loteConStock(datos, insumoId, lote) {
+      const ins = (datos?.insumos ?? []).find(x => x.insumo_id === insumoId)
+      return !!ins && (ins.lotes ?? []).some(x => x.lote === lote)
+    }
+
+    // Los lotes recordados de ESTE ingrediente en esa máquina que siguen sin
+    // figurar con stock, el más reciente primero. Uno que administración ya
+    // cargó (aparece con stock) deja de proponerse: es un lote más de la lista.
+    function lotesNoRegistradosDe(datos, ingredienteId, maquinaId) {
+      if (!maquinaId) return []
+      const deMaquina = leerLotesNoRegistrados()[maquinaId]
+      if (!deMaquina) return []
+      return insumosDe(datos, ingredienteId)
+        .map(ins => ({ insumo_id: ins.insumo_id, lote: String(deMaquina[ins.insumo_id]?.lote ?? '').trim(), en: Number(deMaquina[ins.insumo_id]?.en) || 0 }))
+        .filter(r => r.lote && !loteConStock(datos, r.insumo_id, r.lote))
+        .sort((a, z) => z.en - a.en)
+    }
+
+    // Al registrar una masa: por cada renglón con lote, si ese lote no figura
+    // con stock queda recordado para esa máquina e insumo; si figura, se
+    // olvida el que había (el último usado ya es uno registrado).
+    function recordarLotesNoRegistrados(b, datos) {
+      if (!b?.maquinaId || !datos) return
+      const m = leerLotesNoRegistrados()
+      const deMaquina = m[b.maquinaId] && typeof m[b.maquinaId] === 'object' ? { ...m[b.maquinaId] } : {}
+      for (const it of ingredientesConLote(datos, b.cantidades)) {
+        const l = b.lotes?.[it.ingrediente_id]
+        if (!l || !l.insumo_id || l.sinLote || l.terminado) continue
+        const lote = String(l.lote ?? '').trim()
+        if (!lote) continue
+        if (loteConStock(datos, l.insumo_id, lote)) delete deMaquina[l.insumo_id]
+        else deMaquina[l.insumo_id] = { lote, en: Date.now() }
+      }
+      if (Object.keys(deMaquina).length) m[b.maquinaId] = deMaquina
+      else delete m[b.maquinaId]
+      guardarLotesNoRegistrados(m)
+    }
+
+    // "Se terminó" sobre un lote recordado: no se vuelve a proponer.
+    function olvidarLoteNoRegistrado(maquinaId, insumoId, lote) {
+      if (!maquinaId || !insumoId) return
+      const m = leerLotesNoRegistrados()
+      const r = m[maquinaId]?.[insumoId]
+      if (!r || (lote != null && String(r.lote ?? '').trim() !== String(lote).trim())) return
+      delete m[maquinaId][insumoId]
+      if (!Object.keys(m[maquinaId]).length) delete m[maquinaId]
+      guardarLotesNoRegistrados(m)
     }
 
     // Las opciones del desplegable de lote de un ingrediente. El insumo NO
@@ -10862,7 +11163,7 @@
       const l = b.lotes[it.ingrediente_id] ?? null
       const ops = opcionesLote(datos, it.ingrediente_id)
       const ins = l && l.insumo_id ? insumosDe(datos, it.ingrediente_id).find(x => x.insumo_id === l.insumo_id) ?? null : null
-      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))
+      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * factorTamano(b))
       const base = { pide, l, ops, ins, consumo, terminado: false, falta: false, sinIngreso: false, quedaAntes: null, noAlcanza: false }
       if (!pide) return base
       if (l && l.terminado) return { ...base, terminado: true, falta: true }
@@ -10882,6 +11183,8 @@
     // receta. Lista vacía = se puede mandar.
     function faltanParaRegistrar(b, datos) {
       const faltan = []
+      // Lo primero: el tamaño. Sin elegir no se registra (16/10/2026).
+      if (tamanoElegido(b.doble) === null) faltan.push('elegir SIMPLE o DOBLE')
       for (const it of datos.original.items) {
         const e = estadoLote(it, b, datos)
         const nombre = String(it.ingrediente ?? '').toLowerCase()
@@ -10995,7 +11298,10 @@
       return {
         p_turno_id: b.turnoId,
         p_tipo_masa: b.tipo,
-        p_doble: !!b.doble,
+        // true o false de verdad, nunca null: registrarMasa no llega acá sin
+        // tamaño elegido (faltanParaRegistrar), y un borrador viejo con
+        // true/false sale tal cual.
+        p_doble: tamanoElegido(b.doble) === true,
         p_masero_id: maseroId,
         p_items: items,
         p_client_uuid: b.client_uuid,
@@ -11096,7 +11402,10 @@
       // Una masa empezada antes (se recargó la tablet, se fue a otra pantalla)
       // se retoma con SU borrador y SU uuid.
       estado.masa = borradorEnCurso(turnoId)
-      estado.salaDoble = !!estado.masa?.doble
+      // El tamaño que el masero ya eligió en ESE borrador; sin borrador, o si
+      // todavía no lo había elegido, sigue sin elegir (null).
+      if (estado.masa) estado.masa.doble = tamanoElegido(estado.masa.doble)
+      estado.salaDoble = tamanoElegido(estado.masa?.doble)
       estado.datosMasa = null
       estado.tiposMasa = null
       estado.tipoMasa = estado.masa?.tipo ?? null
@@ -11229,8 +11538,9 @@
     }
 
     function elegirTamano(doble) {
-      estado.salaDoble = !!doble
-      if (estado.masa) { estado.masa.doble = !!doble; estado.masa.payload = null; guardarBorradorMasa(estado.masa) }
+      // Se llama solo desde los botones Simple / Doble: siempre true o false.
+      estado.salaDoble = doble === true
+      if (estado.masa) { estado.masa.doble = doble === true; estado.masa.payload = null; guardarBorradorMasa(estado.masa) }
       if (estado.vista === 'pr-receta') pintarReceta()
       else pintarSala()
     }
@@ -11248,7 +11558,7 @@
       const b = estado.masa ?? nuevoBorradorMasa(t)
       const primeraVez = !b.como
       b.tipo = estado.tipoMasa
-      b.doble = !!estado.salaDoble
+      b.doble = tamanoElegido(estado.salaDoble)
       b.nro = t.nro
       b.como = como
       b.partida = como === 'modificar' ? partidaDeModificar(d) : como
@@ -11258,7 +11568,7 @@
       // Los lotes se CONSERVAN al pasar de Original a Anterior o a Modificar:
       // son los envases que hay en la sala, no dependen de la receta. Solo al
       // empezar la masa vienen de la anterior.
-      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d)
+      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d, b.maquinaId ?? t.maquinaId)
       b.agregados = []
       // Lo que es nuevo en la receta vigente (ver nuevosEnReceta) y lo que la
       // masa anterior llevaba de más ("otro", escrito a mano) vienen solo
@@ -11342,9 +11652,11 @@
       const clases = ['pr-rec__lote']
       if (e.terminado) clases.push('pr-rec__lote--terminado')
       else if (vacio) clases.push('pr-rec__lote--vacio')
-      const nota = e.sinIngreso ? '<span class="pr-rec__lote-nota">sin ingreso cargado</span>' : htmlCeldaQueda(e)
+      else if (e.sinIngreso) clases.push('pr-rec__lote--no-registrado')
+      // 23/10/2026: "sin ingreso cargado" pasó a decir lo que Facu pidió, en rojo.
+      const nota = e.sinIngreso ? `<span class="pr-rec__lote-nota">${esc(TEXTO_LOTE_NO_REGISTRADO)}</span>` : htmlCeldaQueda(e)
       return `<button type="button" class="${clases.join(' ')}" data-lote="${esc(it.ingrediente_id)}" aria-haspopup="dialog" ` +
-        `aria-label="Lote de ${esc(it.ingrediente)}: ${esc(texto)}${e.sinIngreso ? ', sin ingreso cargado' : ''}">` +
+        `aria-label="Lote de ${esc(it.ingrediente)}: ${esc(texto)}${e.sinIngreso ? esc(', ' + TEXTO_LOTE_NO_REGISTRADO.toLowerCase()) : ''}">` +
         `<span class="pr-rec__lote-texto">${esc(texto)}</span>${nota}</button>`
     }
 
@@ -11454,6 +11766,7 @@
       if (!b || !d) return
       document.getElementById('pr-receta-cab').innerHTML = htmlCabeceraReceta(b, d)
       document.getElementById('pr-receta-opciones').innerHTML = htmlOpcionesReceta(b, d)
+      document.getElementById('pr-receta-tamano-aviso').hidden = tamanoElegido(b.doble) !== null
       const cont = document.getElementById('pr-receta-filas')
       cont.innerHTML = htmlFilasReceta(b, d)
       cont.classList.toggle('pr-receta__tabla--modificar', b.como === 'modificar')
@@ -11562,6 +11875,8 @@
       const b = estado.masa
       if (!b) return
       const antes = b.lotes[ingredienteId]
+      // Un lote no registrado que se terminó no se vuelve a proponer (23/10/2026).
+      if (antes?.lote != null) olvidarLoteNoRegistrado(b.maquinaId, antes.insumo_id, antes.lote)
       b.lotes[ingredienteId] = { insumo_id: antes?.insumo_id || '', lote: null, manual: false, sinLote: false, terminado: true }
       b.payload = null
       estado.errorReceta = null
@@ -11723,6 +12038,51 @@
         '</button>'
     }
 
+    // LOS LOTES NO REGISTRADOS DEL PANEL (23/10/2026): el que está puesto si
+    // no figura con stock, y el último no registrado que se usó en esta
+    // máquina para cada insumo del ingrediente (si sigue sin figurar). Sin
+    // repetir. Van arriba, en rojo, y se eligen igual que cualquier lote.
+    function filasNoRegistradas(e, d, ingredienteId, maquinaId) {
+      const out = [], ya = new Set()
+      const agregar = (insumoId, lote, puesto) => {
+        const l = String(lote ?? '').trim()
+        if (!insumoId || !l || ya.has(`${insumoId}|${l}`)) return
+        ya.add(`${insumoId}|${l}`)
+        out.push({ insumo_id: insumoId, lote: l, puesto })
+      }
+      if (e?.sinIngreso && !e.terminado && e.l?.insumo_id) agregar(e.l.insumo_id, e.l.lote, true)
+      for (const r of lotesNoRegistradosDe(d, ingredienteId, maquinaId)) agregar(r.insumo_id, r.lote, false)
+      return out
+    }
+
+    function htmlFilaNoRegistrada(r, i, d, marcado) {
+      const ins = (d?.insumos ?? []).find(x => x.insumo_id === r.insumo_id) ?? null
+      const sub = TEXTO_LOTE_NO_REGISTRADO + (r.puesto ? '' : ' · el último que se usó en esta máquina')
+      return `<button type="button" class="pr-lp__tarjeta pr-lp__fila pr-lp__fila--no-registrado" data-lote-no-reg="${i}" aria-pressed="${marcado ? 'true' : 'false'}">` +
+        '<span class="pr-lp__radio" aria-hidden="true"></span>' +
+        `<span class="pr-lp__fila-col"><span class="pr-lp__fila-texto"><strong>${esc(marcaDeInsumo(ins))}</strong> lote ${esc(r.lote)}</span>` +
+        `<span class="pr-lp__fila-fecha">${esc(sub)}</span></span></button>`
+    }
+
+    // Tocar un lote no registrado lo PONE y cierra (no hay "Usar …": no está
+    // en la lista de stock). Viaja como escrito a mano: la base lo marca
+    // lote_fuera_de_stock.
+    function elegirLoteNoRegistrado(indice) {
+      const pl = estado.panelLote, b = estado.masa, d = estado.datosMasa
+      if (!pl || !b || !d) return
+      const it = d.original.items.find(x => x.ingrediente_id === pl.ingredienteId)
+      if (!it) return
+      const i = indice === '' || indice == null ? -1 : Number(indice)
+      const r = Number.isInteger(i) && i >= 0 ? filasNoRegistradas(estadoLote(it, b, d), d, pl.ingredienteId, b.maquinaId)[i] : undefined
+      if (!r) return
+      b.lotes[pl.ingredienteId] = { insumo_id: r.insumo_id, lote: r.lote, manual: true, sinLote: false }
+      b.payload = null
+      estado.errorReceta = null
+      guardarBorradorMasa(b)
+      pintarReceta()
+      cerrarPanelLote()
+    }
+
     function htmlPanelLote(ingredienteId) {
       const b = estado.masa, d = estado.datosMasa
       const it = d?.original.items.find(x => x.ingrediente_id === ingredienteId)
@@ -11746,8 +12106,12 @@
       // El lote puesto viene de la masa anterior de esa máquina (salvo que se
       // haya escrito a mano): se dice.
       const notaElegido = elegido >= 0 && d.anterior && !e.l?.manual ? `El de la masa anterior (${esc(d.anterior.nro)})` : ''
-      const listaHtml = filas.length
-        ? `<div class="pr-lp__filas" data-scroll-propio>${filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')}</div>`
+      // Arriba de todo, en rojo, los lotes no registrados (23/10/2026): el
+      // puesto y el último que se usó en esta máquina. Se eligen de un toque.
+      const noReg = filasNoRegistradas(e, d, ingredienteId, b.maquinaId)
+      const noRegHtml = noReg.map((r, i) => htmlFilaNoRegistrada(r, i, d, r.puesto && !Number.isInteger(pl.sel))).join('')
+      const listaHtml = filas.length || noReg.length
+        ? `<div class="pr-lp__filas" data-scroll-propio>${noRegHtml}${filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')}</div>`
         : '<p class="pr-lp__vacio">No hay lotes con stock cargado de este insumo.</p>'
       const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote
       const sel = todas.find(f => f.i === marcado) ?? null
@@ -11760,8 +12124,8 @@
         sub: `para la masa ${b.nro ?? '—'} · ${b.maquinaNombre ?? 'Máquina'}`,
         terminado: usar || termino ? `${termino}${usar}` : '',
         // Sin lotes con stock, la lista vacía no dice nada útil: la ventana
-        // abre directo con el campo.
-        tarjetas: pl.escribir && !todas.length ? '' : filtrosHtml + listaHtml,
+        // abre directo con el campo (salvo que haya uno no registrado).
+        tarjetas: pl.escribir && !todas.length && !noReg.some(r => !r.puesto) ? '' : filtrosHtml + listaHtml,
         otros: htmlEscribirLote(it, e, d),
       }
     }
@@ -11805,7 +12169,7 @@
         `<label class="pr-lp__escribir-rotulo" for="pr-lote-panel-escribir">Escribí el lote${ins ? ` de ${esc(marcaDeInsumo(ins))}` : ''}</label>` +
         insumosHtml +
         `<input type="text" class="pr-input pr-lp__escribir-campo" id="pr-lote-panel-escribir" data-lote-manual="${esc(it.ingrediente_id)}" maxlength="80" autocomplete="off" enterkeyhint="done">` +
-        '<p class="pr-lp__escribir-nota">Queda anotado como "sin ingreso cargado" y le llega un aviso a administración. Podés registrar la masa igual.</p>' +
+        `<p class="pr-lp__escribir-nota">Queda anotado como "${esc(TEXTO_LOTE_NO_REGISTRADO)}" y administración lo ve en Stock para cargar el ingreso. Podés registrar la masa igual.</p>` +
         error +
         '<button type="button" class="pr-btn pr-btn--accion" id="pr-lote-panel-usar">Usar este lote</button>' +
         '</div>'
@@ -11866,7 +12230,7 @@
       const b = estado.masa, d = estado.datosMasa
       const it = d?.original.items.find(x => x.ingrediente_id === ingredienteId)
       if (!b || !d || !it) return null
-      const consumo = redondearKg((b.cantidades[ingredienteId] ?? 0) * (b.doble ? 2 : 1))
+      const consumo = redondearKg((b.cantidades[ingredienteId] ?? 0) * factorTamano(b))
       return insumosDe(d, ingredienteId).map(ins => {
         const lotes = [...(ins.lotes ?? [])].sort((a, z) => {
           const fa = String(fechaLote(ins.insumo_id, a.lote) ?? ''), fz = String(fechaLote(ins.insumo_id, z.lote) ?? '')
@@ -11936,7 +12300,12 @@
       const b = estado.masa, d = estado.datosMasa
       const l = b.lotes[ingredienteId]
       const conStock = opcionesLote(d, ingredienteId).some(o => !o.manual && !o.sinLote)
-      const escribir = modo === 'lote' && !conStock
+      // Con un lote no registrado para elegir que NO es el puesto, la ventana
+      // muestra la lista (ese lote en rojo) y no abre directo el campo
+      // (23/10/2026). Si el único es el puesto, como antes: el campo.
+      const it = d.original.items.find(x => x.ingrediente_id === ingredienteId)
+      const hayNoReg = !!it && filasNoRegistradas(estadoLote(it, b, d), d, ingredienteId, b.maquinaId).some(r => !r.puesto)
+      const escribir = modo === 'lote' && !conStock && !hayNoReg
       estado.panelLote = { ingredienteId, modo, escribir, texto: l?.manual ? String(l.lote ?? '') : '' }
       pintarPanelLote()
       const panel = document.getElementById('pr-lote-panel')
@@ -12084,6 +12453,10 @@
         // Un lote que no alcanza ya se está avisando pegado al botón: el
         // toque registra igual (Parte 0: aviso, nunca bloqueo).
         b.payload = parametrosRegistrarMasa(b, d, estado.persona?.id ?? null)
+        // Los lotes no registrados de esta masa quedan recordados en la
+        // tablet para la próxima de esta máquina (23/10/2026). Una vez, al
+        // congelar el payload: un reintento no vuelve a pasar por acá.
+        recordarLotesNoRegistrados(b, d)
       }
       estado.enviandoMasa = true
       pintarPieReceta()
@@ -12122,7 +12495,9 @@
       try { await cargarDatosMasa(); leida = !sinRed } catch (err) { console.error('masa siguiente:', err) }
       if (!estado.datosMasa) { soltarMaquinaSala(); return mostrarSala() }
       if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)
-      estado.salaDoble = !!prev.doble
+      // El tamaño NO se copia de la anterior (16/10/2026): cada masa nueva
+      // arranca sin elegir y el masero tiene que tocar Simple o Doble.
+      estado.salaDoble = null
       const como = prev.como === 'modificar' ? 'anterior' : (prev.como ?? 'original')
       elegirComo(como === 'anterior' && !estado.datosMasa.anterior ? 'original' : como)
     }
@@ -12131,7 +12506,7 @@
     // "anterior": sus cantidades de UNA masa simple, y sus insumos y lotes.
     function anteriorDesdeBorrador(b) {
       return {
-        masa_id: null, lote: b.lote, nro: b.nro, hora: new Date().toISOString(), doble: !!b.doble, es_de_hoy: true,
+        masa_id: null, lote: b.lote, nro: b.nro, hora: new Date().toISOString(), doble: tamanoElegido(b.doble), es_de_hoy: true,
         es_chocolate: esChocolate(b, estado.defineChocolate),
         items: Object.keys(b.cantidades ?? {}).map(id => {
           const l = b.lotes?.[id]
@@ -12777,6 +13152,7 @@
         if (ev.target.closest('#pr-lote-panel-usar-lista')) { usarLoteDeLista(); return }
         const mf = ev.target.closest('[data-lote-marca]')
         if (mf && estado.panelLote) { estado.panelLote.marca = mf.dataset.loteMarca; pintarPanelLote(); return }
+        const nr = ev.target.closest('[data-lote-no-reg]'); if (nr) { elegirLoteNoRegistrado(nr.dataset.loteNoReg); return }
         const t = ev.target.closest('[data-lote-op]'); if (t) elegirTarjetaLote(t.dataset.loteOp)
       })
       panelLote.addEventListener('keydown', teclaPanelLote)

@@ -128,7 +128,9 @@ const SEGURAS_PRODUCCION = [
   ['apagado', 'clase CSS constante del código (" pr-sala__apagado"), o vacía'],
   ['tipo', 'HTML ya escapado: htmlCabeceraReceta() lo arma arriba con esc(b.tipo), o vacío'],
   // Terminar la tablet, parte 3: el <select> del lote se fue (y con él htmlOpcionesLote y sus "opciones").
-  ['nota', 'HTML constante del código (el "sin ingreso cargado" del lote), o vacío'],
+  ['nota', 'HTML del código: el "Lote no registrado por administración" del lote (con esc() de la constante), htmlCeldaQueda() que escapa adentro, o vacío'],
+  // Lotes no registrados (23/10/2026)
+  ['noRegHtml', 'HTML armado por htmlFilaNoRegistrada(), que escapa la marca, el lote y la nota adentro'],
   ['queda', 'HTML ya escapado: htmlFilaLote() lo arma arriba con esc(textoCantidad()), o vacío'],
   ['i', 'el índice numérico de la opción de lote (forEach), no un dato de la base'],
   // Terminar la tablet, parte 4: las paradas
