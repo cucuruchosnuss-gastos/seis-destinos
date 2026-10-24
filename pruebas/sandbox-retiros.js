@@ -68,6 +68,8 @@ const FUNCIONES_BASE = [
   'textoLotesHoja', 'faltanteDeRenglon', 'descripcionHoja', 'cantidadHoja', 'totalInsumosHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La impresión nueva (07/10/2026): medida, media hoja u hojas enteras.
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
+  // Sin cortes de más (23/10/2026): las medidas que no pueden ser.
+  'medidasRaras', 'textoMedidaRara', 'registrarMedidaRara', 'hojaConEstilos', 'esperarHojaLista',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf',
   'enviarOrden', 'compartirTextoOrden',
   // Devoluciones y reposiciones (22/10/2026)
@@ -82,7 +84,7 @@ const CONSTANTES_BASE = [
   'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'GRUPOS_RETIRO', 'hayStock', 'CLASE_GRUPO',
   'MARCA_A_ELEGIR', 'TEXTO_FALTA_CONO', 'PASOS_RETIRO', 'COLOR_TAMANO_RETIRO', 'COLOR_INSUMO_RETIRO', 'TONOS_RETIRO', 'PALETA_CONO_RETIRO', 'TEXTO_SIN_SENAL', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
   'LINK_TRASPASO', 'ultimoOrigenDibujado', ...CONSTANTES_FR,
-  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
+  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
   'MOTIVOS_DEVOLUCION', 'LARGO_LOTE_DEVUELTO',
 ]
 

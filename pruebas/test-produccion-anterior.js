@@ -208,6 +208,8 @@ esperas.push((async () => {
   chk('CSS: registrada en verde', /background: var\(--p-bien\)/.test(FUENTE.match(/\.pr-receta__registrar--ok[^{]*\{([^}]*)\}/)?.[1] ?? ''))
   let soltar
   const G = await receta(armar({ ant: anterior(), registrar: () => new Promise(r => { soltar = r }) }))
+  // Desde el 16/10/2026 el tamaño arranca sin elegir: el masero lo toca.
+  G.elegirTamano(false)
   const btn = G.__doc.getElementById('pr-receta-registrar')
   chk('antes: "Registrar masa 2"', btn.textContent === 'Registrar masa 2' && btn.disabled === false, btn.textContent)
   const envio = G.registrarMasa()
@@ -223,6 +225,7 @@ esperas.push((async () => {
   chk('y vuelve a "Registrar masa 9" para la siguiente', btn.textContent === 'Registrar masa 9' && btn.disabled === false && btn.title === '', btn.textContent)
   // Sin señal: queda guardada en la tablet, dicho en el mismo botón.
   const R = await receta(armar({ ant: anterior(), registrar: () => ({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } }) }))
+  R.elegirTamano(false)
   await R.registrarMasa()
   const btnR = R.__doc.getElementById('pr-receta-registrar')
   chk('sin señal: el botón dice "Masa 2 guardada en la tablet"', btnR.textContent === 'Masa 2 guardada en la tablet', btnR.textContent)
@@ -233,6 +236,7 @@ esperas.push((async () => {
   chk('… que al vencer lo vuelve SOLO a "Registrar masa 3"', btnR.textContent === 'Registrar masa 3' && btnR.disabled === false, btnR.textContent)
   // Un rechazo de la base no se tapa con el verde.
   const X2 = await receta(armar({ ant: anterior(), registrar: () => ({ data: null, error: { message: 'La receta cambió.', code: 'P0001' } }) }))
+  X2.elegirTamano(false)
   await X2.registrarMasa()
   chk('un rechazo: el botón vuelve a "Registrar masa" y el error va pegado', X2.__doc.getElementById('pr-receta-registrar').textContent === 'Registrar masa 2' &&
     X2.__doc.getElementById('pr-receta-error').textContent === 'La receta cambió.', X2.__doc.getElementById('pr-receta-registrar').textContent)

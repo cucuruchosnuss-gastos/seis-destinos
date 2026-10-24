@@ -133,6 +133,8 @@ const PRELUDIO = `
   function renderizarStock() {}
   // El stock valorizado (09/10/2026) lo prueba test-stock-costos.js.
   async function cargarValorizado() {}
+  // Los lotes usados sin ingreso (23/10/2026) los prueba test-stock-lotes-sin-ingreso.js.
+  async function cargarLotesSinIngreso() {}
   var window = { scrollTo() {} }
   var __Date = globalThis.Date
   var Date = function (...a) {
