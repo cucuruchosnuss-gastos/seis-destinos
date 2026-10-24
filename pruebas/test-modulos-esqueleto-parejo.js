@@ -13,7 +13,7 @@
 // también encima de la barra de abajo).
 //
 // Lo que se fija acá (lo que se ve en un navegador lo fija
-// e2e/57-esqueleto-parejo.spec.js, antes 54):
+// e2e/58-esqueleto-parejo.spec.js, antes 54):
 //  1. NINGÚN módulo (menos la planta, produccion.html) tiene una regla
 //     "position: fixed" a pantalla completa con fondo LLENO: eso es una
 //     pantalla encima de todo. Los modales (fondo transparente u oscurecido)
@@ -324,7 +324,7 @@ for (const f of TOCADOS) {
 // ══ 6. Gastos: "Anterior / Siguiente" del wizard pegada abajo (24/10/2026) ═
 // En un paso largo los botones quedan siempre a la vista. Lo que se ve en el
 // navegador (dentro de la ventana, sin tapar, arriba de la barra de abajo) lo
-// fija e2e/57-esqueleto-parejo.spec.js.
+// fija e2e/58-esqueleto-parejo.spec.js.
 {
   const rs = REGLAS['gastos.html']
   const nav = rs.find(r => r.selector === '.wizard-nav' && !r.media)
