@@ -2528,6 +2528,8 @@
     @media (min-width: 900px) { .pr-ing__cabeza { grid-template-columns: 1fr 1fr; } }
     .pr-ing__origen { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .pr-ing__op { min-height: 48px; border-radius: 12px; border: 1px solid var(--color-borde-boton, #9A9287); background: var(--color-fondo); color: var(--color-texto); font: inherit; font-weight: 600; cursor: pointer; padding: 0.5rem; overflow-wrap: anywhere; }
+    .pr-ing__op--propia { grid-column: 1 / -1; }
+    .pr-ing__nota { margin: 0.5rem 0 0; overflow-wrap: anywhere; }
     .pr-ing__op[aria-pressed="true"] { background: var(--naranja-suave); border-color: var(--naranja); color: var(--naranja-oscuro); }
     .pr-ing__elegido { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; min-height: 44px; }
     .pr-ing__provs { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -2861,7 +2863,7 @@
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-ing-volver">‹ Stock terminado</button>
             <h1 class="pr-titulo">Cargar ingreso</h1>
           </div>
-          <p class="pr-texto-suave">Cajas que entran de un proveedor o de otra fábrica del grupo.</p>
+          <p class="pr-texto-suave">Cajas que entran al stock: hechas por la misma fábrica, de un proveedor o de otra fábrica del grupo.</p>
         </div>
         <div id="pr-ing-cuerpo"></div>
       </section>
@@ -9997,7 +9999,18 @@
     // La BASE guarda sola el lote de cada renglón como vigente del producto
     // (ingresar_producto_terminado, desde el 21/10/2026, salvo 'SIN LOTE'):
     // ya no hay tilde ni llamada a guardar_lote_vigente después.
+    // PRODUCCIÓN PROPIA (24/10/2026): una tercera opción de origen, arriba de
+    // todo, "Producción propia (<esta fábrica>)": lo que la fábrica hace ella
+    // misma sin planilla (los barquillos de Dolce Pasta). Viaja
+    // p_unidad_origen_id = la fábrica que recibe y p_proveedor_id = null; la
+    // base (leída el 24/10/2026) exige el lote de fabricación ("poné el lote
+    // de fabricación") y no genera deuda entre empresas. Acá el lote se
+    // escribe siempre ("Lote de fabricación"): no se pregunta por el último,
+    // cada tanda trae el suyo. Sin precio y con el remito opcional. Un
+    // producto con productos_terminados.origen_tipo = 'fabrica' la trae
+    // elegida, mientras nadie haya elegido el origen a mano.
 
+    const ORIGENES_INGRESO = ['propia', 'proveedor', 'fabrica']
     const TAREAS_INGRESO = ['materia_prima:cargar', 'stock:ajustar_inventario']
     const LARGO_MAXIMO_LOTE = 40
 
@@ -10008,9 +10021,11 @@
 
     // En qué está el lote de un renglón: 'sin-producto'; 'pregunta' (tiene
     // vigente y todavía no se contestó); 'si' (es el vigente); 'otro' (hay
-    // que escribirlo: "No, es otro", o el producto no tiene vigente).
-    function modoLoteIngreso(r) {
+    // que escribirlo: "No, es otro", o el producto no tiene vigente);
+    // 'fabricacion' (producción propia: se escribe siempre, sin pregunta).
+    function modoLoteIngreso(r, ing) {
       if (!r?.productoId) return 'sin-producto'
+      if (ing?.origen === 'propia') return 'fabricacion'
       if (!r.loteVigente) return 'otro'
       if (r.loteResp === 'si') return 'si'
       if (r.loteResp === 'otro') return 'otro'
@@ -10018,8 +10033,8 @@
     }
 
     // El lote que viaja: el vigente si se contestó Sí; si no, lo escrito.
-    function loteDeRenglon(r) {
-      return normalizarLoteIngreso(modoLoteIngreso(r) === 'si' ? r.loteVigente : r.lote)
+    function loteDeRenglon(r, ing) {
+      return normalizarLoteIngreso(modoLoteIngreso(r, ing) === 'si' ? r.loteVigente : r.lote)
     }
 
     // estado.ingresoAlcances: Map 'modulo:tarea' → alcance; undefined = no se
@@ -10064,22 +10079,51 @@
 
     function nuevoIngreso(unidadId, hoy) {
       return {
-        unidadId, fecha: hoy, origen: null, proveedorId: null, proveedorNombre: '', busqueda: '', unidadOrigenId: '',
+        unidadId, fecha: hoy, origen: null, origenAMano: false, proveedorId: null, proveedorNombre: '', busqueda: '', unidadOrigenId: '',
         remito: '', observaciones: '', renglones: [nuevoRenglonIngreso()], clientUuid: crypto.randomUUID(),
         enviando: false, error: '', catalogo: null, catalogoError: false, avisoLote: '',
       }
     }
 
-    // Proveedor u otra fábrica: elegir uno SUELTA el otro (nunca los dos).
-    function elegirOrigenIngreso(ing, tipo) {
-      if (tipo !== 'proveedor' && tipo !== 'fabrica') return
+    // Producción propia, proveedor u otra fábrica: elegir uno SUELTA los
+    // otros (nunca dos). aMano false = lo eligió la pantalla por el producto
+    // (sugerirOrigenIngreso), y entonces lo puede volver a cambiar.
+    function elegirOrigenIngreso(ing, tipo, aMano = true) {
+      if (!ORIGENES_INGRESO.includes(tipo)) return
+      const antes = ing.origen
       ing.origen = tipo
-      if (tipo === 'proveedor') ing.unidadOrigenId = ''
-      else { ing.proveedorId = null; ing.proveedorNombre = ''; ing.busqueda = '' }
+      if (aMano) ing.origenAMano = true
+      if (tipo !== 'fabrica') ing.unidadOrigenId = ''
+      if (tipo !== 'proveedor') { ing.proveedorId = null; ing.proveedorNombre = ''; ing.busqueda = '' }
+      // Entrar o salir de producción propia: el lote se vuelve a pedir (el
+      // vigente que se aceptó con Sí no es el de una tanda nueva).
+      if ((antes === 'propia') !== (tipo === 'propia')) for (const r of ing.renglones) soltarLoteDeOrigen(r)
+    }
+
+    // Lo que quedó del lote por la pregunta de antes: Sí copiaba el vigente.
+    function soltarLoteDeOrigen(r) {
+      if (r.loteResp === 'si') r.lote = ''
+      r.loteResp = ''
+    }
+
+    // Un producto con origen_tipo 'fabrica' (se hace en la misma fábrica)
+    // trae elegida "Producción propia"; si ya no queda ninguno, se suelta.
+    // Lo que se eligió a mano no se toca.
+    function sugerirOrigenIngreso(ing) {
+      if (!ing || ing.origenAMano) return
+      const propio = ing.renglones.some(r => r.productoId && origenTipoDe(ing.catalogo, r.productoId) === 'fabrica')
+      if (propio && ing.origen !== 'propia') elegirOrigenIngreso(ing, 'propia', false)
+      else if (!propio && ing.origen === 'propia') { ing.origen = null; for (const r of ing.renglones) soltarLoteDeOrigen(r) }
+    }
+
+    function origenTipoDe(cat, productoId) {
+      return (cat?.productos ?? []).find(p => p.id === productoId)?.origen_tipo ?? null
     }
 
     // { p_proveedor_id, p_unidad_origen_id }: exactamente uno con valor.
+    // Producción propia: el origen es la misma fábrica que recibe.
     function origenParaBase(ing) {
+      if (ing.origen === 'propia') return { p_proveedor_id: null, p_unidad_origen_id: ing.unidadId || null }
       if (ing.origen === 'proveedor') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: null }
       if (ing.origen === 'fabrica') return { p_proveedor_id: null, p_unidad_origen_id: ing.unidadOrigenId || null }
       return { p_proveedor_id: null, p_unidad_origen_id: null }
@@ -10096,7 +10140,7 @@
     function itemsParaBase(ing, cat) {
       return ing.renglones.filter(r => r.presentacionId).map(r => {
         const pr = presentacionDe(cat, r.presentacionId)
-        const lote = loteDeRenglon(r)
+        const lote = loteDeRenglon(r, ing)
         return {
           presentacion_id: r.presentacionId,
           marca_id: pr?.con_cono && r.marcaId ? r.marcaId : null,
@@ -10112,7 +10156,7 @@
     function faltaIngreso(ing, cat) {
       if (!ing.unidadId) return 'Elegí la fábrica que recibe.'
       if (!ing.fecha) return 'Poné la fecha.'
-      if (ing.origen !== 'proveedor' && ing.origen !== 'fabrica') return 'Elegí de dónde viene: un proveedor o una fábrica del grupo.'
+      if (!ORIGENES_INGRESO.includes(ing.origen)) return 'Elegí de dónde viene: producción propia, un proveedor o una fábrica del grupo.'
       if (ing.origen === 'proveedor' && !ing.proveedorId) return 'Elegí el proveedor.'
       if (ing.origen === 'fabrica' && !ing.unidadOrigenId) return 'Elegí la fábrica de donde viene.'
       if (ing.origen === 'fabrica' && ing.unidadOrigenId === ing.unidadId) return 'La fábrica de origen tiene que ser otra.'
@@ -10124,8 +10168,9 @@
         const pr = presentacionDe(cat, r.presentacionId)
         if (pr?.con_cono && !r.marcaId) return `Renglón ${n}: elegí el cono (si es común, elegí la presentación sin cono).`
         if (!Number.isInteger(r.cajas) || r.cajas <= 0) return `Renglón ${n}: las cajas tienen que ser un número entero mayor que cero.`
-        if (modoLoteIngreso(r) === 'pregunta') return `Renglón ${n}: contestá si el lote sigue siendo ${r.loteVigente}.`
-        const lote = loteDeRenglon(r)
+        if (modoLoteIngreso(r, ing) === 'pregunta') return `Renglón ${n}: contestá si el lote sigue siendo ${r.loteVigente}.`
+        const lote = loteDeRenglon(r, ing)
+        if (!lote && ing.origen === 'propia') return `Renglón ${n}: poné el lote de fabricación.`
         if (!lote) return `Renglón ${n}: escribí el lote.`
         if (lote.length > LARGO_MAXIMO_LOTE) return `Renglón ${n}: el lote puede tener ${LARGO_MAXIMO_LOTE} caracteres como mucho.`
         if (ing.origen === 'proveedor' && r.precio != null && r.precio < 0) return `Renglón ${n}: el precio no puede ser negativo.`
@@ -10164,7 +10209,7 @@
     // lotes vigentes). Productos de reventa incluidos: son los que entran.
     async function leerCatalogoIngreso(unidadId) {
       const leer = async (q) => { const { data, error } = await q; if (error) throw error; return data ?? [] }
-      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden, tipo_masa').eq('unidad_negocio_id', unidadId).eq('activo', true))
+      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden, tipo_masa, origen_tipo').eq('unidad_negocio_id', unidadId).eq('activo', true))
       const ids = productos.map(p => p.id)
       const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, con_cono, unidades_por_caja, orden').in('producto_id', ids).eq('activa', true)) : []
       const marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre, activa, estado_alta').eq('activa', true))
@@ -10238,19 +10283,22 @@
             <input class="pr-input" data-ing-campo="cajas" inputmode="numeric" autocomplete="off"></label>
           ${ing.origen === 'proveedor' ? `<label class="pr-campo"><span class="pr-campo__rotulo">Precio por caja (opcional)</span>
             <input class="pr-input" data-ing-campo="precio" inputmode="decimal" autocomplete="off"></label>` : ''}
-          ${htmlLoteIngreso(r)}
+          ${htmlLoteIngreso(r, ing)}
         </div>
       </div>`
     }
 
     // El lote del renglón: la pregunta con Sí / "No, es otro" si hay vigente,
     // y el campo (de solo lectura con Sí; obligatorio con "No, es otro" o sin
-    // vigente). Sin producto, el campo apagado.
-    function htmlLoteIngreso(r) {
-      const modo = modoLoteIngreso(r)
-      const campo = (attrs, valor, placeholder) => `<label class="pr-campo"><span class="pr-campo__rotulo">Lote</span>
+    // vigente). Sin producto, el campo apagado. Producción propia: "Lote de
+    // fabricación", vacío y obligatorio, sin pregunta.
+    function htmlLoteIngreso(r, ing) {
+      const modo = modoLoteIngreso(r, ing)
+      const rotulo = ing?.origen === 'propia' ? 'Lote de fabricación' : 'Lote'
+      const campo = (attrs, valor, placeholder) => `<label class="pr-campo"><span class="pr-campo__rotulo">${esc(rotulo)}</span>
               <input class="pr-input" data-ing-campo="lote" autocomplete="off" autocapitalize="characters" maxlength="${LARGO_MAXIMO_LOTE}" value="${esc(valor)}" placeholder="${esc(placeholder)}"${attrs}></label>`
       if (modo === 'sin-producto') return `<div class="pr-ing__lote">${campo(' disabled', '', 'Primero el producto')}</div>`
+      if (modo === 'fabricacion') return `<div class="pr-ing__lote" data-ing-lote-modo="fabricacion">${campo(' required aria-required="true"', r.lote, 'El lote de esta tanda')}</div>`
       const pregunta = r.loteVigente ? `<p class="pr-ing__lote-pregunta">Último lote: <strong>${esc(r.loteVigente)}</strong>. ¿Sigue siendo este?</p>
             <div class="pr-ing__origen" role="group" aria-label="¿Sigue siendo el último lote?">
               <button type="button" class="pr-ing__op" data-ing-lote="si" aria-pressed="${modo === 'si' ? 'true' : 'false'}">Sí</button>
@@ -10289,9 +10337,11 @@
             <input class="pr-input" type="date" id="pr-ing-fecha" value="${esc(ing.fecha)}" max="${esc(hoyArgentina())}"></label>
           <div class="pr-campo"><span class="pr-campo__rotulo">¿De dónde viene?</span>
             <div class="pr-ing__origen" role="group" aria-label="De dónde viene">
+              <button type="button" class="pr-ing__op pr-ing__op--propia" data-ing-origen="propia" aria-pressed="${ing.origen === 'propia' ? 'true' : 'false'}">Producción propia (${esc(estado.unidades.get(ing.unidadId) ?? 'esta fábrica')})</button>
               <button type="button" class="pr-ing__op" data-ing-origen="proveedor" aria-pressed="${ing.origen === 'proveedor' ? 'true' : 'false'}">Proveedor</button>
               <button type="button" class="pr-ing__op" data-ing-origen="fabrica" aria-pressed="${ing.origen === 'fabrica' ? 'true' : 'false'}">Otra fábrica del grupo</button>
-            </div></div>
+            </div>
+            ${ing.origen === 'propia' ? '<p class="pr-texto-suave pr-ing__nota">Lo hizo esta fábrica: cada producto lleva el lote de fabricación de la tanda. No genera deuda entre empresas.</p>' : ''}</div>
           ${ing.origen === 'proveedor' ? (ing.proveedorId
             ? `<div class="pr-campo"><span class="pr-campo__rotulo">Proveedor</span><div class="pr-ing__elegido"><strong>${esc(ing.proveedorNombre)}</strong> <button type="button" class="pr-btn pr-btn--secundario" id="pr-ing-cambiar-prov">Cambiar</button></div></div>`
             : `<label class="pr-campo"><span class="pr-campo__rotulo">Proveedor</span><input class="pr-input" id="pr-ing-buscar" autocomplete="off" placeholder="Buscá por nombre o CUIT" value="${esc(ing.busqueda)}"></label><div id="pr-ing-proveedores" class="pr-ing__provs"></div>`) : ''}
@@ -10364,6 +10414,7 @@
         ing.unidadId = t.value
         if (ing.unidadOrigenId === ing.unidadId) ing.unidadOrigenId = ''
         ing.renglones = [nuevoRenglonIngreso()]
+        sugerirOrigenIngreso(ing)
         cargarCatalogoIngreso(ing)
         return
       }
@@ -10379,6 +10430,7 @@
         r.lote = ''; r.loteResp = ''
         const pres = (ing.catalogo?.presentaciones ?? []).filter(p => p.producto_id === r.productoId)
         if (pres.length === 1) r.presentacionId = pres[0].id
+        sugerirOrigenIngreso(ing)
         pintarIngreso()
       } else if (campo === 'presentacionId') {
         r.presentacionId = t.value
@@ -10416,7 +10468,7 @@
       }
       if (b.id === 'pr-ing-cambiar-prov') { ing.proveedorId = null; ing.proveedorNombre = ''; pintarIngreso(); document.getElementById('pr-ing-buscar')?.focus?.(); return }
       if (b.id === 'pr-ing-agregar') { ing.renglones.push(nuevoRenglonIngreso()); pintarIngreso(); return }
-      if (b.dataset.ingQuitar) { ing.renglones = ing.renglones.filter(r => r.id !== b.dataset.ingQuitar); pintarIngreso(); return }
+      if (b.dataset.ingQuitar) { ing.renglones = ing.renglones.filter(r => r.id !== b.dataset.ingQuitar); sugerirOrigenIngreso(ing); pintarIngreso(); return }
       if (b.id === 'pr-ing-guardar') guardarIngreso()
     }
 
@@ -10612,6 +10664,9 @@
         if (estado.salidas !== s || turno !== s.turno) return
         s.filas = data ?? []
         s.recortado = s.filas.length >= TOPE_FILAS
+        // La producción propia (24/10/2026: origen = la misma fábrica que
+        // recibe) no es una salida hacia otra fábrica: no se lista.
+        s.filas = s.filas.filter(f => !f.destino_id || f.destino_id !== f.unidad_origen_id)
       } catch (err) {
         console.error('salidas entre fábricas:', err)
         if (estado.salidas !== s || turno !== s.turno) return
