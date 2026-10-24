@@ -2,6 +2,9 @@
 
 Rama `ci-prueba/tablet-lote-y-caja` (desde `origin/main` f32b687). Se integra DESPUÉS de `ci-prueba/masa-tamano-sin-default` (e2a4485) y `ci-prueba/conos-parecidos` (b42ba2a). **Cero SQL: la base no se tocó** (solo SELECT de verificación).
 
+## Integración con las otras dos ramas
+La sesión principal integró `masa-tamano-sin-default` (5a39529) y `conos-parecidos` (1557f4f) a main antes; se trajo `origin/main` con merge (d784832): **sin conflictos** (las zonas de `produccion.html`, `sandbox-produccion.js` y `docs/memoria/produccion.md` no se pisan). Después del merge: `npm run pruebas` 277/277, check-scripts y check-bytes en verde; mutaciones `lotes-no-registrados` 36/36 (+1 eq.), `stock-lotes-sin-ingreso` 38/38 (+3 eq.), `produccion-lotes` 71/71, `produccion-masa` 170/170, `produccion-masa-tamano` 25/25, `produccion-conos-parecidos` 26/26; e2e 56 + 8-planta-tamanos + 54-conos-parecidos: 32/32.
+
 ## Para el chat de arquitectura (CLAUDE.md / docs/memoria)
 Ya quedaron escritas dos entradas con fecha: el final de `docs/memoria/produccion.md` ("LOTES NO REGISTRADOS Y LA CAJA DOLCE PASTA") y el final de la sección de la pantalla de `docs/memoria/stock.md` ("LOTES USADOS SIN INGRESO CARGADO"). CLAUDE.md no cambia (es índice). Si se ordena la memoria, la entrada de producción MANDA sobre "Un lote que no figura en stock…" y "LOS LOTES VIENEN PUESTOS…" de la sala de masa.
 
