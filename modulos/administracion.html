@@ -13349,8 +13349,6 @@
        cheque de la cartera: entran parejas en una fila mientras quepan. */
     .chq-salida-tipos { grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
     .chq-estado--vendido { background: var(--color-fondo); color: var(--verde-oscuro); }
-    .chq-venta-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.5rem; min-width: 0; }
-    .chq-venta-campos .chq-campo { margin-bottom: 0; }
     .chq-venta-resumen {
       border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px);
       padding: 0.75rem; margin: 0.875rem 0; font-size: 0.875rem; min-width: 0; overflow-wrap: anywhere;
@@ -13360,6 +13358,11 @@
     .chq-venta-resumen strong { font-variant-numeric: tabular-nums; }
     .chq-venta-resumen__total { font-weight: 700; }
     .chq-link-gasto { font-size: 0.8125rem; font-weight: 600; color: var(--naranja-oscuro); white-space: nowrap; }
+    /* IMPORTE COMPLETO (24/10/2026): el aviso de que los gastos del banco se
+       cargan aparte y el botón que lleva a cargarlos en Gastos. */
+    .chq-venta-resumen .chq-gastos-banco { display: block; }
+    .chq-gastos-banco { overflow-wrap: anywhere; }
+    .chq-gastos-banco__ir { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 0.5rem; text-decoration: none; text-align: center; }
     /* EN DOS PASOS (13/10/2026): "Ya se acreditó", la vista "En el banco" y
        cargar lo acreditado. */
     .chq-ya { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font-size: 0.875rem; margin: 0 0 0.875rem; cursor: pointer; }
@@ -13533,20 +13536,9 @@
             <label for="chq-acr-fecha">¿Qué día acreditó el banco?</label>
             <input type="date" id="chq-acr-fecha">
           </div>
-          <div id="chq-acr-reparto" hidden>
-            <div class="chq-campo__ayuda">Para las ventas: escribí el total que acreditó el banco (del resumen) o la tasa, y se reparte proporcional. Después se puede corregir cheque por cheque.</div>
-            <div class="chq-venta-campos" style="margin-top:.5rem">
-              <div class="chq-campo">
-                <label for="chq-acr-total">Total acreditado $</label>
-                <input type="text" id="chq-acr-total" inputmode="decimal" autocomplete="off">
-              </div>
-              <div class="chq-campo">
-                <label for="chq-acr-tasa">o tasa %</label>
-                <input type="text" id="chq-acr-tasa" inputmode="decimal" autocomplete="off">
-              </div>
-            </div>
-            <div class="chq-campo__error" id="chq-acr-ayuda-reparto" hidden></div>
-          </div>
+          <!-- IMPORTE COMPLETO (24/10/2026): ya no se escribe lo que acreditó
+               el banco. Entra el valor completo de cada cheque; los gastos o
+               intereses del banco se cargan aparte en Gastos. -->
           <div id="chq-acr-lista"></div>
           <div class="chq-venta-resumen" id="chq-acr-resumen"></div>
           <div class="chq-campo__error" id="chq-acr-error" hidden></div>
@@ -13644,25 +13636,9 @@
         <input type="checkbox" id="chq-salida-ya">
         <span>Ya se acreditó (la plata ya entró en la cuenta)</span>
       </label>
-      <!-- VENDER AL BANCO con la plata ya acreditada: el descuento se carga de
-           UNA de tres maneras, y las otras dos se calculan solas. -->
-      <div id="chq-venta" hidden>
-        <div class="chq-venta-campos">
-          <div class="chq-campo">
-            <label for="chq-venta-neto">Acreditó $</label>
-            <input type="text" id="chq-venta-neto" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="chq-campo">
-            <label for="chq-venta-descuento">Descuento $</label>
-            <input type="text" id="chq-venta-descuento" inputmode="decimal" autocomplete="off">
-          </div>
-          <div class="chq-campo">
-            <label for="chq-venta-tasa">Tasa %</label>
-            <input type="text" id="chq-venta-tasa" inputmode="decimal" autocomplete="off">
-          </div>
-        </div>
-        <div class="chq-campo__ayuda" style="margin-bottom:.875rem">Escribí una de las tres: las otras dos se calculan solas.</div>
-      </div>
+      <!-- IMPORTE COMPLETO (24/10/2026): vender ya no pide lo que acreditó el
+           banco (ni descuento ni tasa). Entra el valor completo; los gastos
+           o intereses del banco se cargan aparte en Gastos. -->
       <!-- Lo que va a pasar, antes de confirmar (depositar y vender). -->
       <div class="chq-venta-resumen" id="chq-salida-resumen" hidden></div>
       <!-- ENDOSAR A UN PROVEEDOR (29/09/2026): el endoso paga su cuenta corriente
@@ -15283,7 +15259,10 @@
       let acredito = ''
       if (ch.venta_neto != null && Number.isFinite(neto)) {
         const interes = Number.isFinite(imp) ? Math.round(imp * 100) - Math.round(neto * 100) : null
-        acredito = ` · acreditó ${formatearImporte(neto)}${interes != null ? ` (${formatearImporte(interes / 100)} de interés)` : ''}`
+        // Desde el 24/10/2026 una venta entra por el importe completo
+        // (venta_neto = importe): no se dice "acreditó … ($ 0,00 de
+        // interés)". Las ventas de antes, con interés, lo siguen diciendo.
+        if (interes !== 0) acredito = ` · acreditó ${formatearImporte(neto)}${interes != null ? ` (${formatearImporte(interes / 100)} de interés)` : ''}`
       }
       return `Vendido${cuando}${cuenta ? ` · ${cuenta}` : ''}${acredito}`
     }
@@ -15420,9 +15399,13 @@
     //   depositar_cheques(p_cheque_ids, p_cuenta_id, p_fecha)
     //   vender_cheques(p_cheque_ids, p_cuenta_id, p_fecha, p_neto, p_detalle)
     //     → { cheques, bruto, neto, descuento, caja_movimiento_id, gasto_id }
-    // Las dos meten UN ingreso por el total en la cuenta; vender además carga
-    // un GASTO "Intereses-Venta de cheques" por (total − acreditado) pagado
-    // desde esa cuenta, y deja el cheque 'vendido' con su venta_neto. La cuenta:
+    // Las dos meten UN ingreso por el total en la cuenta y vender deja el
+    // cheque 'vendido'. IMPORTE COMPLETO (24/10/2026, leído con
+    // pg_get_functiondef ese día): la base IGNORA p_neto (lo pisa con el
+    // total) y ya NO carga el gasto de intereses; los gastos o intereses del
+    // banco se cargan aparte en Gastos, categoría "Gastos bancarios y
+    // comisiones" (htmlGastosBanco lleva ahí). p_neto se sigue mandando,
+    // con el total, porque vender_cheques no tiene default. La cuenta:
     // cualquier banco de la Empresa en pesos (un cheque de Dolce se puede
     // depositar en un banco de Nuss: queda entre empresas). El endoso a un
     // proveedor sigue por su camino (ver "ENDOSAR A UN PROVEEDOR").
@@ -15496,22 +15479,28 @@
       return `${uno ? 'El cheque es' : 'Hay cheques'} de otra fábrica (${partes.join(' y ')}) y la cuenta es de ${deLaCuenta}: queda como movimiento entre empresas.`
     }
 
-    // VENDER AL BANCO: el descuento se carga de UNA de tres maneras y las otras
-    // dos salen de esa. Todo en centavos; la tasa es sobre el TOTAL de los
-    // cheques (no anual), con 2 decimales: la misma cuenta que escribe la base
-    // en la descripción del gasto (round(descuento * 100 / total, 2)).
-    //   desde: 'neto' (Acreditó $) | 'descuento' (Descuento $) | 'tasa' (Tasa %)
-    // → { netoCent, descCent, tasa } o null si no hay un número para calcular.
-    function calcularVenta(brutoCent, desde, valor) {
-      if (!(brutoCent > 0) || valor === null || valor === undefined || valor === '') return null
-      const v = Number(valor)
-      if (!Number.isFinite(v)) return null
-      let descCent
-      if (desde === 'neto') descCent = brutoCent - Math.round(v * 100)
-      else if (desde === 'descuento') descCent = Math.round(v * 100)
-      else if (desde === 'tasa') descCent = Math.round(brutoCent * v / 100)
-      else return null
-      return { netoCent: brutoCent - descCent, descCent, tasa: Math.round(descCent * 10000 / brutoCent) / 100 }
+    // LOS GASTOS DEL BANCO, APARTE (24/10/2026). La categoría de Gastos donde
+    // se cargan a mano los intereses y comisiones del banco. Se nombra por su
+    // id (leído en `categorias` el 24/10/2026): el nombre ya cambió una vez
+    // (era la de los intereses de la venta de cheques; quedó el mismo id).
+    const CATEGORIA_GASTOS_BANCARIOS = { id: '7041825a-5a0c-484b-be07-17f9978a0d97', nombre: 'Gastos bancarios y comisiones' }
+
+    // "Entran $ X a <cuenta>. Los gastos o intereses del banco se cargan
+    // aparte en Gastos, categoría 'Gastos bancarios y comisiones'." y el botón
+    // que lleva a cargarlo: gastos.html?nuevo=1&categoria=<id>&unidad=<fábrica>
+    // abre el wizard de Gastos con la categoría (y la fábrica de la cuenta, si
+    // se sabe; vacía, Gastos la ignora) ya elegidas.
+    // entradas: [{ cuenta, centavos }] (una por cuenta). nuevaPestana: en el
+    // diálogo, antes de confirmar, Gastos se abre aparte para no perder lo
+    // que se está cargando. HTML: el texto con esc(); el href, con
+    // encodeURIComponent y entre comillas DOBLES.
+    function htmlGastosBanco(entradas, unidadId, { nuevaPestana = false } = {}) {
+      const entran = (entradas ?? []).map(x => `Entran ${formatearImporte((Number(x?.centavos) || 0) / 100)} a ${x?.cuenta || 'la cuenta elegida'}.`).join(' ')
+      const texto = `${entran}${entran ? ' ' : ''}Los gastos o intereses del banco se cargan aparte en Gastos, categoría '${CATEGORIA_GASTOS_BANCARIOS.nombre}'.`
+      const unidad = unidadId || ''
+      const destino = nuevaPestana ? ' target="_blank" rel="noopener"' : ''
+      return `<div class="chq-gastos-banco"><span>${esc(texto)}</span><br>` +
+        `<a class="chq-btn chq-btn--chico chq-gastos-banco__ir" data-gastos-banco href="gastos.html?nuevo=1&amp;categoria=${encodeURIComponent(CATEGORIA_GASTOS_BANCARIOS.id)}&amp;unidad=${encodeURIComponent(unidad)}"${destino}>Cargar el gasto del banco</a></div>`
     }
 
     // Lo que se valida ANTES de llamar, con las MISMAS reglas que la base
@@ -15519,9 +15508,9 @@
     // el servidor rechaza, y una más estricta bloquea lo que sí entra. El
     // endoso valida aparte (erroresEndoso).
     // ya: la plata ya entró (un solo paso, depositar_cheques / vender_cheques).
-    // Sin ya, se MANDA al banco y lo acreditado se carga después: no se pide.
-    // Por defecto true (así lo llamaban las pruebas de un solo paso).
-    function erroresSalida({ tipo, fecha, cuentaId, venta, brutoCent, ya = true }, fechaCobranza, hoy) {
+    // Sin ya, se MANDA al banco y se acredita después. Desde el 24/10/2026
+    // vender tampoco pide lo acreditado: entra siempre el importe completo.
+    function erroresSalida({ tipo, fecha, cuentaId }, fechaCobranza, hoy) {
       const e = []
       if (!TIPOS_BANCO.includes(tipo) && tipo !== 'endosado') e.push('Elegí qué hacés con el cheque: depositarlo, venderlo o endosarlo.')
       if (!esFechaIso(fecha)) e.push('Falta la fecha.')
@@ -15532,19 +15521,17 @@
         }
       }
       if (TIPOS_BANCO.includes(tipo) && !cuentaId) e.push('Elegí la cuenta del banco.')
-      if (tipo === 'vendido' && ya) {
-        if (!venta || !(venta.netoCent > 0)) e.push('Poné lo que acreditó el banco.')
-        else if (venta.netoCent > brutoCent) e.push(`Lo acreditado no puede ser más que el total de los cheques (${formatearImporte(brutoCent / 100)}).`)
-      }
       return e
     }
 
-    // Los parámetros tal cual viajan. Lo acreditado, en pesos (centavos / 100);
-    // un detalle vacío va como null.
-    function parametrosBanco(ids, { tipo, cuentaId, fecha, venta, detalle }) {
+    // Los parámetros tal cual viajan; un detalle vacío va como null. Vender:
+    // p_neto es el IMPORTE COMPLETO (el total, en pesos): la base lo ignora
+    // desde el 24/10/2026, pero vender_cheques no tiene default y se manda
+    // lo que de verdad entra.
+    function parametrosBanco(ids, { tipo, cuentaId, fecha, brutoCent, detalle }) {
       const p = { p_cheque_ids: [...ids], p_cuenta_id: cuentaId, p_fecha: fecha }
       if (tipo === 'vendido') {
-        p.p_neto = venta.netoCent / 100
+        p.p_neto = (Number(brutoCent) || 0) / 100
         p.p_detalle = textoOpcional(detalle)
       }
       return p
@@ -15568,12 +15555,13 @@
     function textoResultadoBanco(res, tipo, cuentaNombre) {
       const n = Number(res?.cheques) || 0
       const bruto = Number(res?.bruto)
-      const desc = Number(res?.descuento) || 0
       const cuenta = cuentaNombre || 'la cuenta'
       const entraron = Number.isFinite(bruto) ? formatearImporte(bruto) : 'la plata'
       if (tipo === 'vendido') {
+        // Desde el 24/10/2026 la base ya no carga el gasto de intereses: se
+        // recuerda que va aparte.
         const que = n === 1 ? 'Se vendió 1 cheque' : `Se vendieron ${n} cheques`
-        return `${que}: entraron ${entraron} en ${cuenta}${desc > 0 ? ` y se cargó un gasto de ${formatearImporte(desc)} de interés` : ''}.`
+        return `${que}: entraron ${entraron} en ${cuenta}. Los gastos del banco se cargan aparte en Gastos.`
       }
       const que = n === 1 ? 'Se depositó 1 cheque' : `Se depositaron ${n} cheques`
       return `${que} en ${cuenta}: entraron ${entraron}.`
@@ -15612,13 +15600,11 @@
       if (!s) return
       const cheques = chequesDelEndoso(s)
       s.cuentaId = cuentaDefecto(cheques, estado.cobranzas, cuentasOfrecidas())
-      s.venta = null
       s.ya = false
       s.enviando = false
       const sel = document.getElementById('chq-salida-cuenta')
       sel.innerHTML = htmlOpcionesCuentas(cuentasOfrecidas(), estado.nombresUnidades)
       sel.value = s.cuentaId ?? ''
-      for (const id of ['chq-venta-neto', 'chq-venta-descuento', 'chq-venta-tasa']) ponerNumero(document.getElementById(id), null)
       document.getElementById('chq-venta-detalle').value = ''
     }
 
@@ -15657,7 +15643,6 @@
       document.getElementById('chq-salida-campo-ya').hidden = !banco
       document.getElementById('chq-salida-ya').checked = ya
       document.getElementById('chq-salida-campo-detalle').hidden = !banco || (ya && s.tipo === 'depositado')
-      document.getElementById('chq-venta').hidden = !(ya && s.tipo === 'vendido')
       const confirmar = document.getElementById('chq-salida-confirmar')
       confirmar.textContent = !banco ? 'Confirmar' : !ya ? 'Mandar al banco' : s.tipo === 'depositado' ? 'Depositar' : 'Vender'
       document.getElementById('chq-salida-error').hidden = true
@@ -15694,38 +15679,14 @@
       let html = fila(n === 1 ? 'Total del cheque' : `Total de los ${n} cheques`, formatearImporte(brutoCent / 100))
       if (!s.ya) {
         html += `<div><span>Se mandan a ${esc(cuenta?.nombre ?? 'la cuenta elegida')} para ${s.tipo === 'vendido' ? 'vender' : 'depositar'}. La plata no se mueve todavía: cuando el banco acredite, se carga en «En el banco».</span></div>`
-      } else if (s.tipo === 'vendido') {
-        const v = s.venta
-        if (v && v.netoCent > 0 && v.netoCent <= brutoCent) {
-          html += fila('Descuento', `${formatearImporte(v.descCent / 100)} (${formatearNumeroAr(v.tasa, { decimales: 2 })} %)`)
-          html += fila('Acreditado', formatearImporte(v.netoCent / 100), 'chq-venta-resumen__total')
-          html += `<div><span>Entran ${esc(formatearImporte(brutoCent / 100))} a ${esc(cuenta?.nombre ?? 'la cuenta elegida')}${v.descCent > 0 ? ` y se carga un gasto de ${esc(formatearImporte(v.descCent / 100))} de interés (Intereses-Venta de cheques)` : ''}.</span></div>`
-        } else {
-          html += `<div><span>Escribí cuánto acreditó el banco, el descuento o la tasa.</span></div>`
-        }
       } else {
-        html += `<div><span>Entran ${esc(formatearImporte(brutoCent / 100))} a ${esc(cuenta?.nombre ?? 'la cuenta elegida')}.</span></div>`
+        // IMPORTE COMPLETO (24/10/2026): vender o depositar, entra el total;
+        // los gastos del banco se cargan aparte (el botón abre Gastos en otra
+        // pestaña, así no se pierde lo que se está cargando acá).
+        html += htmlGastosBanco([{ cuenta: cuenta?.nombre ?? 'la cuenta elegida', centavos: brutoCent }], cuenta?.unidad_negocio_id ?? null, { nuevaPestana: true })
       }
       resumen.innerHTML = html
       resumen.hidden = false
-    }
-
-    // Se escribió en uno de los tres campos de la venta: se recalculan los
-    // otros dos (nunca el que se está escribiendo).
-    function alEscribirVenta(desdeCampo) {
-      const s = estado.salida
-      if (!s || s.tipo !== 'vendido' || !s.ya) return
-      const ids = { neto: 'chq-venta-neto', descuento: 'chq-venta-descuento', tasa: 'chq-venta-tasa' }
-      const brutoCent = centavosDe(chequesDelEndoso(s))
-      const v = calcularVenta(brutoCent, desdeCampo, leerCampoNumero(document.getElementById(ids[desdeCampo])))
-      s.venta = v
-      for (const [k, id] of Object.entries(ids)) {
-        if (k === desdeCampo) continue
-        const valor = !v ? null : k === 'neto' ? v.netoCent / 100 : k === 'descuento' ? v.descCent / 100 : v.tasa
-        ponerNumero(document.getElementById(id), valor)
-      }
-      document.getElementById('chq-salida-error').hidden = true
-      pintarBanco()
     }
 
     async function confirmarSalida() {
@@ -15741,7 +15702,6 @@
         tipo: s.tipo,
         fecha: document.getElementById('chq-salida-fecha').value,
         cuentaId: s.cuentaId,
-        venta: s.venta,
         detalle: document.getElementById('chq-venta-detalle').value,
         brutoCent: centavosDe(cheques),
         ya: !!s.ya,
@@ -15782,15 +15742,17 @@
     // EN EL BANCO (13/10/2026): los cheques que se mandaron al banco y todavía
     // no se acreditaron (estado 'en_banco'). Mandarlos NO mueve plata
     // (enviar_cheques_al_banco); cuando el banco acredita —1 a 3 días después—
-    // se carga cuánto dio (acreditar_cheques): un ingreso en la cuenta y, si
-    // entró menos, el gasto 'Intereses-Venta de cheques'. Si el banco no lo
+    // se acredita (acreditar_cheques): un ingreso en la cuenta por el IMPORTE
+    // COMPLETO (24/10/2026: la base ignora lo "acreditado" que se mande y ya
+    // no carga el gasto de intereses; los gastos del banco se cargan aparte,
+    // en Gastos, categoría 'Gastos bancarios y comisiones'). Si el banco no lo
     // tomó, vuelve a la cartera (cancelar_envio_cheques, con motivo).
     // Agrupados por cuenta y fecha de envío.
     // ═══════════════════════════════════════════════════════════════════════
 
     // Lo que se eligió en esta vista. Aparte de la selección de la cartera:
     // son otros cheques y otras acciones.
-    const bancoUI = { ids: new Set(), panel: null, valores: new Map(), enviando: false, resultado: '' }
+    const bancoUI = { ids: new Set(), panel: null, enviando: false, resultado: '' }
 
     const TEXTO_MOTIVO_NO_TOMO = 'Poné el motivo (por ejemplo: "el banco no lo aceptó").'
 
@@ -15894,69 +15856,35 @@
           </label>`
     }
 
-    // ── Repartir lo acreditado ───────────────────────────────────────────
-    // cheques: [{ id, importe, salida_modo }]. Se reparte entre los de VENTA
-    // (un depósito entra entero); si no hay ninguna venta, entre todos.
-    // Devuelve un Map id → centavos, o null si no se puede repartir.
-    function objetivoReparto(cheques) {
-      const ventas = cheques.filter(ch => ch.salida_modo === 'venta')
-      return new Set((ventas.length ? ventas : cheques).map(ch => ch.id))
+    // ── Lo que entra (24/10/2026: el IMPORTE COMPLETO) ───────────────────
+    // Ya no se reparte lo acreditado (el total del banco o la tasa): la base
+    // mete el valor completo de cada cheque. Por cuenta, en el orden en que
+    // aparecen: [{ cuentaId, cuenta, unidadId, centavos, cheques }].
+    function entradasPorCuenta(cheques, cuentasPorId) {
+      const m = new Map()
+      for (const ch of cheques ?? []) {
+        const k = ch?.salida_cuenta_id ?? ''
+        let e = m.get(k)
+        if (!e) {
+          const c = cuentasPorId?.get?.(ch?.salida_cuenta_id)
+          e = { cuentaId: ch?.salida_cuenta_id ?? null, cuenta: c?.nombre || nombreCuentaSalida(ch) || 'la cuenta', unidadId: c?.unidad_negocio_id ?? null, centavos: 0, cheques: 0 }
+          m.set(k, e)
+        }
+        e.centavos += aCentavos(ch?.importe)
+        e.cheques++
+      }
+      return [...m.values()]
     }
 
-    function repartoPorTotal(cheques, totalCent) {
-      if (!cheques?.length || !Number.isFinite(totalCent)) return null
-      const objetivo = objetivoReparto(cheques)
-      const r = new Map()
-      let fijo = 0, sumaObj = 0
-      for (const ch of cheques) {
-        const c = aCentavos(ch.importe)
-        if (objetivo.has(ch.id)) sumaObj += c
-        else { fijo += c; r.set(ch.id, c) }
-      }
-      const resto = totalCent - fijo
-      if (!(resto > 0) || resto > sumaObj || sumaObj <= 0) return null
-      // Proporcional al importe, en centavos; los centavos que sobran del
-      // redondeo van al cheque más grande.
-      let asignado = 0, mayor = null
-      for (const ch of cheques) {
-        if (!objetivo.has(ch.id)) continue
-        const c = aCentavos(ch.importe)
-        const v = Math.floor(c * resto / sumaObj)
-        r.set(ch.id, v)
-        asignado += v
-        if (!mayor || c > aCentavos(mayor.importe)) mayor = ch
-      }
-      if (mayor) r.set(mayor.id, r.get(mayor.id) + (resto - asignado))
-      return r
+    // La fábrica del gasto del banco: la de las cuentas, si es UNA sola.
+    function unidadUnicaDe(entradas) {
+      const us = new Set((entradas ?? []).map(e => e?.unidadId).filter(Boolean))
+      return us.size === 1 ? us.values().next().value : null
     }
 
-    function repartoPorTasa(cheques, tasa) {
-      if (!cheques?.length || !Number.isFinite(tasa) || tasa < 0 || tasa >= 100) return null
-      const objetivo = objetivoReparto(cheques)
-      const r = new Map()
-      for (const ch of cheques) {
-        const c = aCentavos(ch.importe)
-        r.set(ch.id, objetivo.has(ch.id) ? c - Math.round(c * tasa / 100) : c)
-      }
-      return r
-    }
-
-    // { brutoCent, netoCent, descCent, tasa, completo }: completo = todos
-    // tienen lo acreditado escrito.
-    function resumenAcreditar(cheques, valores) {
-      let bruto = 0, neto = 0, completo = cheques.length > 0
-      for (const ch of cheques) {
-        bruto += aCentavos(ch.importe)
-        const v = valores.get(ch.id)
-        if (v == null || !Number.isFinite(v)) completo = false
-        else neto += v
-      }
-      const desc = bruto - neto
-      return { brutoCent: bruto, netoCent: neto, descCent: desc, tasa: bruto > 0 ? Math.round(desc * 10000 / bruto) / 100 : 0, completo }
-    }
-
-    // La misma regla de acreditar_cheques, dicha antes de mandar.
-    function erroresAcreditar(cheques, valores, fecha, hoy) {
+    // La misma regla de acreditar_cheques, dicha antes de mandar (la fecha;
+    // lo acreditado ya no se escribe).
+    function erroresAcreditar(cheques, fecha, hoy) {
       const e = []
       if (!cheques.length) e.push('Elegí al menos un cheque.')
       if (!esFechaIso(fecha)) e.push('Falta la fecha.')
@@ -15965,29 +15893,23 @@
         const envio = cheques.map(ch => ch.envio_fecha).filter(esFechaIso).sort().pop()
         if (envio && diasEntre(envio, fecha) < 0) e.push(`La fecha no puede ser anterior al envío al banco (${formatearFechaCob(envio)}).`)
       }
-      for (const ch of cheques) {
-        const v = valores.get(ch.id)
-        const c = aCentavos(ch.importe)
-        if (v == null || !(v > 0)) e.push(`Cheque Nº ${ch.numero ?? '—'}: poné cuánto acreditó.`)
-        else if (v > c) e.push(`Cheque Nº ${ch.numero ?? '—'}: lo acreditado no puede ser más que su importe (${formatearImporte(c / 100)}).`)
-      }
       return e
     }
 
-    // Tal cual viaja: lo acreditado en pesos (centavos / 100).
-    function parametrosAcreditar(cheques, valores, fecha) {
-      return { p_items: cheques.map(ch => ({ cheque_id: ch.id, acreditado: valores.get(ch.id) / 100 })), p_fecha: fecha }
+    // Tal cual viaja: solo los cheques y la fecha. acreditar_cheques lee
+    // cheque_id e IGNORA "acreditado" desde el 24/10/2026 (pg_get_functiondef
+    // de ese día: v_acr := ch.importe), así que no se manda.
+    function parametrosAcreditar(cheques, fecha) {
+      return { p_items: cheques.map(ch => ({ cheque_id: ch.id })), p_fecha: fecha }
     }
 
     // Lo que dice la pantalla al terminar, con lo que DEVOLVIÓ la base (una
-    // fila por cuenta). HTML: todo escapado; el gasto, con
-    // encodeURIComponent y comillas DOBLES.
+    // fila por cuenta), y el botón para cargar los gastos del banco. HTML:
+    // todo escapado.
     function htmlResultadoAcreditar(res, cheques, cobranzas, cuentasPorId, nombres) {
       const lineas = (Array.isArray(res) ? res : []).map(r => {
-        const desc = Number(r?.descuento) || 0
-        const gasto = desc > 0 && r?.gasto_id
-          ? ` <a class="chq-link-gasto" href="gastos.html?gasto=${encodeURIComponent(r.gasto_id)}">Ver el gasto</a>` : ''
-        return `<div>Entró ${esc(formatearImporte(r?.acreditado))} en ${esc(r?.cuenta ?? 'la cuenta')}${desc > 0 ? ` · gasto de intereses ${esc(formatearImporte(desc))}` : ''}${gasto}</div>`
+        const entro = r?.bruto ?? r?.acreditado
+        return `<div>Entró ${esc(formatearImporte(entro))} en ${esc(r?.cuenta ?? 'la cuenta')}</div>`
       })
       // Un cheque de una fábrica que entró en el banco de OTRA queda como
       // movimiento entre empresas.
@@ -16004,6 +15926,7 @@
       for (const o of otras.values()) {
         lineas.push(`<div>Los cheques de ${esc(o.nombre)} (${esc(formatearImporte(o.centavos / 100))}) entraron en un banco de otra fábrica: quedan en «Entre empresas».</div>`)
       }
+      if (lineas.length) lineas.push(htmlGastosBanco([], unidadUnicaDe(entradasPorCuenta(cheques, cuentasPorId))))
       return lineas.join('')
     }
 
@@ -16062,93 +15985,42 @@
     }
 
     // ── Cargar lo acreditado ─────────────────────────────────────────────
+    // IMPORTE COMPLETO (24/10/2026): solo se elige el día; entra el valor
+    // completo de cada cheque y los gastos del banco se cargan aparte.
     function abrirAcreditar() {
       if (!chequesBancoElegidos().length) return
       bancoUI.panel = 'acreditar'
-      bancoUI.valores = new Map()
       bancoUI.resultado = ''
       const fecha = document.getElementById('chq-acr-fecha')
       fecha.value = hoyArgentina()
       fecha.max = hoyArgentina()
-      ponerNumero(document.getElementById('chq-acr-total'), null)
-      ponerNumero(document.getElementById('chq-acr-tasa'), null)
       document.getElementById('chq-acr-error').hidden = true
       armarFilasAcreditar()
       pintarEnBanco()
       document.getElementById('chq-acreditar').scrollIntoView?.({ block: 'nearest' })
     }
 
-    // Un campo "Acreditó $" por cheque, prellenado con su importe (o con lo
-    // que ya se había escrito, si se cambió la elección).
+    // Los cheques elegidos, uno por renglón (sin campos: entra su importe).
     function armarFilasAcreditar() {
       const cheques = chequesBancoElegidos()
-      const anteriores = bancoUI.valores
-      bancoUI.valores = new Map(cheques.map(ch => [ch.id, anteriores.has(ch.id) ? anteriores.get(ch.id) : aCentavos(ch.importe)]))
       const min = cheques.map(ch => ch.envio_fecha).filter(esFechaIso).sort().pop()
       document.getElementById('chq-acr-fecha').min = min ?? ''
-      document.getElementById('chq-acr-reparto').hidden = !cheques.some(ch => ch.salida_modo === 'venta')
-      const lista = document.getElementById('chq-acr-lista')
-      lista.innerHTML = cheques.map((ch, i) => `
+      document.getElementById('chq-acr-lista').innerHTML = cheques.map(ch => `
         <div class="chq-acr-fila">
           <div class="chq-acr-fila__cheque">Nº ${esc(ch.numero ?? '—')} · ${esc(nombreBanco(ch.banco_codigo))} · ${esc(formatearImporte(ch.importe))} <span class="chq-banco-modo chq-banco-modo--${esc(ch.salida_modo === 'venta' ? 'venta' : 'deposito')}">${esc(textoModoEnvio(ch.salida_modo))}</span></div>
-          <div class="chq-campo">
-            <label for="chq-acr-cheque-${esc(String(i))}">Acreditó $</label>
-            <input type="text" id="chq-acr-cheque-${esc(String(i))}" data-acr-cheque="${esc(ch.id)}" inputmode="decimal" autocomplete="off">
-          </div>
         </div>`).join('')
-      lista.querySelectorAll('[data-acr-cheque]').forEach(inp => {
-        const id = inp.dataset.acrCheque
-        enlazarCampoNumero(inp, { decimales: 2 })
-        const v = bancoUI.valores.get(id)
-        ponerNumero(inp, v == null ? null : v / 100)
-        inp.addEventListener('input', () => {
-          const x = leerCampoNumero(inp)
-          bancoUI.valores.set(id, x == null ? null : Math.round(x * 100))
-          // Cambiar un cheque a mano deja de cuadrar con el total o la tasa
-          // de arriba: se vacían, para que no digan algo que no es.
-          ponerNumero(document.getElementById('chq-acr-total'), null)
-          ponerNumero(document.getElementById('chq-acr-tasa'), null)
-          document.getElementById('chq-acr-error').hidden = true
-          pintarResumenAcreditar()
-        })
-      })
       pintarResumenAcreditar()
     }
 
-    // Se escribió el total del banco o la tasa: se reparte (proporcional) y
-    // se ponen los valores en cada cheque. desde: 'total' | 'tasa'.
-    function alRepartir(desde) {
-      const cheques = chequesBancoElegidos()
-      const totalInp = document.getElementById('chq-acr-total')
-      const tasaInp = document.getElementById('chq-acr-tasa')
-      const x = leerCampoNumero(desde === 'total' ? totalInp : tasaInp)
-      ponerNumero(desde === 'total' ? tasaInp : totalInp, null)
-      const ayuda = document.getElementById('chq-acr-ayuda-reparto')
-      let r = null
-      if (x != null) r = desde === 'total' ? repartoPorTotal(cheques, Math.round(x * 100)) : repartoPorTasa(cheques, x)
-      ayuda.textContent = x != null && !r
-        ? (desde === 'total' ? 'Ese total no se puede repartir: tiene que ser mayor que cero y no más que lo que valen los cheques.' : 'La tasa va de 0 a menos de 100.')
-        : ''
-      ayuda.hidden = !ayuda.textContent
-      if (r) {
-        for (const [id, v] of r) bancoUI.valores.set(id, v)
-        document.querySelectorAll('#chq-acr-lista [data-acr-cheque]').forEach(inp => ponerNumero(inp, bancoUI.valores.get(inp.dataset.acrCheque) / 100))
-      }
-      document.getElementById('chq-acr-error').hidden = true
-      pintarResumenAcreditar()
-    }
-
+    // El total y "Entran $ X a <cuenta>. Los gastos o intereses del banco se
+    // cargan aparte…", con el botón (en otra pestaña: no se pierde la
+    // elección).
     function pintarResumenAcreditar() {
       const cheques = chequesBancoElegidos()
-      const r = resumenAcreditar(cheques, bancoUI.valores)
+      const entradas = entradasPorCuenta(cheques, estado.cuentasBanco?.porId)
       const fila = (k, v, clase = '') => `<div class="${esc(clase)}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`
-      let html = fila(cheques.length === 1 ? 'Total del cheque' : `Total de los ${cheques.length} cheques`, formatearImporte(r.brutoCent / 100))
-      if (r.completo) {
-        html += fila('Acreditado', formatearImporte(r.netoCent / 100), 'chq-venta-resumen__total')
-        html += fila('Interés', `${formatearImporte(r.descCent / 100)} (${formatearNumeroAr(r.tasa, { decimales: 2 })} %)`)
-      } else {
-        html += '<div><span>Falta escribir cuánto acreditó algún cheque.</span></div>'
-      }
+      let html = fila(cheques.length === 1 ? 'Total del cheque' : `Total de los ${cheques.length} cheques`, formatearImporte(centavosDe(cheques) / 100), 'chq-venta-resumen__total')
+      html += htmlGastosBanco(entradas.map(e => ({ cuenta: e.cuenta, centavos: e.centavos })), unidadUnicaDe(entradas), { nuevaPestana: true })
       document.getElementById('chq-acr-resumen').innerHTML = html
     }
 
@@ -16157,7 +16029,7 @@
       const cheques = chequesBancoElegidos()
       const fecha = document.getElementById('chq-acr-fecha').value
       const err = document.getElementById('chq-acr-error')
-      const errores = erroresAcreditar(cheques, bancoUI.valores, fecha, hoyArgentina())
+      const errores = erroresAcreditar(cheques, fecha, hoyArgentina())
       if (errores.length) {
         err.textContent = errores.join(' ')
         err.hidden = false
@@ -16167,12 +16039,11 @@
       bancoUI.enviando = true
       btn.disabled = true
       try {
-        const { data, error } = await supabase.rpc('acreditar_cheques', parametrosAcreditar(cheques, bancoUI.valores, fecha))
+        const { data, error } = await supabase.rpc('acreditar_cheques', parametrosAcreditar(cheques, fecha))
         if (error) throw error
         bancoUI.resultado = htmlResultadoAcreditar(data, cheques, estado.cobranzas, estado.cuentasBanco?.porId, estado.nombresUnidades)
         bancoUI.ids = new Set()
         bancoUI.panel = null
-        bancoUI.valores = new Map()
         mostrarExito(cheques.length === 1 ? 'Se acreditó 1 cheque.' : `Se acreditaron ${cheques.length} cheques.`)
         await refrescarTodo()
       } catch (e) {
@@ -16241,10 +16112,6 @@
       })
       document.getElementById('chq-banco-acreditar').addEventListener('click', abrirAcreditar)
       document.getElementById('chq-banco-no-tomo').addEventListener('click', abrirNoTomo)
-      enlazarCampoNumero(document.getElementById('chq-acr-total'), { decimales: 2 })
-      enlazarCampoNumero(document.getElementById('chq-acr-tasa'), { decimales: 2, max: 100 })
-      document.getElementById('chq-acr-total').addEventListener('input', () => alRepartir('total'))
-      document.getElementById('chq-acr-tasa').addEventListener('input', () => alRepartir('tasa'))
       document.getElementById('chq-acr-cancelar').addEventListener('click', () => { bancoUI.panel = null; pintarEnBanco() })
       document.getElementById('chq-acr-confirmar').addEventListener('click', confirmarAcreditar)
       document.getElementById('chq-no-tomo-cancelar').addEventListener('click', () => { bancoUI.panel = null; pintarEnBanco() })
@@ -17577,12 +17444,6 @@
         estado.salida.ya = ev.target.checked
         pintarModalSalida()
       })
-      enlazarCampoNumero(document.getElementById('chq-venta-neto'), { decimales: 2 })
-      enlazarCampoNumero(document.getElementById('chq-venta-descuento'), { decimales: 2 })
-      enlazarCampoNumero(document.getElementById('chq-venta-tasa'), { decimales: 2, max: 100 })
-      document.getElementById('chq-venta-neto').addEventListener('input', () => alEscribirVenta('neto'))
-      document.getElementById('chq-venta-descuento').addEventListener('input', () => alEscribirVenta('descuento'))
-      document.getElementById('chq-venta-tasa').addEventListener('input', () => alEscribirVenta('tasa'))
       // ── Endosar a un proveedor ──
       document.getElementById('chq-endoso-buscar').addEventListener('input', (ev) => {
         const texto = ev.target.value

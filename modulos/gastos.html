@@ -2408,9 +2408,11 @@
       'Alquiler':                 'key',
       'Servicios':                'zap',
       'Pago a Cta. Cte. Proveedor': 'receipt',
-      // 13/10/2026: el interés de vender cheques al banco (lo carga
-      // vender_cheques), la librería y las comisiones de las órdenes.
-      'Intereses-Venta de cheques': 'percent',
+      // 13/10/2026: la librería y las comisiones de las órdenes.
+      // 24/10/2026: la categoría de los intereses de la venta de cheques se
+      // renombró (mismo id) y ahí se cargan A MANO los gastos del banco:
+      // vender, depositar y acreditar cheques ya no cargan ningún gasto.
+      'Gastos bancarios y comisiones': 'landmark',
       'Librería-Impresiones':       'printer',
       'Comisiones':                 'handshake',
     }
@@ -3661,6 +3663,8 @@
     if (idFacturaURL) {
       mostrarDetalleFactura(idFacturaURL)
     }
+
+    // (El deep link ?nuevo=1&categoria=… va al FINAL del script: ver ahí.)
 
     // ═══════════════════════════════════════════════════════════════════════
     // WIZARD — MAESTROS
@@ -5773,6 +5777,29 @@
       }
     }
 
+    // La categoría que pide la URL (?categoria=): por id o, si no, por nombre
+    // (sin importar mayúsculas). Solo una de las activas; si no, null.
+    function categoriaDeURL(categorias, valor) {
+      const v = String(valor ?? '').trim()
+      if (!v) return null
+      const lista = categorias ?? []
+      return lista.find(c => c.id === v) ?? lista.find(c => String(c.nombre ?? '').toLocaleLowerCase('es') === v.toLocaleLowerCase('es')) ?? null
+    }
+
+    // ?nuevo=1&categoria=…&unidad=…: el wizard con la categoría y la fábrica
+    // ya elegidas (como cargarGastoDesdeIngreso). La fábrica, solo si es una
+    // de las que ofrece la grilla.
+    async function abrirWizardConCategoria(categoria, unidad) {
+      await abrirWizard()
+      // iniciarWizard() cierra el wizard si no pudo cargar los maestros.
+      if (document.getElementById('vista-wizard').hidden) return
+      const cat = categoriaDeURL(estado.maestros.categorias, categoria)
+      if (cat) categoriaSeleccionada = cat.id
+      if (unidad && unidadesElegibles().some(u => u.id === unidad)) { unidadSeleccionada = unidad; viaVehiculos = false }
+      renderizarGrillaDestino()
+      renderizarGrillaCategorias()
+    }
+
     // "Cargar gasto" de una factura ingresada: abre el wizard con proveedor,
     // número, fecha, importe (el que leyó el OCR de Ingreso), la categoría de
     // materia prima, la unidad y la foto. Al guardar se llama a
@@ -7579,6 +7606,22 @@
       const fila = (estado.ingresosSinGasto ?? []).find(f => f.ingreso_id === btn.dataset.ingreso)
       if (fila) cargarGastoDesdeIngreso(fila)
     })
+
+    // Deep link "cargar un gasto NUEVO de esta categoría" (24/10/2026, desde
+    // la cartera de cheques de Administración, para los gastos del banco):
+    // gastos.html?nuevo=1&categoria=<id o nombre>[&unidad=<id>] abre el
+    // wizard con la categoría (y la fábrica) ya elegidas. Si no es una
+    // categoría activa o una fábrica de la grilla, se ignora y el wizard
+    // arranca como siempre; ?gasto= y ?factura= mandan.
+    // VA AL FINAL DEL SCRIPT: el wizard usa variables declaradas más abajo
+    // que el resto del arranque (turnoFoto, ...) y sus botones se enganchan
+    // recién acá arriba; llamado antes, tiraba "Cannot access 'turnoFoto'
+    // before initialization" (visto en la maqueta el 24/10/2026).
+    const paramsNuevoURL = new URLSearchParams(location.search)
+    if (paramsNuevoURL.get('nuevo') === '1' && !idGastoURL && !idFacturaURL) {
+      abrirWizardConCategoria(paramsNuevoURL.get('categoria'), paramsNuevoURL.get('unidad'))
+        .catch(e => console.error('abrirWizardConCategoria:', e))
+    }
 
   </script>
 

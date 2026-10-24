@@ -87,6 +87,8 @@ const OPCIONALES = [
   'htmlOpcionesClienteRechazo', 'leerCamposRechazo', 'listaRenglonesRechazo', 'escribirRenglonRechazo', 'agregarRenglonRechazo',
   'quitarRenglonRechazo', 'pintarRenglonesRechazo', 'pintarResultadosRechazo', 'pintarMotivosRechazo', 'pintarClienteRechazo',
   'pintarResumenRechazo', 'pintarErrorRechazo', 'pintarBotonRechazo', 'pintarRechazo', 'confirmarRechazo', 'conectarRechazo',
+  // importe completo: los gastos del banco, aparte (24/10/2026)
+  'htmlGastosBanco', 'entradasPorCuenta', 'unidadUnicaDe',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
@@ -97,7 +99,9 @@ const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADO
   'TEXTO_MOTIVO_NO_TOMO', 'bancoUI',
   // Cheque rechazado (24/10/2026)
   'ESTADOS_SALIDOS_Y_RECHAZADOS', 'MOTIVOS_RECHAZO', 'CONCEPTO_GASTO_RECHAZO', 'ESPERA_BUSQUEDA_RECHAZO', 'LARGO_MINIMO_RECHAZO',
-  'LARGO_MINIMO_MOTIVO_RECHAZO', 'TOPE_PDF_RECHAZO', 'puedeRechazar']
+  'LARGO_MINIMO_MOTIVO_RECHAZO', 'TOPE_PDF_RECHAZO', 'puedeRechazar',
+  // importe completo (24/10/2026)
+  'CATEGORIA_GASTOS_BANCARIOS']
 
 const PRELUDIO = `
   ${fuenteNumeros()}

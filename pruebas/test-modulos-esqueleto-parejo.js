@@ -312,6 +312,30 @@ const CAMBIADOS_A_PROPOSITO = {
     // test-stock-terminado.js miran el botón nuevo).
     'control:a#btn-entrada-terminado[href=produccion-gestion.html?vista=stock&amp;desde=stock]': 'pasó a <button id="btn-entrada-terminado">',
   },
+  'administracion.html': {
+    // Rama cheques-importe-completo (24/10/2026): la base mete SIEMPRE el
+    // importe completo al vender, depositar y acreditar cheques y ya no carga
+    // el gasto de intereses, así que se fueron los campos de lo acreditado
+    // (vender: Acreditó / Descuento / Tasa; acreditar: total, tasa y un
+    // "Acreditó $" por cheque) y el "Ver el gasto" del resultado de acreditar
+    // (test-cheques-importe-completo.js mira que no estén).
+    'id:chq-venta': 'vender ya no pide lo acreditado (importe completo)',
+    'id:chq-venta-neto': 'vender ya no pide lo acreditado (importe completo)',
+    'control:input#chq-venta-neto[type=text]': 'vender ya no pide lo acreditado (importe completo)',
+    'id:chq-venta-descuento': 'vender ya no pide lo acreditado (importe completo)',
+    'control:input#chq-venta-descuento[type=text]': 'vender ya no pide lo acreditado (importe completo)',
+    'id:chq-venta-tasa': 'vender ya no pide lo acreditado (importe completo)',
+    'control:input#chq-venta-tasa[type=text]': 'vender ya no pide lo acreditado (importe completo)',
+    'id:chq-acr-reparto': 'acreditar ya no reparte lo acreditado (importe completo)',
+    'id:chq-acr-total': 'acreditar ya no reparte lo acreditado (importe completo)',
+    'control:input#chq-acr-total[type=text]': 'acreditar ya no reparte lo acreditado (importe completo)',
+    'id:chq-acr-tasa': 'acreditar ya no reparte lo acreditado (importe completo)',
+    'control:input#chq-acr-tasa[type=text]': 'acreditar ya no reparte lo acreditado (importe completo)',
+    'id:chq-acr-ayuda-reparto': 'acreditar ya no reparte lo acreditado (importe completo)',
+    'id:chq-acr-cheque-*': 'acreditar ya no pide "Acreditó $" por cheque (importe completo)',
+    'control:input#chq-acr-cheque-*[data-acr-cheque][type=text]': 'acreditar ya no pide "Acreditó $" por cheque (importe completo)',
+    'control:a{Ver el gasto}': 'el resultado de acreditar ya no tiene gasto de intereses; queda el "Ver el gasto" de las ventas viejas',
+  },
 }
 for (const f of TOCADOS) {
   let viejo = null
