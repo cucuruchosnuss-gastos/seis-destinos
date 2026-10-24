@@ -754,7 +754,18 @@
     .nota-credito__opciones .ficha-unidad-cc__chip { text-align: left; }
     .nota-credito__campos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .nota-credito__campos label { font-size: 0.8125rem; color: var(--color-texto-2); display: flex; flex-direction: column; gap: 0.25rem; }
+    /* La nota de débito de un proveedor (24/10/2026): renglones concepto + importe. */
+    #modal-nota-debito input[type="text"], #modal-anular-nd input[type="text"] {
+      width: 100%; min-height: 44px; padding: 0 0.75rem; border: 1px solid var(--color-borde); border-radius: 8px; background: #fff;
+      color: var(--color-texto); font-family: var(--fuente); font-size: 1rem; box-sizing: border-box; min-width: 0;
+    }
+    #modal-nota-debito input[type="file"] { max-width: 100%; min-height: 44px; }
+    .nota-debito__renglon { display: grid; grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem) 44px; gap: 0.5rem; align-items: center; min-width: 0; }
+    .nota-debito__quitar { min-height: 44px; min-width: 44px; border: 1px solid var(--color-borde); border-radius: 8px; background: #fff; color: var(--color-texto); font-size: 1.125rem; cursor: pointer; }
+    .btn-anular-nd { min-height: 36px; padding: 0 0.75rem; border-radius: 999px; border: 1px solid var(--bordo); background: #fff; color: var(--bordo); font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
     @media (max-width: 420px) {
+      .nota-debito__renglon { grid-template-columns: minmax(0, 1fr) 44px; }
+      .nota-debito__renglon [data-nd-concepto] { grid-column: 1 / -1; }
       .nota-credito__factura { grid-template-columns: auto 1fr; }
       .nota-credito__factura input[type="text"] { grid-column: 1 / -1; }
       .nota-credito__campos { grid-template-columns: 1fr; }
@@ -1940,6 +1951,81 @@
       </div>
     </div>
   </div><!-- /modal-nota-credito -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — NOTA DE DÉBITO DE UN PROVEEDOR (24/10/2026)
+       Lo que el proveedor nos cobra aparte (gastos de un cheque rechazado,
+       intereses…): suma a lo que se le debe y queda como un comprobante
+       pendiente "Nota de débito <n°>". UNA llamada a
+       registrar_nota_debito_proveedor. Pide cuentas_corrientes:registrar_pago.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-nota-debito" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel" role="dialog" aria-modal="true" aria-labelledby="titulo-nota-debito">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-nota-debito" title="Cerrar">✕</button>
+      <h2 id="titulo-nota-debito">Nota de débito del proveedor</h2>
+      <p class="saldo-inicial__proveedor" id="nota-debito-proveedor"></p>
+      <p class="saldo-inicial__nota">Lo que el proveedor nos cobra aparte: suma a lo que se le debe y queda como un comprobante pendiente en su cuenta. Solo en pesos.</p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-nd-comprobante">N° de comprobante</label>
+          <input type="text" id="campo-nd-comprobante" placeholder="0001-00001234" maxlength="60" autocomplete="off">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-nd-fecha">Fecha</label>
+          <input type="date" id="campo-nd-fecha">
+        </div>
+      </div>
+
+      <div class="nota-credito__bloque">
+        <div class="nota-credito__cabeza">
+          <strong>Conceptos</strong>
+          <button type="button" class="btn-link-cc" id="btn-nd-renglon">+ Agregar renglón</button>
+        </div>
+        <div id="nota-debito-renglones"></div>
+        <p class="nota-credito__totales" id="nota-debito-total" aria-live="off"></p>
+      </div>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-nd-obs">Observaciones (opcional)</label>
+          <input type="text" id="campo-nd-obs" maxlength="200" autocomplete="off">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-nd-pdf">PDF de la nota (opcional)</label>
+          <input type="file" id="campo-nd-pdf" accept="application/pdf">
+        </div>
+      </div>
+
+      <p class="saldo-inicial__error" id="nota-debito-error" role="alert" hidden></p>
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0; flex-wrap:wrap;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-nota-debito">Cancelar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-nota-debito">Cargar nota de débito</button>
+      </div>
+    </div>
+  </div><!-- /modal-nota-debito -->
+
+  <!-- ANULAR UNA NOTA DE DÉBITO RECIBIDA (24/10/2026): anular_nota_debito,
+       con motivo. La base la deja anular solo si no tiene pagos aplicados. -->
+  <div class="modal-cc" id="modal-anular-nd" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel" role="dialog" aria-modal="true" aria-labelledby="titulo-anular-nd">
+      <h2 id="titulo-anular-nd">Anular la nota de débito</h2>
+      <p class="saldo-inicial__nota" id="anular-nd-texto"></p>
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-anular-nd-motivo">¿Por qué se anula? (obligatorio)</label>
+          <input type="text" id="campo-anular-nd-motivo" maxlength="200" autocomplete="off">
+        </div>
+      </div>
+      <p class="saldo-inicial__error" id="anular-nd-error" role="alert" hidden></p>
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0; flex-wrap:wrap;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-anular-nd">Cancelar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-anular-nd">Anular la nota</button>
+      </div>
+    </div>
+  </div><!-- /modal-anular-nd -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — ELEGIR UNIDAD DE NEGOCIO
@@ -3930,6 +4016,293 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // LA NOTA DE DÉBITO DE UN PROVEEDOR (24/10/2026, pedido de Facu)
+    // La base (leída con pg_get_functiondef el 24/10/2026):
+    //   registrar_nota_debito_proveedor(p_proveedor_id, p_unidad_negocio_id,
+    //     p_fecha, p_comprobante, p_items [{ concepto, importe }],
+    //     p_observaciones, p_archivo_url) → { nota_debito_id, total }: carga
+    //     una factura pendiente "Nota de débito <n°>" (modulo_origen y
+    //     tipo_documento 'nota_debito') por el total, en pesos, en esa fábrica.
+    //     Pide cuentas_corrientes:registrar_pago; la fecha no futura.
+    //   anular_nota_debito(p_id, p_motivo): la recibida, solo sin pagos
+    //     aplicados ("Esa nota de débito ya tiene pagos aplicados: primero
+    //     anulá los pagos."); deja la factura 'anulada' (sale de la cuenta).
+    // El PDF va al bucket 'comprobantes' adentro de la carpeta del usuario
+    // (<uid>/notas-debito/…): se guarda la RUTA, nunca una URL firmada.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let notaDebitoProv = null   // ver abrirModalNotaDebito()
+    let claveRenglonNd = 0
+    let anularNd = null         // { notaId, facturaId, enviando, error }
+    const TOPE_PDF_ND = 10 * 1024 * 1024
+    // El importe de cada renglón: 2 decimales.
+    const DECIMALES_ND = 2
+
+    function puedeCargarNotaDebito() {
+      return tieneTarea('cuentas_corrientes', 'registrar_pago')
+    }
+
+    function renglonNd() {
+      return { clave: ++claveRenglonNd, concepto: '', importe: null }
+    }
+
+    function centavosNd(n) {
+      const x = Number(n)
+      return Number.isFinite(x) ? Math.round(x * 100) : 0
+    }
+
+    // Los renglones que viajan: los que tienen importe.
+    function itemsNd(renglones) {
+      return (renglones ?? []).filter(g => centavosNd(g.importe) > 0)
+        .map(g => ({ concepto: String(g.concepto ?? '').trim(), importe: centavosNd(g.importe) / 100 }))
+    }
+
+    function totalNd(renglones) {
+      return itemsNd(renglones).reduce((a, g) => a + centavosNd(g.importe), 0) / 100
+    }
+
+    function htmlRenglonesNd(renglones) {
+      return (renglones ?? []).map(g => '<div class="nota-debito__renglon">' +
+        `<input type="text" data-nd-concepto="${esc(g.clave)}" maxlength="120" autocomplete="off" value="${esc(g.concepto)}" aria-label="Concepto" placeholder="Concepto">` +
+        `<input type="text" data-nd-importe="${esc(g.clave)}" inputmode="decimal" autocomplete="off" aria-label="Importe" placeholder="0,00">` +
+        `<button type="button" class="nota-debito__quitar" data-nd-quitar="${esc(g.clave)}" aria-label="Quitar este renglón">✕</button></div>`).join('')
+    }
+
+    // Lo que falta, en una frase, o null. La base vuelve a controlar todo.
+    function validarNotaDebito(n, hoy) {
+      if (!n?.unidadId) return 'Elegí la fábrica de la nota de débito.'
+      if (!String(n.comprobante ?? '').trim()) return 'Poné el número de comprobante.'
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(n.fecha ?? ''))) return 'Poné la fecha.'
+      if (n.fecha > hoy) return 'La fecha no puede ser futura.'
+      const items = itemsNd(n.renglones)
+      if (!items.length) return 'Escribí al menos un renglón con su importe.'
+      if (items.some(g => !g.concepto)) return 'Cada renglón lleva su concepto.'
+      const a = n.archivo
+      if (a && !(a.type === 'application/pdf' || /\.pdf$/i.test(String(a.name ?? '')))) return 'El archivo tiene que ser un PDF.'
+      if (a && Number(a.size) > TOPE_PDF_ND) return 'El PDF pesa más de 10 MB.'
+      return null
+    }
+
+    function parametrosNotaDebito(n, archivoUrl = null) {
+      const obs = String(n.observaciones ?? '').trim()
+      return {
+        p_proveedor_id: n.proveedorId, p_unidad_negocio_id: n.unidadId, p_fecha: n.fecha,
+        p_comprobante: String(n.comprobante ?? '').trim(), p_items: itemsNd(n.renglones),
+        p_observaciones: obs || null, p_archivo_url: archivoUrl,
+      }
+    }
+
+    function rutaPdfNd(uid, proveedorId, fecha, ahora = Date.now()) {
+      const anio = /^\d{4}/.test(String(fecha ?? '')) ? String(fecha).slice(0, 4) : String(new Date().getFullYear())
+      return `${uid}/notas-debito/${proveedorId}/${anio}/${ahora}.pdf`
+    }
+
+    async function subirPdfNd(archivo, proveedorId, fecha) {
+      const uid = estado.sesion?.user?.id
+      if (!uid) throw new Error('No se pudo identificar tu usuario para subir el PDF.')
+      const ruta = rutaPdfNd(uid, proveedorId, fecha)
+      const { error } = await supabase.storage.from('comprobantes').upload(ruta, archivo, { contentType: 'application/pdf', upsert: false })
+      if (error) throw new Error('No se pudo subir el PDF: ' + (error.message || 'probá de nuevo.'))
+      return ruta
+    }
+
+    function abrirModalNotaDebito() {
+      if (!puedeCargarNotaDebito() || !estado.ficha?.proveedorId) return
+      if (!estado.ficha.unidadId) { mostrarError('Elegí la fábrica para cargar una nota de débito.'); return }
+      const ficha = estado.ficha
+      notaDebitoProv = {
+        proveedorId: ficha.proveedorId, nombre: ficha.nombre, unidadId: ficha.unidadId,
+        comprobante: '', fecha: fechaISO(new Date()), renglones: [renglonNd()], observaciones: '', archivo: null,
+        enviando: false, error: null,
+      }
+      document.getElementById('nota-debito-proveedor').textContent = `${ficha.nombre ?? 'Proveedor'} · ${etiquetaUnidad(ficha.unidadId)}`
+      document.getElementById('campo-nd-comprobante').value = ''
+      document.getElementById('campo-nd-fecha').value = notaDebitoProv.fecha
+      document.getElementById('campo-nd-fecha').max = notaDebitoProv.fecha
+      document.getElementById('campo-nd-obs').value = ''
+      document.getElementById('campo-nd-pdf').value = ''
+      pintarRenglonesNd()
+      pintarPieNd()
+      document.getElementById('modal-nota-debito').hidden = false
+      document.getElementById('campo-nd-comprobante').focus()
+    }
+
+    function cerrarModalNotaDebito() {
+      // Mientras se manda no se cierra: la respuesta tiene que verse.
+      if (notaDebitoProv?.enviando) return
+      document.getElementById('modal-nota-debito').hidden = true
+      notaDebitoProv = null
+    }
+
+    function pintarRenglonesNd() {
+      const n = notaDebitoProv
+      if (!n) return
+      const cont = document.getElementById('nota-debito-renglones')
+      cont.innerHTML = htmlRenglonesNd(n.renglones)
+      for (const g of n.renglones) {
+        const input = cont.querySelector(`[data-nd-importe="${CSS.escape(String(g.clave))}"]`)
+        if (!input) continue
+        enlazarCampoNumero(input, { decimales: DECIMALES_ND })
+        ponerNumero(input, g.importe ?? null)
+      }
+    }
+
+    function pintarPieNd() {
+      const n = notaDebitoProv
+      if (!n) return
+      document.getElementById('nota-debito-total').textContent = 'Total de la nota: ' + formatearImporte(totalNd(n.renglones))
+      const err = document.getElementById('nota-debito-error')
+      err.textContent = n.error || ''
+      err.hidden = !n.error
+      const btn = document.getElementById('btn-confirmar-nota-debito')
+      btn.disabled = !!n.enviando
+      btn.textContent = n.enviando ? 'Cargando…' : 'Cargar nota de débito'
+    }
+
+    function escribirNotaDebito(t) {
+      const n = notaDebitoProv
+      if (!n || !t) return
+      if (t.id === 'campo-nd-comprobante') n.comprobante = t.value
+      else if (t.id === 'campo-nd-fecha') n.fecha = t.value
+      else if (t.id === 'campo-nd-obs') n.observaciones = t.value
+      else if (t.id === 'campo-nd-pdf') n.archivo = t.files?.[0] ?? null
+      else {
+        const clave = Number(t.dataset?.ndConcepto ?? t.dataset?.ndImporte)
+        const g = n.renglones.find(x => x.clave === clave)
+        if (!g) return
+        if (t.dataset.ndConcepto !== undefined) g.concepto = t.value
+        else g.importe = leerCampoNumero(t)
+      }
+      n.error = null
+      pintarPieNd()
+    }
+
+    function accionNotaDebito(ev) {
+      const n = notaDebitoProv
+      if (!n || n.enviando) return
+      const b = ev.target.closest?.('[data-nd-quitar]')
+      if (!b) return
+      n.renglones = n.renglones.filter(x => x.clave !== Number(b.dataset.ndQuitar))
+      if (!n.renglones.length) n.renglones.push(renglonNd())
+      pintarRenglonesNd()
+      pintarPieNd()
+    }
+
+    function agregarRenglonNd() {
+      const n = notaDebitoProv
+      if (!n || n.enviando) return
+      n.renglones.push(renglonNd())
+      pintarRenglonesNd()
+      pintarPieNd()
+    }
+
+    async function confirmarNotaDebito() {
+      const n = notaDebitoProv
+      // Un doble toque manda una sola vez.
+      if (!n || n.enviando) return
+      n.comprobante = document.getElementById('campo-nd-comprobante').value
+      n.fecha = document.getElementById('campo-nd-fecha').value
+      n.observaciones = document.getElementById('campo-nd-obs').value
+      const falta = validarNotaDebito(n, fechaISO(new Date()))
+      if (falta) { n.error = falta; pintarPieNd(); return }
+      n.enviando = true
+      n.error = null
+      pintarPieNd()
+      let data = null, error = null
+      try {
+        const ruta = n.archivo ? await subirPdfNd(n.archivo, n.proveedorId, n.fecha) : null
+        ;({ data, error } = await supabase.rpc('registrar_nota_debito_proveedor', parametrosNotaDebito(n, ruta)))
+      } catch (e) {
+        error = { message: e?.message || 'No hay conexión: la nota de débito no se cargó. Probá de nuevo.' }
+      }
+      n.enviando = false
+      if (error) {
+        // El mensaje de la base, tal cual.
+        n.error = error.message || 'No se pudo cargar la nota de débito.'
+        if (notaDebitoProv === n) pintarPieNd()
+        return
+      }
+      mostrarExito(`Nota de débito cargada por ${formatearImporte(data?.total ?? totalNd(n.renglones))}: quedó como comprobante pendiente en su cuenta.`)
+      if (notaDebitoProv === n) cerrarModalNotaDebito()
+      const ficha = estado.ficha
+      if (ficha && ficha.proveedorId === n.proveedorId) {
+        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+        if (estado.ficha === ficha) renderizarFichaBanner()
+      }
+      cargarSaldos()
+    }
+
+    // Las notas de débito de las facturas que se están viendo: factura → nota.
+    async function cargarNotasDebitoFicha(infoFactura) {
+      const ids = Object.values(infoFactura ?? {}).filter(f => f.modulo_origen === 'nota_debito').map(f => f.id)
+      const mapa = new Map()
+      if (!ids.length) return mapa
+      const { data, error } = await supabase.from('notas_debito').select('id, factura_pendiente_id, comprobante, estado').in('factura_pendiente_id', ids)
+      if (error) { console.error('No se pudieron leer las notas de débito:', error); return mapa }
+      for (const nd of data ?? []) mapa.set(nd.factura_pendiente_id, nd)
+      return mapa
+    }
+
+    function abrirAnularNd(notaId) {
+      const nota = [...(estado.ficha?.notasDebito?.values() ?? [])].find(x => x.id === notaId)
+      if (!nota) return
+      anularNd = { notaId, enviando: false, error: null }
+      document.getElementById('anular-nd-texto').textContent = `Nota de débito ${nota.comprobante || 's/n'}: sale de la cuenta del proveedor. Solo se puede si no tiene pagos aplicados.`
+      document.getElementById('campo-anular-nd-motivo').value = ''
+      pintarAnularNd()
+      document.getElementById('modal-anular-nd').hidden = false
+      document.getElementById('campo-anular-nd-motivo').focus()
+    }
+
+    function cerrarAnularNd() {
+      if (anularNd?.enviando) return
+      anularNd = null
+      document.getElementById('modal-anular-nd').hidden = true
+    }
+
+    function pintarAnularNd() {
+      const a = anularNd
+      if (!a) return
+      const err = document.getElementById('anular-nd-error')
+      err.textContent = a.error || ''
+      err.hidden = !a.error
+      const btn = document.getElementById('btn-confirmar-anular-nd')
+      btn.disabled = !!a.enviando
+      btn.textContent = a.enviando ? 'Anulando…' : 'Anular la nota'
+    }
+
+    async function confirmarAnularNd() {
+      const a = anularNd
+      if (!a || a.enviando) return
+      const motivo = String(document.getElementById('campo-anular-nd-motivo').value ?? '').trim()
+      if (motivo.length < 3) { a.error = 'Poné el motivo de la anulación.'; pintarAnularNd(); return }
+      a.enviando = true
+      a.error = null
+      pintarAnularNd()
+      let error = null
+      try {
+        ;({ error } = await supabase.rpc('anular_nota_debito', { p_id: a.notaId, p_motivo: motivo }))
+      } catch (e) {
+        error = { message: e?.message || 'No hay conexión: la nota no se anuló.' }
+      }
+      a.enviando = false
+      if (error) {
+        // El mensaje de la base, tal cual.
+        a.error = error.message || 'No se pudo anular la nota.'
+        if (anularNd === a) pintarAnularNd()
+        return
+      }
+      mostrarExito('Nota de débito anulada: salió de la cuenta del proveedor.')
+      if (anularNd === a) cerrarAnularNd()
+      const ficha = estado.ficha
+      if (ficha) {
+        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+        if (estado.ficha === ficha) renderizarFichaBanner()
+      }
+      cargarSaldos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // IMPORTAR PROVEEDORES DESDE EXCEL
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -4938,6 +5311,7 @@
           ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${hayCreditos ? '' : 'hidden'} ${dis}>Aplicar crédito</button>` : ''}
           ${puedeCargarSaldoInicial() ? '<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-saldo-inicial-ficha">Cargar saldo inicial</button>' : ''}
           ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-nota-credito-ficha" ${dis}>Cargar nota de crédito</button>` : ''}
+          ${tieneTarea('cuentas_corrientes', 'registrar_pago') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-nota-debito-ficha" ${dis}>+ Nota de débito</button>` : ''}
         </div>
         ${todas ? `<div class="banner-ficha-cc__ayuda">Registrar un pago o aplicar un crédito es de una unidad: elegila abajo.</div>` : ''}`
 
@@ -4986,6 +5360,8 @@
       })
       // La nota de crédito es de UNA fábrica: en "todas" queda deshabilitada.
       document.getElementById('btn-nota-credito-ficha')?.addEventListener('click', () => abrirModalNotaCredito())
+      // La nota de débito (24/10/2026), también de UNA fábrica.
+      document.getElementById('btn-nota-debito-ficha')?.addEventListener('click', () => abrirModalNotaDebito())
     }
 
     async function cargarFichaMovimientos() {
@@ -5033,11 +5409,13 @@
       // Las cantidades del ingreso vinculado a cada descarga sin importe: es lo
       // único que hay para ponerle precio.
       const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
-      const [cantidades, etiquetasPago, obsSaldoInicial, codigosComision] = await Promise.all([
+      const [cantidades, etiquetasPago, obsSaldoInicial, codigosComision, notasDebito] = await Promise.all([
         idsSinImporte.length ? cargarCantidadesSinImporte(idsSinImporte) : new Map(),
         cargarEtiquetasDePagos(data ?? []),
         cargarObservacionesSaldoInicial(data ?? []),
         idsComision.length ? cargarCodigosComision(idsComision) : new Map(),
+        // Las notas de débito recibidas (24/10/2026): "Anular" en su fila.
+        cargarNotasDebitoFicha(infoFactura),
       ])
       if (estado.ficha !== ficha) return
 
@@ -5049,6 +5427,7 @@
       estado.ficha.estadoPorFactura = estadoPorFactura
       estado.ficha.infoFactura = infoFactura
       estado.ficha.codigosComision = codigosComision
+      estado.ficha.notasDebito = notasDebito
       estado.ficha.cantidadesSinImporte = cantidades
       renderizarFichaMovimientos()
     }
@@ -5110,9 +5489,17 @@
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
         const esPago = m.tipo === 'pago' && m.gasto_id
-        const puedeEliminar = esFactura
+        // Una NOTA DE DÉBITO recibida (24/10/2026): no se elimina como una
+        // factura, se ANULA con motivo (anular_nota_debito).
+        const infoNd = esFactura ? estado.ficha.infoFactura?.[m.factura_pendiente_id] : null
+        const esNotaDebito = infoNd?.modulo_origen === 'nota_debito'
+        const notaNd = esNotaDebito ? estado.ficha.notasDebito?.get?.(m.factura_pendiente_id) : null
+        const puedeEliminar = esFactura && !esNotaDebito
           && ['pendiente', 'parcial'].includes(estadoPorFactura[m.factura_pendiente_id])
           && tieneTarea('cuentas_corrientes', 'anular_factura')
+        // Se anula si sigue entera (sin pagos): la base lo vuelve a controlar.
+        const botonAnularNd = notaNd && notaNd.estado !== 'anulada' && infoNd?.estado === 'pendiente' && tieneTarea('cuentas_corrientes', 'registrar_pago')
+          ? `<button type="button" class="btn-anular-nd" data-anular-nd="${esc(notaNd.id)}">Anular</button>` : ''
         const volverFicha = encodeURIComponent(location.href)
         // Los href de abajo son seguros por encodeURIComponent + comillas
         // DOBLES en el atributo. encodeURIComponent NO escapa la comilla
@@ -5122,6 +5509,7 @@
             <a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
             ${tieneTarea('facturas_pendientes', 'editar_interes') ? `<a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Editar">✏️</a>` : ''}
             ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${esc(m.factura_pendiente_id)}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
+            ${botonAnularNd}
           </div>` : esPago ? `
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
             <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${esc(m.gasto_id)}" title="Detalle del pago">📋</button>
@@ -5145,7 +5533,7 @@
           <div class="tarjeta-lista fila-movimiento">
             <span class="punto-tipo-mov punto-tipo-mov--${esc(m.tipo)}"></span>
             <div style="flex:1; min-width:0;">
-              <div class="fila-movimiento__tipo">${esc(etiquetaTipoMovimiento(m))}</div>
+              <div class="fila-movimiento__tipo">${esc(esNotaDebito ? 'Nota de débito' : etiquetaTipoMovimiento(m))}</div>
               <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
             </div>
@@ -5160,6 +5548,9 @@
 
       listaEl.querySelectorAll('.btn-detalle-pago').forEach(btn => {
         btn.addEventListener('click', () => abrirModalDetallePago(btn.dataset.gastoId))
+      })
+      listaEl.querySelectorAll('[data-anular-nd]').forEach(btn => {
+        btn.addEventListener('click', () => abrirAnularNd(btn.dataset.anularNd))
       })
 
       listaEl.querySelectorAll('.btn-icono-eliminar--inline').forEach(btn => {
@@ -7006,6 +7397,21 @@
       // las dudas, también por 'change'.)
       if (ev.target.id === 'campo-nota-tipo' || ev.target.id === 'campo-nota-fecha') escribirNota(ev.target)
     })
+
+    // ── Modal: nota de débito de un proveedor (24/10/2026) ─────────────────
+    document.getElementById('btn-cerrar-nota-debito').addEventListener('click', cerrarModalNotaDebito)
+    document.getElementById('btn-cancelar-nota-debito').addEventListener('click', cerrarModalNotaDebito)
+    document.querySelector('#modal-nota-debito .modal-cc__backdrop').addEventListener('click', cerrarModalNotaDebito)
+    document.getElementById('btn-confirmar-nota-debito').addEventListener('click', confirmarNotaDebito)
+    document.getElementById('btn-nd-renglon').addEventListener('click', agregarRenglonNd)
+    document.getElementById('nota-debito-renglones').addEventListener('click', accionNotaDebito)
+    document.getElementById('modal-nota-debito').addEventListener('input', (ev) => escribirNotaDebito(ev.target))
+    document.getElementById('modal-nota-debito').addEventListener('change', (ev) => {
+      if (['campo-nd-fecha', 'campo-nd-pdf'].includes(ev.target.id)) escribirNotaDebito(ev.target)
+    })
+    document.getElementById('btn-cancelar-anular-nd').addEventListener('click', cerrarAnularNd)
+    document.querySelector('#modal-anular-nd .modal-cc__backdrop').addEventListener('click', cerrarAnularNd)
+    document.getElementById('btn-confirmar-anular-nd').addEventListener('click', confirmarAnularNd)
 
     // ── Cargar importe de una descarga sin importe (delegado: se redibuja) ─
     const listaMovFicha = document.getElementById('lista-movimientos-ficha')

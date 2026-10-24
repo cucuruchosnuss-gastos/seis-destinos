@@ -78,6 +78,15 @@ const OPCIONALES = [
   'elegirEnBanco', 'elegirGrupoEnBanco', 'abrirAcreditar', 'armarFilasAcreditar', 'alRepartir', 'pintarResumenAcreditar',
   'confirmarAcreditar', 'abrirNoTomo', 'confirmarNoTomo', 'conectarEnBanco', 'prepararBanco', 'pintarBanco', 'alEscribirVenta', 'cargarCuentasBanco',
   'textoVolverACartera',
+  // Cheque rechazado (24/10/2026).
+  'textoRechazo', 'htmlLinkNotaRechazo', 'abrirHojaNotaDebito', 'cargarNotasDeRechazados', 'motivoRechazo', 'gastosParaEnviar',
+  'totalesRechazo', 'textoSalidaRechazo', 'cuentaDeRechazo', 'textoBancoRechazo', 'htmlResultadosRechazo', 'textoBusquedaRechazo',
+  'htmlElegidoRechazo', 'htmlRenglonesRechazo', 'htmlResumenRechazo', 'erroresRechazo', 'parametrosRechazo', 'textoExitoRechazo',
+  'rutaPdfNotaProveedor', 'subirPdfNotaProveedor', 'renglonGastoRechazo', 'abrirRechazo', 'cerrarRechazo', 'alEscribirBusquedaRechazo',
+  'buscarChequesRechazo', 'elegirChequeRechazo', 'cambiarChequeRechazo', 'elegirMotivoRechazo', 'cargarClientesRechazo',
+  'htmlOpcionesClienteRechazo', 'leerCamposRechazo', 'listaRenglonesRechazo', 'escribirRenglonRechazo', 'agregarRenglonRechazo',
+  'quitarRenglonRechazo', 'pintarRenglonesRechazo', 'pintarResultadosRechazo', 'pintarMotivosRechazo', 'pintarClienteRechazo',
+  'pintarResumenRechazo', 'pintarErrorRechazo', 'pintarBotonRechazo', 'pintarRechazo', 'confirmarRechazo', 'conectarRechazo',
   // importe completo: los gastos del banco, aparte (24/10/2026)
   'htmlGastosBanco', 'entradasPorCuenta', 'unidadUnicaDe',
 ]
@@ -88,6 +97,9 @@ const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADO
   'TIPOS_BANCO', 'BOTONES_LOTE',
   // En el banco (13/10/2026)
   'TEXTO_MOTIVO_NO_TOMO', 'bancoUI',
+  // Cheque rechazado (24/10/2026)
+  'ESTADOS_SALIDOS_Y_RECHAZADOS', 'MOTIVOS_RECHAZO', 'CONCEPTO_GASTO_RECHAZO', 'ESPERA_BUSQUEDA_RECHAZO', 'LARGO_MINIMO_RECHAZO',
+  'LARGO_MINIMO_MOTIVO_RECHAZO', 'TOPE_PDF_RECHAZO', 'puedeRechazar',
   // importe completo (24/10/2026)
   'CATEGORIA_GASTOS_BANCARIOS']
 
@@ -183,9 +195,15 @@ const PRELUDIO = `
   var turnoPreviaEndoso = 0
   var turnoEmitidos = 0
   var temporizadorBusquedaEndoso = null
+  // Cheque rechazado (24/10/2026).
+  var temporizadorRechazo = null
+  var turnoRechazo = 0
+  var claveRenglonRechazo = 0
 `
 
-function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [] } = {}) {
+// `retornoExtra` (24/10/2026): lo que el preludioExtra de una suite quiere
+// devolver además (sus dobles), con la sintaxis de un objeto literal.
+function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [], retornoExtra = '' } = {}) {
   const { scriptModulo } = require('./sandbox')
   // La cartera vive en una región de administracion.html (26/09/2026).
   const { regionCheques } = require('./fuente-cheques')
@@ -208,7 +226,7 @@ function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes
     retorno: `${[...new Set(cts)].join(", ")}, estado, __els, __doc: document, __llamadas, __consultas, __almacen, window,
       __set(d){ __datos = d }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f },
       __accionMotivo(){ return accionDelMotivo },
-      __barra, __oyentesBarra, __elegirEnBarra`,
+      __barra, __oyentesBarra, __elegirEnBarra${retornoExtra ? ', ' + retornoExtra : ''}`,
   })
 }
 

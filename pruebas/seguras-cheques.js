@@ -41,6 +41,13 @@ const SEGURAS_CHEQUES = [
   ['destino', 'HTML constante de htmlGastosBanco(): \' target="_blank" rel="noopener"\' o vacío, sin nada de la base'],
   ['htmlGruposEnBanco(gruposEnBanco(filas, estado.cuentasBanco?.porId), bancoUI.ids, puedeProcesar(), estado.cobranzas, hoyArgentina())', 'HTML armado por htmlGruposEnBanco(), que escapa adentro'],
   ['bancoUI.resultado', 'HTML armado por htmlResultadoAcreditar(), que escapa adentro'],
+  // Cheque rechazado (24/10/2026)
+  ['htmlLinkNotaRechazo(ch)', 'HTML armado por htmlLinkNotaRechazo(): el id y el código de la nota con esc(), o vacío'],
+  ['htmlRenglonesRechazo(lista)', 'HTML armado por htmlRenglonesRechazo(), que escapa adentro (la clave y el concepto)'],
+  ['htmlResultadosRechazo(r)', 'HTML armado por htmlResultadosRechazo(), que escapa adentro'],
+  ['htmlOpcionesClienteRechazo(r)', 'HTML armado por htmlOpcionesClienteRechazo(), que escapa adentro'],
+  ['htmlResumenRechazo(estado.rechazo)', 'HTML armado por htmlResumenRechazo(), que escapa adentro'],
+  ['htmlElegidoRechazo(c)', 'HTML armado por htmlElegidoRechazo(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [

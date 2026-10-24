@@ -31,6 +31,9 @@ const MITAD_1 = [
   '9-comparar-planta.spec.js',
   '6-planta-reanudar.spec.js',
   '30-revision-celular.spec.js',
+  // 24/10/2026 (cheque-rechazado): con él, 741 s en la 1 y 792 s en la 2.
+  // Va antes de los de abajo: mut-navegador-en-dos.js se ancla en el último.
+  '60-cheque-rechazado.spec.js',
   // 24/10/2026 (cheques-importe-completo): con el spec 61 la mitad 2 pasaba
   // del 55 % (819 de 1486 s); los dos de cheques al banco vienen a la 1.
   '37-cheques-banco.spec.js',
@@ -100,6 +103,8 @@ const TIEMPOS = {
   '1-planta.spec.js': 1,
   '2-gestion.spec.js': 1,
   '4-retiros.spec.js': 1,
+  // Medido en la compu el 24/10/2026 (31 s): en GitHub se estima algo más.
+  '60-cheque-rechazado.spec.js': 35,
 }
 const TIEMPO_SIN_MEDIR = 8
 

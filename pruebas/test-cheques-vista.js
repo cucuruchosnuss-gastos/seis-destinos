@@ -98,8 +98,9 @@ if (SOLO !== 'estatico') {
     chk('filtro: "en cartera" pide estado = en_cartera',
       correr({}).llamadas.some(x => x[0] === 'eq' && x[1] === 'estado' && x[2] === 'en_cartera'))
     const sal = correr({ estado: 'salidos' }).llamadas.find(x => x[1] === 'estado')
-    chk('filtro: "salidos" pide depositado, endosado y vendido, y nada más',
-      sal && sal[0] === 'in' && JSON.stringify(sal[2]) === JSON.stringify(['depositado', 'endosado', 'vendido']))
+    // 24/10/2026: "Salidos" muestra también los rechazados (salieron y no vuelven).
+    chk('filtro: "salidos" pide depositado, endosado, vendido y rechazado, y nada más',
+      sal && sal[0] === 'in' && JSON.stringify(sal[2]) === JSON.stringify(['depositado', 'endosado', 'vendido', 'rechazado']))
     const ven = correr({ estado: 'vendidos' }).llamadas.find(x => x[1] === 'estado')
     chk('filtro: "vendidos" (13/10/2026) pide estado = vendido', ven && ven[0] === 'eq' && ven[2] === 'vendido')
     chk('filtro: "todos" no filtra por estado (es el único que trae anulados)',
@@ -269,7 +270,7 @@ if (SOLO !== 'estatico') {
     S.pintarFiltrosCheques()
     chk('limpiar: el botón aparece con filtros puestos', S.__doc.getElementById('chq-btn-limpiar').hidden === false)
     chequearMarcas('pintarFiltrosCheques', S.__doc.getElementById('chq-chips-estado').innerHTML, [])
-    chk('segmentado: cinco opciones (con "En el banco" y "Vendidos") y "Todos" marcada', (S.__doc.getElementById('chq-chips-estado').innerHTML.match(/data-estado-cheque=/g) || []).length === 5 &&
+    chk('segmentado: seis opciones (con "En el banco", "Vendidos" y "Rechazados", 24/10/2026) y "Todos" marcada', (S.__doc.getElementById('chq-chips-estado').innerHTML.match(/data-estado-cheque=/g) || []).length === 6 &&
       /aria-pressed="true" data-estado-cheque="todos"/.test(S.__doc.getElementById('chq-chips-estado').innerHTML))
     const antes = S.__llamadas.cargarCheques
     S.limpiarFiltrosCheques()

@@ -92,7 +92,7 @@ const FUNCIONES = [
   'pasaFiltroUnidad', 'veUnidad', 'etiquetaUnidad', 'esc', 'importeHtml', 'formatearImporte', 'formatearImporteCentavosSuaves',
   'badgeEstadoFactura', 'tieneTarea', 'nombreUnidad', 'contarSinImporte', 'esSinImporte', 'htmlFilaSinImporte', 'decimalesImporteSin',
   'enlazarCampoImporteSin', 'cargarCantidadesSinImporte', 'productoUnicoConCantidad', 'textoCantidadInsumo', 'totalImporteFormulario', 'resumenCantidades',
-  'cargarFichaMovimientos', 'renderizarFichaMovimientos', 'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
+  'cargarFichaMovimientos', 'cargarNotasDebitoFicha', 'renderizarFichaMovimientos', 'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial',
   'montoDeCampo', 'actualizarSugerenciasPago',
   // lo nuevo

@@ -494,6 +494,63 @@
     .ad-dv-factura__cab { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; align-items: baseline; margin: 0 0 0.5rem; min-width: 0; }
     .ad-dv-factura__rotulo { font-weight: 800; overflow-wrap: anywhere; }
     .ad-dv-factura__archivo { max-width: 100%; min-height: 44px; }
+    /* ── LA NOTA DE DÉBITO (24/10/2026) ───────────────────────────────────
+       La ventana (por encima de la cartera de cheques, z 80) y la hoja: A4
+       vertical, blanco y negro, el mismo estilo que la orden de pago de
+       Cuentas corrientes. En la pantalla se ve solo el ORIGINAL; al imprimir
+       (#ad-impresion) y en el PDF, las dos copias, cada una en su hoja. */
+    /* La ventana copia la de "Dividir para facturar" (.ad-dv) con clases propias. */
+    .ad-nd { position: fixed; inset: 0; z-index: 90; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
+    .ad-nd[hidden] { display: none; }
+    @media (min-width: 640px) { .ad-nd { align-items: center; padding: 1rem; } }
+    .ad-nd__caja { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 860px; max-height: 94vh; overflow-y: auto; min-width: 0; }
+    .ad-nd__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .ad-nd__titulo { font-size: 1.125rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+    .ad-nd__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--color-texto); }
+    .ndh-marco { overflow-x: auto; min-width: 0; }
+    .ndh { box-sizing: border-box; width: 100%; max-width: 194mm; margin: 0 auto; padding: 5mm; background: #fff; color: #111;
+      font-family: var(--fuente); font-size: 8.5pt; line-height: 1.25; border: 1px solid var(--color-borde); }
+    #ad-nd-hoja .ndh-copia--duplicado { display: none; }
+    .ndh-copia { position: relative; background: #fff; }
+    .ndh-cab { display: flex; justify-content: space-between; gap: 5mm; align-items: flex-start; border-bottom: 1.5px solid #111; padding-bottom: 2.4mm; }
+    .ndh-cab__emisor { display: flex; gap: 3mm; align-items: flex-start; min-width: 0; }
+    .ndh-cab__logo { max-height: 13mm; max-width: 24mm; object-fit: contain; }
+    .ndh-cab__razon { font-size: 10.5pt; font-weight: 800; overflow-wrap: anywhere; }
+    .ndh-cab__dato { font-size: 7.5pt; overflow-wrap: anywhere; }
+    .ndh-cab__titulo { text-align: right; flex-shrink: 0; }
+    .ndh-cab__titulo-texto { font-size: 12pt; font-weight: 800; letter-spacing: 0.02em; }
+    .ndh-cab__numero { font-size: 10.5pt; font-weight: 700; }
+    .ndh-cab__copia { display: inline-block; margin-top: 1mm; padding: 0.3mm 2mm; border: 1px solid #111; font-size: 8pt; font-weight: 800; letter-spacing: 0.1em; }
+    .ndh-seccion { margin-top: 3mm; overflow-wrap: anywhere; }
+    .ndh-seccion__titulo { font-size: 8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.2mm; }
+    /* La tabla no corta las palabras por la mitad: en el celular, si no entra, scrollea adentro de .ndh-marco. */
+    .ndh-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; overflow-wrap: normal; }
+    .ndh-tabla th, .ndh-tabla td { border: 1px solid #555; padding: 0.6mm 1.2mm; text-align: left; vertical-align: top; color: #111; }
+    .ndh-tabla th { background: #eee; font-weight: 700; }
+    .ndh-tabla .ndh-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ndh-total { margin-top: 3mm; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; border-top: 1.5px solid #111; padding-top: 1.6mm; }
+    .ndh-total__numero { font-size: 11pt; font-weight: 800; white-space: nowrap; }
+    .ndh-letras { font-size: 7.5pt; margin-top: 0.8mm; }
+    .ndh-firmas { display: flex; gap: 10mm; margin-top: 15mm; }
+    .ndh-firma { flex: 1; border-top: 1px solid #111; padding-top: 1.2mm; font-size: 7.5pt; text-align: center; }
+    .ndh-pie { margin-top: 3mm; font-size: 6.5pt; color: #555; }
+    /* ANULADA: un sello en diagonal, negro transparente (la hoja es en
+       blanco y negro), arriba del contenido; el motivo va escrito abajo. */
+    .ndh-sello { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); border: 1mm solid rgba(0, 0, 0, 0.45);
+      padding: 1mm 6mm; font-size: 30pt; font-weight: 900; letter-spacing: 0.15em; color: rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap; }
+    .ndh-anulada { margin-top: 2mm; font-weight: 800; }
+    .ndh--papel { border: 0; padding: 0; max-width: none; }
+    .ndh--papel .ndh-copia--duplicado { break-before: page; page-break-before: always; }
+    .ad-ndc-renglon { display: grid; grid-template-columns: minmax(0, 1fr) 9rem 44px; gap: 0.375rem; align-items: center; margin: 0.25rem 0 0.375rem; min-width: 0; }
+    .ad-ndc-renglon .ad-input { min-width: 0; }
+    .ad-ndc-quitar { min-height: 44px; min-width: 44px; border: 1.5px solid var(--color-borde); border-radius: var(--radio-boton); background: var(--color-fondo); color: var(--color-texto); font-size: 1.125rem; cursor: pointer; }
+    .ad-ndc-obs { margin-top: 0.75rem; }
+    .ad-ndc-total { font-weight: 800; margin: 0.5rem 0 0; }
+    .ad-renglon--nota .ad-renglon__desc { overflow-wrap: anywhere; }
+    @media (max-width: 420px) {
+      .ad-ndc-renglon { grid-template-columns: minmax(0, 1fr) 44px; }
+      .ad-ndc-renglon [data-ndc-concepto] { grid-column: 1 / -1; }
+    }
     /* Los 3 vendedores (la ficha y la ventana) y la configuración. */
     .ad-vendedores { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin: 0.25rem 0 0.875rem; min-width: 0; }
     .ad-vendedor { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.5rem; min-width: 0; }
@@ -805,6 +862,9 @@
         <span class="ad-bloqueado-todas" id="ad-ficha-bloqueada" hidden>Elegí una fábrica arriba para cambiarlo</span>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-saldo-inicial" hidden>Saldo inicial</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-ajuste" hidden>Ajuste</button>
+        <!-- NOTA DE DÉBITO SUELTA (24/10/2026): registrar_nota_debito_cliente
+             (retiros:precios en su fábrica o cobranzas:procesar). -->
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-nota-debito" hidden>+ Nota de débito</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-resumen">Descargar resumen de cuenta</button>
       </div>
       <div class="ad-panel" id="ad-panel-saldo" hidden>
@@ -829,6 +889,22 @@
         <div class="ad-panel__acciones">
           <button type="button" class="ad-btn" id="ad-ajuste-guardar">Cargar el ajuste</button>
           <button type="button" class="ad-btn ad-btn--suave" id="ad-ajuste-cancelar">Cancelar</button>
+        </div>
+      </div>
+      <div class="ad-panel" id="ad-panel-nota-debito" hidden>
+        <p class="ad-texto-suave">Lo que se le cobra aparte al cliente (gastos, intereses, diferencias): suma a su cuenta y sale una hoja para imprimir o mandar.</p>
+        <div class="ad-fila-campos">
+          <div class="ad-campo"><label for="ad-ndc-fecha">Fecha</label><input type="date" class="ad-input" id="ad-ndc-fecha"></div>
+        </div>
+        <span class="ad-campo__rotulo">Conceptos</span>
+        <div id="ad-ndc-renglones"></div>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-ndc-mas">+ Agregar renglón</button>
+        <div class="ad-campo ad-ndc-obs"><label for="ad-ndc-obs">Observaciones (opcional)</label><input type="text" class="ad-input" id="ad-ndc-obs" maxlength="300" autocomplete="off"></div>
+        <p class="ad-ndc-total" id="ad-ndc-total"></p>
+        <p class="ad-error-pegado" id="ad-ndc-error" hidden></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-ndc-guardar">Hacer la nota de débito</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-ndc-cancelar">Cancelar</button>
         </div>
       </div>
       <!-- La cuenta de cliente y proveedor (06/10/2026, js/cuenta-unica.js):
@@ -1337,6 +1413,34 @@
     </div>
   </div>
 
+  <!-- LA NOTA DE DÉBITO (24/10/2026): la hoja de datos_nota_debito, A4
+       vertical en blanco y negro como la orden de pago, ORIGINAL y DUPLICADO.
+       La abren la cuenta del cliente, la nota suelta y el cheque rechazado
+       (la cartera avisa con el evento 'administracion:nota-debito'). -->
+  <div class="ad-nd" id="ad-nd" hidden role="dialog" aria-modal="true" aria-labelledby="ad-nd-titulo">
+    <div class="ad-nd__caja">
+      <div class="ad-nd__barra">
+        <h2 class="ad-nd__titulo" id="ad-nd-titulo">Nota de débito</h2>
+        <button type="button" class="ad-nd__cerrar" id="ad-nd-cerrar" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="ad-panel__acciones" id="ad-nd-acciones">
+        <button type="button" class="ad-btn" id="ad-nd-imprimir" disabled>Imprimir</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-nd-compartir" disabled>Compartir PDF</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-nd-anular" hidden>Anular</button>
+      </div>
+      <div class="ad-panel" id="ad-nd-anular-panel" hidden>
+        <div class="ad-campo"><label for="ad-nd-motivo">¿Por qué se anula? (obligatorio)</label><input type="text" class="ad-input" id="ad-nd-motivo" maxlength="200" autocomplete="off"></div>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-nd-anular-si">Anular la nota</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-nd-anular-no">Cancelar</button>
+        </div>
+      </div>
+      <p class="ad-error-pegado" id="ad-nd-error" role="alert" hidden></p>
+      <p class="ad-texto-suave" id="ad-nd-nota-copias">Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO.</p>
+      <div class="ndh-marco"><div class="ndh" id="ad-nd-hoja"></div></div>
+    </div>
+  </div>
+
   <!-- La hoja para imprimir, CON precios: la arma htmlHoja() de
        js/retiros-comun.js justo antes de imprimir. -->
   <div class="ad-impresion" id="ad-impresion"></div>
@@ -1350,7 +1454,7 @@
     import {
       armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
-      cantidadInsumoHoja, unidadHoja, cargarScript,
+      cantidadInsumoHoja, unidadHoja, cargarScript, LIBRERIAS_PDF,
       ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
     // Los insumos por bulto (23/10/2026): la cantidad y el precio de un
@@ -1398,6 +1502,9 @@
       // La unidad elegida en la barra de arriba (28/09/2026): null = Todas.
       unidadBarra: null,
       vista: null,
+      // La hoja de la nota de débito abierta (24/10/2026): { id, datos,
+      // error, anulando, enviando, errorAnular } o null.
+      notaDebito: null,
       // Lo que se lee por empresa
       clientes: null,        // la tabla clientes (id → fila), para nombres y límites
       catalogo: null,
@@ -4287,6 +4394,8 @@
     const ETIQUETA_MOVIMIENTO = {
       saldo_inicial: 'Saldo inicial', retiro: 'Retiro', cobranza: 'Cobranza', ajuste: 'Ajuste', anulacion_retiro: 'Anulación de retiro',
       comision: 'Comisión', retencion: 'Retención',
+      // 24/10/2026: la nota de débito al cliente y su anulación.
+      nota_debito: 'Nota de débito', anulacion_nota_debito: 'Anulación de nota de débito',
     }
 
     // clientes_con_saldo() trae el saldo, la lista, los retiros del mes, si
@@ -5355,7 +5464,7 @@
         const r = await supabase.from('ordenes_retiro').select('id, codigo').in('id', ids)
         if (!r.error) for (const o of r.data ?? []) codigos.set(o.id, o.codigo)
       }
-      return { cuenta, codigos }
+      return { cuenta, codigos, notas: await leerNotasDebitoCliente(clienteId, cuenta) }
     }
 
     function puedeVerLaCobranza() {
@@ -5414,13 +5523,16 @@
       const filas = [...c.cuenta].reverse().map(m => {
         const orden = m.orden_retiro_id && puedeVerLaOrden() ? m.orden_retiro_id : null
         const abre = !orden && m.tipo === 'cobranza' && m.cobranza_id && puedeVerLaCobranza()
+        // La nota de débito y su anulación abren la hoja (24/10/2026).
+        const nota = !orden && !abre ? notaDeMovimiento(m, c.notas) : null
         const inicio = orden ? `<button type="button" class="ad-renglon ad-renglon--boton" data-orden-retiro="${esc(orden)}">`
-          : abre ? `<button type="button" class="ad-renglon ad-renglon--boton" data-cuenta-cobranza="${esc(m.cobranza_id)}">` : '<div class="ad-renglon">'
+          : abre ? `<button type="button" class="ad-renglon ad-renglon--boton" data-cuenta-cobranza="${esc(m.cobranza_id)}">`
+          : nota ? `<button type="button" class="ad-renglon ad-renglon--boton ad-renglon--nota" data-cuenta-nota-debito="${esc(nota.id)}">` : '<div class="ad-renglon">'
         return inicio + `<div><div class="ad-renglon__desc">${esc(detalleMovimiento(m, c.codigos))}</div>` +
           `<div class="ad-renglon__lotes">${esc(fechaCorta(m.fecha) + ' · ' + (ETIQUETA_MOVIMIENTO[m.tipo] ?? m.tipo))}` +
-          `${orden ? ' · <span class="ad-renglon__ver">Ver la orden ›</span>' : abre ? ' · <span class="ad-renglon__ver">Ver la cobranza ›</span>' : ''}</div></div>` +
+          `${orden ? ' · <span class="ad-renglon__ver">Ver la orden ›</span>' : abre ? ' · <span class="ad-renglon__ver">Ver la cobranza ›</span>' : nota ? ' · <span class="ad-renglon__ver">Ver la nota ›</span>' : ''}</div></div>` +
           `<div class="ad-renglon__plata"><div class="ad-fila__importe">${esc(importeHoja(m.importe))}</div>` +
-          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${orden || abre ? '</button>' : '</div>'}`
+          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${orden || abre || nota ? '</button>' : '</div>'}`
       }).join('')
       return cabecera + `<div class="ad-tarjeta">${filas}</div>`
     }
@@ -5441,17 +5553,23 @@
       document.getElementById('ad-ficha-bloqueada').hidden = !fichaBloqueada
       document.getElementById('ad-btn-saldo-inicial').hidden = !(precios && c.cuenta && !tieneSaldoInicial(c.cuenta))
       document.getElementById('ad-btn-ajuste').hidden = !precios
+      document.getElementById('ad-btn-nota-debito').hidden = !puedeNotaDebitoCliente()
       // El resumen sale de la cuenta ya leída: hasta que llega, no se ofrece.
       document.getElementById('ad-btn-resumen').disabled = !c.cuenta
       document.getElementById('ad-panel-saldo').hidden = c.panel !== 'saldo'
       document.getElementById('ad-panel-ajuste').hidden = c.panel !== 'ajuste'
-      for (const [id, panel] of [['ad-saldo-error', 'saldo'], ['ad-ajuste-error', 'ajuste']]) {
+      document.getElementById('ad-panel-nota-debito').hidden = c.panel !== 'nota_debito'
+      for (const [id, panel] of [['ad-saldo-error', 'saldo'], ['ad-ajuste-error', 'ajuste'], ['ad-ndc-error', 'nota_debito']]) {
         const e = document.getElementById(id)
         e.textContent = c.panel === panel ? (c.errorPanel ?? '') : ''
         e.hidden = !(c.panel === panel && c.errorPanel)
       }
       document.getElementById('ad-saldo-guardar').disabled = estado.trabajando
       document.getElementById('ad-ajuste-guardar').disabled = estado.trabajando
+      const ndc = document.getElementById('ad-ndc-guardar')
+      ndc.disabled = estado.trabajando
+      ndc.textContent = estado.trabajando && c.panel === 'nota_debito' ? 'Haciendo la nota…' : 'Hacer la nota de débito'
+      if (c.panel === 'nota_debito') pintarTotalNotaCliente()
       pintarCuentaUnicaCliente()
     }
 
@@ -5496,7 +5614,7 @@
 
     async function abrirCliente(id) {
       const turno = ++turnoCliente
-      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null, otras: null, unica: null }
+      estado.cliente = { id, cuenta: null, codigos: new Map(), notas: new Map(), error: null, panel: null, errorPanel: null, otras: null, unica: null, ndc: null }
       mostrarVista('ad-vista-cliente')
       pintarCliente()
       try {
@@ -5633,6 +5751,498 @@
         estado.trabajando = false
         pintarCliente()
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NOTAS DE DÉBITO (24/10/2026, pedido de Facu)
+    // La base (leída con pg_get_functiondef el 24/10/2026):
+    //   registrar_nota_debito_cliente(p_cliente_id, p_fecha, p_items
+    //     [{ concepto, importe }], p_observaciones) → { nota_debito_id, codigo,
+    //     total }: suma a la cuenta del cliente un movimiento 'nota_debito'
+    //     ("Nota de débito N-ND-0001"). Pide retiros:precios en la fábrica del
+    //     cliente o cobranzas:procesar; la fecha no futura.
+    //   datos_nota_debito(p_id) → todo lo que va impreso: codigo,
+    //     comprobante, fecha, estado, anulada_motivo, items, total,
+    //     observaciones, empresa { nombre, razon_social, cuit, domicilio,
+    //     telefono, logo_url }, cliente { nombre, razon_social, cuit,
+    //     domicilio, localidad, condicion_iva }, proveedor { razon_social,
+    //     cuit, direccion }, cheque { banco, numero, importe, fecha_pago,
+    //     rechazo_fecha, rechazo_motivo }, cargada_por.
+    //   anular_nota_debito(p_id, p_motivo): la emitida se revierte en la
+    //     cuenta del cliente ('anulacion_nota_debito'); la recibida, solo sin
+    //     pagos aplicados.
+    // La cuenta del cliente (cuenta_cliente) no trae el id de la nota: el
+    // código sale del detalle ("Nota de débito N-ND-0001") y el id de
+    // notas_debito del cliente (la policy: retiros:precios/ver, cobranzas o
+    // cuentas corrientes).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TIPOS_MOVIMIENTO_NOTA = ['nota_debito', 'anulacion_nota_debito']
+    const RE_CODIGO_NOTA = /\b([A-Z0-9?]+-ND-\d+)\b/
+    const COPIAS_NOTA_DEBITO = ['ORIGINAL', 'DUPLICADO']
+    let claveRenglonNota = 0
+    let turnoNotaDebito = 0
+
+    // código → { id, estado } de las notas de débito del cliente, solo si
+    // la cuenta tiene alguna. Si no se pueden leer, la cuenta se ve igual.
+    async function leerNotasDebitoCliente(clienteId, cuenta) {
+      const notas = new Map()
+      if (!(cuenta ?? []).some(m => TIPOS_MOVIMIENTO_NOTA.includes(m?.tipo))) return notas
+      const r = await supabase.from('notas_debito').select('id, codigo, estado').eq('cliente_id', clienteId)
+      if (r.error) { console.error('No se pudieron leer las notas de débito del cliente:', r.error); return notas }
+      for (const n of r.data ?? []) if (n.codigo) notas.set(n.codigo, n)
+      return notas
+    }
+
+    // La nota de un movimiento de la cuenta ('nota_debito' o su anulación), o null.
+    function notaDeMovimiento(m, notas) {
+      if (!TIPOS_MOVIMIENTO_NOTA.includes(m?.tipo)) return null
+      const codigo = String(m?.detalle ?? '').match(RE_CODIGO_NOTA)?.[1]
+      return codigo ? (notas?.get?.(codigo) ?? null) : null
+    }
+
+    // ── La nota suelta a un cliente ─────────────────────────────────────
+    function puedeNotaDebitoCliente(unidadId = estado.empresaId) {
+      return puedeEn('retiros', 'precios', unidadId) || tieneTarea('cobranzas', 'procesar')
+    }
+
+    function renglonNota(concepto = '', importe = null) {
+      return { clave: ++claveRenglonNota, concepto, importe }
+    }
+
+    function htmlRenglonesNota(renglones) {
+      return (renglones ?? []).map(g => '<div class="ad-ndc-renglon">' +
+        `<input type="text" class="ad-input" data-ndc-concepto="${esc(g.clave)}" maxlength="120" autocomplete="off" value="${esc(g.concepto)}" aria-label="Concepto" placeholder="Concepto">` +
+        `<input type="text" class="ad-input" data-ndc-importe="${esc(g.clave)}" inputmode="decimal" autocomplete="off" aria-label="Importe" placeholder="$ 0,00">` +
+        `<button type="button" class="ad-ndc-quitar" data-ndc-quitar="${esc(g.clave)}" aria-label="Quitar este renglón">&times;</button></div>`).join('')
+    }
+
+    // Los renglones que viajan: los que tienen importe.
+    function itemsNota(renglones) {
+      return (renglones ?? []).filter(g => Math.round(Number(g.importe) * 100) > 0)
+        .map(g => ({ concepto: limpio(g.concepto), importe: Math.round(Number(g.importe) * 100) / 100 }))
+    }
+
+    function totalNota(renglones) {
+      return itemsNota(renglones).reduce((a, g) => a + Math.round(g.importe * 100), 0) / 100
+    }
+
+    // Lo que falta, en una frase, o null.
+    function erroresNotaCliente(n, hoy) {
+      if (!esFechaIso(n?.fecha)) return 'Poné la fecha.'
+      if (n.fecha > hoy) return 'La fecha no puede ser futura.'
+      if (!itemsNota(n.renglones).length) return 'Escribí al menos un renglón con su importe.'
+      if (itemsNota(n.renglones).some(g => !g.concepto)) return 'Cada renglón lleva su concepto.'
+      return null
+    }
+
+    function parametrosNotaCliente(clienteId, n) {
+      return { p_cliente_id: clienteId, p_fecha: n.fecha, p_items: itemsNota(n.renglones), p_observaciones: limpio(n.observaciones) || null }
+    }
+
+    function abrirNotaDebitoCliente() {
+      const c = estado.cliente
+      if (!c || !puedeNotaDebitoCliente()) return
+      c.panel = 'nota_debito'
+      c.errorPanel = null
+      c.ndc = { fecha: hoyArgentina(), renglones: [renglonNota()], observaciones: '' }
+      document.getElementById('ad-ndc-fecha').value = c.ndc.fecha
+      document.getElementById('ad-ndc-fecha').max = c.ndc.fecha
+      document.getElementById('ad-ndc-obs').value = ''
+      pintarRenglonesNota()
+      pintarCliente()
+      document.querySelector('#ad-ndc-renglones [data-ndc-concepto]')?.focus?.()
+    }
+
+    function pintarRenglonesNota() {
+      const n = estado.cliente?.ndc
+      if (!n) return
+      const cont = document.getElementById('ad-ndc-renglones')
+      cont.innerHTML = htmlRenglonesNota(n.renglones)
+      for (const g of n.renglones) {
+        const input = cont.querySelector(`[data-ndc-importe="${CSS.escape(String(g.clave))}"]`)
+        if (!input) continue
+        enlazarCampoNumero(input, { decimales: 2 })
+        ponerNumero(input, g.importe ?? null)
+      }
+    }
+
+    function pintarTotalNotaCliente() {
+      const n = estado.cliente?.ndc
+      document.getElementById('ad-ndc-total').textContent = n ? 'Total de la nota: ' + importeHoja(totalNota(n.renglones)) : ''
+    }
+
+    function escribirRenglonNota(t) {
+      const c = estado.cliente
+      const n = c?.ndc
+      if (!n) return
+      if (t.id === 'ad-ndc-fecha') n.fecha = t.value
+      else if (t.id === 'ad-ndc-obs') n.observaciones = t.value
+      else {
+        const clave = Number(t.dataset?.ndcConcepto ?? t.dataset?.ndcImporte)
+        const g = n.renglones.find(x => x.clave === clave)
+        if (!g) return
+        if (t.dataset.ndcConcepto !== undefined) g.concepto = t.value
+        else g.importe = leerCampoNumero(t)
+      }
+      if (c.errorPanel) { c.errorPanel = null; const e = document.getElementById('ad-ndc-error'); e.textContent = ''; e.hidden = true }
+      pintarTotalNotaCliente()
+    }
+
+    function agregarRenglonNota() {
+      const n = estado.cliente?.ndc
+      if (!n || estado.trabajando) return
+      n.renglones.push(renglonNota())
+      pintarRenglonesNota()
+      pintarTotalNotaCliente()
+    }
+
+    function quitarRenglonNota(clave) {
+      const n = estado.cliente?.ndc
+      if (!n || estado.trabajando) return
+      n.renglones = n.renglones.filter(x => x.clave !== Number(clave))
+      if (!n.renglones.length) n.renglones.push(renglonNota())
+      pintarRenglonesNota()
+      pintarTotalNotaCliente()
+    }
+
+    async function guardarNotaDebitoCliente() {
+      const c = estado.cliente
+      const n = c?.ndc
+      // Un doble toque manda una sola vez.
+      if (!n || c.panel !== 'nota_debito' || estado.trabajando) return
+      n.fecha = document.getElementById('ad-ndc-fecha').value
+      n.observaciones = document.getElementById('ad-ndc-obs').value
+      const falta = erroresNotaCliente(n, hoyArgentina())
+      if (falta) { c.errorPanel = falta; pintarCliente(); return }
+      estado.trabajando = true
+      c.errorPanel = null
+      pintarCliente()
+      let res
+      try {
+        res = await supabase.rpc('registrar_nota_debito_cliente', parametrosNotaCliente(c.id, n))
+      } catch (e) {
+        res = { data: null, error: { message: e?.message || 'No hay conexión: la nota no se hizo. Probá de nuevo.' } }
+      }
+      estado.trabajando = false
+      if (res?.error) {
+        console.error('Falló registrar_nota_debito_cliente:', res.error)
+        // El mensaje de la base, tal cual.
+        if (estado.cliente === c) { c.errorPanel = res.error.message || 'No se pudo hacer la nota. Probá de nuevo.'; pintarCliente() }
+        return
+      }
+      const d = res?.data ?? {}
+      mostrarExito(`Nota de débito ${d.codigo ?? ''} por ${importeHoja(d.total)}: quedó en la cuenta del cliente.`)
+      estado.saldos = null
+      if (estado.cliente === c) await abrirCliente(c.id)
+      if (d.nota_debito_id) abrirNotaDebito(d.nota_debito_id)
+    }
+
+    // ── La hoja ─────────────────────────────────────────────────────────
+    // El total en letras, pesos y centavos (el mismo de la orden de pago de
+    // Cuentas corrientes): "UN MILLÓN DOSCIENTOS MIL PESOS CON CINCUENTA CENTAVOS".
+    const LETRAS_UNIDAD_ND = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve',
+      'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve',
+      'veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve']
+    const LETRAS_DECENA_ND = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa']
+    const LETRAS_CENTENA_ND = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos']
+
+    function letrasMenorDeMilNd(n, corto) {
+      const c = Math.floor(n / 100), r = n % 100
+      const partes = []
+      if (c) partes.push(n === 100 ? 'cien' : LETRAS_CENTENA_ND[c])
+      if (r) {
+        let t
+        if (r < 30) t = LETRAS_UNIDAD_ND[r]
+        else t = LETRAS_DECENA_ND[Math.floor(r / 10)] + (r % 10 ? ' y ' + LETRAS_UNIDAD_ND[r % 10] : '')
+        if (corto) t = t.replace(/veintiuno$/, 'veintiún').replace(/(^|\s)uno$/, '$1un')
+        partes.push(t)
+      }
+      return partes.join(' ')
+    }
+    function letrasMenorDeMillonNd(n, corto) {
+      const miles = Math.floor(n / 1000), resto = n % 1000
+      const partes = []
+      if (miles === 1) partes.push('mil')
+      else if (miles > 1) partes.push(letrasMenorDeMilNd(miles, true) + ' mil')
+      if (resto) partes.push(letrasMenorDeMilNd(resto, corto))
+      return partes.join(' ')
+    }
+    function enteroEnLetrasNd(n) {
+      if (!n) return 'cero'
+      const millones = Math.floor(n / 1e6), resto = n % 1e6
+      const partes = []
+      if (millones === 1) partes.push('un millón')
+      else if (millones > 1) partes.push(letrasMenorDeMillonNd(millones, true) + ' millones')
+      if (resto) partes.push(letrasMenorDeMillonNd(resto, true))
+      return partes.join(' ')
+    }
+    function importeEnLetrasNd(importe) {
+      const c = Math.round(Math.abs(Number(importe)) * 100)
+      if (!Number.isFinite(c)) return '—'
+      const pesos = Math.floor(c / 100), cent = c % 100
+      const millonesJustos = pesos >= 1e6 && pesos % 1e6 === 0
+      const textoPesos = enteroEnLetrasNd(pesos) + (millonesJustos ? ' de' : '') + (pesos === 1 ? ' peso' : ' pesos')
+      const textoCent = cent === 1 ? 'un centavo' : `${cent ? enteroEnLetrasNd(cent).replace(/(^|\s)uno$/, '$1un').replace(/veintiuno$/, 'veintiún') : 'cero'} centavos`
+      return `${textoPesos} con ${textoCent}`.toUpperCase()
+    }
+
+    function cuitConGuionesNd(cuit) {
+      const d = String(cuit ?? '').replace(/\D/g, '')
+      return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : String(cuit ?? '').trim()
+    }
+
+    // Una fecha 'aaaa-mm-dd' (o con hora) como dd/mm/aaaa; sin fecha, "—".
+    function fechaNd(f) {
+      return fechaCorta(String(f ?? '').slice(0, 10))
+    }
+
+    const CONDICION_IVA_ND = { responsable_inscripto: 'Responsable inscripto', monotributo: 'Monotributo', exento: 'Exento', consumidor_final: 'Consumidor final' }
+
+    // Puro: la hoja entera, DOS copias iguales (ORIGINAL y DUPLICADO). Todo
+    // texto de la base pasa por esc(); el logo, por logoSeguro().
+    function htmlNotaDebito(d) {
+      const e = d?.empresa ?? {}
+      const emitida = d?.direccion !== 'recibida'
+      const cli = d?.cliente ?? null
+      const prov = d?.proveedor ?? null
+      const ch = d?.cheque ?? null
+      const items = Array.isArray(d?.items) ? d.items : []
+      const logo = logoSeguro(e.logo_url)
+      const anulada = d?.estado === 'anulada'
+      const numero = emitida ? (d?.codigo ?? '—') : ('N° ' + (d?.comprobante ?? 's/n'))
+      const destinatario = emitida
+        ? `<div class="ndh-seccion"><div class="ndh-seccion__titulo">Cliente</div>` +
+          `<div><strong>${esc(limpio(cli?.razon_social) || limpio(cli?.nombre) || '—')}</strong></div>` +
+          (limpio(cli?.razon_social) && limpio(cli?.nombre) && limpio(cli.razon_social) !== limpio(cli.nombre) ? `<div>${esc(cli.nombre)}</div>` : '') +
+          (cli?.cuit ? `<div>${esc('CUIT ' + cuitConGuionesNd(cli.cuit))}</div>` : '') +
+          ([cli?.domicilio, cli?.localidad].map(limpio).filter(Boolean).length ? `<div>${esc([cli.domicilio, cli.localidad].map(limpio).filter(Boolean).join(', '))}</div>` : '') +
+          (cli?.condicion_iva ? `<div>${esc('IVA: ' + (CONDICION_IVA_ND[cli.condicion_iva] ?? cli.condicion_iva))}</div>` : '') + '</div>'
+        : `<div class="ndh-seccion"><div class="ndh-seccion__titulo">Proveedor (la recibimos)</div>` +
+          `<div><strong>${esc(prov?.razon_social ?? '—')}</strong></div>` +
+          (prov?.cuit ? `<div>${esc('CUIT ' + cuitConGuionesNd(prov.cuit))}</div>` : '') +
+          (prov?.direccion ? `<div>${esc(prov.direccion)}</div>` : '') + '</div>'
+      const cheque = ch
+        ? `<div class="ndh-seccion"><div class="ndh-seccion__titulo">Cheque rechazado</div>` +
+          '<table class="ndh-tabla"><thead><tr><th>Banco</th><th>N°</th><th>Fecha de pago</th><th>Rechazado el</th><th>Motivo</th><th class="ndh-num">Importe</th></tr></thead><tbody>' +
+          `<tr><td>${esc(ch.banco ?? '—')}</td><td>${esc(ch.numero ?? '—')}</td><td>${esc(ch.fecha_pago ? fechaNd(ch.fecha_pago) : 'A la vista')}</td>` +
+          `<td>${esc(fechaNd(ch.rechazo_fecha))}</td><td>${esc(ch.rechazo_motivo ?? '—')}</td><td class="ndh-num">${esc(importeHoja(ch.importe))}</td></tr></tbody></table></div>`
+        : ''
+      const filas = items.length
+        ? items.map(it => `<tr><td>${esc(it?.concepto ?? '—')}</td><td class="ndh-num">${esc(importeHoja(it?.importe))}</td></tr>`).join('')
+        : '<tr><td colspan="2">—</td></tr>'
+      const copia = (rotulo) =>
+        (anulada ? '<div class="ndh-sello" aria-hidden="true">ANULADA</div>' : '') +
+        '<div class="ndh-cab"><div class="ndh-cab__emisor">' +
+        (logo ? `<img class="ndh-cab__logo" src="../${encodeURIComponent(logo)}" alt="">` : '') +
+        `<div><div class="ndh-cab__razon">${esc(limpio(e.razon_social) || limpio(e.nombre) || '—')}</div>` +
+        (e.cuit ? `<div class="ndh-cab__dato">${esc('CUIT ' + cuitConGuionesNd(e.cuit))}</div>` : '') +
+        (e.domicilio ? `<div class="ndh-cab__dato">${esc(e.domicilio)}</div>` : '') +
+        (e.telefono ? `<div class="ndh-cab__dato">${esc('Tel. ' + e.telefono)}</div>` : '') + '</div></div>' +
+        '<div class="ndh-cab__titulo"><div class="ndh-cab__titulo-texto">NOTA DE DÉBITO</div>' +
+        `<div class="ndh-cab__numero">${esc(numero)}</div>` +
+        `<div class="ndh-cab__dato">${esc('Fecha ' + fechaNd(d?.fecha))}</div>` +
+        `<div class="ndh-cab__copia">${esc(rotulo)}</div></div></div>` +
+        destinatario + cheque +
+        '<div class="ndh-seccion"><div class="ndh-seccion__titulo">Conceptos</div>' +
+        `<table class="ndh-tabla"><thead><tr><th>Concepto</th><th class="ndh-num">Importe</th></tr></thead><tbody>${filas}</tbody></table></div>` +
+        `<div class="ndh-total"><div>TOTAL</div><div class="ndh-total__numero">${esc(importeHoja(d?.total))}</div></div>` +
+        `<div class="ndh-letras">${esc('Son ' + importeEnLetrasNd(d?.total))}</div>` +
+        (limpio(d?.observaciones) ? `<div class="ndh-seccion"><div class="ndh-seccion__titulo">Observaciones</div><div>${esc(d.observaciones)}</div></div>` : '') +
+        (anulada ? `<div class="ndh-anulada">${esc('ANULADA' + (limpio(d?.anulada_motivo) ? ': ' + limpio(d.anulada_motivo) : ''))}</div>` : '') +
+        '<div class="ndh-firmas"><div class="ndh-firma">Recibí conforme — firma y aclaración</div><div class="ndh-firma">Autorizó</div></div>' +
+        (d?.cargada_por ? `<div class="ndh-pie">${esc('Hecha por ' + d.cargada_por)}</div>` : '')
+      return COPIAS_NOTA_DEBITO.map(r => `<div class="ndh-copia ndh-copia--${esc(r.toLowerCase())}" data-copia="${esc(r)}">${copia(r)}</div>`).join('')
+    }
+
+    // Anular: la emitida con retiros:precios o cobranzas:procesar (la base
+    // mira la fábrica); la recibida con cuentas_corrientes:registrar_pago.
+    function puedeAnularNotaDebito(d) {
+      if (!d || d.estado === 'anulada') return false
+      if (d.direccion === 'recibida') return tieneTarea('cuentas_corrientes', 'registrar_pago')
+      return tieneTarea('cobranzas', 'procesar') || estado.miRolApp === 'super_admin' || estado.misTareas.has('retiros:precios')
+    }
+
+    function nombreArchivoNota(d) {
+      const n = String(d?.codigo || d?.comprobante || 'nota').replace(/[^A-Za-z0-9-]+/g, '_')
+      return `Nota de debito ${n}.pdf`
+    }
+
+    async function abrirNotaDebito(id) {
+      if (!id) return
+      const turno = ++turnoNotaDebito
+      estado.notaDebito = { id, datos: null, error: null, anulando: false, enviando: false, errorAnular: null, compartiendo: false }
+      document.getElementById('ad-nd-motivo').value = ''
+      document.getElementById('ad-nd').hidden = false
+      pintarNotaDebito()
+      let res
+      try {
+        res = await supabase.rpc('datos_nota_debito', { p_id: id })
+      } catch (e) {
+        res = { data: null, error: { message: e?.message || 'No hay conexión.' } }
+      }
+      if (turno !== turnoNotaDebito || estado.notaDebito?.id !== id) return
+      if (res?.error || !res?.data) estado.notaDebito.error = 'No se pudo leer la nota de débito: ' + (res?.error?.message || 'no vino nada') + '.'
+      else estado.notaDebito.datos = res.data
+      pintarNotaDebito()
+      document.getElementById('ad-nd-imprimir').focus?.()
+    }
+
+    function pintarNotaDebito() {
+      const nd = estado.notaDebito
+      if (!nd) return
+      const d = nd.datos
+      document.getElementById('ad-nd-titulo').textContent = 'Nota de débito' + (d?.codigo ? ' ' + d.codigo : d?.comprobante ? ' ' + d.comprobante : '') + (d?.estado === 'anulada' ? ' (anulada)' : '')
+      const hoja = document.getElementById('ad-nd-hoja')
+      hoja.innerHTML = d ? htmlNotaDebito(d) : `<p class="ad-texto-suave">${esc(nd.error || 'Cargando la nota de débito…')}</p>`
+      document.getElementById('ad-nd-imprimir').disabled = !d
+      const compartir = document.getElementById('ad-nd-compartir')
+      compartir.disabled = !d || nd.compartiendo
+      compartir.textContent = nd.compartiendo ? 'Armando el PDF…' : 'Compartir PDF'
+      const anular = document.getElementById('ad-nd-anular')
+      anular.hidden = !puedeAnularNotaDebito(d)
+      anular.disabled = nd.enviando
+      document.getElementById('ad-nd-anular-panel').hidden = !(nd.anulando && puedeAnularNotaDebito(d))
+      const si = document.getElementById('ad-nd-anular-si')
+      si.disabled = nd.enviando
+      si.textContent = nd.enviando ? 'Anulando…' : 'Anular la nota'
+      const err = document.getElementById('ad-nd-error')
+      const texto = nd.errorAnular || (d ? '' : nd.error) || ''
+      err.textContent = texto
+      err.hidden = !texto
+      document.getElementById('ad-nd-nota-copias').hidden = !d
+    }
+
+    function cerrarNotaDebito() {
+      if (estado.notaDebito?.enviando) return
+      turnoNotaDebito++
+      estado.notaDebito = null
+      document.getElementById('ad-nd').hidden = true
+    }
+
+    // A4 vertical, las dos copias (el duplicado en otra hoja). La regla va
+    // DENTRO de la hoja (después de la de js/retiros-comun.js): gana solo
+    // mientras está esta hoja.
+    function imprimirNotaDebito() {
+      const d = estado.notaDebito?.datos
+      if (!d) return
+      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 8mm; } }</style>' +
+        `<div class="ndh ndh--papel">${htmlNotaDebito(d)}</div>`
+      window.print()
+    }
+
+    // El PDF en el navegador (html2canvas + jsPDF, de cdnjs, recién cuando
+    // hacen falta): una página por copia, con 8 mm de margen. Se mide recién
+    // con los estilos y la letra cargados (ver Aprendizajes: la hoja de la orden).
+    async function pdfNotaDebito(d) {
+      for (const url of LIBRERIAS_PDF) await cargarScript(url)
+      const cont = document.createElement('div')
+      cont.className = 'ndh ndh--papel'
+      cont.style.cssText = 'position:fixed;left:-10000px;top:0;width:194mm;background:#fff'
+      cont.innerHTML = htmlNotaDebito(d)
+      document.body.appendChild(cont)
+      try {
+        const imgs = [...cont.querySelectorAll('img')]
+        await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r })))
+        if (document.fonts?.ready) await document.fonts.ready
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
+        const copias = [...cont.querySelectorAll('.ndh-copia')]
+        for (let k = 0; k < copias.length; k++) {
+          const canvas = await window.html2canvas(copias[k], { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+          const alto = canvas.height * 194 / canvas.width
+          if (k > 0) pdf.addPage()
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 8, 8, 194, Math.min(alto, 281))
+        }
+        return pdf.output('blob')
+      } finally {
+        cont.remove()
+      }
+    }
+
+    // Compartir (WhatsApp, mail…) con navigator.share; si el dispositivo no
+    // comparte archivos, se descarga.
+    async function compartirNotaDebito() {
+      const nd = estado.notaDebito
+      const d = nd?.datos
+      if (!d || nd.compartiendo) return
+      nd.compartiendo = true
+      nd.errorAnular = null
+      pintarNotaDebito()
+      try {
+        const blob = await pdfNotaDebito(d)
+        const nombre = nombreArchivoNota(d)
+        const archivo = typeof File === 'function' ? new File([blob], nombre, { type: 'application/pdf' }) : null
+        let compartido = false
+        if (archivo && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+          try {
+            await navigator.share({ files: [archivo], title: nombre.replace(/\.pdf$/, ''), text: nombre.replace(/\.pdf$/, '') })
+            compartido = true
+          } catch (err) {
+            if (err?.name === 'AbortError') compartido = true
+          }
+        }
+        if (!compartido) {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = nombre
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          setTimeout(() => URL.revokeObjectURL(url), 60000)
+          mostrarExito('Se descargó el PDF: ' + nombre)
+        }
+      } catch (err) {
+        console.error('No se pudo armar el PDF de la nota de débito:', err)
+        if (estado.notaDebito === nd) nd.errorAnular = err?.message || 'No se pudo armar el PDF. Probá de nuevo.'
+      }
+      nd.compartiendo = false
+      if (estado.notaDebito === nd) pintarNotaDebito()
+    }
+
+    function pedirAnularNotaDebito() {
+      const nd = estado.notaDebito
+      if (!nd?.datos || !puedeAnularNotaDebito(nd.datos)) return
+      nd.anulando = true
+      nd.errorAnular = null
+      pintarNotaDebito()
+      document.getElementById('ad-nd-motivo').focus?.()
+    }
+
+    function cancelarAnularNotaDebito() {
+      const nd = estado.notaDebito
+      if (!nd || nd.enviando) return
+      nd.anulando = false
+      nd.errorAnular = null
+      pintarNotaDebito()
+    }
+
+    async function confirmarAnularNotaDebito() {
+      const nd = estado.notaDebito
+      if (!nd?.datos || nd.enviando) return
+      const motivo = limpio(document.getElementById('ad-nd-motivo').value)
+      if (motivo.length < LARGO_MINIMO_MOTIVO) { nd.errorAnular = 'Poné el motivo de la anulación.'; pintarNotaDebito(); return }
+      nd.enviando = true
+      nd.errorAnular = null
+      pintarNotaDebito()
+      let res
+      try {
+        res = await supabase.rpc('anular_nota_debito', { p_id: nd.id, p_motivo: motivo })
+      } catch (e) {
+        res = { error: { message: e?.message || 'No hay conexión: la nota no se anuló.' } }
+      }
+      nd.enviando = false
+      if (res?.error) {
+        console.error('Falló anular_nota_debito:', res.error)
+        // El mensaje de la base, tal cual.
+        if (estado.notaDebito === nd) { nd.errorAnular = res.error.message || 'No se pudo anular la nota.'; pintarNotaDebito() }
+        return
+      }
+      mostrarExito('Nota de débito anulada' + (nd.datos.direccion === 'recibida' ? '.' : ': se revirtió en la cuenta del cliente.'))
+      document.dispatchEvent(new CustomEvent('administracion:nota-debito-anulada', { detail: { id: nd.id } }))
+      if (estado.cliente && estado.vista === 'ad-vista-cliente') { estado.saldos = null; abrirCliente(estado.cliente.id) }
+      if (estado.notaDebito === nd) abrirNotaDebito(nd.id)
     }
 
     // ── La ficha completa (retiros:precios) ────────────────────────────────
@@ -11625,6 +12235,8 @@
       })
       document.getElementById('ad-cliente-volver').addEventListener('click', () => mostrarClientes())
       document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
+        const nota = e.target.closest('[data-cuenta-nota-debito]')
+        if (nota && estado.cliente) { abrirNotaDebito(nota.dataset.cuentaNotaDebito); return }
         const b = e.target.closest('[data-cuenta-cobranza]')
         if (b && estado.cliente) abrirCobranzaDesdeCuenta(b.dataset.cuentaCobranza)
         const r = e.target.closest('[data-orden-retiro]')
@@ -11645,6 +12257,29 @@
       document.getElementById('ad-ajuste-guardar').addEventListener('click', () => guardarPanelCliente())
       document.getElementById('ad-saldo-cancelar').addEventListener('click', () => cerrarPanelCliente())
       document.getElementById('ad-ajuste-cancelar').addEventListener('click', () => cerrarPanelCliente())
+      // La nota de débito suelta (24/10/2026) y su hoja.
+      document.getElementById('ad-btn-nota-debito').addEventListener('click', () => abrirNotaDebitoCliente())
+      document.getElementById('ad-ndc-guardar').addEventListener('click', () => guardarNotaDebitoCliente())
+      document.getElementById('ad-ndc-cancelar').addEventListener('click', () => cerrarPanelCliente())
+      document.getElementById('ad-ndc-mas').addEventListener('click', () => agregarRenglonNota())
+      const renglonesNota = document.getElementById('ad-ndc-renglones')
+      renglonesNota.addEventListener('input', (e) => escribirRenglonNota(e.target))
+      renglonesNota.addEventListener('click', (e) => { const b = e.target.closest('[data-ndc-quitar]'); if (b) quitarRenglonNota(b.dataset.ndcQuitar) })
+      for (const id of ['ad-ndc-fecha', 'ad-ndc-obs']) {
+        document.getElementById(id).addEventListener('input', (e) => escribirRenglonNota(e.target))
+        document.getElementById(id).addEventListener('change', (e) => escribirRenglonNota(e.target))
+      }
+      document.getElementById('ad-nd-cerrar').addEventListener('click', () => cerrarNotaDebito())
+      document.getElementById('ad-nd').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarNotaDebito() })
+      document.getElementById('ad-nd-imprimir').addEventListener('click', () => imprimirNotaDebito())
+      document.getElementById('ad-nd-compartir').addEventListener('click', () => compartirNotaDebito())
+      document.getElementById('ad-nd-anular').addEventListener('click', () => pedirAnularNotaDebito())
+      document.getElementById('ad-nd-anular-si').addEventListener('click', () => confirmarAnularNotaDebito())
+      document.getElementById('ad-nd-anular-no').addEventListener('click', () => cancelarAnularNotaDebito())
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('ad-nd').hidden) cerrarNotaDebito() })
+      // La cartera de cheques (otro script de esta página) pide abrir la hoja
+      // de la nota de un cheque rechazado.
+      document.addEventListener('administracion:nota-debito', (e) => abrirNotaDebito(e.detail?.id))
       // La ficha
       document.getElementById('ad-ficha-volver').addEventListener('click', () => { if (estado.ficha) abrirCliente(estado.ficha.id) })
       document.getElementById('ad-ficha-guardar').addEventListener('click', () => guardarFicha())
@@ -12763,6 +13398,46 @@
     .chq-acr-fila__cheque { font-size: 0.875rem; margin-bottom: 0.25rem; overflow-wrap: anywhere; }
     .chq-acr-fila .chq-campo { margin-bottom: 0; }
 
+    /* CHEQUE RECHAZADO (24/10/2026). En ROJO (--rojo-suave de fondo, el chip
+       en --rojo-oscuro sobre blanco, 7,4:1) y con una franja --rojo a la
+       izquierda: no se confunde con el bordó del plazo ni con el anulado. */
+    /* Con "Rechazados" son seis opciones: en el celular bajan de renglón en vez de pisarse. */
+    .chq-segmento { flex-wrap: wrap; }
+    .chq-estado--rechazado { background: var(--color-fondo); color: var(--rojo-oscuro); text-transform: uppercase; letter-spacing: 0.04em; }
+    .chq-tabla__fila--rechazado td { background: var(--rojo-suave); }
+    .chq-tabla__fila--rechazado td:first-child { box-shadow: inset 4px 0 0 var(--rojo); }
+    .chq-tarjeta--rechazado { background: var(--rojo-suave); box-shadow: inset 4px 0 0 var(--rojo); }
+    .chq-leyenda__muestra--rechazado { background: var(--rojo-suave); box-shadow: inset 4px 0 0 var(--rojo); }
+    .chq-rechazo-texto { color: var(--rojo-oscuro); font-weight: 600; }
+    .chq-link-nota { min-height: 40px; padding: 0 0.25rem; border: 0; background: none; font: inherit; font-size: 0.8125rem; font-weight: 700; color: var(--rojo-oscuro); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+    .chq-nav__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; min-width: 0; }
+    .chq-nav { flex-wrap: wrap; }
+    .chq-nav__link { white-space: nowrap; }
+    .chq-rech-motivos { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.5rem; min-width: 0; }
+    .chq-rech-motivos .chq-btn { flex: 1 1 7rem; }
+    .chq-rech-elegido { display: flex; align-items: flex-start; gap: 0.5rem; justify-content: space-between; padding: 0.625rem 0.75rem; margin-bottom: 0.875rem;
+      border: 1px solid var(--naranja); border-radius: var(--radio-boton, 12px); background: var(--naranja-suave); min-width: 0; }
+    .chq-rech-elegido__texto { min-width: 0; overflow-wrap: anywhere; font-size: 0.875rem; }
+    .chq-rech-elegido__texto strong { color: var(--naranja-oscuro); }
+    .chq-rech-elegido .chq-btn { flex: 0 0 auto; white-space: nowrap; }
+    .chq-rech-resultado { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; text-align: left;
+      border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px); background: var(--color-fondo); color: var(--color-texto); font: inherit; cursor: pointer; min-width: 0; }
+    .chq-rech-resultado:hover, .chq-rech-resultado:focus-visible { border-color: var(--naranja); }
+    .chq-rech-resultado__l1 { font-weight: 700; overflow-wrap: anywhere; }
+    .chq-rech-resultado__l2 { font-size: 0.78125rem; color: var(--chq-texto-secundario); overflow-wrap: anywhere; }
+    .chq-rech-renglon { display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem 44px; gap: 0.375rem; align-items: center; margin-bottom: 0.375rem; min-width: 0; }
+    .chq-rech-renglon input { width: 100%; min-height: 44px; padding: 0.5rem 0.625rem; border: 1.5px solid var(--color-borde); border-radius: var(--radio-input);
+      font-family: var(--fuente); font-size: 1rem; background: var(--color-fondo); color: var(--color-texto); min-width: 0; }
+    .chq-rech-quitar { min-height: 44px; min-width: 44px; border: 1.5px solid var(--color-borde); border-radius: var(--radio-boton); background: var(--color-fondo); color: var(--color-texto); font-size: 1.125rem; cursor: pointer; }
+    #chq-rech-resumen strong { white-space: nowrap; }
+    #chq-rech-resumen span { min-width: 0; overflow-wrap: anywhere; }
+    .chq-rech-bloque { border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px); padding: 0.75rem; margin-bottom: 0.875rem; min-width: 0; }
+    .chq-rech-bloque__titulo { font-weight: 700; font-size: 0.9375rem; margin-bottom: 0.5rem; overflow-wrap: anywhere; }
+    @media (max-width: 420px) {
+      .chq-rech-renglon { grid-template-columns: minmax(0, 1fr) 44px; }
+      .chq-rech-renglon input[data-rech-concepto] { grid-column: 1 / -1; }
+    }
+
     @media (min-width: 640px) {
       .chq-modal { align-items: center; }
     }
@@ -12788,7 +13463,12 @@
         <a id="chq-link-cobranzas" class="chq-nav__link" href="cobranzas.html">&lsaquo; Cobranzas</a>
         <!-- Selección con resumen (Parte 7): una casilla en cada cheque y la
              barra de abajo con la cantidad, el total y el plazo. -->
-        <button type="button" class="chq-btn chq-btn--chico chq-nav__seleccionar" id="chq-btn-seleccionar" aria-pressed="false">Seleccionar</button>
+        <div class="chq-nav__botones">
+          <!-- CHEQUE RECHAZADO (24/10/2026): un cheque que salió y volvió
+               rechazado (registrar_cheque_rechazado). Solo con cobranzas:procesar. -->
+          <button type="button" class="chq-btn chq-btn--chico chq-btn--alerta" id="chq-btn-rechazado" hidden>Cheque rechazado</button>
+          <button type="button" class="chq-btn chq-btn--chico chq-nav__seleccionar" id="chq-btn-seleccionar" aria-pressed="false">Seleccionar</button>
+        </div>
       </nav>
 
       <div class="chq-cartera" id="chq-cartera"></div>
@@ -13004,6 +13684,91 @@
       </div>
     </div>
   </div>
+
+  <!-- ══ CHEQUE RECHAZADO (24/10/2026) ═══════════════════════════════════
+       Buscar el cheque por su número (buscar_cheques_para_rechazo, 300 ms de
+       espera) → la fecha y el motivo → los gastos al cliente → (si se le dio
+       a un proveedor) su nota de débito → el resumen → registrar_cheque_rechazado.
+       Después se abre la nota de débito al cliente para imprimir o compartir. -->
+  <div class="chq-modal" id="chq-modal-rechazo" hidden role="dialog" aria-modal="true" aria-labelledby="chq-rech-titulo">
+    <div class="chq-modal__caja">
+      <div class="chq-modal__titulo" id="chq-rech-titulo">Cheque rechazado</div>
+      <div class="chq-campo" id="chq-rech-campo-buscar">
+        <label for="chq-rech-buscar">Número del cheque</label>
+        <input type="search" id="chq-rech-buscar" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="Por ejemplo: 4330">
+        <div class="chq-campo__ayuda">Escribí al menos 2 números: aparecen los cheques que salieron (depositados, vendidos, endosados o en el banco).</div>
+        <div class="chq-campo__ayuda" id="chq-rech-buscando" role="status" hidden></div>
+        <div class="chq-endoso-resultados" id="chq-rech-resultados"></div>
+      </div>
+      <div class="chq-rech-elegido" id="chq-rech-elegido" hidden>
+        <div class="chq-rech-elegido__texto" id="chq-rech-elegido-texto"></div>
+        <button type="button" class="chq-btn chq-btn--chico" id="chq-rech-cambiar">Cambiar</button>
+      </div>
+      <div id="chq-rech-form" hidden>
+        <div class="chq-campo">
+          <label for="chq-rech-fecha">Fecha del rechazo</label>
+          <input type="date" id="chq-rech-fecha">
+        </div>
+        <div class="chq-campo">
+          <label id="chq-rech-motivo-rotulo">Motivo</label>
+          <div class="chq-rech-motivos" role="group" aria-labelledby="chq-rech-motivo-rotulo">
+            <button type="button" class="chq-btn chq-btn--chico" data-rech-motivo="Sin fondos">Sin fondos</button>
+            <button type="button" class="chq-btn chq-btn--chico" data-rech-motivo="Firma">Firma</button>
+            <button type="button" class="chq-btn chq-btn--chico" data-rech-motivo="Cuenta cerrada">Cuenta cerrada</button>
+            <button type="button" class="chq-btn chq-btn--chico" data-rech-motivo="Otro">Otro</button>
+          </div>
+          <input type="text" id="chq-rech-motivo-texto" maxlength="200" autocomplete="off" placeholder="Detalle (opcional; con «Otro», obligatorio)" aria-label="Detalle del motivo">
+        </div>
+        <div class="chq-campo" id="chq-rech-campo-cliente" hidden>
+          <label for="chq-rech-cliente">¿A qué cliente se le hace la nota de débito?</label>
+          <select id="chq-rech-cliente"></select>
+          <div class="chq-campo__ayuda">La cobranza de este cheque no tiene el cliente asignado.</div>
+        </div>
+        <div class="chq-rech-bloque">
+          <div class="chq-rech-bloque__titulo">Gastos que se le cobran al cliente</div>
+          <div class="chq-campo__ayuda" style="margin:0 0 .5rem">La nota de débito lleva el cheque y estos gastos. Un renglón sin importe no se cobra.</div>
+          <div id="chq-rech-gastos"></div>
+          <button type="button" class="chq-btn chq-btn--chico" id="chq-rech-gasto-mas">+ Agregar gasto</button>
+        </div>
+        <!-- Solo si el cheque se le dio a un proveedor (endosado o usado en un pago). -->
+        <div class="chq-rech-bloque" id="chq-rech-prov" hidden>
+          <div class="chq-rech-bloque__titulo" id="chq-rech-prov-titulo">Nota de débito del proveedor</div>
+          <label class="chq-ya">
+            <input type="checkbox" id="chq-rech-prov-si">
+            <span>El proveedor ya mandó su nota de débito (se carga ahora, opcional)</span>
+          </label>
+          <div class="chq-campo__ayuda" id="chq-rech-prov-permiso" hidden></div>
+          <div id="chq-rech-prov-campos" hidden>
+            <div class="chq-campo">
+              <label for="chq-rech-prov-comprobante">N° de comprobante</label>
+              <input type="text" id="chq-rech-prov-comprobante" maxlength="60" autocomplete="off" placeholder="0001-00001234">
+            </div>
+            <div class="chq-campo">
+              <label for="chq-rech-prov-fecha">Fecha de su nota</label>
+              <input type="date" id="chq-rech-prov-fecha">
+            </div>
+            <div class="chq-campo__ayuda" style="margin:0 0 .5rem">Sus gastos (el cheque ya va incluido):</div>
+            <div id="chq-rech-prov-gastos"></div>
+            <button type="button" class="chq-btn chq-btn--chico" id="chq-rech-prov-gasto-mas">+ Agregar gasto</button>
+            <div class="chq-campo" style="margin-top:.875rem">
+              <label for="chq-rech-prov-obs">Observaciones (opcional)</label>
+              <input type="text" id="chq-rech-prov-obs" maxlength="200" autocomplete="off">
+            </div>
+            <div class="chq-campo">
+              <label for="chq-rech-prov-pdf">PDF de su nota (opcional)</label>
+              <input type="file" id="chq-rech-prov-pdf" accept="application/pdf">
+            </div>
+          </div>
+        </div>
+        <div class="chq-venta-resumen" id="chq-rech-resumen"></div>
+      </div>
+      <div class="chq-campo__error" id="chq-rech-error" role="alert" hidden></div>
+      <div class="chq-acciones">
+        <button type="button" class="chq-btn" id="chq-rech-cancelar">Cancelar</button>
+        <button type="button" class="chq-btn chq-btn--primario" id="chq-rech-confirmar" disabled>Registrar el rechazo</button>
+      </div>
+    </div>
+  </div>
   </section>
 
   <script type="module">
@@ -13012,7 +13777,7 @@
     import { supabase } from '../js/supabase.js'
     import {
       dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
-      ETIQUETA_ESTADO_CHEQUE, ESTADOS_SALIDOS, nombreBancoDe,
+      ETIQUETA_ESTADO_CHEQUE, ESTADOS_SALIDOS, nombreBancoDe, textoSalidaCheque,
     } from '../js/cobranzas-comun.js'
     // La barra de unidad de negocio de arriba (28/09/2026): la MISMA elección
     // para toda la app. Acá solo se lee y se escucha; la barra la dibuja sola.
@@ -13088,6 +13853,11 @@
       cuentasBancoError: false,
       // Los nombres de las fábricas (id → nombre), para agrupar las cuentas.
       nombresUnidades: new Map(),
+      // CHEQUE RECHAZADO (24/10/2026): el diálogo abierto (ver
+      // "CHEQUE RECHAZADO") o null, y la nota de débito de cada cheque
+      // rechazado a la vista (cheque_id → { id, codigo, estado }).
+      rechazo: null,
+      notasPorCheque: new Map(),
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -13177,6 +13947,10 @@
 
     const FILTROS_CHEQUES_DEFECTO = { estado: 'en_cartera', numero: '', banco: '' }
 
+    // "Salidos" muestra también los que salieron y volvieron RECHAZADOS
+    // (24/10/2026): salieron de la cartera y no vuelven a ella.
+    const ESTADOS_SALIDOS_Y_RECHAZADOS = [...ESTADOS_SALIDOS, 'rechazado']
+
     const ESTADOS_FILTRO_CHEQUES = [
       { id: 'en_cartera', nombre: 'En cartera' },
       // Mandados al banco, esperando que acrediten (13/10/2026). Vista propia.
@@ -13184,6 +13958,9 @@
       { id: 'salidos', nombre: 'Salidos' },
       // Los vendidos al banco (13/10/2026), aparte: el interés es un gasto.
       { id: 'vendidos', nombre: 'Vendidos' },
+      // Los que salieron y volvieron rechazados (24/10/2026). También entran
+      // en "Salidos" y en "Todos".
+      { id: 'rechazados', nombre: 'Rechazados' },
       // "Todos" es el ÚNICO que muestra los anulados.
       { id: 'todos', nombre: 'Todos' },
     ]
@@ -13239,8 +14016,9 @@
     // qué se le pidió. Devuelve sinResultados cuando no hay que consultar.
     function aplicarFiltrosCheques(q, f) {
       if (f.estado === 'en_cartera') q = q.eq('estado', 'en_cartera')
-      else if (f.estado === 'salidos') q = q.in('estado', ESTADOS_SALIDOS)
+      else if (f.estado === 'salidos') q = q.in('estado', ESTADOS_SALIDOS_Y_RECHAZADOS)
       else if (f.estado === 'vendidos') q = q.eq('estado', 'vendido')
+      else if (f.estado === 'rechazados') q = q.eq('estado', 'rechazado')
       else if (f.estado === 'en_banco') q = q.eq('estado', 'en_banco')
       // 'todos': sin filtro de estado, que es lo que trae también los anulados.
       if (f.banco) q = q.eq('banco_codigo', f.banco)
@@ -14034,7 +14812,7 @@
       pintarFiltrosCheques()
       const { q, sinResultados } = aplicarFiltrosCheques(
         supabase.from('cobranza_cheques').select(
-          'id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id, salida_gasto_id, pago_gasto_id, salida_cuenta_id, venta_neto, venta_gasto_id, salida_modo, envio_fecha, envio_detalle'),
+          'id, cobranza_id, foto_id, es_echeck, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id, salida_gasto_id, pago_gasto_id, salida_cuenta_id, venta_neto, venta_gasto_id, salida_modo, envio_fecha, envio_detalle, rechazo_fecha, rechazo_motivo, rechazo_estado_anterior'),
         estado.filtros)
       if (sinResultados) {
         estado.filas = []; estado.error = null; estado.tope = false
@@ -14068,6 +14846,8 @@
         // Las cobranzas (y con ellas la unidad de cada cheque) cambiaron: el
         // total de la unidad de la barra se puede calcular recién ahora.
         estado.cobranzasListas = true
+        // La nota de débito de cada rechazado (24/10/2026): no frena la lista.
+        cargarNotasDeRechazados(filas, turno)
         recalcularResumen()
         pintarCartera()
       } catch (err) {
@@ -14201,6 +14981,7 @@
       { clave: 'vencido', nombre: 'Plazo vencido' },
       { clave: 'salido', nombre: 'Salió de cartera' },
       { clave: 'en_banco', nombre: 'En el banco, esperando que acredite' },
+      { clave: 'rechazado', nombre: 'Rechazado' },
       { clave: 'anulado', nombre: 'Anulado' },
     ]
 
@@ -14210,6 +14991,7 @@
     function clavesEstadoCheque(ch, cob, hoy) {
       if (esSalido(ch)) return ['salido']
       if (ch.estado === 'en_banco') return ['en_banco']
+      if (ch.estado === 'rechazado') return ['rechazado']
       if (ch.estado === 'anulado') return ['anulado']
       const claves = esPorControlar(ch, cob) ? ['por_controlar'] : []
       const venc = estadoVencimiento(ch, hoy)
@@ -14277,6 +15059,10 @@
       }))
       // "Ver el pago" (05/10/2026) navega solo: que la fila no abra además la cobranza.
       cont.querySelectorAll('.chq-link-pago').forEach(a => a.addEventListener('click', (ev) => ev.stopPropagation()))
+      // La nota de débito de un rechazado (24/10/2026): la hoja, sin abrir la cobranza.
+      cont.querySelectorAll('[data-ver-nota-debito]').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation(); abrirHojaNotaDebito(b.dataset.verNotaDebito)
+      }))
     }
 
     // Tocar un cheque abre su cobranza en Cobranzas, que sabe volver acá.
@@ -14336,7 +15122,7 @@
       const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
       const venc = estadoVencimiento(ch, hoyArgentina())
       const clases = [
-        salido ? 'chq-tabla__fila--salido' : ch.estado === 'en_banco' ? 'chq-tabla__fila--en-banco' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
+        salido ? 'chq-tabla__fila--salido' : ch.estado === 'en_banco' ? 'chq-tabla__fila--en-banco' : ch.estado === 'rechazado' ? 'chq-tabla__fila--rechazado' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
         esPorControlar(ch, cob) ? 'chq-tabla__fila--por-controlar' : '',
         venc ? (venc.nivel === 'vencido' ? 'chq-tabla__fila--vencido' : 'chq-tabla__fila--vence') : '',
         ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
@@ -14505,6 +15291,12 @@
         const t = textoEnBanco(ch)
         return `<div class="chq-salida"><span class="chq-salida__texto" title="${esc(t)}">${esc(t)}</span></div>`
       }
+      // RECHAZADO (24/10/2026): la fecha, el motivo y el link a su nota de
+      // débito. No se ofrece nada más: un rechazado no vuelve a la cartera.
+      if (ch.estado === 'rechazado') {
+        const t = textoRechazo(ch)
+        return `<div class="chq-salida"><span class="chq-salida__texto chq-rechazo-texto" title="${esc(t)}">${esc(t)}</span>${htmlLinkNotaRechazo(ch)}</div>`
+      }
       const accion = accionSalida(ch, cob)
       if (salido) {
         const texto = textoSalidaCorto(ch)
@@ -14556,18 +15348,19 @@
       const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
       // Un cheque que salió muestra CUÁNDO y A QUIÉN en lugar del cliente: el
       // renglón no da para los dos, y el cliente está en la cobranza.
-      const salida = salido ? textoSalidaCorto(ch) : ch.estado === 'en_banco' ? textoEnBanco(ch) : ''
+      const salida = salido ? textoSalidaCorto(ch) : ch.estado === 'en_banco' ? textoEnBanco(ch) : ch.estado === 'rechazado' ? textoRechazo(ch) : ''
       const venc = estadoVencimiento(ch, hoyArgentina())
       const clases = [
         'chq-tarjeta',
-        salido ? 'chq-tarjeta--salido' : ch.estado === 'en_banco' ? 'chq-tarjeta--en-banco' : ch.estado === 'anulado' ? 'chq-tarjeta--anulado' : '',
+        salido ? 'chq-tarjeta--salido' : ch.estado === 'en_banco' ? 'chq-tarjeta--en-banco' : ch.estado === 'rechazado' ? 'chq-tarjeta--rechazado' : ch.estado === 'anulado' ? 'chq-tarjeta--anulado' : '',
         esPorControlar(ch, cob) ? 'chq-tarjeta--por-controlar' : '',
         venc ? (venc.nivel === 'vencido' ? 'chq-tarjeta--vencido' : 'chq-tarjeta--vence') : '',
         ch.id === estado.destacado ? 'chq-tarjeta--destacada' : '',
         estado.seleccion.ids.has(ch.id) ? 'chq-tarjeta--elegida' : '',
         estado.seleccion.noPueden?.has(ch.id) ? 'chq-tarjeta--no-sale' : '',
       ].filter(Boolean).join(' ')
-      const accion = htmlAccionSalida(ch, accionSalida(ch, cob))
+      // Un rechazado: el link a su nota de débito, a la derecha (24/10/2026).
+      const accion = ch.estado === 'rechazado' ? htmlLinkNotaRechazo(ch) : htmlAccionSalida(ch, accionSalida(ch, cob))
       // LA UNIDAD NO ENTRA EN EL RENGLÓN DE ABAJO (medido a 390px el
       // 22/09/2026): el banco y el cliente ya quedan en 10 a 70px, y un dato
       // más le dejaba ~20px a cada uno —ninguno se leía—. Va en el title de
@@ -15890,6 +16683,623 @@
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // CHEQUE RECHAZADO (24/10/2026, pedido de Facu)
+    // Un cheque que salió (depositado, vendido, endosado o en el banco) y
+    // volvió rechazado. La base (leída con pg_get_functiondef el 24/10/2026;
+    // las dos piden cobranzas:procesar):
+    //   buscar_cheques_para_rechazo(p_texto) → [{ cheque_id, banco_codigo,
+    //     banco, numero, importe, fecha_pago, es_echeck, estado, salida_fecha,
+    //     destino, cliente_id, cliente, unidad_negocio_id, proveedor_id,
+    //     proveedor, titulares }]: hasta 20, los que contienen los dígitos
+    //     escritos (desde 2; con menos devuelve []).
+    //   registrar_cheque_rechazado(p_cheque_id, p_fecha, p_motivo, p_gastos,
+    //     p_cliente_id, p_nd_proveedor) → { nota_debito_cliente_id, codigo,
+    //     total_cliente, nota_debito_proveedor_id, caja_movimiento_id,
+    //     proveedor_id, estado_anterior }. En UNA transacción: si estaba
+    //     depositado o vendido descuenta el importe de esa cuenta; si era de
+    //     otra empresa da vuelta la deuda entre empresas; deja el cheque
+    //     'rechazado' (ya no se edita ni vuelve); hace la nota de débito al
+    //     cliente (el cheque + p_gastos [{ concepto, importe }]; sin cliente en
+    //     la cobranza, p_cliente_id) y, si se le dio a un proveedor y se manda
+    //     p_nd_proveedor { comprobante, fecha, gastos, observaciones,
+    //     archivo_url }, carga su nota de débito (pide además
+    //     cuentas_corrientes:registrar_pago). El motivo, de 3 letras o más; la
+    //     fecha no futura ni anterior a la salida.
+    // Después se abre la hoja de la nota al cliente (la dibuja el script de
+    // Administración: evento 'administracion:nota-debito').
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MOTIVOS_RECHAZO = ['Sin fondos', 'Firma', 'Cuenta cerrada', 'Otro']
+    const CONCEPTO_GASTO_RECHAZO = 'Gastos de cheque rechazado'
+    const ESPERA_BUSQUEDA_RECHAZO = 300
+    const LARGO_MINIMO_RECHAZO = 2
+    const LARGO_MINIMO_MOTIVO_RECHAZO = 3
+    const TOPE_PDF_RECHAZO = 10 * 1024 * 1024
+    let temporizadorRechazo = null
+    let turnoRechazo = 0
+    let claveRenglonRechazo = 0
+
+    const puedeRechazar = () => puedeProcesar()
+
+    function renglonGastoRechazo(concepto = '', importe = null) {
+      return { clave: ++claveRenglonRechazo, concepto, importe }
+    }
+
+    // "Rechazado el 20/10/2026 · Sin fondos". Texto plano: quien lo muestre, lo escapa.
+    function textoRechazo(ch) {
+      const cuando = esFechaIso(ch?.rechazo_fecha) ? ` el ${formatearFechaCob(ch.rechazo_fecha)}` : ''
+      const motivo = String(ch?.rechazo_motivo ?? '').trim()
+      return `Rechazado${cuando}${motivo ? ` · ${motivo}` : ''}`
+    }
+
+    // El link a la nota de débito al cliente de un rechazado ('' si no se ve).
+    function htmlLinkNotaRechazo(ch) {
+      const n = estado.notasPorCheque?.get?.(ch?.id)
+      if (!n?.id) return ''
+      const rotulo = 'Nota de débito ' + (n.codigo ?? '') + (n.estado === 'anulada' ? ' (anulada)' : '')
+      return `<button type="button" class="chq-link-nota" data-ver-nota-debito="${esc(n.id)}">${esc(rotulo)}</button>`
+    }
+
+    // La hoja la dibuja Administración (su script, no este).
+    function abrirHojaNotaDebito(id) {
+      if (!id) return
+      document.dispatchEvent(new CustomEvent('administracion:nota-debito', { detail: { id } }))
+    }
+
+    // Las notas de débito de los rechazados que se están viendo (la policy de
+    // notas_debito: cobranzas:procesar, retiros:precios/ver o cuentas
+    // corrientes). Si no se pueden leer, el rechazado se ve igual, sin link.
+    async function cargarNotasDeRechazados(filas, turno) {
+      const ids = (filas ?? []).filter(c => c?.estado === 'rechazado').map(c => c.id)
+      if (!ids.length) return
+      try {
+        const { data, error } = await supabase.from('notas_debito').select('id, cheque_id, codigo, estado, direccion')
+          .eq('direccion', 'emitida').in('cheque_id', ids)
+        if (error) throw error
+        if (turno !== turnoCheques) return
+        for (const n of data ?? []) estado.notasPorCheque.set(n.cheque_id, n)
+        renderizarCheques()
+      } catch (err) {
+        console.error('No se pudieron leer las notas de débito de los rechazados:', err)
+      }
+    }
+
+    // El motivo que viaja: el chip y el detalle ("Sin fondos: cuenta
+    // embargada"); con "Otro", solo lo escrito.
+    function motivoRechazo(motivo, detalle) {
+      const d = String(detalle ?? '').trim()
+      if (!motivo) return ''
+      if (motivo === 'Otro') return d
+      return d ? `${motivo}: ${d}` : motivo
+    }
+
+    // Los renglones que se cobran: los que tienen importe (un renglón vacío,
+    // como el que viene puesto, no viaja).
+    function gastosParaEnviar(renglones) {
+      return (renglones ?? []).filter(g => aCentavos(g.importe) > 0)
+        .map(g => ({ concepto: String(g.concepto ?? '').trim(), importe: aCentavos(g.importe) / 100 }))
+    }
+
+    // En centavos: el cheque, los gastos al cliente y los del proveedor.
+    function totalesRechazo(r) {
+      const cheque = aCentavos(r?.cheque?.importe)
+      const suma = (lista) => gastosParaEnviar(lista).reduce((a, g) => a + aCentavos(g.importe), 0)
+      const gastosCliente = suma(r?.gastos)
+      const gastosProveedor = suma(r?.prov?.gastos)
+      return { cheque, gastosCliente, cliente: cheque + gastosCliente, gastosProveedor, proveedor: cheque + gastosProveedor }
+    }
+
+    // Cómo salió el cheque, en una frase: "Depositado el 10/10/2026 en Banco
+    // Macro · Nuss", "Endosado el … a <proveedor>". Texto plano.
+    function textoSalidaRechazo(c) {
+      const destino = c?.estado === 'endosado' ? (c.proveedor || c.destino) : c?.destino
+      return textoSalidaCheque(c?.estado, c?.salida_fecha, destino)
+    }
+
+    // La cuenta de donde lo descuenta el banco: el nombre de la cuenta si el
+    // cheque está en la lista; si no, el destino que guardó la base.
+    function cuentaDeRechazo(c) {
+      const enLista = estado.filas.find(x => x.id === c?.cheque_id)
+      return (enLista && nombreCuentaSalida(enLista)) || String(c?.destino ?? '').trim() || 'la cuenta donde entró'
+    }
+
+    // Lo que pasa con el banco (o con el proveedor). Texto plano.
+    function textoBancoRechazo(c) {
+      if (!c) return ''
+      if (['depositado', 'vendido'].includes(c.estado)) return `Se descuentan ${formatearImporte(c.importe)} de ${cuentaDeRechazo(c)}.`
+      if (c.estado === 'en_banco') return 'Estaba en el banco esperando que acredite: no se descuenta nada de la cuenta.'
+      if (c.estado === 'endosado') return `Se lo habíamos dado a ${c.proveedor || c.destino || 'un proveedor'}: no se descuenta nada del banco.`
+      return ''
+    }
+
+    function htmlResultadosRechazo(r) {
+      const lista = r?.resultados ?? []
+      return lista.map(c => {
+        const l1 = `${c.es_echeck ? 'E-cheque' : 'Cheque'} ${c.banco || nombreBanco(c.banco_codigo)} · Nº ${c.numero ?? '—'} · ${formatearImporte(c.importe)}`
+        const l2 = `${c.cliente || 'Sin cliente'} · ${textoSalidaRechazo(c)}`
+        return `<button type="button" class="chq-rech-resultado" data-rech-cheque="${esc(c.cheque_id)}">` +
+          `<span class="chq-rech-resultado__l1">${esc(l1)}</span><span class="chq-rech-resultado__l2">${esc(l2)}</span></button>`
+      }).join('')
+    }
+
+    // El aviso debajo del buscador (texto plano). El error de la base, tal cual.
+    function textoBusquedaRechazo(r) {
+      if (!r) return ''
+      if (r.buscando) return 'Buscando…'
+      if (r.errorBusqueda) return r.errorBusqueda
+      const d = String(r.busqueda ?? '').replace(/\D/g, '')
+      if (d.length >= LARGO_MINIMO_RECHAZO && !(r.resultados ?? []).length) return 'No hay cheques salidos con ese número.'
+      return ''
+    }
+
+    function htmlElegidoRechazo(c) {
+      if (!c) return ''
+      const titulo = (c.banco || nombreBanco(c.banco_codigo)) + ' Nº ' + (c.numero ?? '—')
+      return `<strong>${esc(titulo)}</strong> · ${esc(formatearImporte(c.importe))}<br>` +
+        `${esc(c.cliente || 'Sin cliente')} · ${esc(textoSalidaRechazo(c))}`
+    }
+
+    function htmlRenglonesRechazo(renglones) {
+      return (renglones ?? []).map(g => '<div class="chq-rech-renglon">' +
+        `<input type="text" data-rech-concepto="${esc(g.clave)}" maxlength="120" autocomplete="off" value="${esc(g.concepto)}" aria-label="Concepto del gasto" placeholder="Concepto">` +
+        `<input type="text" data-rech-importe="${esc(g.clave)}" inputmode="decimal" autocomplete="off" aria-label="Importe del gasto" placeholder="$ 0,00">` +
+        `<button type="button" class="chq-rech-quitar" data-rech-quitar="${esc(g.clave)}" aria-label="Quitar este gasto">&times;</button></div>`).join('')
+    }
+
+    // El resumen antes de confirmar: lo del banco, la nota al cliente y la
+    // del proveedor. Todo escapado: los nombres vienen de la base.
+    function htmlResumenRechazo(r) {
+      const c = r?.cheque
+      if (!c) return ''
+      const t = totalesRechazo(r)
+      const nombreCliente = c.cliente_id ? c.cliente : ((r.clientes ?? []).find(x => x.id === r.clienteId)?.nombre ?? null)
+      // [texto, importe o null, ¿renglón del total?]: todo texto plano, se escapa abajo.
+      const lineas = [[textoBancoRechazo(c), null, false],
+        ['Nota de débito al cliente' + (nombreCliente ? ' (' + nombreCliente + ')' : ''), formatearImporte(t.cliente / 100), true],
+        ['Cheque ' + formatearImporte(t.cheque / 100) + ' + gastos ' + formatearImporte(t.gastosCliente / 100), null, false]]
+      if (c.proveedor_id && r.prov?.si) {
+        lineas.push(['Nota de débito del proveedor' + (c.proveedor ? ' (' + c.proveedor + ')' : ''), formatearImporte(t.proveedor / 100), true],
+          ['Cheque ' + formatearImporte(t.cheque / 100) + ' + sus gastos ' + formatearImporte(t.gastosProveedor / 100) + ': queda como deuda en su cuenta corriente', null, false])
+      }
+      return lineas.map(([texto, monto, total]) => `<div${total ? ' class="chq-venta-resumen__total"' : ''}><span>${esc(texto)}</span>` +
+        `${monto === null ? '' : `<strong>${esc(monto)}</strong>`}</div>`).join('')
+    }
+
+    // Lo que falta, en una frase (texto plano), o null. La base vuelve a
+    // controlar todo: esto es para no mandarle algo que va a rechazar.
+    function erroresRechazo(r, hoy) {
+      const c = r?.cheque
+      if (!c) return 'Elegí el cheque.'
+      if (!esFechaIso(r.fecha)) return 'Poné la fecha del rechazo.'
+      if (r.fecha > hoy) return 'La fecha no puede ser futura.'
+      if (esFechaIso(c.salida_fecha) && r.fecha < c.salida_fecha) return `La fecha del rechazo no puede ser anterior a la salida del cheque (${formatearFechaCob(c.salida_fecha)}).`
+      if (!r.motivo) return 'Elegí el motivo: Sin fondos, Firma, Cuenta cerrada u Otro.'
+      if (motivoRechazo(r.motivo, r.detalle).length < LARGO_MINIMO_MOTIVO_RECHAZO) return 'Con «Otro», escribí el motivo del rechazo.'
+      if (!c.cliente_id && !r.clienteId) return 'Elegí a qué cliente se le hace la nota de débito.'
+      if ((r.gastos ?? []).some(g => aCentavos(g.importe) > 0 && !String(g.concepto ?? '').trim())) return 'Cada gasto al cliente lleva su concepto.'
+      if (c.proveedor_id && r.prov?.si) {
+        if (!puedeRegistrarPago()) return 'Para cargar la nota de débito del proveedor hace falta la tarea «Registrar pagos a proveedores».'
+        if (!String(r.prov.comprobante ?? '').trim()) return 'Poné el número de comprobante de la nota del proveedor.'
+        if (!esFechaIso(r.prov.fecha)) return 'Poné la fecha de la nota del proveedor.'
+        if (r.prov.fecha > hoy) return 'La fecha de la nota del proveedor no puede ser futura.'
+        if ((r.prov.gastos ?? []).some(g => aCentavos(g.importe) > 0 && !String(g.concepto ?? '').trim())) return 'Cada gasto del proveedor lleva su concepto.'
+        const a = r.prov.archivo
+        if (a && !(a.type === 'application/pdf' || /\.pdf$/i.test(String(a.name ?? '')))) return 'El archivo de la nota del proveedor tiene que ser un PDF.'
+        if (a && Number(a.size) > TOPE_PDF_RECHAZO) return 'El PDF de la nota del proveedor pesa más de 10 MB.'
+      }
+      return null
+    }
+
+    // Lo que viaja a registrar_cheque_rechazado. p_cliente_id solo si la
+    // cobranza no tiene cliente (la base usa el de la cobranza si lo hay);
+    // p_nd_proveedor solo si se le dio a un proveedor y se tildó su nota.
+    function parametrosRechazo(r, archivoUrl = null) {
+      const c = r.cheque
+      const conProveedor = !!(c.proveedor_id && r.prov?.si)
+      return {
+        p_cheque_id: c.cheque_id,
+        p_fecha: r.fecha,
+        p_motivo: motivoRechazo(r.motivo, r.detalle),
+        p_gastos: gastosParaEnviar(r.gastos),
+        p_cliente_id: c.cliente_id ? null : (r.clienteId || null),
+        p_nd_proveedor: conProveedor ? {
+          comprobante: String(r.prov.comprobante ?? '').trim(),
+          fecha: r.prov.fecha,
+          gastos: gastosParaEnviar(r.prov.gastos),
+          observaciones: textoOpcional(r.prov.observaciones),
+          archivo_url: archivoUrl,
+        } : null,
+      }
+    }
+
+    function textoExitoRechazo(d) {
+      const partes = [`Cheque rechazado. Nota de débito ${d?.codigo ?? ''} al cliente por ${formatearImporte(d?.total_cliente)}.`]
+      if (d?.caja_movimiento_id) partes.push('Se descontó de la cuenta del banco.')
+      if (d?.nota_debito_proveedor_id) partes.push('La nota del proveedor quedó en su cuenta corriente.')
+      return partes.join(' ')
+    }
+
+    // El PDF de la nota del proveedor va al bucket 'comprobantes', ADENTRO de
+    // la carpeta del usuario (la policy de Storage solo deja subir ahí). Se
+    // guarda la RUTA, nunca una URL firmada.
+    function rutaPdfNotaProveedor(uid, proveedorId, fecha, ahora = Date.now()) {
+      const anio = /^\d{4}/.test(String(fecha ?? '')) ? String(fecha).slice(0, 4) : String(new Date().getFullYear())
+      return `${uid}/notas-debito/${proveedorId}/${anio}/${ahora}.pdf`
+    }
+
+    async function subirPdfNotaProveedor(archivo, proveedorId, fecha) {
+      const uid = estado.sesion?.user?.id
+      if (!uid) throw new Error('No se pudo identificar tu usuario para subir el PDF.')
+      const ruta = rutaPdfNotaProveedor(uid, proveedorId, fecha)
+      const { error } = await supabase.storage.from('comprobantes').upload(ruta, archivo, { contentType: 'application/pdf', upsert: false })
+      if (error) throw new Error('No se pudo subir el PDF: ' + (error.message || 'probá de nuevo.'))
+      return ruta
+    }
+
+    function abrirRechazo() {
+      if (!puedeRechazar()) return
+      clearTimeout(temporizadorRechazo)
+      turnoRechazo++
+      const hoy = hoyArgentina()
+      estado.rechazo = {
+        busqueda: '', resultados: [], buscando: false, errorBusqueda: null,
+        cheque: null, fecha: hoy, motivo: null, detalle: '',
+        clienteId: null, clientes: null, errorClientes: null,
+        gastos: [renglonGastoRechazo(CONCEPTO_GASTO_RECHAZO)],
+        prov: { si: false, comprobante: '', fecha: hoy, gastos: [renglonGastoRechazo(CONCEPTO_GASTO_RECHAZO)], observaciones: '', archivo: null },
+        enviando: false, error: null,
+      }
+      for (const id of ['chq-rech-buscar', 'chq-rech-motivo-texto', 'chq-rech-prov-comprobante', 'chq-rech-prov-obs', 'chq-rech-prov-pdf']) document.getElementById(id).value = ''
+      document.getElementById('chq-rech-fecha').value = hoy
+      document.getElementById('chq-rech-prov-fecha').value = hoy
+      document.getElementById('chq-rech-prov-si').checked = false
+      pintarRechazo()
+      document.getElementById('chq-modal-rechazo').hidden = false
+      document.getElementById('chq-rech-buscar').focus()
+    }
+
+    function cerrarRechazo(forzar = false) {
+      // Mientras se manda no se cierra: la respuesta tiene que verse.
+      if (estado.rechazo?.enviando && !forzar) return
+      clearTimeout(temporizadorRechazo)
+      turnoRechazo++
+      estado.rechazo = null
+      document.getElementById('chq-modal-rechazo').hidden = true
+    }
+
+    function alEscribirBusquedaRechazo(texto) {
+      const r = estado.rechazo
+      if (!r) return
+      r.busqueda = String(texto ?? '')
+      clearTimeout(temporizadorRechazo)
+      if (r.busqueda.replace(/\D/g, '').length < LARGO_MINIMO_RECHAZO) {
+        turnoRechazo++
+        r.resultados = []; r.buscando = false; r.errorBusqueda = null
+        pintarResultadosRechazo()
+        return
+      }
+      r.buscando = true
+      pintarResultadosRechazo()
+      temporizadorRechazo = setTimeout(() => buscarChequesRechazo(r.busqueda), ESPERA_BUSQUEDA_RECHAZO)
+    }
+
+    async function buscarChequesRechazo(texto) {
+      const r = estado.rechazo
+      if (!r) return
+      const turno = ++turnoRechazo
+      let res
+      try {
+        res = await supabase.rpc('buscar_cheques_para_rechazo', { p_texto: String(texto ?? '').trim() })
+      } catch (e) {
+        res = { data: null, error: { message: e?.message || 'No hay conexión: no se pudo buscar.' } }
+      }
+      if (turno !== turnoRechazo || estado.rechazo !== r) return
+      r.buscando = false
+      if (res?.error) {
+        r.resultados = []
+        // El mensaje de la base, entero.
+        r.errorBusqueda = res.error.message || 'No se pudo buscar el cheque.'
+      } else {
+        // La fábrica de pruebas no aparece para una cuenta real.
+        r.resultados = sinUnidadesDePrueba(Array.isArray(res?.data) ? res.data : [], estado.fabrica, c => c?.unidad_negocio_id)
+        r.errorBusqueda = null
+      }
+      pintarResultadosRechazo()
+    }
+
+    function elegirChequeRechazo(id) {
+      const r = estado.rechazo
+      const c = r?.resultados?.find(x => x.cheque_id === id)
+      if (!c || r.enviando) return
+      r.cheque = c
+      r.clienteId = null
+      r.prov.si = false
+      r.error = null
+      document.getElementById('chq-rech-prov-si').checked = false
+      const fecha = document.getElementById('chq-rech-fecha')
+      fecha.max = hoyArgentina()
+      fecha.min = esFechaIso(c.salida_fecha) ? c.salida_fecha : ''
+      pintarRechazo()
+      if (!c.cliente_id && r.clientes === null) cargarClientesRechazo(r)
+      document.getElementById('chq-rech-fecha').focus()
+    }
+
+    function cambiarChequeRechazo() {
+      const r = estado.rechazo
+      if (!r || r.enviando) return
+      r.cheque = null
+      r.error = null
+      pintarRechazo()
+      document.getElementById('chq-rech-buscar').focus()
+    }
+
+    function elegirMotivoRechazo(m) {
+      const r = estado.rechazo
+      if (!r || r.enviando || !MOTIVOS_RECHAZO.includes(m)) return
+      r.motivo = m
+      r.error = null
+      pintarMotivosRechazo()
+      pintarErrorRechazo()
+      if (m === 'Otro') document.getElementById('chq-rech-motivo-texto').focus()
+    }
+
+    // Los clientes de la fábrica del cheque, para una cobranza sin cliente.
+    async function cargarClientesRechazo(r) {
+      const u = r.cheque?.unidad_negocio_id
+      let q = supabase.from('clientes').select('id, nombre, unidad_negocio_id, activo').order('nombre')
+      if (u) q = q.eq('unidad_negocio_id', u)
+      try {
+        const { data, error } = await q
+        if (error) throw error
+        if (estado.rechazo !== r) return
+        r.clientes = sinUnidadesDePrueba((data ?? []).filter(x => x?.activo !== false), estado.fabrica, x => x?.unidad_negocio_id)
+        r.errorClientes = null
+      } catch (err) {
+        console.error('No se pudieron leer los clientes:', err)
+        if (estado.rechazo !== r) return
+        r.clientes = []
+        r.errorClientes = 'No se pudieron leer los clientes. Revisá la señal y volvé a elegir el cheque.'
+      }
+      pintarClienteRechazo()
+      pintarResumenRechazo()
+    }
+
+    function htmlOpcionesClienteRechazo(r) {
+      if (r?.clientes === null) return '<option value="">Cargando los clientes…</option>'
+      return '<option value="">Elegí el cliente…</option>' + (r?.clientes ?? [])
+        .map(x => `<option value="${esc(x.id)}"${x.id === r.clienteId ? ' selected' : ''}>${esc(x.nombre)}</option>`).join('')
+    }
+
+    // Lee los campos sueltos (no los renglones, que se anotan al tipear).
+    function leerCamposRechazo(r) {
+      r.fecha = document.getElementById('chq-rech-fecha').value
+      r.detalle = document.getElementById('chq-rech-motivo-texto').value
+      if (r.cheque && !r.cheque.cliente_id) r.clienteId = document.getElementById('chq-rech-cliente').value || null
+      r.prov.comprobante = document.getElementById('chq-rech-prov-comprobante').value
+      r.prov.fecha = document.getElementById('chq-rech-prov-fecha').value
+      r.prov.observaciones = document.getElementById('chq-rech-prov-obs').value
+    }
+
+    function listaRenglonesRechazo(r, grupo) {
+      return grupo === 'proveedor' ? r.prov.gastos : r.gastos
+    }
+
+    function escribirRenglonRechazo(grupo, t) {
+      const r = estado.rechazo
+      if (!r) return
+      const clave = Number(t?.dataset?.rechConcepto ?? t?.dataset?.rechImporte)
+      const g = listaRenglonesRechazo(r, grupo).find(x => x.clave === clave)
+      if (!g) return
+      if (t.dataset.rechConcepto !== undefined) g.concepto = t.value
+      else g.importe = leerCampoNumero(t)
+      r.error = null
+      pintarErrorRechazo()
+      pintarResumenRechazo()
+    }
+
+    function agregarRenglonRechazo(grupo) {
+      const r = estado.rechazo
+      if (!r || r.enviando) return
+      listaRenglonesRechazo(r, grupo).push(renglonGastoRechazo())
+      pintarRenglonesRechazo(grupo)
+      pintarResumenRechazo()
+    }
+
+    function quitarRenglonRechazo(grupo, clave) {
+      const r = estado.rechazo
+      if (!r || r.enviando) return
+      const lista = listaRenglonesRechazo(r, grupo)
+      const i = lista.findIndex(x => x.clave === Number(clave))
+      if (i >= 0) lista.splice(i, 1)
+      pintarRenglonesRechazo(grupo)
+      pintarResumenRechazo()
+    }
+
+    function pintarRenglonesRechazo(grupo) {
+      const r = estado.rechazo
+      if (!r) return
+      const cont = document.getElementById(grupo === 'proveedor' ? 'chq-rech-prov-gastos' : 'chq-rech-gastos')
+      const lista = listaRenglonesRechazo(r, grupo)
+      cont.innerHTML = htmlRenglonesRechazo(lista)
+      for (const g of lista) {
+        const input = cont.querySelector(`[data-rech-importe="${CSS.escape(String(g.clave))}"]`)
+        if (!input) continue
+        enlazarCampoNumero(input, { decimales: 2 })
+        ponerNumero(input, g.importe ?? null)
+      }
+    }
+
+    function pintarResultadosRechazo() {
+      const r = estado.rechazo
+      if (!r) return
+      document.getElementById('chq-rech-resultados').innerHTML = htmlResultadosRechazo(r)
+      const aviso = document.getElementById('chq-rech-buscando')
+      const t = textoBusquedaRechazo(r)
+      aviso.textContent = t
+      aviso.hidden = !t
+    }
+
+    function pintarMotivosRechazo() {
+      const r = estado.rechazo
+      document.querySelectorAll('[data-rech-motivo]').forEach(b => {
+        const elegido = r?.motivo === b.dataset.rechMotivo
+        b.classList.toggle('chq-btn--elegido', elegido)
+        b.setAttribute('aria-pressed', elegido ? 'true' : 'false')
+      })
+    }
+
+    function pintarClienteRechazo() {
+      const r = estado.rechazo
+      const campo = document.getElementById('chq-rech-campo-cliente')
+      campo.hidden = !(r?.cheque && !r.cheque.cliente_id)
+      if (campo.hidden) return
+      document.getElementById('chq-rech-cliente').innerHTML = htmlOpcionesClienteRechazo(r)
+      if (r.errorClientes) { r.error = r.errorClientes; pintarErrorRechazo() }
+    }
+
+    function pintarResumenRechazo() {
+      document.getElementById('chq-rech-resumen').innerHTML = htmlResumenRechazo(estado.rechazo)
+    }
+
+    function pintarErrorRechazo() {
+      const r = estado.rechazo
+      const e = document.getElementById('chq-rech-error')
+      e.textContent = r?.error ?? ''
+      e.hidden = !r?.error
+    }
+
+    function pintarBotonRechazo() {
+      const r = estado.rechazo
+      const b = document.getElementById('chq-rech-confirmar')
+      b.disabled = !r?.cheque || !!r?.enviando
+      b.textContent = r?.enviando ? 'Registrando…' : 'Registrar el rechazo'
+    }
+
+    // Todo el diálogo. Redibuja los renglones: se llama al abrir, al elegir o
+    // cambiar el cheque y al prender la nota del proveedor (al tipear, solo
+    // el resumen y el error).
+    function pintarRechazo() {
+      const r = estado.rechazo
+      if (!r) return
+      const c = r.cheque
+      document.getElementById('chq-rech-campo-buscar').hidden = !!c
+      document.getElementById('chq-rech-elegido').hidden = !c
+      document.getElementById('chq-rech-elegido-texto').innerHTML = htmlElegidoRechazo(c)
+      document.getElementById('chq-rech-form').hidden = !c
+      pintarResultadosRechazo()
+      pintarMotivosRechazo()
+      pintarClienteRechazo()
+      pintarRenglonesRechazo('cliente')
+      const conProv = !!c?.proveedor_id
+      document.getElementById('chq-rech-prov').hidden = !conProv
+      if (conProv) {
+        document.getElementById('chq-rech-prov-titulo').textContent = 'Nota de débito del proveedor' + (c.proveedor ? ` (${c.proveedor})` : '')
+        const permiso = puedeRegistrarPago()
+        const si = document.getElementById('chq-rech-prov-si')
+        si.disabled = !permiso
+        if (!permiso) { r.prov.si = false; si.checked = false }
+        const nota = document.getElementById('chq-rech-prov-permiso')
+        nota.textContent = permiso ? '' : 'Para cargar su nota de débito hace falta la tarea «Registrar pagos a proveedores» (Cuentas corrientes). El rechazo se registra igual; su nota se carga después en su cuenta.'
+        nota.hidden = permiso
+        document.getElementById('chq-rech-prov-campos').hidden = !r.prov.si
+        if (r.prov.si) pintarRenglonesRechazo('proveedor')
+      }
+      pintarResumenRechazo()
+      pintarErrorRechazo()
+      pintarBotonRechazo()
+    }
+
+    async function confirmarRechazo() {
+      const r = estado.rechazo
+      // Un doble toque manda una sola vez.
+      if (!r || r.enviando) return
+      leerCamposRechazo(r)
+      const falta = erroresRechazo(r, hoyArgentina())
+      if (falta) { r.error = falta; pintarErrorRechazo(); return }
+      r.enviando = true
+      r.error = null
+      pintarErrorRechazo()
+      pintarBotonRechazo()
+      let res
+      try {
+        const conPdf = r.cheque.proveedor_id && r.prov.si && r.prov.archivo
+        const archivoUrl = conPdf ? await subirPdfNotaProveedor(r.prov.archivo, r.cheque.proveedor_id, r.prov.fecha) : null
+        res = await supabase.rpc('registrar_cheque_rechazado', parametrosRechazo(r, archivoUrl))
+      } catch (e) {
+        res = { data: null, error: { message: e?.message || 'No hay conexión: el rechazo no se registró. Probá de nuevo.' } }
+      }
+      r.enviando = false
+      if (res?.error) {
+        console.error('Falló registrar_cheque_rechazado:', res.error)
+        // El mensaje de la base, entero.
+        r.error = res.error.message || 'No se pudo registrar el rechazo. Probá de nuevo.'
+        if (estado.rechazo === r) { pintarErrorRechazo(); pintarBotonRechazo() }
+        return
+      }
+      const d = res?.data ?? {}
+      if (estado.rechazo === r) cerrarRechazo(true)
+      mostrarExito(textoExitoRechazo(d))
+      await refrescarTodo()
+      abrirHojaNotaDebito(d.nota_debito_cliente_id)
+    }
+
+    function conectarRechazo() {
+      const boton = document.getElementById('chq-btn-rechazado')
+      boton.hidden = !puedeRechazar()
+      boton.addEventListener('click', abrirRechazo)
+      document.getElementById('chq-rech-buscar').addEventListener('input', (ev) => alEscribirBusquedaRechazo(ev.target.value))
+      document.getElementById('chq-rech-resultados').addEventListener('click', (ev) => {
+        const b = ev.target?.closest?.('[data-rech-cheque]')
+        if (b) elegirChequeRechazo(b.dataset.rechCheque)
+      })
+      document.getElementById('chq-rech-cambiar').addEventListener('click', cambiarChequeRechazo)
+      document.querySelectorAll('[data-rech-motivo]').forEach(b => b.addEventListener('click', () => elegirMotivoRechazo(b.dataset.rechMotivo)))
+      for (const [id, grupo] of [['chq-rech-gastos', 'cliente'], ['chq-rech-prov-gastos', 'proveedor']]) {
+        const cont = document.getElementById(id)
+        cont.addEventListener('input', (ev) => escribirRenglonRechazo(grupo, ev.target))
+        cont.addEventListener('click', (ev) => {
+          const b = ev.target?.closest?.('[data-rech-quitar]')
+          if (b) quitarRenglonRechazo(grupo, b.dataset.rechQuitar)
+        })
+      }
+      document.getElementById('chq-rech-gasto-mas').addEventListener('click', () => agregarRenglonRechazo('cliente'))
+      document.getElementById('chq-rech-prov-gasto-mas').addEventListener('click', () => agregarRenglonRechazo('proveedor'))
+      document.getElementById('chq-rech-prov-si').addEventListener('change', (ev) => {
+        const r = estado.rechazo
+        if (!r || r.enviando) return
+        leerCamposRechazo(r)
+        r.prov.si = !!ev.target.checked
+        r.error = null
+        pintarRechazo()
+      })
+      const alCambiarCampo = () => {
+        const r = estado.rechazo
+        if (!r) return
+        leerCamposRechazo(r)
+        r.error = null
+        pintarErrorRechazo()
+        pintarResumenRechazo()
+      }
+      for (const id of ['chq-rech-fecha', 'chq-rech-motivo-texto', 'chq-rech-cliente', 'chq-rech-prov-comprobante', 'chq-rech-prov-fecha', 'chq-rech-prov-obs']) {
+        const el = document.getElementById(id)
+        el.addEventListener('input', alCambiarCampo)
+        el.addEventListener('change', alCambiarCampo)
+      }
+      document.getElementById('chq-rech-prov-pdf').addEventListener('change', (ev) => {
+        const r = estado.rechazo
+        if (!r) return
+        r.prov.archivo = ev.target.files?.[0] ?? null
+        r.error = null
+        pintarErrorRechazo()
+      })
+      document.getElementById('chq-rech-cancelar').addEventListener('click', () => cerrarRechazo())
+      document.getElementById('chq-rech-confirmar').addEventListener('click', confirmarRechazo)
+      // Anular una nota de débito desde la hoja (la dibuja Administración):
+      // la cartera se relee para que el link diga "(anulada)".
+      document.addEventListener('administracion:nota-debito-anulada', () => { if (iniciada) refrescarTodo() })
+    }
+
     // ── Volver a cartera: pide un motivo en un diálogo propio ─────────────
 
     let accionDelMotivo = null
@@ -16073,12 +17483,15 @@
       // ── En el banco ──
       conectarEnBanco()
       document.getElementById('chq-sel-dar-salida').addEventListener('click', () => abrirModalSalidaLote('endosado'))
+      // ── Cheque rechazado (24/10/2026) ──
+      conectarRechazo()
 
       // Escape cierra el diálogo que esté abierto; si no hay ninguno, limpia
       // la selección.
       document.addEventListener('keydown', (ev) => {
         if (ev.key !== 'Escape') return
-        if (!document.getElementById('chq-modal-salida').hidden) cerrarModalSalida()
+        if (!document.getElementById('chq-modal-rechazo').hidden) cerrarRechazo()
+        else if (!document.getElementById('chq-modal-salida').hidden) cerrarModalSalida()
         else if (!document.getElementById('chq-modal-motivo').hidden) cerrarModalMotivo()
         else if (estado.seleccion.activa) cancelarSeleccion()
       })
