@@ -1353,6 +1353,10 @@
       cantidadInsumoHoja, unidadHoja, cargarScript,
       ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
+    // Los insumos por bulto (23/10/2026): la cantidad y el precio de un
+    // insumo marcado 'bulto' se dicen y se piden por bulto; a la base va la
+    // unidad base. La regla vive en js/cantidades.js.
+    import { cantidadSegunVista, contenidoUnico, modoDePrecio, precioABase, precioDesdeBase } from '../js/cantidades.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
@@ -1991,9 +1995,85 @@
       const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
       if (e3) throw e3
       const { data: insumos, error: e4 } = await supabase.from('insumos')
-        .select('id, nombre, marca, unidad_medida, categoria, activo').order('categoria').order('nombre')
+        .select('id, nombre, marca, unidad_medida, categoria, activo, vista_preferida, contenido_bulto').order('categoria').order('nombre')
       if (e4) throw e4
-      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [], insumos: insumos ?? [] }
+      const contenidos = await leerContenidosInsumos(unidadId)
+      return {
+        productos: productos ?? [], presentaciones, marcas: marcas ?? [],
+        insumos: (insumos ?? []).map(i => ({ ...i, contenido: contenidoDelCatalogo(i) ?? contenidos.get(i.id) ?? null })),
+      }
+    }
+
+    // Lo que trae UN bulto según el catálogo (24/10/2026): insumos.contenido_bulto
+    // (harina 25, azúcar 50, óleo 20…). Es lo PRIMERO que se mira: lo lee
+    // cualquier usuario logueado (la policy "leer catalogo de insumos"), así
+    // que quien valoriza sin stock:ver también ve el bulto. null si no está.
+    function contenidoDelCatalogo(ins) {
+      return contenidoUnico([ins?.contenido_bulto])
+    }
+
+    // Lo que trae UN bulto de cada insumo en la empresa (23/10/2026), para
+    // cuando el catálogo NO lo dice (insumos.contenido_bulto null): de donde
+    // ya lo saca Stock, v_stock_insumos.contenido_unico (null si tiene dos
+    // presentaciones o ninguna). La vista pide stock:ver en la empresa; sin
+    // ese permiso (o si falla) no hay contenido y todo sigue en su unidad: es
+    // un dato de más, no el dato. Un insumo sin stock en la empresa tampoco
+    // aparece ahí.
+    async function leerContenidosInsumos(unidadId) {
+      const m = new Map()
+      if (!unidadId || !puedeEn('stock', 'ver', unidadId)) return m
+      try {
+        const { data, error } = await supabase.from('v_stock_insumos')
+          .select('insumo_id, contenido_unico').eq('unidad_negocio_id', unidadId)
+        if (error) throw error
+        for (const f of Array.isArray(data) ? data : []) {
+          const c = contenidoUnico([f?.contenido_unico])
+          if (f?.insumo_id && c !== null) m.set(f.insumo_id, c)
+        }
+      } catch (err) {
+        console.error('No se pudo leer lo que trae cada bulto:', err)
+      }
+      return m
+    }
+
+    // CÓMO SE DICE EL PRECIO DE UN INSUMO (23/10/2026): por bulto si el
+    // insumo es 'bulto' (insumos.vista_preferida) y se sabe lo que trae UN
+    // bulto —PRIMERO del catálogo (insumos.contenido_bulto, 24/10/2026); si
+    // el catálogo no lo dice, de los lotes de los que salió el renglón, si se
+    // ven, o del stock de la empresa—; si no, por su unidad. `contenidos` son
+    // los de los lotes del renglón (o null): sin contenido en el catálogo, si
+    // alguno tiene presentación, mandan ellos (con dos distintas no hay "un"
+    // bulto).
+    function modoPrecioInsumo(cat, insumoId, contenidos = null) {
+      const ins = insumoDe(cat, insumoId)
+      const propios = (Array.isArray(contenidos) ? contenidos : []).filter(c => contenidoUnico([c]) !== null)
+      const delCatalogo = contenidoDelCatalogo(ins)
+      const contenido = delCatalogo !== null ? delCatalogo : propios.length ? contenidoUnico(propios) : (ins?.contenido ?? null)
+      return modoDePrecio({ unidad: ins?.unidad_medida, vista: ins?.vista_preferida, contenido })
+    }
+
+    // El modo de un renglón de una orden: con los lotes de los que salió.
+    function modoPrecioRenglon(d, it, cat = estado.catalogo) {
+      if (!it?.insumo_id) return null
+      const lotes = Array.isArray(d?.lotesInsumos) ? d.lotesInsumos.filter(l => l.insumo_id === it.insumo_id).map(l => l.contenido_por_bulto) : null
+      return modoPrecioInsumo(cat, it.insumo_id, lotes)
+    }
+
+    // La cantidad de un insumo según su vista: "4 bultos de 25 kg" (y aparte
+    // "= 100 kg"), o "100 kg".
+    function cantidadInsumoSegunModo(cantidad, unidad, modo) {
+      if (!modo?.porBulto) return { texto: cantidadInsumoHoja(cantidad, unidad), kilos: null }
+      const r = cantidadSegunVista({ cantidad, unidad, vista: 'bulto', contenido: modo.contenido })
+      return r.enBultos ? { texto: `${r.cabeza} ${r.cola}`, kilos: '= ' + cantidadInsumoHoja(cantidad, unidad) } : { texto: cantidadInsumoHoja(cantidad, unidad), kilos: null }
+    }
+
+    // Debajo de un precio por bulto, en chico: el precio por unidad base, el
+    // que va a la base ("$ 700,00 por kg", hasta 4 decimales). Sin bulto o
+    // sin precio, nada.
+    function textoPrecioPorBase(base, modo, moneda = 'ARS') {
+      if (!modo?.porBulto || base === null || base === undefined || base === '' || !Number.isFinite(Number(base))) return ''
+      const simbolo = moneda === 'USD' ? 'US$' : '$'
+      return `${simbolo} ${formatearNumeroAr(Number(base), { decimales: 4, minimos: 2 })} por ${modo.unidad === 'u' ? 'unidad' : modo.unidad}`
     }
 
     function insumoDe(cat, id) {
@@ -2854,7 +2934,7 @@
       let lotesInsumos = null
       if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {
         const r = await supabase.from('stock_movimientos')
-          .select('insumo_id, lote, cantidad').eq('orden_retiro_id', id).eq('tipo', 'despacho')
+          .select('insumo_id, lote, cantidad, contenido_por_bulto').eq('orden_retiro_id', id).eq('tipo', 'despacho')
         if (!r.error) lotesInsumos = r.data ?? []
       }
       const planillas = await leerPlanillasDeOrden(o, items)
@@ -2919,14 +2999,19 @@
 
     function htmlRenglonOrden(it, d, cat) {
       let desc, detalle, porQue
+      let modo = null
       if (it.insumo_id) {
         // Un INSUMO de reventa: por cantidad en su unidad, y su precio es por
-        // esa unidad ("Precio x kg").
+        // esa unidad ("Precio x kg") — o, si es 'bulto' y se sabe lo que trae
+        // un bulto (23/10/2026), por bulto ("Precio x bulto de 25 kg"), con
+        // el total en kilos debajo.
         const pi = partesInsumo(cat, it)
+        modo = modoPrecioRenglon(d, it, cat)
         const lotesI = lotesDeRenglon(d.lotes, it, d.lotesInsumos)
-        desc = cantidadInsumoHoja(it.cantidad, pi.unidad) + ' · ' + [pi.nombre, pi.marca].map(limpio).filter(Boolean).join(' · ')
-        detalle = 'Insumo · ' + (lotesI === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotesI, pi.unidad))
-        porQue = unidadHoja(pi.unidad) || 'unidad'
+        const cant = cantidadInsumoSegunModo(it.cantidad, pi.unidad, modo)
+        desc = cant.texto + ' · ' + [pi.nombre, pi.marca].map(limpio).filter(Boolean).join(' · ')
+        detalle = (cant.kilos ? cant.kilos + ' · ' : '') + 'Insumo · ' + (lotesI === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotesI, pi.unidad))
+        porQue = modo.porBulto ? modo.rotulo : (unidadHoja(pi.unidad) || 'unidad')
       } else {
         const p = partesRenglon(cat, it)
         const lotes = lotesDeRenglon(d.lotes, it)
@@ -2949,9 +3034,16 @@
         plata = `<div class="ad-renglon__plata"><label class="ad-dato__rotulo" for="ad-precio-${esc(it.id)}">${esc('Precio x ' + porQue)}</label>` +
           `<input type="text" class="ad-input ad-renglon__precio" id="ad-precio-${esc(it.id)}" data-precio="${esc(it.id)}" autocomplete="off">` +
           `<div class="ad-texto-suave" data-subtotal="${esc(it.id)}">${esc(importeHoja(subtotalValorizar(d, it), moneda))}</div>` +
+          (modo?.porBulto ? `<div class="ad-texto-suave ad-renglon__por-base" data-precio-base="${esc(it.id)}">${esc(textoPrecioPorBase(d.valorizar.precios?.[it.id], modo, moneda))}</div>` : '') +
           htmlOrigenPrecio(d.valorizar.origen?.[it.id]) + '</div>'
       } else if (d.orden.estado_valorizacion === 'valorizada') {
-        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
+        // Por bulto: el precio del bulto sale de lo guardado y de su subtotal
+        // (precioDesdeBase), así se ve lo que se escribió y no 17.499,90.
+        const precio = modo?.porBulto
+          ? precioDesdeBase(it.precio_caja, modo, { decimalesBase: 2, subtotal: it.subtotal, cantidad: it.cantidad })
+          : it.precio_caja
+        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(precio, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div>` +
+          (modo?.porBulto ? `<div class="ad-texto-suave ad-renglon__por-base">${esc(textoPrecioPorBase(it.precio_caja, modo, moneda))}</div>` : '') + '</div>'
       }
       const sello = esItemDev(it) ? `<span class="ad-sello ad-sello--dev">${tipoItem(it) === 'reposicion' ? 'Reposición' : 'Devolución'}</span> ` : ''
       return `<div class="ad-renglon${esItemDev(it) ? ' ad-renglon--dev' : ''}"><div><div class="ad-renglon__desc">${sello}${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div>${htmlFaltanteRenglon(it, d)}</div>${plata}</div>`
@@ -3050,7 +3142,9 @@
         if (d.valorizar) {
           for (const input of cuerpo.querySelectorAll('[data-precio]')) {
             enlazarCampoNumero(input, { decimales: DECIMALES_PRECIO })
-            ponerNumero(input, d.valorizar.precios[input.dataset.precio] ?? null)
+            // Un insumo por bulto muestra el precio del bulto (23/10/2026).
+            const id = input.dataset.precio
+            ponerNumero(input, d.valorizar.modos?.[id]?.porBulto ? (d.valorizar.escritos?.[id] ?? null) : (d.valorizar.precios[id] ?? null))
           }
         }
         // El campo de la comisión se dibuja SIN value: se enlaza y se escribe
@@ -3271,7 +3365,10 @@
       const cli = clienteDe(o.cliente_id)
       const listaId = cli?.lista_precio_id ?? null
       if (avisarFaltaLista(d, cli, listaId)) return
-      const v = { precios: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
+      // `precios` es lo que va a la base (por unidad base); en un insumo por
+      // bulto, `escritos` es lo que se ve y se escribe (por bulto) y `modos`
+      // cómo se pide (23/10/2026).
+      const v = { precios: {}, escritos: {}, modos: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
       d.comision = null
       d.valorizar = v
       pintarOrden()
@@ -3329,8 +3426,33 @@
         }
         v.saldo = resto.saldo
       }
+      prepararPreciosPorBulto(d, vigente)
       v.cargando = false
       pintarOrden()
+    }
+
+    // LOS INSUMOS POR BULTO AL VALORIZAR (23/10/2026). Lo que vino de la base
+    // —lo ya guardado en el renglón (2 decimales, con su subtotal) o el de la
+    // lista (hasta 4)— se pasa a precio POR BULTO, que es lo que se ve y se
+    // escribe, y lo que se manda se recalcula desde ahí con precioABase(): así
+    // la base valoriza exactamente lo que está en pantalla y el bulto de 30 kg
+    // a $ 17.500 no vuelve como $ 17.499,90. `guardado(it)` dice si el precio
+    // del renglón es el que ya tenía.
+    function prepararPreciosPorBulto(d, guardado) {
+      const v = d?.valorizar
+      if (!v) return
+      for (const it of d.items ?? []) {
+        const modo = modoPrecioRenglon(d, it)
+        if (!modo?.porBulto) continue
+        v.modos[it.id] = modo
+        const base = v.precios[it.id]
+        if (base === null || base === undefined) { v.escritos[it.id] = null; continue }
+        const bulto = precioDesdeBase(base, modo, guardado(it)
+          ? { decimalesBase: 2, subtotal: it.subtotal, cantidad: it.cantidad }
+          : { decimalesBase: 4 })
+        v.escritos[it.id] = bulto
+        v.precios[it.id] = precioABase(bulto, modo)
+      }
     }
 
     function subtotalValorizar(d, it) {
@@ -3397,12 +3519,20 @@
     function cambiarPrecio(itemId, valor) {
       const d = estado.orden
       if (!d?.valorizar) return
-      d.valorizar.precios[itemId] = valor
+      // Un insumo por bulto: lo escrito es el precio del bulto, y a la base
+      // va por unidad base (23/10/2026).
+      const modo = d.valorizar.modos?.[itemId]
+      if (modo?.porBulto) {
+        d.valorizar.escritos[itemId] = valor
+        d.valorizar.precios[itemId] = precioABase(valor, modo)
+      } else d.valorizar.precios[itemId] = valor
       d.valorizar.desdeLista.delete(itemId)
       const it = d.items.find(x => x.id === itemId)
       const cuerpo = document.getElementById('ad-orden-cuerpo')
       const sub = cuerpo.querySelector(`[data-subtotal="${itemId}"]`)
       if (sub && it) sub.textContent = importeHoja(subtotalValorizar(d, it), d.orden.moneda)
+      const porBase = modo?.porBulto ? cuerpo.querySelector(`[data-precio-base="${itemId}"]`) : null
+      if (porBase) porBase.textContent = textoPrecioPorBase(d.valorizar.precios[itemId], modo, d.orden.moneda)
       const tot = document.getElementById('ad-valorizar-total')
       if (tot) tot.textContent = textoTotalValorizar(d)
       const lim = document.getElementById('ad-valorizar-limite')
@@ -3505,7 +3635,11 @@
         renglones: ordenarRenglonesHoja(d.items.map(it => {
           if (it.insumo_id) {
             const pi = partesInsumo(estado.catalogo, it)
+            // Por bulto (23/10/2026): la hoja dice la cantidad y el precio
+            // por bulto si sabe lo que trae uno (`contenido`; si no, null).
+            const modo = modoPrecioRenglon(d, it)
             return { esInsumo: true, producto: pi.nombre, marca: pi.marca, cantidad: it.cantidad, unidad: pi.unidad,
+              contenido: modo?.porBulto ? modo.contenido : null,
               lotes: lotesDeRenglon(d.lotes, it, d.lotesInsumos) ?? [],
               precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,
               subtotal: o.estado_valorizacion === 'valorizada' ? it.subtotal : null }
@@ -6354,10 +6488,36 @@
 
     // Cómo se dice una versión de un insumo en la grilla: su precio fijo, o
     // "costo + N %" (el precio sale del costo de cada día: ver la tarjeta).
-    function textoPrecioInsumoGrilla(v, moneda) {
+    function textoPrecioInsumoGrilla(v, moneda, modo = null) {
       const pct = numeroONull(v?.recargo_costo_pct)
       if (pct !== null) return `costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} %`
+      if (modo?.porBulto && precioFijoDeVersion(v) !== null) return `${importeHoja(bultoDeVersion(v, modo), moneda)} el ${modo.rotulo}`
       return importeHoja(precioFijoDeVersion(v), moneda)
+    }
+
+    // LOS INSUMOS POR BULTO EN LA GRILLA (23/10/2026): en un insumo 'bulto'
+    // con contenido conocido el precio se escribe y se ve POR BULTO (lo que
+    // queda en `pendientes` es lo escrito) y se guarda por unidad base. La
+    // grilla guarda con guardar_precios en precio_caja (2 decimales); la
+    // tarjeta de abajo, en precio_unitario (4): cada versión vuelve a bulto
+    // con los decimales con que se guardó.
+    function modoPrecioFila(f) {
+      return f?.insumoId ? modoPrecioInsumo(estado.catalogo, f.insumoId) : null
+    }
+
+    function modoPrecioClave(clave) {
+      return String(clave ?? '').startsWith('ins:') ? modoPrecioInsumo(estado.catalogo, String(clave).slice(4)) : null
+    }
+
+    // El precio fijo de una versión, por bulto (o null).
+    function bultoDeVersion(v, modo) {
+      return precioDesdeBase(precioFijoDeVersion(v), modo, { decimalesBase: numeroONull(v?.precio_unitario) !== null ? 4 : 2 })
+    }
+
+    // "Júpiter · por bulto de 25 kg" (o "Júpiter · por kg").
+    function presentacionFilaInsumo(f) {
+      const modo = modoPrecioFila(f)
+      return modo?.porBulto ? [f.marca, 'por ' + modo.rotulo].map(limpio).filter(Boolean).join(' · ') : f.presentacion
     }
 
     // "$ 30,8333" por unidad, o el guion si no hay dato (nunca "$ 0").
@@ -6472,7 +6632,7 @@
       for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {
         filas.push({ clave: 'ins:' + i.id, presentacionId: null, insumoId: i.id, producto: i.nombre,
           presentacion: [i.marca, 'por ' + (unidadHoja(i.unidad_medida) || 'unidad')].map(limpio).filter(Boolean).join(' · '),
-          grupo: TITULO_INSUMOS, unidad: i.unidad_medida })
+          grupo: TITULO_INSUMOS, unidad: i.unidad_medida, marca: i.marca ?? null })
       }
       return filas
     }
@@ -6488,10 +6648,12 @@
         const f = (l.filas ?? []).find(x => x.clave === clave)
         if (!f || !filaEditable(f, meta)) continue
         const actual = vigenteYProximo(l.precios, clave, hoy).vigente
-        const actualFijo = !actual ? null : String(clave).startsWith('ins:') ? precioFijoDeVersion(actual) : numeroONull(actual.precio_caja)
+        // Un insumo por bulto se compara por bulto y va por unidad base.
+        const modo = modoPrecioClave(clave)
+        const actualFijo = !actual ? null : modo?.porBulto ? bultoDeVersion(actual, modo) : String(clave).startsWith('ins:') ? precioFijoDeVersion(actual) : numeroONull(actual.precio_caja)
         if (actualFijo !== null && actualFijo === Number(precio)) continue
         items.push(String(clave).startsWith('ins:')
-          ? { insumo_id: String(clave).slice(4), precio_caja: Number(precio) }
+          ? { insumo_id: String(clave).slice(4), precio_caja: precioABase(Number(precio), modo) }
           : { presentacion_id: clave, precio_caja: Number(precio) })
       }
       return items
@@ -6509,7 +6671,9 @@
         const v = vigenteYProximo(l.precios, f.clave, hoy).vigente
         if (!v) continue
         // Un insumo a costo + % ya sigue al costo: no se le pone un precio fijo.
-        const base = f.insumoId ? precioFijoDeVersion(v) : numeroONull(v.precio_caja)
+        // Uno por bulto sube su precio por bulto (23/10/2026).
+        const modo = modoPrecioFila(f)
+        const base = modo?.porBulto ? bultoDeVersion(v, modo) : f.insumoId ? precioFijoDeVersion(v) : numeroONull(v.precio_caja)
         if (base === null) continue
         nuevos.set(f.clave, Math.round(base * (1 + porcentaje / 100) * 100) / 100)
       }
@@ -6598,12 +6762,14 @@
       const { vigente, proximo } = vigenteYProximo(l.precios, f.clave, hoy)
       const moneda = listaDe(l.id)?.moneda || 'ARS'
       const pendiente = l.pendientes.has(f.clave) && l.pendientes.get(f.clave) !== null
-      const actual = vigente ? textoPrecioInsumoGrilla(vigente, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
-      const prox = proximo ? ' · próximo ' + textoPrecioInsumoGrilla(proximo, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
+      const modo = modoPrecioFila(f)
+      const presentacion = presentacionFilaInsumo(f)
+      const actual = vigente ? textoPrecioInsumoGrilla(vigente, moneda, modo) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
+      const prox = proximo ? ' · próximo ' + textoPrecioInsumoGrilla(proximo, moneda, modo) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
       return `<div class="ad-precio${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.clave)}">` +
-        `<div><div class="ad-renglon__desc">${esc(f.producto + ' · ' + f.presentacion)}</div>` +
+        `<div><div class="ad-renglon__desc">${esc(f.producto + ' · ' + presentacion)}</div>` +
         `<div class="ad-renglon__lotes">${esc(actual + prox)}</div></div>` +
-        `<div class="ad-precio__acciones"><input type="text" class="ad-input ad-renglon__precio" data-precio-lista="${esc(f.clave)}" aria-label="${esc('Precio nuevo de ' + f.producto + ' ' + f.presentacion)}" autocomplete="off">` +
+        `<div class="ad-precio__acciones"><input type="text" class="ad-input ad-renglon__precio" data-precio-lista="${esc(f.clave)}" aria-label="${esc('Precio nuevo de ' + f.producto + ' ' + presentacion)}" autocomplete="off">` +
         `<button type="button" class="ad-link" data-historial="${esc(f.clave)}">Historial</button></div></div>`
     }
 
@@ -6640,7 +6806,7 @@
       const versiones = versionesDe(l.precios, clave)
       const filas = versiones.length ? versiones.map(v =>
         `<div class="ad-renglon"><div class="ad-renglon__desc">${esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))}</div>` +
-        `<div class="ad-renglon__plata">${esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda) : importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
+        `<div class="ad-renglon__plata">${esc(String(clave).startsWith('ins:') ? textoPrecioInsumoGrilla(v, moneda, modoPrecioClave(clave)) : importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
       return `<h2 class="ad-subtitulo">${esc('Historial · ' + (f ? f.producto + ' · ' + f.presentacion : ''))}</h2>${filas}` +
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" id="ad-historial-cerrar">Cerrar</button></div>`
     }
@@ -6855,15 +7021,25 @@
       return Math.round(c * (100 + p)) / 100
     }
 
+    // Un precio de la lista dicho según la vista del insumo (23/10/2026): por
+    // bulto "$ 17.500,00 el bulto de 25 kg ($ 700,00 por kg)", o por su
+    // unidad "$ 700,00 por kg". `base` es el precio por unidad base, como lo
+    // guarda la base (hasta 4 decimales).
+    function textoPrecioInsumoLista(base, modo, unidadMedida, moneda) {
+      if (!modo?.porBulto || numeroONull(base) === null) return `${plataInsumoLista(base, moneda)} ${porUnidadInsumo(unidadMedida)}`
+      const bulto = precioDesdeBase(base, modo, { decimalesBase: 4 })
+      return `${importeHoja(bulto, moneda)} el ${modo.rotulo} (${plataInsumoLista(base, moneda)} ${porUnidadInsumo(unidadMedida)})`
+    }
+
     function textoRenglonInsumo(f, moneda) {
-      const unidad = porUnidadInsumo(f.unidad_medida)
+      const modo = modoPrecioInsumo(estado.catalogo, f.insumo_id)
       if (f.tipo === 'costo_mas_pct') {
         const pct = numeroONull(f.recargo_costo_pct)
         const cabeza = pct === null ? 'Sobre el costo' : `Costo + ${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} %`
         if (f.sin_costo === true) return `${cabeza} · falta cargar el costo`
-        return `${cabeza} → ${plataInsumoLista(f.precio_unitario, moneda)} ${unidad}`
+        return `${cabeza} → ${textoPrecioInsumoLista(f.precio_unitario, modo, f.unidad_medida, moneda)}`
       }
-      return `Precio fijo ${plataInsumoLista(f.precio_unitario, moneda)} ${unidad}`
+      return `Precio fijo ${textoPrecioInsumoLista(f.precio_unitario, modo, f.unidad_medida, moneda)}`
     }
 
     async function leerInsumosLista(listaId, empresaId) {
@@ -6941,7 +7117,10 @@
           <button type="button" class="ad-segmento__opcion" data-ins-modo="fijo" aria-pressed="${ed.modo === 'fijo' ? 'true' : 'false'}">Precio fijo</button>
           ${veCostos ? `<button type="button" class="ad-segmento__opcion" data-ins-modo="costo" aria-pressed="${ed.modo === 'costo' ? 'true' : 'false'}">Costo + %</button>` : ''}
         </div>`
-      const unidad = porUnidadInsumo(insumo?.unidad_medida)
+      // Un insumo por bulto se escribe por bulto (23/10/2026): "Precio por
+      // bulto de 25 kg"; a la base va por unidad base.
+      const modoPrecio = ed.insumoId ? modoPrecioInsumo(estado.catalogo, ed.insumoId) : null
+      const unidad = modoPrecio?.porBulto ? 'por ' + modoPrecio.rotulo : porUnidadInsumo(insumo?.unidad_medida)
       const campo = ed.modo === 'costo'
         ? `<div class="ad-campo"><label for="ad-ins-pct">Porcentaje sobre el costo (%)</label><input type="text" class="ad-input" id="ad-ins-pct" autocomplete="off"></div>`
         : `<div class="ad-campo"><label for="ad-ins-precio">Precio ${esc(unidad)}</label><input type="text" class="ad-input" id="ad-ins-precio" autocomplete="off"></div>`
@@ -6963,10 +7142,15 @@
       const ed = l.insumosEd
       if (!ed?.insumoId || valor === null) return ''
       const moneda = listaDe(l.id)?.moneda ?? 'ARS'
-      const unidad = porUnidadInsumo((insumoDe(estado.catalogo, ed.insumoId) ?? renglonesInsumosLista(l.insumos?.filas).find(f => f.insumo_id === ed.insumoId))?.unidad_medida)
-      if (ed.modo === 'fijo') return `Va a quedar a ${plataInsumoLista(valor, moneda)} ${unidad}.`
+      const unidadMedida = (insumoDe(estado.catalogo, ed.insumoId) ?? renglonesInsumosLista(l.insumos?.filas).find(f => f.insumo_id === ed.insumoId))?.unidad_medida
+      const unidad = porUnidadInsumo(unidadMedida)
+      const modo = modoPrecioInsumo(estado.catalogo, ed.insumoId)
+      if (ed.modo === 'fijo') return `Va a quedar a ${textoPrecioInsumoLista(precioABase(valor, modo), modo, unidadMedida, moneda)}.`
       const costo = l.insumos?.costos?.get(ed.insumoId) ?? null
       if (costo === null) return 'Este insumo todavía no tiene costo cargado en esta fábrica: hasta que se cargue (en Stock → Costos) no tiene precio.'
+      if (modo.porBulto) {
+        return `Costo ${textoPrecioInsumoLista(costo, modo, unidadMedida, moneda)} + ${formatearNumeroAr(valor, { decimales: 2, minimos: 0 })} % = ${textoPrecioInsumoLista(precioConRecargo(costo, valor), modo, unidadMedida, moneda)} (con el costo de hoy).`
+      }
       return `Costo ${plataInsumoLista(costo, moneda)} + ${formatearNumeroAr(valor, { decimales: 2, minimos: 0 })} % = ${plataInsumoLista(precioConRecargo(costo, valor), moneda)} ${unidad} (con el costo de hoy).`
     }
 
@@ -6994,7 +7178,9 @@
       if (l.insumosEd) {
         const precio = document.getElementById('ad-ins-precio')
         const pct = document.getElementById('ad-ins-pct')
-        if (precio) { enlazarCampoNumero(precio, { decimales: 4 }); ponerNumero(precio, l.insumosEd.valor) }
+        // Por bulto se escribe con centavos (2); por unidad, hasta 4 (23/10/2026).
+        const porBulto = modoPrecioInsumo(estado.catalogo, l.insumosEd.insumoId).porBulto
+        if (precio) { enlazarCampoNumero(precio, { decimales: porBulto ? 2 : 4 }); ponerNumero(precio, l.insumosEd.valor) }
         if (pct) { enlazarCampoNumero(pct, { decimales: 2, negativos: true }); ponerNumero(pct, l.insumosEd.valor) }
         pintarPreviaInsumoLista()
       }
@@ -7006,9 +7192,12 @@
       const f = insumoId ? renglonesInsumosLista(l.insumos.filas).find(x => x.insumo_id === insumoId) : null
       const veCostos = puedeEn('stock', 'ver_costos')
       const modo = f?.tipo === 'costo_mas_pct' && veCostos ? 'costo' : 'fijo'
+      // `valor` es lo que dice el CAMPO: en un insumo por bulto, el precio del
+      // bulto (23/10/2026); se pasa a unidad base recién al guardar.
+      const modoPrecio = f ? modoPrecioInsumo(estado.catalogo, f.insumo_id) : null
       l.insumosEd = {
         insumoId: f ? f.insumo_id : null, nuevo: !f, modo,
-        valor: f ? (modo === 'costo' ? numeroONull(f.recargo_costo_pct) : numeroONull(f.precio_unitario)) : null,
+        valor: f ? (modo === 'costo' ? numeroONull(f.recargo_costo_pct) : precioDesdeBase(numeroONull(f.precio_unitario), modoPrecio, { decimalesBase: 4 })) : null,
         desde: hoyArgentina(), error: null, enviando: false,
       }
       pintarInsumosLista()
@@ -7038,11 +7227,13 @@
       return null
     }
 
-    // EXACTAMENTE uno de los dos: el otro viaja null.
+    // EXACTAMENTE uno de los dos: el otro viaja null. El precio fijo va SIEMPRE
+    // por unidad base: en un insumo por bulto, lo escrito / lo que trae el
+    // bulto (23/10/2026; la base lo guarda con 4 decimales y vuelve igual).
     function parametrosPrecioInsumoLista(listaId, ed, valor) {
       return {
         p_lista_id: listaId, p_insumo_id: ed.insumoId,
-        p_precio_unitario: ed.modo === 'fijo' ? valor : null,
+        p_precio_unitario: ed.modo === 'fijo' ? precioABase(valor, modoPrecioInsumo(estado.catalogo, ed.insumoId)) : null,
         p_recargo_costo_pct: ed.modo === 'costo' ? valor : null,
         p_vigente_desde: ed.desde,
       }
@@ -11547,7 +11738,15 @@
       insLista.addEventListener('change', (e) => {
         const ed = estado.lista?.insumosEd
         if (!ed) return
-        if (e.target.id === 'ad-ins-insumo') { ed.valor = leerCampoNumero(campoValorInsumo()); ed.insumoId = e.target.value || null; ed.error = null; pintarInsumosLista() }
+        if (e.target.id === 'ad-ins-insumo') {
+          // Si el insumo nuevo se escribe en otra cosa (por bulto o por kg,
+          // 23/10/2026), el campo se VACÍA: $ 17.500 por bulto no puede pasar
+          // a ser $ 17.500 el kilo sin que nadie lo toque.
+          const antes = modoPrecioInsumo(estado.catalogo, ed.insumoId).rotulo
+          ed.valor = leerCampoNumero(campoValorInsumo()); ed.insumoId = e.target.value || null; ed.error = null
+          if (ed.modo === 'fijo' && modoPrecioInsumo(estado.catalogo, ed.insumoId).rotulo !== antes) ed.valor = null
+          pintarInsumosLista()
+        }
         if (e.target.id === 'ad-ins-desde') { ed.desde = e.target.value; ed.error = null; pintarPreviaInsumoLista() }
       })
       document.getElementById('ad-lista-clientes').addEventListener('change', (e) => {

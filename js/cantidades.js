@@ -264,3 +264,115 @@ export function desdeUnidadBase(base, modo) {
   const b = Math.round((n / Number(modo.contenido)) * 1e6) / 1e6
   return Math.abs(Math.round(b * 1000) / 1000 - b) < 1e-9 ? b : null
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// CÓMO SE PIDE Y SE MUESTRA UN PRECIO (23/10/2026, rama
+// ci-prueba/unidades-por-bulto) — la tercera parte de la regla.
+//
+// Pedido de Facu: la harina se compra y se vende POR BOLSA, no por kilo. En
+// toda pantalla que pida o muestre el precio de un insumo marcado 'bulto'
+// (insumos.vista_preferida) con UN contenido conocido, el precio se escribe y
+// se ve POR BULTO ("bulto de 25 kg · $ 17.500") y a la base va SIEMPRE el
+// precio por unidad base (precio del bulto / contenido). Las funciones de la
+// base no cambian. Sin contenido conocido, todo sigue en su unidad.
+//
+// EL REDONDEO. La base guarda el precio por kilo con 2 decimales en
+// orden_retiro_items.precio_caja y lista_precios_items.precio_caja, y con 4
+// en lista_precios_items.precio_unitario (verificado el 23/10/2026). $ 17.500
+// la bolsa de 30 kg son $ 583,333… el kilo: guardado con 2 decimales vuelve
+// como 583,33 × 30 = $ 17.499,90, que NO es lo que escribió la persona. Por
+// eso:
+//  - a la base se manda el cociente con DECIMALES_PRECIO_BASE decimales (8):
+//    valorizar_orden_retiro calcula el subtotal con lo que RECIBE, antes de
+//    guardar el precio redondeado, así que el subtotal da exacto;
+//  - para volver a mostrar un precio guardado, precioDesdeBase() busca el
+//    precio por bulto (en centavos) que, redondeado como lo redondea la base,
+//    da lo guardado y además da el subtotal guardado; entre varios, el más
+//    redondo. No inventa: si ninguno cierra, multiplica y redondea.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const DECIMALES_PRECIO_BASE = 8
+
+// El contenido de UN bulto de una lista de contenidos (de lotes, de
+// movimientos): el único distinto que sirva, o null (ninguno, o dos
+// presentaciones distintas: no hay "un" bulto). Los null no cuentan, igual
+// que en v_stock_insumos.contenido_unico.
+export function contenidoUnico(contenidos) {
+  const conocidos = [...new Set((Array.isArray(contenidos) ? contenidos : [])
+    .filter(c => c !== null && c !== undefined && c !== '')
+    .map(Number)
+    .filter(c => Number.isFinite(c) && c > 0))]
+  return conocidos.length === 1 ? conocidos[0] : null
+}
+
+// Cómo se pide y se muestra el precio de un insumo.
+//   unidad    — la del catálogo (kg / lt / un)
+//   vista     — insumos.vista_preferida
+//   contenido — lo que trae UN bulto (contenidoUnico), o null
+// Devuelve { porBulto, contenido, unidad, rotulo }: `rotulo` dice de qué es
+// el precio ("bulto de 25 kg", o "kg" / "L" / "unidad"), para "Precio x …".
+export function modoDePrecio({ unidad, vista, contenido = null } = {}) {
+  const u = unidadCorta(unidad)
+  const c = contenido === null || contenido === undefined || contenido === '' ? NaN : Number(contenido)
+  if (vista === 'bulto' && Number.isFinite(c) && c > 0) {
+    return { porBulto: true, contenido: c, unidad: u, rotulo: `bulto de ${formatearCantidadStock(c, u)}` }
+  }
+  return { porBulto: false, contenido: null, unidad: u, rotulo: u === 'u' || u === 'unidades' ? 'unidad' : u }
+}
+
+// De lo ESCRITO (el precio por bulto, o por unidad) a lo que va a la base:
+// el precio por unidad base. Vacío no es cero: null.
+export function precioABase(escrito, modo) {
+  if (escrito === null || escrito === undefined || escrito === '') return null
+  const n = Number(escrito)
+  if (!Number.isFinite(n)) return null
+  if (!modo?.porBulto) return n
+  const factor = Math.pow(10, DECIMALES_PRECIO_BASE)
+  return Math.round((n / modo.contenido) * factor) / factor
+}
+
+// Cuán redondo es un importe en centavos: 3 = de a cien pesos, 2 = de a
+// diez, 1 = pesos enteros, 0 = de a diez centavos, -1 = centavos sueltos.
+function redondezCentavos(centavos) {
+  if (centavos % 10000 === 0) return 3
+  if (centavos % 1000 === 0) return 2
+  if (centavos % 100 === 0) return 1
+  if (centavos % 10 === 0) return 0
+  return -1
+}
+
+// De lo GUARDADO en la base (el precio por unidad base) a lo que se muestra:
+// el precio por bulto, con 2 decimales.
+//   decimalesBase — con cuántos decimales lo guardó la base (2 en
+//                   precio_caja, 4 en precio_unitario)
+//   subtotal, cantidad — si se conocen (un renglón valorizado), el precio
+//                   tiene que dar ese subtotal: round(precio / contenido ×
+//                   cantidad, 2), como lo calcula valorizar_orden_retiro
+// Sin bulto, devuelve lo guardado tal cual. Ausente → null.
+export function precioDesdeBase(base, modo, { decimalesBase = 2, subtotal = null, cantidad = null } = {}) {
+  if (base === null || base === undefined || base === '') return null
+  const b = Number(base)
+  if (!Number.isFinite(b)) return null
+  if (!modo?.porBulto) return b
+  const c = modo.contenido
+  const directo = Math.round(b * c * 100) / 100
+  const paso = Math.pow(10, -decimalesBase)
+  const desde = Math.ceil((b - paso / 2) * c * 100 - 1e-6)
+  const hasta = Math.floor((b + paso / 2) * c * 100 + 1e-6)
+  if (!(hasta >= desde) || hasta - desde > 100000) return directo
+  const q = cantidad === null || cantidad === undefined || cantidad === '' ? NaN : Math.abs(Number(cantidad))
+  const s = subtotal === null || subtotal === undefined || subtotal === '' ? NaN : Math.abs(Number(subtotal))
+  const conSubtotal = Number.isFinite(q) && q > 0 && Number.isFinite(s)
+  const factor = Math.pow(10, decimalesBase)
+  let mejor = null
+  for (let cent = desde; cent <= hasta; cent++) {
+    const porBase = cent / 100 / c
+    // Lo que guardaría la base, con SU redondeo, tiene que ser lo guardado.
+    if (Math.abs(Math.round(porBase * factor) / factor - b) > paso / 1000) continue
+    if (conSubtotal && Math.abs(Math.round(porBase * q * 100) / 100 - s) > 0.001) continue
+    const r = redondezCentavos(Math.abs(cent))
+    const dist = Math.abs(cent / 100 - b * c)
+    if (!mejor || r > mejor.r || (r === mejor.r && dist < mejor.dist)) mejor = { p: cent / 100, r, dist }
+  }
+  return mejor ? mejor.p : directo
+}

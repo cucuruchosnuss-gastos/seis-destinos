@@ -10,6 +10,7 @@ const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
+const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
@@ -179,6 +180,11 @@ const FUNCIONES_BASE = [
   'contenidoSeccionComisiones', 'mostrarComisiones', 'cargarComisiones', 'textoTotalComisiones', 'pintarComisiones', 'cambiarComisionConfig',
   'guardarComisionConfig',
   ...FUNCIONES_CU,
+  // Los insumos por bulto (23/10/2026): de este archivo y de js/cantidades.js
+  'leerContenidosInsumos', 'contenidoDelCatalogo', 'modoPrecioInsumo', 'modoPrecioRenglon', 'cantidadInsumoSegunModo', 'textoPrecioPorBase',
+  'prepararPreciosPorBulto', 'textoPrecioInsumoLista', 'modoPrecioFila', 'modoPrecioClave', 'bultoDeVersion', 'presentacionFilaInsumo',
+  'modoPrecioHoja', 'cantidadInsumoBultoHoja', 'precioInsumoHoja',
+  ...FUNCIONES_CANTIDADES, 'unidadCorta', ...FUNCIONES_PRECIO,
 ]
 
 const CONSTANTES_BASE = [
@@ -203,6 +209,8 @@ const CONSTANTES_BASE = [
   // Cliente y proveedor (06/10/2026)
   ...CONSTANTES_CU,
   'LINK_TRASPASO_AD', ...CONSTANTES_FR,
+  // Los insumos por bulto (23/10/2026), de js/cantidades.js
+  ...CONSTANTES_CANTIDADES, ...CONSTANTES_PRECIO,
   // Los clientes provisorios (06/10/2026)
   'TEXTO_FICHA_PROVISORIO', 'MAX_DESTINOS_UNIR', 'TOPE_BUSCAR_CLIENTES', 'TEXTO_SOLO_PROVISORIOS', 'TEXTO_SIN_LEER_CLIENTES',
   // Retenciones (13/10/2026)

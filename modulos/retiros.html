@@ -395,6 +395,10 @@
       font-family: var(--fuente-titulo); font-size: 30px; font-weight: 800; text-align: center; padding: 0 4px; flex-shrink: 0;
     }
     .rt-cuanto--insumo .rt-input { width: 110px; font-size: 24px; }
+    /* Un insumo por bulto (23/10/2026): debajo, en chico, "= 100 kg". */
+    .rt-cuanto--insumo { flex-wrap: wrap; }
+    .rt-equivale { flex-basis: 100%; margin: 0; text-align: right; font-size: 14px; color: var(--rt-texto-2); overflow-wrap: anywhere; }
+    .rt-equivale--error { color: var(--bordo-oscuro); font-weight: 600; }
     .rt-opciones-bloque { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
     .rt-opciones-bloque .rt-opciones { flex-direction: row; flex-wrap: wrap; gap: 6px; }
     .rt-opciones-bloque .rt-opcion { width: auto; min-height: 44px; border: 1px solid var(--color-borde); border-radius: 10px; padding: 0 12px; }
@@ -860,18 +864,21 @@
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import {
-      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero,
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import {
       armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden, compartirTextoOrden,
       enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
-      cantidadInsumoHoja, unidadHoja, decimalesDeUnidad,
+      cantidadInsumoHoja, unidadHoja, decimalesDeUnidad, cantidadInsumoBultoHoja,
       ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
     // La unidad al lado de un campo de cantidad ("kg", "L", "u"), la misma
-    // regla que Stock e Ingreso (05/10/2026).
-    import { unidadCorta } from '../js/cantidades.js'
+    // regla que Stock e Ingreso (05/10/2026). Desde el 23/10/2026, también
+    // cómo se pide y se dice un insumo por bulto.
+    import {
+      unidadCorta, modoDeCarga, aUnidadBase, desdeUnidadBase, contenidoUnico, textoSegunVista,
+    } from '../js/cantidades.js'
     // El faltante de un renglón: "¿de dónde salen?" (13/10/2026). El mismo
     // cartel que Administración → Retiros por revisar. Desde el 20/10/2026,
     // también la pregunta ANTES de confirmar (TEXTO_PRODUJO_ANTES en adelante).
@@ -1382,12 +1389,86 @@
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
         supabase.from('marcas_personalizadas')
           .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
-        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida').eq('activo', true).order('nombre'),
+        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true).order('nombre'),
       ])
       if (c.error) throw c.error
       if (m.error) throw m.error
       if (t.error) console.error('No se pudieron leer los insumos sin stock:', t.error)
-      return catalogoDesdeRpc(c.data, m.data, t.error ? [] : t.data)
+      const cat = catalogoDesdeRpc(c.data, m.data, t.error ? [] : t.data)
+      return conBultosDeInsumos(cat, t.error ? [] : t.data, await leerContenidosInsumos(unidadId))
+    }
+
+    // LOS INSUMOS POR BULTO EN LA CARGA (23/10/2026). Un insumo marcado
+    // 'bulto' (insumos.vista_preferida) del que se sabe lo que trae UN bulto
+    // se pide y se muestra en bultos ("¿Cuánto se lleva? (bultos de 25 kg)",
+    // y debajo "= 100 kg"); lo que se guarda en el renglón y va a la base
+    // sigue SIEMPRE en su unidad. Lo que trae un bulto sale PRIMERO del
+    // catálogo (insumos.contenido_bulto, 24/10/2026: lo lee cualquier usuario
+    // logueado). Solo si el catálogo no lo dice, de donde lo saca Stock
+    // (v_stock_insumos.contenido_unico, de esta empresa): la vista pide
+    // stock:ver, así que sin ese permiso (o si falla) no hay contenido y todo
+    // sigue en su unidad, sin romperse.
+    async function leerContenidosInsumos(unidadId) {
+      const m = new Map()
+      try {
+        const { data, error } = await supabase.from('v_stock_insumos')
+          .select('insumo_id, contenido_unico').eq('unidad_negocio_id', unidadId)
+        if (error) throw error
+        for (const f of Array.isArray(data) ? data : []) {
+          const c = contenidoUnico([f?.contenido_unico])
+          if (f?.insumo_id && c !== null) m.set(f.insumo_id, c)
+        }
+      } catch (err) {
+        console.error('No se pudo leer lo que trae cada bulto:', err)
+      }
+      return m
+    }
+
+    // Le suma a cada insumo del catálogo su vista y lo que trae un bulto:
+    // el del catálogo (contenido_bulto) y, si no está, el del stock.
+    function conBultosDeInsumos(cat, filasInsumos, contenidos) {
+      const filas = (Array.isArray(filasInsumos) ? filasInsumos : []).filter(i => i?.id)
+      const vistas = new Map(filas.map(i => [i.id, i.vista_preferida ?? 'base']))
+      const delCatalogo = new Map(filas.map(i => [i.id, contenidoUnico([i.contenido_bulto])]))
+      for (const i of cat?.insumos ?? []) {
+        i.vista_preferida = vistas.get(i.id) ?? 'base'
+        i.contenido = delCatalogo.get(i.id) ?? contenidos?.get(i.id) ?? null
+      }
+      return cat
+    }
+
+    // Cómo se pide la cantidad de un renglón de insumo (modoDeCarga de
+    // js/cantidades.js): en bultos o en su unidad, con los decimales que
+    // corresponden. null si el renglón no es de un insumo.
+    function modoInsumoRenglon(r, cat = estado.catalogo) {
+      if (!r?.insumoId) return null
+      const ins = insumoDe(cat, r.insumoId)
+      return modoDeCarga({
+        unidad: r.unidad ?? ins?.unidad_medida, vista: ins?.vista_preferida,
+        contenidos: ins?.contenido ? [ins.contenido] : [], decimalesBase: decimalesDeUnidad(r.unidad ?? ins?.unidad_medida),
+      })
+    }
+
+    // Lo que trae un bulto para la hoja (js/retiros-comun.js): SOLO si ese
+    // insumo se pide en bultos; si no, null y la hoja sigue en su unidad.
+    function contenidoParaHoja(insumoId, unidad) {
+      const modo = insumoId ? modoInsumoRenglon({ insumoId, unidad }) : null
+      return modo?.enBultos ? modo.contenido : null
+    }
+
+    // Lo que dice el CAMPO para una cantidad en unidad base: los bultos (si
+    // no da justo con 3 decimales, redondeado: el renglón no cambia hasta que
+    // se escriba), o la misma cantidad.
+    function cantidadEnCampo(base, modo) {
+      if (base === null || base === undefined || base === '') return null
+      if (!modo?.enBultos) return Number(base)
+      return desdeUnidadBase(base, modo) ?? r3(Number(base) / modo.contenido)
+    }
+
+    // De lo escrito en un campo de insumo a la unidad base del renglón. Un
+    // error (2,5 bultos de 3 u) deja la cantidad vacía y se dice debajo.
+    function cantidadDesdeCampo(escrito, modo) {
+      return aUnidadBase(escrito, modo ?? { enBultos: false })
     }
 
     // El stock de cada PRESENTACIÓN CON CONO, cono por cono (29/09/2026):
@@ -2593,15 +2674,23 @@
     function textoStockOpcion(o) {
       if (o.stock === null || o.stock === undefined) return ''
       if (!(o.stock > 0)) return 'sin stock'
-      const cuanto = o.grupo === 'insumos' ? cantidadInsumoHoja(o.stock, o.unidad) : `${enteroHoja(o.stock)} cajas`
+      const cuanto = o.grupo === 'insumos' ? cantidadRenglon({ insumoId: o.insumoId, unidad: o.unidad }, o.stock) : `${enteroHoja(o.stock)} cajas`
       return `hay ${cuanto}${o.entreConos ? ' entre todos los conos' : ''}`
     }
 
-    // { q, u }: el número y la unidad por separado ("128" / "cajas").
+    // { q, u }: el número y la unidad por separado ("128" / "cajas"). Un
+    // insumo por bulto (23/10/2026): "250" / "bultos de 25 kg".
     function partesStockOpcion(o) {
       if (o.stock === null || o.stock === undefined || !(o.stock > 0)) return null
       if (o.grupo === 'insumos') {
-        const t = cantidadInsumoHoja(o.stock, o.unidad)
+        const modo = modoInsumoRenglon({ insumoId: o.insumoId, unidad: o.unidad })
+        const t = modo?.enBultos
+          ? textoSegunVista({ cantidad: o.stock, unidad: o.unidad, vista: 'bulto', contenido: modo.contenido }) + ' de ' + cantidadInsumoHoja(modo.contenido, o.unidad)
+          : cantidadInsumoHoja(o.stock, o.unidad)
+        if (modo?.enBultos) {
+          const k = t.indexOf(' ')
+          return k > 0 ? { q: t.slice(0, k), u: t.slice(k + 1) } : { q: t, u: '' }
+        }
         const k = t.lastIndexOf(' ')
         return k > 0 ? { q: t.slice(0, k), u: t.slice(k + 1) } : { q: t, u: '' }
       }
@@ -2782,8 +2871,50 @@
     }
 
     // Una cantidad en la unidad del renglón: "12 cajas" o "25,5 kg".
+    // Un insumo por bulto (23/10/2026): "2 bultos (50 kg)".
     function cantidadRenglon(r, n) {
-      return r?.insumoId ? cantidadInsumoHoja(n, r.unidad) : `${enteroHoja(n)} cajas`
+      if (!r?.insumoId) return `${enteroHoja(n)} cajas`
+      const modo = modoInsumoRenglon(r)
+      if (!modo?.enBultos || n === null || n === undefined || n === '') return cantidadInsumoHoja(n, r.unidad)
+      return textoSegunVista({ cantidad: n, unidad: r.unidad, vista: 'bulto', contenido: modo.contenido }, { conKilos: true })
+    }
+
+    // Debajo del campo en bultos: "= 100 kg", o por qué no se pudo convertir
+    // (r.errorCantidad). Vacío, nada.
+    function textoEquivaleRenglon(r, modo = modoInsumoRenglon(r)) {
+      if (!modo?.enBultos) return ''
+      if (r?.errorCantidad) return r.errorCantidad
+      const n = cantidadPedida(r)
+      return n === null ? '' : '= ' + cantidadInsumoHoja(n, r.unidad)
+    }
+
+    // Lo escrito en "¿Cuánto se lleva?" de un insumo, a la unidad base.
+    function ponerCantidadInsumo(i, escrito) {
+      const r = renglon(i)
+      if (!r) return
+      const { base, error } = cantidadDesdeCampo(escrito, modoInsumoRenglon(r))
+      r.cantidad = base
+      r.errorCantidad = error
+      const eq = document.getElementById('rt-renglones')?.querySelector?.(`[data-r-equivale="${Number(i)}"]`)
+      if (eq) {
+        eq.textContent = textoEquivaleRenglon(r)
+        eq.classList.toggle('rt-equivale--error', !!error)
+      }
+      pintarResumenLotes(i)
+      pintarPie()
+      guardarBorrador()
+    }
+
+    // { q, u }: el número y la unidad de lo pedido en un renglón de insumo,
+    // por separado ("4" / "bultos de 25 kg", o "100" / "kg").
+    function partesCantidadInsumo(r, n) {
+      if (n === null || n === undefined || n === '') return { q: '—', u: unidadHoja(r?.unidad) || '' }
+      const modo = modoInsumoRenglon(r)
+      if (modo?.enBultos) {
+        const b = cantidadEnCampo(n, modo)
+        return { q: formatearNumeroAr(b, { decimales: 3, minimos: 0 }), u: modo.rotulo }
+      }
+      return { q: cantidadInsumoHoja(n, r.unidad).replace(/ \S+$/, ''), u: unidadHoja(r?.unidad) || '' }
     }
 
     // EL AVISO DE FALTANTE, que NO bloquea: la orden sale igual y el renglón
@@ -3050,7 +3181,7 @@
           `<span class="rt-lote-fila__lote">${esc(nombreLote(l.lote))}${k === 0 && info.lista.length > 1 ? '<span class="rt-viejo">EL MÁS VIEJO</span>' : ''}</span>` +
           `<span class="rt-lote-fila__detalle">${l.desde ? `del ${esc(fechaCorta(l.desde).slice(0, 5))} · ` : ''}quedan <strong>${esc(cantidadRenglon(r, l.saldo))}</strong></span></label>` +
           `<input type="text" class="rt-input" id="rt-r-${i}-lote-${k}" data-r-lote-cant="${i}" data-lote="${esc(l.lote)}" autocomplete="off" placeholder=" " inputmode="decimal">` +
-          `<span class="rt-lote-fila__unidad">${esc(r.insumoId ? unidadCorta(r.unidad) : 'cajas')}</span></div>`).join('') + `</div>` +
+          `<span class="rt-lote-fila__unidad">${esc(r.insumoId ? (modoInsumoRenglon(r)?.enBultos ? 'bultos' : unidadCorta(r.unidad)) : 'cajas')}</span></div>`).join('') + `</div>` +
           `<div class="rt-lote__limpiar"><button type="button" class="rt-link" data-r-lotes-limpiar="${i}">Que salga sola de los más viejos</button></div>`
       }
       const lista = info && !info.cargando && !info.error ? info.lista : null
@@ -3074,16 +3205,20 @@
       if (r.insumoId) {
         // Un INSUMO: cantidad en su unidad de medida, sin cajas ni cono.
         const ins = insumoDe(cat, r.insumoId)
-        const stock = ins && ins.stock !== null && ins.stock !== undefined ? `hay ${cantidadInsumoHoja(ins.stock, r.unidad)}` : ''
+        // Por bulto (23/10/2026): "¿Cuánto se lleva? (bultos de 25 kg)" y
+        // debajo "= 100 kg"; el renglón guarda los kilos.
+        const modo = modoInsumoRenglon(r, cat)
+        const stock = ins && ins.stock !== null && ins.stock !== undefined ? `hay ${cantidadRenglon(r, ins.stock)}` : ''
         const col = colorProductoRetiro('', true)
         cabeza = `<div class="rt-elegido" style="--rt-color: ${col.c}; --rt-tinte: ${col.t}; --rt-oscuro: ${col.dk}"><span class="rt-elegido__texto">` +
           `<span class="rt-elegido__nombre">${esc(descripcionRenglon(cat, r))}</span>` +
           `<span class="rt-elegido__sub"><span class="rt-sello rt-sello--insumo">Insumo</span>${stock ? `<span>${esc(stock)}</span>` : ''}</span></span>` +
           `<button type="button" class="rt-link" data-r-cambiar-producto="${i}">Cambiar</button></div>`
-        cuanto = `<div class="rt-cuanto rt-cuanto--insumo"><label for="rt-r-cantidad-${i}">¿Cuánto se lleva? (${esc(unidadHoja(r.unidad) || 'unidad')})</label>` +
-          `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="Uno menos">−</button>` +
+        cuanto = `<div class="rt-cuanto rt-cuanto--insumo"><label for="rt-r-cantidad-${i}">¿Cuánto se lleva? (${esc(modo?.enBultos ? modo.rotulo : (unidadHoja(r.unidad) || 'unidad'))})</label>` +
+          `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="${modo?.enBultos ? 'Un bulto menos' : 'Uno menos'}">−</button>` +
           `<input type="text" class="rt-input" id="rt-r-cantidad-${i}" data-r-cantidad="${i}" autocomplete="off">` +
-          `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="Uno más">+</button></div>`
+          `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="${modo?.enBultos ? 'Un bulto más' : 'Uno más'}">+</button>` +
+          (modo?.enBultos ? `<p class="rt-equivale" data-r-equivale="${i}" aria-live="polite">${esc(textoEquivaleRenglon(r, modo))}</p>` : '') + '</div>'
       } else {
         const prod = (cat?.productos ?? []).find(p => p.id === r.productoId)
         const pr = (cat?.presentaciones ?? []).find(x => x.id === r.presentacionId)
@@ -3150,8 +3285,9 @@
       else if (tipo === 'reposicion') textoLotesR = `Se repone · sin cargo · ${textoDevolucionRenglon(r)} · sale ${lotes.length ? 'de ' + lotes.join(' · ') : 'de los lotes más viejos'}`
       const faltante = (a.faltante ?? 0) > 0 ? cantidadRenglon(r, a.faltante) : null
       const pedido = cantidadPedida(r)
-      const q = pedido === null ? '—' : (esInsumo ? cantidadInsumoHoja(pedido, r.unidad).replace(/ \S+$/, '') : (tipo === 'devolucion' ? '−' : '') + enteroHoja(pedido))
-      const u = esInsumo ? (unidadHoja(r.unidad) || '') : 'cajas'
+      const pi = esInsumo ? partesCantidadInsumo(r, pedido) : null
+      const q = pedido === null ? '—' : (esInsumo ? pi.q : (tipo === 'devolucion' ? '−' : '') + enteroHoja(pedido))
+      const u = esInsumo ? pi.u : 'cajas'
       return `<div class="rt-item${faltante ? ' rt-item--faltante' : ''}${falta ? ' rt-item--error' : ''}${tipo !== 'retiro' ? ' rt-item--dev' : ''}" style="--rt-color: ${col.c}">` +
         `<button type="button" class="rt-item__cuerpo" data-r-editar="${i}" aria-label="Cambiar el renglón ${i + 1}: ${esc(nombre)}">` +
         `<span class="rt-item__prod"><span class="rt-item__nombre">${esc(nombre)}</span><span class="rt-item__cono">${cono}</span></span>` +
@@ -3206,17 +3342,21 @@
       }
       // La cantidad de un insumo, con los decimales de su unidad (kilos y
       // litros 3, unidades 0).
+      // Un insumo por bulto (23/10/2026): el campo dice bultos (3 decimales:
+      // medio bulto es real) y el renglón guarda la unidad base.
       for (const input of cont.querySelectorAll('[data-r-cantidad]')) {
         const x = f.renglones[Number(input.dataset.rCantidad)]
-        enlazarCampoNumero(input, { decimales: decimalesDeUnidad(x?.unidad) })
-        if (x) ponerNumero(input, x.cantidad)
+        const modo = modoInsumoRenglon(x)
+        enlazarCampoNumero(input, { decimales: modo ? modo.decimales : decimalesDeUnidad(x?.unidad) })
+        if (x) ponerNumero(input, cantidadEnCampo(x.cantidad, modo))
       }
       // Lo que sale de cada lote, con los decimales del renglón.
       for (const input of cont.querySelectorAll('[data-r-lote-cant]')) {
         const x = f.renglones[Number(input.dataset.rLoteCant)]
-        enlazarCampoNumero(input, { decimales: x?.insumoId ? decimalesDeUnidad(x.unidad) : DECIMALES_CAJAS })
+        const modo = modoInsumoRenglon(x)
+        enlazarCampoNumero(input, { decimales: x?.insumoId ? (modo ? modo.decimales : decimalesDeUnidad(x.unidad)) : DECIMALES_CAJAS })
         const q = x?.lotes?.[input.dataset.lote]
-        if (x && Number(q) > 0) ponerNumero(input, Number(q))
+        if (x && Number(q) > 0) ponerNumero(input, x.insumoId ? cantidadEnCampo(Number(q), modo) : Number(q))
       }
       document.getElementById('rt-catalogo-aviso').innerHTML = htmlAvisoCatalogo()
       pintarPie()
@@ -3377,6 +3517,7 @@
       r.insumoMarca = ins.marca ?? null
       r.unidad = ins.unidad_medida ?? null
       r.cantidad = null
+      r.errorCantidad = null
       r.lotes = {}
       tocarRenglon()
     }
@@ -3452,11 +3593,17 @@
       const r = renglon(i)
       if (!r) return
       const campo = r.insumoId ? 'cantidad' : 'cajas'
+      // Un insumo por bulto suma y resta de a un bulto (23/10/2026).
+      const modo = modoInsumoRenglon(r)
+      const paso = modo?.enBultos ? modo.contenido : 1
       const actual = Number(r[campo]) > 0 ? Number(r[campo]) : 0
-      const nuevo = r3(Math.max(actual + delta, 0))
+      const nuevo = r3(Math.max(actual + delta * paso, 0))
       r[campo] = nuevo > 0 ? nuevo : null
+      if (r.insumoId) r.errorCantidad = null
       const input = document.getElementById('rt-renglones').querySelector(`[data-r-${r.insumoId ? 'cantidad' : 'cajas'}="${Number(i)}"]`)
-      if (input) ponerNumero(input, r[campo])
+      if (input) ponerNumero(input, r.insumoId ? cantidadEnCampo(r[campo], modo) : r[campo])
+      const eq = r.insumoId ? document.getElementById('rt-renglones').querySelector(`[data-r-equivale="${Number(i)}"]`) : null
+      if (eq) { eq.textContent = textoEquivaleRenglon(r, modo); eq.classList.toggle('rt-equivale--error', false) }
       pintarResumenLotes(i)
       pintarPie()
       guardarBorrador()
@@ -3665,8 +3812,9 @@
         const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
         const cono = esInsumo ? '' : (r.conCono ? `· con cono ${textoCono(cat, true, r.marcaId)}` : '· sin cono')
         const pedido = cantidadPedida(r)
-        const q = esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad).replace(/ \S+$/, '') : (tipo === 'devolucion' ? '−' : '') + enteroHoja(r.cajas)
-        const u = esInsumo ? (unidadHoja(r.unidad) || '') : 'cajas'
+        const pi = esInsumo ? partesCantidadInsumo(r, r.cantidad) : null
+        const q = esInsumo ? pi.q : (tipo === 'devolucion' ? '−' : '') + enteroHoja(r.cajas)
+        const u = esInsumo ? pi.u : 'cajas'
         return `<div class="rt-resumen-fila" style="--rt-color: ${col.c}"><span class="rt-resumen-fila__desc">${esc(nombre)}` +
           `${cono ? ` <span class="rt-resumen-fila__cono">${esc(cono)}</span>` : ''}` +
           `${esInsumo ? ' <span class="rt-sello rt-sello--insumo">Insumo</span>' : ''}` +
@@ -4176,7 +4324,10 @@
     // insumo en el celular: eso ya no existe.
     function renglonesParaHoja(o) {
       return (o?.renglones ?? []).map(r => r?.tipo === 'insumo'
-        ? { esInsumo: true, producto: r.insumo, marca: r.marca_insumo, cantidad: r.cantidad, unidad: r.unidad_medida, lotes: r.lotes ?? [] }
+        // Por bulto (23/10/2026): con lo que trae un bulto, la hoja dice
+        // "4 bultos de 25 kg (100 kg)"; si no se sabe, en su unidad.
+        ? { esInsumo: true, producto: r.insumo, marca: r.marca_insumo, cantidad: r.cantidad, unidad: r.unidad_medida, lotes: r.lotes ?? [],
+            contenido: contenidoParaHoja(r.insumo_id, r.unidad_medida) }
         : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo),
             cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [],
             // Devoluciones (22/10/2026): mis_ordenes_retiro trae el tipo en
@@ -4368,7 +4519,7 @@
           return `<div class="rt-item-mio rt-item-mio--dev"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(detalle)}</div>${repone ? htmlFaltanteMio(o.renglones?.[i], o) : ''}</div>`
         }
         if (r.esInsumo) {
-          const desc = cantidadInsumoHoja(r.cantidad, r.unidad) + ' · ' + [r.producto, r.marca].map(limpio).filter(Boolean).join(' · ')
+          const desc = cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido) + ' · ' + [r.producto, r.marca].map(limpio).filter(Boolean).join(' · ')
           const lotes = 'Insumo · ' + (r.lotes.length ? 'lote ' + textoLotes(r.lotes, r.unidad) : 'de los lotes más viejos')
           return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div></div>`
         }
@@ -4571,10 +4722,13 @@
           const r = renglon(t.dataset.rCajas)
           if (r) { r.cajas = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCajas); pintarPie(); guardarBorrador() }
         } else if (t.dataset.rCantidad !== undefined) {
-          const r = renglon(t.dataset.rCantidad)
-          if (r) { r.cantidad = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCantidad); pintarPie(); guardarBorrador() }
+          // Un insumo: lo escrito (bultos o su unidad) pasa a la unidad base.
+          ponerCantidadInsumo(t.dataset.rCantidad, leerCampoNumero(t))
         } else if (t.dataset.rLoteCant !== undefined) {
-          ponerCantidadLote(t.dataset.rLoteCant, t.dataset.lote, leerCampoNumero(t))
+          const r = renglon(t.dataset.rLoteCant)
+          const escrito = leerCampoNumero(t)
+          // En bultos, lo de cada lote también pasa a la unidad base.
+          ponerCantidadLote(t.dataset.rLoteCant, t.dataset.lote, r?.insumoId ? cantidadDesdeCampo(escrito, modoInsumoRenglon(r)).base : escrito)
         } else if (t.dataset.rBuscar !== undefined) {
           buscarCatalogoRenglon(t.dataset.rBuscar, t.value)
         } else if (t.dataset.rConoBuscar !== undefined) {

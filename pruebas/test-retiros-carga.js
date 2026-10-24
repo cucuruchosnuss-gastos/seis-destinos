@@ -695,6 +695,11 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chequearMarcas(chk, 'hecho', S.htmlHecho({ codigo: marca('codigo'), cliente: { nombre: marca('h-cliente') }, faltantes: [] }), ['codigo', 'h-cliente'])
   S.estado.errorClientes = marca('error-clientes')
   chequearMarcas(chk, 'error de clientes', S.htmlResultadosClientes(''), ['error-clientes'])
+  // 23/10/2026: un insumo por bulto con la unidad del catálogo marcada: el
+  // "= 50 …" debajo del campo la lleva (unidadHoja la deja tal cual).
+  S.estado.catalogo = { ...S.estado.catalogo, insumos: [{ id: 'i-xss', nombre: 'Harina', marca: null, categoria: 'H', unidad_medida: marca('unidad-bulto'), stock: null, vista_preferida: 'bulto', contenido: 25 }] }
+  const rx = { ...S.renglonNuevo(), insumoId: 'i-xss', unidad: marca('unidad-bulto'), cantidad: 50 }
+  chequearMarcas(chk, 'el equivalente de un insumo por bulto', S.htmlRenglon(rx, 0, S.estado.catalogo, false), ['unidad-bulto'])
 }
 
 fin()

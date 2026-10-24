@@ -26,7 +26,7 @@ correrMutaciones({
     { nombre: 'el total de unidades con insumos queda en —', de: "  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo && r?.movimiento !== 'devolucion')", a: "  const rs = (orden?.renglones ?? []).filter(r => r?.movimiento !== 'devolucion')" },
     { nombre: 'las unidades con decimales', de: "  return unidad === 'un' ? 0 : 3", a: '  return 3' },
     { nombre: 'la cantidad ausente dice 0', de: "  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'\n  const texto = formatearNumeroAr", a: "  if (!Number.isFinite(Number(n))) return '—'\n  const texto = formatearNumeroAr" },
-    { nombre: 'el texto no lleva los insumos', de: '      lineas.push(`- ${cantidadInsumoHoja(r.cantidad, r.unidad)} · ${nombreInsumoHoja(r)}${lotesI}`)\n', a: '' },
+    { nombre: 'el texto no lleva los insumos', de: '      lineas.push(`- ${cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido)} · ${nombreInsumoHoja(r)}${lotesI}`)\n', a: '' },
     { nombre: 'los lotes del insumo en cajas', de: '      return c === null || c === undefined || c === \'\' ? lote : `${lote} (${cantidadInsumoHoja(c, unidad)})`', a: '      return `${lote} (${enteroHoja(l?.cajas)})`' },
     // La hoja del diseño (29/09/2026): escapado
     { nombre: "sin escHoja en el producto", de: "<td class=\"rh-producto\">${escHoja(descripcionHoja(r))}</td>", a: "<td class=\"rh-producto\">${descripcionHoja(r)}</td>" },
@@ -47,7 +47,7 @@ correrMutaciones({
     { nombre: 'sin escHoja en la localidad', de: 'localidad ? `<span>${escHoja(localidad)}</span>`', a: 'localidad ? `<span>${localidad}</span>`' },
     { nombre: 'sin escHoja en el transporte', de: '<span>${escHoja(textoTransporteHoja(transporte))}</span>', a: '<span>${textoTransporteHoja(transporte)}</span>' },
     { nombre: 'sin escHoja en el lote', de: '<td class="rh-lote">${escHoja(lotes)}</td>', a: '<td class="rh-lote">${lotes}</td>' },
-    { nombre: 'sin escHoja en el precio', de: '<td class="rh-num rh-plata">${escHoja(p === \'—\' || !u ? p : p + \' / \' + u)}</td>', a: '<td class="rh-num rh-plata">${p === \'—\' || !u ? p : p + \' / \' + u}</td>' },
+    { nombre: 'sin escHoja en el precio', de: '<td class="rh-num rh-plata">${escHoja(p)}</td>', a: '<td class="rh-num rh-plata">${p}</td>' },
     { nombre: 'sin escHoja en el rótulo de la copia', de: '<span class="rh-titulo__copia">${escHoja(rotuloCopiaHoja(copia, pagina, paginas, entera))}</span>', a: '<span class="rh-titulo__copia">${rotuloCopiaHoja(copia, pagina, paginas, entera)}</span>' },
     // La hoja nueva: lo que tiene que decir
     { nombre: 'sin la línea punteada', de: '<div class="rh-pagina">${partes.join(CORTE_HOJA)}</div>', a: '<div class="rh-pagina">${partes.join(\'\')}</div>' },
