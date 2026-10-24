@@ -283,6 +283,22 @@
       min-height: 48px; border-radius: 12px; border: 2px dashed var(--rt-punteado); background: var(--color-acento-fila);
       color: var(--naranja-oscuro); font: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; width: 100%;
     }
+    /* DEVOLUCIONES (22/10/2026): el botón, el título y los controles del renglón. */
+    .rt-agregar--dev { border-style: solid; border-color: var(--color-borde); background: var(--color-fondo); color: var(--color-texto); margin-top: 6px; }
+    .rt-dev-titulo { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--color-texto); }
+    .rt-sello--dev { background: var(--bordo-suave); color: var(--bordo); }
+    .rt-dev-subtitulo { margin-top: 10px; }
+    .rt-dev { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; min-width: 0; }
+    .rt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .rt-chip { min-height: 40px; padding: 0 14px; border-radius: 20px; border: 2px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto); font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+    .rt-chip[aria-pressed="true"] { border-color: var(--naranja); background: var(--color-acento-fila); color: var(--naranja-oscuro); }
+    .rt-dev-tratos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .rt-dev-trato { min-height: 72px; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto); font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
+    .rt-dev-trato strong { font-size: 15.5px; font-weight: 800; }
+    .rt-dev-trato small { font-size: 12.5px; color: var(--rt-texto-2); }
+    .rt-dev-trato[aria-pressed="true"] { border-color: var(--naranja); background: var(--color-acento-fila); box-shadow: inset 0 0 0 1px var(--naranja); }
+    .rt-chip:focus-visible, .rt-dev-trato:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    @media (max-width: 359px) { .rt-dev-tratos { grid-template-columns: 1fr; } }
     .rt-orden-vacia { padding: 14px; text-align: center; color: var(--rt-texto-2); font-size: 14.5px; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px; }
     /* En el celular el pie no se dibuja como franja: queda solo la acción
        "Ver resumen", pegada abajo (.rt-accion). El total va en la compu. */
@@ -592,6 +608,10 @@
       .rt-item__lotes-texto { display: none; }
       .rt-lote-chip { display: inline-flex; height: 24px; padding: 0 8px; border-radius: 7px; background: var(--color-pista); font-size: 12.5px; font-weight: 700; align-items: center; color: var(--color-texto); }
       .rt-lote-chip--falta { background: var(--bordo); color: #fff; font-weight: 800; }
+      /* Las devoluciones (22/10/2026): su título y, en la columna de lotes, el motivo. */
+      .rt-orden-lista .rt-dev-subtitulo, .rt-resumen .rt-dev-subtitulo, .rt-lista .rt-dev-subtitulo { display: flex; padding: 8px 16px 4px; margin: 0; }
+      .rt-item--dev .rt-item__lotes-texto { display: inline; font-size: 13px; color: var(--rt-texto-2); }
+      .rt-item--dev .rt-lote-chip:not(.rt-lote-chip--falta) { display: none; }
       .rt-item__falta { grid-column: 2; grid-row: 2; }
       .rt-item__cant { grid-column: 3; grid-row: 1 / span 2; }
       .rt-item__q { font-size: 20px; }
@@ -734,6 +754,8 @@
             <div class="rt-orden-cab" aria-hidden="true"><span>Producto</span><span>Lotes</span><span style="text-align: right">Cantidad</span><span></span></div>
             <div class="rt-orden-lista" id="rt-orden-lista"></div>
             <button type="button" class="rt-agregar" id="rt-agregar">+ Agregar otro producto</button>
+            <!-- Devoluciones (22/10/2026): el cliente trae cajas; se descuentan o se reponen. -->
+            <button type="button" class="rt-agregar rt-agregar--dev" id="rt-agregar-devolucion">↩ Devolución de mercadería</button>
             <div class="rt-tarjeta rt-bloque-transporte">
               <div class="rt-campo">
                 <label for="rt-transporte">Transporte</label>
@@ -845,6 +867,7 @@
       armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden, compartirTextoOrden,
       enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
       cantidadInsumoHoja, unidadHoja, decimalesDeUnidad,
+      ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
     // La unidad al lado de un campo de cantidad ("kg", "L", "u"), la misma
     // regla que Stock e Ingreso (05/10/2026).
@@ -1519,11 +1542,15 @@
     // por no poder medirlo.
     const hayStock = (o) => o.stock === null || o.stock === undefined || o.stock > 0
 
-    function gruposCatalogo(cat, busqueda, stockConos = cat?.conos ?? null) {
+    // Para una DEVOLUCIÓN (`devolucion: true`, 22/10/2026): solo producto
+    // terminado (sin insumos) y todo, tenga stock o no: lo que el cliente
+    // trae no depende de lo que hay.
+    function gruposCatalogo(cat, busqueda, stockConos = cat?.conos ?? null, { devolucion = false } = {}) {
       const q = normalizar(busqueda)
       const coincide = (o) => !q || (o.textos ?? []).some(t => normalizar(t).includes(q))
       const todas = opcionesCatalogo(cat, stockConos)
-      return GRUPOS_RETIRO.map(g => ({ ...g, lista: todas[g.tipo].filter(o => coincide(o) && (q ? true : hayStock(o))) }))
+      return GRUPOS_RETIRO.filter(g => !devolucion || g.tipo !== 'insumos')
+        .map(g => ({ ...g, lista: todas[g.tipo].filter(o => coincide(o) && (q || devolucion ? true : hayStock(o))) }))
         .filter(g => g.lista.length)
     }
 
@@ -1811,12 +1838,15 @@
 
     // Los lotes leídos de un renglón (la lista) o null.
     function listaLotesDe(r) {
+      // Una devolución no saca nada del stock: no tiene lotes (22/10/2026).
+      if (!saleDelStock(r)) return null
       const info = estado.lotes.get(claveLotesRenglon(r))
       return info && !info.cargando && !info.error ? info.lista : null
     }
 
     // ¿El renglón ya sabe qué es (para leer sus lotes)?
-    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId)
+    // (Una devolución no: no saca nada del stock.)
+    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId) && saleDelStock(r)
 
     // Lee los lotes de los renglones que ya saben qué son y todavía no los
     // tienen. asegurarLotes() no vuelve a leer lo que ya está.
@@ -1880,6 +1910,78 @@
         cantidad: null, lotes: {} }
     }
 
+    // ── DEVOLUCIONES Y REPOSICIONES (22/10/2026) ───────────────────────────
+    // El cliente trae cajas (rotura, humedad, error de pedido…). En la MISMA
+    // orden se carga un renglón de DEVOLUCIÓN: el producto, las cajas, el
+    // motivo, el lote que trae (opcional) y qué se hace:
+    //   'descuenta' → tipo 'devolucion': se le descuenta (Administración lo
+    //                 valoriza en negativo) y NO sale nada del stock;
+    //   'repone'    → tipo 'reposicion': se le reponen las mismas cajas sin
+    //                 cargo, de un lote del stock (como un retiro: lotes,
+    //                 faltante y "¿de dónde salen?").
+    // Y qué pasa con las cajas que trajo: se descartan (por defecto) o
+    // vuelven al stock (la base las entra como 'devolucion' en su lote).
+    // El renglón lleva r.dev = { trato, motivo, motivoTexto, lote, destino };
+    // un renglón sin r.dev es un retiro, como siempre.
+    const MOTIVOS_DEVOLUCION = ['Rotura', 'Humedad', 'Vencido', 'Error de pedido', 'Otro']
+    const LARGO_LOTE_DEVUELTO = 40
+
+    function devolucionVacia() {
+      return { trato: null, motivo: null, motivoTexto: '', lote: '', destino: 'descarte' }
+    }
+
+    function renglonDevolucion() {
+      const r = renglonNuevo()
+      r.dev = devolucionVacia()
+      return r
+    }
+
+    function esRenglonDev(r) {
+      return !!(r?.dev && typeof r.dev === 'object')
+    }
+
+    // 'retiro', 'devolucion' o 'reposicion' (el tipo que va a la base). Sin
+    // elegir todavía qué se hace, cuenta como devolución: no saca stock.
+    function tipoRenglon(r) {
+      if (!esRenglonDev(r)) return 'retiro'
+      return r.dev.trato === 'repone' ? 'reposicion' : 'devolucion'
+    }
+
+    // ¿Sale algo del stock? El retiro y la reposición; la devolución no.
+    function saleDelStock(r) {
+      return tipoRenglon(r) !== 'devolucion'
+    }
+
+    function letrasDe(t) {
+      return (String(t ?? '').match(/\p{L}/gu) ?? []).length
+    }
+
+    // El motivo que viaja: el chip, con el detalle si se escribió
+    // ("Rotura: se mojó en el camión"); "Otro" es solo lo escrito.
+    function motivoDevolucion(dev) {
+      if (!dev?.motivo) return null
+      const texto = limpio(dev.motivoTexto)
+      if (dev.motivo === 'Otro') return texto || null
+      return texto ? `${dev.motivo}: ${texto}` : dev.motivo
+    }
+
+    function faltaDevolucion(r) {
+      const d = r?.dev
+      if (!d?.motivo) return 'elegí el motivo de la devolución'
+      if (letrasDe(motivoDevolucion(d)) < 3) return 'escribí el motivo de la devolución (al menos 3 letras)'
+      if (limpio(d.lote).length > LARGO_LOTE_DEVUELTO) return `el lote devuelto puede tener hasta ${LARGO_LOTE_DEVUELTO} letras`
+      if (d.trato !== 'descuenta' && d.trato !== 'repone') return 'elegí si se descuenta de la orden o se reponen'
+      if (d.destino !== 'descarte' && d.destino !== 'stock') return 'elegí qué se hace con las cajas devueltas'
+      return null
+    }
+
+    // "Rotura · lote 6249 · se descartan", para la tarjeta y el resumen.
+    function textoDevolucionRenglon(r) {
+      const d = r?.dev ?? {}
+      return [motivoDevolucion(d) ?? 'falta el motivo', limpio(d.lote) ? `lote ${limpio(d.lote)}` : '', textoDestinoDevuelto(d.destino)]
+        .filter(Boolean).join(' · ')
+    }
+
     // 'editando' es el renglón que se está armando (1c catálogo / 1d lotes):
     // arranca en el primero, vacío. null = se está mirando la orden (1f).
     function formVacio() {
@@ -1904,6 +2006,7 @@
       if (!r.presentacionId) return 'elegí la presentación'
       if (r.conCono && !r.marcaId) return 'elegí el cono (si es común, elegí «Sin cono»)'
       if (r.cajas === null || r.cajas === undefined || !(Number(r.cajas) > 0) || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'
+      if (esRenglonDev(r)) return faltaDevolucion(r) ?? (saleDelStock(r) ? faltaEnLotes(r) : null)
       return faltaEnLotes(r)
     }
 
@@ -1985,6 +2088,15 @@
       }
       const item = { presentacion_id: r.presentacionId, marca_id: r.conCono ? (r.marcaId ?? null) : null, cajas: Number(r.cajas) }
       if (lotes) item.lotes = lotes
+      // Una devolución o reposición (22/10/2026): el tipo, el motivo, el lote
+      // que trajo (o null) y qué se hace con las cajas. La devolución no
+      // lleva lotes (no sale nada); la reposición, los de lo que sale.
+      if (esRenglonDev(r)) {
+        item.tipo = tipoRenglon(r)
+        item.motivo = motivoDevolucion(r.dev)
+        item.lote_devuelto = limpio(r.dev.lote) || null
+        item.destino = r.dev.destino === 'stock' ? 'stock' : 'descarte'
+      }
       return item
     }
 
@@ -2004,8 +2116,14 @@
       }
     }
 
+    // Las cajas que se LLEVA (retiros y reposiciones): una devolución no sale.
     function totalCajasForm(f) {
-      return f.renglones.reduce((s, r) => s + (!r.insumoId && Number(r.cajas) > 0 ? Number(r.cajas) : 0), 0)
+      return f.renglones.reduce((s, r) => s + (!r.insumoId && tipoRenglon(r) !== 'devolucion' && Number(r.cajas) > 0 ? Number(r.cajas) : 0), 0)
+    }
+
+    // Las cajas que TRAJO el cliente (devoluciones y reposiciones).
+    function totalDevueltasForm(f) {
+      return (f?.renglones ?? []).reduce((s, r) => s + (esRenglonDev(r) && (r.productoId || r.presentacionId) && Number(r.cajas) > 0 ? Number(r.cajas) : 0), 0)
     }
 
     function textoCuentaForm(f) {
@@ -2024,7 +2142,8 @@
         porUnidad.set(r.unidad ?? '', (porUnidad.get(r.unidad ?? '') ?? 0) + Number(r.cantidad))
       }
       const insumos = [...porUnidad.entries()].map(([u, n]) => cantidadInsumoHoja(n, u || null))
-      return [`${enteroHoja(totalCajasForm(f))} cajas`, ...insumos].join(' + ')
+      const devueltas = totalDevueltasForm(f)
+      return [`${enteroHoja(totalCajasForm(f))} cajas`, ...insumos].join(' + ') + (devueltas ? ` · devueltas ${enteroHoja(devueltas)}` : '')
     }
 
     // Cuántos renglones tienen algo que no está en stock.
@@ -2546,11 +2665,11 @@
     // encabezado de color: una opción por presentación (y por cono, con
     // cono) con la franja del color del producto, la pastilla del cono y
     // cuánto hay. Lo sin stock, solo al buscar, al 55 % y con "sin stock".
-    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = cat?.conos ?? null) {
-      const grupos = gruposCatalogo(cat, busqueda, stockConos)
+    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = cat?.conos ?? null, { devolucion = false } = {}) {
+      const grupos = gruposCatalogo(cat, busqueda, stockConos, { devolucion })
       const q = limpio(busqueda)
       // Sin buscar se ven solo los que tienen stock: se dice cómo encontrar el resto.
-      const pista = q ? '' : '<p class="rt-pista">Escribí para buscar también lo que no tiene stock.</p>'
+      const pista = q || devolucion ? '' : '<p class="rt-pista">Escribí para buscar también lo que no tiene stock.</p>'
       if (!grupos.length) {
         return q ? `<span class="rt-texto-suave">Nada coincide con «${esc(q)}».</span>` : pista
       }
@@ -2600,11 +2719,40 @@
     // armando ningún renglón: elegir agrega uno).
     function htmlEleccionRenglon(r, i, cat) {
       const cargando = estado.catalogo === null && !estado.errorCatalogo
-      return `<div class="rt-catalogo"><label class="rt-buscador" for="rt-r-buscar-${esc(i)}">` +
+      const dev = esRenglonDev(r)
+      const ayuda = dev ? 'Buscar el producto que devuelve' : 'Buscar producto, cono o insumo'
+      return `<div class="rt-catalogo">${dev ? htmlTituloDevolucion() : ''}<label class="rt-buscador" for="rt-r-buscar-${esc(i)}">` +
         `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"/></svg>` +
-        `<input type="search" id="rt-r-buscar-${esc(i)}" data-r-buscar="${esc(i)}" value="${esc(r?.busqueda ?? '')}" autocomplete="off" maxlength="60" placeholder="Buscar producto, cono o insumo" aria-label="Buscar producto, cono o insumo"></label>` +
-        `<div class="rt-opciones" role="group" aria-label="Producto o insumo" data-r-opciones="${esc(i)}">` +
-        `${cargando ? htmlEsqueletoCatalogo() : htmlProductosRenglon(i, cat, r?.busqueda ?? '')}</div></div>`
+        `<input type="search" id="rt-r-buscar-${esc(i)}" data-r-buscar="${esc(i)}" value="${esc(r?.busqueda ?? '')}" autocomplete="off" maxlength="60" placeholder="${esc(ayuda)}" aria-label="${esc(ayuda)}"></label>` +
+        `<div class="rt-opciones" role="group" aria-label="${dev ? 'Producto' : 'Producto o insumo'}" data-r-opciones="${esc(i)}">` +
+        `${cargando ? htmlEsqueletoCatalogo() : htmlProductosRenglon(i, cat, r?.busqueda ?? '', cat?.conos ?? null, { devolucion: dev })}</div></div>`
+    }
+
+    // El título del renglón de una devolución (22/10/2026).
+    function htmlTituloDevolucion() {
+      return '<p class="rt-dev-titulo"><span class="rt-sello rt-sello--dev">Devolución</span>Lo que trae el cliente</p>'
+    }
+
+    // EL RENGLÓN DE UNA DEVOLUCIÓN, después de las cajas: el motivo (chips y
+    // detalle), el lote que trae, qué se hace (dos botones grandes) y qué
+    // pasa con las cajas que trajo. Los textos se escriben sin redibujar.
+    function htmlDevolucionRenglon(r, i) {
+      const d = r.dev
+      const chips = MOTIVOS_DEVOLUCION.map(m => `<button type="button" class="rt-chip" data-r-dev-motivo="${i}" data-valor="${esc(m)}" aria-pressed="${d.motivo === m ? 'true' : 'false'}">${esc(m)}</button>`).join('')
+      const otro = d.motivo === 'Otro'
+      const trato = (valor, titulo, sub) => `<button type="button" class="rt-dev-trato" data-r-dev-trato="${i}" data-valor="${valor}" aria-pressed="${d.trato === valor ? 'true' : 'false'}">` +
+        `<strong>${esc(titulo)}</strong><small>${esc(sub)}</small></button>`
+      const destino = (valor, texto) => `<button type="button" class="rt-segmento__opcion" data-r-dev-destino="${i}" data-valor="${valor}" aria-pressed="${d.destino === valor ? 'true' : 'false'}">${esc(texto)}</button>`
+      return `<div class="rt-dev" data-r-dev="${i}">` +
+        `<span class="rt-campo__rotulo">Motivo</span><div class="rt-chips" role="group" aria-label="Motivo de la devolución">${chips}</div>` +
+        `<input type="text" class="rt-input" id="rt-r-dev-texto-${i}" data-r-dev-texto="${i}" value="${esc(d.motivoTexto ?? '')}" maxlength="200" autocomplete="off" ` +
+        `placeholder="${otro ? 'Contá qué pasó (al menos 3 letras)' : 'Detalle (opcional)'}" aria-label="Detalle del motivo">` +
+        `<div class="rt-campo"><label for="rt-r-dev-lote-${i}">Lote que trae (opcional)</label>` +
+        `<input type="text" class="rt-input" id="rt-r-dev-lote-${i}" data-r-dev-lote="${i}" value="${esc(d.lote ?? '')}" maxlength="${LARGO_LOTE_DEVUELTO}" autocomplete="off" placeholder="El que dice la caja"></div>` +
+        `<span class="rt-campo__rotulo">¿Qué se hace?</span><div class="rt-dev-tratos" role="group" aria-label="Qué se hace con la devolución">` +
+        trato('descuenta', 'Se descuenta de la orden', 'Se le resta al cliente') + trato('repone', 'Se reponen', 'Se lleva las mismas cajas, sin cargo') + '</div>' +
+        `<span class="rt-campo__rotulo">Las cajas devueltas</span><div class="rt-segmento" role="group" aria-label="Las cajas devueltas">` +
+        destino('descarte', 'Se descartan') + destino('stock', 'Vuelven al stock') + '</div></div>'
     }
 
     function htmlMarcasRenglon(r, i, cat) {
@@ -2906,7 +3054,8 @@
           `<div class="rt-lote__limpiar"><button type="button" class="rt-link" data-r-lotes-limpiar="${i}">Que salga sola de los más viejos</button></div>`
       }
       const lista = info && !info.cargando && !info.error ? info.lista : null
-      return `<div class="rt-lote"><div class="rt-lote__cab"><span class="rt-lote__titulo"><strong>¿De qué lotes?</strong><span>El más viejo arriba</span></span>${completar}</div>` +
+      const titulo = tipoRenglon(r) === 'reposicion' ? '¿De qué lote salen las que se reponen?' : '¿De qué lotes?'
+      return `<div class="rt-lote"><div class="rt-lote__cab"><span class="rt-lote__titulo"><strong>${esc(titulo)}</strong><span>El más viejo arriba</span></span>${completar}</div>` +
         `<div class="rt-lote__cuerpo">${cuerpo}</div>` +
         `<div class="rt-lote__pie" data-r-lotes-resumen="${i}">${htmlResumenLotes(r, lista)}</div></div>` +
         `<div data-r-faltante-caja="${i}">${htmlFaltanteRenglon(r, i)}</div>`
@@ -2950,12 +3099,14 @@
         // borrador viejo).
         const faltaElegir = !r.presentacionId || r.marcaElegir === true || (r.conCono && !r.marcaId)
         if (faltaElegir) opciones = `<div class="rt-opciones-bloque">${htmlConoRenglon(r, i, cat)}${htmlPresentacionesRenglon(r, i, cat)}</div>`
-        cuanto = `<div class="rt-cuanto"><label for="rt-r-cajas-${i}">¿Cuántas cajas se lleva?</label>` +
+        cuanto = `<div class="rt-cuanto"><label for="rt-r-cajas-${i}">${esRenglonDev(r) ? '¿Cuántas cajas devuelve?' : '¿Cuántas cajas se lleva?'}</label>` +
           `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="Una caja menos">−</button>` +
           `<input type="text" class="rt-input" id="rt-r-cajas-${i}" data-r-cajas="${i}" autocomplete="off">` +
           `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="Una caja más">+</button></div>`
       }
-      return `<div class="rt-editor${falta ? ' rt-renglon--error' : ''}" data-renglon="${i}">${cabeza}${opciones}${cuanto}${htmlLoteRenglon(r, i)}${error}` +
+      const dev = esRenglonDev(r) && !r.insumoId
+      return `<div class="rt-editor${falta ? ' rt-renglon--error' : ''}${dev ? ' rt-editor--dev' : ''}" data-renglon="${i}">${dev ? htmlTituloDevolucion() : ''}${cabeza}${opciones}${cuanto}` +
+        `${dev ? htmlDevolucionRenglon(r, i) : ''}${htmlLoteRenglon(r, i)}${error}` +
         `<div class="rt-accion"><p class="rt-error-pegado" data-r-listo-error="${i}" hidden></p>` +
         `<button type="button" class="rt-btn rt-btn--ancho" data-r-listo="${i}">${esc(textoAgregarRenglon(r))}</button>` +
         `<button type="button" class="rt-link" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">Quitar de la orden</button></div></div>`
@@ -2973,8 +3124,9 @@
     function textoAgregarRenglon(r) {
       const a = asignacion(r, listaLotesDe(r))
       const pedido = cantidadPedida(r)
-      if (pedido === null) return 'Agregar'
-      return `Agregar${(a.faltante ?? 0) > 0 ? ' igual' : ''} · ${cantidadRenglon(r, pedido)}`
+      const que = esRenglonDev(r) ? 'Agregar la devolución' : 'Agregar'
+      if (pedido === null) return que
+      return `${que}${(a.faltante ?? 0) > 0 ? ' igual' : ''} · ${cantidadRenglon(r, pedido)}`
     }
 
     // UN RENGLÓN DE LA ORDEN ARMADA (1f en el celular, una fila de la tabla en
@@ -2989,12 +3141,18 @@
       const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
       const cono = esInsumo ? '<span>insumo</span>' : r.conCono ? htmlChipCono(textoCono(cat, true, r.marcaId), r.marcaId) : '<span>sin cono</span>'
       const lotes = a.porLote.filter(l => l.q > 0).map(l => `${l.lote || 'Sin lote'} ×${cantidadRenglon(r, l.q).replace(/ cajas$/, '')}`)
-      const textoLotesR = lotes.length ? lotes.join(' · ') : 'de los lotes más viejos'
+      // Una devolución dice el motivo, el lote que trajo y qué se hace con
+      // las cajas; una reposición, además, "Se repone · sin cargo" y de qué
+      // lotes sale (22/10/2026). La carga no muestra plata: nunca "$ 0".
+      const tipo = tipoRenglon(r)
+      let textoLotesR = lotes.length ? lotes.join(' · ') : 'de los lotes más viejos'
+      if (tipo === 'devolucion') textoLotesR = textoDevolucionRenglon(r)
+      else if (tipo === 'reposicion') textoLotesR = `Se repone · sin cargo · ${textoDevolucionRenglon(r)} · sale ${lotes.length ? 'de ' + lotes.join(' · ') : 'de los lotes más viejos'}`
       const faltante = (a.faltante ?? 0) > 0 ? cantidadRenglon(r, a.faltante) : null
       const pedido = cantidadPedida(r)
-      const q = pedido === null ? '—' : (esInsumo ? cantidadInsumoHoja(pedido, r.unidad).replace(/ \S+$/, '') : enteroHoja(pedido))
+      const q = pedido === null ? '—' : (esInsumo ? cantidadInsumoHoja(pedido, r.unidad).replace(/ \S+$/, '') : (tipo === 'devolucion' ? '−' : '') + enteroHoja(pedido))
       const u = esInsumo ? (unidadHoja(r.unidad) || '') : 'cajas'
-      return `<div class="rt-item${faltante ? ' rt-item--faltante' : ''}${falta ? ' rt-item--error' : ''}" style="--rt-color: ${col.c}">` +
+      return `<div class="rt-item${faltante ? ' rt-item--faltante' : ''}${falta ? ' rt-item--error' : ''}${tipo !== 'retiro' ? ' rt-item--dev' : ''}" style="--rt-color: ${col.c}">` +
         `<button type="button" class="rt-item__cuerpo" data-r-editar="${i}" aria-label="Cambiar el renglón ${i + 1}: ${esc(nombre)}">` +
         `<span class="rt-item__prod"><span class="rt-item__nombre">${esc(nombre)}</span><span class="rt-item__cono">${cono}</span></span>` +
         `<span class="rt-item__lotes"><span class="rt-item__lotes-texto">${esc(textoLotesR)}</span>` +
@@ -3022,10 +3180,16 @@
       const f = estado.form
       if (!f) return
       const cat = estado.catalogo
-      const conProducto = f.renglones.map((r, i) => [r, i]).filter(([r]) => r.productoId || r.insumoId)
-      document.getElementById('rt-orden-lista').innerHTML = conProducto.length
+      const todos = f.renglones.map((r, i) => [r, i]).filter(([r]) => r.productoId || r.insumoId)
+      // Las devoluciones van en su sección, aparte (22/10/2026).
+      const conProducto = todos.filter(([r]) => !esRenglonDev(r))
+      const devoluciones = todos.filter(([r]) => esRenglonDev(r))
+      document.getElementById('rt-orden-lista').innerHTML = (todos.length
         ? conProducto.map(([r, i]) => htmlTarjetaRenglon(r, i, cat, f.intentado)).join('')
-        : '<div class="rt-orden-vacia">Todavía no agregaste nada. Elegí un producto del catálogo.</div>'
+        : '<div class="rt-orden-vacia">Todavía no agregaste nada. Elegí un producto del catálogo.</div>') +
+        (devoluciones.length
+          ? `<p class="rt-subtitulo rt-dev-subtitulo">Devoluciones · ${esc(devoluciones.length)}</p>` + devoluciones.map(([r, i]) => htmlTarjetaRenglon(r, i, cat, f.intentado)).join('')
+          : '')
       const n = conProducto.length
       document.getElementById('rt-orden-titulo').innerHTML =
         `<span>Lo que se lleva · ${esc(n)} ${n === 1 ? 'renglón' : 'renglones'}</span><span class="rt-subtitulo__total">${esc(textoTotalForm(f))}</span>`
@@ -3230,7 +3394,7 @@
       const r = renglon(i)
       if (!r) return
       r.busqueda = texto
-      if (cont) cont.innerHTML = htmlProductosRenglon(Number(i), estado.catalogo, texto)
+      if (cont) cont.innerHTML = htmlProductosRenglon(Number(i), estado.catalogo, texto, estado.catalogo?.conos ?? null, { devolucion: esRenglonDev(r) })
     }
 
     // El renglón de destino de una opción del catálogo: el que se está
@@ -3351,6 +3515,57 @@
       window.scrollTo(0, 0)
     }
 
+    // "Devolución de mercadería" (22/10/2026): abre un renglón de devolución.
+    // Un renglón vacío abierto se reusa (pasa a devolución).
+    function agregarDevolucion() {
+      const f = estado.form
+      if (!f) return
+      const abierto = editandoDe(f)
+      if (abierto && !abierto.productoId && !abierto.insumoId) {
+        if (!esRenglonDev(abierto)) abierto.dev = devolucionVacia()
+      } else {
+        f.renglones.push(renglonDevolucion())
+        f.editando = f.renglones.length - 1
+      }
+      tocarRenglon()
+      window.scrollTo(0, 0)
+    }
+
+    // Los controles de la devolución: tocar redibuja el renglón (no hay campo
+    // con el foco); tipear el motivo o el lote NO (se perdería el foco).
+    function elegirMotivoDevolucion(i, motivo) {
+      const r = renglon(i)
+      if (!esRenglonDev(r) || !MOTIVOS_DEVOLUCION.includes(motivo)) return
+      r.dev.motivo = motivo
+      tocarRenglon()
+    }
+
+    function elegirTratoDevolucion(i, trato) {
+      const r = renglon(i)
+      if (!esRenglonDev(r) || (trato !== 'descuenta' && trato !== 'repone')) return
+      if (r.dev.trato !== trato) r.lotes = {}
+      r.dev.trato = trato
+      tocarRenglon()
+    }
+
+    function elegirDestinoDevolucion(i, destino) {
+      const r = renglon(i)
+      if (!esRenglonDev(r) || (destino !== 'descarte' && destino !== 'stock')) return
+      r.dev.destino = destino
+      tocarRenglon()
+    }
+
+    function escribirDevolucion(t) {
+      const campo = t?.dataset?.rDevTexto !== undefined ? 'motivoTexto' : t?.dataset?.rDevLote !== undefined ? 'lote' : null
+      if (!campo) return false
+      const r = renglon(campo === 'lote' ? t.dataset.rDevLote : t.dataset.rDevTexto)
+      if (!esRenglonDev(r)) return true
+      r.dev[campo] = campo === 'lote' ? String(t.value ?? '').slice(0, LARGO_LOTE_DEVUELTO) : String(t.value ?? '')
+      pintarPie()
+      guardarBorrador()
+      return true
+    }
+
     function quitarRenglon(i) {
       const f = estado.form
       if (!f) return
@@ -3398,6 +3613,9 @@
         if (r.lote && !Object.keys(r.lotes).length && cantidadPedida(r) !== null) r.lotes[r.lote] = cantidadPedida(r)
         delete r.lote
         delete r.eligiendoLote
+        // Una devolución de un borrador: con todos sus campos (22/10/2026).
+        if (r.dev !== undefined && r.dev !== null && typeof r.dev === 'object' && !Array.isArray(r.dev)) r.dev = { ...devolucionVacia(), ...r.dev }
+        else delete r.dev
       }
       // Un borrador de antes del diseño del 29/09/2026 no sabe qué renglón se
       // estaba armando: se abre el primero sin nada elegido, o ninguno.
@@ -3433,24 +3651,32 @@
     function htmlResumen(f, cat) {
       const c = clienteDe(f.clienteId)
       const apodo = (Array.isArray(c?.apodos) ? c.apodos : []).map(limpio).find(Boolean)
-      const filas = f.renglones.filter(r => r.productoId || r.insumoId).map(r => {
+      const fila = (r) => {
         const a = asignacion(r, listaLotesDe(r))
-        const lote = a.asignado > 0
+        const tipo = tipoRenglon(r)
+        let lote = a.asignado > 0
           ? a.porLote.filter(l => l.q > 0).map(l => `${nombreLote(l.lote)}: ${cantidadRenglon(r, l.q)}`).join(' · ')
           : 'De los lotes más viejos'
+        // Devoluciones (22/10/2026): el motivo y qué se hace; sin plata.
+        if (tipo === 'devolucion') lote = 'Se descuenta de la orden · ' + textoDevolucionRenglon(r)
+        else if (tipo === 'reposicion') lote = 'Se repone · sin cargo · ' + textoDevolucionRenglon(r) + ' · sale ' + (a.asignado > 0 ? 'de ' + lote : 'de los lotes más viejos')
         const esInsumo = !!r.insumoId
         const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === r.productoId)?.nombre ?? ''), esInsumo)
         const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
         const cono = esInsumo ? '' : (r.conCono ? `· con cono ${textoCono(cat, true, r.marcaId)}` : '· sin cono')
         const pedido = cantidadPedida(r)
-        const q = esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad).replace(/ \S+$/, '') : enteroHoja(r.cajas)
+        const q = esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad).replace(/ \S+$/, '') : (tipo === 'devolucion' ? '−' : '') + enteroHoja(r.cajas)
         const u = esInsumo ? (unidadHoja(r.unidad) || '') : 'cajas'
         return `<div class="rt-resumen-fila" style="--rt-color: ${col.c}"><span class="rt-resumen-fila__desc">${esc(nombre)}` +
           `${cono ? ` <span class="rt-resumen-fila__cono">${esc(cono)}</span>` : ''}` +
           `${esInsumo ? ' <span class="rt-sello rt-sello--insumo">Insumo</span>' : ''}` +
           `<span class="rt-resumen-fila__lotes">${esc(lote)}</span>${htmlAvisoFaltante(r, a)}</span>` +
           `<span class="rt-resumen-fila__cajas">${esc(pedido === null ? '—' : q)} <small>${esc(u)}</small></span></div>`
-      }).join('')
+      }
+      const conAlgo = f.renglones.filter(r => r.productoId || r.insumoId)
+      const devs = conAlgo.filter(esRenglonDev)
+      const filas = conAlgo.filter(r => !esRenglonDev(r)).map(fila).join('') +
+        (devs.length ? `<p class="rt-subtitulo rt-dev-subtitulo">Devoluciones · ${esc(devs.length)}</p>` + devs.map(fila).join('') : '')
       const total = textoTotalForm(f)
       const k = total.indexOf(' + ')
       return htmlDatoRt('Fábrica', `${empresaActual()?.nombre ?? '—'} · se numera al confirmar`) +
@@ -3952,7 +4178,11 @@
       return (o?.renglones ?? []).map(r => r?.tipo === 'insumo'
         ? { esInsumo: true, producto: r.insumo, marca: r.marca_insumo, cantidad: r.cantidad, unidad: r.unidad_medida, lotes: r.lotes ?? [] }
         : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo),
-            cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [] })
+            cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [],
+            // Devoluciones (22/10/2026): mis_ordenes_retiro trae el tipo en
+            // 'movimiento' (su 'tipo' es producto / insumo).
+            movimiento: r.movimiento ?? 'retiro', motivo: r.motivo_devolucion ?? null,
+            loteDevuelto: r.lote_devuelto ?? null, destino: r.destino_devuelto ?? null })
     }
 
     // La memoria vieja de los insumos (clave 'retiros.insumos', hasta el
@@ -3965,7 +4195,8 @@
         codigo: o.codigo, estado: o.estado, fecha: o.fecha, cargadaEn: o.cargada_en,
         cargadaPor: estado.miNombre, transporte: o.transporte, observaciones: o.observaciones,
         empresa: empresaActual(), cliente: clienteDeOrden(o, cliente),
-        renglones: renglonesParaHoja(o),
+        // Los retiros primero y las devoluciones en su sección.
+        renglones: ordenarRenglonesHoja(renglonesParaHoja(o)),
       }
     }
 
@@ -4052,8 +4283,14 @@
       return Array.isArray(data) ? data : []
     }
 
+    // Las cajas que se llevó: una devolución no suma (22/10/2026).
     function cajasDeOrden(o) {
-      return (o?.renglones ?? []).reduce((s, r) => s + (Number(r.cajas) || 0), 0)
+      return (o?.renglones ?? []).reduce((s, r) => s + (r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0)), 0)
+    }
+
+    // Las cajas que trajo (devoluciones y reposiciones).
+    function devueltasDeOrden(o) {
+      return (o?.renglones ?? []).reduce((s, r) => s + (r?.movimiento === 'devolucion' || r?.movimiento === 'reposicion' ? (Number(r.cajas) || 0) : 0), 0)
     }
 
     // 1i · Un retiro mío: el logo de la fábrica, el código, el cliente, la
@@ -4062,8 +4299,9 @@
     function htmlFilaMia(o) {
       const anulada = o.estado === 'anulada'
       const insumos = (o.renglones ?? []).filter(r => r?.tipo === 'insumo').length
+      const devueltas = devueltasDeOrden(o)
       const meta = fechaCorta(o.fecha) + ' · ' + enteroHoja(cajasDeOrden(o)) + ' cajas' +
-        (insumos ? ` · ${insumos} de materia prima e insumos` : '')
+        (insumos ? ` · ${insumos} de materia prima e insumos` : '') + (devueltas ? ` · devolvió ${enteroHoja(devueltas)}` : '')
       return `<div class="rt-mia"><button type="button" class="rt-fila${anulada ? ' rt-fila--anulada' : ''}" data-mia="${esc(o.orden_id)}">` +
         `<span class="rt-fila__logo">${htmlMarcaEmpresa(empresaActual())}</span>` +
         `<span class="rt-fila__texto"><span class="rt-fila__linea"><span class="rt-fila__codigo">${esc(o.codigo || '—')}</span>${anulada ? '<span class="rt-sello">Anulada</span>' : ''}</span>` +
@@ -4116,7 +4354,19 @@
     function htmlDetalleMio(o) {
       // renglonesParaHoja() arma objetos nuevos (sin la revisión): el faltante
       // de cada renglón se lee del renglón de la base, en la misma posición.
-      const renglones = renglonesParaHoja(o).map((r, i) => {
+      const comoHoja = renglonesParaHoja(o)
+      const esDev = (r) => r.movimiento === 'devolucion' || r.movimiento === 'reposicion'
+      const html = (r, i) => {
+        if (esDev(r)) {
+          // Devoluciones (22/10/2026): "−5 cajas" si se descuenta; si se
+          // repone, de qué lotes salió. Sin plata.
+          const repone = r.movimiento === 'reposicion'
+          const desc = (repone ? '' : '−') + enteroHoja(r.cajas) + ' cajas · ' + [r.producto, r.presentacion, r.cono].filter(Boolean).join(' · ')
+          const lote = limpio(r.loteDevuelto)
+          const detalle = [repone ? 'Se repone · sin cargo' : 'Se descuenta de la orden', limpio(r.motivo), lote ? 'lote ' + lote : '', textoDestinoDevuelto(r.destino)]
+            .filter(Boolean).join(' · ') + (repone ? ' · sale de los lotes ' + textoLotes(r.lotes) : '')
+          return `<div class="rt-item-mio rt-item-mio--dev"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(detalle)}</div>${repone ? htmlFaltanteMio(o.renglones?.[i], o) : ''}</div>`
+        }
         if (r.esInsumo) {
           const desc = cantidadInsumoHoja(r.cantidad, r.unidad) + ' · ' + [r.producto, r.marca].map(limpio).filter(Boolean).join(' · ')
           const lotes = 'Insumo · ' + (r.lotes.length ? 'lote ' + textoLotes(r.lotes, r.unidad) : 'de los lotes más viejos')
@@ -4125,12 +4375,17 @@
         const desc = enteroHoja(r.cajas) + ' cajas · ' + [r.producto, r.presentacion, r.cono].filter(Boolean).join(' · ')
         const lotes = enteroHoja(r.unidades) + ' unidades · lotes ' + textoLotes(r.lotes)
         return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div>${htmlFaltanteMio(o.renglones?.[i], o)}</div>`
-      }).join('')
+      }
+      const devs = comoHoja.map((r, i) => [r, i]).filter(([r]) => esDev(r))
+      const renglones = comoHoja.map((r, i) => [r, i]).filter(([r]) => !esDev(r)).map(([r, i]) => html(r, i)).join('') +
+        (devs.length ? `<p class="rt-subtitulo rt-dev-subtitulo">Devoluciones · ${esc(devs.length)}</p>` + devs.map(([r, i]) => html(r, i)).join('') : '')
+      const devueltas = devueltasDeOrden(o)
       return `<div class="rt-resumen">${o.estado === 'anulada' ? '<div class="rt-aviso rt-aviso--grave">Anulada.</div>' : ''}` +
         htmlDatoRt('Fecha', fechaHoraHoja(o.cargada_en)) + htmlDatoRt('Cliente', o.cliente ?? '—') +
         htmlDatoRt('Transporte', limpio(o.transporte) || '—') +
         (String(o.observaciones ?? '').trim() ? htmlDatoRt('Observaciones', String(o.observaciones).trim()) : '') +
-        `</div><div class="rt-lista">${renglones}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span><span class="rt-total__valor">${esc(enteroHoja(cajasDeOrden(o)))} cajas</span></p>`
+        `</div><div class="rt-lista">${renglones}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span><span class="rt-total__valor">${esc(enteroHoja(cajasDeOrden(o)))} cajas` +
+        `${devueltas ? ` <small>${esc('· devueltas ' + enteroHoja(devueltas))}</small>` : ''}</span></p>`
     }
 
     // ── El faltante en una de mis órdenes ───────────────────────────────────
@@ -4275,6 +4530,7 @@
         if (e.target.closest('#rt-cliente-cambiar')) cambiarCliente()
       })
       document.getElementById('rt-agregar').addEventListener('click', () => agregarRenglon())
+      document.getElementById('rt-agregar-devolucion').addEventListener('click', () => agregarDevolucion())
       document.getElementById('rt-revisar').addEventListener('click', () => revisar())
       document.getElementById('rt-transporte').addEventListener('input', () => { leerCabecera(); guardarBorrador() })
       document.getElementById('rt-observaciones').addEventListener('input', () => { leerCabecera(); guardarBorrador() })
@@ -4302,10 +4558,15 @@
         else if ((b = e.target.closest('[data-r-completar]'))) completarLotes(b.dataset.rCompletar)
         else if ((b = e.target.closest('[data-r-lotes-limpiar]'))) limpiarLotes(b.dataset.rLotesLimpiar)
         else if ((b = e.target.closest('[data-r-quitar]'))) quitarRenglon(b.dataset.rQuitar)
+        // La devolución (22/10/2026).
+        else if ((b = e.target.closest('[data-r-dev-motivo]'))) elegirMotivoDevolucion(b.dataset.rDevMotivo, b.dataset.valor)
+        else if ((b = e.target.closest('[data-r-dev-trato]'))) elegirTratoDevolucion(b.dataset.rDevTrato, b.dataset.valor)
+        else if ((b = e.target.closest('[data-r-dev-destino]'))) elegirDestinoDevolucion(b.dataset.rDevDestino, b.dataset.valor)
       })
       renglones.addEventListener('input', (e) => {
         const t = e.target
         if (escribirOrigen(t)) return
+        if (escribirDevolucion(t)) return
         if (t.dataset.rCajas !== undefined) {
           const r = renglon(t.dataset.rCajas)
           if (r) { r.cajas = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCajas); pintarPie(); guardarBorrador() }

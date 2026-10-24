@@ -353,6 +353,13 @@ esperas.push((async () => {
     const sin = await S.cargarRetiros(ctxFalso(S, { sb }))
     chk('retiros: sin retiros:ver no lee las órdenes (lo dice)', sin.estado === 'pronto' && !sb.llamadas.slice(-3).some(l => l[1] === 'ordenes_retiro' && l[0] === 'select' && false))
   }
+  {
+    // Devoluciones (22/10/2026): una devolución NO sale; la reposición sí.
+    const sb = sbFalso({ tablas: { ordenes_retiro: [{ id: 'o1', fecha: HOY, estado: 'confirmada', unidad_negocio_id: 'u-n' }],
+      orden_retiro_items: [{ orden_id: 'o1', cajas: 10, tipo: 'retiro' }, { orden_id: 'o1', cajas: 7, tipo: 'devolucion' }, { orden_id: 'o1', cajas: 3, tipo: 'reposicion' }] } })
+    const m = await S.cargarRetiros(ctxFalso(S, { sb, tareas: new Set(['retiros:ver']) }))
+    chk('retiros: las cajas despachadas no cuentan las devueltas (sí la reposición)', m.valor === '13', m.valor)
+  }
   // Administración
   {
     const cl = (cliente_id, nombre, saldo) => ({ cliente_id, nombre, saldo })

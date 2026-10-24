@@ -73,6 +73,12 @@ const SEGURAS_RETIROS = [
   ['htmlFaltanteRenglon(r, i)', 'HTML armado por htmlFaltanteRenglon(): htmlAvisoFaltante() o htmlOrigenRenglon(), que escapan adentro'],
   ['como', 'HTML ya escapado: htmlEstadoFaltantes() arma el estado con esc() del error de la base o del texto'],
   ['reintentar', 'HTML ya escapado: el botón "Volver a intentar" con esc() del id del renglón, o vacío'],
+  // 22/10/2026: devoluciones y reposiciones.
+  ['htmlTituloDevolucion()', 'HTML constante del código: el sello "Devolución" y "Lo que trae el cliente"'],
+  ["htmlProductosRenglon(i, cat, r?.busqueda ?? '', cat?.conos ?? null, { devolucion: dev })", 'HTML armado por htmlProductosRenglon(), que escapa el nombre, la marca, el stock y lo buscado de cada opción'],
+  ['valor', 'texto constante del código: "descuenta" / "repone" o "descarte" / "stock" (los botones de la devolución)'],
+  ['chips', 'HTML ya escapado: htmlDevolucionRenglon() arma cada chip con esc() del motivo (una lista fija)'],
+  ['LARGO_LOTE_DEVUELTO', 'número: constante del código (40, el largo que acepta la base)'],
 ]
 
 const SEGURAS_REGEX_RETIROS = [

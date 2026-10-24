@@ -98,6 +98,9 @@ const FUNCIONES_BASE = [
   // Sin cortes de más (23/10/2026): las medidas que no pueden ser.
   'medidasRaras', 'textoMedidaRara', 'registrarMedidaRara', 'hojaConEstilos', 'esperarHojaLista',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf', 'enviarOrden',
+  // Devoluciones y reposiciones (22/10/2026)
+  'esDevolucionHoja', 'ordenarRenglonesHoja', 'textoDestinoDevuelto', 'detalleDevolucionHoja', 'totalCajasDevueltas', 'htmlFilaDevolucionHoja',
+  'tipoItem', 'esItemDev', 'textoDevolucionItem', 'cajasQueSalen', 'textoAFavor',
   // Importar (26/09/2026)
   'normalizarEncabezado', 'mapearColumnas', 'textoCelda', 'fechaIsoLocal', 'numeroCelda', 'fechaCelda', 'cuitValido', 'cbuValido',
   'condicionIvaDe', 'claveNombreCliente', 'filasDeHoja', 'estadoFila', 'filaPrevia', 'marcarRepetidas', 'textoFilas',
@@ -129,6 +132,8 @@ const FUNCIONES_BASE = [
   // El faltante: "¿de dónde salen?" (13/10/2026)
   'esProductoRevisar', 'htmlBotonesRevisar', 'completarRenglonesRevisar', 'ctxFaltanteRevisar', 'abrirFaltanteRevisar', 'resolverFilaRevisar',
   'htmlFaltanteRenglon', 'leerPlanillasDeOrden',
+  // La reposición por revisar (24/10/2026)
+  'esReposicionRevisar',
   // Retenciones (13/10/2026)
   'retencionesVacio', 'ret', 'tipoRetencion', 'detalleRetencion', 'plataRet', 'sumaRet', 'origenRetencion', 'empresasRet', 'sinPruebaRet',
   'leerRetenciones', 'leerRetencionesPortada', 'totalesPorEmpresa', 'htmlTotalRet', 'htmlTotalesRet', 'htmlAnularRet', 'htmlFilaRet',

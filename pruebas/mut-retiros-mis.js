@@ -11,6 +11,8 @@ correrMutaciones({
   escape: 'esc',
   funciones: ['htmlFilaMia', 'htmlMisRetiros', 'htmlDetalleMio'],
   equivalentes: [
+    { expr: 'esc(devs.length)', motivo: 'un conteo (número) de devoluciones' },
+    { expr: "esc('· devueltas ' + enteroHoja(devueltas))", motivo: 'un número formateado (enteroHoja) con texto del código' },
     { expr: 'esc(estado.errorMis)', motivo: 'texto constante del código: lo pone mostrarMisRetiros()' },
     { expr: 'esc(enteroHoja(cajasDeOrden(o)))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },
     { expr: 'esc(meta)', motivo: 'la fecha corta (dd/mm/aaaa), las cajas (enteroHoja) y cuántos insumos: ningún texto de la base' },
