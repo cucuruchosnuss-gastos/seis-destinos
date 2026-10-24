@@ -654,14 +654,40 @@
 
     /* ── Navegación del wizard ─────────────────────────────────────────────── */
 
+    /* "Anterior / Siguiente" PEGADA ABAJO (24/10/2026): en un paso largo los
+       botones quedan siempre a la vista, sin bajar hasta el final. Una barra
+       de lado a lado de la vista, con el fondo del contenido y un borde y una
+       sombra suaves arriba (como la barra de Cobranzas). En el celular y la
+       tablet va ARRIBA de la barra de abajo de la app (68 px + safe-area, lo
+       mismo que deja libre el body). */
     .wizard-nav {
       display: flex;
       gap: 0.75rem;
-      padding: 1rem 1.25rem;
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: var(--radio-tarjeta);
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      margin: 0 -1.25rem;
+      padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      background: var(--color-superficie);
+      border-top: 1px solid var(--color-borde);
+      box-shadow: 0 -2px 12px rgba(28, 26, 23, 0.08);
       flex-shrink: 0;
+    }
+    @media (max-width: 1023.98px) {
+      body.con-barra-lateral .wizard-nav { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); padding-bottom: 0.75rem; }
+    }
+    /* El sticky necesita que el body NO sea un contenedor de scroll: con
+       "overflow-x: hidden" (main.css) lo es y nada se pega (ver Órdenes de
+       retiro y la gestión de producción). Con el wizard abierto, clip: corta
+       igual de costado, sin scroll propio. */
+    body:has(> #vista-wizard:not([hidden])) { overflow-x: clip; }
+    /* Y al tocar un campo (o traerlo a la vista con el teclado), el navegador
+       deja libre abajo el alto de la barra pegada (~72 px, con margen: 88),
+       así el campo no queda debajo de los botones. En el celular, sumado a
+       los 76 px que ya deja para la barra de abajo de la app (main.css). */
+    html:has(> body > #vista-wizard:not([hidden])) { scroll-padding-bottom: 88px; }
+    @media (max-width: 1023.98px) {
+      html:has(> body.con-barra-lateral > #vista-wizard:not([hidden])) { scroll-padding-bottom: calc(76px + 88px + env(safe-area-inset-bottom, 0px)); }
     }
 
     .wizard-nav .btn { flex: 1; }

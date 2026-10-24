@@ -150,6 +150,134 @@ for (const p of PANTALLAS) {
   }
 }
 
+// GASTOS: "Anterior / Siguiente" del wizard PEGADA ABAJO (24/10/2026). En un
+// paso LARGO (Datos, más alto que la ventana), recién abierto y sin bajar:
+//  - la barra del paso es "position: sticky" y está dentro de la ventana;
+//  - document.elementFromPoint en el centro de cada botón devuelve ESE botón
+//    (no lo tapa la barra de abajo de la app ni nada);
+//  - debajo de 1024 px queda justo ARRIBA de la barra de abajo de la app, que
+//    sigue a la vista; en la compu, pegada al borde de abajo;
+//  - un campo que queda a medias debajo de la barra pegada, al recibir el
+//    foco, sube por encima de ella (el scroll-padding de 88 px);
+//  - a mitad de camino sigue igual; al final del paso, en su lugar;
+//  - sin scroll de costado y sin errores de JavaScript.
+// Se vio en rojo contra el código de antes (sin sticky), con "hidden" en vez
+// de clip en el body, sin los 68 px del celular y sin el scroll-padding.
+for (const { ancho, alto } of ANCHOS) {
+  test(`Gastos · el wizard: Anterior / Siguiente siempre a la vista en un paso largo, a ${ancho} px`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await page.goto(`${MAQUETA}/modulos/gastos.html?maqueta=gastos`);
+    await expect(page.locator(ancho >= 1024 ? '.barra-lateral' : '.barra-abajo')).toBeVisible();
+    await page.locator('#btn-nuevo-gasto').click();
+    await page.locator('#btn-sin-foto').click();
+    const paso = page.locator('#sp-datos');
+    await expect(paso).toBeVisible();
+    const nav = paso.locator('.wizard-nav');
+    await expect(nav).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    const medir = () => page.evaluate(() => {
+      const p = document.getElementById('sp-datos');
+      const n = p.querySelector('.wizard-nav');
+      const r = n.getBoundingClientRect();
+      const abajo = document.querySelector('.barra-abajo');
+      const ra = abajo ? abajo.getBoundingClientRect() : null;
+      const abajoVisible = !!abajo && getComputedStyle(abajo).display !== 'none' && ra.height > 0;
+      const quien = (e) => e ? `${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}.${(e.getAttribute('class') || '').trim().split(/\s+/).join('.')}` +
+        (e.closest('.barra-abajo') ? ' (la barra de abajo de la app)' : '') : 'nada';
+      const botones = [...n.querySelectorAll('button')].filter(b => !b.hidden && getComputedStyle(b).display !== 'none').map(b => {
+        const rb = b.getBoundingClientRect();
+        const x = rb.left + rb.width / 2;
+        const y = rb.top + rb.height / 2;
+        const en = document.elementFromPoint(x, y);
+        return { id: b.id, dentro: y > 0 && y < innerHeight && x > 0 && x < innerWidth, tocable: !!en && (en === b || b.contains(en)), en: quien(en) };
+      });
+      const enAbajo = abajoVisible ? document.elementFromPoint(ra.left + ra.width / 2, ra.top + ra.height / 2) : null;
+      return {
+        posicion: getComputedStyle(n).position,
+        // Dónde termina el paso (donde irían los botones sin pegarse) y
+        // hasta dónde se ve (arriba de la barra de abajo, si hay).
+        finPaso: p.getBoundingClientRect().bottom, ventana: innerHeight,
+        seVeHasta: abajoVisible ? ra.top : innerHeight,
+        arriba: r.top, fondo: r.bottom,
+        abajoTop: abajoVisible ? ra.top : null,
+        abajoALaVista: abajoVisible && !!enAbajo && !!enAbajo.closest('.barra-abajo'),
+        botones,
+        doc: document.documentElement.scrollWidth, ancho: innerWidth,
+      };
+    });
+    const revisar = (m, cuando) => {
+      expect(m.posicion, `${cuando}: la barra del paso va pegada (sticky)`).toBe('sticky');
+      expect(m.botones.map(b => b.id), `${cuando}: Anterior y Siguiente`).toEqual(['btn-datos-atras', 'btn-datos-siguiente']);
+      for (const b of m.botones) {
+        expect(b.dentro, `${cuando}: ${b.id} dentro de la ventana`).toBe(true);
+        expect(b.tocable, `${cuando}: ${b.id} no está tapado (en su centro hay ${b.en})`).toBe(true);
+      }
+      expect(m.fondo, `${cuando}: la barra entera dentro de la ventana`).toBeLessThanOrEqual(m.ventana + 0.5);
+      // El scroll-padding que deja libre la barra pegada es de 88 px.
+      expect(m.fondo - m.arriba, `${cuando}: la barra pegada mide menos que los 88 px que se le dejan libres`).toBeLessThanOrEqual(88);
+      if (ancho >= 1024) {
+        expect(m.abajoTop, 'en la compu no hay barra de abajo').toBeNull();
+      } else {
+        expect(m.abajoALaVista, `${cuando}: la barra de abajo de la app sigue a la vista`).toBe(true);
+        expect(m.fondo, `${cuando}: la barra del paso termina arriba de la barra de abajo`).toBeLessThanOrEqual(m.abajoTop + 0.5);
+      }
+      expect(m.doc, `${cuando}: sin scroll de costado`).toBeLessThanOrEqual(m.ancho);
+    };
+
+    // Recién abierto, sin bajar: el paso termina más abajo de lo que se ve
+    // (sin la barra pegada, los botones quedaban fuera de la vista).
+    let m0 = await medir();
+    // En la tablet (768 × 1024) el paso Datos de la maqueta entra justo (por
+    // 4 px): se lo alarga como uno con más cosas (el aviso de duplicado, el
+    // de la lectura de la foto…), para mirar la barra en un paso largo.
+    if (m0.finPaso <= m0.seVeHasta) {
+      await page.addStyleTag({ content: '#sp-datos .paso__subtitulo { margin-bottom: 60vh; }' });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      m0 = await medir();
+    }
+    expect(m0.finPaso, 'el paso Datos es LARGO (termina más abajo de lo que se ve)').toBeGreaterThan(m0.seVeHasta);
+    revisar(m0, 'sin bajar');
+    // Pegada al borde: en la compu, abajo de todo; en el celular, justo arriba de la barra de abajo.
+    if (ancho >= 1024) expect(Math.round(m0.fondo), 'pegada al borde de abajo').toBe(alto);
+    else expect(Math.abs(m0.fondo - m0.abajoTop), 'pegada a la barra de abajo').toBeLessThanOrEqual(1);
+    await captura(page, `esqueleto-wizard-nav-${ancho}`, info);
+
+    // Un campo de abajo que recibe el foco (el teclado, o tocarlo) queda
+    // ARRIBA de la barra pegada, no debajo de los botones.
+    // Se lo deja a medias DEBAJO de la barra pegada (no debajo de la barra de
+    // abajo de la app): sin el scroll-padding de la barra, el navegador lo
+    // da por visible y no lo mueve.
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      const c = document.querySelector('#grilla-medio-pago .btn-tipo-doc').getBoundingClientRect();
+      const n = document.querySelector('#sp-datos .wizard-nav').getBoundingClientRect();
+      window.scrollTo(0, Math.max(0, c.bottom - (n.top + 20)));
+    });
+    const antes = await page.evaluate(() => ({
+      fondoCampo: document.querySelector('#grilla-medio-pago .btn-tipo-doc').getBoundingClientRect().bottom,
+      arribaBarra: document.querySelector('#sp-datos .wizard-nav').getBoundingClientRect().top,
+    }));
+    expect(antes.fondoCampo, 'el campo arranca tapado por la barra pegada').toBeGreaterThan(antes.arribaBarra);
+    await page.locator('#grilla-medio-pago .btn-tipo-doc').first().focus();
+    const foco = await page.evaluate(() => ({
+      fondoCampo: document.querySelector('#grilla-medio-pago .btn-tipo-doc').getBoundingClientRect().bottom,
+      arribaBarra: document.querySelector('#sp-datos .wizard-nav').getBoundingClientRect().top,
+    }));
+    expect(foco.fondoCampo, 'el campo con el foco queda arriba de la barra pegada').toBeLessThanOrEqual(foco.arribaBarra + 0.5);
+
+    // A mitad de camino.
+    await page.evaluate(() => window.scrollTo(0, Math.round((document.documentElement.scrollHeight - innerHeight) / 2)));
+    revisar(await medir(), 'a mitad de camino');
+    await captura(page, `esqueleto-wizard-nav-mitad-${ancho}`, info);
+    // Al final: la barra queda en su lugar, al final del paso.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    revisar(await medir(), 'al final');
+    expect(errores).toEqual([]);
+  });
+}
+
 // Los encabezados de los módulos viejos: los mismos que los nuevos, con el
 // color propio de cada módulo, a 1280 y a 390 px.
 const MODULOS = [

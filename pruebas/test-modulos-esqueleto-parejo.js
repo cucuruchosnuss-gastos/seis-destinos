@@ -13,7 +13,7 @@
 // también encima de la barra de abajo).
 //
 // Lo que se fija acá (lo que se ve en un navegador lo fija
-// e2e/54-esqueleto-parejo.spec.js):
+// e2e/57-esqueleto-parejo.spec.js, antes 54):
 //  1. NINGÚN módulo (menos la planta, produccion.html) tiene una regla
 //     "position: fixed" a pantalla completa con fondo LLENO: eso es una
 //     pantalla encima de todo. Los modales (fondo transparente u oscurecido)
@@ -27,6 +27,9 @@
 //     (PALETA_MODULO), sin la tarjeta vieja ni "Seis Destinos".
 //  5. NINGÚN control ni id se perdió en los módulos tocados, contra un commit
 //     FIJO (f32b687, el main de antes de este cambio), nunca contra HEAD.
+//  6. (24/10/2026) Gastos: la barra "Anterior / Siguiente" del wizard pegada
+//     abajo (sticky), arriba de la barra de abajo del celular, con el body en
+//     clip y el scroll-padding que la deja libre.
 //
 //   node pruebas/test-modulos-esqueleto-parejo.js
 // Overrides (para las mutaciones): ARCHIVO_<MODULO> (ARCHIVO_GASTOS,
@@ -316,6 +319,69 @@ for (const f of TOCADOS) {
     if ((ahora.cuenta.get(k) || 0) < n) faltan.push(`${k} (${ahora.cuenta.get(k) || 0} de ${n})`)
   }
   chk(`${f}: ningún control ni id se perdió`, faltan.length === 0, faltan.join(' · '))
+}
+
+// ══ 6. Gastos: "Anterior / Siguiente" del wizard pegada abajo (24/10/2026) ═
+// En un paso largo los botones quedan siempre a la vista. Lo que se ve en el
+// navegador (dentro de la ventana, sin tapar, arriba de la barra de abajo) lo
+// fija e2e/57-esqueleto-parejo.spec.js.
+{
+  const rs = REGLAS['gastos.html']
+  const nav = rs.find(r => r.selector === '.wizard-nav' && !r.media)
+  const c = nav ? nav.cuerpo : ''
+  chk('gastos: la barra del wizard va pegada abajo (position: sticky; bottom: 0)',
+    prop(c, 'position') === 'sticky' && /^0(px)?$/.test(prop(c, 'bottom') || ''), c)
+  chk('gastos: la barra del wizard tiene el fondo del contenido (lleno, nada se ve detrás)',
+    prop(c, 'background') === 'var(--color-superficie)' && fondoLleno(nav), c)
+  chk('gastos: la barra del wizard lleva el borde y la sombra suaves arriba (como la de Cobranzas)',
+    prop(c, 'border-top') === '1px solid var(--color-borde)' && /^0 -\d+px \d+px rgba\(28, 26, 23, 0\.0\d\)$/.test(prop(c, 'box-shadow') || ''), c)
+  const z = Number(prop(c, 'z-index'))
+  chk('gastos: la barra del wizard va encima del contenido y DEBAJO de las barras de la app (abajo 25, arriba 28)',
+    Number.isFinite(z) && z > 0 && z < 25, prop(c, 'z-index'))
+  chk('gastos: en la compu deja libre el safe-area (iPhone sin barra de abajo)',
+    /env\(safe-area-inset-bottom/.test(prop(c, 'padding') || ''), prop(c, 'padding'))
+  // En el celular: arriba de la barra de abajo de la app, con el MISMO alto
+  // que el body le deja libre en main.css.
+  const cel = rs.find(r => r.selector === 'body.con-barra-lateral .wizard-nav' && /max-width:\s*1023\.98px/.test(r.media))
+  const bodyCel = reglas(MAIN).find(r => r.selector === 'body.con-barra-lateral' && /max-width:\s*1023\.98px/.test(r.media) && prop(r.cuerpo, 'padding-bottom'))
+  chk('gastos: en el celular la barra del wizard va arriba de la barra de abajo (bottom = el padding-bottom del body: 68 px + safe-area)',
+    !!cel && !!bodyCel && prop(cel.cuerpo, 'bottom') === prop(bodyCel.cuerpo, 'padding-bottom') && /^calc\(68px \+ env\(safe-area-inset-bottom/.test(prop(cel.cuerpo, 'bottom') || ''),
+    `${cel && cel.cuerpo} | body: ${bodyCel && bodyCel.cuerpo}`)
+  chk('gastos: en el celular no suma el safe-area dos veces (ya lo tiene la barra de abajo)',
+    !!cel && !/safe-area/.test(prop(cel.cuerpo, 'padding-bottom') || ''), cel && cel.cuerpo)
+  // El sticky solo se pega si el body NO es un contenedor de scroll: con el
+  // wizard abierto, clip y no hidden.
+  const clip = rs.find(r => r.selector === 'body:has(> #vista-wizard:not([hidden]))' && !r.media)
+  chk('gastos: con el wizard abierto el body corta de costado con clip (no hidden: con hidden nada se pega)',
+    !!clip && prop(clip.cuerpo, 'overflow-x') === 'clip' && !/overflow:/.test(clip.cuerpo), clip && clip.cuerpo)
+  // … y para eso el wizard tiene que ser hijo DIRECTO del body.
+  const cuerpo = G.slice(G.indexOf('<body')).replace(/<!--[\s\S]*?-->/g, '').replace(/<script\b[\s\S]*?<\/script>/g, '')
+  const hasta = cuerpo.indexOf('<div id="vista-wizard"')
+  const prof = hasta === -1 ? -1 : (cuerpo.slice(0, hasta).match(/<div\b/g) || []).length - (cuerpo.slice(0, hasta).match(/<\/div>/g) || []).length
+  chk('gastos: #vista-wizard es hijo directo del body (lo pide el :has(> #vista-wizard))', prof === 0, prof)
+  // Al tocar un campo, el navegador deja libre la barra pegada.
+  const sp = rs.find(r => r.selector === 'html:has(> body > #vista-wizard:not([hidden]))' && !r.media)
+  const spCel = rs.find(r => r.selector === 'html:has(> body.con-barra-lateral > #vista-wizard:not([hidden]))' && /max-width:\s*1023\.98px/.test(r.media))
+  chk('gastos: con el wizard abierto, un campo con el foco no queda debajo de la barra pegada (scroll-padding-bottom 88 px)',
+    !!sp && prop(sp.cuerpo, 'scroll-padding-bottom') === '88px', sp && sp.cuerpo)
+  const spMain = reglas(MAIN).find(r => r.selector === 'html:has(> body.con-barra-lateral)' && /max-width:\s*1023\.98px/.test(r.media))
+  const deMain = spMain && (prop(spMain.cuerpo, 'scroll-padding-bottom') || '').match(/^calc\((\d+px) \+ env/)
+  chk('gastos: en el celular, los 88 px se suman a lo que main.css ya deja para la barra de abajo',
+    !!spCel && !!deMain && prop(spCel.cuerpo, 'scroll-padding-bottom') === `calc(${deMain[1]} + 88px + env(safe-area-inset-bottom, 0px))`,
+    `${spCel && spCel.cuerpo} | main: ${spMain && spMain.cuerpo}`)
+  // Cada paso tiene su barra, como último hijo del paso (así se pega mientras
+  // se ve el paso), nunca dentro del contenido.
+  const pasos = G.match(/<div class="paso[^"]*" id="sp-[a-z-]+">[\s\S]*?\n    <\/div>\n/g) || []
+  chk('gastos: se encontraron los pasos del wizard', pasos.length >= 8, pasos.length)
+  for (const p of pasos) {
+    const id = p.match(/id="(sp-[a-z-]+)"/)[1]
+    // Desde la barra: sus botones, su cierre y enseguida el cierre del paso.
+    const desde = p.slice(p.indexOf('\n      <div class="wizard-nav">') + 1)
+    const cierre = desde.indexOf('\n      </div>')
+    chk(`gastos: el paso ${id} tiene UNA barra Anterior / Siguiente, al final del paso (hija del paso)`,
+      (p.match(/class="wizard-nav"/g) || []).length === 1 && p.includes('\n      <div class="wizard-nav">') &&
+      cierre !== -1 && !/<div\b/.test(desde.slice(desde.indexOf('>') + 1, cierre)) && desde.slice(cierre) === '\n      </div>\n    </div>\n', desde.slice(cierre))
+  }
 }
 
 fin()
