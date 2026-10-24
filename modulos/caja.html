@@ -32,83 +32,25 @@
 
     .caja-toolbar__buscar { flex: 1; min-width: 160px; }
 
-    /* ── Header nuevo, mismo estilo visual que cc-header de Cuentas
-       Corrientes (tarjeta blanca redondeada) pero con el orden de los hijos
-       invertido: acá "‹ Volver" va primero/izquierda y el bloque de marca
-       segundo/derecha — mismo criterio ya unificado en Gastos/Empleados/
-       Accesos, no el de Cuentas Corrientes tal cual. Logo: cuadrado con el
-       gradiente ámbar literal del mockup (no el logo.png real). ────────── */
-
-    .caja-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--color-fondo);
-      border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-suave);
-      padding: 0.875rem 1.25rem;
-      margin: 1.25rem 0 1.25rem;
-    }
-    .caja-header__volver {
-      padding: 0.5rem 0.875rem;
-      border-radius: 999px;
-      font-family: var(--fuente);
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--color-texto-suave);
-      background: none;
-      border: none;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .caja-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
-    .caja-header__marca { display: flex; align-items: center; gap: 0.625rem; }
-    .caja-header__logo {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #d4a52a, #8a6508);
-      flex-shrink: 0;
-    }
-    .caja-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; }
-    .caja-header__marca-texto {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--color-texto-suave);
-      text-transform: uppercase;
-    }
-    .caja-header__titulo { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto); }
-
-    /* Header de la ficha de persona — mismo patrón que .cc-header-ficha de
-       Cuentas Corrientes (Volver izquierda, ya está bien ahí), con avatar
-       ámbar-suave + nombre a la derecha. */
-    .caja-header-ficha {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--color-fondo);
-      border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-suave);
-      padding: 0.875rem 1.25rem;
-      margin: 1.25rem 0 1.25rem;
-      gap: 0.75rem;
-    }
-    .caja-header-ficha__persona { display: flex; align-items: center; gap: 0.75rem; }
+    /* ── El encabezado (23/10/2026): el de todos los módulos, .cab-modulo de
+       main.css, con el color de Caja (PALETA_MODULO de js/modulos.js). En la
+       ficha de una persona, al lado de "Caja" van sus iniciales y su nombre. */
+    .cab-modulo { --cab-modulo: oklch(0.60 0.13 85); --cab-modulo-suave: oklch(0.955 0.036 85); }
+    .caja-ficha-sub { display: inline-flex; align-items: center; gap: 0.5rem; }
     .caja-header-ficha__avatar {
-      width: 34px;
-      height: 34px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       background: var(--amarillo-suave);
       color: var(--amarillo-oscuro);
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 0.8125rem;
+      font-size: 0.6875rem;
       flex-shrink: 0;
     }
-    .caja-header-ficha__nombre { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto); }
+    .caja-header-ficha__avatar:empty { display: none; }
 
     /* ── Pestañas (mismo patrón .tabs-cc de cuentas-corrientes.html) ──────── */
 
@@ -591,14 +533,14 @@
 
     /* ── Vista detalle de persona ─────────────────────────────────────────── */
 
+    /* 23/10/2026: la ficha es una vista DENTRO de la página, en el lugar del
+       listado (el JS ya lo esconde), y scrollea la página. Antes iba
+       "position: fixed; inset: 0; z-index: 50" y tapaba la barra lateral, la
+       de arriba y la de abajo del celular. */
     #vista-detalle-persona:not([hidden]) {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      background: var(--color-superficie);
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
+      min-width: 0;
     }
 
     /* Botón "+" para agregar cuenta — solo en la propia ficha, ver
@@ -1492,14 +1434,12 @@
 
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
 
-      <header class="caja-header">
-        <a href="../dashboard.html" class="caja-header__volver" title="Volver al dashboard">‹ Volver</a>
-        <div class="caja-header__marca">
-          <div class="caja-header__logo"></div>
-          <div class="caja-header__marca-col">
-            <span class="caja-header__marca-texto">Seis Destinos</span>
-            <span class="caja-header__titulo">Caja <span style="color:var(--amarillo); font-size:0.875rem; line-height:1;">●</span></span>
-          </div>
+      <!-- El encabezado de todos los módulos (23/10/2026, .cab-modulo de main.css). -->
+      <header class="cab-modulo">
+        <a href="../dashboard.html" class="cab-modulo__volver" title="Volver al dashboard">‹ Volver</a>
+        <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2"/></svg></span>
+        <div class="cab-modulo__col">
+          <span class="cab-modulo__titulo">Caja</span>
         </div>
       </header>
 
@@ -1596,12 +1536,13 @@
        VISTA B — FICHA DE PERSONA
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-detalle-persona" hidden>
-    <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
-      <header class="caja-header-ficha">
-        <button type="button" class="caja-header__volver" id="btn-volver-ficha">‹ Volver</button>
-        <div class="caja-header-ficha__persona">
-          <div class="caja-header-ficha__avatar" id="detalle-persona-avatar"></div>
-          <span class="caja-header-ficha__nombre" id="detalle-persona-nombre"></span>
+    <div style="padding:0 1.25rem 1.25rem; max-width:1120px; margin:0 auto; width:100%; box-sizing:border-box;">
+      <header class="cab-modulo">
+        <button type="button" class="cab-modulo__volver" id="btn-volver-ficha">‹ Volver</button>
+        <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2"/></svg></span>
+        <div class="cab-modulo__col">
+          <span class="cab-modulo__titulo">Caja</span>
+          <span class="cab-modulo__sub caja-ficha-sub"><span class="caja-header-ficha__avatar" id="detalle-persona-avatar"></span><span id="detalle-persona-nombre"></span></span>
         </div>
       </header>
 
@@ -1636,11 +1577,13 @@
   <!-- CAMBIO 6 — Directorio de datos bancarios públicos. Sin saldos en
        ningún punto de esta vista, a propósito. -->
   <div id="vista-directorio-caja" hidden>
-    <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
-      <header class="caja-header-ficha">
-        <button type="button" class="caja-header__volver" id="btn-directorio-atras">‹ Volver</button>
-        <div class="caja-header-ficha__persona">
-          <span class="caja-header-ficha__nombre" id="directorio-titulo">Directorio</span>
+    <div style="padding:0 1.25rem 1.25rem; max-width:1120px; margin:0 auto; width:100%; box-sizing:border-box;">
+      <header class="cab-modulo">
+        <button type="button" class="cab-modulo__volver" id="btn-directorio-atras">‹ Volver</button>
+        <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2"/></svg></span>
+        <div class="cab-modulo__col">
+          <span class="cab-modulo__titulo">Caja</span>
+          <span class="cab-modulo__sub" id="directorio-titulo">Directorio</span>
         </div>
       </header>
 
@@ -3246,8 +3189,12 @@
       document.getElementById('detalle-persona-nombre').textContent = emp.nombre
       document.getElementById('detalle-persona-avatar').textContent = iniciales(emp.nombre)
 
+      // 23/10/2026: la ficha es una vista dentro de la página. Se anota la
+      // altura del listado ANTES de esconderlo y la ficha arranca arriba.
+      if (!document.getElementById('vista-lista-caja').hidden) scrollDelListado = window.scrollY || 0
       document.getElementById('vista-lista-caja').hidden = true
       document.getElementById('vista-detalle-persona').removeAttribute('hidden')
+      window.scrollTo(0, 0)
 
       // Entrada directa (rol 'usuario'): nunca se cargó el listado general —
       // acá se piden únicamente los saldos propios, no los de nadie más.
@@ -3282,8 +3229,11 @@
     function cerrarDetallePersona() {
       document.getElementById('vista-detalle-persona').hidden = true
       document.getElementById('vista-lista-caja').removeAttribute('hidden')
+      window.scrollTo(0, scrollDelListado)
       estado.personaAbierta = null
     }
+    // La altura del listado al abrir una ficha (para volver a la misma).
+    let scrollDelListado = 0
 
     // ═══════════════════════════════════════════════════════════════════════
     // DIRECTORIO (CAMBIO 6) — nombre/medio/moneda/CBU/alias/número, nunca

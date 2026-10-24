@@ -43,68 +43,9 @@
       min-width: 0;
     }
 
-    /* ── Header — tarjeta blanca, mismo patrón que materia-prima ──────────── */
-
-    .stock-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-width: 0;
-      background: var(--color-fondo);
-      border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-suave);
-      padding: 0.875rem 1.25rem;
-      margin: 1.25rem 0;
-    }
-    .stock-header__marca { display: flex; align-items: center; gap: 0.625rem; min-width: 0; }
-    .stock-header__logo {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, var(--verde), var(--verde-oscuro));
-      flex-shrink: 0;
-    }
-    .stock-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
-    .stock-header__marca-texto {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--color-texto-suave);
-      text-transform: uppercase;
-    }
-    .stock-header__titulo {
-      font-size: 1.125rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      color: var(--color-texto);
-      min-width: 0;
-    }
-    /* SIN `white-space: nowrap`. Verificado: `.stock-header__marca`, su
-       columna y el título ya tienen `min-width: 0`, así que no eran ellos los
-       que apretaban — el piso lo ponía el nowrap de acá, que impedía que
-       "Catálogo de insumos" bajara de renglón en una pantalla angosta y
-       obligaba al header a ser más ancho que el viewport. Sin la regla, en
-       pantallas donde entra se ve igual, y donde no entra baja en vez de
-       desbordar. */
-    .stock-header__subtitulo {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--color-texto-suave);
-    }
-    .stock-header__volver {
-      padding: 0.5rem 0.875rem;
-      border-radius: 999px;
-      font-family: var(--fuente);
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--color-texto-suave);
-      background: none;
-      border: none;
-      cursor: pointer;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-    .stock-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
+    /* ── El encabezado (23/10/2026): el de todos los módulos, .cab-modulo de
+       main.css, con el color de Stock (PALETA_MODULO de js/modulos.js). ── */
+    .cab-modulo { --cab-modulo: oklch(0.52 0.12 130); --cab-modulo-suave: oklch(0.955 0.034 130); }
 
     /* ── Se actualiza sola (02/10/2026) ───────────────────────────────────
        Una línea chica: cuándo se leyó por última vez y "Actualizar". Con un
@@ -801,6 +742,128 @@
     body.stock-en-eleccion .vista-stock,
     body.stock-en-eleccion .pestanas-stock,
     body.stock-en-eleccion .stock-actualizado { display: none !important; }
+
+    /* ── Producto terminado (23/10/2026) ────────────────────────────────────
+       Como el selector de productos de la Carga de retiros, pero más chico:
+       una línea por presentación + cono, agrupadas por producto, letra de 13
+       px y renglones de 40 px, para que entre mucho sin leer de más. Lo
+       negativo, en rojo (--rojo-oscuro sobre --rojo-suave). Nada con ancho
+       fijo: a 360 px no hay scroll de costado. */
+    body.stock-en-terminado .pestanas-stock { display: none !important; }
+    /* En la compu, angosta: el número no queda lejos de su nombre. */
+    #vista-terminado { max-width: 52rem; }
+    .ptm-lista { display: flex; flex-direction: column; gap: 0.625rem; min-width: 0; }
+    .ptm-fabrica {
+      margin: 0.5rem 0 -0.125rem; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--color-texto-2);
+    }
+    .ptm-producto {
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px;
+      overflow: hidden; min-width: 0;
+    }
+    .ptm-producto__cab {
+      display: flex; align-items: baseline; gap: 0.5rem; padding: 0.4375rem 0.75rem;
+      background: var(--color-superficie); border-bottom: 1px solid var(--color-borde);
+    }
+    .ptm-producto__nombre { flex: 1; min-width: 0; font-size: 0.875rem; font-weight: 800; overflow-wrap: anywhere; }
+    .ptm-producto__total { flex-shrink: 0; font-size: 0.75rem; font-weight: 700; color: var(--color-texto-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ptm-linea + .ptm-linea { border-top: 1px solid var(--color-pista); }
+    .ptm-linea__fila {
+      display: flex; align-items: center; gap: 0.5rem; width: 100%; min-height: 40px; padding: 0.3125rem 0.75rem;
+      border: 0; background: var(--color-fondo); color: var(--color-texto); font: inherit; text-align: left; cursor: pointer;
+    }
+    .ptm-linea__fila:hover { background: var(--color-fila-hover); }
+    .ptm-linea__fila:focus-visible { outline: 3px solid var(--color-acento); outline-offset: -3px; }
+    .ptm-linea--abierta > .ptm-linea__fila { background: var(--color-acento-fila); box-shadow: inset 3px 0 0 var(--verde); }
+    .ptm-linea__fila::before {
+      content: '›'; flex-shrink: 0; width: 0.625rem; color: var(--color-texto-suave); font-weight: 700;
+      transition: transform 0.15s;
+    }
+    .ptm-linea--abierta > .ptm-linea__fila::before { transform: rotate(90deg); }
+    .ptm-linea__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .ptm-linea__nombre { font-size: 0.8125rem; font-weight: 600; overflow-wrap: anywhere; }
+    .ptm-linea__aviso { font-size: 0.6875rem; font-weight: 700; color: var(--rojo-oscuro); }
+    .ptm-linea__cajas {
+      flex-shrink: 0; font-size: 0.875rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .ptm-linea__sin {
+      flex-shrink: 0; padding: 0.0625rem 0.4375rem; border-radius: 6px; background: var(--color-superficie);
+      color: var(--color-texto-2); font-size: 0.6875rem; font-weight: 700; white-space: nowrap;
+    }
+    .ptm-linea--sin-stock .ptm-linea__nombre { color: var(--color-texto-2); }
+    .ptm-neg { color: var(--rojo-oscuro); }
+    .ptm-detalle {
+      padding: 0.375rem 0.75rem 0.625rem 1.875rem; background: var(--color-fondo);
+      display: flex; flex-direction: column; gap: 0.375rem; min-width: 0;
+    }
+    .ptm-lotes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-width: 0; }
+    .ptm-lote {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.5rem; min-height: 34px;
+      padding: 0.1875rem 0.375rem; border-radius: 6px; font-size: 0.8125rem; min-width: 0;
+    }
+    .ptm-lote + .ptm-lote { border-top: 1px dashed var(--color-pista); }
+    .ptm-lote--neg { background: var(--rojo-suave); }
+    .ptm-lote__lote { font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
+    .ptm-lote__desde { flex: 1 0 auto; font-size: 0.6875rem; color: var(--color-texto-suave); white-space: nowrap; }
+    .ptm-lote__cajas { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ptm-lote__form { list-style: none; }
+    .ptm-btn {
+      min-height: 30px; padding: 0.125rem 0.625rem; border-radius: 8px; border: 1px solid var(--verde);
+      background: var(--color-fondo); color: var(--verde-oscuro); font: inherit; font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+    .ptm-btn:hover { background: var(--verde-suave); }
+    .ptm-btn--otro { align-self: flex-start; }
+    .ptm-link {
+      align-self: flex-start; min-height: 30px; padding: 0; border: 0; background: none; font: inherit;
+      font-size: 0.75rem; font-weight: 700; color: var(--verde-oscuro); text-decoration: underline; cursor: pointer;
+    }
+    .ptm-detalle__hist { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+    .ptm-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-width: 0; }
+    .ptm-hist__fila {
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.5rem; align-items: baseline;
+      padding: 0.25rem 0; border-top: 1px solid var(--color-pista); font-size: 0.75rem;
+    }
+    .ptm-hist__fecha { color: var(--color-texto-suave); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ptm-hist__que { min-width: 0; overflow-wrap: anywhere; }
+    .ptm-hist__tipo { font-weight: 700; }
+    .ptm-hist__motivo { display: block; color: var(--color-texto-2); font-style: italic; }
+    .ptm-hist__cajas { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ptm-hist__vacio { margin: 0; font-size: 0.75rem; color: var(--color-texto-suave); }
+    .ptm-exito {
+      margin: 0; padding: 0.375rem 0.625rem; border-radius: 8px; background: var(--verde-suave);
+      color: var(--verde-oscuro); font-size: 0.8125rem; font-weight: 700;
+    }
+    .ptm-form {
+      display: flex; flex-direction: column; gap: 0.5rem; margin: 0.25rem 0; padding: 0.625rem;
+      border: 1px solid var(--color-borde); border-radius: 10px; background: var(--color-superficie); min-width: 0;
+    }
+    .ptm-form__titulo { margin: 0; font-size: 0.8125rem; overflow-wrap: anywhere; }
+    .ptm-form__nota { margin: -0.25rem 0 0; font-size: 0.6875rem; color: var(--color-texto-suave); }
+    .ptm-form__fila { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; min-width: 0; }
+    .ptm-campo { display: flex; flex-direction: column; gap: 0.1875rem; font-size: 0.75rem; font-weight: 700; color: var(--color-texto-2); min-width: 0; }
+    .ptm-campo input, .ptm-campo select {
+      min-height: 40px; padding: 0.375rem 0.625rem; border: 1.5px solid var(--color-borde); border-radius: 8px;
+      background: var(--color-fondo); color: var(--color-texto); font-family: var(--fuente); font-size: 0.875rem; font-weight: 400;
+      min-width: 0; width: 100%; box-sizing: border-box;
+    }
+    .ptm-campo--cajas { flex: 1 1 6rem; }
+    .ptm-segmento { display: flex; border: 1.5px solid var(--verde); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+    .ptm-segmento__btn {
+      min-height: 40px; padding: 0 0.875rem; border: 0; background: var(--color-fondo); color: var(--verde-oscuro);
+      font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer;
+    }
+    .ptm-segmento__btn + .ptm-segmento__btn { border-left: 1.5px solid var(--verde); }
+    .ptm-segmento__btn[aria-pressed="true"] { background: var(--verde); color: #fff; }
+    .ptm-segmento__btn[aria-pressed="true"]:hover { background: var(--verde-oscuro); }
+    .ptm-form__queda { margin: 0; font-size: 0.8125rem; font-weight: 700; }
+    .ptm-form__error { margin: 0; font-size: 0.8125rem; font-weight: 700; color: var(--rojo-oscuro); overflow-wrap: anywhere; }
+    .ptm-form__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .ptm-gestion { margin: 1rem 0 0; font-size: 0.75rem; color: var(--color-texto-2); }
+    .ptm-gestion a { color: var(--verde-oscuro); font-weight: 700; }
+    @media (max-width: 1023.98px) {
+      body #buscador-terminado, .ptm-campo input, .ptm-campo select { font-size: 16px; }
+    }
 
     /* ── Modales — bottom-sheet, mismo patrón que materia-prima ───────────── */
 
@@ -2533,14 +2596,13 @@
 
   <div class="contenedor-stock">
 
-    <header class="stock-header">
-      <a href="../dashboard.html" class="stock-header__volver" title="Volver al dashboard">‹ Volver</a>
-      <div class="stock-header__marca">
-        <div class="stock-header__logo"></div>
-        <div class="stock-header__marca-col">
-          <span class="stock-header__marca-texto">Seis Destinos</span>
-          <span class="stock-header__titulo">Stock <span style="color:var(--verde); font-size:0.875rem; line-height:1;">●</span> <span class="stock-header__subtitulo" id="stock-subtitulo">Stock actual</span></span>
-        </div>
+    <!-- El encabezado de todos los módulos (23/10/2026, .cab-modulo de main.css). -->
+    <header class="cab-modulo">
+      <a href="../dashboard.html" class="cab-modulo__volver stock-header__volver" title="Volver al dashboard">‹ Volver</a>
+      <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 12h16M10 8h4M10 16h4"/></svg></span>
+      <div class="cab-modulo__col">
+        <span class="cab-modulo__titulo">Stock</span>
+        <span class="cab-modulo__sub" id="stock-subtitulo">Stock actual</span>
       </div>
     </header>
 
@@ -2561,10 +2623,12 @@
          el producto terminado Y los insumos elige primero qué mirar. Con una
          sola de las dos se entra derecho (ver decidirEntrada()). -->
     <div class="stock-eleccion" id="stock-eleccion" hidden>
-      <a class="stock-eleccion__opcion" id="btn-entrada-terminado" href="produccion-gestion.html?vista=stock&amp;desde=stock">
+      <!-- 23/10/2026: abre la vista de producto terminado de ESTE módulo
+           (#vista-terminado); antes era un link a la gestión de Producción. -->
+      <button type="button" class="stock-eleccion__opcion" id="btn-entrada-terminado">
         <span class="stock-eleccion__titulo">Producto terminado</span>
         <span class="stock-eleccion__texto">Las cajas producidas, por producto, cono y lote.</span>
-      </a>
+      </button>
       <button type="button" class="stock-eleccion__opcion" id="btn-entrada-insumos">
         <span class="stock-eleccion__titulo">Insumos y materias primas</span>
         <span class="stock-eleccion__texto">El stock de cada insumo, el catálogo, el recuento y los costos.</span>
@@ -2615,13 +2679,28 @@
       <!-- Lotes usados sin ingreso cargado (23/10/2026): lo que la fábrica usó
            en sus masas (masa_items.lote_fuera_de_stock) y no tiene ingreso, de
            los últimos 30 días, para que administración cargue el ingreso. Lo
-           arma pintarLotesSinIngreso(). -->
+           junta la RPC lotes_usados_sin_ingreso (24/10/2026) y lo arma
+           pintarLotesSinIngreso(). -->
       <section class="stock-sin-ingreso" id="stock-sin-ingreso" hidden></section>
 
       <div class="lista-contenido" id="lista-stock"></div>
 
       <div class="estado-vacio-stock" id="stock-cargando">Cargando stock…</div>
       <div class="estado-vacio-stock" id="stock-vacio" hidden></div>
+    </div>
+
+    <!-- ══ VISTA: PRODUCTO TERMINADO (23/10/2026) ═══════════════════════
+         Una línea por producto + presentación + cono, agrupadas por
+         producto; al tocarla, sus lotes y sus movimientos. La arma
+         pintarTerminado() (ver "PRODUCTO TERMINADO" en el script). La fábrica
+         la elige la barra de arriba. -->
+    <div class="vista-stock" id="vista-terminado" hidden>
+      <input type="search" class="buscador-stock" id="buscador-terminado" placeholder="Buscar producto, presentación, cono o lote…" autocomplete="off">
+      <div class="rec-aviso" id="ptm-incompleto" hidden>El libro de producto terminado tiene más movimientos de los que se pueden leer de una vez: los números pueden estar incompletos.</div>
+      <div class="rec-aviso" id="ptm-error" role="alert" hidden></div>
+      <div class="ptm-lista" id="ptm-lista"></div>
+      <div class="estado-vacio-stock" id="ptm-estado">Leyendo el stock de producto terminado…</div>
+      <p class="ptm-gestion">Para cargar un ingreso de cajas o ver las salidas entre fábricas: <a id="ptm-link-gestion" href="produccion-gestion.html?vista=stock&amp;desde=stock">Producción › Stock terminado</a>.</p>
     </div>
 
     <!-- ══ VISTA: CATÁLOGO ═══════════════════════════════════════════════ -->
@@ -3974,6 +4053,11 @@
       trp: null,
       trpCatalogo: null,
 
+      // ── Producto terminado (23/10/2026) ─────────────────────────────
+      // La vista de "Producto terminado" de la entrada: null = sin abrir.
+      // Ver estadoTerminadoVacio().
+      ptm: null,
+
       // ── Costos de insumos (09/10/2026) ────────────────────────────────
       costosUnidad: '',     // la fábrica de la pantalla de costos
       costos: null,         // { unidad, filas (de costos_insumos) | null, error }
@@ -4069,6 +4153,7 @@
       if (estado.cargados.has('historial')) renderizarHistorial()
       if (estado.cargados.has('mermas')) renderizarMermas()
       if (estado.cargados.has('transito')) { renderizarTransito(); renderizarTransfHistorial() }
+      if (estado.ptm?.leido) pintarTerminado()
       if (estado.cargados.has('recuento')) {
         const nueva = unidadRecuentoPorBarra()
         if (nueva !== estado.unidadRecuento) {
@@ -4697,170 +4782,116 @@
     //
     // La sala de masa usa lotes que administración no cargó: registrar_masa
     // los marca masa_items.lote_fuera_de_stock (saldo del lote <= 0 en ese
-    // momento; verificado con pg_get_functiondef el 23/10/2026). Acá se
-    // juntan los de los últimos DIAS_SIN_INGRESO días por fábrica, insumo y
-    // lote, con los kg usados y la fecha de la última masa, para cargar el
-    // ingreso. Un lote que YA tiene un movimiento positivo en el libro
-    // (ingreso, inventario inicial, transferencia, ajuste) no se lista: tuvo
-    // ingreso y se terminó, no es papeleo pendiente.
+    // momento; verificado con pg_get_functiondef el 23/10/2026). Se listan
+    // los de los últimos DIAS_SIN_INGRESO días, por fábrica, insumo y lote,
+    // con los kg usados y la fecha de la última masa, para cargar el ingreso.
     //
-    // LA RLS (pg_policies, 23/10/2026): masa_items se lee con _ve_turno() =
-    // produccion:cargar, ver o configurar CON ALCANCE en la fábrica del turno
-    // (super_admin pasa). stock:ver NO alcanza. Sin ese permiso la base no da
-    // error: devuelve vacío, que se leería como "no hay nada". Por eso se
-    // decide ANTES con la misma regla (puedeVerMasasEn) y se DICE.
+    // DESDE EL 24/10/2026 LOS JUNTA LA BASE, una llamada por fábrica:
+    // lotes_usados_sin_ingreso(p_unidad_negocio_id uuid, p_dias integer
+    // DEFAULT 30) → jsonb [{insumo_id, insumo, marca, unidad_medida, lote, kg,
+    // masas, ultima_fecha, maquinas}] (pg_get_functiondef, 24/10/2026):
+    // SECURITY DEFINER, masas no anuladas de los turnos de esa fábrica con
+    // turnos_produccion.fecha >= hoy (Argentina) - p_dias, agrupado por insumo
+    // y lote, SIN los lotes que ya tienen un movimiento positivo en
+    // stock_movimientos de esa fábrica (tuvieron ingreso y se terminaron: no
+    // es papeleo). ultima_fecha es una FECHA (date, 'aaaa-mm-dd') del turno,
+    // no un instante: se muestra tal cual, sin pasarla por la zona horaria.
+    // Exige stock:ver, produccion:ver o produccion:configurar CON ALCANCE en
+    // la fábrica (tiene_tarea_alcance; si no, levanta un error). La pantalla
+    // consulta solo las fábricas donde la misma regla da
+    // (puedeVerLotesSinIngresoEn) y, si la base igual contesta un error, lo
+    // muestra tal cual para ESA fábrica: las demás se ven igual.
     const DIAS_SIN_INGRESO = 30
-    const FILAS_POR_PAGINA_SIN_INGRESO = 1000
-    const TOPE_PAGINAS_SIN_INGRESO = 10
 
-    function puedeVerMasasEn(unidadId) {
-      return ['produccion:cargar', 'produccion:ver', 'produccion:configurar'].some(c => puedeTareaEn(c, unidadId))
+    function puedeVerLotesSinIngresoEn(unidadId) {
+      return ['stock:ver', 'produccion:ver', 'produccion:configurar'].some(c => puedeTareaEn(c, unidadId))
     }
 
-    // Lee de a páginas (PostgREST corta en 1000 filas). armar(desde, hasta)
-    // devuelve la consulta de esa página. → { filas, error }
-    async function leerPaginasSinIngreso(armar) {
-      const filas = []
-      for (let pagina = 0; pagina < TOPE_PAGINAS_SIN_INGRESO; pagina++) {
-        const desde = pagina * FILAS_POR_PAGINA_SIN_INGRESO
-        const { data, error } = await armar(desde, desde + FILAS_POR_PAGINA_SIN_INGRESO - 1)
-        if (error) return { filas, error }
-        filas.push(...(data ?? []))
-        if ((data ?? []).length < FILAS_POR_PAGINA_SIN_INGRESO) break
-      }
-      return { filas, error: null }
+    // Lo que devuelve la RPC para UNA fábrica → los renglones de la pantalla.
+    function filasSinIngreso(unidadId, data) {
+      return (Array.isArray(data) ? data : []).filter(x => x && x.insumo_id).map(x => ({
+        unidad_negocio_id: unidadId, insumo_id: x.insumo_id, nombre: x.insumo ?? '', marca: x.marca ?? null,
+        lote: String(x.lote ?? '').trim(), kg: Number(x.kg) || 0, masas: Number(x.masas) || 0,
+        ultima: x.ultima_fecha ?? null, maquinas: x.maquinas ?? '',
+      }))
     }
 
-    // La fecha (dd/mm/aaaa) de un instante, en hora argentina.
-    function fechaArSinIngreso(iso) {
-      const d = new Date(iso ?? '')
-      if (Number.isNaN(d.getTime())) return ''
-      return formatearFechaCorta(d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }))
-    }
-
-    // Por fábrica, insumo y lote: kg sumados, cuántas masas y la última.
-    // `conIngreso` = Set de 'unidad|insumo|lote' que ya tienen ingreso.
-    function agruparSinIngreso(filas, conIngreso) {
-      const m = new Map()
-      for (const f of filas ?? []) {
-        const unidad = f?.masas?.turnos_produccion?.unidad_negocio_id
-        const lote = String(f?.lote ?? '').trim()
-        if (!unidad || !f.insumo_id || !lote || f.masas?.anulada === true) continue
-        const k = `${unidad}|${f.insumo_id}|${lote}`
-        let g = m.get(k)
-        if (!g) {
-          g = { unidad_negocio_id: unidad, insumo_id: f.insumo_id, nombre: f.insumos?.nombre ?? '', marca: f.insumos?.marca ?? null, lote, kg: 0, masas: new Set(), ultima: null }
-          m.set(k, g)
-        }
-        g.kg += Number(f.cantidad_kg) || 0
-        g.masas.add(f.masa_id)
-        const h = f.masas?.hora ?? null
-        if (h && (!g.ultima || new Date(h) > new Date(g.ultima))) g.ultima = h
-      }
-      return [...m.values()]
-        .filter(g => !conIngreso?.has(`${g.unidad_negocio_id}|${g.insumo_id}|${g.lote}`))
-        .map(g => ({ ...g, kg: Math.round(g.kg * 1000) / 1000, masas: g.masas.size }))
-        .sort((a, b) => (new Date(b.ultima ?? 0) - new Date(a.ultima ?? 0)) ||
-          String(a.nombre).localeCompare(String(b.nombre), 'es', { sensitivity: 'base' }) || String(a.lote).localeCompare(String(b.lote)))
+    // Las fábricas juntas: la última masa más reciente primero (las fechas
+    // 'aaaa-mm-dd' se ordenan como texto), después insumo y lote.
+    function ordenarSinIngreso(grupos) {
+      return grupos.sort((a, b) => String(b.ultima ?? '').localeCompare(String(a.ultima ?? '')) ||
+        String(a.nombre).localeCompare(String(b.nombre), 'es', { sensitivity: 'base' }) || String(a.lote).localeCompare(String(b.lote)))
     }
 
     async function cargarLotesSinIngreso() {
       const turno = ++estado.turnoSinIngreso
-      // Solo las fábricas donde se ve el stock (la pantalla) Y se pueden leer
-      // las masas. Si no hay ninguna, ni se consulta.
-      const legibles = (estado.unidadesStock ?? []).map(u => u.id).filter(puedeVerMasasEn)
-      if (!legibles.length) {
-        estado.sinIngreso = { grupos: [], error: null, errorIngresos: null }
-        return pintarLotesSinIngreso()
-      }
-      const desde = new Date(Date.now() - DIAS_SIN_INGRESO * 24 * 60 * 60 * 1000).toISOString()
-      const usados = await leerPaginasSinIngreso((a, z) => supabase.from('masa_items')
-        .select('masa_id, insumo_id, lote, cantidad_kg, insumos(nombre, marca), masas!inner(hora, anulada, turnos_produccion!inner(unidad_negocio_id))')
-        .eq('lote_fuera_de_stock', true)
-        .eq('masas.anulada', false)
-        .gte('masas.hora', desde)
-        .order('id')
-        .range(a, z))
+      // Solo las fábricas donde se ve el stock (unidadesStock ya viene SIN la
+      // fábrica de pruebas: cargarStock la pasa por sinUnidadesDePrueba) Y
+      // donde la RPC deja. Todas a la vez.
+      const legibles = (estado.unidadesStock ?? []).map(u => u.id).filter(puedeVerLotesSinIngresoEn)
+      const respuestas = await Promise.all(legibles.map(async id => {
+        try {
+          const { data, error } = await supabase.rpc('lotes_usados_sin_ingreso', { p_unidad_negocio_id: id, p_dias: DIAS_SIN_INGRESO })
+          return { id, data, error }
+        } catch (e) {
+          return { id, data: null, error: e }
+        }
+      }))
       if (turno !== estado.turnoSinIngreso) return
-      if (usados.error) {
-        console.error('lotes sin ingreso:', usados.error)
-        estado.sinIngreso = { grupos: [], error: usados.error.message || 'error de la base', errorIngresos: null }
-        return pintarLotesSinIngreso()
-      }
-      // Solo las legibles: salen de unidadesStock, que ya viene SIN la fábrica
-      // de pruebas (cargarStock la pasa por sinUnidadesDePrueba).
-      const enAlcance = new Set(legibles)
-      const filas = usados.filas.filter(f => enAlcance.has(f?.masas?.turnos_produccion?.unidad_negocio_id))
-      // ¿Cuáles ya tienen un movimiento positivo en el libro?
-      const conIngreso = new Set()
-      let errorIngresos = null
-      const insumoIds = [...new Set(filas.map(f => f.insumo_id).filter(Boolean))]
-      const lotes = [...new Set(filas.map(f => String(f.lote ?? '').trim()).filter(Boolean))]
-      if (insumoIds.length && lotes.length) {
-        const ing = await leerPaginasSinIngreso((a, z) => supabase.from('stock_movimientos')
-          .select('unidad_negocio_id, insumo_id, lote')
-          .in('insumo_id', insumoIds)
-          .in('lote', lotes)
-          .gt('cantidad', 0)
-          .order('id')
-          .range(a, z))
-        if (turno !== estado.turnoSinIngreso) return
-        if (ing.error) {
-          console.error('ingresos de los lotes:', ing.error)
-          errorIngresos = ing.error.message || 'error de la base'
+      const grupos = []
+      const errores = []
+      for (const r of respuestas) {
+        if (r.error) {
+          console.error('lotes sin ingreso:', r.error)
+          errores.push({ unidad_negocio_id: r.id, mensaje: r.error.message || 'error de la base' })
         } else {
-          for (const x of ing.filas) conIngreso.add(`${x.unidad_negocio_id}|${x.insumo_id}|${String(x.lote ?? '').trim()}`)
+          grupos.push(...filasSinIngreso(r.id, r.data))
         }
       }
-      estado.sinIngreso = { grupos: agruparSinIngreso(filas, conIngreso), error: null, errorIngresos }
+      estado.sinIngreso = { grupos: ordenarSinIngreso(grupos), errores }
       pintarLotesSinIngreso()
     }
 
     function htmlFilaSinIngreso(g, conUnidad) {
       const masas = g.masas === 1 ? '1 masa' : `${g.masas} masas`
-      const ultima = fechaArSinIngreso(g.ultima)
+      // ultima_fecha es un date ('aaaa-mm-dd'): directo a dd/mm/aaaa.
+      const ultima = formatearFechaCorta(g.ultima)
       return '<li class="stock-sin-ingreso__fila">' +
         `<div class="stock-sin-ingreso__que">${esc(g.nombre || 'Insumo sin nombre')}${g.marca ? ` · ${esc(g.marca)}` : ''}` +
         (conUnidad ? `<span class="stock-sin-ingreso__unidad"> · ${esc(nombreUnidadStock(g.unidad_negocio_id))}</span>` : '') + '</div>' +
-        `<div class="stock-sin-ingreso__lote">Lote ${esc(g.lote)}</div>` +
-        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, 'kg'))} en ${esc(masas)}${ultima ? ` · última masa el ${esc(ultima)}` : ''}</div>` +
+        `<div class="stock-sin-ingreso__lote">${g.lote ? `Lote ${esc(g.lote)}` : 'Sin número de lote'}</div>` +
+        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, 'kg'))} en ${esc(masas)}` +
+        `${g.maquinas ? ` · ${esc(g.maquinas)}` : ''}${ultima ? ` · última masa el ${esc(ultima)}` : ''}</div>` +
         '</li>'
     }
 
-    // Lo que se ve depende de la barra de arriba: las fábricas elegidas donde
-    // se ve el stock, separadas en las que se pueden leer y las que no.
+    // Lo que se ve depende de la barra de arriba (sin volver a consultar): los
+    // errores y los lotes de las fábricas elegidas.
     function pintarLotesSinIngreso() {
       const caja = document.getElementById('stock-sin-ingreso')
       const s = estado.sinIngreso
       const enBarra = (estado.unidadesStock ?? []).filter(u => pasaFiltroUnidad(u.id, estado.unidadBarra))
       if (!s || !enBarra.length || sinPermisoEnBarra(estado.unidadesStock)) { caja.hidden = true; caja.innerHTML = ''; return }
-      const sinPermiso = enBarra.filter(u => !puedeVerMasasEn(u.id))
-      const notaPermiso = sinPermiso.length
-        ? '<p class="rec-aviso rec-aviso--info">No se pueden ver los lotes usados sin ingreso cargado de ' +
-          `${esc(sinPermiso.map(u => u.nombre).join(', '))}: la base deja leer las masas solo con un permiso de Producción (ver, cargar o configurar) en esa fábrica.</p>`
-        : ''
-      if (s.error) {
-        caja.hidden = false
-        caja.innerHTML = notaPermiso + `<p class="rec-aviso">No se pudieron leer los lotes usados sin ingreso cargado: ${esc(s.error)}</p>`
-        return
-      }
+      // El error de la base, tal cual, con el nombre de SU fábrica.
+      const avisos = (s.errores ?? []).filter(e => pasaFiltroUnidad(e.unidad_negocio_id, estado.unidadBarra))
+        .map(e => `<p class="rec-aviso">No se pudieron leer los lotes usados sin ingreso cargado de ${esc(nombreUnidadStock(e.unidad_negocio_id))}: ${esc(e.mensaje)}</p>`)
+        .join('')
       const grupos = (s.grupos ?? []).filter(g => pasaFiltroUnidad(g.unidad_negocio_id, estado.unidadBarra))
       if (!grupos.length) {
-        caja.hidden = !notaPermiso
-        caja.innerHTML = notaPermiso
+        caja.hidden = !avisos
+        caja.innerHTML = avisos
         return
       }
       const n = grupos.length
       const abierto = !!estado.sinIngresoAbierto
       const conUnidad = !estado.unidadBarra && new Set(grupos.map(g => g.unidad_negocio_id)).size > 1
       caja.hidden = false
-      caja.innerHTML = notaPermiso +
+      caja.innerHTML = avisos +
         `<button type="button" class="stock-sin-ingreso__cabeza" data-sin-ingreso-alternar aria-expanded="${abierto ? 'true' : 'false'}">` +
         `<span>${n === 1 ? '1 lote usado sin ingreso cargado' : `${n} lotes usados sin ingreso cargado`}</span>` +
         `<span class="stock-sin-ingreso__accion">${abierto ? 'Ocultar' : 'Ver cuáles'}</span></button>` +
         `<div class="stock-sin-ingreso__cuerpo"${abierto ? '' : ' hidden'}>` +
         `<p class="stock-sin-ingreso__nota">Lotes que la fábrica usó en sus masas en los últimos ${DIAS_SIN_INGRESO} días y no tienen ingreso cargado. Cargá el ingreso en Insumos y salen de la lista.</p>` +
-        (s.errorIngresos ? `<p class="rec-aviso">No se pudo comprobar si alguno ya tiene ingreso: ${esc(s.errorIngresos)}</p>` : '') +
         `<ul class="stock-sin-ingreso__lista">${grupos.map(g => htmlFilaSinIngreso(g, conUnidad)).join('')}</ul></div>`
     }
 
@@ -8363,6 +8394,648 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // PRODUCTO TERMINADO — el stock de cajas (23/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // La entrada "Producto terminado" de Stock. Antes mandaba a la gestión de
+    // Producción; desde el 23/10/2026 es una vista de este módulo, armada como
+    // el selector de productos de la Carga de retiros: UNA línea por producto
+    // + presentación + cono ("Caja con cono · ASPEN ×320 ····· 45 cajas"),
+    // agrupadas por producto, con un buscador arriba y SIN lotes a la vista.
+    // Al tocar una línea se despliegan sus lotes (lo negativo en rojo) y sus
+    // movimientos (el ajuste dice su motivo).
+    //
+    // De dónde sale: stock_terminado_movimientos (una fila por movimiento, con
+    // signo), leída de a páginas de 1000 (PostgREST corta ahí). La base deja
+    // leerla con stock:ver o con Producción (policy "stock terminado: leer":
+    // _ve_produccion_en(unidad) OR tiene_tarea_alcance('stock','ver',unidad);
+    // verificado el 23/10/2026). No hay vista con el saldo hecho: se suma acá.
+    //
+    // "Corregir stock" (en cada lote) y "+ Otro lote" (en cada línea): una
+    // sola llamada a ajustar_stock_terminado(p_unidad_negocio_id,
+    // p_presentacion_id, p_marca_id, p_lote, p_cajas, p_motivo_tipo, p_motivo)
+    // → uuid (verificada con pg_get_functiondef el 23/10/2026). SECURITY
+    // DEFINER: exige tiene_tarea_alcance('stock','ajustar_inventario',
+    // unidad), cajas distintas de cero (con signo: + entra, − sale), el
+    // motivo_tipo de su lista, un motivo de 3 letras o más y el lote (lo pasa
+    // a mayúsculas; sin lote, "SIN LOTE"). Guarda un movimiento 'ajuste' con
+    // motivo = "<etiqueta del tipo>: <motivo>" en stock_terminado_movimientos.
+    // La base NO tiene clave de idempotencia: un corte de red con reintento
+    // puede corregir dos veces (por eso el error de conexión manda a mirar el
+    // stock antes de volver a guardar).
+    //
+    // Los botones de corregir se ven solo con stock:ajustar_inventario EN ESA
+    // fábrica (puedeTareaEn: la misma regla que tiene_tarea_alcance). Es
+    // cosmético: la RPC revalida.
+
+    // Las etiquetas de los tipos de movimiento (el CHECK de la tabla,
+    // verificado el 23/10/2026). Un tipo nuevo que no esté acá se muestra con
+    // su nombre crudo (escapado).
+    const TIPOS_MOV_TERMINADO = {
+      produccion: 'Producción',
+      inventario_inicial: 'Inventario inicial',
+      ajuste: 'Ajuste',
+      despacho: 'Retiro',
+      traspaso_salida: 'Pasó a otra fábrica',
+      traspaso_entrada: 'Vino de otra fábrica',
+      ingreso_externo: 'Ingreso',
+      // El nombre que usa la gestión de Producción (rama devoluciones-retiro, 24/10/2026).
+      devolucion: 'Devolución de cliente',
+    }
+
+    // Por qué se corrige: los cinco valores que acepta la RPC, con las MISMAS
+    // etiquetas que ella escribe adelante del motivo.
+    const MOTIVOS_AJUSTE_TERMINADO = [
+      ['faltante_recuento', 'Faltante en el recuento'],
+      ['sobrante_recuento', 'Sobrante en el recuento'],
+      ['aparecio_otro_lado', 'Apareció en otro lado'],
+      ['correccion_carga', 'Corrección de carga'],
+      ['carga_inicial', 'Carga inicial'],
+    ]
+
+    const FILAS_POR_PAGINA_PTM = 1000
+    const TOPE_PAGINAS_PTM = 20
+    // Cuántos movimientos se ven al abrir el historial de una línea (y cuántos
+    // más suma "Ver más").
+    const HISTORIAL_PTM = 15
+    // El largo máximo del lote (la RPC rechaza más de 40).
+    const LARGO_LOTE_PTM = 40
+    const TEXTO_ERROR_RED_PTM = 'No se pudo guardar la corrección (¿se cortó la conexión?). Antes de volver a guardar, tocá Actualizar y mirá si la corrección ya figura: la base no frena una corrección repetida.'
+
+    function estadoTerminadoVacio() {
+      return {
+        cargando: true, error: null, incompleto: false, leido: false,
+        movs: [], cat: null, busqueda: '',
+        abiertas: new Set(),       // las claves de las líneas desplegadas
+        historial: new Map(),      // clave → cuántos movimientos se ven
+        form: null,                // la corrección abierta (ver formTerminadoNuevo)
+        exito: null,               // { clave, texto } de la última corrección
+        turno: 0,
+      }
+    }
+
+    function claveLineaTerminado(unidadId, presentacionId, marcaId) {
+      return `${unidadId ?? ''}|${presentacionId ?? ''}|${marcaId ?? ''}`
+    }
+
+    // "45 cajas", "1 caja", "-3 cajas" (con punto de miles).
+    function textoCajasTerminado(n) {
+      const v = Number(n) || 0
+      return `${formatearNumeroAr(v, { decimales: 0 })} ${Math.abs(v) === 1 ? 'caja' : 'cajas'}`
+    }
+
+    // Una fecha de la base (AAAA-MM-DD) dicha corta: "10/09/26".
+    function fechaCortaTerminado(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''))
+      return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : ''
+    }
+
+    // "Caja con cono · ASPEN ×320": la presentación, el cono y las unidades por
+    // caja (si el nombre de la presentación ya trae ese número, "Caja x 600",
+    // "Caja 600", "Caja ×1.800", no se repite).
+    function textoLineaTerminado(l) {
+      const partes = [l?.presentacion, l?.cono].map(x => String(x ?? '').trim()).filter(Boolean)
+      let texto = partes.join(' · ') || 'Presentación'
+      const upc = Number(l?.upc)
+      if (Number.isInteger(upc) && upc > 0) {
+        const numeros = (String(l?.presentacion ?? '').replace(/(\d)\.(?=\d{3}\b)/g, '$1').match(/\d+/g) ?? []).map(Number)
+        if (!numeros.includes(upc)) texto += ` ×${formatearNumeroAr(upc, { decimales: 0 })}`
+      }
+      return texto
+    }
+
+    // Las líneas (producto + presentación + cono, por fábrica) con su total,
+    // sus lotes (los más viejos primero) y sus movimientos (los más nuevos
+    // primero), a partir del libro y el catálogo.
+    function lineasTerminado(movs, cat) {
+      const pres = new Map((cat?.presentaciones ?? []).map(p => [p.id, p]))
+      const prods = new Map((cat?.productos ?? []).map(p => [p.id, p]))
+      const marcas = new Map((cat?.marcas ?? []).map(m => [m.id, m]))
+      const lineas = new Map()
+      for (const m of movs ?? []) {
+        if (!m) continue
+        const clave = claveLineaTerminado(m.unidad_negocio_id, m.presentacion_id, m.marca_id)
+        let l = lineas.get(clave)
+        if (!l) {
+          const p = pres.get(m.presentacion_id)
+          const prod = prods.get(p?.producto_id)
+          l = {
+            clave, unidadId: m.unidad_negocio_id, presentacionId: m.presentacion_id, marcaId: m.marca_id ?? null,
+            productoId: p?.producto_id ?? `sin-producto|${m.presentacion_id}`,
+            producto: prod?.nombre ?? 'Producto sin nombre', ordenProducto: prod?.orden ?? null,
+            presentacion: p?.nombre ?? 'Presentación', ordenPresentacion: p?.orden ?? null,
+            upc: p?.unidades_por_caja ?? null,
+            cono: m.marca_id ? (marcas.get(m.marca_id)?.nombre ?? 'Cono') : null,
+            total: 0, lotes: new Map(), movs: [],
+          }
+          lineas.set(clave, l)
+        }
+        const cajas = Number(m.cajas) || 0
+        l.total += cajas
+        const lote = m.lote ?? ''
+        let g = l.lotes.get(lote)
+        if (!g) { g = { lote, saldo: 0, desde: null }; l.lotes.set(lote, g) }
+        g.saldo += cajas
+        if (m.fecha && (!g.desde || m.fecha < g.desde)) g.desde = m.fecha
+        l.movs.push(m)
+      }
+      return [...lineas.values()].map(l => ({
+        ...l,
+        lotes: [...l.lotes.values()].sort((a, b) =>
+          String(a.desde ?? '9999').localeCompare(String(b.desde ?? '9999')) || String(a.lote).localeCompare(String(b.lote))),
+        movs: l.movs.sort((a, b) =>
+          String(b.fecha ?? '').localeCompare(String(a.fecha ?? '')) || String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))),
+      }))
+    }
+
+    function tieneStockLineaTerminado(l) {
+      return (l?.lotes ?? []).some(g => g.saldo !== 0)
+    }
+
+    // ¿La línea coincide con lo buscado? Cada palabra tiene que estar en el
+    // producto, la presentación, el cono o algún lote.
+    function coincideLineaTerminado(l, busqueda) {
+      const palabras = normalizar(busqueda).split(/\s+/).filter(Boolean)
+      if (!palabras.length) return true
+      const texto = normalizar([l.producto, l.presentacion, l.cono ?? '', ...(l.lotes ?? []).map(g => g.lote)].join(' '))
+      return palabras.every(p => texto.includes(p))
+    }
+
+    // Lo que se dibuja: fábricas → productos → líneas, ordenado. Sin buscar,
+    // solo las líneas con algún lote distinto de cero; buscando, también las
+    // que quedaron en cero (en gris, "sin stock"). La barra de arriba elige la
+    // fábrica (con "Todas", todas las que la persona ve).
+    function armarTerminado(lineas, { busqueda = '', unidadBarra = null, nombreUnidad = (id) => id } = {}) {
+      const q = String(busqueda ?? '').trim()
+      const visibles = (lineas ?? []).filter(l =>
+        pasaFiltroUnidad(l.unidadId, unidadBarra) && (q ? coincideLineaTerminado(l, q) : tieneStockLineaTerminado(l)))
+      const porFabrica = new Map()
+      for (const l of visibles) {
+        let f = porFabrica.get(l.unidadId)
+        if (!f) { f = { id: l.unidadId, nombre: nombreUnidad(l.unidadId), productos: new Map() }; porFabrica.set(l.unidadId, f) }
+        let p = f.productos.get(l.productoId)
+        if (!p) { p = { id: l.productoId, nombre: l.producto, orden: l.ordenProducto, total: 0, lineas: [] }; f.productos.set(l.productoId, p) }
+        p.total += l.total
+        p.lineas.push(l)
+      }
+      const porOrden = (a, b) => (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER)
+      return [...porFabrica.values()]
+        .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)))
+        .map(f => ({
+          ...f,
+          productos: [...f.productos.values()]
+            .sort((a, b) => porOrden(a.orden, b.orden) || String(a.nombre).localeCompare(String(b.nombre)))
+            .map(p => ({
+              ...p,
+              lineas: p.lineas.sort((a, b) =>
+                porOrden(a.ordenPresentacion, b.ordenPresentacion) ||
+                String(a.presentacion).localeCompare(String(b.presentacion)) ||
+                (a.cono ? 1 : 0) - (b.cono ? 1 : 0) ||
+                String(a.cono ?? '').localeCompare(String(b.cono ?? ''))),
+            })),
+        }))
+    }
+
+    // ¿Puede corregir el stock terminado de esta fábrica? La misma regla que
+    // revalida la RPC: stock:ajustar_inventario con alcance en la unidad.
+    function puedeCorregirTerminadoEn(unidadId) {
+      return puedeAjustar() && puedeTareaEn('stock:ajustar_inventario', unidadId)
+    }
+
+    function nombreUnidadTerminado(id) {
+      return (estado.ptm?.cat?.unidades ?? []).find(u => u.id === id)?.nombre || nombreDeUnidadBarra(id)
+    }
+
+    function lineaTerminado(clave) {
+      const t = estado.ptm
+      return (t?.lineas ?? []).find(l => l.clave === clave) ?? null
+    }
+
+    // ── Lecturas ─────────────────────────────────────────────────────────────
+
+    // Productos, presentaciones, conos y fábricas (para los nombres). Las tres
+    // primeras se leen con stock:ver o con Producción (policies "produccion:
+    // leer …", verificadas el 23/10/2026).
+    async function leerCatalogoTerminado() {
+      const [pr, pp, mk, un] = await Promise.all([
+        supabase.from('productos_terminados').select('id, unidad_negocio_id, nombre, orden, activo'),
+        supabase.from('producto_presentaciones').select('id, producto_id, nombre, con_cono, unidades_por_caja, orden, activa'),
+        supabase.from('marcas_personalizadas').select('id, nombre'),
+        supabase.from('unidades_negocio').select('id, nombre'),
+      ])
+      const error = pr.error || pp.error || mk.error
+      if (error) throw error
+      return { productos: pr.data ?? [], presentaciones: pp.data ?? [], marcas: mk.data ?? [], unidades: un.error ? [] : (un.data ?? []) }
+    }
+
+    // El libro entero que la persona puede leer, de a páginas. Pasado el tope,
+    // se dice que puede estar incompleto en vez de mostrar números cortados.
+    async function leerMovimientosTerminado() {
+      const filas = []
+      let incompleto = false
+      for (let pagina = 0; pagina < TOPE_PAGINAS_PTM; pagina++) {
+        const desde = pagina * FILAS_POR_PAGINA_PTM
+        const { data, error } = await supabase.from('stock_terminado_movimientos')
+          .select('id, unidad_negocio_id, presentacion_id, marca_id, lote, cajas, tipo, motivo, fecha, created_at')
+          .order('id')
+          .range(desde, desde + FILAS_POR_PAGINA_PTM - 1)
+        if (error) throw error
+        filas.push(...(data ?? []))
+        if ((data ?? []).length < FILAS_POR_PAGINA_PTM) break
+        if (pagina === TOPE_PAGINAS_PTM - 1) incompleto = true
+      }
+      // La fábrica de pruebas nunca aparece para una cuenta real.
+      return { filas: sinUnidadesDePrueba(filas, estado.fabrica, f => f?.unidad_negocio_id), incompleto }
+    }
+
+    // Lee todo y repinta. silencioso = sin el "Cargando…" (el refresco solo y
+    // después de guardar). Devuelve si se pudo leer. Una lectura vieja no pisa
+    // una nueva (turno).
+    async function cargarTerminado({ silencioso = false } = {}) {
+      const t = estado.ptm ?? (estado.ptm = estadoTerminadoVacio())
+      const turno = ++t.turno
+      if (!silencioso) { t.cargando = true; pintarTerminado() }
+      let ok = true
+      try {
+        const [cat, movs] = await Promise.all([leerCatalogoTerminado(), leerMovimientosTerminado()])
+        if (turno !== t.turno) return true
+        t.cat = cat
+        t.movs = movs.filas
+        t.incompleto = movs.incompleto
+        t.lineas = lineasTerminado(t.movs, t.cat)
+        t.error = null
+        t.leido = true
+      } catch (err) {
+        console.error('stock terminado:', err)
+        if (turno !== t.turno) return false
+        t.error = 'No se pudo leer el stock de producto terminado. Revisá la conexión y tocá Actualizar.'
+        ok = false
+      }
+      t.cargando = false
+      pintarTerminado()
+      return ok
+    }
+
+    // Entrar a la vista (desde la elección o derecho).
+    async function abrirTerminado() {
+      if (estado.enEleccion) salirDeEleccion()
+      mostrarVista('terminado')
+      if (!estado.ptm) estado.ptm = estadoTerminadoVacio()
+      const buscador = document.getElementById('buscador-terminado')
+      if (buscador) buscador.value = estado.ptm.busqueda
+      if (!estado.ptm.leido) await cargarTerminado()
+      else pintarTerminado()
+    }
+
+    // ── La corrección ────────────────────────────────────────────────────────
+
+    // lote: el lote que se corrige, o null = "+ Otro lote" (se escribe).
+    function formTerminadoNuevo(clave, lote) {
+      return {
+        clave, lote, otro: lote === null, loteNuevo: '',
+        signo: null, cajas: null, tipo: '', motivo: '',
+        enviando: false, intentado: false, errorBase: null,
+      }
+    }
+
+    function abrirFormTerminado(clave, lote) {
+      const t = estado.ptm
+      const l = lineaTerminado(clave)
+      if (!t || !l || !puedeCorregirTerminadoEn(l.unidadId)) return
+      if (t.form?.enviando) return
+      t.form = formTerminadoNuevo(clave, lote)
+      t.exito = null
+      t.abiertas.add(clave)
+      pintarTerminado()
+      const primero = document.getElementById(lote === null ? 'ptm-f-lote' : 'ptm-f-cajas')
+      if (primero && typeof primero.focus === 'function') primero.focus()
+    }
+
+    function cerrarFormTerminado() {
+      const t = estado.ptm
+      if (!t?.form || t.form.enviando) return
+      t.form = null
+      pintarTerminado()
+    }
+
+    // El lote tal como lo va a guardar la base (sin espacios en los bordes y
+    // en mayúsculas).
+    function loteDelFormTerminado(f) {
+      return f?.otro ? String(f.loteNuevo ?? '').trim().toUpperCase() : (f?.lote ?? '')
+    }
+
+    // Lo que falta para poder guardar, dicho para la persona. Las mismas
+    // reglas que la RPC (cajas enteras > 0, el tipo, motivo de 3 letras, lote
+    // de hasta 40).
+    function faltaFormTerminado(f) {
+      const falta = []
+      if (!f) return ['abrir la corrección']
+      const lote = loteDelFormTerminado(f)
+      if (f.otro && !lote) falta.push('el lote (si no tiene, escribí SIN LOTE)')
+      if (lote.length > LARGO_LOTE_PTM) falta.push(`un lote más corto (hasta ${LARGO_LOTE_PTM} letras)`)
+      if (f.signo !== '+' && f.signo !== '-') falta.push('elegir Sumar o Restar')
+      if (!(Number.isInteger(f.cajas) && f.cajas > 0)) falta.push('las cajas (un número entero mayor que cero)')
+      if (!MOTIVOS_AJUSTE_TERMINADO.some(([v]) => v === f.tipo)) falta.push('por qué se corrige')
+      if (String(f.motivo ?? '').trim().length < 3) falta.push('el motivo (al menos 3 letras)')
+      return falta
+    }
+
+    function textoFaltaTerminado(falta) {
+      if (!falta.length) return ''
+      const lista = falta.length === 1 ? falta[0] : `${falta.slice(0, -1).join(', ')} y ${falta[falta.length - 1]}`
+      return `Falta: ${lista}.`
+    }
+
+    // Exactamente lo que viaja a la base.
+    function parametrosAjusteTerminado(f, l) {
+      return {
+        p_unidad_negocio_id: l.unidadId,
+        p_presentacion_id: l.presentacionId,
+        p_marca_id: l.marcaId ?? null,
+        p_lote: loteDelFormTerminado(f),
+        p_cajas: f.signo === '-' ? -f.cajas : f.cajas,
+        p_motivo_tipo: f.tipo,
+        p_motivo: String(f.motivo ?? '').trim(),
+      }
+    }
+
+    // El saldo del lote que se corrige (0 si es un lote nuevo para la línea).
+    function saldoLoteTerminado(l, lote) {
+      return (l?.lotes ?? []).find(g => g.lote === lote)?.saldo ?? 0
+    }
+
+    // "Queda: 40 → 37 cajas", o '' si todavía no se sabe.
+    function textoQuedaTerminado(f, l) {
+      if (!f || !l || (f.signo !== '+' && f.signo !== '-') || !(Number.isInteger(f.cajas) && f.cajas > 0)) return ''
+      const antes = saldoLoteTerminado(l, loteDelFormTerminado(f))
+      const despues = antes + (f.signo === '-' ? -f.cajas : f.cajas)
+      return `Queda: ${formatearNumeroAr(antes, { decimales: 0 })} → ${textoCajasTerminado(despues)}`
+    }
+
+    function textoExitoTerminado(f) {
+      const lote = loteDelFormTerminado(f)
+      const una = f.cajas === 1
+      return f.signo === '-'
+        ? `Listo: se ${una ? 'restó' : 'restaron'} ${textoCajasTerminado(f.cajas)} del lote ${lote}.`
+        : `Listo: se ${una ? 'sumó' : 'sumaron'} ${textoCajasTerminado(f.cajas)} al lote ${lote}.`
+    }
+
+    async function guardarAjusteTerminado() {
+      const t = estado.ptm
+      const f = t?.form
+      if (!f || f.enviando) return
+      const l = lineaTerminado(f.clave)
+      f.intentado = true
+      f.errorBase = null
+      if (!l || faltaFormTerminado(f).length) { pintarFormTerminado(); return }
+      f.enviando = true
+      pintarFormTerminado()
+      try {
+        const { error } = await supabase.rpc('ajustar_stock_terminado', parametrosAjusteTerminado(f, l))
+        if (error) throw error
+        f.enviando = false
+        if (t.form === f) t.form = null
+        t.exito = { clave: f.clave, texto: textoExitoTerminado(f) }
+        // La pantalla de producto terminado se relee entera: el lote nuevo
+        // (o el saldo nuevo) sale del libro, no de una cuenta hecha acá.
+        await cargarTerminado({ silencioso: true })
+      } catch (err) {
+        console.error('ajustar_stock_terminado:', err)
+        f.enviando = false
+        // El error de la base, tal cual. Sin mensaje (la red), el aviso de
+        // mirar antes de reintentar.
+        f.errorBase = err?.message ? String(err.message) : TEXTO_ERROR_RED_PTM
+        if (t.form === f) pintarFormTerminado()
+      }
+    }
+
+    // ── Dibujo ───────────────────────────────────────────────────────────────
+
+    function htmlFormTerminado(f, l) {
+      const lote = f.otro ? null : f.lote
+      const titulo = f.otro
+        ? 'Otro lote'
+        : `Corregir el lote <b>${esc(lote || 'sin lote')}</b> · hay ${esc(textoCajasTerminado(saldoLoteTerminado(l, lote)))}`
+      const opciones = MOTIVOS_AJUSTE_TERMINADO.map(([v, et]) =>
+        `<option value="${esc(v)}"${f.tipo === v ? ' selected' : ''}>${esc(et)}</option>`).join('')
+      return `<form class="ptm-form" data-ptm-form="${esc(f.clave)}" novalidate>
+        <p class="ptm-form__titulo">${titulo}</p>
+        ${f.otro ? `<label class="ptm-campo"><span>Lote</span><input type="text" id="ptm-f-lote" data-ptm-campo="lote" maxlength="${esc(LARGO_LOTE_PTM)}" autocomplete="off" autocapitalize="characters" value="${esc(f.loteNuevo)}"></label>
+        <p class="ptm-form__nota">Si no tiene lote, escribí SIN LOTE. Se guarda en mayúsculas.</p>` : ''}
+        <div class="ptm-form__fila">
+          <div class="ptm-segmento" role="group" aria-label="Sumar o restar cajas">
+            <button type="button" class="ptm-segmento__btn" data-ptm-signo="+" aria-pressed="${f.signo === '+' ? 'true' : 'false'}">Sumar</button>
+            <button type="button" class="ptm-segmento__btn" data-ptm-signo="-" aria-pressed="${f.signo === '-' ? 'true' : 'false'}">Restar</button>
+          </div>
+          <label class="ptm-campo ptm-campo--cajas"><span>Cajas</span><input type="text" id="ptm-f-cajas" data-ptm-campo="cajas" autocomplete="off"></label>
+        </div>
+        <label class="ptm-campo"><span>Por qué</span><select id="ptm-f-tipo" data-ptm-campo="tipo"><option value="">Elegí…</option>${opciones}</select></label>
+        <label class="ptm-campo"><span>Motivo</span><input type="text" id="ptm-f-motivo" data-ptm-campo="motivo" maxlength="300" autocomplete="off" placeholder="Qué pasó (obligatorio)" value="${esc(f.motivo)}"></label>
+        <p class="ptm-form__queda" id="ptm-f-queda"></p>
+        <p class="ptm-form__error" id="ptm-f-error" role="alert" hidden></p>
+        <div class="ptm-form__acciones">
+          <button type="submit" class="btn-stock btn-stock--primario btn-stock--chico" id="ptm-f-guardar">Guardar</button>
+          <button type="button" class="btn-stock btn-stock--chico" data-ptm-cancelar="1">Cancelar</button>
+        </div>
+      </form>`
+    }
+
+    function htmlHistorialTerminado(l, tope) {
+      const movs = l.movs ?? []
+      if (!movs.length) return '<p class="ptm-hist__vacio">Sin movimientos.</p>'
+      const filas = movs.slice(0, tope).map(m => {
+        const cajas = Number(m.cajas) || 0
+        const motivo = m.tipo === 'ajuste' && String(m.motivo ?? '').trim()
+          ? `<span class="ptm-hist__motivo">${esc(String(m.motivo).trim())}</span>` : ''
+        return `<li class="ptm-hist__fila">
+          <span class="ptm-hist__fecha">${esc(fechaCortaTerminado(m.fecha))}</span>
+          <span class="ptm-hist__que"><span class="ptm-hist__tipo">${esc(TIPOS_MOV_TERMINADO[m.tipo] ?? m.tipo ?? 'Movimiento')}</span> · lote ${esc(m.lote || 'sin lote')}${motivo}</span>
+          <span class="ptm-hist__cajas${cajas < 0 ? ' ptm-neg' : ''}">${esc((cajas > 0 ? '+' : '') + formatearNumeroAr(cajas, { decimales: 0 }))}</span>
+        </li>`
+      }).join('')
+      const mas = movs.length > tope
+        ? `<button type="button" class="ptm-link" data-ptm-mas="${esc(l.clave)}">Ver más (quedan ${esc(movs.length - tope)})</button>` : ''
+      return `<ul class="ptm-hist">${filas}</ul>${mas}`
+    }
+
+    function htmlDetalleTerminado(l, t) {
+      const puede = puedeCorregirTerminadoEn(l.unidadId)
+      const f = t.form?.clave === l.clave ? t.form : null
+      const exito = t.exito?.clave === l.clave ? `<p class="ptm-exito" role="status">${esc(t.exito.texto)}</p>` : ''
+      const conSaldo = (l.lotes ?? []).filter(g => g.saldo !== 0)
+      const lotes = conSaldo.length
+        ? `<ul class="ptm-lotes">${conSaldo.map(g => {
+            const formAca = f && !f.otro && f.lote === g.lote
+            return `<li class="ptm-lote${g.saldo < 0 ? ' ptm-lote--neg' : ''}">
+              <span class="ptm-lote__lote">${esc(g.lote || 'sin lote')}</span>
+              <span class="ptm-lote__desde">${g.desde ? `desde ${esc(fechaCortaTerminado(g.desde))}` : ''}</span>
+              <span class="ptm-lote__cajas${g.saldo < 0 ? ' ptm-neg' : ''}">${esc(textoCajasTerminado(g.saldo))}</span>
+              ${puede && !formAca ? `<button type="button" class="ptm-btn" data-ptm-corregir="${esc(l.clave)}" data-lote="${esc(g.lote)}">Corregir stock</button>` : ''}
+            </li>${formAca ? `<li class="ptm-lote__form">${htmlFormTerminado(f, l)}</li>` : ''}`
+          }).join('')}</ul>`
+        : '<p class="ptm-hist__vacio">Ningún lote tiene cajas.</p>'
+      const otro = puede
+        ? (f?.otro ? htmlFormTerminado(f, l) : `<button type="button" class="ptm-btn ptm-btn--otro" data-ptm-otro="${esc(l.clave)}">+ Otro lote</button>`)
+        : ''
+      const tope = t.historial.get(l.clave) ?? 0
+      const hist = `<button type="button" class="ptm-link" data-ptm-historial="${esc(l.clave)}" aria-expanded="${tope ? 'true' : 'false'}">${tope ? 'Ocultar movimientos' : `Movimientos (${esc(l.movs.length)})`}</button>` +
+        (tope ? htmlHistorialTerminado(l, tope) : '')
+      return `<div class="ptm-detalle">${exito}${lotes}${otro}<div class="ptm-detalle__hist">${hist}</div></div>`
+    }
+
+    function htmlLineaTerminado(l, t) {
+      const abierta = t.abiertas.has(l.clave)
+      const sinStock = !tieneStockLineaTerminado(l)
+      const derecha = sinStock
+        ? '<span class="ptm-linea__sin">sin stock</span>'
+        : `<span class="ptm-linea__cajas${l.total < 0 ? ' ptm-neg' : ''}">${esc(textoCajasTerminado(l.total))}</span>`
+      const negativos = (l.lotes ?? []).filter(g => g.saldo < 0).length
+      const aviso = negativos ? `<span class="ptm-linea__aviso">${esc(negativos === 1 ? '1 lote en negativo' : negativos + ' lotes en negativo')}</span>` : ''
+      return `<div class="ptm-linea${abierta ? ' ptm-linea--abierta' : ''}${sinStock ? ' ptm-linea--sin-stock' : ''}">
+        <button type="button" class="ptm-linea__fila" data-ptm-linea="${esc(l.clave)}" aria-expanded="${abierta ? 'true' : 'false'}" title="${esc(l.producto + ' · ' + textoLineaTerminado(l))}">
+          <span class="ptm-linea__texto"><span class="ptm-linea__nombre">${esc(textoLineaTerminado(l))}</span>${aviso}</span>${derecha}
+        </button>
+        ${abierta ? htmlDetalleTerminado(l, t) : ''}
+      </div>`
+    }
+
+    function htmlTerminado(t, fabricas) {
+      const variasFabricas = fabricas.length > 1
+      return fabricas.map(fab => {
+        const productos = fab.productos.map(p => `<section class="ptm-producto">
+          <div class="ptm-producto__cab"><span class="ptm-producto__nombre">${esc(p.nombre)}</span><span class="ptm-producto__total${p.total < 0 ? ' ptm-neg' : ''}">${esc(textoCajasTerminado(p.total))}</span></div>
+          ${p.lineas.map(l => htmlLineaTerminado(l, t)).join('')}
+        </section>`).join('')
+        return variasFabricas ? `<h3 class="ptm-fabrica">${esc(fab.nombre)}</h3>${productos}` : productos
+      }).join('')
+    }
+
+    function pintarTerminado() {
+      const t = estado.ptm
+      const lista = document.getElementById('ptm-lista')
+      const aviso = document.getElementById('ptm-estado')
+      if (!t || !lista || !aviso) return
+      const incompleto = document.getElementById('ptm-incompleto')
+      if (incompleto) incompleto.hidden = !(t.incompleto && !t.error)
+      if (t.cargando && !t.leido) {
+        lista.innerHTML = ''
+        aviso.hidden = false
+        aviso.textContent = 'Leyendo el stock de producto terminado…'
+        return
+      }
+      if (t.error && !t.leido) {
+        lista.innerHTML = ''
+        aviso.hidden = false
+        aviso.textContent = t.error
+        return
+      }
+      const fabricas = armarTerminado(t.lineas, { busqueda: t.busqueda, unidadBarra: estado.unidadBarra, nombreUnidad: nombreUnidadTerminado })
+      const errorRefresco = document.getElementById('ptm-error')
+      if (errorRefresco) { errorRefresco.hidden = !t.error; errorRefresco.textContent = t.error || '' }
+      if (!fabricas.length) {
+        lista.innerHTML = ''
+        aviso.hidden = false
+        const q = String(t.busqueda ?? '').trim()
+        aviso.textContent = q
+          ? `Nada coincide con «${q}».`
+          : (estado.unidadBarra ? `${nombreUnidadTerminado(estado.unidadBarra)} no tiene producto terminado en stock.` : 'No hay producto terminado en stock.')
+        return
+      }
+      aviso.hidden = true
+      lista.innerHTML = htmlTerminado(t, fabricas)
+      // El campo de cajas: entero, con el helper de números de la app.
+      const cajas = document.getElementById('ptm-f-cajas')
+      if (cajas && t.form) {
+        enlazarCampoNumero(cajas, { decimales: 0 })
+        ponerNumero(cajas, t.form.cajas)
+      }
+      pintarFormTerminado()
+    }
+
+    // Lo que cambia mientras se escribe en la corrección, SIN redibujar la
+    // lista (le sacaría el foco al campo): Sumar/Restar, cuánto queda, lo que
+    // falta o el error de la base, y el botón (trabado solo mientras manda).
+    function pintarFormTerminado() {
+      const f = estado.ptm?.form
+      if (!f) return
+      const l = lineaTerminado(f.clave)
+      document.querySelectorAll('[data-ptm-signo]').forEach(b => {
+        b.setAttribute('aria-pressed', b.dataset.ptmSigno === f.signo ? 'true' : 'false')
+      })
+      const queda = document.getElementById('ptm-f-queda')
+      if (queda) {
+        const texto = textoQuedaTerminado(f, l)
+        queda.textContent = texto
+        queda.hidden = !texto
+      }
+      const error = document.getElementById('ptm-f-error')
+      if (error) {
+        const texto = f.errorBase || (f.intentado ? textoFaltaTerminado(faltaFormTerminado(f)) : '')
+        error.textContent = texto
+        error.hidden = !texto
+      }
+      const guardar = document.getElementById('ptm-f-guardar')
+      if (guardar) {
+        guardar.disabled = !!f.enviando
+        guardar.textContent = f.enviando ? 'Guardando…' : 'Guardar'
+      }
+    }
+
+    // ── Eventos ──────────────────────────────────────────────────────────────
+
+    function alTocarTerminado(e) {
+      const t = estado.ptm
+      if (!t) return
+      const el = e.target?.closest?.('[data-ptm-linea], [data-ptm-corregir], [data-ptm-otro], [data-ptm-signo], [data-ptm-cancelar], [data-ptm-historial], [data-ptm-mas]')
+      if (!el) return
+      const d = el.dataset
+      if (d.ptmLinea !== undefined) {
+        if (t.abiertas.has(d.ptmLinea)) t.abiertas.delete(d.ptmLinea)
+        else t.abiertas.add(d.ptmLinea)
+        pintarTerminado()
+      } else if (d.ptmCorregir !== undefined) {
+        abrirFormTerminado(d.ptmCorregir, d.lote ?? '')
+      } else if (d.ptmOtro !== undefined) {
+        abrirFormTerminado(d.ptmOtro, null)
+      } else if (d.ptmSigno !== undefined) {
+        if (t.form && !t.form.enviando) { t.form.signo = d.ptmSigno === '-' ? '-' : '+'; pintarFormTerminado() }
+      } else if (d.ptmCancelar !== undefined) {
+        cerrarFormTerminado()
+      } else if (d.ptmHistorial !== undefined) {
+        if (t.historial.get(d.ptmHistorial)) t.historial.delete(d.ptmHistorial)
+        else t.historial.set(d.ptmHistorial, HISTORIAL_PTM)
+        pintarTerminado()
+      } else if (d.ptmMas !== undefined) {
+        t.historial.set(d.ptmMas, (t.historial.get(d.ptmMas) ?? 0) + HISTORIAL_PTM)
+        pintarTerminado()
+      }
+    }
+
+    function alEscribirTerminado(e) {
+      const f = estado.ptm?.form
+      const campo = e.target?.dataset?.ptmCampo
+      if (!f || !campo) return
+      if (campo === 'cajas') f.cajas = leerCampoNumero(e.target)
+      else if (campo === 'lote') f.loteNuevo = e.target.value
+      else if (campo === 'tipo') f.tipo = e.target.value
+      else if (campo === 'motivo') f.motivo = e.target.value
+      f.errorBase = null
+      pintarFormTerminado()
+    }
+
+    function alMandarTerminado(e) {
+      if (!e.target?.closest?.('[data-ptm-form]')) return
+      e.preventDefault()
+      return guardarAjusteTerminado()
+    }
+
+    function alBuscarTerminado(e) {
+      if (!estado.ptm) return
+      estado.ptm.busqueda = e.target.value
+      pintarTerminado()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // TRASPASO A OTRA FÁBRICA — producto terminado (30/09/2026)
     // ═══════════════════════════════════════════════════════════════════════
     //
@@ -9935,6 +10608,7 @@
       mermas: 'Mermas',
       traspaso: 'Traspaso a otra fábrica',
       costos: 'Costos de insumos',
+      terminado: 'Producto terminado',
     }
 
     // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
@@ -9953,6 +10627,11 @@
       document.getElementById('vista-traspaso').hidden = id !== 'traspaso'
       document.getElementById('vista-costos').hidden = id !== 'costos'
       document.getElementById('vista-alias').hidden = id !== 'alias'
+      document.getElementById('vista-terminado').hidden = id !== 'terminado'
+      // El producto terminado es otra entrada, no una pestaña: mientras se lo
+      // mira no se ven las pestañas de insumos (ver body.stock-en-terminado).
+      if (id === 'terminado') document.body?.classList.add('stock-en-terminado')
+      else document.body?.classList.remove('stock-en-terminado')
       // En la elección de entrada (dos botones) el subtítulo es el de ella.
       document.getElementById('stock-subtitulo').textContent = estado.enEleccion ? 'Elegí qué mirar' : SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
@@ -11521,7 +12200,15 @@
 
     // ── Traspaso a otra fábrica ────────────────────────────────────────────
     document.getElementById('btn-ver-traspaso').addEventListener('click', abrirTraspaso)
-    document.getElementById('btn-entrada-insumos').addEventListener('click', salirDeEleccion)
+    document.getElementById('btn-entrada-insumos').addEventListener('click', elegirInsumos)
+    document.getElementById('btn-entrada-terminado').addEventListener('click', () => abrirTerminado())
+    // La vista de producto terminado (23/10/2026): todo por delegación, la
+    // lista se redibuja entera.
+    document.getElementById('ptm-lista').addEventListener('click', alTocarTerminado)
+    document.getElementById('ptm-lista').addEventListener('input', alEscribirTerminado)
+    document.getElementById('ptm-lista').addEventListener('change', alEscribirTerminado)
+    document.getElementById('ptm-lista').addEventListener('submit', alMandarTerminado)
+    document.getElementById('buscador-terminado').addEventListener('input', alBuscarTerminado)
     document.querySelector('.stock-header__volver').addEventListener('click', alVolverDelEncabezado)
     document.getElementById('btn-volver-de-traspaso').addEventListener('click', () => mostrarVista('stock'))
     document.getElementById('trp-origen').addEventListener('change', (e) => pedirCambioOrigenTrp(e.target.value))
@@ -11743,6 +12430,8 @@
       if ([...document.querySelectorAll('.modal-stock')].some(m => !m.hidden)) return true
       if (estado.sucios.size > 0 || estado.guardando) return true
       if (estado.vista === 'traspaso') return true
+      // Una corrección de producto terminado abierta (23/10/2026).
+      if (estado.vista === 'terminado' && estado.ptm?.form) return true
       const activo = document.activeElement
       if (activo && typeof activo.closest === 'function' && activo.closest('#vista-recuento')
           && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName || '')) return true
@@ -11793,6 +12482,7 @@
       if (estado.vista === 'mermas') tareas.push(cargarMermas())
       if (estado.vista === 'transito') tareas.push(cargarTransito())
       if (estado.vista === 'costos') tareas.push(cargarCostos())
+      if (estado.vista === 'terminado') tareas.push(cargarTerminado({ silencioso: true }))
       tareas.push(cargarPendientesStock())
       const res = await Promise.all(tareas)
       return res.every(r => r !== false)
@@ -11866,8 +12556,9 @@
         if (!params.has('vista')) return null
         pedida = params.get('vista')
         // ?vista=insumos (14/10/2026) es la entrada elegida, no una vista: se
-        // QUEDA en la dirección, así recargar no vuelve a la elección.
-        if (pedida === 'insumos') return null
+        // QUEDA en la dirección, así recargar no vuelve a la elección. Lo
+        // mismo ?vista=terminado (23/10/2026), que ahora se abre acá.
+        if (pedida === 'insumos' || pedida === 'terminado') return null
         params.delete('vista')
         const resto = params.toString()
         history.replaceState(history.state, '', window.location.pathname + (resto ? '?' + resto : '') + window.location.hash)
@@ -11892,8 +12583,9 @@
     // DOS ENTRADAS (14/10/2026, pedido del 13/10, paso 4)
     // ═══════════════════════════════════════════════════════════════════════
     //
-    // Al entrar a Stock: "Producto terminado" (la gestión de Producción, en su
-    // vista de stock) e "Insumos y materias primas" (esta pantalla). Cada una
+    // Al entrar a Stock: "Producto terminado" (desde el 23/10/2026 la vista
+    // #vista-terminado de este módulo; antes, la gestión de Producción) e
+    // "Insumos y materias primas" (la pantalla de siempre). Cada una
     // solo con su permiso; con una sola se entra derecho; sin ninguna, el aviso
     // de siempre. ?vista=terminado y ?vista=insumos (o catalogo, costos,
     // traspaso) saltean la elección.
@@ -11923,8 +12615,9 @@
         estado.misTareas.has('produccion:ver') || estado.misTareas.has('produccion:configurar')
     }
 
-    // Con "&desde=stock" la gestión dice "‹ Stock" y vuelve acá: solo si acá
-    // hay algo más que mirar (si no, volver rebotaría a la gestión).
+    // El link a la gestión de Producción (Stock terminado). Con "&desde=stock"
+    // la gestión dice "‹ Stock" y vuelve acá. Desde el 23/10/2026 se usa solo
+    // para el link de la vista de producto terminado (antes, para mandar ahí).
     function urlTerminado(conVolver) {
       return 'produccion-gestion.html?vista=stock' + (conVolver ? '&desde=stock' : '')
     }
@@ -11945,8 +12638,16 @@
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
 
-    // El "‹ Volver" del encabezado: con elección, desde los insumos vuelve a
-    // los dos botones (sin recargar); en la elección o sin ella, al inicio.
+    // "Insumos y materias primas": la pantalla de siempre. Si antes se miró el
+    // producto terminado, vuelve a la vista de insumos con la que se entró.
+    function elegirInsumos() {
+      salirDeEleccion()
+      if (estado.vista === 'terminado') mostrarVista(estado.vistaInsumos || 'stock')
+    }
+
+    // El "‹ Volver" del encabezado: con elección, desde los insumos o el
+    // producto terminado vuelve a los dos botones (sin recargar); en la
+    // elección o sin ella, al inicio.
     function alVolverDelEncabezado(e) {
       if (estado.hayEleccion && !estado.enEleccion) {
         e.preventDefault()
@@ -12034,12 +12735,22 @@
         document.getElementById('sin-acceso').hidden = false
         return
       }
-      if (entrada === 'terminado') {
-        window.location.replace(urlTerminado(insumos))
-        return
-      }
+      // El link a la gestión de Producción (cargar un ingreso, las salidas
+      // entre fábricas): siempre con "&desde=stock", porque volver a Stock
+      // ahora cae en el producto terminado de acá (23/10/2026).
+      const linkGestion = document.getElementById('ptm-link-gestion')
+      if (linkGestion) linkGestion.href = urlTerminado(true)
       estado.hayEleccion = insumos && terminado
       if (entrada === 'eleccion') mostrarEleccion()
+      // Solo producto terminado (Producción, o sin ninguna tarea de insumos):
+      // la vista de acá, sin pestañas, y nada de lo de insumos.
+      if (!insumos) {
+        document.getElementById('pestanas-stock').hidden = true
+        estado.fabrica = await fabricaP
+        await abrirTerminado()
+        iniciarActualizacionSola()
+        return
+      }
 
       // El orden de este array es el de las pestañas Y el del default: se abre
       // en Stock, que es lo que se mira todos los días. Pero se resuelve por
@@ -12073,6 +12784,12 @@
       const desdeUrl = vistaDesdeUrl(veCostos ? [...vistas, 'costos'] : vistas)
       const inicial = desdeUrl === 'traspaso' ? 'stock' : (desdeUrl ?? (soloCostos ? 'costos' : vistas[0]))
       mostrarVista(inicial)
+      // A dónde vuelve "Insumos y materias primas" si antes se miró el
+      // producto terminado.
+      estado.vistaInsumos = inicial
+      // ?vista=terminado con insumos también: el producto terminado arriba, y
+      // los insumos cargándose abajo (para la elección del "‹ Volver").
+      if (entrada === 'terminado') abrirTerminado()
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
       // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.

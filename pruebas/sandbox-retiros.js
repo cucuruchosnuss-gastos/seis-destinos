@@ -79,6 +79,11 @@ const FUNCIONES_BASE = [
   'textoEquivaleRenglon', 'ponerCantidadInsumo', 'partesCantidadInsumo',
   'modoPrecioHoja', 'cantidadInsumoBultoHoja', 'precioInsumoHoja',
   ...FUNCIONES_CANTIDADES, 'modoDeCarga', 'aUnidadBase', 'desdeUnidadBase', ...FUNCIONES_PRECIO,
+  // Devoluciones y reposiciones (22/10/2026)
+  'esDevolucionHoja', 'ordenarRenglonesHoja', 'textoDestinoDevuelto', 'detalleDevolucionHoja', 'totalCajasDevueltas', 'htmlFilaDevolucionHoja',
+  'devolucionVacia', 'renglonDevolucion', 'esRenglonDev', 'tipoRenglon', 'saleDelStock', 'letrasDe', 'motivoDevolucion', 'faltaDevolucion',
+  'textoDevolucionRenglon', 'totalDevueltasForm', 'htmlTituloDevolucion', 'htmlDevolucionRenglon', 'agregarDevolucion',
+  'elegirMotivoDevolucion', 'elegirTratoDevolucion', 'elegirDestinoDevolucion', 'escribirDevolucion', 'devueltasDeOrden',
 ]
 
 const CONSTANTES_BASE = [
@@ -89,6 +94,7 @@ const CONSTANTES_BASE = [
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
   // Los insumos por bulto (23/10/2026), de js/cantidades.js
   ...CONSTANTES_CANTIDADES, 'DECIMALES_BULTOS_CARGA', ...CONSTANTES_PRECIO,
+  'MOTIVOS_DEVOLUCION', 'LARGO_LOTE_DEVUELTO',
 ]
 
 const PRELUDIO = `

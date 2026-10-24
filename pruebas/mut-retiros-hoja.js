@@ -21,8 +21,9 @@ correrMutaciones({
     { nombre: 'el título vuelve a "RETIRO DE MERCADERÍA"', de: '<span class="rh-titulo__grande">ORDEN DE PEDIDO</span>', a: '<span class="rh-titulo__grande">RETIRO DE MERCADERÍA</span>' },
     { nombre: 'el título impreso sin texto', de: '<span class="rh-titulo__grande">ORDEN DE PEDIDO</span>', a: '<span class="rh-titulo__grande"></span>' },
     // Los insumos
-    { nombre: 'los insumos suman al total de cajas', de: '(r?.esInsumo ? 0 : (Number(r.cajas) || 0))', a: '(Number(r.cajas) || Number(r.cantidad) || 0)' },
-    { nombre: 'el total de unidades con insumos queda en —', de: "  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo)", a: '  const rs = orden?.renglones ?? []' },
+    // (22/10/2026: el total tampoco cuenta las devoluciones; eso lo muta mut-retiros-devoluciones.js.)
+    { nombre: 'los insumos suman al total de cajas', de: "(r?.esInsumo || r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0))", a: "(r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || Number(r.cantidad) || 0))" },
+    { nombre: 'el total de unidades con insumos queda en —', de: "  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo && r?.movimiento !== 'devolucion')", a: "  const rs = (orden?.renglones ?? []).filter(r => r?.movimiento !== 'devolucion')" },
     { nombre: 'las unidades con decimales', de: "  return unidad === 'un' ? 0 : 3", a: '  return 3' },
     { nombre: 'la cantidad ausente dice 0', de: "  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'\n  const texto = formatearNumeroAr", a: "  if (!Number.isFinite(Number(n))) return '—'\n  const texto = formatearNumeroAr" },
     { nombre: 'el texto no lleva los insumos', de: '      lineas.push(`- ${cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido)} · ${nombreInsumoHoja(r)}${lotesI}`)\n', a: '' },
