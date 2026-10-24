@@ -20,8 +20,7 @@ correrMutacionesEnVarios([
     manuales: [
       // ── El nombre y el link a los clientes ──────────────────────────────────
       { nombre: 'la pestaña vuelve al nombre de antes', de: '<title>Cuentas corrientes — Seis Destinos</title>', a: '<title>Cuentas corrientes · Proveedores — Seis Destinos</title>' },
-      { nombre: 'la cabecera vuelve al nombre de antes', de: '<span class="cc-header__titulo">Cuentas corrientes</span>', a: '<span class="cc-header__titulo">Cuentas corrientes · Proveedores</span>' },
-      { nombre: 'no se leen las tareas de retiros', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'cobranzas', 'pedidos']" },
+      { nombre: 'la cabecera vuelve al nombre de antes', de: '<span class="cab-modulo__titulo">Cuentas corrientes</span>\n        </div>\n      </header>\n      <!-- DOS PESTAÑAS', a: '<span class="cab-modulo__titulo">Cuentas corrientes · Proveedores</span>\n        </div>\n      </header>\n      <!-- DOS PESTAÑAS' },      { nombre: 'no se leen las tareas de retiros', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'cobranzas', 'pedidos']" },
       { nombre: 'no se leen las tareas de cobranzas', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'pedidos']" },
       { nombre: 'no se leen las tareas de pedidos (cliente y proveedor, 06/10/2026)', de: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas', 'pedidos']", a: "['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros', 'cobranzas']" },
       { nombre: 'las pestañas no se pintan al leer las tareas', de: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n      renderizarPrimerNivel()\n', a: '      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))\n' },
@@ -59,7 +58,8 @@ correrMutacionesEnVarios([
       // ── Colores: lo que falta, bordó ─────────────────────────────────────────
       { nombre: 'la descarga sin importe sin bordó', de: '      background: var(--bordo-suave);\n      color: var(--bordo);\n      font-size: 0.75rem;', a: '      background: var(--color-superficie);\n      color: var(--color-texto);\n      font-size: 0.75rem;' },
       { nombre: '"Falta importe" vuelve al rojo suelto', de: '    .fila-movimiento__monto--falta { color: var(--bordo); font-weight: 700; white-space: nowrap; }', a: '    .fila-movimiento__monto--falta { color: #B91C1C; font-weight: 700; white-space: nowrap; }' },
-      { nombre: 'el ícono vuelve al turquesa', de: '      background: oklch(0.50 0.15 322);', a: '      background: linear-gradient(135deg, var(--turquesa), var(--turquesa-oscuro));' },
+      // 23/10/2026: el ícono es el del encabezado de todos los módulos (.cab-modulo).
+      { nombre: 'el ícono vuelve al turquesa', de: '.cab-modulo { --cab-modulo: oklch(0.50 0.15 322);', a: '.cab-modulo { --cab-modulo: var(--turquesa);' },
       { nombre: 'los avatares vuelven al azul', de: "    const PALETA_AVATAR = ['#FDE7E7', '#F6EBDD', '#E6F4EC', '#FFF3DA', '#F3E8E2']", a: "    const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']" },
       // ── El cheque endosado ───────────────────────────────────────────────────
       { nombre: 'cualquier medio de pago cuenta como cheque', de: "      if (!gasto || gasto.medio_pago !== 'cheque') return null", a: '      if (!gasto) return null' },

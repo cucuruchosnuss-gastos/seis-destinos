@@ -1522,15 +1522,19 @@
       .pg-contenido { padding: 0 28px calc(2rem + env(safe-area-inset-bottom)); }
       .pg-btn-menu, .pg-volver-menu { display: none !important; }
     }
-    /* Celular: "Menú" lo abre a pantalla completa (2b); los tres bloques como
-       tarjetas y renglones de 52 px con "›". */
+    /* Celular: "Menú" lo abre en el lugar del contenido (2b); los tres bloques
+       como tarjetas y renglones de 52 px con "›". 23/10/2026: antes iba
+       "position: fixed; inset: 0; z-index: 50" encima de todo y tapaba la
+       barra de arriba y la de abajo del celular; ahora es una vista DENTRO de
+       la página (el contenido se esconde mientras está abierto) y scrollea la
+       página. */
     @media (max-width: 899px) {
       .pg-menu { display: none; }
       body.pg-menu-abierto .pg-menu {
-        display: flex; position: fixed; inset: 0; z-index: 50; overflow-y: auto; border-right: none;
+        display: flex; border-right: none; min-width: 0;
         background: var(--color-superficie); padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); gap: 12px;
       }
-      body.pg-menu-abierto { overflow: hidden; }
+      body.pg-menu-abierto .pg-contenido { display: none; }
       .pg-menu__cerrar {
         display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--radio-boton);
         border: 1px solid var(--pr-borde-boton); background: var(--color-fondo); font: inherit; font-weight: 700; cursor: pointer;
@@ -3160,6 +3164,8 @@
     function abrirMenu() {
       document.body.classList.add('pg-menu-abierto')
       document.getElementById('pr-btn-menu').setAttribute('aria-expanded', 'true')
+      // El menú ocupa el lugar del contenido (23/10/2026): arranca arriba.
+      window.scrollTo(0, 0)
       document.getElementById('pr-menu-cerrar').focus?.()
     }
 
