@@ -10409,6 +10409,15 @@
         `<button type="button" class="ad-btn ad-btn--suave" data-revisar-aceptar="${esc(f.item_id)}">Otro / ajustar</button></div>`
     }
 
+    // Una REPOSICIÓN (24/10/2026): retiros_por_revisar() devuelve el 'tipo'
+    // del renglón ('retiro' | 'devolucion' | 'reposicion', el de
+    // orden_retiro_items). Lo que se le repone al cliente también sale del
+    // stock y, si no estaba, queda por revisar como cualquier retiro: la
+    // tarjeta lo marca para que no se lea como una venta.
+    function esReposicionRevisar(f) {
+      return f?.tipo === 'reposicion'
+    }
+
     function htmlFilaRevisar(f, rv) {
       const abierto = rv.aceptando?.itemId === f.item_id ? rv.aceptando : null
       const falt = rv.falt?.itemId === f.item_id ? rv.falt : null
@@ -10428,7 +10437,7 @@
       return `<div class="ad-tarjeta ad-fila--atencion" data-revisar="${esc(f.item_id)}">` +
         `<div class="ad-fila__linea"><span class="ad-fila__codigo">${esc(f.codigo || '—')}</span><span class="ad-sello ad-sello--anulada">Sin stock</span></div>` +
         `<div class="ad-fila__meta">${esc(meta)}</div>` +
-        `<div class="ad-error-app__mensaje">${esc(f.que || '—')}</div>` +
+        `<div class="ad-error-app__mensaje">${esReposicionRevisar(f) ? '<span class="ad-sello ad-sello--dev">Reposición</span> ' : ''}${esc(f.que || '—')}</div>` +
         `<p class="ad-error-pegado">${esc(cuanto)}</p>` +
         `${motivoBase ? `<p class="ad-texto-suave">${esc(motivoBase)}</p>` : ''}${acciones}</div>`
     }

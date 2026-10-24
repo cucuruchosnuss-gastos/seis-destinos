@@ -8,6 +8,11 @@
 //    con su precio editable y el subtotal negativo, la reposición en $ 0 sin
 //    campo, el total "a favor del cliente"), la hoja con precios y la hoja
 //    "Dividir para facturar" con la devolución en negativo.
+//  - RETIROS POR REVISAR (24/10/2026): la reposición que salió sin stock
+//    lleva el sello "Reposición" (retiros_por_revisar devuelve 'tipo').
+// Las dos hojas (Carga y Administración) siguen en MEDIA HOJA con la letra y
+// las medidas nuevas de la "hoja sin cortes". Antes era el 54 (renumerado el
+// 24/10/2026: el 54 ya lo usaban conos-parecidos y hoja-sin-cortes).
 // Los datos se suman con 'maqueta.cambios' (no se tocan los de otras pruebas).
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
@@ -148,6 +153,11 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await page.emulateMedia({ media: 'print' });
     const hoja = page.locator('#rt-impresion');
     await expect(hoja.locator('.rh-devuelto__titulo')).toHaveCount(2);
+    // Con la letra y las medidas nuevas de la "hoja sin cortes" (24/10/2026):
+    // original + duplicado con su sección DEVOLUCIONES siguen en UNA A4.
+    await expect(hoja.locator('.rh-hoja--media'), 'la hoja con devoluciones va en media hoja').toHaveCount(1);
+    await expect(hoja.locator('.rh-hoja--media .rh-copia')).toHaveCount(2);
+    await expect(hoja.locator('.rh-hoja--media .rh-copia').nth(1).locator('.rh-devuelto__titulo')).toHaveCount(1);
     await expect(hoja.locator('.rh-copia').first().locator('.rh-cajas')).toHaveText(['5', '−2', '1', '6']);
     await expect(hoja.locator('.rh-copia').first()).toContainText('Devolución · Rotura · lote 6249-1 · vuelven al stock');
     await expect(hoja.locator('.rh-copia').first()).toContainText('TOTAL DE CAJAS · devueltas 3');
@@ -262,6 +272,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await page.emulateMedia({ media: 'print' });
     const hoja = page.locator('#ad-impresion .rh-copia').first();
     await expect(hoja.locator('.rh-devuelto__titulo')).toHaveText('DEVOLUCIONES');
+    await expect(page.locator('#ad-impresion .rh-hoja--media'), 'la hoja con precios y devoluciones va en media hoja').toHaveCount(1);
     await expect(hoja).toContainText('$ -6.000,00');
     await expect(hoja).toContainText('Se repone');
     await expect(hoja).toContainText('a favor del cliente');
@@ -302,6 +313,45 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await expect.poll(() => rpc.filter(r => r.nombre === 'valorizar_orden_retiro').length).toBe(1);
     expect(rpc.find(r => r.nombre === 'valorizar_orden_retiro').params).toEqual({ p_orden_id: 'o41', p_precios: { 'o41-1': 3000, 'o41-2': 2500, 'o41-3': 0 } });
 
+    await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+}
+
+// ── Retiros por revisar: la reposición (24/10/2026) ─────────────────────────
+// retiros_por_revisar() devuelve 'tipo': la tarjeta de una reposición que
+// salió sin stock dice "Reposición"; la de un retiro, no.
+for (const [nombre, ancho, alto] of TAMANOS) {
+  test(`${nombre}: Retiros por revisar — la reposición se marca`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    page.setDefaultTimeout(15000);
+    await page.goto(`${MAQUETA}/modulos/administracion.html?maqueta=administracion`);
+    await page.evaluate(async () => {
+      localStorage.setItem('barraUnidad.elegida', 'u-n');
+      const datos = await fetch('/maqueta/datos/administracion.json').then(r => r.json());
+      const filas = datos.rpc.retiros_por_revisar.map(f => ({ ...f, tipo: 'retiro', presentacion_id: f.unidad === 'cajas' ? 'pr1' : null, marca_id: null }));
+      filas.push({ item_id: 'it-rep', orden_id: 'o1', codigo: 'N-0042', fecha: '2026-09-27', cliente: 'Distribuidora Anatolia',
+        que: 'Cucurucho chico · Caja x 320 · con un nombre de marca bastante largo para el celular', pedidas: 2, faltante: 2, unidad: 'cajas',
+        cargada_por: 'Emanuel Romero', presentacion_id: 'pr2', marca_id: null, tipo: 'reposicion' });
+      sessionStorage.setItem('maqueta.cambios', JSON.stringify({ rpc: { retiros_por_revisar: filas } }));
+    });
+    await page.reload();
+    await page.locator('[data-pestana="revisar"]').first().click();
+    const rep = page.locator('[data-revisar="it-rep"]');
+    await expect(rep.locator('.ad-sello--dev')).toHaveText('Reposición');
+    await expect(rep).toContainText('Se llevó 2 cajas · faltaban 2 cajas en stock');
+    await expect(rep.locator('[data-revisar-produccion="it-rep"]')).toBeVisible();
+    await expect(page.locator('[data-revisar="it-1"] .ad-sello--dev')).toHaveCount(0);
+    await expect(page.locator('#ad-revisar-lista .ad-sello--dev')).toHaveCount(1);
+    await expect(page.locator('#ad-revisar-cuenta')).toHaveText('3 renglones por revisar');
+    // El sello entra a lo ancho de la tarjeta y la tarjeta en la pantalla.
+    await rep.scrollIntoViewIfNeeded();
+    const caja = await rep.boundingBox();
+    const sello = await rep.locator('.ad-sello--dev').boundingBox();
+    expect(sello.x >= caja.x - 0.5 && sello.x + sello.width <= caja.x + caja.width + 0.5, 'el sello entra en la tarjeta').toBe(true);
+    await entra(page, '[data-revisar="it-rep"]', 'la tarjeta de la reposición');
+    await captura(page, `revisar-reposicion-${nombre}`, info);
     await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
     expect(errores, errores.join('\n')).toEqual([]);
   });

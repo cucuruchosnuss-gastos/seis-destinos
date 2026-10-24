@@ -132,6 +132,8 @@ const FUNCIONES_BASE = [
   // El faltante: "¿de dónde salen?" (13/10/2026)
   'esProductoRevisar', 'htmlBotonesRevisar', 'completarRenglonesRevisar', 'ctxFaltanteRevisar', 'abrirFaltanteRevisar', 'resolverFilaRevisar',
   'htmlFaltanteRenglon', 'leerPlanillasDeOrden',
+  // La reposición por revisar (24/10/2026)
+  'esReposicionRevisar',
   // Retenciones (13/10/2026)
   'retencionesVacio', 'ret', 'tipoRetencion', 'detalleRetencion', 'plataRet', 'sumaRet', 'origenRetencion', 'empresasRet', 'sinPruebaRet',
   'leerRetenciones', 'leerRetencionesPortada', 'totalesPorEmpresa', 'htmlTotalRet', 'htmlTotalesRet', 'htmlAnularRet', 'htmlFilaRet',
