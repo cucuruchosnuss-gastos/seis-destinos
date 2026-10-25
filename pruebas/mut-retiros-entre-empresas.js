@@ -56,6 +56,8 @@ const r = correrMutaciones({
     { nombre: 'sin el sello en el cliente elegido', de: `\`\${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Entre empresas</span>' : ''}</span>\``, a: "`</span>`" },
     { nombre: 'sin el aviso en el cliente elegido', de: '        (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : \'\')', a: "        ''" },
     { nombre: 'el aviso del cliente sin esc', de: 'id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>', a: 'id="rt-aviso-entre" role="note">${textoEntreEmpresas(c)}</p>' },
+    { nombre: 'el catálogo sin el aviso', de: '      avisoCatalogo.textContent = textoEntreEmpresas(clienteDe(f.clienteId))\n', a: '' },
+    { nombre: 'el aviso del catálogo siempre a la vista', de: '      avisoCatalogo.hidden = !avisoCatalogo.textContent', a: '      avisoCatalogo.hidden = false' },
     // Sin devoluciones
     { nombre: 'el botón de devolución sigue a la vista', de: "      document.getElementById('rt-agregar-devolucion').hidden = esEntreEmpresas(f)", a: "      document.getElementById('rt-agregar-devolucion').hidden = false" },
     { nombre: 'la devolución se abre igual', de: '      if (!f || esEntreEmpresas(f)) return', a: '      if (!f) return' },

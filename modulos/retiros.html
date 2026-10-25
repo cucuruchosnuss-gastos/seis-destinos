@@ -322,11 +322,14 @@
     /* Un cliente nuevo que cargó el depósito: lo completa administración. */
     .rt-sello--provisorio { background: #F1EEE9; color: var(--color-texto-menu); }
     /* El cliente es otra empresa del grupo (24/10/2026): lo que sale entra a su stock. */
-    .rt-sello--entre { background: var(--color-acento-fila); color: var(--naranja-oscuro); }
+    .rt-sello--entre { background: var(--color-acento-fila); color: var(--naranja-oscuro); align-self: flex-start; }
     .rt-aviso-entre {
       margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--naranja); background: var(--color-acento-fila);
       color: var(--naranja-oscuro); font-size: 14px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere;
     }
+    .rt-aviso-entre--catalogo { margin: 0; }
+    /* En la compu la tarjeta del cliente (con su aviso) está al lado: no se repite. */
+    @media (min-width: 1024px) { .rt-aviso-entre--catalogo { display: none; } }
 
     /* ── El cliente nuevo (provisorio, 06/10/2026) ────────────────────── */
     .rt-cliente-nuevo:empty { display: none; }
@@ -790,6 +793,9 @@
           </div>
         </div>
         <div class="rt-col-agregar">
+          <!-- Otra empresa del grupo (24/10/2026): en el celular, mientras se
+               elige del catálogo, la tarjeta del cliente no se ve; el aviso sí. -->
+          <p class="rt-aviso-entre rt-aviso-entre--catalogo" id="rt-aviso-entre-catalogo" role="note" hidden></p>
           <div id="rt-catalogo-aviso"></div>
           <div class="rt-renglones" id="rt-renglones"></div>
         </div>
@@ -2463,6 +2469,9 @@
       document.getElementById('rt-cliente-buscador').hidden = !!f.clienteId
       // A otra empresa del grupo no se le cargan devoluciones ni reposiciones (24/10/2026).
       document.getElementById('rt-agregar-devolucion').hidden = esEntreEmpresas(f)
+      const avisoCatalogo = document.getElementById('rt-aviso-entre-catalogo')
+      avisoCatalogo.textContent = textoEntreEmpresas(clienteDe(f.clienteId))
+      avisoCatalogo.hidden = !avisoCatalogo.textContent
       // Con el cliente nuevo abierto, la lista no se ve: el panel muestra los parecidos.
       const conNuevo = !!estado.nuevoCliente
       document.getElementById('rt-clientes-resultados').innerHTML = f.clienteId || conNuevo ? '' : htmlResultadosClientes(f.clienteBusqueda)
