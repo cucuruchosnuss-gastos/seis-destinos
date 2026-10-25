@@ -73,8 +73,14 @@ No hay ningún reporte de "ventas" en el repo (se buscó `ventas`, `vendido`, `f
 - `test-retiros-entre-empresas.js` **42/42**; `mut-retiros-entre-empresas.js` **25/25** (baseline fijo `d2d1dc1`: la suite da rojo sobre la carga de antes).
 - `test-administracion-orden-entre-empresas.js` **85/85**; `mut-administracion-orden-entre-empresas.js` **42/42** (baseline `d2d1dc1`).
 - `e2e/62-orden-entre-empresas.spec.js` **12/12** (390, 360, tablet, 1280; puertos propios 4192/4193).
-- Las de siempre al día: `sandbox-retiros.js`, `sandbox-administracion.js` (funciones nuevas), `seguras-administracion.js` (3 interpolaciones con motivo).
-- `npm run pruebas` y GitHub: ver al pie.
+- Las de siempre al día: `sandbox-retiros.js`, `sandbox-administracion.js` (funciones nuevas), `seguras-administracion.js` (3 interpolaciones con motivo); `test-clientes-apagados.js` (el SELECT de la ficha suma `unidad_grupo_id`).
+- Mutaciones de antes cuyas anclas tocó el cambio, corridas de a una y en verde: `mut-administracion-division-orden` 96/96, `mut-administracion-comisiones` 40/40, `mut-administracion-ordenes` 82/82 (+1 equivalencia: el total de la valorizada entre empresas), `mut-retiros-carga` 118/118 (+2 equivalencias: el aviso, que lo prueba la suite nueva con marcas), `mut-administracion-entre-empresas` 76/76, `mut-clientes-apagados` 42/42, `mut-clientes-provisorios` 58/58, `mut-resumen-cuenta` 56/56, `mut-retiros-devoluciones` 68/68.
+- **Ojo, NO es de esta rama:** `mut-administracion-clientes.js` da **48/50** por dos `esc()` de `htmlCuenta` (`esc(orden)` y `esc(nota.id)`, del botón de la nota de débito de la Tanda B) que su suite no detecta; esta rama no toca esas líneas. Queda para quien siga la nota de débito (una equivalencia justificada o una aserción con marca).
+- `npm run pruebas` sobre main 1b0e136 + la rama: **295/295 en verde**. GitHub: ver al pie.
+
+## Hashes de la rama
+
+`7901114` (la carga y Administración), `224a711` (aviso en el catálogo, maqueta y e2e/62), `32775b4` (docs, traspaso y suites de antes al día), `9ab7f49` (dos anclas de mutación), `3d73bb1` (trae main `1b0e136`: un solo choque, en `aprendizajes.md`, quedaron los dos lados). El último commit de la rama es este traspaso con los números finales; GitHub (Pruebas y Navegador) se esperó en ese commit.
 
 ## Qué automatizaría ahora
 
