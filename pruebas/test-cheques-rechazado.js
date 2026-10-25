@@ -288,6 +288,9 @@ esperas.push((async () => {
   const ops = S.__els.get('chq-rech-cliente').innerHTML
   chk('sin cliente: solo los prendidos y sin la fábrica de pruebas', /value="c1"/.test(ops) && !/value="c2"/.test(ops) && !/value="c3"/.test(ops), ops)
   S.elegirMotivoRechazo('Firma')
+  // Una fecha fija, como el "hoy" de abajo: la del formulario arranca en el hoy
+  // real y desde el 25/10/2026 daba "La fecha no puede ser futura".
+  r.fecha = '2026-10-20'
   chk('sin cliente: sin elegir, no deja confirmar', S.erroresRechazo(r, '2026-10-24') === 'Elegí a qué cliente se le hace la nota de débito.')
   r.clienteId = 'c1'
   chk('sin cliente: elegido, sí', S.erroresRechazo(r, '2026-10-24') === null)
@@ -308,6 +311,7 @@ esperas.push((async () => {
   S.elegirMotivoRechazo('Sin fondos')
   chk('proveedor: sin tildar, viaja p_nd_proveedor null', S.parametrosRechazo(r).p_nd_proveedor === null)
   r.prov.si = true
+  r.fecha = '2026-10-20'   // fija, como el "hoy" de abajo (ver "sin cliente")
   S.pintarRechazo()
   chk('proveedor: tildado, se ven sus campos', S.__els.get('chq-rech-prov-campos').hidden === false)
   chk('proveedor: sin comprobante no deja confirmar', S.erroresRechazo(r, '2026-10-24') === 'Poné el número de comprobante de la nota del proveedor.')
@@ -334,6 +338,7 @@ esperas.push((async () => {
   const r2 = await conCheque(S2, ENDOSADO)
   chk('sin registrar_pago: la casilla queda apagada y lo dice', S2.__els.get('chq-rech-prov-si').disabled === true && S2.__els.get('chq-rech-prov-permiso').hidden === false)
   r2.prov.si = true
+  r2.fecha = '2026-10-20'   // fija, como el "hoy" de abajo (ver "sin cliente")
   S2.elegirMotivoRechazo('Sin fondos')
   chk('sin registrar_pago: si igual se tildara, no deja mandar', /Registrar pagos a proveedores/.test(S2.erroresRechazo(r2, '2026-10-24') ?? ''))
 })())

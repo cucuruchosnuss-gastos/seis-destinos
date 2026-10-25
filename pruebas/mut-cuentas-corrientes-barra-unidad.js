@@ -89,9 +89,10 @@ correrMutaciones({
       de: '      let filas = estado.ficha.movimientosRaw.filter(m => pasaFiltroUnidad(m.unidad_negocio_id, estado.ficha.unidadId))', a: '      let filas = estado.ficha.movimientosRaw' },
     { nombre: 'un movimiento sin unidad lleva saldo corrido',
       de: '        const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)', a: '        const lineaSaldo = (!todas && saldoAcum !== 0)' },
+    // (25/10/2026: el renglón de abajo pasó a ser el error del "Ver PDF" de la nota de débito.)
     { nombre: 'un movimiento sin unidad no lo dice en una unidad',
-      de: "              <div class=\"fila-movimiento__fecha\">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n            </div>",
-      a: "              <div class=\"fila-movimiento__fecha\">${formatearFecha(m.fecha)}${todas ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n            </div>" },
+      de: "              <div class=\"fila-movimiento__fecha\">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n              ${errorPdfNd}",
+      a: "              <div class=\"fila-movimiento__fecha\">${formatearFecha(m.fecha)}${todas ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n              ${errorPdfNd}" },
     { nombre: 'los remitos no filtran por la unidad de la ficha',
       de: 'const filas = (remitos ?? []).filter(r => pasaFiltroUnidad(r.unidad_negocio_id, unidadId))', a: 'const filas = (remitos ?? [])' },
     { nombre: 'los saldos de la ficha se consultan de una unidad',

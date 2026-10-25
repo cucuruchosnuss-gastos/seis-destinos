@@ -18,6 +18,11 @@
 //    cobertura. Y el sub-proceso informa cuántos caracteres leyó, para que el
 //    runner confirme que leyó el mutado y no el limpio.
 //
+// Con MUT_SOLO_ANCLAS=1 (25/10/2026) no corre nada: solo arma las mutaciones,
+// aborta igual si un ancla no existe o no es única, y si no dice "ANCLAS OK".
+// Lo usa test-anclas-mutaciones.js para encontrar en segundos el ancla que
+// quedó vieja, en vez de al final de un runner de 10 minutos.
+//
 // Las mutaciones corren DE A UNA, nunca superpuestas: execFileSync espera a
 // que termine cada sub-proceso antes de escribir la siguiente.
 
@@ -59,8 +64,10 @@ function correrMutacionesEn({ suite, original, funciones, escape = 'esc', manual
     }
   }
 
+  const soloAnclas = process.env.MUT_SOLO_ANCLAS === '1'
+
   // ── Guard 1 ─────────────────────────────────────────────────────────────
-  const limpio = correr(original)
+  const limpio = soloAnclas ? { rojo: false, salida: '(solo anclas: la suite no se corre)' } : correr(original)
   if (limpio.rojo) {
     console.log('ABORTADO: la suite NO está verde sobre el archivo limpio, así que las mutaciones no medirían nada.')
     console.log(limpio.salida)
@@ -103,6 +110,7 @@ function correrMutacionesEn({ suite, original, funciones, escape = 'esc', manual
       // pasa a ser otra, que casi siempre rompe el archivo y "se detecta").
       mutado: enZona(zona.replace(ancla, () => ancla.replace(aguja, () => sinEsc))),
       equivalente: eq?.motivo,
+      eqExpr: eq?.expr,
     })
   }
 
@@ -120,6 +128,19 @@ function correrMutacionesEn({ suite, original, funciones, escape = 'esc', manual
     console.log('ABORTADO: mutaciones sin ancla única (mutarían el renglón equivocado):')
     for (const a of ambiguas) console.log('  ' + a)
     process.exit(2)
+  }
+
+  if (soloAnclas) {
+    // Una equivalencia que ya no corresponde a ninguna automática no rompe nada,
+    // pero es un ancla vieja: se avisa (solo con un archivo: con varios, cada
+    // tanda recibe la lista entera y la de otro archivo no es vieja).
+    const usadas = new Set(mutaciones.map(m => m.eqExpr).filter(Boolean))
+    const sobran = salir && funciones.length ? equivalentes.filter(e => !usadas.has(e.expr)) : []
+    for (const e of sobran) console.log(`  AVISO: la equivalencia «${e.expr.slice(0, 70)}» no está en las funciones de ${path.basename(original)}`)
+    console.log(`ANCLAS OK: ${mutaciones.length} mutaciones en ${path.basename(original)}`)
+    const res = { detectadas: 0, total: mutaciones.length, equivalentes: 0, fallas: 0 }
+    if (!salir) return res
+    process.exit(0)
   }
 
   // ── Correr, de a una ────────────────────────────────────────────────────

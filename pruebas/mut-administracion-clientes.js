@@ -34,6 +34,9 @@ correrMutaciones({
     // Los dos de "Todas las fábricas" (29/09/2026):
     { expr: 'esc(c.empresa)', motivo: 'la empresa de cada fila la prueba test-administracion-clientes-todas.js (marca «empresa»)' },
     { expr: "esc('No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.')", motivo: 'el aviso lo prueba test-administracion-clientes-todas.js (marca «fallo»)' },
+    // Los dos de la cuenta que abre la orden o la nota de débito (24/10/2026; se escapaban desde la Tanda B):
+    { expr: 'esc(orden)', motivo: 'el id de la orden (cliente_movimientos.orden_retiro_id, uuid de la base) va a un data-orden-retiro entre comillas' },
+    { expr: 'esc(nota.id)', motivo: 'el id de la nota de débito (uuid de la base) va a un data-cuenta-nota-debito entre comillas' },
   ],
   manuales: [
     { nombre: 'la sección Clientes sin permiso', de: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'], tambien: (u) => puedeGestionarCliente(u) },", a: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'cargar'] }," },
