@@ -37,12 +37,12 @@ const PRELUDIO = `
   var estado = { miRolApp: 'usuario', unidades: new Map([['u-n', 'Nuss'], ['u-d', 'Dolce Pasta'], ['u-m', 'Mengui']]) }
 `
 const FUNCIONES = ['esc', 'textoPlano', 'normalizarBusqueda', 'puedeIngresarEn', 'unidadesDeIngreso', 'nuevoRenglonIngreso', 'nuevoIngreso',
-  'elegirOrigenIngreso', 'origenParaBase', 'presentacionDe', 'itemsParaBase', 'faltaIngreso', 'parametrosIngreso', 'normalizarLoteIngreso', 'modoLoteIngreso', 'loteDeRenglon', 'htmlLoteIngreso', 'contestarLoteIngreso',
+  'elegirOrigenIngreso', 'soltarLoteDeOrigen', 'origenParaBase', 'presentacionDe', 'itemsParaBase', 'faltaIngreso', 'parametrosIngreso', 'normalizarLoteIngreso', 'modoLoteIngreso', 'loteDeRenglon', 'htmlLoteIngreso', 'contestarLoteIngreso',
   'textoListoIngreso', 'proveedoresQueCoinciden', 'opcionesIngreso', 'htmlRenglonIngreso', 'mostrarErrorIngreso', 'guardarIngreso']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['TAREAS_INGRESO', 'LARGO_MAXIMO_LOTE'],
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: ['TAREAS_INGRESO', 'LARGO_MAXIMO_LOTE', 'ORIGENES_INGRESO'],
     retorno: `TAREAS_INGRESO, estado, __rpc, __exitos, __errores, __stock: () => __stock, __setRespuesta(f){ __respuesta = f }`,
   })
 }
@@ -131,7 +131,7 @@ function armado(S, cambios = {}) {
   {
     const S = sandbox()
     const f = (c, r) => { const ing = armado(S, c); if (r) Object.assign(ing.renglones[0], r); return S.faltaIngreso(ing, CAT) }
-    chk('sin origen', f({}) === 'Elegí de dónde viene: un proveedor o una fábrica del grupo.', f({}))
+    chk('sin origen', f({}) === 'Elegí de dónde viene: producción propia, un proveedor o una fábrica del grupo.', f({}))
     chk('proveedor sin elegir', f({ origen: 'proveedor' }) === 'Elegí el proveedor.')
     chk('fábrica sin elegir', f({ origen: 'fabrica' }) === 'Elegí la fábrica de donde viene.')
     chk('la fábrica de origen igual a la que recibe', f({ origen: 'fabrica', unidadOrigenId: 'u-n' }) === 'La fábrica de origen tiene que ser otra.')

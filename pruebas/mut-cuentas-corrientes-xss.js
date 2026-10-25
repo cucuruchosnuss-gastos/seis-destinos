@@ -51,8 +51,9 @@ correrMutaciones({
       de: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n            ${cantidadesHtml}",
       a: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${etiquetaUnidad(m.unidad_negocio_id)}` : ''}</div>\n            ${cantidadesHtml}" },
     { nombre: 'movimientos: la unidad en "todas" pierde el esc()',
-      de: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n            </div>",
-      a: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${etiquetaUnidad(m.unidad_negocio_id)}` : ''}</div>\n            </div>" },
+      // 24/10/2026: debajo de la fecha va el error del PDF de la nota de débito.
+      de: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n              ${errorPdfNd}\n            </div>",
+      a: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${etiquetaUnidad(m.unidad_negocio_id)}` : ''}</div>\n              ${errorPdfNd}\n            </div>" },
     { nombre: 'historial: la referencia pierde el esc()',
       de: "${referencia ? ` — ${esc(referencia)}` : ''}", a: "${referencia ? ` — ${referencia}` : ''}" },
     { nombre: 'sugerencias: la fantasía pierde el esc()',

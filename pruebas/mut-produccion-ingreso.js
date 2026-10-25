@@ -17,12 +17,14 @@ correrMutacionesProduccion({
     { expr: 'esc(r.id)', motivo: "el id del renglón lo arma el código ('r' y un contador)" },
     { expr: 'esc(vacia)', motivo: 'el texto de la opción vacía es constante del código' },
     { expr: 'esc(placeholder)', motivo: 'el placeholder del lote es texto constante del código' },
+    { expr: 'esc(rotulo)', motivo: 'el rótulo del lote ("Lote" o "Lote de fabricación", 24/10/2026) es texto constante del código' },
   ],
   manuales: [
     // ── Proveedor O otra fábrica, nunca los dos ─────────────────────────
-    { nombre: 'pasar a proveedor no suelta la fábrica', de: "      if (tipo === 'proveedor') ing.unidadOrigenId = ''\n", a: "      if (tipo === 'proveedor') {}\n" },
-    { nombre: 'pasar a otra fábrica no suelta el proveedor', de: "      else { ing.proveedorId = null; ing.proveedorNombre = ''; ing.busqueda = '' }", a: "      else { ing.busqueda = '' }" },
-    { nombre: 'acepta cualquier origen', de: "      if (tipo !== 'proveedor' && tipo !== 'fabrica') return\n      ing.origen = tipo", a: "      ing.origen = tipo" },
+    // (24/10/2026: con la producción propia, cada origen suelta los otros dos.)
+    { nombre: 'pasar a proveedor no suelta la fábrica', de: "      if (tipo !== 'fabrica') ing.unidadOrigenId = ''\n", a: '' },
+    { nombre: 'pasar a otra fábrica no suelta el proveedor', de: "      if (tipo !== 'proveedor') { ing.proveedorId = null; ing.proveedorNombre = ''; ing.busqueda = '' }", a: "      if (tipo !== 'proveedor') { ing.busqueda = '' }" },
+    { nombre: 'acepta cualquier origen', de: "      if (!ORIGENES_INGRESO.includes(tipo)) return\n      const antes = ing.origen", a: "      const antes = ing.origen" },
     { nombre: 'de un proveedor también manda la fábrica', de: "      if (ing.origen === 'proveedor') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: null }", a: "      if (ing.origen === 'proveedor') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: ing.unidadOrigenId || null }" },
     { nombre: 'de otra fábrica también manda el proveedor', de: "      if (ing.origen === 'fabrica') return { p_proveedor_id: null, p_unidad_origen_id: ing.unidadOrigenId || null }", a: "      if (ing.origen === 'fabrica') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: ing.unidadOrigenId || null }" },
     // ── El armado ──────────────────────────────────────────────────────
@@ -35,7 +37,7 @@ correrMutacionesProduccion({
     { nombre: 'sin client_uuid', de: '        p_client_uuid: ing.clientUuid,\n', a: '' },
     { nombre: 'un uuid nuevo en cada intento', de: '        p_client_uuid: ing.clientUuid,\n', a: '        p_client_uuid: crypto.randomUUID(),\n' },
     // ── Lo que falta ───────────────────────────────────────────────────
-    { nombre: 'deja pasar sin origen', de: "      if (ing.origen !== 'proveedor' && ing.origen !== 'fabrica') return 'Elegí de dónde viene: un proveedor o una fábrica del grupo.'\n", a: '' },
+    { nombre: 'deja pasar sin origen', de: "      if (!ORIGENES_INGRESO.includes(ing.origen)) return 'Elegí de dónde viene: producción propia, un proveedor o una fábrica del grupo.'\n", a: '' },
     { nombre: 'deja pasar sin proveedor', de: "      if (ing.origen === 'proveedor' && !ing.proveedorId) return 'Elegí el proveedor.'\n", a: '' },
     { nombre: 'deja pasar sin fábrica de origen', de: "      if (ing.origen === 'fabrica' && !ing.unidadOrigenId) return 'Elegí la fábrica de donde viene.'\n", a: '' },
     { nombre: 'deja pasar la misma fábrica', de: "      if (ing.origen === 'fabrica' && ing.unidadOrigenId === ing.unidadId) return 'La fábrica de origen tiene que ser otra.'\n", a: '' },
@@ -55,13 +57,13 @@ correrMutacionesProduccion({
     { nombre: 'no vuelve al stock', de: '      await mostrarStockTerminado()\n    }\n\n    function conectarIngreso() {', a: '    }\n\n    function conectarIngreso() {' },
     { nombre: 'no muestra la fábrica que recibió', de: '      estado.stockUnidad = ing.unidadId\n      estado.ing = null', a: '      estado.ing = null' },
     // ── El lote (21/10/2026): "¿Sigue siendo este?" ────────────────────
-    { nombre: 'sin contestar la pregunta se guarda igual', de: "        if (modoLoteIngreso(r) === 'pregunta') return", a: '        if (false) return' },
+    { nombre: 'sin contestar la pregunta se guarda igual', de: "        if (modoLoteIngreso(r, ing) === 'pregunta') return", a: '        if (false) return' },
     { nombre: 'sin lote se guarda igual', de: "        if (!lote) return `Renglón ${n}: escribí el lote.`\n", a: '' },
     { nombre: 'sin tope de 40', de: '        if (lote.length > LARGO_MAXIMO_LOTE) return', a: '        if (false) return' },
     { nombre: 'el tope es 41', de: '    const LARGO_MAXIMO_LOTE = 40', a: '    const LARGO_MAXIMO_LOTE = 41' },
     { nombre: 'el lote sin mayúsculas', de: "      return String(texto ?? '').trim().toUpperCase()", a: "      return String(texto ?? '').trim()" },
     { nombre: 'el lote sin recortar', de: "      return String(texto ?? '').trim().toUpperCase()", a: "      return String(texto ?? '').toUpperCase()" },
-    { nombre: 'con Sí viaja lo escrito', de: "      return normalizarLoteIngreso(modoLoteIngreso(r) === 'si' ? r.loteVigente : r.lote)", a: '      return normalizarLoteIngreso(r.lote)' },
+    { nombre: 'con Sí viaja lo escrito', de: "      return normalizarLoteIngreso(modoLoteIngreso(r, ing) === 'si' ? r.loteVigente : r.lote)", a: '      return normalizarLoteIngreso(r.lote)' },
     { nombre: 'sin vigente se pregunta igual', de: "      if (!r.loteVigente) return 'otro'\n", a: '' },
     { nombre: 'sin contestar ya cuenta como Sí', de: "      if (r.loteResp === 'si') return 'si'", a: "      if (r.loteResp !== 'otro') return 'si'" },
     { nombre: '"No, es otro" no vacía el lote', de: "      r.lote = resp === 'si' ? r.loteVigente : ''", a: "      r.lote = r.loteVigente" },
@@ -74,7 +76,7 @@ correrMutacionesProduccion({
     { nombre: 'el campo no es obligatorio', de: "        : modo === 'otro' ? campo(' required aria-required=\"true\"', r.lote, 'Escribí el lote')", a: "        : modo === 'otro' ? campo('', r.lote, 'Escribí el lote')" },
     { nombre: 'el campo sin largo máximo', de: ' maxlength="${LARGO_MAXIMO_LOTE}"', a: '' },
     { nombre: 'vuelve a llamar a guardar_lote_vigente', de: '      // El lote vigente lo guarda la base sola (desde el 21/10/2026).\n', a: "      await supabase.rpc('guardar_lote_vigente', { p_unidad_negocio_id: ing.unidadId })\n" },
-    { nombre: 'el renglón no dibuja el lote', de: '          ${htmlLoteIngreso(r)}\n', a: '' },
+    { nombre: 'el renglón no dibuja el lote', de: '          ${htmlLoteIngreso(r, ing)}\n', a: '' },
     // ── Texto de listo ─────────────────────────────────────────────────
     { nombre: 'listo sin las cajas', de: "      return `Listo: entraron ${formatearNumeroAr(cajas, { decimales: 0 })} ${cajas === 1 ? 'caja' : 'cajas'}.`", a: "      return 'Listo.'" },
     { nombre: 'el reintento no lo dice', de: "      if (res?.reintento) return 'Listo: ese ingreso ya estaba cargado (no se cargó dos veces).'\n", a: '' },

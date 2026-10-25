@@ -57,7 +57,7 @@ for (const [ancho, alto] of TAMANOS) {
 
     // Sin elegir de dónde viene, no manda.
     await page.locator('#pr-ing-guardar').click();
-    await expect(page.locator('#pr-ing-error')).toHaveText('Elegí de dónde viene: un proveedor o una fábrica del grupo.');
+    await expect(page.locator('#pr-ing-error')).toHaveText('Elegí de dónde viene: producción propia, un proveedor o una fábrica del grupo.');
 
     await page.locator('[data-ing-origen="proveedor"]').click();
     await expect(page.locator('[data-ing-origen="proveedor"]')).toHaveAttribute('aria-pressed', 'true');

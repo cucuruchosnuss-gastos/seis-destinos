@@ -581,6 +581,10 @@ const SEGURAS = {
     'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, lineaSaldo: HTML_PROPIO, iconos: HTML_PROPIO,
     // 24/10/2026: "Anular" de una nota de débito recibida, con esc() del id de la nota.
     botonAnularNd: HTML_PROPIO,
+    // 24/10/2026 (ajustes-24-10): "Ver PDF" (esc() del id) y el error de la
+    // firma (esc() del mensaje); los ejecuta con marcas
+    // test-cuentas-corrientes-nota-debito-pdf.js.
+    botonPdfNd: HTML_PROPIO, errorPdfNd: HTML_PROPIO,
   },
   htmlSinImporte: { n: 'número: la función devuelve "" si n no es > 0; los call sites pasan contarSinImporte() (.length)' },
   // Las comisiones (06/10/2026): las ejecuta con marcas test-cuentas-corrientes-comisiones.js.
@@ -899,7 +903,15 @@ if (SOLO !== 'render') {
   chk('estático: los parámetros de la URL no se usan en ningún otro lado',
     [...script.matchAll(/\bproveedorURL\b/g)].length === 4 && [...script.matchAll(/\bunidadURL\b/g)].length === 2)
   const navs = [...script.matchAll(/(?:location\.href\s*=|location\.replace\(|location\.assign\(|window\.open\()\s*([^\n;)]*)/g)].map(m => norm(m[1]))
-  chk('estático: la única navegación es la literal al dashboard', navs.length === 1 && navs[0] === "'../dashboard.html'", navs.join(' | '))
+  // + 24/10/2026 (ajustes-24-10): el PDF de una nota de débito se abre en una
+  // pestaña EN BLANCO (window.open('', '_blank')) que después recibe el link
+  // que firma Supabase Storage (data.signedUrl de createSignedUrl, nunca un
+  // texto de la base). Solo en verPdfNd.
+  const PESTANA_PDF = "'', '_blank'"
+  const LINK_FIRMADO = 'data.signedUrl }'
+  chk('estático: la única navegación es la literal al dashboard (y la pestaña del PDF firmado de verPdfNd)',
+    navs.length === 3 && navs[0] === "'../dashboard.html'" && navs.filter(n => n === PESTANA_PDF).length === 1 && navs.filter(n => n === LINK_FIRMADO).length === 1 &&
+    cuerpoDe('verPdfNd').includes("window.open('', '_blank')") && cuerpoDe('verPdfNd').includes('pestana.location.href = data.signedUrl'), navs.join(' | '))
   const historia = [...script.matchAll(/history\.(pushState|replaceState)\(([^)]*)\)/g)].map(m => norm(m[2]))
   chk('estático: history solo recibe la query de la ficha o location.pathname',
     // + 05/10/2026: la pestaña de primer nivel (location.pathname + un
@@ -908,7 +920,10 @@ if (SOLO !== 'render') {
     historia.filter(h => h === "null, '', location.pathname").length === 2 &&
     historia.includes("null, '', location.pathname + (s === 'clientes' ? '?pestana=clientes' : ''") &&
     cuerpoDe('sincronizarUrlFicha').includes('const qs = `?proveedor=${proveedorId}`'), historia.join(' | '))
-  chk('estático: ningún .src ni .href se asigna en runtime', !/\.(src|href)\s*=(?!=)/.test(script))
+  // Salvo el link firmado del PDF (24/10/2026), en la pestaña que abrió verPdfNd.
+  chk('estático: ningún .src ni .href se asigna en runtime (salvo el link firmado del PDF)',
+    !/\.(src|href)\s*=(?!=)/.test(script.replace('pestana.location.href = data.signedUrl', '')) &&
+    script.split('pestana.location.href = data.signedUrl').length === 2)
 
   const utils = require('fs').readFileSync(path.join(RAIZ, 'js/utils.js'), 'utf8')
   chk('control: los toasts de js/utils.js usan textContent y no innerHTML',
