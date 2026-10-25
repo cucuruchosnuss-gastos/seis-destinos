@@ -287,7 +287,11 @@ const SEGURAS_REGEX_PRODUCCION = [
   [/^(ing\.renglones\.map\(\(r, i\) => )?htmlRenglonIngreso\(r, i, ing\)\)?(\.join\(''\))?$/, 'HTML armado por htmlRenglonIngreso(), que escapa todo dato adentro'],
   // El lote del ingreso (21/10/2026): htmlLoteIngreso() arma la pregunta y el
   // campo; campo() escapa el valor y el placeholder; attrs son literales.
-  [/^htmlLoteIngreso\(r\)$/, 'HTML armado por htmlLoteIngreso(), que escapa el lote vigente y lo escrito'],
+  // (24/10/2026: recibe también el ingreso, para la producción propia.)
+  [/^htmlLoteIngreso\(r(, ing)?\)$/, 'HTML armado por htmlLoteIngreso(), que escapa el lote vigente y lo escrito'],
+  // El lote de fabricación (producción propia, 24/10/2026): campo() escapa
+  // lo escrito (r.lote) y el placeholder; los atributos son literales.
+  [/^campo\(' required aria-required="true"', r\.lote, 'El lote de esta tanda'\)$/, 'HTML armado por campo(), que escapa el valor (r.lote) y el placeholder literal'],
   [/^LARGO_MAXIMO_LOTE$/, 'constante numérica del código (40)'],
   [/^attrs$/, "atributos literales del código (' disabled', ' readonly …', ' required …')"],
   [/^campo\(' disabled', '', 'Primero el producto'\)$/, 'HTML armado por campo(), que escapa el valor y el placeholder (acá literales)'],
