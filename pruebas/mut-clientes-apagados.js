@@ -61,7 +61,7 @@ correrMutaciones({
     { nombre: 'sin código en la fila', de: "        codigo !== null && codigo !== undefined ? 'cód. ' + codigo : null].filter(Boolean).join(' · ')", a: "        null].filter(Boolean).join(' · ')" },
     { nombre: 'la cuenta no dice apagado', de: "        cli?.activo === false ? '<div class=\"ad-aviso\">Cliente apagado:", a: "        false ? '<div class=\"ad-aviso\">Cliente apagado:" },
     { nombre: 'la cuenta sin código anterior', de: "        cli && textoCodigoAnterior(cli.codigo_anterior) ?", a: '        false ?' },
-    { nombre: 'la ficha no lee el código anterior', de: 'proveedor_id, observaciones, unidad_negocio_id, codigo_anterior\')', a: "proveedor_id, observaciones, unidad_negocio_id')" },
+    { nombre: 'la ficha no lee el código anterior', de: 'proveedor_id, observaciones, unidad_negocio_id, codigo_anterior, unidad_grupo_id\')', a: "proveedor_id, observaciones, unidad_negocio_id, unidad_grupo_id')" },
     { nombre: 'el código cero no se muestra', de: "      if (codigo === null || codigo === undefined || codigo === '') return ''", a: "      if (!codigo) return ''" },
     { nombre: 'el buscador no mira el código', de: "(digitos.length > 0 && digitos === String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? ''))", a: 'false' },
     { nombre: 'el buscador del código por parte', de: "(digitos.length > 0 && digitos === String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? ''))", a: "(digitos.length > 0 && String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? '').includes(digitos))" },
