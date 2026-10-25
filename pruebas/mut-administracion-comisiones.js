@@ -52,7 +52,7 @@ correrMutaciones({
     // El detalle
     { nombre: 'sin Subtotal / Comisión / Total', de: '      if (conImporte) {\n        partes.push', a: '      if (false) {\n        partes.push' },
     { nombre: 'sin aviso de recalcular', de: "        if (comisionDesactualizada(o)) partes.push(", a: "        if (false) partes.push(" },
-    { nombre: 'una anulada muestra la comisión', de: "        total = o.estado === 'anulada' ? `<p class=\"ad-total\">Total ${esc(importeHoja(o.total, o.moneda))}</p>` : htmlComisionOrden(d)", a: '        total = htmlComisionOrden(d)' },
+    { nombre: 'una anulada muestra la comisión', de: "        total = o.estado === 'anulada' ? `<p class=\"ad-total\">Total ${esc(importeHoja(o.total, o.moneda))}</p>`\n", a: '        total = false ? ``\n' },
     { nombre: 'sin cobranzas:procesar', de: "        (puedeEn('retiros', 'precios', o.unidad_negocio_id) || tieneTarea('cobranzas', 'procesar'))", a: "        puedeEn('retiros', 'precios', o.unidad_negocio_id)" },
     { nombre: 'precios en cualquier empresa', de: "        (puedeEn('retiros', 'precios', o.unidad_negocio_id) || tieneTarea('cobranzas', 'procesar'))", a: "        (tieneTarea('retiros', 'precios') || tieneTarea('cobranzas', 'procesar'))" },
     // El panel

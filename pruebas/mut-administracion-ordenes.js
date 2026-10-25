@@ -19,6 +19,8 @@ correrMutaciones({
   funciones: ['htmlEmpresas', 'htmlSeccion', 'htmlLink', 'htmlFilaOrden', 'htmlListaOrdenes', 'htmlOpcionesClientes',
     'htmlDatoAd', 'htmlRenglonOrden', 'htmlDetalleOrden', 'htmlValorizar', 'htmlOrigenPrecio'],
   equivalentes: [
+    // La orden a otra empresa del grupo (24/10/2026): el total de la valorizada.
+    { expr: 'esc(importeHoja(o.total, o.moneda) + textoAFavor(o.total))', motivo: 'un importe que arma importeHoja() (número formateado por el código) más un texto fijo de textoAFavor()' },
     { expr: 'esc(e.id)', motivo: 'el id de una empresa va a un data-empresa entre comillas (uuid de la base)' },
     { expr: 'esc(TODAS_LAS_FABRICAS)', motivo: "constante del código: 'todas' (\"Todas las fábricas\" de Clientes, 29/09/2026)" },
     { expr: "esc('Con ' + nombre + ' elegida arriba no tenés órdenes, clientes ni precios en Administración. Elegí otra unidad o \"Todas\".')", motivo: 'el nombre de la unidad lo prueba test-administracion-barra-unidad.js (marca «unidad»)' },
@@ -126,7 +128,7 @@ correrMutaciones({
     { nombre: 'un negativo se manda', de: "      if (Object.values(v.precios).some(p => Number(p) < 0)) { v.errorGuardar = 'Un precio no puede ser negativo.'; pintarOrden(); return }", a: '' },
     { nombre: 'se mandan solo los corregidos', de: '      for (const it of d.items) precios[it.id] = d.valorizar.precios[it.id]', a: '      for (const it of d.items) if (!d.valorizar.desdeLista.has(it.id)) precios[it.id] = d.valorizar.precios[it.id]' },
     { nombre: 'el error de valorizar se tapa', de: "        v.errorGuardar = err?.message || 'No se pudo valorizar. Probá de nuevo.'", a: "        v.errorGuardar = 'No se pudo valorizar. Probá de nuevo.'" },
-    { nombre: 'supera el límite y no se avisa', de: '        const aviso = data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null', a: '        const aviso = null' },
+    { nombre: 'supera el límite y no se avisa', de: '        const aviso = !entre && data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null', a: '        const aviso = null' },
     { nombre: 'el subtotal no multiplica las cajas', de: '      return p === null || p === undefined ? null : Math.round(p * cantidadValorizable(it) * 100) / 100', a: '      return p === null || p === undefined ? null : p' },
     // Anular
     { nombre: 'anular sin motivo', de: "      if (motivo.length < LARGO_MINIMO_MOTIVO) { d.anular.error = 'Escribí por qué se anula la orden.'; pintarAccionesOrden(); return }\n", a: '' },

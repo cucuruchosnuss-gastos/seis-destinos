@@ -321,6 +321,15 @@
     .rt-sello--insumo { background: #F1EEE9; color: var(--color-texto-menu); text-transform: none; }
     /* Un cliente nuevo que cargó el depósito: lo completa administración. */
     .rt-sello--provisorio { background: #F1EEE9; color: var(--color-texto-menu); }
+    /* El cliente es otra empresa del grupo (24/10/2026): lo que sale entra a su stock. */
+    .rt-sello--entre { background: var(--color-acento-fila); color: var(--naranja-oscuro); align-self: flex-start; }
+    .rt-aviso-entre {
+      margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--naranja); background: var(--color-acento-fila);
+      color: var(--naranja-oscuro); font-size: 14px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere;
+    }
+    .rt-aviso-entre--catalogo { margin: 0; }
+    /* En la compu la tarjeta del cliente (con su aviso) está al lado: no se repite. */
+    @media (min-width: 1024px) { .rt-aviso-entre--catalogo { display: none; } }
 
     /* ── El cliente nuevo (provisorio, 06/10/2026) ────────────────────── */
     .rt-cliente-nuevo:empty { display: none; }
@@ -784,6 +793,9 @@
           </div>
         </div>
         <div class="rt-col-agregar">
+          <!-- Otra empresa del grupo (24/10/2026): en el celular, mientras se
+               elige del catálogo, la tarjeta del cliente no se ve; el aviso sí. -->
+          <p class="rt-aviso-entre rt-aviso-entre--catalogo" id="rt-aviso-entre-catalogo" role="note" hidden></p>
           <div id="rt-catalogo-aviso"></div>
           <div class="rt-renglones" id="rt-renglones"></div>
         </div>
@@ -918,6 +930,9 @@
       vista: null,
       clientes: null,
       errorClientes: null,
+      // Los nombres de las empresas del grupo que son clientes (24/10/2026):
+      // unidad_grupo_id → nombre ("Dolce Pasta").
+      empresasGrupo: new Map(),
       // El buscador de clientes (29/09/2026): la última respuesta de
       // buscar_clientes { texto, empresaId, filas }, si la base dijo que no
       // hay permiso (null: no se le vuelve a preguntar), su turno y su espera.
@@ -1278,10 +1293,26 @@
     // Sin nada de plata: ni el límite de crédito, ni la lista de precios.
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio')
+        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio, unidad_grupo_id')
         .eq('unidad_negocio_id', unidadId).eq('activo', true).order('nombre')
       if (error) throw error
+      await leerEmpresasGrupo(data ?? [])
       return data ?? []
+    }
+
+    // Los nombres de las empresas del grupo que son clientes (unidades_negocio
+    // la lee cualquier usuario logueado). Si falla, el aviso dice "otra
+    // empresa del grupo": la carga sigue.
+    async function leerEmpresasGrupo(clientes) {
+      const ids = [...new Set((clientes ?? []).map(empresaGrupoDe).filter(Boolean))].filter(id => !estado.empresasGrupo.has(id))
+      if (!ids.length) return
+      try {
+        const { data, error } = await supabase.from('unidades_negocio').select('id, nombre').in('id', ids)
+        if (error) throw error
+        for (const u of data ?? []) if (u?.id && limpio(u.nombre)) estado.empresasGrupo.set(u.id, limpio(u.nombre))
+      } catch (err) {
+        console.error('No se pudieron leer los nombres de las empresas del grupo:', err)
+      }
     }
 
     // ── El buscador de clientes (29/09/2026) ───────────────────────────────
@@ -2115,6 +2146,14 @@
       f.renglones.forEach((r, i) => {
         if (faltaOrigen(r)) faltan.push(`Falta decir de dónde salen las cajas del renglón ${i + 1}.`)
       })
+      // Otra empresa del grupo (24/10/2026): la base no acepta devoluciones
+      // ni reposiciones; se dice antes de mandar (el cliente pudo cambiar
+      // con la devolución ya cargada).
+      if (esEntreEmpresas(f)) {
+        f.renglones.forEach((r, i) => {
+          if (esRenglonDev(r)) faltan.push(`Renglón ${i + 1}: a otra empresa del grupo no se le cargan devoluciones ni reposiciones. Sacalo: la devolución se carga como otra orden, desde la empresa que devuelve.`)
+        })
+      }
       return faltan
     }
 
@@ -2236,6 +2275,32 @@
       return id ? (estado.clientes ?? []).find(c => c.id === id) ?? null : null
     }
 
+    // ── EL CLIENTE QUE ES OTRA EMPRESA DEL GRUPO (24/10/2026) ─────────────
+    // clientes.unidad_grupo_id: el cliente ES otra empresa del grupo ("DOLCE
+    // PASTA SRL" dentro de Nuss → Dolce Pasta). registrar_orden_retiro saca el
+    // stock de la que entrega como siempre y lo hace ENTRAR al de la que
+    // recibe (si lleva la misma presentación); NO acepta devoluciones ni
+    // reposiciones ("Las devoluciones entre empresas del grupo se cargan como
+    // otra orden, desde la empresa que devuelve (renglón N)."). Por eso, con
+    // ese cliente se avisa arriba y no se ofrece "Devolución de mercadería".
+    function empresaGrupoDe(c) {
+      const id = c?.unidad_grupo_id
+      return typeof id === 'string' && id ? id : null
+    }
+
+    function esEntreEmpresas(f) {
+      return !!empresaGrupoDe(clienteDe(f?.clienteId))
+    }
+
+    function nombreEmpresaGrupo(id) {
+      return limpio(estado.empresasGrupo?.get(id)) || 'otra empresa del grupo'
+    }
+
+    function textoEntreEmpresas(c) {
+      const id = empresaGrupoDe(c)
+      return id ? `Entre empresas: lo que sale entra al stock de ${nombreEmpresaGrupo(id)}` : ''
+    }
+
     // ── el cliente ─────────────────────────────────────────────────────────
 
     function detalleCliente(c) {
@@ -2253,9 +2318,11 @@
       return `<div class="rt-cliente-elegido"><span class="rt-cliente-elegido__texto"><span class="rt-rotulo">Retira</span>` +
         `<span class="rt-cliente-elegido__nombre">${esc(c ? c.nombre : 'Cliente (no se pudo leer)')}</span>` +
         `${d ? `<span class="rt-cliente-elegido__detalle">${esc(d)}</span>` : ''}` +
-        `${c?.provisorio === true ? '<span class="rt-sello rt-sello--provisorio" title="Cliente nuevo: lo completa administración">Provisorio</span>' : ''}</span>` +
+        `${c?.provisorio === true ? '<span class="rt-sello rt-sello--provisorio" title="Cliente nuevo: lo completa administración">Provisorio</span>' : ''}` +
+        `${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Entre empresas</span>' : ''}</span>` +
         `<span class="rt-numerar">Se numera al confirmar</span>` +
-        `<button type="button" class="rt-link" id="rt-cliente-cambiar">Cambiar</button></div>`
+        `<button type="button" class="rt-link" id="rt-cliente-cambiar">Cambiar</button></div>` +
+        (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : '')
     }
 
     // Un resultado: nombre, la EMPRESA siempre (aunque acá es una sola, que se
@@ -2400,6 +2467,11 @@
       document.getElementById('rt-cliente-elegido').innerHTML = htmlClienteElegido(f)
       document.getElementById('rt-cliente-elegido-bloque').hidden = !f.clienteId
       document.getElementById('rt-cliente-buscador').hidden = !!f.clienteId
+      // A otra empresa del grupo no se le cargan devoluciones ni reposiciones (24/10/2026).
+      document.getElementById('rt-agregar-devolucion').hidden = esEntreEmpresas(f)
+      const avisoCatalogo = document.getElementById('rt-aviso-entre-catalogo')
+      avisoCatalogo.textContent = textoEntreEmpresas(clienteDe(f.clienteId))
+      avisoCatalogo.hidden = !avisoCatalogo.textContent
       // Con el cliente nuevo abierto, la lista no se ve: el panel muestra los parecidos.
       const conNuevo = !!estado.nuevoCliente
       document.getElementById('rt-clientes-resultados').innerHTML = f.clienteId || conNuevo ? '' : htmlResultadosClientes(f.clienteBusqueda)
@@ -3666,7 +3738,7 @@
     // Un renglón vacío abierto se reusa (pasa a devolución).
     function agregarDevolucion() {
       const f = estado.form
-      if (!f) return
+      if (!f || esEntreEmpresas(f)) return
       const abierto = editandoDe(f)
       if (abierto && !abierto.productoId && !abierto.insumoId) {
         if (!esRenglonDev(abierto)) abierto.dev = devolucionVacia()
@@ -3829,6 +3901,7 @@
       const k = total.indexOf(' + ')
       return htmlDatoRt('Fábrica', `${empresaActual()?.nombre ?? '—'} · se numera al confirmar`) +
         htmlDatoRt('Retira', c ? [c.nombre + (apodo ? ` (“${apodo}”)` : ''), detalleCliente(c)].filter(Boolean).join(' · ') : '—') +
+        (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : '') +
         htmlDatoRt('Transporte', limpio(f.transporte) || '—') +
         (String(f.observaciones ?? '').trim() ? htmlDatoRt('Observ.', String(f.observaciones).trim()) : '') +
         `<div>${filas}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span>` +
@@ -3902,6 +3975,8 @@
         estado.confirmando = false
         estado.hecho = { ordenId: data?.orden_id ?? null, codigo: data?.codigo ?? null, faltantes: Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : null,
           reintento: data?.reintento === true, orden: null, error: null, aviso: null, cliente: clienteDe(f.clienteId), cajas: totalCajasForm(f), total: textoTotalForm(f),
+          // Otra empresa del grupo (24/10/2026): la base devuelve entre_empresas.
+          entre: data?.entre_empresas === true || esEntreEmpresas(f) ? nombreEmpresaGrupo(empresaGrupoDe(clienteDe(f.clienteId))) : null,
           // Para el cartel del faltante: la fábrica y, por número de renglón,
           // la presentación y el cono que se mandaron (la base numera los
           // renglones en el orden de p_items, desde 1).
@@ -4214,10 +4289,11 @@
         ? '<div class="rt-aviso">Esta orden ya había entrado antes de que se cortara la conexión: no se cargó dos veces.</div>' : ''
       const cuando = h.orden?.cargada_en ? fechaHoraHoja(h.orden.cargada_en) : ''
       const detalle = [[h.cliente?.nombre, h.total].filter(Boolean).join(' · '), cuando].filter(Boolean)
+      const entre = h.entre ? `<p class="rt-aviso-entre" role="note">${esc('Entre empresas: lo que salió entra al stock de ' + h.entre + '.')}</p>` : ''
       return `<span class="rt-hecho__ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>` +
         `<span class="rt-hecho__rotulo">Retiro confirmado</span>` +
         `<div class="rt-codigo-grande">${esc(h.codigo || '—')}</div>` +
-        `${detalle.length ? `<p class="rt-hecho__detalle">${detalle.map(esc).join('<br>')}</p>` : ''}${aviso}${htmlEstadoFaltantes(h)}`
+        `${detalle.length ? `<p class="rt-hecho__detalle">${detalle.map(esc).join('<br>')}</p>` : ''}${entre}${aviso}${htmlEstadoFaltantes(h)}`
     }
 
     function pintarHecho() {

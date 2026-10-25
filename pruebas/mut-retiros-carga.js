@@ -16,6 +16,10 @@ correrMutaciones({
     'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon', 'htmlRenglon',
     'htmlResumen', 'htmlDatoRt', 'htmlEstadoFaltantes', 'htmlHecho', 'htmlEleccionRenglon'],
   equivalentes: [
+    // La orden a otra empresa del grupo (24/10/2026): el nombre de la empresa
+    // lo prueba con marcas test-retiros-entre-empresas.js (mut-retiros-entre-empresas.js).
+    { expr: 'esc(textoEntreEmpresas(c))', motivo: 'lo prueba con marcas test-retiros-entre-empresas.js (el nombre de la empresa del grupo)' },
+    { expr: "esc('Entre empresas: lo que salió entra al stock de ' + h.entre + '.')", motivo: 'lo prueba con marcas test-retiros-entre-empresas.js (la orden confirmada)' },
     { expr: 'esc(ayuda)', motivo: 'texto constante del código: el placeholder del buscador (devolución o retiro)' },
     { expr: 'esc(titulo)', motivo: 'texto constante del código: el título de los lotes (retiro o reposición)' },
     { expr: 'esc(devs.length)', motivo: 'un conteo (número) de devoluciones' },
@@ -66,7 +70,7 @@ correrMutaciones({
     { nombre: 'no busca por razón social', de: ' || normalizar(c.razon_social).includes(q) ||', a: ' ||' },
     { nombre: 'el transporte habitual pisa lo escrito', de: '      if (!limpio(f.transporte) || f.transporte === f.transporteAuto) {', a: '      if (true) {' },
     { nombre: 'no trae el transporte habitual', de: '        f.transporte = limpio(c.transporte_habitual)\n', a: '' },
-    { nombre: 'los clientes se leen con el límite de crédito', de: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio')", a: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio, limite_credito')" },
+    { nombre: 'los clientes se leen con el límite de crédito', de: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio, unidad_grupo_id')", a: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, provisorio, unidad_grupo_id, limite_credito')" },
     // Los renglones
     { nombre: 'las cajas con decimales', de: '    const DECIMALES_CAJAS = 0', a: '    const DECIMALES_CAJAS = 2' },
     { nombre: 'media caja pasa', de: " || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'", a: ") return 'poné las cajas'" },

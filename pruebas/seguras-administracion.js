@@ -114,6 +114,11 @@ const SEGURAS_ADMINISTRACION = [
   // test-administracion-nota-debito.js.
   ['copia(r)', 'HTML armado por copia() adentro de htmlNotaDebito(): cada dato de la base con esc(), el logo por logoSeguro() + encodeURIComponent, y el rótulo con esc()'],
   ['htmlNotaDebito(d)', 'HTML armado por htmlNotaDebito(), que escapa adentro (lo ejecuta con marcas test-administracion-nota-debito.js)'],
+  // La orden a otra empresa del grupo (24/10/2026): las ejecuta con texto
+  // malicioso test-administracion-orden-entre-empresas.js.
+  ['htmlSelloEntre(o)', 'HTML armado por htmlSelloEntre(): un sello fijo con el nombre de la empresa en esc() (lo ejecuta con marcas test-administracion-orden-entre-empresas.js)'],
+  ['htmlDeudaEntre(o)', 'HTML armado por htmlDeudaEntre(), todo el texto en esc() (lo ejecuta con marcas test-administracion-orden-entre-empresas.js)'],
+  ['htmlOrdenEntre(f)', 'HTML armado por htmlOrdenEntre(): el código y el id en esc() (lo ejecuta con marcas test-administracion-orden-entre-empresas.js)'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [
