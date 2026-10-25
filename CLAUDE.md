@@ -46,7 +46,7 @@ Los módulos son enormes (`modulos/administracion.html` ~850 KB, `produccion-ges
 - `npm run pruebas:rama` / `npm run mutaciones:rama` — solo lo que alcanza el cambio de la rama contra `origin/main` (`... lista` dice qué correría). No reemplaza a `npm run pruebas` antes de integrar.
 - `node pruebas/check-scripts.js` — cada `<script>` como lo ve el navegador; en el cierre de todo commit que toque un módulo.
 - `npm run ensayo -- <ramas>` — el ensayo de integración (ver arriba).
-- Mutaciones de a una por vez (`node pruebas/mut-<x>.js`); el baseline de una suite se ancla a un commit fijo, nunca a `HEAD`.
+- Mutaciones de a una por vez (`node pruebas/mut-<x>.js`); el baseline de una suite se ancla a un commit fijo, nunca a `HEAD`. Para ver solo si sus anclas siguen en pie (segundos): `MUT_SOLO_ANCLAS=1 node pruebas/mut-<x>.js`; `test-anclas-mutaciones.js` lo hace con todas en `npm run pruebas`.
 - Navegador: `npm run e2e` (Playwright); maqueta sin sesión: `npm run maqueta` + `?maqueta=<datos>` (skill `mirar-en-maqueta`, a 390 y 1280 px).
 - Una suite nueva no se registra en ningún lado: alcanza con el nombre `test-<modulo>-<tema>.js` / `mut-<modulo>-<tema>.js`.
 
