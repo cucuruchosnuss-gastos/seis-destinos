@@ -84,6 +84,8 @@ const FUNCIONES_BASE = [
   'devolucionVacia', 'renglonDevolucion', 'esRenglonDev', 'tipoRenglon', 'saleDelStock', 'letrasDe', 'motivoDevolucion', 'faltaDevolucion',
   'textoDevolucionRenglon', 'totalDevueltasForm', 'htmlTituloDevolucion', 'htmlDevolucionRenglon', 'agregarDevolucion',
   'elegirMotivoDevolucion', 'elegirTratoDevolucion', 'elegirDestinoDevolucion', 'escribirDevolucion', 'devueltasDeOrden',
+  // El cliente que es otra empresa del grupo (24/10/2026)
+  'empresaGrupoDe', 'esEntreEmpresas', 'nombreEmpresaGrupo', 'textoEntreEmpresas', 'leerEmpresasGrupo',
 ]
 
 const CONSTANTES_BASE = [
@@ -180,7 +182,7 @@ const PRELUDIO = `
     ],
     fabrica: FABRICA_SIN_DATOS,
     empresaId: null, empresaPendiente: null, vista: null, unidadBarra: null,
-    clientes: null, errorClientes: null, catalogo: null, catalogoEmpresa: null, errorCatalogo: null,
+    clientes: null, errorClientes: null, empresasGrupo: new Map(), catalogo: null, catalogoEmpresa: null, errorCatalogo: null,
     buscarClientes: null, buscarClientesSinPermiso: false, turnoBuscarClientes: 0, esperaBuscarClientes: null,
     nuevoCliente: null,
     lotes: new Map(), form: null, confirmando: false, hecho: null, mis: null, errorMis: null, mio: null, enviando: false,

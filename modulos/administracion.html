@@ -370,6 +370,15 @@
     .ad-sello--provisorio { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); }
     /* Devoluciones y reposiciones de una orden (22/10/2026). */
     .ad-sello--dev { background: var(--color-superficie); color: var(--color-texto); border-color: var(--color-borde-fuerte); }
+    /* LA ORDEN A OTRA EMPRESA DEL GRUPO (24/10/2026): no es venta ni cuenta
+       corriente, es deuda entre empresas. Un dato: neutro, con borde fuerte. */
+    .ad-sello--entre { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-texto-menu); }
+    .ad-entre-deuda {
+      margin: 0.5rem 0 0; padding: 0.5rem 0.75rem; border-radius: 0.625rem; border: 1px solid var(--color-borde-fuerte);
+      background: var(--color-superficie); color: var(--color-texto); font-size: 0.875rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere;
+    }
+    .ad-entre-fila__orden { margin: 0.25rem 0 0; font-size: 0.875rem; color: var(--ad-texto-secundario); }
+    .ad-entre-fila__orden .ad-link { min-height: 44px; font-weight: 700; }
     .ad-subtitulo--dev { margin-top: 0.75rem; }
     .ad-provisorio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: -0.25rem 0 0.25rem; padding: 0 0.25rem; }
     .ad-provisorio .ad-btn { flex: 1 1 12rem; }
@@ -2053,6 +2062,13 @@
 
     function elegirEmpresa(id) {
       if (!empresasDeAdministracion().some(e => e.id === id) || id === estado.empresaId) return
+      ponerEmpresa(id)
+      mostrarInicio()
+    }
+
+    // Cambia la empresa elegida y suelta lo leído de la anterior (sin
+    // navegar: lo usa también el link a una orden desde Entre empresas).
+    function ponerEmpresa(id) {
       estado.empresaId = id
       guardarPreferencia(CLAVE_EMPRESA, id)
       estado.clientes = null
@@ -2063,7 +2079,6 @@
       estado.importar = null
       estado.filtros.clienteId = ''
       pintarEmpresas()
-      mostrarInicio()
     }
 
     function empresaInicial(lista, guardada) {
@@ -2077,7 +2092,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, pct_parte_a, comision_habitual, apodos, provisorio')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, pct_parte_a, comision_habitual, apodos, provisorio, unidad_grupo_id')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -2208,6 +2223,43 @@
 
     function clienteDe(id) {
       return (estado.clientes ?? []).find(c => c.id === id) ?? null
+    }
+
+    // ── LA ORDEN A OTRA EMPRESA DEL GRUPO (24/10/2026) ─────────────────────
+    // clientes.unidad_grupo_id: el cliente ES otra empresa del grupo ("DOLCE
+    // PASTA SRL" dentro de Nuss → Dolce Pasta). Para esas órdenes la base
+    // (verificado con pg_get_functiondef el 24/10/2026):
+    //  - registrar_orden_retiro hace entrar lo que sale al stock de la que
+    //    recibe y no acepta devoluciones ni reposiciones;
+    //  - valorizar_orden_retiro NO escribe cliente_movimientos: deja la deuda
+    //    en movimientos_entre_unidades (orden_retiro_id; acreedora = la que
+    //    entrega, deudora = la que recibe); una corrección agrega la diferencia;
+    //  - anular_orden_retiro revierte la entrada y la deuda.
+    // Por eso acá: el sello "Entre empresas", la valorización dice de quién es
+    // la deuda, y NO se ofrecen "Dividir para facturar" ni la comisión (no es
+    // una venta).
+    function empresaGrupoDe(c) {
+      const id = c?.unidad_grupo_id
+      return typeof id === 'string' && id ? id : null
+    }
+
+    function ordenEntreEmpresas(o) {
+      return !!o && !!empresaGrupoDe(clienteDe(o.cliente_id))
+    }
+
+    // "Queda como deuda de Dolce Pasta con Cucuruchos Nuss": la que recibe le
+    // debe a la que entrega (la de la orden).
+    function textoDeudaEntre(o) {
+      const recibe = nombreEmpresa(empresaGrupoDe(clienteDe(o?.cliente_id))) || 'la empresa que recibe'
+      const entrega = nombreEmpresa(o?.unidad_negocio_id) || 'la empresa que entrega'
+      return `Queda como deuda de ${recibe} con ${entrega}`
+    }
+
+    // `antes`: "Al valorizar, " → "Al valorizar, queda como deuda de …".
+    function htmlDeudaEntre(o, antes = '') {
+      const t = textoDeudaEntre(o)
+      const frase = antes ? antes + t.charAt(0).toLowerCase() + t.slice(1) : t
+      return `<p class="ad-entre-deuda" data-entre-deuda>${esc(frase + ' (Entre empresas): no va a la cuenta corriente.')}</p>`
     }
 
     // Los nombres de quien cargó: contra v_empleados_publico, NUNCA con un
@@ -2666,6 +2718,13 @@
         : '<span class="ad-sello ad-sello--pendiente">Sin valorizar</span>'
     }
 
+    // El sello de una orden a otra empresa del grupo (24/10/2026).
+    function htmlSelloEntre(o) {
+      if (!ordenEntreEmpresas(o)) return ''
+      const recibe = nombreEmpresa(empresaGrupoDe(clienteDe(o.cliente_id)))
+      return `<span class="ad-sello ad-sello--entre" data-sello-entre title="${esc(recibe ? 'Otra empresa del grupo: ' + recibe : 'Otra empresa del grupo')}">Entre empresas</span>`
+    }
+
     // ── LA COMISIÓN DE UNA ORDEN (06/10/2026) ─────────────────────────────
     //
     // Una orden valorizada puede llevar una COMISIÓN: un porcentaje del total
@@ -2691,7 +2750,7 @@
     // que todavía no tiene la comisión cargada (ni "sin comisión").
     function faltaComision(o, cli) {
       return !!o && o.estado === 'confirmada' && o.estado_valorizacion === 'valorizada' &&
-        (o.comision_modo ?? null) === null && comisionHabitualDe(cli) !== null
+        (o.comision_modo ?? null) === null && comisionHabitualDe(cli) !== null && !empresaGrupoDe(cli)
     }
 
     function ordenesComisionSinCargar(ordenes, clientes) {
@@ -2754,7 +2813,7 @@
     // La regla de la base: retiros:precios en la empresa de la orden, o
     // cobranzas:procesar. Y la orden valorizada y no anulada.
     function puedeCargarComision(o) {
-      return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' &&
+      return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) &&
         (puedeEn('retiros', 'precios', o.unidad_negocio_id) || tieneTarea('cobranzas', 'procesar'))
     }
 
@@ -2946,7 +3005,7 @@
       const pendiente = o.estado === 'confirmada' && o.estado_valorizacion !== 'valorizada'
       const selloComision = faltaComision(o, cli) ? '<span class="ad-sello">Comisión sin cargar</span>' : ''
       return `<button type="button" class="ad-fila${o.estado === 'anulada' ? ' ad-fila--anulada' : ''}${pendiente ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
-        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}${selloComision}</span>` +
+        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}${htmlSelloEntre(o)}${selloComision}</span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta)}</span>` +
         `<span class="ad-fila__importe${pendiente ? ' ad-fila__importe--pendiente' : ''}">${esc(valor)}</span></span></button>`
     }
@@ -3218,6 +3277,11 @@
         htmlDatoAd('Transporte', limpio(o.transporte) || '—'),
       ]
       if (limpio(o.observaciones)) datos.push(htmlDatoAd('Observaciones', o.observaciones))
+      const entre = ordenEntreEmpresas(o)
+      if (entre) {
+        const recibe = nombreEmpresa(empresaGrupoDe(cli)) || 'otra empresa del grupo'
+        datos.push(htmlDatoAd('Entre empresas', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))
+      }
       const anulada = o.estado === 'anulada' ? `<div class="ad-aviso ad-aviso--grave">${esc('Anulada. Motivo: ' + (o.anulada_motivo || '—'))}</div>` : ''
       const hayProductos = d.items.some(it => !it.insumo_id)
       const hayInsumos = d.items.some(it => it.insumo_id)
@@ -3230,11 +3294,14 @@
       let total = ''
       if (d.valorizar) total = `<p class="ad-total" id="ad-valorizar-total">${esc(textoTotalValorizar(d))}</p>`
       else if (o.estado_valorizacion === 'valorizada') {
-        total = o.estado === 'anulada' ? `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>` : htmlComisionOrden(d)
+        // Entre empresas (24/10/2026): sin comisión; la deuda es entre las dos empresas.
+        total = o.estado === 'anulada' ? `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>`
+          : entre ? `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda) + textoAFavor(o.total))}</p>${htmlDeudaEntre(o)}` : htmlComisionOrden(d)
       }
-      return `<div class="ad-tarjeta"><div class="ad-fila__linea">${htmlSelloOrden(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
+      return `<div class="ad-tarjeta"><div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
         `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>` +
-        (d.valorizar ? '' : htmlFacturasOrden(d))
+        // Entre empresas no se divide para facturar (24/10/2026).
+        (d.valorizar || entre ? '' : htmlFacturasOrden(d))
     }
 
     function pintarOrden() {
@@ -3475,7 +3542,9 @@
       // `precios` es lo que va a la base (por unidad base); en un insumo por
       // bulto, `escritos` es lo que se ve y se escribe (por bulto) y `modos`
       // cómo se pide (23/10/2026).
-      const v = { precios: {}, escritos: {}, modos: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
+      const v = { precios: {}, escritos: {}, modos: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null,
+        // Entre empresas no hay cuenta corriente: tampoco límite de crédito (24/10/2026).
+        limite: empresaGrupoDe(cli) ? null : (cli?.limite_credito ?? null), error: null, cargando: true }
       d.comision = null
       d.valorizar = v
       pintarOrden()
@@ -3611,6 +3680,8 @@
       if (v.cargando) return '<p class="ad-texto-suave">Trayendo los precios de la lista del cliente…</p>'
       const partes = []
       if (v.error) partes.push(`<div class="ad-aviso ad-aviso--grave">${esc(v.error)}</div>`)
+      // Entre empresas (24/10/2026): la valorización es deuda entre las dos, no cuenta corriente.
+      if (ordenEntreEmpresas(d.orden)) partes.push(htmlDeudaEntre(d.orden, 'Al valorizar, '))
       if (v.sinLista) partes.push('<div class="ad-aviso">Este cliente no tiene una lista de precios asignada: cargá cada precio.</div>')
       else if (d.items.some(it => !v.desdeLista.has(it.id) && tipoItem(it) !== 'reposicion') && d.orden.estado_valorizacion !== 'valorizada') partes.push('<div class="ad-aviso">Algunos productos no están en la lista del cliente: cargá su precio.</div>')
       const aviso = avisoLimite(saldoProyectado(d), v.limite, d.orden.moneda)
@@ -3667,8 +3738,11 @@
       try {
         const { data, error } = await supabase.rpc('valorizar_orden_retiro', parametrosValorizar(d))
         if (error) throw error
-        const aviso = data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null
-        mostrarExito(`Orden ${d.orden.codigo} valorizada: ${importeHoja(data?.total, data?.moneda)}.`)
+        // Entre empresas (24/10/2026): la base no toca la cuenta del cliente;
+        // se dice de quién es la deuda y no se mira el límite.
+        const entre = ordenEntreEmpresas(d.orden)
+        const aviso = !entre && data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null
+        mostrarExito(`Orden ${d.orden.codigo} valorizada: ${importeHoja(data?.total, data?.moneda)}.` + (entre ? ' ' + textoDeudaEntre(d.orden) + '.' : ''))
         estado.trabajando = false
         estado.ordenes = null
         await abrirOrden(d.orden.id)
@@ -4060,7 +4134,7 @@
     // Con retiros:precios en la empresa de la orden (la regla de las cuatro
     // funciones), y la orden valorizada y no anulada.
     function puedeDividir(o) {
-      return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' && puedeEn('retiros', 'precios', o.unidad_negocio_id)
+      return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) && puedeEn('retiros', 'precios', o.unidad_negocio_id)
     }
 
     function camposDivision() {
@@ -4506,6 +4580,7 @@
         `${c.empresa ? htmlSelloEmpresa(c.unidad_negocio_id, c.empresa) : ''}` +
         `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
         `${esProvisorio(c) ? '<span class="ad-sello ad-sello--provisorio">Provisorio</span>' : ''}` +
+        `${empresaGrupoDe(fichaCliente(c.cliente_id)) ? '<span class="ad-sello ad-sello--entre" data-sello-entre>Empresa del grupo</span>' : ''}` +
         `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">Cliente y proveedor</span>' : ''}` +
         `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
         `${it?.error ? `<span class="ad-error-pegado">${esc(it.error)}</span>` : ''}</button>`
@@ -6262,7 +6337,7 @@
 
     async function leerFicha(clienteId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, apodos, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, comision_habitual, pct_parte_a, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior')
+        .select('id, nombre, apodos, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, comision_habitual, pct_parte_a, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior, unidad_grupo_id')
         .eq('id', clienteId).maybeSingle()
       if (error) throw error
       return data
@@ -6506,6 +6581,15 @@
       return `Código en el sistema anterior: ${codigo}`
     }
 
+    // El cliente que ES otra empresa del grupo (24/10/2026): solo lectura (la
+    // marca la pone el chat de la base, no la ficha).
+    function htmlFichaEntre(c) {
+      const id = empresaGrupoDe(c)
+      if (!id) return ''
+      const nombre = nombreEmpresa(id) || 'otra empresa'
+      return `<p class="ad-entre-deuda" data-ficha-entre>${esc('Es la empresa ' + nombre + ' del grupo. Sus órdenes no van a la cuenta corriente: quedan como deuda entre empresas, y no se dividen para facturar ni llevan comisión.')}</p>`
+    }
+
     async function abrirFicha(clienteId) {
       if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return
       // proveedorActual: con quién está vinculado hoy; proveedorId: el que se
@@ -6521,7 +6605,7 @@
         estado.ficha.original = c
         estado.ficha.proveedorActual = c.proveedor_id ?? null
         document.getElementById('ad-ficha-titulo').textContent = 'Ficha de ' + (c.nombre ?? 'cliente')
-        document.getElementById('ad-ficha-aviso').innerHTML = ''
+        document.getElementById('ad-ficha-aviso').innerHTML = htmlFichaEntre(c)
         llenarFicha(c)
         llenarCondicionVenta(c)
         estado.ficha.apodos = (Array.isArray(c.apodos) ? c.apodos : []).map(limpio).filter(Boolean)
@@ -10829,7 +10913,84 @@
       return `<div class="ad-tarjeta ad-entre-fila" data-entre="${esc(f?._id)}">` +
         `<div class="ad-fila__linea"><span class="ad-sello">${esc(nombreTipoEntre(f?.tipo))}</span><span class="ad-fila__meta">${esc(fechaCorta(f?.fecha))}</span></div>` +
         `<div class="ad-entre-fila__empresas"><span class="ad-fila__meta">De</span>${selloOrigenEntre}<span aria-hidden="true">→</span>${selloDestinoEntre}<span class="ad-fila__importe">${esc(derecha)}</span></div>` +
-        `<p class="ad-entre-fila__detalle">${esc(f?.detalle || '—')}</p>${valorHtmlEntre}</div>`
+        `<p class="ad-entre-fila__detalle">${esc(f?.detalle || '—')}</p>${htmlOrdenEntre(f)}${valorHtmlEntre}</div>`
+    }
+
+    // ── LA ORDEN DE RETIRO DE UNA DEUDA ENTRE EMPRESAS (24/10/2026) ────────
+    // valorizar_orden_retiro y anular_orden_retiro dejan la deuda de una orden
+    // a otra empresa del grupo en movimientos_entre_unidades, con
+    // orden_retiro_id y el concepto "Orden de retiro N-0042", "Corrección de la
+    // valorización de la orden N-0042" o "Anulación de la orden N-0042: …"
+    // (verificado con pg_get_functiondef el 24/10/2026). movimientos_entre_
+    // empresas() NO devuelve orden_retiro_id (hueco de base): sale de la tabla
+    // (la leen super_admin y taller:precios) y, si no se puede, del código del
+    // concepto. El id y la empresa salen de ordenes_retiro (retiros:ver en esa
+    // empresa); sin eso el código va sin link.
+    const RE_CODIGO_ORDEN_ENTRE = /\borden(?: de retiro)? ([A-Z]{1,3}-\d{3,})\b/i
+
+    function codigoOrdenEntre(f) {
+      if (f?.tipo !== 'otro') return null
+      const m = RE_CODIGO_ORDEN_ENTRE.exec(String(f.detalle ?? ''))
+      return m ? m[1].toUpperCase() : null
+    }
+
+    function puedeAbrirOrdenEntre(o) {
+      return !!o?.id && !!o.unidad && puedeEn('retiros', 'ver', o.unidad) && empresasDeAdministracion().some(e => e.id === o.unidad)
+    }
+
+    function htmlOrdenEntre(f) {
+      const codigo = f?.orden?.codigo || codigoOrdenEntre(f)
+      if (!codigo) return ''
+      const o = f?.orden
+      const cuerpo = o && puedeAbrirOrdenEntre(o)
+        ? `<button type="button" class="ad-link" data-entre-orden="${esc(o.id)}">${esc(codigo)}</button>`
+        : `<strong>${esc(codigo)}</strong>`
+      return `<p class="ad-entre-fila__orden" data-entre-orden-fila>Orden de retiro ${cuerpo}</p>`
+    }
+
+    // Completa f.orden = { id, codigo, unidad } en las deudas cargadas que son
+    // de una orden. Nunca falla: lo que no se puede leer queda con el código.
+    async function vincularOrdenesEntre(filas) {
+      const deudas = (filas ?? []).filter(f => f?.tipo === 'otro' && f.referencia_tipo === 'movimiento_entre_unidades' && f.referencia_id)
+      if (!deudas.length) return
+      const porMov = new Map()
+      try {
+        const { data, error } = await supabase.from('movimientos_entre_unidades').select('id, orden_retiro_id').in('id', deudas.map(f => f.referencia_id))
+        if (error) throw error
+        for (const m of data ?? []) if (m?.id && m.orden_retiro_id) porMov.set(m.id, m.orden_retiro_id)
+      } catch (err) {
+        console.error('No se pudieron leer las órdenes de las deudas entre empresas:', err)
+      }
+      const ids = [...new Set(porMov.values())]
+      const codigos = [...new Set(deudas.map(codigoOrdenEntre).filter(Boolean))]
+      if (!ids.length && !codigos.length) return
+      const ordenes = []
+      const leer = async (columna, valores) => {
+        if (!valores.length) return
+        try {
+          const { data, error } = await supabase.from('ordenes_retiro').select('id, codigo, unidad_negocio_id').in(columna, valores)
+          if (error) throw error
+          ordenes.push(...(data ?? []))
+        } catch (err) {
+          console.error('No se pudieron leer las órdenes de las deudas entre empresas:', err)
+        }
+      }
+      await Promise.all([leer('id', ids), leer('codigo', codigos)])
+      for (const f of deudas) {
+        const id = porMov.get(f.referencia_id) ?? null
+        const codigo = codigoOrdenEntre(f)
+        const o = ordenes.find(x => id ? x.id === id : (!!codigo && x.codigo === codigo))
+        if (o) f.orden = { id: o.id, codigo: o.codigo || codigo, unidad: o.unidad_negocio_id ?? null }
+        else if (codigo) f.orden = { id: null, codigo, unidad: null }
+      }
+    }
+
+    // El link: la orden se abre en su empresa (si es otra, se cambia).
+    function abrirOrdenEntre(id) {
+      const f = (datosEntre().filas ?? []).find(x => x?.orden?.id === id)
+      if (!f || !puedeAbrirOrdenEntre(f.orden)) return
+      if (f.orden.unidad !== estado.empresaId) ponerEmpresa(f.orden.unidad)
+      return abrirOrdenDesde(id)
     }
 
     // Las empresas que ENTREGARON mercadería o insumos sin importe.
@@ -11041,6 +11202,9 @@
       }
       pintarEntre()
       if (!e.filas) return
+      // El código (y el link) de la orden de cada deuda de una orden de retiro.
+      const filas = e.filas
+      vincularOrdenesEntre(filas).then(() => { if (turno === e.turno && e.filas === filas) pintarEntre() })
       // Las listas de cada empresa que entregó mercadería o insumos sin
       // importe, y la valorización que ya estaba elegida, otra vez.
       const conPrecio = traspasosConPrecio(e.filas)
@@ -11096,6 +11260,8 @@
       document.getElementById('ad-entre-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-entre-lista').addEventListener('click', (ev) => {
         if (ev.target.closest('[data-entre-reintentar]')) cargarEntre()
+        const o = ev.target.closest('[data-entre-orden]')
+        if (o) abrirOrdenEntre(o.dataset.entreOrden)
       })
       document.getElementById('ad-entre-valorizar').addEventListener('change', (ev) => {
         const s = ev.target.closest('select[data-entre-lista]')

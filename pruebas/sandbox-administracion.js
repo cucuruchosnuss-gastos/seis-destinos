@@ -192,9 +192,14 @@ const FUNCIONES_BASE = [
   'prepararPreciosPorBulto', 'textoPrecioInsumoLista', 'modoPrecioFila', 'modoPrecioClave', 'bultoDeVersion', 'presentacionFilaInsumo',
   'modoPrecioHoja', 'cantidadInsumoBultoHoja', 'precioInsumoHoja',
   ...FUNCIONES_CANTIDADES, 'unidadCorta', ...FUNCIONES_PRECIO,
+  // La orden a otra empresa del grupo (24/10/2026)
+  'empresaGrupoDe', 'ordenEntreEmpresas', 'textoDeudaEntre', 'htmlDeudaEntre', 'htmlSelloEntre', 'htmlFichaEntre', 'ponerEmpresa',
+  'codigoOrdenEntre', 'puedeAbrirOrdenEntre', 'htmlOrdenEntre', 'vincularOrdenesEntre', 'abrirOrdenEntre',
 ]
 
 const CONSTANTES_BASE = [
+  // La orden a otra empresa del grupo (24/10/2026)
+  'RE_CODIGO_ORDEN_ENTRE',
   // MODULOS (js/modulos.js) antes de LINKS, que se arma con él.
   'MODULOS', 'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'CLAVES_ACCESOS', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
   'LISTA_DE_DETALLE', 'MQ_LISTA_DETALLE', 'MODOS_COMISION', 'PILA_NAV',
