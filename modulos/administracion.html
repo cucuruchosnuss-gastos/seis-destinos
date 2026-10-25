@@ -6055,12 +6055,30 @@
       return COPIAS_NOTA_DEBITO.map(r => `<div class="ndh-copia ndh-copia--${esc(r.toLowerCase())}" data-copia="${esc(r)}">${copia(r)}</div>`).join('')
     }
 
-    // Anular: la emitida con retiros:precios o cobranzas:procesar (la base
-    // mira la fábrica); la recibida con cuentas_corrientes:registrar_pago.
-    function puedeAnularNotaDebito(d) {
+    // Anular, con la MISMA regla que anular_nota_debito (pg_get_functiondef,
+    // 24/10/2026): la emitida con retiros:precios EN LA FÁBRICA DE LA NOTA
+    // (tiene_tarea_alcance con notas_debito.unidad_negocio_id) o
+    // cobranzas:procesar; la recibida con cuentas_corrientes:registrar_pago.
+    // `unidadId` es la fábrica de la nota (la lee abrirNotaDebito: la hoja
+    // de datos_nota_debito no la trae); sin ella, solo cobranzas:procesar.
+    function puedeAnularNotaDebito(d, unidadId = estado.notaDebito?.unidadId ?? null) {
       if (!d || d.estado === 'anulada') return false
       if (d.direccion === 'recibida') return tieneTarea('cuentas_corrientes', 'registrar_pago')
-      return tieneTarea('cobranzas', 'procesar') || estado.miRolApp === 'super_admin' || estado.misTareas.has('retiros:precios')
+      return tieneTarea('cobranzas', 'procesar') || puedeEn('retiros', 'precios', unidadId)
+    }
+
+    // La fábrica de la nota (notas_debito.unidad_negocio_id; la policy
+    // notas_debito_ver deja a los mismos que datos_nota_debito). null si no
+    // se puede leer: entonces Anular queda solo para cobranzas:procesar.
+    async function leerUnidadNotaDebito(id) {
+      try {
+        const { data, error } = await supabase.from('notas_debito').select('id, unidad_negocio_id').eq('id', id).maybeSingle()
+        if (error) throw error
+        return data?.unidad_negocio_id ?? null
+      } catch (err) {
+        console.error('No se pudo leer la fábrica de la nota de débito:', err)
+        return null
+      }
     }
 
     function nombreArchivoNota(d) {
@@ -6071,17 +6089,18 @@
     async function abrirNotaDebito(id) {
       if (!id) return
       const turno = ++turnoNotaDebito
-      estado.notaDebito = { id, datos: null, error: null, anulando: false, enviando: false, errorAnular: null, compartiendo: false }
+      estado.notaDebito = { id, unidadId: null, datos: null, error: null, anulando: false, enviando: false, errorAnular: null, compartiendo: false }
       document.getElementById('ad-nd-motivo').value = ''
       document.getElementById('ad-nd').hidden = false
       pintarNotaDebito()
-      let res
+      let res, unidadId
       try {
-        res = await supabase.rpc('datos_nota_debito', { p_id: id })
+        ;[res, unidadId] = await Promise.all([supabase.rpc('datos_nota_debito', { p_id: id }), leerUnidadNotaDebito(id)])
       } catch (e) {
         res = { data: null, error: { message: e?.message || 'No hay conexión.' } }
       }
       if (turno !== turnoNotaDebito || estado.notaDebito?.id !== id) return
+      estado.notaDebito.unidadId = unidadId ?? null
       if (res?.error || !res?.data) estado.notaDebito.error = 'No se pudo leer la nota de débito: ' + (res?.error?.message || 'no vino nada') + '.'
       else estado.notaDebito.datos = res.data
       pintarNotaDebito()

@@ -96,7 +96,18 @@ export const supabase = {
     async signOut() { return {} },
     onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } } },
   },
-  storage: { from() { return { createSignedUrl: async () => ({ data: null, error: null }), upload: async () => ({ data: null, error: null }) } } },
+  // FIRMAR EN VIVO (24/10/2026, el PDF de la nota de débito): una prueba
+  // puede poner globalThis.__maqueta.firmar = (bucket, ruta, segundos) =>
+  // { data, error } para mirar el link o el error de la firma. Sin eso, como
+  // antes: sin link y sin error.
+  storage: { from(bucket) { return {
+    createSignedUrl: async (ruta, segundos) => {
+      console.log('[maqueta] firmar', bucket, ruta, segundos)
+      const viva = globalThis.__maqueta?.firmar
+      return typeof viva === 'function' ? viva(bucket, ruta, segundos) : { data: null, error: null }
+    },
+    upload: async () => ({ data: null, error: null }),
+  } } },
   // Una Edge Function responde lo que diga "funciones" en los datos
   // (02/10/2026: el lector de comprobantes de Cobranzas). Sin datos, falla
   // como una función que no está publicada.

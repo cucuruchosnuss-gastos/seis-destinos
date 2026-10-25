@@ -47,6 +47,9 @@ function nuevo({ tareas = null, rpc = null } = {}) {
   const S = construirAdministracion(ARCHIVO, { preludioExtra: PRELUDIO })
   if (tareas) S.estado.misTareas = new Map(tareas.map(t => [t, { todas: true }]))
   if (rpc) S.__setRpc(rpc)
+  // La fábrica de la nota (24/10/2026: Anular mira retiros:precios EN ESA
+  // fábrica; ver test-administracion-anular-nota-debito.js).
+  S.__tablas.notas_debito = [{ id: 'nd-1', unidad_negocio_id: 'u-n' }]
   return S
 }
 
