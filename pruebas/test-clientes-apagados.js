@@ -175,7 +175,7 @@ async function pruebas() {
     chk('y su código en el sistema anterior', /Código en el sistema anterior: 55/.test(h))
     chk('un prendido no dice apagado', !/Cliente apagado/.test(S.htmlCuenta({ id: 'c1', cuenta: [], codigos: new Map() })))
     chk('sin código anterior no dice nada', S.textoCodigoAnterior(null) === '' && S.textoCodigoAnterior(0) === 'Código en el sistema anterior: 0')
-    chk('la ficha lee el código anterior', /unidad_negocio_id, codigo_anterior'\)\n        \.eq\('id', clienteId\)\.maybeSingle\(\)/.test(src))
+    chk('la ficha lee el código anterior', /unidad_negocio_id, codigo_anterior(, unidad_grupo_id)?'\)\n        \.eq\('id', clienteId\)\.maybeSingle\(\)/.test(src))
     chk('y lo muestra (sin editarlo)', /id="ad-ficha-codigo-anterior" hidden><\/p>/.test(src) && !/data-ficha="codigo_anterior"/.test(src))
     chk('el buscador encuentra por código anterior', S.clientesFiltrados([{ cliente_id: 'c1', nombre: 'Distribuidora Anatolia', codigo_anterior: 101 }], '101').length === 1 &&
       S.clientesFiltrados([{ cliente_id: 'c1', nombre: 'Distribuidora Anatolia', codigo_anterior: 101 }], '10').length === 0)

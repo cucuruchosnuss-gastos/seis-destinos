@@ -71,7 +71,7 @@ correrMutaciones({
     { nombre: 'facturas ilegibles = sin facturas', de: "        console.error('No se pudieron leer las facturas de la orden:', err)\n        return null", a: "        console.error('No se pudieron leer las facturas de la orden:', err)\n        return []" },
     { nombre: 'la condición del cliente no divide', de: '      return hay(o?.division_pct_a) || hay(cli?.pct_parte_a)', a: '      return hay(o?.division_pct_a)' },
     { nombre: 'siempre A y B (nunca la única)', de: '      const base = seDivide ? PARTES_DIVISION : [PARTE_UNICA]', a: '      const base = PARTES_DIVISION' },
-    { nombre: 'precios en cualquier empresa', de: "o.estado_valorizacion === 'valorizada' && puedeEn('retiros', 'precios', o.unidad_negocio_id)\n    }", a: "o.estado_valorizacion === 'valorizada' && tieneTarea('retiros', 'precios')\n    }" },
+    { nombre: 'precios en cualquier empresa', de: "o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) && puedeEn('retiros', 'precios', o.unidad_negocio_id)\n    }", a: "o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) && tieneTarea('retiros', 'precios')\n    }" },
     { nombre: 'el botón aparece sin valorizar', de: "document.getElementById('ad-btn-dividir').hidden = !(puedeDividir(o) && !d.valorizar)", a: "document.getElementById('ad-btn-dividir').hidden = !(!!o && puedeEn('retiros', 'precios', o.unidad_negocio_id))" },
     // La ventana
     { nombre: 'sin condición: los propios del cliente no se usan', de: 'pct: propias[v.id] !== undefined && propias[v.id] !== null ? propias[v.id] : numeroONulo(v.pct_defecto) }))', a: 'pct: numeroONulo(v.pct_defecto) }))' },
