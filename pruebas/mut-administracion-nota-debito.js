@@ -52,9 +52,10 @@ correrMutaciones({
     { nombre: 'letras: "un millón" sin el "de"', de: "      const textoPesos = enteroEnLetrasNd(pesos) + (millonesJustos ? ' de' : '')", a: '      const textoPesos = enteroEnLetrasNd(pesos)' },
     { nombre: 'letras: sin los centavos', de: '      const pesos = Math.floor(c / 100), cent = c % 100\n      const millonesJustos = pesos >= 1e6 && pesos % 1e6 === 0\n      const textoPesos = enteroEnLetrasNd', a: '      const pesos = Math.floor(c / 100), cent = 0\n      const millonesJustos = pesos >= 1e6 && pesos % 1e6 === 0\n      const textoPesos = enteroEnLetrasNd' },
     // ── Abrir, anular ─────────────────────────────────────────────────────
-    { nombre: 'abrir no lee datos_nota_debito', de: "        res = await supabase.rpc('datos_nota_debito', { p_id: id })", a: "        res = { data: null, error: { message: 'sin leer' } }" },
+    // 24/10/2026 (ajustes-24-10): abrir lee la hoja y la fábrica de la nota juntas.
+    { nombre: 'abrir no lee datos_nota_debito', de: "[supabase.rpc('datos_nota_debito', { p_id: id }), leerUnidadNotaDebito(id)]", a: "[{ data: null, error: { message: 'sin leer' } }, leerUnidadNotaDebito(id)]" },
     { nombre: 'una anulada sigue ofreciendo Anular', de: "      if (!d || d.estado === 'anulada') return false\n", a: '      if (!d) return false\n' },
-    { nombre: 'Anular para cualquiera', de: "      return tieneTarea('cobranzas', 'procesar') || estado.miRolApp === 'super_admin' || estado.misTareas.has('retiros:precios')", a: '      return true' },
+    { nombre: 'Anular para cualquiera', de: "      return tieneTarea('cobranzas', 'procesar') || puedeEn('retiros', 'precios', unidadId)\n", a: '      return true\n' },
     { nombre: 'anular sin motivo', de: "      if (motivo.length < LARGO_MINIMO_MOTIVO) { nd.errorAnular = 'Poné el motivo de la anulación.'; pintarNotaDebito(); return }\n", a: '' },
     { nombre: 'anular manda el motivo sin limpiar', de: "      const motivo = limpio(document.getElementById('ad-nd-motivo').value)", a: "      const motivo = document.getElementById('ad-nd-motivo').value" },
     { nombre: 'el error de anular se tapa', de: "nd.errorAnular = res.error.message || 'No se pudo anular la nota.'", a: "nd.errorAnular = 'No se pudo anular la nota.'" },

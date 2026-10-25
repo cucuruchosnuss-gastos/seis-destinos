@@ -51,7 +51,7 @@ const FUNCIONES_BASE = [
   'erroresNotaCliente', 'parametrosNotaCliente', 'abrirNotaDebitoCliente', 'pintarRenglonesNota', 'pintarTotalNotaCliente',
   'escribirRenglonNota', 'agregarRenglonNota', 'quitarRenglonNota', 'guardarNotaDebitoCliente',
   'letrasMenorDeMilNd', 'letrasMenorDeMillonNd', 'enteroEnLetrasNd', 'importeEnLetrasNd', 'cuitConGuionesNd', 'fechaNd', 'htmlNotaDebito',
-  'puedeAnularNotaDebito', 'nombreArchivoNota', 'abrirNotaDebito', 'pintarNotaDebito', 'cerrarNotaDebito', 'imprimirNotaDebito',
+  'puedeAnularNotaDebito', 'leerUnidadNotaDebito', 'nombreArchivoNota', 'abrirNotaDebito', 'pintarNotaDebito', 'cerrarNotaDebito', 'imprimirNotaDebito',
   'pdfNotaDebito', 'compartirNotaDebito', 'pedirAnularNotaDebito', 'cancelarAnularNotaDebito', 'confirmarAnularNotaDebito',
   // Clientes apagados y el interruptor (28/09/2026)
   'textoCodigoAnterior', 'puedePrenderApagar', 'htmlInterruptor', 'leerApagados', 'clientesDeLaLista', 'cargarApagados',
@@ -354,6 +354,8 @@ const OPCIONALES_FN = {
   leerSoloProvisorios: 'async function leerSoloProvisorios() { return { filas: [], provisorios: [], sinLeer: true, incompleta: false } }',
   htmlFilaSoloProvisorio: "function htmlFilaSoloProvisorio() { return '' }",
   htmlSoloProvisorios: "function htmlSoloProvisorios() { return '' }",
+  // La fábrica de la nota para Anular (24/10/2026): una copia de antes no la lee.
+  leerUnidadNotaDebito: 'async function leerUnidadNotaDebito() { return null }',
 }
 const OPCIONALES_CONST = { TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'" }
 

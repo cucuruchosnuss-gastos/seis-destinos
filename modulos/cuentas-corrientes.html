@@ -763,6 +763,9 @@
     .nota-debito__renglon { display: grid; grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem) 44px; gap: 0.5rem; align-items: center; min-width: 0; }
     .nota-debito__quitar { min-height: 44px; min-width: 44px; border: 1px solid var(--color-borde); border-radius: 8px; background: #fff; color: var(--color-texto); font-size: 1.125rem; cursor: pointer; }
     .btn-anular-nd { min-height: 36px; padding: 0 0.75rem; border-radius: 999px; border: 1px solid var(--bordo); background: #fff; color: var(--bordo); font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
+    /* El PDF de la nota de débito (24/10/2026): link firmado por 5 minutos. */
+    .btn-ver-pdf-nd { min-height: 36px; padding: 0 0.75rem; border-radius: 999px; border: 1px solid var(--color-borde); background: #fff; color: var(--color-texto); font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .fila-movimiento__error-pdf { margin-top: 0.375rem; color: var(--bordo); font-size: 0.8125rem; overflow-wrap: anywhere; }
     @media (max-width: 420px) {
       .nota-debito__renglon { grid-template-columns: minmax(0, 1fr) 44px; }
       .nota-debito__renglon [data-nd-concepto] { grid-column: 1 / -1; }
@@ -4237,10 +4240,43 @@
       const ids = Object.values(infoFactura ?? {}).filter(f => f.modulo_origen === 'nota_debito').map(f => f.id)
       const mapa = new Map()
       if (!ids.length) return mapa
-      const { data, error } = await supabase.from('notas_debito').select('id, factura_pendiente_id, comprobante, estado').in('factura_pendiente_id', ids)
+      const { data, error } = await supabase.from('notas_debito').select('id, factura_pendiente_id, comprobante, estado, archivo_url').in('factura_pendiente_id', ids)
       if (error) { console.error('No se pudieron leer las notas de débito:', error); return mapa }
       for (const nd of data ?? []) mapa.set(nd.factura_pendiente_id, nd)
       return mapa
+    }
+
+    // EL PDF DE LA NOTA (24/10/2026): notas_debito.archivo_url es la RUTA en
+    // el bucket privado 'comprobantes' (<uid>/notas-debito/…). Se firma al
+    // mirarlo, por 5 minutos; la policy "comprobantes: ver PDFs de notas de
+    // débito" (verificada con SELECT a pg_policies el 24/10/2026) deja leerlo
+    // a cuentas_corrientes:ver_todo / registrar_pago, cobranzas:procesar o
+    // retiros:precios en la fábrica de la nota. La pestaña se abre ANTES de
+    // esperar a la base (si no, el navegador la frena como emergente). Si la
+    // firma falla, el error tal cual, debajo de la fila.
+    const BUCKET_PDF_ND = 'comprobantes'
+    const SEGUNDOS_FIRMA_PDF_ND = 300
+
+    async function verPdfNd(notaId) {
+      const ficha = estado.ficha
+      const nota = [...(ficha?.notasDebito?.values() ?? [])].find(x => x.id === notaId)
+      const ruta = nota?.archivo_url
+      if (!ruta) return
+      const pestana = typeof window !== 'undefined' && window.open ? window.open('', '_blank') : null
+      let mensaje = null
+      try {
+        const { data, error } = await supabase.storage.from(BUCKET_PDF_ND).createSignedUrl(ruta, SEGUNDOS_FIRMA_PDF_ND)
+        if (error) throw error
+        if (!data?.signedUrl) throw new Error('La base no devolvió el link del PDF.')
+        if (pestana) { pestana.opener = null; pestana.location.href = data.signedUrl }
+      } catch (err) {
+        console.error('No se pudo abrir el PDF de la nota de débito:', err)
+        if (pestana) pestana.close()
+        mensaje = err?.message || 'No se pudo abrir el PDF.'
+      }
+      if (estado.ficha !== ficha) return
+      ficha.errorPdfNd = mensaje ? { notaId, mensaje } : null
+      renderizarFichaMovimientos()
     }
 
     function abrirAnularNd(notaId) {
@@ -5500,15 +5536,21 @@
         // Se anula si sigue entera (sin pagos): la base lo vuelve a controlar.
         const botonAnularNd = notaNd && notaNd.estado !== 'anulada' && infoNd?.estado === 'pendiente' && tieneTarea('cuentas_corrientes', 'registrar_pago')
           ? `<button type="button" class="btn-anular-nd" data-anular-nd="${esc(notaNd.id)}">Anular</button>` : ''
+        // El PDF de la nota, si se cargó con uno (24/10/2026; ver verPdfNd).
+        const botonPdfNd = notaNd?.archivo_url
+          ? `<button type="button" class="btn-ver-pdf-nd" data-ver-pdf-nd="${esc(notaNd.id)}">Ver PDF</button>` : ''
+        const errorPdfNd = notaNd && estado.ficha.errorPdfNd?.notaId === notaNd.id
+          ? `<div class="fila-movimiento__error-pdf" role="alert">${esc('No se pudo abrir el PDF: ' + estado.ficha.errorPdfNd.mensaje)}</div>` : ''
         const volverFicha = encodeURIComponent(location.href)
         // Los href de abajo son seguros por encodeURIComponent + comillas
         // DOBLES en el atributo. encodeURIComponent NO escapa la comilla
         // simple: no cambiar el delimitador a comillas simples.
         const iconos = esFactura ? `
-          <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
+          <div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:0.375rem; align-items:center; margin-top:0.375rem;">
             <a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
             ${tieneTarea('facturas_pendientes', 'editar_interes') ? `<a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Editar">✏️</a>` : ''}
             ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${esc(m.factura_pendiente_id)}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
+            ${botonPdfNd}
             ${botonAnularNd}
           </div>` : esPago ? `
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
@@ -5536,6 +5578,7 @@
               <div class="fila-movimiento__tipo">${esc(esNotaDebito ? 'Nota de débito' : etiquetaTipoMovimiento(m))}</div>
               <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
+              ${errorPdfNd}
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
               <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>
@@ -5551,6 +5594,9 @@
       })
       listaEl.querySelectorAll('[data-anular-nd]').forEach(btn => {
         btn.addEventListener('click', () => abrirAnularNd(btn.dataset.anularNd))
+      })
+      listaEl.querySelectorAll('[data-ver-pdf-nd]').forEach(btn => {
+        btn.addEventListener('click', () => verPdfNd(btn.dataset.verPdfNd))
       })
 
       listaEl.querySelectorAll('.btn-icono-eliminar--inline').forEach(btn => {

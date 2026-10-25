@@ -83,8 +83,9 @@ correrMutaciones({
       de: "        return Math.round(p / contenido * 10000) / 10000",
       a: "        return Math.round(p * 10000) / 10000" },
     { nombre: 'el bulto sale del contenido aunque haya varias presentaciones',
-      de: "      const contenido = s && Number(s.presentaciones) === 1 ? numeroCosto(s.contenido_unico) : null",
-      a: "      const contenido = s ? numeroCosto(s.contenido_unico) ?? 50 : null" },
+      // 24/10/2026: el de la fábrica quedó como respaldo del catálogo (delStock).
+      de: "      const delStock = s && Number(s.presentaciones) === 1 ? numeroCosto(s.contenido_unico) : null",
+      a: "      const delStock = s ? numeroCosto(s.contenido_unico) ?? 50 : null" },
     { nombre: 'cambiar de modo no vacía el campo',
       de: "      ponerNumero(document.getElementById('costo-precio'), null)\n      pintarModalCosto()\n    }",
       a: "      pintarModalCosto()\n    }" },

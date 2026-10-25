@@ -12,7 +12,6 @@ correrMutaciones({
   funciones: ['htmlFilaSinIngreso', 'pintarLotesSinIngreso'],
   equivalentes: [
     { expr: 'esc(masas)', motivo: '"1 masa" / "N masas" con N pasado por Number() en filasSinIngreso: nada escapable' },
-    { expr: "esc(formatearCantidadStock(g.kg, 'kg'))", motivo: 'número (Number() en filasSinIngreso) formateado con formatearNumeroAr y "kg": dígitos, puntos y coma' },
   ],
   manuales: [
     // ── El permiso ───────────────────────────────────────────────────────

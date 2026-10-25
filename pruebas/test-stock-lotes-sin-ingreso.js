@@ -381,15 +381,16 @@ async function correr() {
   {
     const MAL = '<img src=x onerror=alert(1)>'
     const S = nuevo({
-      rpc: { [NUSS]: [lote('col', MAL, MAL, MAL, 1, 1, MAL, MAL)], [DOLCE]: [lote('col', 'C', null, 'L', 1, 1, '2026-10-20')] },
+      // La unidad también viene de la base (24/10/2026: ya no es siempre "kg").
+      rpc: { [NUSS]: [{ ...lote('col', MAL, MAL, MAL, 1, 1, MAL, MAL), unidad_medida: MAL }], [DOLCE]: [lote('col', 'C', null, 'L', 1, 1, '2026-10-20')] },
       unidades: [{ id: NUSS, nombre: MAL }, { id: DOLCE, nombre: 'Dolce Pasta' }],
     })
     await S.cargarStock()
     S.estado.sinIngresoAbierto = true
     S.pintarLotesSinIngreso()
     const h = caja(S).innerHTML
-    // insumo, marca, fábrica, lote, máquinas y fecha: seis.
-    chk('insumo, marca, lote, máquinas, fecha y fábrica van escapados', !/<img/.test(h) && (h.match(/&lt;img src=x/g) || []).length >= 6, h)
+    // insumo, marca, fábrica, lote, unidad, máquinas y fecha: siete.
+    chk('insumo, marca, lote, unidad, máquinas, fecha y fábrica van escapados', !/<img/.test(h) && (h.match(/&lt;img src=x/g) || []).length >= 7, h)
     const E = nuevo({ rpc: { [NUSS]: { error: { message: '<b>falló</b>' } }, [DOLCE]: [] }, unidades: [{ id: NUSS, nombre: MAL }, { id: DOLCE, nombre: 'Dolce Pasta' }] })
     await E.cargarStock()
     chk('el error de la base y el nombre de su fábrica van escapados', !/<b>|<img/.test(caja(E).innerHTML) && /&lt;b&gt;falló/.test(caja(E).innerHTML) && /de &lt;img/.test(caja(E).innerHTML), caja(E).innerHTML)

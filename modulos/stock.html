@@ -4067,6 +4067,9 @@
       // Turnos: una respuesta vieja no pisa la nueva (cambiar la barra).
       turnoValorizado: 0,
       turnoCostos: 0,
+      // Lo que trae UN bulto según el catálogo (insumos.contenido_bulto,
+      // 24/10/2026): Map insumo_id → { contenido, vista }, o null sin leer.
+      bultosCatalogo: null,
 
       // ── Lotes usados sin ingreso cargado (23/10/2026) ─────────────────
       // { grupos, error, errorIngresos } o null mientras no se leyó.
@@ -4813,7 +4816,16 @@
         unidad_negocio_id: unidadId, insumo_id: x.insumo_id, nombre: x.insumo ?? '', marca: x.marca ?? null,
         lote: String(x.lote ?? '').trim(), kg: Number(x.kg) || 0, masas: Number(x.masas) || 0,
         ultima: x.ultima_fecha ?? null, maquinas: x.maquinas ?? '',
+        unidad_medida: unidadSinIngreso(x.unidad_medida),
       }))
+    }
+
+    // La unidad de la cantidad (24/10/2026): la que manda la base
+    // (insumos.unidad_medida, que la RPC devuelve en cada renglón); "kg"
+    // solo de respaldo, si viniera vacía.
+    function unidadSinIngreso(u) {
+      const t = String(u ?? '').trim()
+      return t || 'kg'
     }
 
     // Las fábricas juntas: la última masa más reciente primero (las fechas
@@ -4860,7 +4872,7 @@
         `<div class="stock-sin-ingreso__que">${esc(g.nombre || 'Insumo sin nombre')}${g.marca ? ` · ${esc(g.marca)}` : ''}` +
         (conUnidad ? `<span class="stock-sin-ingreso__unidad"> · ${esc(nombreUnidadStock(g.unidad_negocio_id))}</span>` : '') + '</div>' +
         `<div class="stock-sin-ingreso__lote">${g.lote ? `Lote ${esc(g.lote)}` : 'Sin número de lote'}</div>` +
-        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, 'kg'))} en ${esc(masas)}` +
+        `<div class="stock-sin-ingreso__datos">${esc(formatearCantidadStock(g.kg, unidadSinIngreso(g.unidad_medida)))} en ${esc(masas)}` +
         `${g.maquinas ? ` · ${esc(g.maquinas)}` : ''}${ultima ? ` · última masa el ${esc(ultima)}` : ''}</div>` +
         '</li>'
     }
@@ -10226,7 +10238,10 @@
       }
       estado.costos = { unidad, filas: null, error: null }
       renderizarCostos()
-      const { data, error } = await supabase.rpc('costos_insumos', { p_unidad_negocio_id: unidad })
+      const [{ data, error }] = await Promise.all([
+        supabase.rpc('costos_insumos', { p_unidad_negocio_id: unidad }),
+        cargarBultosCatalogoCostos(),
+      ])
       if (turno !== estado.turnoCostos) return true
       if (error) {
         console.error('costos_insumos:', error)
@@ -10328,12 +10343,37 @@
 
     // ── El modal de un insumo: cargar un costo y su historial ──────────────
 
+    // Lo que trae UN bulto según el catálogo (24/10/2026, como Administración
+    // y la Carga): insumos.contenido_bulto (numeric, null = no se sabe; CHECK
+    // > 0), que lee cualquier usuario logueado (policy "leer catalogo de
+    // insumos"). Se lee UNA vez por página. Si falla, es un dato de más: los
+    // costos se ven igual, con el bulto de la fábrica como antes.
+    async function cargarBultosCatalogoCostos() {
+      if (estado.bultosCatalogo) return
+      try {
+        const { data, error } = await supabase.from('insumos').select('id, contenido_bulto, vista_preferida')
+        if (error) throw error
+        estado.bultosCatalogo = new Map((Array.isArray(data) ? data : []).filter(i => i?.id)
+          .map(i => [i.id, { contenido: numeroCosto(i.contenido_bulto), vista: i.vista_preferida ?? null }]))
+      } catch (err) {
+        console.error('No se pudo leer lo que trae cada bulto en el catálogo:', err)
+      }
+    }
+
     // La presentación del insumo en esa fábrica: el contenido de UN bulto, o
-    // null (con varias presentaciones o ninguna, no hay "un" bulto).
+    // null. PRIMERO el del catálogo (insumos.contenido_bulto, 24/10/2026); si
+    // es null, el de la fábrica (v_stock_insumos.contenido_unico: con varias
+    // presentaciones o ninguna, no hay "un" bulto). La vista ('bulto' o
+    // 'base') es insumos.vista_preferida: la trae la fila de v_stock_insumos
+    // (copia esa columna) y, si el insumo no tiene stock en la fábrica, el
+    // catálogo; así ese insumo también se escribe por bulto.
     function presentacionCosto(unidadId, insumoId) {
       const s = (estado.stock || []).find(x => x.unidad_negocio_id === unidadId && x.insumo_id === insumoId)
-      const contenido = s && Number(s.presentaciones) === 1 ? numeroCosto(s.contenido_unico) : null
-      return { contenido: contenido && contenido > 0 ? contenido : null, vista: s?.vista_preferida ?? 'base' }
+      const cat = estado.bultosCatalogo?.get?.(insumoId) ?? null
+      const delCatalogo = cat && cat.contenido > 0 ? cat.contenido : null
+      const delStock = s && Number(s.presentaciones) === 1 ? numeroCosto(s.contenido_unico) : null
+      const contenido = delCatalogo ?? (delStock && delStock > 0 ? delStock : null)
+      return { contenido, vista: s?.vista_preferida ?? cat?.vista ?? 'base' }
     }
 
     // Lo que viaja a guardar_costo_insumo: SIEMPRE por unidad de medida, con
