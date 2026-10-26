@@ -52,12 +52,23 @@ function consulta(tabla) {
     gt(a, b) { filtros.push(r => valor(r, a) > b); return q }, lt(a, b) { filtros.push(r => valor(r, a) < b); return q },
     like() { return q }, ilike() { return q }, not() { return q }, or() { return q },
     maybeSingle() { q._uno = true; return q }, single() { q._uno = true; return q },
+    // LAS ESCRITURAS DIRECTAS (26/10/2026, el Ingreso de materia prima graba
+    // con insert): se anotan en la consola ("[maqueta] insert", tabla, filas)
+    // y responden como la base, con .select().single() una fila con id. No
+    // cambian las tablas.
+    insert(filas) { console.log('[maqueta] insert', tabla, filas); q._insert = filas; return q },
+    delete() { console.log('[maqueta] delete', tabla); q._borrar = true; return q },
     then(res, rej) {
       // Una tabla con el texto "ERROR:…" responde como un error de la base, y
       // "ESPERAR" no responde nunca (para mirar el estado "Cargando…").
       const cruda = DATOS.tablas?.[tabla]
       if (cruda === 'ESPERAR') return new Promise(() => {})
       if (typeof cruda === 'string' && cruda.startsWith('ERROR:')) return Promise.resolve({ data: null, error: { message: cruda.slice(6), code: 'P0001' } }).then(res, rej)
+      if (q._insert !== undefined) {
+        const fila = Array.isArray(q._insert) ? q._insert[0] : q._insert
+        return Promise.resolve({ data: q._uno ? { id: `${tabla}-maqueta`, ...fila } : null, error: null }).then(res, rej)
+      }
+      if (q._borrar) return Promise.resolve({ data: null, error: null }).then(res, rej)
       const filas = (cruda || []).filter(r => filtros.every(f => f(r)))
       const r = { data: q._uno ? (filas[0] ?? null) : filas, error: null }
       if (q._contar) r.count = filas.length

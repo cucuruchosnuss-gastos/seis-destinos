@@ -1709,6 +1709,110 @@
       font-weight: 600;
     }
 
+    /* ── Producto terminado en el ingreso (26/10/2026) ───────────────────── */
+    .chip-terminado {
+      display: inline-block;
+      font-size: 0.625rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 5px;
+      padding: 0.125rem 0.375rem;
+      background: var(--marron-suave);
+      color: var(--marron-oscuro);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .terminado-mp__titulo { margin-top: 1.125rem; }
+    .terminado-mp__oferta {
+      border: 1px dashed var(--marron);
+      border-radius: 14px;
+      padding: 0.6875rem 0.75rem;
+      margin-bottom: 0.625rem;
+      background: var(--color-fondo);
+      min-width: 0;
+    }
+    .terminado-mp__oferta-texto {
+      font-size: 0.8125rem;
+      color: var(--color-texto);
+      margin-bottom: 0.5rem;
+      overflow-wrap: anywhere;
+    }
+    .terminado-mp__oferta-botones { display: flex; flex-wrap: wrap; gap: 0.375rem; min-width: 0; }
+    .terminado-mp__oferta-botones .chip-presentacion {
+      min-height: 44px;
+      max-width: 100%;
+      text-align: left;
+      overflow-wrap: anywhere;
+      font-weight: 650;
+    }
+    .item-mp.terminado-mp { padding: 0.75rem 0.875rem 0.875rem; }
+    .terminado-mp__cab {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .terminado-mp__cab .item-mp__nombre-fila { flex-wrap: wrap; }
+    .terminado-mp__cab .item-mp__nombre { white-space: normal; overflow-wrap: anywhere; }
+    .terminado-mp__cab .btn-item-secundario {
+      width: auto;
+      margin-top: 0;
+      padding: 0.5rem 0.75rem;
+      min-height: 40px;
+      flex-shrink: 0;
+    }
+    .terminado-mp__grilla {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+      gap: 0 0.625rem;
+      min-width: 0;
+    }
+    .terminado-mp .wz-campo { margin-top: 0.75rem; }
+    .terminado-mp .wz-campo__label { display: block; }
+    .terminado-mp__pregunta {
+      font-size: 0.875rem;
+      color: var(--color-texto);
+      margin: 0.75rem 0 0.5rem;
+      overflow-wrap: anywhere;
+    }
+    .terminado-mp__lote .wz-toggle button { white-space: normal; }
+    .terminado-mp__error { margin-top: 0.625rem; }
+    .terminado-mp__remito-conf { margin-top: 0.25rem; }
+    .resumen-guardado-mp {
+      position: relative;
+      border: 1px solid var(--marron);
+      border-radius: 14px;
+      background: var(--marron-suave);
+      color: var(--color-texto);
+      padding: 0.75rem 3rem 0.75rem 0.875rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .resumen-guardado-mp__titulo { font-weight: 800; font-size: 0.9375rem; color: var(--marron-oscuro); }
+    .resumen-guardado-mp__parte { font-size: 0.8125rem; margin-top: 0.5rem; }
+    .resumen-guardado-mp__parte strong {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .resumen-guardado-mp__parte ul { margin: 0.25rem 0 0; padding-left: 1.125rem; }
+    .resumen-guardado-mp__cerrar {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: none;
+      font-size: 1rem;
+      color: var(--marron-oscuro);
+      cursor: pointer;
+    }
+
     .parecidos { margin-bottom: 0.625rem; }
     .parecidos__titulo {
       font-size: 0.8125rem; font-weight: 600; color: #2c3242;
@@ -2496,6 +2600,11 @@
     <!-- ── Listado de ingresos (única pantalla del módulo) ───────────────── -->
     <div id="pantalla-ingresos">
 
+      <!-- Lo que se acaba de guardar cuando hubo producto terminado
+           (26/10/2026): cada parte con lo suyo. Lo dibuja
+           mostrarResumenGuardado(). -->
+      <div class="resumen-guardado-mp" id="mp-resumen-guardado" role="status" hidden></div>
+
       <div class="banner-mp">
         <div class="banner-mp__etiqueta">Ingresos del mes</div>
         <div class="banner-mp__numero" id="banner-ingresos-mes">—</div>
@@ -2902,6 +3011,10 @@
 
         <div id="wz-lista-items" style="margin-top:0.875rem;"></div>
 
+        <!-- Producto terminado (26/10/2026): lo que ofrece el proveedor y sus
+             renglones. Lo dibuja pintarTerminados(). -->
+        <div id="wz-terminados"></div>
+
         <button type="button" class="btn-agregar-item" id="btn-agregar-item">
           ＋ Agregar ítem a mano
         </button>
@@ -2919,6 +3032,7 @@
 
         <div class="wz-seccion" id="wz-detalle-titulo">Detalle</div>
         <div id="wz-detalle-items"></div>
+        <div id="wz-detalle-terminados"></div>
 
         <!-- Qué va a pasar con la factura al confirmar: cuenta corriente, el
              gasto de quien la pagó, o el gasto del que viene este ingreso. -->
@@ -2978,6 +3092,9 @@
     // Cómo se pide una cantidad según la vista preferida del insumo
     // (05/10/2026): la misma regla que Stock usa al enviar.
     import { modoDeCarga, aUnidadBase, equivalenteDeCarga, unidadCorta } from '../js/cantidades.js'
+    // El ingreso de producto terminado (26/10/2026): la MISMA lógica que la
+    // gestión de Producción (decimosexta excepción, js/ingreso-terminado.js).
+    import { LARGO_MAXIMO_LOTE, modoLoteIngreso, loteDeRenglon, presentacionDe, faltaIngreso, parametrosIngreso, leerCatalogoIngresoTerminado } from '../js/ingreso-terminado.js'
 
     mostrarBannerVersion()
 
@@ -3308,6 +3425,22 @@
         totalFacturaTocado: false,
         sinStock: false,
         sinStockMotivo: '',
+        // PRODUCTO TERMINADO (26/10/2026): las cajas de un producto terminado
+        // que trae el proveedor (las capelinas de Rodrigo). NO son ítems de
+        // materia prima: viven aparte y se graban aparte, con
+        // ingresar_producto_terminado (ver "PRODUCTO TERMINADO EN EL
+        // INGRESO"). terminadoCat: el catálogo de la fábrica, { unidadId, cat,
+        // error }; terminadoRemito: null = sin tocar (se propone el número del
+        // remito); terminadoUuid: el p_client_uuid, UNO por carga (un
+        // reintento no carga dos veces); terminadoRes: lo que devolvió la base
+        // (ya está grabado: no se manda de nuevo ni se edita).
+        terminados: [],
+        terminadoSeq: 0,
+        terminadoCat: null,
+        terminadoRemito: null,
+        terminadoUuid: crypto.randomUUID(),
+        terminadoRes: null,
+        terminadoError: '',
       }
     }
 
@@ -4862,6 +4995,7 @@
         return false
       }
       estado.wizard = wizardVacio()
+      mostrarResumenGuardado(null)
       // Una sola unidad: se preselecciona, no tiene sentido preguntar.
       const elegibles = unidadesParaElegir()
       if (elegibles.length === 1) estado.wizard.encabezado.unidadId = elegibles[0].id
@@ -4925,7 +5059,7 @@
           cargarIngresos()
           return
         }
-        const hayAlgo = w.foto.archivo || w.items.length || w.encabezado.razonSocial
+        const hayAlgo = w.foto.archivo || w.items.length || w.terminados.length || w.encabezado.razonSocial
         if (hayAlgo && !confirm('¿Salir de la carga? Se pierde lo cargado hasta acá.')) return
         cerrarWizard()
         return
@@ -6221,15 +6355,18 @@
 
     function htmlSugerenciasCatalogo(termino) {
       const encontrados = buscarCatalogo(termino)
+      // También los productos terminados de la fábrica (26/10/2026): buscar
+      // "capelina" tiene que encontrar la Capelina Grande, que no es insumo.
+      const terminados = buscarTerminados(estado.wizard, termino)
       if (!termino.trim()) return ''
-      if (!encontrados.length) {
+      if (!encontrados.length && !terminados.length) {
         return '<div class="sugerencia-cat sugerencia-cat--vacia">Nada en el catálogo con ese texto. Creá el producto abajo.</div>'
       }
       return encontrados.map(i => `
         <button type="button" class="sugerencia-cat" data-insumo="${esc(i.id)}">
           <span class="sugerencia-cat__nombre">${esc(i.nombre)}</span>
           <span class="sugerencia-cat__meta">${esc([i.marca, i.unidad_medida].filter(Boolean).join(' · '))}</span>
-        </button>`).join('')
+        </button>`).join('') + terminados.map(htmlSugerenciaTerminado).join('')
     }
 
     // Elegir del catálogo a mano. Es la OTRA salida de un renglón sin resolver
@@ -6469,6 +6606,10 @@
       // sugerencia se recalcula al volver acá.
       sugerirYaRecibido()
       renderizarItems()
+      // El producto terminado de la fábrica (26/10/2026): se lee acá, cuando
+      // ya se saben la fábrica y el proveedor; hasta que llega, no se ofrece.
+      pintarTerminados()
+      asegurarCatalogoTerminado()
 
       // El historial se pide DESPUÉS de dibujar: la pantalla no espera a la
       // red, y cuando llega se aplica solo a los renglones sin responder y se
@@ -7241,18 +7382,21 @@
       // decidir si una sugerencia es la correcta.
       const textoDelPapel = item.textoOriginal || item.nombreOcr || ''
       const parecidos = (item.esNuevo && !item.creando) ? sugerenciasPorParecido(textoDelPapel) : []
+      // Y si el papel nombra un producto terminado de la fábrica ("CAPELINA
+      // GRANDE X 44"), también se propone (26/10/2026).
+      const terminadosPapel = (item.esNuevo && !item.creando) ? terminadosParecidos(estado.wizard, textoDelPapel) : []
 
       // PRIMERO EL CATÁLOGO. Nunca se aplica solo: son botones que hay que
       // tocar. Una sugerencia equivocada aceptada de apuro es peor que buscar
       // a mano, así que la lista propone y no decide.
-      const sugerenciasHtml = !parecidos.length ? '' : `
+      const sugerenciasHtml = (!parecidos.length && !terminadosPapel.length) ? '' : `
              <div class="parecidos">
                <div class="parecidos__titulo">¿Es alguno de estos?</div>
                ${parecidos.map(r => `
                  <button type="button" class="sugerencia-cat" data-parecido="${esc(r.insumo.id)}">
                    <span class="sugerencia-cat__nombre">${esc(r.insumo.nombre)}</span>
                    <span class="sugerencia-cat__meta">${esc([r.insumo.marca, r.insumo.unidad_medida].filter(Boolean).join(' · '))}</span>
-                 </button>`).join('')}
+                 </button>`).join('')}${terminadosPapel.map(htmlSugerenciaTerminado).join('')}
              </div>`
 
       const bloqueCrear = !item.creando ? `
@@ -7735,6 +7879,11 @@
           })
         })
 
+        // ── Un producto terminado (26/10/2026): el renglón pasa a serlo ───
+        tarjeta.querySelectorAll('.parecidos [data-terminado]').forEach(btn => {
+          btn.addEventListener('click', () => pasarATerminado(item, btn.dataset.terminado))
+        })
+
         // ── Sugerencias por parecido ──────────────────────────────────────
         tarjeta.querySelectorAll('[data-parecido]').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -7758,6 +7907,9 @@
                 const insumo = estado.catalogoInsumos.find(i => i.id === btn.dataset.insumo)
                 if (insumo) elegirDelCatalogo(item, insumo)
               })
+            })
+            panel.querySelectorAll('[data-terminado]').forEach(btn => {
+              btn.addEventListener('click', () => pasarATerminado(item, btn.dataset.terminado))
             })
           }
           inputCat.addEventListener('input', pintar)
@@ -7854,6 +8006,460 @@
       estado.wizard.items.push(item)
       estado.wizard.itemAbierto = item.uid
       renderizarItems()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRODUCTO TERMINADO EN EL INGRESO (26/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Rodrigo Arrascaeta trae cajas de Capelina Grande, que es PRODUCTO
+    // TERMINADO, no insumo: con el catálogo de insumos no había cómo cargarlas
+    // acá, y nadie las iba a buscar a la gestión de Producción. Ahora:
+    //  - un proveedor con productos terminados en la fábrica que recibe
+    //    (productos_terminados.origen_proveedor_id = ese proveedor) los
+    //    ofrece en el paso Ítems ("… también trae producto terminado:
+    //    + Capelina Grande");
+    //  - el buscador del catálogo y las sugerencias del papel también
+    //    encuentran los productos terminados de la fábrica, marcados
+    //    "Producto terminado"; elegir uno saca el renglón de los insumos.
+    // El renglón funciona como el de "INGRESO DE PRODUCTO TERMINADO" de la
+    // gestión: presentación, cono (solo con cono), cajas, "Último lote: X.
+    // ¿Sigue siendo este?" (Sí / No, es otro: se escribe, en mayúsculas, 40
+    // como mucho) y el remito. Lo que falta, el lote que viaja y los
+    // parámetros salen de js/ingreso-terminado.js, que es la lógica de la
+    // gestión letra por letra. Graba ingresar_producto_terminado (la base pide
+    // materia_prima:cargar o stock:ajustar_inventario en la fábrica: el wizard
+    // ya exige materia_prima:cargar ahí) y la base deja el lote como vigente
+    // para el próximo ingreso.
+    // Con insumos Y producto terminado se graban por separado: primero el
+    // producto terminado y después lo de siempre (ver confirmarIngreso).
+    // Al completar un ingreso existente no se ofrece: esa cabecera es de una
+    // factura de insumos que ya está en el circuito.
+
+    // ¿Se ofrece producto terminado en esta carga? No al completar un ingreso
+    // existente, ni una vez grabado (ya no se edita).
+    function ofrecerTerminados(w) {
+      return !!w && !w.completar && !w.terminadoRes
+    }
+
+    // Los productos que se pueden cargar: con alguna presentación activa.
+    function terminadosCargables(w) {
+      if (!ofrecerTerminados(w)) return []
+      const cat = w.terminadoCat?.cat
+      const conPres = new Set((cat?.presentaciones ?? []).map(p => p.producto_id))
+      return (cat?.productos ?? []).filter(p => conPres.has(p.id))
+    }
+
+    // Los que trae ESTE proveedor.
+    function terminadosDelProveedor(w) {
+      if (!w?.proveedorId) return []
+      return terminadosCargables(w).filter(p => p.origen_proveedor_id === w.proveedorId)
+    }
+
+    // El buscador del catálogo: por nombre, sin acentos ni mayúsculas.
+    function buscarTerminados(w, termino, limite = 5) {
+      const t = normalizarBusquedaCat(termino)
+      if (!t) return []
+      return terminadosCargables(w).filter(p => normalizarBusquedaCat(p.nombre).includes(t)).slice(0, limite)
+    }
+
+    // El papel nombra el producto entero ("CAPELINA GRANDE X 44").
+    function terminadosParecidos(w, textoPapel) {
+      const t = normalizarBusquedaCat(textoPapel)
+      if (!t) return []
+      return terminadosCargables(w).filter(p => {
+        const n = normalizarBusquedaCat(p.nombre)
+        return n.length > 0 && t.includes(n)
+      }).slice(0, 3)
+    }
+
+    function productoTerminadoDe(w, id) {
+      return (w?.terminadoCat?.cat?.productos ?? []).find(p => p.id === id) ?? null
+    }
+
+    function htmlSugerenciaTerminado(p) {
+      return `
+        <button type="button" class="sugerencia-cat" data-terminado="${esc(p.id)}">
+          <span class="sugerencia-cat__nombre">${esc(p.nombre)}</span>
+          <span class="sugerencia-cat__meta"><span class="chip-terminado">Producto terminado</span></span>
+        </button>`
+    }
+
+    // Lee el catálogo de la fábrica que recibe (una vez por fábrica). Si la
+    // fábrica cambió, lo cargado de producto terminado era de la otra y se
+    // saca. Cuando llega se redibuja lo que lo usa.
+    async function asegurarCatalogoTerminado() {
+      const w = estado.wizard
+      const unidad = w?.encabezado.unidadId
+      if (!ofrecerTerminados(w) || !unidad) return
+      if (w.terminadoCat?.unidadId === unidad && !w.terminadoCat.error) return
+      if (w.terminadoCat && w.terminadoCat.unidadId !== unidad) w.terminados = []
+      w.terminadoCat = { unidadId: unidad, cat: null, error: false }
+      try {
+        const cat = await leerCatalogoIngresoTerminado(supabase, unidad)
+        if (estado.wizard !== w || w.encabezado.unidadId !== unidad) return
+        w.terminadoCat = { unidadId: unidad, cat, error: false }
+      } catch (err) {
+        console.error('catálogo de producto terminado:', err)
+        if (estado.wizard !== w) return
+        w.terminadoCat = { unidadId: unidad, cat: null, error: true }
+      }
+      pintarTerminados()
+      // Una tarjeta abierta sugiere ahora también producto terminado. No se
+      // redibuja si alguien está escribiendo en ella (le sacaría el foco).
+      const lista = document.getElementById('wz-lista-items')
+      if (w.paso === 'items' && !lista?.contains?.(document.activeElement)) renderizarItems()
+    }
+
+    // Un renglón nuevo, como el de la gestión al elegir el producto: con una
+    // sola presentación viene elegida, y trae el lote vigente para preguntar.
+    function nuevoRenglonTerminado(w, productoId, cajas = null) {
+      const cat = w.terminadoCat?.cat
+      const pres = (cat?.presentaciones ?? []).filter(p => p.producto_id === productoId)
+      w.terminadoSeq = (w.terminadoSeq ?? 0) + 1
+      return {
+        id: `pt${w.terminadoSeq}`, productoId, presentacionId: pres.length === 1 ? pres[0].id : '', marcaId: '',
+        cajas, lote: '', loteVigente: cat?.vigentes?.get(productoId) ?? '', loteResp: '', precio: null,
+      }
+    }
+
+    function agregarTerminado(productoId, cajas = null) {
+      const w = estado.wizard
+      if (!terminadosCargables(w).some(p => p.id === productoId)) return null
+      const r = nuevoRenglonTerminado(w, productoId, cajas)
+      w.terminados.push(r)
+      w.terminadoError = ''
+      pintarTerminados()
+      document.querySelector?.(`[data-pt-renglon="${r.id}"]`)?.scrollIntoView?.({ block: 'nearest' })
+      return r
+    }
+
+    // Un renglón de los insumos (del papel o agregado a mano) que resultó ser
+    // producto terminado: sale de los insumos y pasa a ser un renglón de
+    // producto terminado. El número del papel, si es entero, queda como cajas.
+    function pasarATerminado(item, productoId) {
+      const w = estado.wizard
+      if (!terminadosCargables(w).some(p => p.id === productoId)) return
+      const n = item.numeroPapel
+      w.items = w.items.filter(i => i.uid !== item.uid)
+      if (w.itemAbierto === item.uid) w.itemAbierto = null
+      renderizarItems()
+      agregarTerminado(productoId, Number.isInteger(n) && n > 0 ? n : null)
+    }
+
+    // El ingreso como lo entiende js/ingreso-terminado.js: de un proveedor (el
+    // del comprobante), a la fábrica y con la fecha del paso Datos.
+    function ingresoTerminado(w) {
+      return {
+        unidadId: w.encabezado.unidadId, fecha: w.encabezado.fecha, origen: 'proveedor',
+        proveedorId: w.proveedorId, remito: remitoTerminado(w), observaciones: '',
+        renglones: w.terminados, clientUuid: w.terminadoUuid,
+      }
+    }
+
+    // El remito: el que se escribió, o el número del comprobante si es un remito.
+    function remitoTerminado(w) {
+      if (w.terminadoRemito != null) return w.terminadoRemito
+      return w.encabezado.tipoDoc === 'remito' ? (w.encabezado.numeroDoc || '') : ''
+    }
+
+    function soloTerminado(w) {
+      return !w.items.length && w.terminados.length > 0
+    }
+
+    // Lo que falta del producto terminado, o null. El proveedor tiene que ser
+    // uno del padrón (la base pide su id); lo demás lo dice faltaIngreso, el
+    // mismo de la gestión.
+    function faltaTerminado(w) {
+      if (!w.terminados.length || w.terminadoRes) return null
+      if (!w.proveedorId) return 'El producto terminado tiene que venir de un proveedor del padrón: volvé a «Datos» y elegilo en el buscador.'
+      if (!w.terminadoCat?.cat) return 'Todavía no se leyeron los productos terminados de esta fábrica. Revisá la conexión y volvé a entrar a los ítems.'
+      return faltaIngreso(ingresoTerminado(w), w.terminadoCat.cat)
+    }
+
+    function validarTerminados() {
+      const w = estado.wizard
+      const falta = faltaTerminado(w)
+      w.terminadoError = falta || ''
+      pintarTerminados()
+      if (falta) mostrarError(`Producto terminado: ${falta}`)
+      return !falta
+    }
+
+    // Graba el producto terminado: UNA llamada, con el p_client_uuid de esta
+    // carga. null si salió bien (o ya estaba grabado); si no, el texto del
+    // error: el de la base tal cual, o el de la conexión.
+    async function guardarTerminado(w) {
+      if (!w.terminados.length || w.terminadoRes) return null
+      try {
+        const { data, error } = await supabase.rpc('ingresar_producto_terminado', parametrosIngreso(ingresoTerminado(w), w.terminadoCat?.cat))
+        if (error) throw error
+        w.terminadoRes = data ?? {}
+        return null
+      } catch (err) {
+        console.error('ingresar_producto_terminado:', err)
+        // El mensaje de la base va tal cual (ya viene en castellano); sin
+        // mensaje, es la conexión: el mismo p_client_uuid no duplica.
+        return err?.message && !/fetch|network/i.test(err.message) ? err.message
+          : 'No se pudo guardar el producto terminado: revisá la conexión y tocá «Confirmar ingreso» de nuevo (no se carga dos veces).'
+      }
+    }
+
+    function cajasTerminado(w) {
+      return Number(w.terminadoRes?.cajas ?? w.terminados.reduce((s, r) => s + (Number.isInteger(r.cajas) ? r.cajas : 0), 0))
+    }
+
+    function textoCajas(n) {
+      return `${formatearNumeroAr(n, { decimales: 0 })} ${n === 1 ? 'caja' : 'cajas'}`
+    }
+
+    function textoCuentaTerminado(w) {
+      const n = w.terminados.length
+      return `${n === 1 ? '1 producto' : `${n} productos`} · ${textoCajas(cajasTerminado(w))}`
+    }
+
+    // El aviso al terminar. Sin producto terminado, el de siempre.
+    function textoGuardado(w, insumos) {
+      if (!w.terminadoRes) return 'Ingreso cargado.'
+      const pt = w.terminadoRes.reintento ? 'el producto terminado (ya estaba cargado: no se cargó dos veces)'
+        : `${textoCajas(cajasTerminado(w))} de producto terminado`
+      return insumos ? `Ingreso cargado: ${insumos === 1 ? '1 insumo' : `${insumos} insumos`} y ${pt}.` : `Ingreso cargado: ${pt}.`
+    }
+
+    // Lo que se guardó, para el cartel del listado: cada parte con lo suyo.
+    // Se arma ANTES de cerrar el wizard (cerrarWizard lo deja en null).
+    function resumenGuardado(w, items) {
+      const cat = w.terminadoCat?.cat
+      const ing = ingresoTerminado(w)
+      return {
+        unidad: nombreUnidad(w.encabezado.unidadId) || '',
+        insumos: items.map(i => ({ nombre: i.nombre || '(sin nombre)', cantidad: textoCantidad(i) })),
+        terminados: w.terminados.map(r => ({
+          nombre: productoTerminadoDe(w, r.productoId)?.nombre ?? '(producto)',
+          presentacion: presentacionDe(cat, r.presentacionId)?.nombre ?? '',
+          cajas: r.cajas, lote: loteDeRenglon(r, ing),
+        })),
+        reintento: !!w.terminadoRes?.reintento,
+      }
+    }
+
+    function htmlResumenGuardado(r) {
+      const insumos = r.insumos.map(i => `<li>${esc(i.nombre)} · ${esc(i.cantidad)}</li>`).join('')
+      const terminados = r.terminados.map(t =>
+        `<li>${esc(t.nombre)}${t.presentacion ? ` (${esc(t.presentacion)})` : ''} · ${esc(textoCajas(t.cajas))} · lote ${esc(t.lote)}</li>`).join('')
+      const tituloPt = r.unidad ? `Producto terminado · stock de ${r.unidad}` : 'Producto terminado'
+      return `
+        <button type="button" class="resumen-guardado-mp__cerrar" data-resumen-cerrar aria-label="Cerrar">✕</button>
+        <div class="resumen-guardado-mp__titulo">Ingreso cargado</div>
+        ${insumos ? `<div class="resumen-guardado-mp__parte"><strong>Insumos y materia prima</strong><ul>${insumos}</ul></div>` : ''}
+        ${terminados ? `<div class="resumen-guardado-mp__parte"><strong>${esc(tituloPt)}</strong><ul>${terminados}</ul></div>` : ''}
+        ${r.reintento ? '<div class="resumen-guardado-mp__parte">El producto terminado ya estaba cargado: no se cargó dos veces.</div>' : ''}`
+    }
+
+    // r null = se saca el cartel.
+    function mostrarResumenGuardado(r) {
+      estado.resumenGuardado = r
+      const el = document.getElementById('mp-resumen-guardado')
+      if (!el) return
+      el.innerHTML = r ? htmlResumenGuardado(r) : ''
+      el.hidden = !r
+      // El listado vuelve con el scroll que tenía el wizard: el cartel, a la vista.
+      if (r) el.scrollIntoView?.({ block: 'start' })
+    }
+
+    function avisoSoloTerminado(w) {
+      const partes = [`Es solo producto terminado: entra al stock terminado de ${nombreUnidad(w.encabezado.unidadId) || 'la fábrica'} (Producción), no al de insumos.`]
+      if (llevaCircuito(w.encabezado.tipoDoc) || w.desdeGasto) partes.push('No pasa a Cuentas corrientes ni a Gastos, igual que cuando se carga desde Producción.')
+      if (w.foto.url) partes.push('La foto del comprobante no se guarda.')
+      return partes.join(' ')
+    }
+
+    function htmlConfirmacionTerminados(w) {
+      if (!w.terminados.length) return ''
+      const cat = w.terminadoCat?.cat
+      const ing = ingresoTerminado(w)
+      const remito = String(remitoTerminado(w)).trim()
+      return `
+        <div class="wz-seccion">Producto terminado</div>
+        ${w.terminados.map(r => {
+          const pr = presentacionDe(cat, r.presentacionId)
+          const cono = pr?.con_cono ? ((cat?.marcas ?? []).find(m => m.id === r.marcaId)?.nombre ?? '') : ''
+          return `
+          <div class="wz-conf-item" data-pt-conf="${esc(r.id)}">
+            <div class="wz-conf-item__fila">
+              <div style="min-width:0;">
+                <div class="item-mp__nombre-fila">
+                  <span class="item-mp__nombre">${esc(productoTerminadoDe(w, r.productoId)?.nombre ?? '(producto)')}</span>
+                  <span class="chip-terminado">Producto terminado</span>
+                </div>
+                ${pr ? `<div class="item-mp__marca">${esc([pr.nombre, cono].filter(Boolean).join(' · '))}</div>` : ''}
+              </div>
+              <span class="item-mp__cantidad">${esc(textoCajas(r.cajas))}</span>
+            </div>
+            <div class="wz-conf-item__lote"><span>Lote</span><span>${esc(loteDeRenglon(r, ing) || '—')}</span></div>
+          </div>`
+        }).join('')}
+        <div class="wz-conf-item__lote terminado-mp__remito-conf"><span>Remito</span><span>${esc(remito || '—')}</span></div>`
+    }
+
+    // ── La sección del paso Ítems ──────────────────────────────────────────
+
+    function pintarTerminados() {
+      const cont = document.getElementById('wz-terminados')
+      const w = estado.wizard
+      if (!cont) return
+      cont.innerHTML = w ? htmlTerminados(w) : ''
+      if (!w) return
+      // Las cajas se escriben con su formato; se ponen desde el estado.
+      for (const r of w.terminados) {
+        const cajas = cont.querySelector?.(`[data-pt-renglon="${r.id}"] [data-pt-campo="cajas"]`)
+        if (!cajas) continue
+        enlazarCampoNumero(cajas, { decimales: 0 })
+        if (r.cajas != null) ponerNumero(cajas, r.cajas)
+      }
+    }
+
+    function htmlTerminados(w) {
+      if (w.terminadoRes) return htmlTerminadoGrabado(w)
+      if (!ofrecerTerminados(w)) return ''
+      const ofrecidos = terminadosDelProveedor(w)
+      if (!w.terminados.length && !ofrecidos.length) return ''
+      const proveedor = w.proveedorMatch?.razon_social || w.encabezado.razonSocial || 'Este proveedor'
+      const oferta = !ofrecidos.length ? '' : `
+        <div class="terminado-mp__oferta">
+          <div class="terminado-mp__oferta-texto"><strong>${esc(proveedor)}</strong> también trae producto terminado. Tocá el que vino:</div>
+          <div class="terminado-mp__oferta-botones">
+            ${ofrecidos.map(p => `<button type="button" class="chip-presentacion" data-pt-agregar="${esc(p.id)}">＋ ${esc(p.nombre)}</button>`).join('')}
+          </div>
+        </div>`
+      return `
+        <div class="wz-seccion terminado-mp__titulo">Producto terminado</div>
+        ${oferta}
+        ${w.terminados.map(r => htmlRenglonTerminado(w, r)).join('')}
+        ${w.terminados.length ? `
+        <div class="wz-campo">
+          <div class="wz-campo__label">Remito del producto terminado (opcional)</div>
+          <input type="text" data-pt-campo="remito" autocomplete="off" value="${esc(remitoTerminado(w))}">
+          <div class="wz-campo__hint">Entra al stock terminado de ${esc(nombreUnidad(w.encabezado.unidadId) || 'la fábrica')} (Producción), no al de insumos.</div>
+        </div>` : ''}
+        <div class="wz-aviso wz-aviso--error terminado-mp__error" data-pt-error role="alert"${w.terminadoError ? '' : ' hidden'}>${esc(w.terminadoError)}</div>`
+    }
+
+    // Ya grabado (y falló después lo de los insumos): se muestra, no se edita.
+    function htmlTerminadoGrabado(w) {
+      return `
+        <div class="wz-seccion terminado-mp__titulo">Producto terminado</div>
+        <div class="wz-aviso wz-aviso--neutro">Ya quedó cargado: ${esc(textoCajas(cajasTerminado(w)))} al stock terminado. Al confirmar de nuevo no se vuelve a cargar.</div>`
+    }
+
+    function htmlRenglonTerminado(w, r) {
+      const cat = w.terminadoCat?.cat
+      const pres = (cat?.presentaciones ?? []).filter(p => p.producto_id === r.productoId)
+      const pr = presentacionDe(cat, r.presentacionId)
+      const opciones = (lista, elegida, vacia) => `<option value="">${esc(vacia)}</option>` + lista.map(x =>
+        `<option value="${esc(x.id)}"${x.id === elegida ? ' selected' : ''}>${esc(x.nombre)}</option>`).join('')
+      return `
+        <div class="item-mp terminado-mp" data-pt-renglon="${esc(r.id)}">
+          <div class="terminado-mp__cab">
+            <div class="item-mp__nombre-fila">
+              <span class="item-mp__nombre">${esc(productoTerminadoDe(w, r.productoId)?.nombre ?? '(producto)')}</span>
+              <span class="chip-terminado">Producto terminado</span>
+            </div>
+            <button type="button" class="btn-item-secundario" data-pt-quitar="${esc(r.id)}">Quitar</button>
+          </div>
+          <div class="terminado-mp__grilla">
+            <label class="wz-campo"><span class="wz-campo__label">Presentación</span>
+              <select data-pt-campo="presentacionId">${opciones(pres, r.presentacionId, 'Elegí la presentación')}</select></label>
+            ${pr?.con_cono ? `<label class="wz-campo"><span class="wz-campo__label">Cono</span>
+              <select data-pt-campo="marcaId">${opciones(cat?.marcas ?? [], r.marcaId, 'Elegí el cono')}</select></label>` : ''}
+            <label class="wz-campo"><span class="wz-campo__label">Cajas</span>
+              <input type="text" inputmode="numeric" autocomplete="off" data-pt-campo="cajas" placeholder="0"></label>
+          </div>
+          ${htmlLoteTerminado(w, r)}
+        </div>`
+    }
+
+    // El lote, como en la gestión (htmlLoteIngreso): con vigente, la pregunta
+    // con Sí (el campo de solo lectura con el vigente) y "No, es otro" (vacío
+    // y obligatorio); sin vigente, el campo obligatorio de entrada.
+    function htmlLoteTerminado(w, r) {
+      const modo = modoLoteIngreso(r, ingresoTerminado(w))
+      const campo = (attrs, valor, placeholder) => `<label class="wz-campo"><span class="wz-campo__label">Lote</span>
+              <input type="text" data-pt-campo="lote" autocomplete="off" autocapitalize="characters" maxlength="${LARGO_MAXIMO_LOTE}" value="${esc(valor)}" placeholder="${esc(placeholder)}"${attrs}></label>`
+      const boton = (resp, texto) => `<button type="button" data-pt-lote="${resp}" aria-pressed="${modo === resp ? 'true' : 'false'}" class="${modo === resp ? 'wz-toggle--sel' : ''}">${texto}</button>`
+      const pregunta = r.loteVigente ? `<div class="terminado-mp__pregunta">Último lote: <strong>${esc(r.loteVigente)}</strong>. ¿Sigue siendo este?</div>
+            <div class="wz-toggle" role="group" aria-label="¿Sigue siendo el último lote?">${boton('si', 'Sí')}${boton('otro', 'No, es otro')}</div>` : ''
+      const input = modo === 'si' ? campo(' readonly aria-readonly="true"', r.loteVigente, '')
+        : modo === 'otro' ? campo(' required aria-required="true"', r.lote, 'Escribí el lote')
+        : ''
+      return `<div class="terminado-mp__lote" data-pt-lote-modo="${modo}">${pregunta}${input}</div>`
+    }
+
+    function renglonTerminado(w, el) {
+      const fila = el?.closest?.('[data-pt-renglon]')
+      return fila ? (w.terminados.find(r => r.id === fila.dataset.ptRenglon) ?? null) : null
+    }
+
+    // Lo que se escribe NO redibuja (el cursor no salta); lo que cambia la
+    // forma del renglón (la presentación, el lote) sí.
+    function alEscribirTerminado(ev) {
+      const w = estado.wizard
+      const t = ev.target
+      if (!w || !t?.dataset) return
+      const campo = t.dataset.ptCampo
+      if (campo === 'remito') { w.terminadoRemito = t.value; return }
+      const r = renglonTerminado(w, t)
+      if (!r) return
+      if (campo === 'cajas') r.cajas = leerCampoNumero(t)
+      else if (campo === 'lote') {
+        if (t.readOnly) return
+        // En mayúsculas mientras se escribe, sin que el cursor salte.
+        const may = String(t.value).toUpperCase()
+        if (may !== t.value) {
+          const a = t.selectionStart, b = t.selectionEnd
+          t.value = may
+          try { t.setSelectionRange(a, b) } catch { /* sin selección: no pasa nada */ }
+        }
+        r.lote = t.value
+      }
+    }
+
+    function alCambiarTerminado(ev) {
+      const w = estado.wizard
+      const t = ev.target
+      const r = w ? renglonTerminado(w, t) : null
+      if (!r) return
+      const campo = t.dataset?.ptCampo
+      if (campo === 'presentacionId') {
+        r.presentacionId = t.value
+        if (!presentacionDe(w.terminadoCat?.cat, r.presentacionId)?.con_cono) r.marcaId = ''
+        pintarTerminados()
+      } else if (campo === 'marcaId') r.marcaId = t.value
+    }
+
+    // Sí / "No, es otro", como contestarLoteIngreso de la gestión: Sí usa el
+    // vigente; "No, es otro" vacía el campo y le da el foco.
+    function contestarLoteTerminado(w, r, resp) {
+      if (!r || !r.loteVigente || (resp !== 'si' && resp !== 'otro')) return
+      r.loteResp = resp
+      r.lote = resp === 'si' ? r.loteVigente : ''
+      w.terminadoError = ''
+      pintarTerminados()
+      if (resp === 'otro') document.querySelector?.(`[data-pt-renglon="${r.id}"] [data-pt-campo="lote"]`)?.focus?.()
+    }
+
+    function alTocarTerminado(ev) {
+      const w = estado.wizard
+      const b = ev.target?.closest?.('button')
+      if (!w || !b) return
+      if (b.dataset.ptAgregar) { agregarTerminado(b.dataset.ptAgregar); return }
+      if (b.dataset.ptQuitar) {
+        w.terminados = w.terminados.filter(r => r.id !== b.dataset.ptQuitar)
+        w.terminadoError = ''
+        pintarTerminados()
+        return
+      }
+      if (b.dataset.ptLote) contestarLoteTerminado(w, renglonTerminado(w, b), b.dataset.ptLote)
     }
 
     // Las tres validaciones son las mismas que hace la base — se chequean acá
@@ -8085,8 +8691,9 @@
 
     function continuarDesdeItems() {
       const w = estado.wizard
-      if (!w.items.length) return mostrarError('Agregá al menos un ítem.')
+      if (!w.items.length && !w.terminados.length) return mostrarError('Agregá al menos un ítem.')
       if (!validarItems()) return
+      if (!validarTerminados()) return
       irAPasoWz('confirmar')
     }
 
@@ -8101,7 +8708,8 @@
       const filas = [
         ['Tipo',      TIPOS_DOC[e.tipoDoc]?.label || '—'],
         ['Número',    e.numeroDoc || '—'],
-        ['Proveedor', e.razonSocial || '—'],
+        // Sin razón social escrita (se eligió del padrón), la del proveedor.
+        ['Proveedor', e.razonSocial || w.proveedorMatch?.razon_social || '—'],
         ['Fecha',     e.fecha ? formatearFecha(e.fecha) : '—'],
         ['Unidad',    nombreUnidad(e.unidadId) || '—'],
       ]
@@ -8112,10 +8720,12 @@
       // Los dos números, porque son distintos y los dos importan: cuántos
       // renglones tiene la factura y cuántos entran realmente al stock.
       const noSuman = w.items.filter(i => i.yaRecibido).length
-      filas.push(['Ítems', String(w.items.length)])
+      // Con producto terminado (26/10/2026) son dos partes y se ven las dos.
+      if (w.items.length || !w.terminados.length) filas.push([w.terminados.length ? 'Insumos' : 'Ítems', String(w.items.length)])
       if (noSuman) {
         filas.push(['Suman stock', `${w.items.length - noSuman} de ${w.items.length}`])
       }
+      if (w.terminados.length) filas.push(['Producto terminado', textoCuentaTerminado(w)])
 
       document.getElementById('wz-resumen').innerHTML = filas.map(([k, v]) => `
         <div class="wz-resumen__fila">
@@ -8150,6 +8760,15 @@
             <div class="wz-conf-item__lote"><span>Lote</span><span>${esc(lote)}</span></div>
           </div>`
       }).join('')
+      document.getElementById('wz-detalle-terminados').innerHTML = htmlConfirmacionTerminados(w)
+      // Solo producto terminado: no hay ingreso de materia prima, así que
+      // tampoco factura que pase a Cuentas corrientes o a Gastos.
+      if (soloTerminado(w)) {
+        const avisoEl = document.getElementById('wz-aviso-circuito')
+        avisoEl.textContent = avisoSoloTerminado(w)
+        avisoEl.hidden = false
+        document.getElementById('wz-bloque-total').hidden = true
+      }
     }
 
     function avisoGuardado(texto) {
@@ -8439,7 +9058,11 @@
       // SIEMPRE se validan los ítems: con el vínculo por renglón, una factura
       // vinculada igual carga ítems (los que no vinieron con el remito).
       if (!validarItems()) { irAPasoWz('items'); return }
-      const errorCircuito = validarCircuitoAntesDeGuardar(w)
+      if (!validarTerminados()) { irAPasoWz('items'); return }
+      // Solo producto terminado (26/10/2026): no se crea ingreso de materia
+      // prima, así que no hay circuito que validar.
+      const soloPt = soloTerminado(w)
+      const errorCircuito = soloPt ? null : validarCircuitoAntesDeGuardar(w)
       if (errorCircuito) { avisoGuardado(errorCircuito); return }
       // Lo que el circuito necesita, leído ANTES de guardar: cerrarWizard()
       // deja estado.wizard en null.
@@ -8450,6 +9073,32 @@
       btn.disabled = true
       btn.textContent = 'Guardando…'
       avisoGuardado('')
+
+      // 0. El PRODUCTO TERMINADO, primero y aparte (26/10/2026): una llamada a
+      // ingresar_producto_terminado con el p_client_uuid de esta carga. Va
+      // antes porque es lo único que se reintenta sin duplicar: si después
+      // falla lo de materia prima (que se borra entero), el reintento no lo
+      // vuelve a mandar (ya está en w.terminadoRes). Si falla él, no se guarda
+      // nada y el error se dice tal cual.
+      const errorTerminado = await guardarTerminado(w)
+      if (errorTerminado) {
+        avisoGuardado(errorTerminado)
+        w.guardando = false
+        btn.disabled = false
+        btn.textContent = 'Confirmar ingreso'
+        return
+      }
+      if (soloPt) {
+        const resumen = resumenGuardado(w, [])
+        mostrarExito(textoGuardado(w, 0))
+        cerrarWizard()
+        mostrarResumenGuardado(resumen)
+        w.guardando = false
+        btn.disabled = false
+        btn.textContent = 'Confirmar ingreso'
+        await cargarIngresos()
+        return
+      }
 
       let ingresoId = null
       try {
@@ -8540,8 +9189,11 @@
 
         if (avisoProveedor) mostrarError(avisoProveedor)
         if (avisoAlias) mostrarError(avisoAlias)
-        mostrarExito('Ingreso cargado.')
+        mostrarExito(textoGuardado(w, w.items.length))
+        // Con producto terminado, el cartel con las dos partes.
+        const resumen = w.terminadoRes ? resumenGuardado(w, w.items) : null
         cerrarWizard()
+        if (resumen) mostrarResumenGuardado(resumen)
         await cargarIngresos()
         await cargarPagadoSinIngresar()
         if (resultado && buscarEntrega(ingresoId)) {
@@ -8564,6 +9216,12 @@
           extra = errorBorrado
             ? ` El ingreso quedó cargado SIN ítems (id ${ingresoId}) y hay que borrarlo a mano.`
             : ' No se guardó nada del ingreso, podés reintentar.'
+        }
+        // El producto terminado ya quedó (paso 0): se dice, y el reintento no
+        // lo vuelve a mandar.
+        if (w.terminadoRes) {
+          extra += ' El producto terminado sí quedó cargado: al reintentar no se carga de nuevo.'
+          pintarTerminados()
         }
         avisoGuardado(`${e.message}${extra}`)
       }
@@ -10428,6 +11086,14 @@
 
     document.getElementById('btn-agregar-item').addEventListener('click', agregarItemManual)
     document.getElementById('btn-items-continuar').addEventListener('click', continuarDesdeItems)
+    // Producto terminado (26/10/2026): un solo juego de listeners en el
+    // contenedor, que se redibuja entero (pintarTerminados).
+    document.getElementById('wz-terminados').addEventListener('input', alEscribirTerminado)
+    document.getElementById('wz-terminados').addEventListener('change', alCambiarTerminado)
+    document.getElementById('wz-terminados').addEventListener('click', alTocarTerminado)
+    document.getElementById('mp-resumen-guardado').addEventListener('click', (ev) => {
+      if (ev.target.closest('[data-resumen-cerrar]')) mostrarResumenGuardado(null)
+    })
 
     document.getElementById('btn-confirmar-ingreso').addEventListener('click', confirmarIngreso)
     // Siempre a los ítems: es el paso anterior a confirmar desde que el
