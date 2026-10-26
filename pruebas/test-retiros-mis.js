@@ -56,8 +56,10 @@ function preparar(S) {
     chk('abrir una muestra su detalle', S.estado.vista === 'rt-vista-mio' && S.__els.get('rt-mio-titulo').textContent === 'Orden N-0012')
     chk('con los lotes de cada renglón', /lotes 7030-1 \(10\)/.test(S.__els.get('rt-mio-cuerpo').innerHTML))
     chk('y los botones de la hoja habilitados', ['imprimir', 'enviar', 'compartir'].every(b => S.__els.get(`rt-mio-${b}`).disabled === false))
-    // Imprimir mide la hoja antes (07/10/2026): se espera.
-    await S.imprimirDesde('mio')
+    // Imprimir mide la hoja antes (07/10/2026). Desde el 26/10/2026 (el iPhone)
+    // se arma en segundo plano al abrir la orden: se espera a que termine.
+    S.imprimirDesde('mio')
+    for (let i = 0; i < 30; i++) await new Promise(r => setImmediate(r))
     const hoja = S.__els.get('rt-impresion').innerHTML
     chk('reimprimir arma la hoja con dos copias', S.__impresiones() === 1 && (hoja.match(/<section class="rh-copia/g) || []).length === 2)
     // El cliente completo (buscado por nombre en la empresa): su localidad,
@@ -66,7 +68,8 @@ function preparar(S) {
     chk('quién la cargó: la persona de la sesión', /Entregó: <strong>Emanuel Romero<\/strong>/.test(hoja))
     chk('y SIN precios', !/PRECIO|SUBTOTAL|\$/.test(hoja))
     S.abrirMia('o-2')
-    await S.imprimirDesde('mio')
+    S.imprimirDesde('mio')
+    for (let i = 0; i < 30; i++) await new Promise(r => setImmediate(r))
     const h2 = S.__els.get('rt-impresion').innerHTML
     chk('una anulada se imprime con ANULADA cruzado', /class="rh-anulada"/.test(h2))
     chk('el cono de un renglón sin marca, con cono, es "—" (nunca "Común"); con marca, la marca', S.conoDeRenglonMio({ producto: 'Cucurucho grande', presentacion: 'Caja x 100 con cono', marca: null }, CAT) === '—' &&

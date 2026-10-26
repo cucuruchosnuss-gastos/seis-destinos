@@ -60,7 +60,8 @@ correrMutaciones({
     { nombre: 'el faltante no va abajo', de: '    (faltantes.length ? `<strong>Faltante:</strong>', a: '    (false ? `<strong>Faltante:</strong>' },
     { nombre: 'sin DNI en la firma', de: '<span class="rh-firma">DNI</span>', a: '' },
     { nombre: 'una sola copia al imprimir', de: "export const COPIAS_IMPRESION = ['ORIGINAL', 'DUPLICADO']", a: "export const COPIAS_IMPRESION = ['ORIGINAL']" },
-    { nombre: 'el PDF con dos copias', de: "export const COPIAS_PDF = ['ORIGINAL']", a: "export const COPIAS_PDF = ['ORIGINAL', 'DUPLICADO']" },
+    // 26/10/2026: el PDF lleva las dos copias, como la impresión.
+    { nombre: 'el PDF con una sola copia', de: "export const COPIAS_PDF = ['ORIGINAL', 'DUPLICADO']", a: "export const COPIAS_PDF = ['ORIGINAL']" },
     { nombre: 'un lote solo repite su cantidad', de: '    return lista.length === 1 ? lote : ', a: '    return false ? lote : ' },
     { nombre: 'el producto se corta con "…"', de: '.rh-tabla td { font-size: 14px; padding: 2px 6px; border-bottom: 1px solid #000; line-height: 1.15; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }', a: '.rh-tabla td { font-size: 14px; padding: 2px 6px; border-bottom: 1px solid #000; line-height: 1.15; vertical-align: top; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' },
     { nombre: 'la leyenda se puede partir', de: '.rh-legal { margin: 0; font-size: 12px; text-align: center; white-space: nowrap; }', a: '.rh-legal { margin: 0; font-size: 12px; text-align: center; }' },
