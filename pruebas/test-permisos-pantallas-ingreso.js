@@ -48,7 +48,9 @@ const PRELUDIO = `
 function nuevo({ rol = 'usuario', alcance } = {}) {
   const S = construirCon(ARCHIVO, {
     preludio: PRELUDIO,
-    funciones: ['puedeCargarEn', 'unidadesParaElegir', ...(TIENE_ALGUNA ? ['puedeCargarAlguna'] : []), 'poblarSelectUnidades', 'abrirWizard'],
+    funciones: ['puedeCargarEn', 'unidadesParaElegir', ...(TIENE_ALGUNA ? ['puedeCargarAlguna'] : []), 'poblarSelectUnidades', 'abrirWizard',
+      // abrirWizard saca el cartel de lo guardado (26/10/2026); una copia de antes no lo tiene.
+      ...(/function mostrarResumenGuardado\(/.test(SCRIPT) ? ['mostrarResumenGuardado'] : [])],
     retorno: 'estado, __el(id) { return document.getElementById(id) }, __errores, puedeCargarAlguna',
   })
   S.estado.unidades = UNIDADES

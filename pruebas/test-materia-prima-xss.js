@@ -66,6 +66,9 @@ const RENDERS = [
   'renderizarProgresoWz', 'renderizarTogglesTipoDoc', 'poblarSelectUnidades',
   // Las de js/cantidades.js (05/10/2026): importadas, se suman a mano.
   ...FUNCIONES_CARGA, 'formatearCantidadStock',
+  // El producto terminado en el ingreso (26/10/2026), y lo que importa de
+  // js/ingreso-terminado.js (a mano, como las de cantidades).
+  'htmlTerminados', 'htmlResumenGuardado', 'modoLoteIngreso', 'loteDeRenglon', 'normalizarLoteIngreso', 'presentacionDe',
 ]
 
 function clausura(src) {
@@ -152,7 +155,7 @@ if (SOLO !== 'estatico') {
   let S
   try {
     const { funciones, constantes } = clausura(scriptModulo(ARCHIVO))
-    S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones, constantes: ['DECIMALES_CANTIDAD', ...CONSTANTES_CARGA, ...constantes], retorno: RETORNO })
+    S = construirCon(ARCHIVO, { preludio: PRELUDIO, funciones, constantes: ['DECIMALES_CANTIDAD', 'LARGO_MAXIMO_LOTE', ...CONSTANTES_CARGA, ...constantes], retorno: RETORNO })
   } catch (e) {
     chk('el sandbox se arma con las funciones reales del archivo', false, String(e && e.stack || e))
   }
@@ -264,7 +267,8 @@ function correrRenders(S) {
   E.proveedores = [prov]
   E.wizard = { proveedorParecidos: [prov], proveedorMatch: null, cuitOcr: null,
     encabezado: { tipoDoc: 'factura_a', numeroDoc: marca('wz_numero'), razonSocial: marca('wz_razon'), fecha: '2026-10-02', unidadId: marca('unidad_id') },
-    remitosVinculadosIds: [], items: [], duplicados: [], histPresentaciones: new Map() }
+    remitosVinculadosIds: [], items: [], duplicados: [], histPresentaciones: new Map(),
+    terminados: [], terminadoCat: null, terminadoRemito: null, terminadoRes: null, terminadoError: '', foto: { url: null } }
   el('campo-buscar-proveedor').value = 'acme'
   S.renderizarSugerenciasProveedor()
   chequearMarcas(chk, 'buscador de proveedor (resultados)', el('wz-sugerencias-proveedor').innerHTML, ['prov_id', 'prov_razon', 'prov_fant', 'prov_cuit'])
@@ -352,6 +356,44 @@ function correrRenders(S) {
   S.renderizarConfirmacion()
   chequearMarcas(chk, 'confirmación (resumen)', el('wz-resumen').innerHTML, ['wz_numero', 'wz_razon', 'unidad_nombre'])
   chequearMarcas(chk, 'confirmación (ítems)', el('wz-detalle-items').innerHTML, ['item_nombre', 'item_marca', 'item_lote', 'item_unidad'])
+
+  // ── Producto terminado (26/10/2026) ──────────────────────────────────────
+  // Todo lo que viene de la base (el proveedor, el producto, la presentación,
+  // el cono, el lote vigente) y lo que escribe la persona (lote, remito), más
+  // el error de la base, con su marca.
+  E.wizard.proveedorId = 'prov-1'
+  E.wizard.proveedorMatch = { razon_social: marca('pt_proveedor') }
+  E.wizard.terminadoCat = { unidadId: E.wizard.encabezado.unidadId, error: false, cat: {
+    productos: [{ id: marca('pt_id'), nombre: marca('pt_nombre'), origen_proveedor_id: 'prov-1' }],
+    presentaciones: [{ id: marca('pt_pres_id'), producto_id: marca('pt_id'), nombre: marca('pt_pres'), con_cono: true }],
+    marcas: [{ id: marca('pt_cono_id'), nombre: marca('pt_cono') }],
+    vigentes: new Map([[marca('pt_id'), marca('pt_vigente')]]),
+  } }
+  E.wizard.terminados = [{ id: 'pt1', productoId: marca('pt_id'), presentacionId: marca('pt_pres_id'), marcaId: marca('pt_cono_id'),
+    cajas: 44, lote: marca('pt_vigente'), loteVigente: marca('pt_vigente'), loteResp: 'si', precio: null }]
+  E.wizard.terminadoRemito = marca('pt_remito')
+  E.wizard.terminadoError = marca('pt_error')
+  chequearMarcas(chk, 'producto terminado (la oferta y el renglón, lote con Sí)', S.htmlTerminados(E.wizard),
+    ['pt_proveedor', 'pt_id', 'pt_nombre', 'pt_pres_id', 'pt_pres', 'pt_cono_id', 'pt_cono', 'pt_vigente', 'pt_remito', 'pt_error'])
+  Object.assign(E.wizard.terminados[0], { loteResp: 'otro', lote: marca('pt_lote') })
+  chequearMarcas(chk, 'producto terminado (lote "No, es otro")', S.htmlTerminados(E.wizard), ['pt_lote'])
+  chequearMarcas(chk, 'producto terminado en el buscador del catálogo', S.htmlSugerenciasCatalogo('xss'), ['pt_id', 'pt_nombre'])
+  S.renderizarConfirmacion()
+  const conf = el('wz-detalle-terminados').innerHTML
+  chequearMarcas(chk, 'confirmación (producto terminado)', conf, ['pt_nombre', 'pt_pres', 'pt_cono', 'pt_remito'])
+  // El lote viaja (y se muestra) en mayúsculas: la marca también.
+  chk('confirmación (producto terminado): el lote en mayúsculas, escapado', !/<b data-xss=/i.test(conf) && conf.includes('&lt;B DATA-XSS=&quot;PT_LOTE&quot;&gt;'))
+  E.wizard.items = []
+  S.renderizarConfirmacion()
+  // El aviso de "solo producto terminado" va por textContent (no es HTML).
+  chk('confirmación (solo producto terminado): el aviso dice que es solo producto terminado', /^Es solo producto terminado/.test(el('wz-aviso-circuito').textContent) && el('wz-aviso-circuito').hidden === false)
+  E.wizard.terminadoRes = { cajas: 44 }
+  chequearMarcas(chk, 'producto terminado ya grabado', S.htmlTerminados(E.wizard), [])
+  chequearMarcas(chk, 'el cartel de lo que se guardó', S.htmlResumenGuardado({
+    unidad: marca('rg_unidad'), insumos: [{ nombre: marca('rg_insumo'), cantidad: marca('rg_cantidad') }],
+    terminados: [{ nombre: marca('rg_pt'), presentacion: marca('rg_pres'), cajas: 44, lote: marca('rg_lote') }], reintento: false,
+  }), ['rg_unidad', 'rg_insumo', 'rg_cantidad', 'rg_pt', 'rg_pres', 'rg_lote'])
+  Object.assign(E.wizard, { terminados: [], terminadoCat: null, terminadoRemito: null, terminadoRes: null, terminadoError: '', items: [nuevo] })
 
   // ── Recepción de transferencias ──────────────────────────────────────────
   E.unidadesRecepcion = [{ id: 'a' }, { id: 'b' }]
@@ -493,6 +535,30 @@ Object.assign(SEGURAS, {
     'htmlBurbujaMp(ins)': 'HTML de htmlBurbujaMp(), que escapa adentro (ejecutado en test-materia-prima-pendientes.js)',
   },
 })
+// El producto terminado en el ingreso (26/10/2026): renders que escapan
+// adentro, EJECUTADOS arriba con marcas en cada dato.
+const PT = 'HTML de un render del producto terminado que escapa adentro (ejecutado arriba con marcas)'
+Object.assign(SEGURAS, {
+  htmlTerminados: { oferta: HTML_PROPIO, "w.terminados.map(r => htmlRenglonTerminado(w, r)).join('')": PT },
+  htmlRenglonTerminado: {
+    "opciones(pres, r.presentacionId, 'Elegí la presentación')": 'HTML de opciones(), que escapa id y nombre',
+    "opciones(cat?.marcas ?? [], r.marcaId, 'Elegí el cono')": 'HTML de opciones(), que escapa id y nombre',
+    'htmlLoteTerminado(w, r)': PT,
+  },
+  htmlLoteTerminado: {
+    LARGO_MAXIMO_LOTE: 'constante numérica de js/ingreso-terminado.js',
+    attrs: 'parámetro de campo(): siempre un literal de esta función',
+    resp: "parámetro de boton(): 'si' u 'otro', literales de esta función",
+    texto: "parámetro de boton(): 'Sí' o 'No, es otro', literales de esta función",
+    "boton('si', 'Sí')": 'HTML de boton(), con partes literales', "boton('otro', 'No, es otro')": 'HTML de boton(), con partes literales',
+    modo: 'modoLoteIngreso(): uno de cinco literales', pregunta: HTML_PROPIO, input: HTML_PROPIO,
+  },
+  htmlResumenGuardado: { insumos: HTML_PROPIO, terminados: HTML_PROPIO },
+  mostrarResumenGuardado: { 'htmlResumenGuardado(r)': PT },
+  pintarTerminados: { 'htmlTerminados(w)': PT },
+})
+Object.assign(SEGURAS.htmlItemAbierto, { "terminadosPapel.map(htmlSugerenciaTerminado).join('')": PT })
+SEGURAS.renderizarConfirmacion = { ...(SEGURAS.renderizarConfirmacion ?? {}), 'htmlConfirmacionTerminados(w)': PT }
 Object.assign(SEGURAS.abrirDetalleIngreso, {
   'htmlFaltanRenglones(entrega)': POR_INGRESAR,
   'htmlCircuitoDetalle(entrega, { resultado: estado.resultadoCircuito, fechaInicio: estado.fechaInicioCircuito, puedeReintentar: puedePasarAlCircuito(), })':

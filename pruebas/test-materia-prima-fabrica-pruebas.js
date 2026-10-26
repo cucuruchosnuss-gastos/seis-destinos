@@ -69,7 +69,7 @@ const PRELUDIO = HELPERS + `
 `
 
 const FUNCIONES = ['esc', 'puedeCargarEn', 'unidadesParaElegir', 'puedeCargarAlguna', 'nombreUnidad', 'poblarSelectUnidades',
-  'abrirWizard', 'cargarUnidadesStockVisibles', 'cargarUnidadesRecepcion', 'cargarTransferenciasRecibidas',
+  'abrirWizard', 'mostrarResumenGuardado', 'cargarUnidadesStockVisibles', 'cargarUnidadesRecepcion', 'cargarTransferenciasRecibidas',
   'renderizarAvisoSinStock', 'renderizarInternos']
 
 function nuevo(fabrica, unidades = UNIDADES) {

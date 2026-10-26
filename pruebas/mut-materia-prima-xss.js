@@ -28,6 +28,9 @@ correrMutaciones({
     'htmlItemAbierto', 'actualizarSumaMixtaEnVivo', 'renderizarConfirmacion',
     'htmlResultadoCircuito', 'renderizarInternos', 'htmlFilaInterno',
     'renderizarResumenInterno', 'renderizarItemsInternos',
+    // El producto terminado en el ingreso (26/10/2026).
+    'htmlTerminados', 'htmlRenglonTerminado', 'htmlLoteTerminado', 'htmlSugerenciaTerminado',
+    'htmlResumenGuardado', 'htmlConfirmacionTerminados',
   ],
   manuales: [
     // Los sinks cerrados en este barrido.

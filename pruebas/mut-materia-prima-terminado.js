@@ -1,0 +1,118 @@
+// Mutaciones de test-materia-prima-terminado.js (producto terminado desde el
+// Ingreso de materia prima, 26/10/2026). Ver mutar.js: lo que vive en
+// js/ingreso-terminado.js (la lógica de la gestión) se muta en ese archivo,
+// por el import.
+//
+//   node pruebas/mut-materia-prima-terminado.js
+//
+// UN RUNNER POR VEZ: dos corridas en paralelo se pisan el mut-tmp-*.html.
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+const RAIZ = path.join(__dirname, '..')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-materia-prima-terminado.js'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/materia-prima.html'),
+  funciones: ['htmlTerminados', 'htmlRenglonTerminado', 'htmlLoteTerminado', 'htmlSugerenciaTerminado', 'htmlResumenGuardado', 'htmlConfirmacionTerminados'],
+  equivalentes: [
+    { expr: 'esc(r.id)', motivo: "el id del renglón lo arma el código ('pt' y un contador)" },
+    { expr: 'esc(vacia)', motivo: 'el texto de la opción vacía es constante del código' },
+    { expr: 'esc(placeholder)', motivo: 'el placeholder del lote es texto constante del código' },
+    { expr: 'esc(tituloPt)', motivo: 'el título lleva el nombre de la fábrica (unidades_negocio), escapado: se mira en test-materia-prima-xss.js' },
+    { expr: "esc(nombreUnidad(w.encabezado.unidadId) || 'la fábrica')", motivo: 'el nombre de la fábrica: se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(textoCajas(t.cajas))', motivo: 'un número formateado por el código' },
+    { expr: 'esc(textoCajas(r.cajas))', motivo: 'un número formateado por el código' },
+    { expr: 'esc(textoCajas(cajasTerminado(w)))', motivo: 'un número formateado por el código' },
+    { expr: 'esc(i.cantidad)', motivo: 'textoCantidad(): número y unidad; la marca se mira en test-materia-prima-xss.js' },
+    { expr: 'esc(w.terminadoError)', motivo: 'el error (de la pantalla o de la base): se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(remitoTerminado(w))', motivo: 'lo que escribió la persona: se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(proveedor)', motivo: 'la razón social: se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(x.id)', motivo: 'ids de la base (uuid): se miran con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(x.nombre)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(p.id)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(p.nombre)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: "esc(productoTerminadoDe(w, r.productoId)?.nombre ?? '(producto)')", motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(r.loteVigente)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(valor)', motivo: 'el lote: se mira con marca en test-materia-prima-xss.js' },
+    { expr: "esc([pr.nombre, cono].filter(Boolean).join(' · '))", motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: "esc(loteDeRenglon(r, ing) || '—')", motivo: 'se mira con marca (en mayúsculas) en test-materia-prima-xss.js' },
+    { expr: "esc(remito || '—')", motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(i.nombre)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(t.nombre)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(t.presentacion)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+    { expr: 'esc(t.lote)', motivo: 'se mira con marca en test-materia-prima-xss.js' },
+  ],
+  manuales: [
+    // ── Qué se ofrece ──────────────────────────────────────────────────
+    { nombre: 'ofrece lo de cualquier proveedor', de: '      return terminadosCargables(w).filter(p => p.origen_proveedor_id === w.proveedorId)', a: '      return terminadosCargables(w)' },
+    { nombre: 'ofrece productos sin presentación activa', de: '      return (cat?.productos ?? []).filter(p => conPres.has(p.id))', a: '      return cat?.productos ?? []' },
+    { nombre: 'ofrece al completar un ingreso existente', de: '      return !!w && !w.completar && !w.terminadoRes', a: '      return !!w && !w.terminadoRes' },
+    { nombre: 'ofrece aunque ya esté grabado', de: '      return !!w && !w.completar && !w.terminadoRes', a: '      return !!w && !w.completar' },
+    { nombre: 'el buscador del catálogo no trae producto terminado', de: '      const terminados = buscarTerminados(estado.wizard, termino)', a: '      const terminados = []' },
+    { nombre: 'con producto terminado dice "Nada en el catálogo"', de: '      if (!encontrados.length && !terminados.length) {', a: '      if (!encontrados.length) {' },
+    { nombre: 'el papel con medio nombre propone', de: '        return n.length > 0 && t.includes(n)', a: '        return n.length > 0 && (t.includes(n) || n.includes(t))' },
+    { nombre: 'cambiar de fábrica conserva lo de la otra', de: '      if (w.terminadoCat && w.terminadoCat.unidadId !== unidad) w.terminados = []\n', a: '' },
+    { nombre: 'relee el catálogo cada vez', de: '      if (w.terminadoCat?.unidadId === unidad && !w.terminadoCat.error) return\n', a: '' },
+    { nombre: 'el catálogo de todas las fábricas', de: ".select('id, nombre, orden, tipo_masa, origen_tipo, origen_proveedor_id').eq('unidad_negocio_id', unidadId)", a: ".select('id, nombre, orden, tipo_masa, origen_tipo, origen_proveedor_id')" },
+    { nombre: 'las presentaciones dadas de baja también', de: ".in('producto_id', ids).eq('activa', true))", a: ".in('producto_id', ids))" },
+    { nombre: 'los lotes vigentes de todas las fábricas', de: ".from('producto_lote_vigente').select('producto_id, lote').eq('unidad_negocio_id', unidadId))", a: ".from('producto_lote_vigente').select('producto_id, lote'))" },
+    // ── El renglón ─────────────────────────────────────────────────────
+    { nombre: 'no elige la presentación única', de: "presentacionId: pres.length === 1 ? pres[0].id : ''", a: "presentacionId: ''" },
+    { nombre: 'no trae el lote vigente', de: "loteVigente: cat?.vigentes?.get(productoId) ?? ''", a: "loteVigente: ''" },
+    { nombre: 'pasar a producto terminado no saca el renglón de los insumos', de: '      w.items = w.items.filter(i => i.uid !== item.uid)\n', a: '' },
+    { nombre: 'un número con decimales queda como cajas', de: 'agregarTerminado(productoId, Number.isInteger(n) && n > 0 ? n : null)', a: 'agregarTerminado(productoId, n > 0 ? n : null)' },
+    { nombre: 'el remito no propone el número del remito', de: "      return w.encabezado.tipoDoc === 'remito' ? (w.encabezado.numeroDoc || '') : ''", a: "      return ''" },
+    { nombre: 'propone el número de una factura como remito', de: "      return w.encabezado.tipoDoc === 'remito' ? (w.encabezado.numeroDoc || '') : ''", a: "      return w.encabezado.numeroDoc || ''" },
+    { nombre: 'el lote de solo lectura se puede pisar', de: '        if (t.readOnly) return\n', a: '' },
+    { nombre: 'el lote no pasa a mayúsculas al escribir', de: '        const may = String(t.value).toUpperCase()', a: '        const may = String(t.value)' },
+    { nombre: '"No, es otro" no vacía el lote', de: "      r.lote = resp === 'si' ? r.loteVigente : ''", a: '      r.lote = r.loteVigente' },
+    { nombre: 'acepta cualquier respuesta del lote', de: "      if (!r || !r.loteVigente || (resp !== 'si' && resp !== 'otro')) return", a: '      if (!r) return' },
+    { nombre: 'con Sí el campo se puede editar', de: "      const input = modo === 'si' ? campo(' readonly aria-readonly=\"true\"', r.loteVigente, '')", a: "      const input = modo === 'si' ? campo('', r.loteVigente, '')" },
+    { nombre: '"No, es otro": el campo no es obligatorio', de: "        : modo === 'otro' ? campo(' required aria-required=\"true\"', r.lote, 'Escribí el lote')", a: "        : modo === 'otro' ? campo('', r.lote, 'Escribí el lote')" },
+    { nombre: 'el campo del lote sin largo máximo', de: ' maxlength="${LARGO_MAXIMO_LOTE}"', a: '' },
+    { nombre: 'la pregunta sin el último lote', de: 'Último lote: <strong>${esc(r.loteVigente)}</strong>. ¿Sigue siendo este?', a: '¿Sigue siendo este?' },
+    { nombre: 'pasar a una presentación sin cono no suelta el cono', de: "        if (!presentacionDe(w.terminadoCat?.cat, r.presentacionId)?.con_cono) r.marcaId = ''", a: '        void 0' },
+    { nombre: 'Quitar no quita', de: '        w.terminados = w.terminados.filter(r => r.id !== b.dataset.ptQuitar)', a: '        void 0' },
+    { nombre: 'la sugerencia no dice "Producto terminado"', de: '<span class="sugerencia-cat__meta"><span class="chip-terminado">Producto terminado</span></span>', a: '<span class="sugerencia-cat__meta"></span>' },
+    // ── Lo que falta y los parámetros ──────────────────────────────────
+    { nombre: 'origen otra fábrica en vez del proveedor', de: "        unidadId: w.encabezado.unidadId, fecha: w.encabezado.fecha, origen: 'proveedor',", a: "        unidadId: w.encabezado.unidadId, fecha: w.encabezado.fecha, origen: 'fabrica',", },
+    { nombre: 'sin proveedor del padrón no lo dice', de: "      if (!w.proveedorId) return 'El producto terminado tiene que venir de un proveedor del padrón: volvé a «Datos» y elegilo en el buscador.'\n", a: '' },
+    { nombre: 'un p_client_uuid nuevo en cada intento', de: '        proveedorId: w.proveedorId, remito: remitoTerminado(w), observaciones: \'\',\n        renglones: w.terminados, clientUuid: w.terminadoUuid,', a: "        proveedorId: w.proveedorId, remito: remitoTerminado(w), observaciones: '',\n        renglones: w.terminados, clientUuid: crypto.randomUUID()," },
+    { nombre: 'validarTerminados no avisa', de: "      if (falta) mostrarError(`Producto terminado: ${falta}`)\n", a: '' },
+    // js/ingreso-terminado.js (la lógica de la gestión), por el import:
+    { nombre: 'común: sin vigente se pregunta igual', de: "  if (!r.loteVigente) return 'otro'\n", a: '' },
+    { nombre: 'común: sin contestar ya cuenta como Sí', de: "  if (r.loteResp === 'si') return 'si'", a: "  if (r.loteResp !== 'otro') return 'si'" },
+    { nombre: 'común: con Sí viaja lo escrito', de: "  return normalizarLoteIngreso(modoLoteIngreso(r, ing) === 'si' ? r.loteVigente : r.lote)", a: '  return normalizarLoteIngreso(r.lote)' },
+    { nombre: 'común: el lote sin mayúsculas', de: "  return String(texto ?? '').trim().toUpperCase()", a: "  return String(texto ?? '').trim()" },
+    { nombre: 'común: el lote sin recortar', de: "  return String(texto ?? '').trim().toUpperCase()", a: "  return String(texto ?? '').toUpperCase()" },
+    { nombre: 'común: de un proveedor también manda la fábrica', de: "  if (ing.origen === 'proveedor') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: null }", a: "  if (ing.origen === 'proveedor') return { p_proveedor_id: ing.proveedorId || null, p_unidad_origen_id: ing.unidadId }" },
+    { nombre: 'común: el cono viaja aunque la presentación no lleve', de: '      marca_id: pr?.con_cono && r.marcaId ? r.marcaId : null,', a: '      marca_id: r.marcaId ? r.marcaId : null,' },
+    { nombre: 'común: las cajas como texto', de: '      cajas: r.cajas,\n      lote: lote || null,', a: '      cajas: String(r.cajas),\n      lote: lote || null,' },
+    { nombre: 'común: sin contestar se guarda igual', de: "    if (modoLoteIngreso(r, ing) === 'pregunta') return", a: '    if (false) return' },
+    { nombre: 'común: sin tope de 40', de: '    if (lote.length > LARGO_MAXIMO_LOTE) return', a: '    if (false) return' },
+    { nombre: 'común: el tope es 41', de: 'export const LARGO_MAXIMO_LOTE = 40', a: 'export const LARGO_MAXIMO_LOTE = 41' },
+    { nombre: 'común: acepta cajas con decimales', de: '    if (!Number.isInteger(r.cajas) || r.cajas <= 0) return', a: '    if (r.cajas == null || r.cajas <= 0) return' },
+    { nombre: 'común: sin el cono se guarda igual', de: '    if (pr?.con_cono && !r.marcaId) return', a: '    if (false) return' },
+    { nombre: 'común: el remito vacío viaja vacío', de: '    p_remito: remito || null,', a: '    p_remito: remito,' },
+    { nombre: 'común: sin client_uuid', de: '    p_client_uuid: ing.clientUuid,\n', a: '' },
+    // ── Guardar ────────────────────────────────────────────────────────
+    { nombre: 'no se graba el producto terminado', de: '      const errorTerminado = await guardarTerminado(w)', a: '      const errorTerminado = null' },
+    { nombre: 'si falla el producto terminado se sigue con los insumos', de: '      if (errorTerminado) {\n        avisoGuardado(errorTerminado)', a: '      if (false) {\n        avisoGuardado(errorTerminado)' },
+    { nombre: 'después de un error del producto terminado queda trabado', de: "        avisoGuardado(errorTerminado)\n        w.guardando = false\n", a: '        avisoGuardado(errorTerminado)\n' },
+    { nombre: 'solo producto terminado crea igual un ingreso de materia prima', de: '      if (soloPt) {\n        const resumen = resumenGuardado(w, [])', a: '      if (false) {\n        const resumen = resumenGuardado(w, [])' },
+    { nombre: 'al confirmar no se valida el producto terminado', de: "      if (!validarTerminados()) { irAPasoWz('items'); return }\n      // Solo producto terminado (26/10/2026)", a: '      // Solo producto terminado (26/10/2026)' },
+    { nombre: 'Continuar no valida el producto terminado', de: "      if (!validarTerminados()) return\n      irAPasoWz('confirmar')", a: "      irAPasoWz('confirmar')" },
+    { nombre: 'Continuar exige insumos', de: "      if (!w.items.length && !w.terminados.length) return mostrarError('Agregá al menos un ítem.')", a: "      if (!w.items.length) return mostrarError('Agregá al menos un ítem.')" },
+    { nombre: 'el error de la base no va tal cual', de: '        return err?.message && !/fetch|network/i.test(err.message) ? err.message', a: "        return err?.message && !/fetch|network/i.test(err.message) ? 'No se pudo guardar.'" },
+    { nombre: 'sin conexión muestra el error técnico', de: '        return err?.message && !/fetch|network/i.test(err.message) ? err.message', a: '        return err?.message ? err.message' },
+    { nombre: 'vuelve a mandar lo ya grabado', de: '      if (!w.terminados.length || w.terminadoRes) return null\n      try {', a: '      if (!w.terminados.length) return null\n      try {' },
+    { nombre: 'no anota lo grabado', de: '        w.terminadoRes = data ?? {}', a: '        void data' },
+    { nombre: 'dos toques mandan dos', de: "      w.guardando = true\n      btn.disabled = true\n      btn.textContent = 'Guardando…'\n      avisoGuardado('')\n\n      // 0. El PRODUCTO", a: "      btn.disabled = true\n      btn.textContent = 'Guardando…'\n      avisoGuardado('')\n\n      // 0. El PRODUCTO" },
+    { nombre: 'no dice que el producto terminado quedó', de: "          extra += ' El producto terminado sí quedó cargado: al reintentar no se carga de nuevo.'", a: "          extra += ''" },
+    { nombre: 'el aviso final sin el producto terminado', de: '        mostrarExito(textoGuardado(w, w.items.length))', a: "        mostrarExito('Ingreso cargado.')" },
+    { nombre: 'sin el cartel con las dos partes', de: '        const resumen = w.terminadoRes ? resumenGuardado(w, w.items) : null', a: '        const resumen = null' },
+    { nombre: 'el aviso de un reintento reconocido', de: "      const pt = w.terminadoRes.reintento ? 'el producto terminado (ya estaba cargado: no se cargó dos veces)'", a: "      const pt = false ? 'el producto terminado (ya estaba cargado: no se cargó dos veces)'" },
+  ],
+})

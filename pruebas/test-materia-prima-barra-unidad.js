@@ -87,7 +87,7 @@ const FUNCIONES = [
   'filasPorIngresarVisibles', 'renderizarAccesoPorIngresar', 'htmlPorIngresar', 'renderizarPorIngresar',
   'renderizarInternos', 'htmlFilaInterno', 'formatearFechaTransito',
   'textoPendienteMp', 'htmlBurbujaMp', 'pintarPendientesMp',
-  'abrirWizard', 'poblarSelectUnidades',
+  'abrirWizard', 'poblarSelectUnidades', 'mostrarResumenGuardado',
   // De js/barra-unidad.js, por el import (el código REAL).
   'pasaFiltroUnidad', 'filtrarPorUnidad',
 ]
