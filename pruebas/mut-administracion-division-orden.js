@@ -83,7 +83,7 @@ correrMutaciones({
     { nombre: 'la vista previa GUARDA', de: "const { data, error } = await supabase.rpc('datos_division_orden', parametrosDivision(dv.ordenId, pctA, dv.comisiones))", a: "const { data, error } = await supabase.rpc('guardar_division_orden', parametrosDivision(dv.ordenId, pctA, dv.comisiones))" },
     { nombre: 'la vista previa con A vacío llama igual', de: "const invalido = pctA === null ? 'Poné el % de la parte A para ver cómo queda.' : validarDivision(pctA, dv.comisiones)", a: 'const invalido = null' },
     { nombre: 'una vista previa vieja pisa a la nueva', de: '        if (estado.division !== dv || turno !== dv.turno) return\n        dv.datos = data\n        dv.aviso = null', a: '        if (estado.division !== dv) return\n        dv.datos = data\n        dv.aviso = null' },
-    { nombre: 'guardar no imprime', de: '        imprimirDivision(data)\n', a: '' },
+    { nombre: 'guardar no imprime', de: '        imprimirDivision(data, { despuesDeGuardar: true })\n', a: '' },
     { nombre: 'guardar sin validar', de: '      if (dv.errorGuardar) { pintarDivision(); return }\n', a: '' },
     { nombre: 'guardar: doble toque manda dos', de: '      if (!dv || dv.guardando) return\n      const { a } = camposDivision()', a: '      if (!dv) return\n      const { a } = camposDivision()' },
     { nombre: 'guardar: el error de la base se tapa', de: "dv.errorGuardar = err?.message || 'No se pudo guardar la división. Probá de nuevo.'", a: "dv.errorGuardar = 'No se pudo guardar la división. Probá de nuevo.'" },

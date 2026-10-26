@@ -472,13 +472,19 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   }))
 }
 
+// La hoja se arma con promesas (sin relojes): unas vueltas alcanzan.
+async function hojaArmada() { for (let i = 0; i < 30; i++) await new Promise(r => setImmediate(r)) }
+
 // ── La hoja CON precios ────────────────────────────────────────────────────
 {
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, estado_valorizacion: 'valorizada', total: 46000 }, items: ITEMS.map(i => ({ ...i, precio_caja: i.id === 'i1' ? 3000 : 4000, subtotal: i.id === 'i1' ? 30000 : 16000 })) })
   esperas.push(S.abrirOrden('o1').then(async () => {
-    // Imprimir mide la hoja antes (07/10/2026): se espera.
-    await S.imprimirOrden()
+    // Imprimir mide la hoja antes (07/10/2026). Desde el 26/10/2026 (el iPhone)
+    // la hoja se arma en segundo plano al dibujar la orden: se espera a que
+    // termine (imprime en el toque si ya estaba, o apenas termina).
+    S.imprimirOrden()
+    await hojaArmada()
     const h = S.__els.get('ad-impresion').innerHTML
     chk('imprimir desde Administración lleva PRECIOS', S.__impresiones() === 1 && /PRECIO X CAJA/.test(h) && /\$ 30\.000,00/.test(h) && /rh-total__plata">\$ 46\.000,00/.test(h))
     chk('con la misma hoja: dos copias y la leyenda', (h.match(/<section class="rh-copia/g) || []).length === 2 && /No válido como factura/.test(h))
@@ -488,7 +494,8 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   const T = nuevo()
   preparar(T)
   esperas.push(T.abrirOrden('o1').then(async () => {
-    await T.imprimirOrden()
+    T.imprimirOrden()
+    await hojaArmada()
     const h = T.__els.get('ad-impresion').innerHTML
     chk('sin valorizar, la hoja con precios dice "—" (nunca $ 0,00)', /PRECIO X CAJA/.test(h) && !/0,00/.test(h))
   }))

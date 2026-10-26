@@ -244,7 +244,10 @@ export function nombreInsumoHoja(r) {
 // en pesos al lado de TOTAL DE CAJAS. Sin `conPrecios: true`, ninguna columna
 // de plata, aunque el objeto traiga precios.
 export const COPIAS_IMPRESION = ['ORIGINAL', 'DUPLICADO']
-export const COPIAS_PDF = ['ORIGINAL']
+// El PDF es IGUAL a la impresión (26/10/2026): original y duplicado. En media
+// hoja, los dos en la misma A4 con la línea de corte; en hojas enteras, cada
+// copia en sus hojas (generarPdf: una página del PDF por hoja).
+export const COPIAS_PDF = ['ORIGINAL', 'DUPLICADO']
 export const LEYENDA_LEGAL = 'Documento interno. No válido como factura.'
 
 // Media A4 y una A4 entera, en milímetros, adentro de los 8 mm de margen de
@@ -631,6 +634,128 @@ export async function armarHoja(contenedor, orden, { conPrecios = false, copias 
   return plan
 }
 
+// ── IMPRIMIR PEGADO AL TOQUE (26/10/2026: en el iPhone no imprimía) ────────
+// Safari del iPhone y del iPad IGNORA window.print() si no se llama pegado al
+// toque de la persona: con un await antes (armarHoja espera la letra, el logo
+// y la medición, hasta 3 s) el toque "se vence" y no pasa nada. Entonces:
+//  - la hoja se arma ANTES, apenas se muestra la orden (prepararHoja), en una
+//    caja aparte que recién al final se pasa al contenedor de impresión;
+//  - el click de Imprimir (imprimirHoja) llama a window.print() SIN NINGÚN
+//    await si la hoja de ESA orden ya está lista;
+//  - si todavía no está (se tocó muy rápido, o se reimprime desde una fila sin
+//    abrir la orden): se arma y, en el iPhone/iPad, aparece "Listo, imprimir",
+//    que imprime en SU toque; en los demás, imprime apenas termina (como antes).
+// `imp` es el estado de UN contenedor de impresión (nuevaImpresion): qué hoja
+// tiene adentro (la clave) y si terminó de armarse. Lo que escribe OTRA cosa
+// en el contenedor (la división, la nota de débito) llama a olvidarHoja(imp).
+export function nuevaImpresion() {
+  return { clave: null, lista: false, armando: null }
+}
+
+// Qué hoja es: la orden entera, con o sin precios y qué copias.
+export function claveHoja(orden, { conPrecios = false, copias = COPIAS_IMPRESION } = {}) {
+  return JSON.stringify([orden ?? null, conPrecios === true, copias])
+}
+
+export function hojaLista(imp, orden, opciones = {}) {
+  return !!imp && imp.lista === true && imp.clave === claveHoja(orden, opciones)
+}
+
+export function olvidarHoja(imp) {
+  if (!imp) return
+  imp.clave = null
+  imp.lista = false
+}
+
+// Arma la hoja de esa orden en segundo plano (una sola vez por orden). Las
+// armadas van en fila: una vieja que termina tarde nunca pisa a la nueva, y
+// una que ya no es la que se quiere (cambió la orden) ni se arma.
+export function prepararHoja(imp, contenedor, orden, { conPrecios = false, copias = COPIAS_IMPRESION, doc = document } = {}) {
+  const clave = claveHoja(orden, { conPrecios, copias })
+  if (imp.clave === clave && (imp.lista || imp.armando)) return imp.armando ?? Promise.resolve(true)
+  imp.clave = clave
+  imp.lista = false
+  const antes = imp.armando ?? Promise.resolve()
+  const armando = antes.then(async () => {
+    if (imp.clave !== clave || !contenedor) return false
+    const caja = doc.createElement('div')
+    await armarHoja(caja, orden, { conPrecios, copias, doc })
+    if (imp.clave !== clave) return false
+    contenedor.innerHTML = caja.innerHTML
+    return true
+  }).catch((err) => { console.error('armar la hoja:', err); return false }).then((ok) => {
+    if (imp.clave === clave) imp.lista = ok === true
+    if (imp.armando === armando) imp.armando = null
+    return ok === true
+  })
+  imp.armando = armando
+  return armando
+}
+
+// El iPhone o el iPad (también el iPad que se presenta como una Mac).
+export function esIos(nav = (typeof navigator === 'undefined' ? null : navigator)) {
+  const ua = String(nav?.userAgent ?? '')
+  return /iPad|iPhone|iPod/.test(ua) || (nav?.platform === 'MacIntel' && Number(nav?.maxTouchPoints) > 1)
+}
+
+// El click de Imprimir. NADA de await antes de imprimir(): es la regla de todo
+// esto. Devuelve qué hizo: 'impreso' (estaba lista: en el mismo toque),
+// 'boton' (iPhone/iPad: se arma y aparece "Listo, imprimir") o 'despues' (los
+// demás: imprime apenas termina de armarse).
+export function imprimirHoja(imp, contenedor, orden, { conPrecios = false, copias = COPIAS_IMPRESION, doc = document, ios = esIos(), imprimir = null } = {}) {
+  const print = imprimir ?? (() => window.print())
+  if (hojaLista(imp, orden, { conPrecios, copias })) { print(); return 'impreso' }
+  prepararHoja(imp, contenedor, orden, { conPrecios, copias, doc }).then(() => {
+    if (!hojaLista(imp, orden, { conPrecios, copias })) return
+    if (ios) mostrarListoParaImprimir({ doc, imprimir: print })
+    else print()
+  })
+  return ios ? 'boton' : 'despues'
+}
+
+// "Listo, imprimir" (iPhone/iPad): un cartel abajo con un botón que llama a
+// imprimir() en SU toque. Uno solo por vez; no sale en el papel.
+export function mostrarListoParaImprimir({ doc = document, imprimir, texto = 'La hoja está lista.' } = {}) {
+  asegurarEstilosListo(doc)
+  doc.getElementById('rh-listo')?.remove()
+  const caja = doc.createElement('div')
+  caja.id = 'rh-listo'
+  caja.className = 'rh-listo'
+  caja.setAttribute('role', 'dialog')
+  caja.setAttribute('aria-label', 'Imprimir')
+  caja.innerHTML = `<p class="rh-listo__texto">${escHoja(texto)}</p>` +
+    '<div class="rh-listo__botones"><button type="button" class="rh-listo__si" data-rh-listo="imprimir">Listo, imprimir</button>' +
+    '<button type="button" class="rh-listo__no" data-rh-listo="cerrar">Cancelar</button></div>'
+  caja.addEventListener('click', (ev) => {
+    const b = ev.target?.closest?.('[data-rh-listo]')
+    if (!b) return
+    caja.remove()
+    if (b.dataset.rhListo === 'imprimir') imprimir()
+  })
+  doc.body.appendChild(caja)
+  caja.querySelector('.rh-listo__si')?.focus?.()
+  return caja
+}
+
+const ESTILOS_LISTO = `
+.rh-listo { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 2147483000;
+  max-width: 420px; margin: 0 auto; background: #fff; color: #111; border: 1px solid #111; border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 14px; font: 600 15px/1.35 system-ui, -apple-system, sans-serif; }
+.rh-listo__texto { margin: 0 0 10px; }
+.rh-listo__botones { display: flex; gap: 8px; }
+.rh-listo__botones button { flex: 1; min-height: 48px; border-radius: 12px; font: inherit; cursor: pointer; }
+.rh-listo__si { background: #111; color: #fff; border: 1px solid #111; }
+.rh-listo__no { background: #fff; color: #111; border: 1px solid #111; }
+@media print { .rh-listo { display: none !important; } }
+`
+function asegurarEstilosListo(doc = document) {
+  if (!doc || doc.getElementById('rh-listo-estilos')) return
+  const s = doc.createElement('style')
+  s.id = 'rh-listo-estilos'
+  s.textContent = ESTILOS_LISTO
+  doc.head.appendChild(s)
+}
+
 // ── Los estilos de la hoja ─────────────────────────────────────────────────
 // Se inyectan UNA vez. SOLO NEGRO SOBRE BLANCO (nada de grises claros; las
 // líneas de 1 px o más) y la letra Archivo, con respaldo sans-serif. Los
@@ -806,8 +931,9 @@ export function cargarScript(url, doc = document) {
   })
 }
 
-// Arma el PDF (una copia, el original) en el navegador, sin servidor. Con la
-// MISMA medición que la impresión: si no entra en media hoja, hojas enteras.
+// Arma el PDF (las dos copias, como la impresión) en el navegador, sin
+// servidor. Con la MISMA medición que la impresión: si no entra en media hoja,
+// hojas enteras.
 export async function generarPdf(orden, { conPrecios = false } = {}) {
   for (const url of LIBRERIAS_PDF) await cargarScript(url)
   asegurarEstilosHoja()

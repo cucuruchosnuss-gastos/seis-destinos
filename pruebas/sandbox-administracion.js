@@ -41,7 +41,7 @@ const FUNCIONES_BASE = [
   'htmlPanelComision', 'htmlComisionOrden', 'abrirComision', 'elegirModoComision', 'cambiarValorComision', 'cancelarComision',
   'guardarComision', 'porcentajeComision',
   'guardarValorizacion', 'cancelarValorizar', 'pedirAnular', 'cancelarAnular', 'confirmarAnular',
-  'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
+  'ordenParaHoja', 'imprimirOrden', 'prepararHojaOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
   // Clientes
   'leerSaldos', 'pasaLimite', 'limiteDe', 'contarSobreLimite', 'clientesFiltrados', 'htmlFilaCliente', 'htmlListaClientes',
   'pintarClientes', 'mostrarClientes', 'abrirAlta', 'puedeDarAlta', 'parametrosAlta', 'guardarAlta', 'leerCuenta', 'detalleMovimiento',
@@ -103,6 +103,9 @@ const FUNCIONES_BASE = [
   'textoLotesHoja', 'faltanteDeRenglon', 'descripcionHoja', 'cantidadHoja', 'totalInsumosHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La impresión nueva (07/10/2026): medida, media hoja u hojas enteras.
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
+  // Imprimir pegado al toque, por el iPhone (26/10/2026): del común y de la pantalla.
+  'nuevaImpresion', 'claveHoja', 'hojaLista', 'olvidarHoja', 'prepararHoja', 'esIos', 'imprimirHoja', 'mostrarListoParaImprimir',
+  'asegurarEstilosListo', 'impresionHoja',
   // Sin cortes de más (23/10/2026): las medidas que no pueden ser.
   'medidasRaras', 'textoMedidaRara', 'registrarMedidaRara', 'hojaConEstilos', 'esperarHojaLista',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf', 'enviarOrden',
@@ -207,7 +210,7 @@ const CONSTANTES_BASE = [
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
   'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'DIAS_ERRORES', 'GRAVEDAD_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
-  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA',
+  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'ESTILOS_LISTO',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
   // Las notas de débito (24/10/2026)

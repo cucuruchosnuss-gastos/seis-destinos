@@ -1464,6 +1464,7 @@
     import {
       armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
+      nuevaImpresion, prepararHoja, imprimirHoja, olvidarHoja, esIos, mostrarListoParaImprimir,
       cantidadInsumoHoja, unidadHoja, cargarScript, LIBRERIAS_PDF,
       ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
@@ -3331,6 +3332,8 @@
         }
       }
       pintarAccionesOrden()
+      // La hoja, armada antes del toque de Imprimir (el iPhone).
+      prepararHojaOrden()
     }
 
     function pintarAccionesOrden() {
@@ -3837,12 +3840,29 @@
 
     // La hoja se MIDE antes de imprimir (07/10/2026): si los renglones no
     // entran en media hoja, cada copia va en hojas enteras (armarHoja).
-    async function imprimirOrden() {
+    // EN EL IPHONE (26/10/2026): Safari ignora window.print() si no está pegado
+    // al toque, así que la hoja se arma ANTES, cada vez que se dibuja la orden
+    // (prepararHojaOrden, desde pintarOrden; la misma orden no se vuelve a
+    // armar), y el click imprime sin ningún await. Si todavía no estaba, se
+    // arma y en el iPhone aparece "Listo, imprimir" (js/retiros-comun.js). La
+    // división y la nota de débito usan el mismo contenedor: lo "olvidan".
+    function impresionHoja() {
+      if (!estado.impresion) estado.impresion = nuevaImpresion()
+      return estado.impresion
+    }
+
+    function prepararHojaOrden() {
+      const d = estado.orden
+      if (!d?.orden || d.error) return
+      asegurarEstilosHoja()
+      prepararHoja(impresionHoja(), document.getElementById('ad-impresion'), ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })
+    }
+
+    function imprimirOrden() {
       const d = estado.orden
       if (!d?.orden) return
       asegurarEstilosHoja()
-      await armarHoja(document.getElementById('ad-impresion'), ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })
-      window.print()
+      return imprimirHoja(impresionHoja(), document.getElementById('ad-impresion'), ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })
     }
 
     function textoResultadoEnvio(r) {
@@ -4102,10 +4122,14 @@
 
     // A4 vertical: la regla va DENTRO de la hoja (en el body, después de la
     // de js/retiros-comun.js), así gana solo mientras está esta hoja.
-    function imprimirDivision(datos) {
+    // Se imprime DESPUÉS de guardar (un await): en el iPhone el toque ya se
+    // venció, así que ahí aparece "Listo, imprimir" (26/10/2026).
+    function imprimirDivision(datos, { despuesDeGuardar = false } = {}) {
       const dv = estado.division
+      olvidarHoja(impresionHoja())
       document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +
         htmlHojaDivision(datos, dv?.facturas, dv?.moneda)
+      if (despuesDeGuardar && esIos()) { mostrarListoParaImprimir({ imprimir: () => window.print(), texto: 'La división quedó guardada.' }); return }
       window.print()
     }
 
@@ -4327,7 +4351,7 @@
         if (cambianLasPartes) pintarFacturasDivision()
         dv.guardando = false
         pintarDivision()
-        imprimirDivision(data)
+        imprimirDivision(data, { despuesDeGuardar: true })
       } catch (err) {
         console.error('No se pudo guardar la división:', err)
         if (estado.division === dv) dv.errorGuardar = err?.message || 'No se pudo guardar la división. Probá de nuevo.'
@@ -6221,6 +6245,9 @@
     function imprimirNotaDebito() {
       const d = estado.notaDebito?.datos
       if (!d) return
+      // Sin ningún await antes del print (el iPhone). El contenedor deja de
+      // tener la hoja de la orden.
+      olvidarHoja(impresionHoja())
       document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 8mm; } }</style>' +
         `<div class="ndh ndh--papel">${htmlNotaDebito(d)}</div>`
       window.print()
