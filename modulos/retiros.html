@@ -881,7 +881,7 @@
     } from '../js/utils.js'
     import {
       armarHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden, compartirTextoOrden,
-      enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
+      enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION, nuevaImpresion, prepararHoja, imprimirHoja,
       cantidadInsumoHoja, unidadHoja, decimalesDeUnidad, cantidadInsumoBultoHoja,
       ordenarRenglonesHoja, textoDestinoDevuelto,
     } from '../js/retiros-comun.js'
@@ -4302,6 +4302,8 @@
       document.getElementById('rt-hecho').innerHTML = htmlHecho(h)
       document.getElementById('rt-hecho-empresa-aviso').innerHTML = htmlAvisoEmpresa()
       pintarAccionesHoja('hecho', h)
+      // La hoja, armada antes del toque de Imprimir (el iPhone).
+      prepararHojaDe(h)
     }
 
     function mostrarHecho() {
@@ -4429,10 +4431,25 @@
 
     // La hoja se MIDE antes de imprimir (07/10/2026): si los renglones no
     // entran en media hoja, cada copia va en hojas enteras (armarHoja).
-    async function imprimirOrden(o, cliente) {
+    // EN EL IPHONE (26/10/2026): Safari ignora window.print() si no está pegado
+    // al toque, así que la hoja se arma ANTES, apenas se muestra la orden
+    // (prepararHojaDe, desde pintarHecho y abrirMia), y el click imprime sin
+    // ningún await. Si todavía no estaba (Reimprimir desde la fila sin abrir la
+    // orden), se arma y en el iPhone aparece "Listo, imprimir" (js/retiros-comun.js).
+    function impresionHoja() {
+      if (!estado.impresion) estado.impresion = nuevaImpresion()
+      return estado.impresion
+    }
+
+    function prepararHojaDe(obj) {
+      if (!obj?.orden) return
       asegurarEstilosHoja()
-      await armarHoja(document.getElementById('rt-impresion'), ordenParaHoja(o, { cliente }), { conPrecios: false, copias: COPIAS_IMPRESION })
-      window.print()
+      prepararHoja(impresionHoja(), document.getElementById('rt-impresion'), ordenParaHoja(obj.orden, { cliente: obj.cliente }), { conPrecios: false, copias: COPIAS_IMPRESION })
+    }
+
+    function imprimirOrden(o, cliente) {
+      asegurarEstilosHoja()
+      return imprimirHoja(impresionHoja(), document.getElementById('rt-impresion'), ordenParaHoja(o, { cliente }), { conPrecios: false, copias: COPIAS_IMPRESION })
     }
 
     // Enviar y compartir: lo que pasó se dice pegado a los botones.
@@ -4693,6 +4710,8 @@
       document.getElementById('rt-mio-cuerpo').innerHTML = htmlDetalleMio(o)
       document.getElementById('rt-mio-empresa-aviso').innerHTML = htmlAvisoEmpresa()
       pintarAccionesHoja('mio', estado.mio)
+      // La hoja, armada antes del toque de Imprimir (el iPhone).
+      prepararHojaDe(estado.mio)
       asegurarPlanillasMio(o)
     }
 

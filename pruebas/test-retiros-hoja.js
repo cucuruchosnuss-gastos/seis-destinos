@@ -187,7 +187,10 @@ const ORDEN = {
   chk('la leyenda en cada hoja', (h.match(/No válido como factura/g) || []).length === 4)
   chk('una hoja nueva empieza en otra página', /\.rh-pagina \+ \.rh-pagina \{[^}]*break-before: page/.test(S.ESTILOS_HOJA))
   chk('cuántas páginas: media = 1; enteras = hojas × copias', S.paginasHoja({ modo: 'media' }) === 1 && S.paginasHoja({ modo: 'entera', paginas: [[0, 2], [2, 3]] }) === 4)
-  chk('imprimir mide la hoja antes (armarHoja), en la Carga', /async function imprimirOrden[\s\S]{0,200}await armarHoja\(document\.getElementById\('rt-impresion'\)/.test(fs.readFileSync(ARCHIVO, 'utf8')))
+  // Desde el 26/10/2026 (el iPhone): la hoja se mide y arma ANTES del toque
+  // (prepararHoja → armarHoja) y el click imprime sin await (imprimirHoja).
+  chk('imprimir mide la hoja antes (armarHoja, por prepararHoja), en la Carga', /function imprimirOrden\(o, cliente\) \{[\s\S]{0,200}return imprimirHoja\(impresionHoja\(\), document\.getElementById\('rt-impresion'\)/.test(fs.readFileSync(ARCHIVO, 'utf8')) &&
+    /await armarHoja\(caja, orden, \{ conPrecios, copias, doc \}\)/.test(comun))
   chk('el PDF usa la misma medición', /plan = planHoja\(await medirHoja\(orden, \{ conPrecios \}\)\)/.test(comun) && /copias: COPIAS_PDF, plan/.test(comun))
 }
 
@@ -215,7 +218,8 @@ const ORDEN = {
   chk('y el aviso de adjuntar el PDF', decodeURIComponent(m.split('&body=')[1]).includes('Va adjunta en PDF'))
   chk('un mail inválido no se usa (va sin destinatario)', S.urlMailto('no es un mail', ORDEN).startsWith('mailto:?subject=') && S.urlMailto('a@b.co?cc=x@y.z', ORDEN).startsWith('mailto:?subject='))
   chk('las librerías del PDF salen de cdnjs', S.LIBRERIAS_PDF.every(u => u.startsWith('https://cdnjs.cloudflare.com/ajax/libs/')) && S.LIBRERIAS_PDF.some(u => /jspdf/.test(u)) && S.LIBRERIAS_PDF.some(u => /html2canvas/.test(u)))
-  chk('el PDF lleva UNA sola copia, el original', JSON.stringify(S.COPIAS_PDF) === '["ORIGINAL"]' && /copias: COPIAS_PDF/.test(comun))
+  // 26/10/2026 (pedido de Facu): el PDF es igual a la impresión.
+  chk('el PDF lleva las DOS copias, el original y el duplicado', JSON.stringify(S.COPIAS_PDF) === '["ORIGINAL","DUPLICADO"]' && /copias: COPIAS_PDF/.test(comun))
 }
 
 // Enviar, con un navegador falso: comparte el PDF si puede; si no, descarga

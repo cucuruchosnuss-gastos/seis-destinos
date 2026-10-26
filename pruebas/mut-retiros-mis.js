@@ -23,7 +23,7 @@ correrMutaciones({
     { nombre: 'una anulada sin sello', de: "${anulada ? '<span class=\"rt-sello\">Anulada</span>' : ''}", a: '' },
     { nombre: 'el cliente no se busca por nombre', de: '      return (estado.clientes ?? []).find(c => normalizar(c.nombre) === n) ?? { nombre: o?.cliente ?? \'Cliente\' }', a: "      return { nombre: o?.cliente ?? 'Cliente' }" },
     { nombre: 'la hoja sin quién la cargó', de: '        cargadaPor: estado.miNombre,', a: "        cargadaPor: ''," },
-    { nombre: 'la hoja de la carga con precios', de: '{ conPrecios: false, copias: COPIAS_IMPRESION }', a: '{ conPrecios: true, copias: COPIAS_IMPRESION }' },
+    { nombre: 'la hoja de la carga con precios', de: "return imprimirHoja(impresionHoja(), document.getElementById('rt-impresion'), ordenParaHoja(o, { cliente }), { conPrecios: false, copias: COPIAS_IMPRESION })", a: "return imprimirHoja(impresionHoja(), document.getElementById('rt-impresion'), ordenParaHoja(o, { cliente }), { conPrecios: true, copias: COPIAS_IMPRESION })" },
     { nombre: 'el cono con cono y sin marca no es "Común"', de: "      return pr.con_cono ? '—' : 'Sin cono'", a: "      return 'Sin cono'" },
     { nombre: 'la marca no se usa', de: '      if (r?.marca) return r.marca\n', a: '' },
     { nombre: 'una orden que no está se abre', de: '      const o = (estado.mis ?? []).find(x => x.orden_id === id)\n      if (!o) return', a: '      const o = (estado.mis ?? []).find(x => x.orden_id === id) ?? estado.mis?.[0]\n      if (!o) return' },
