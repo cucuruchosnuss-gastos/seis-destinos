@@ -86,6 +86,9 @@ const FUNCIONES_BASE = [
   'elegirMotivoDevolucion', 'elegirTratoDevolucion', 'elegirDestinoDevolucion', 'escribirDevolucion', 'devueltasDeOrden',
   // El cliente que es otra empresa del grupo (24/10/2026)
   'empresaGrupoDe', 'esEntreEmpresas', 'nombreEmpresaGrupo', 'textoEntreEmpresas', 'leerEmpresasGrupo',
+  // La fábrica sin control de stock (26/10/2026): los lotes escritos a mano.
+  'sinControlStock', 'lotesAMano', 'normalizarLoteMano', 'filasLotesMano', 'filaLoteMano', 'asignacionMano', 'asignacionDe',
+  'faltaLotesMano', 'lotesManoParaBase', 'htmlResumenLotesMano', 'htmlLotesMano', 'agregarLoteMano', 'quitarLoteMano', 'escribirLoteMano',
 ]
 
 const CONSTANTES_BASE = [
@@ -97,6 +100,7 @@ const CONSTANTES_BASE = [
   // Los insumos por bulto (23/10/2026), de js/cantidades.js
   ...CONSTANTES_CANTIDADES, 'DECIMALES_BULTOS_CARGA', ...CONSTANTES_PRECIO,
   'MOTIVOS_DEVOLUCION', 'LARGO_LOTE_DEVUELTO',
+  'LARGO_LOTE_MANO', 'cajasDeFila',
 ]
 
 const PRELUDIO = `

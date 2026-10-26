@@ -79,6 +79,9 @@ const SEGURAS_RETIROS = [
   ['valor', 'texto constante del código: "descuenta" / "repone" o "descarte" / "stock" (los botones de la devolución)'],
   ['chips', 'HTML ya escapado: htmlDevolucionRenglon() arma cada chip con esc() del motivo (una lista fija)'],
   ['LARGO_LOTE_DEVUELTO', 'número: constante del código (40, el largo que acepta la base)'],
+  // La fábrica sin control de stock (26/10/2026): los lotes escritos a mano.
+  ['LARGO_LOTE_MANO', 'número: constante del código (40, el largo que acepta la base)'],
+  ['htmlResumenLotesMano(r)', 'HTML armado por htmlResumenLotesMano(), que escapa cada número (ejecutado con marcas en test-retiros-sin-control.js)'],
 ]
 
 const SEGURAS_REGEX_RETIROS = [

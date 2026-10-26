@@ -36,14 +36,15 @@ const tandas = [
       { nombre: 'el lote devuelto sin tope', de: "      if (limpio(d.lote).length > LARGO_LOTE_DEVUELTO) return `el lote devuelto puede tener hasta ${LARGO_LOTE_DEVUELTO} letras`\n", a: '' },
       { nombre: 'sin elegir qué se hace, pasa', de: "      if (d.trato !== 'descuenta' && d.trato !== 'repone') return 'elegí si se descuenta de la orden o se reponen'\n", a: '' },
       { nombre: 'un destino raro pasa', de: "      if (d.destino !== 'descarte' && d.destino !== 'stock') return 'elegí qué se hace con las cajas devueltas'\n", a: '' },
-      { nombre: 'la devolución no se valida', de: '      if (esRenglonDev(r)) return faltaDevolucion(r) ?? (saleDelStock(r) ? faltaEnLotes(r) : null)\n', a: '' },
+      { nombre: 'la devolución no se valida', de: '      if (esRenglonDev(r)) return faltaDevolucion(r) ?? (saleDelStock(r) ? (lotesAMano(r) ? faltaLotesMano(r) : faltaEnLotes(r)) : null)\n', a: '' },
       { nombre: 'el lote devuelto sin limpiar', de: '        item.lote_devuelto = limpio(r.dev.lote) || null', a: '        item.lote_devuelto = r.dev.lote || null' },
       { nombre: 'el destino siempre descarte', de: "        item.destino = r.dev.destino === 'stock' ? 'stock' : 'descarte'", a: "        item.destino = 'descarte'" },
       { nombre: 'el motivo no viaja', de: '        item.motivo = motivoDevolucion(r.dev)\n', a: '' },
       // El stock
       { nombre: 'la devolución saca stock', de: "      return tipoRenglon(r) !== 'devolucion'\n", a: '      return true\n' },
       { nombre: 'la devolución tiene lotes', de: '      if (!saleDelStock(r)) return null\n', a: '' },
-      { nombre: 'la devolución lee lotes', de: ' && saleDelStock(r)\n', a: '\n' },
+      // 26/10/2026: renglonConLotes también mira lotesAMano (la fábrica sin control).
+      { nombre: 'la devolución lee lotes', de: ' && saleDelStock(r) && !lotesAMano(r)\n', a: ' && !lotesAMano(r)\n' },
       { nombre: 'cambiar a devolución no suelta los lotes', de: '      if (r.dev.trato !== trato) r.lotes = {}\n', a: '' },
       // Los totales
       { nombre: 'la devolución suma a lo que se lleva', de: " && tipoRenglon(r) !== 'devolucion' && Number(r.cajas) > 0", a: ' && Number(r.cajas) > 0' },
@@ -59,8 +60,8 @@ const tandas = [
       { nombre: 'un motivo inventado se toma', de: ' || !MOTIVOS_DEVOLUCION.includes(motivo)) return', a: ') return' },
       { nombre: 'un trato inventado se toma', de: "      if (!esRenglonDev(r) || (trato !== 'descuenta' && trato !== 'repone')) return", a: '      if (!esRenglonDev(r)) return' },
       { nombre: 'un destino inventado se toma', de: "      if (!esRenglonDev(r) || (destino !== 'descarte' && destino !== 'stock')) return", a: '      if (!esRenglonDev(r)) return' },
-      { nombre: 'tipear redibuja (pierde el foco)', de: '      pintarPie()\n      guardarBorrador()\n      return true', a: '      tocarRenglon()\n      return true' },
-      { nombre: 'tipear no se guarda', de: '      pintarPie()\n      guardarBorrador()\n      return true', a: '      pintarPie()\n      return true' },
+      { nombre: 'tipear redibuja (pierde el foco)', de: 'LARGO_LOTE_DEVUELTO) : String(t.value ?? \'\')\n      pintarPie()\n      guardarBorrador()\n      return true', a: 'LARGO_LOTE_DEVUELTO) : String(t.value ?? \'\')\n      tocarRenglon()\n      return true' },
+      { nombre: 'tipear no se guarda', de: 'LARGO_LOTE_DEVUELTO) : String(t.value ?? \'\')\n      pintarPie()\n      guardarBorrador()\n      return true', a: 'LARGO_LOTE_DEVUELTO) : String(t.value ?? \'\')\n      pintarPie()\n      return true' },
       { nombre: 'el lote no se corta en 40', de: '.slice(0, LARGO_LOTE_DEVUELTO)', a: '' },
       // La orden armada y el resumen
       { nombre: 'sin la sección Devoluciones', de: '      const conProducto = todos.filter(([r]) => !esRenglonDev(r))', a: '      const conProducto = todos' },

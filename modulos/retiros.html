@@ -442,6 +442,18 @@
     /* La unidad al lado de cada lote (05/10/2026): nunca un número pelado. */
     .rt-lote-fila__unidad { flex-shrink: 0; min-width: 1.5rem; font-size: 15px; font-weight: 700; color: var(--color-texto); }
     .rt-lote__limpiar { padding: 0 14px 6px; }
+    /* Sin control de stock (26/10/2026): los lotes escritos a mano. */
+    .rt-lote-mano { display: flex; align-items: flex-end; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--color-pista); min-width: 0; }
+    .rt-lote-mano__campo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; color: var(--rt-texto-2); }
+    .rt-lote-mano__campo--cajas { flex: 0 0 96px; }
+    .rt-lote-mano .rt-input {
+      width: 100%; height: 50px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo); min-width: 0;
+      font-family: var(--fuente-titulo); font-size: 20px; font-weight: 800; padding: 0 10px; font-variant-numeric: tabular-nums; text-transform: uppercase;
+    }
+    .rt-lote-mano__campo--cajas .rt-input { text-align: center; font-size: 24px; }
+    .rt-lote-mano .rt-input:not(:placeholder-shown) { border-color: var(--naranja); }
+    .rt-lote-mano__quitar { flex: 0 0 44px; height: 50px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto); font: inherit; font-size: 22px; font-weight: 800; cursor: pointer; }
+    .rt-lote--mano .rt-lote__limpiar { padding: 8px 14px 10px; }
     .rt-lote__pie { border-top: 2px solid var(--color-borde); background: var(--rt-fondo-pie); padding: 8px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .rt-lote__asignado { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
     .rt-lote__asignado small { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: var(--rt-texto-2); text-transform: uppercase; }
@@ -1415,17 +1427,23 @@
     // que tienen): salen del catálogo de insumos, que lee cualquier usuario,
     // para poder buscarlos y elegirlos marcados "sin stock". Si esa lectura
     // falla, la carga sigue con los que tienen stock (no se frena por eso).
+    // LA FÁBRICA SIN CONTROL DE STOCK (26/10/2026): con el catálogo se lee
+    // unidades_negocio.controla_stock_terminado (cat.sinControl). Si no se
+    // puede leer, se sigue como una fábrica con control (lo de siempre).
     async function leerCatalogo(unidadId) {
-      const [c, m, t] = await Promise.all([
+      const [c, m, t, u] = await Promise.all([
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
         supabase.from('marcas_personalizadas')
           .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
         supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true).order('nombre'),
+        supabase.from('unidades_negocio').select('controla_stock_terminado').eq('id', unidadId).maybeSingle(),
       ])
       if (c.error) throw c.error
       if (m.error) throw m.error
       if (t.error) console.error('No se pudieron leer los insumos sin stock:', t.error)
+      if (u.error) console.error('No se pudo leer si la fábrica controla el stock:', u.error)
       const cat = catalogoDesdeRpc(c.data, m.data, t.error ? [] : t.data)
+      cat.sinControl = !u.error && u.data?.controla_stock_terminado === false
       return conBultosDeInsumos(cat, t.error ? [] : t.data, await leerContenidosInsumos(unidadId))
     }
 
@@ -1610,8 +1628,11 @@
         if (!prod) continue
         const base = { productoId: prod.id, presentacionId: pr.id, conCono: pr.con_cono === true, categoria: prod.categoria ?? null,
           nombre: `${limpio(prod.nombre)} · ${limpio(pr.nombre)}`, textos: [prod.nombre, pr.nombre] }
-        const stockPres = pr.stock_cajas === null || pr.stock_cajas === undefined ? null : Number(pr.stock_cajas)
+        // Sin control de stock (26/10/2026): todos, sin cuánto hay ni "sin
+        // stock", y con cono una sola opción (el cono se elige después).
+        const stockPres = cat?.sinControl === true || pr.stock_cajas === null || pr.stock_cajas === undefined ? null : Number(pr.stock_cajas)
         if (!base.conCono) { sin.push({ ...base, grupo: 'sin_cono', marcaId: null, stock: stockPres }); continue }
+        if (cat?.sinControl === true) { con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: null }); continue }
         if (stockConos instanceof Map) {
           // UN SOLO "SIN CONO" (10/10/2026): solo los conos CON NOMBRE. El
           // "Común" adentro de "Caja con cono" (clave 'presentacion|') ya no se
@@ -1948,6 +1969,166 @@
       return out
     }
 
+    // ── LA FÁBRICA SIN CONTROL DE STOCK (26/10/2026) ───────────────────────
+    //
+    // Dolce Pasta todavía no carga su producción: unidades_negocio.
+    // controla_stock_terminado = false. Ahí registrar_orden_retiro (leída con
+    // pg_get_functiondef el 26/10/2026) NO mira el stock de un renglón de
+    // producto (retiro o reposición): los lotes de "lotes" [{lote, cajas}] se
+    // normalizan (sin espacios en los bordes y en mayúsculas; vacío = 'SIN
+    // LOTE'), entran con un 'ajuste' automático y salen con el despacho; sin
+    // "lotes", un solo lote 'SIN LOTE'. Nunca hay faltante de producto. En la
+    // Carga, entonces, el producto de esa fábrica no lee lotes con stock: se
+    // escriben a mano (lote + cajas, "+ Agregar lote"), y lo asignado tiene
+    // que dar el total; sin ningún lote escrito se puede (va sin "lotes" y se
+    // avisa "Va sin lote"). Sin "¿De dónde salen?", sin "Completar con los más
+    // viejos" ni "Que salga sola…". Los INSUMOS siguen como siempre (Dolce sí
+    // lleva el stock de insumos). r.lotesMano = { clave, filas: [{ lote,
+    // cajas }] }: vale mientras sea el mismo producto, presentación y cono.
+    const LARGO_LOTE_MANO = 40
+
+    function sinControlStock(cat = estado.catalogo) {
+      return cat?.sinControl === true
+    }
+
+    // ¿Los lotes de este renglón se escriben a mano? Producto que sale del
+    // stock (retiro o reposición) de una fábrica sin control.
+    function lotesAMano(r) {
+      return !!r && !r.insumoId && !!r.presentacionId && saleDelStock(r) && sinControlStock()
+    }
+
+    function normalizarLoteMano(t) {
+      return String(t ?? '').trim().toUpperCase()
+    }
+
+    // Las filas de lotes del renglón (siempre al menos una, vacía).
+    function filasLotesMano(r) {
+      const m = r?.lotesMano
+      if (m && m.clave === claveLotesRenglon(r) && Array.isArray(m.filas) && m.filas.length) return m.filas
+      return [{ lote: '', cajas: null }]
+    }
+
+    // La fila k para escribirla (crea la lista si hace falta).
+    function filaLoteMano(r, k) {
+      if (!r) return null
+      const filas = filasLotesMano(r).map(f => ({ ...f }))
+      r.lotesMano = { clave: claveLotesRenglon(r), filas }
+      return filas[Number(k)] ?? null
+    }
+
+    const cajasDeFila = (f) => Number.isInteger(Number(f?.cajas)) && Number(f?.cajas) > 0 ? Number(f.cajas) : 0
+
+    // Como asignacion(): lo pedido, lo asignado y cuánto falta (sin stock que mirar).
+    function asignacionMano(r) {
+      const pedido = cantidadPedida(r)
+      const porLote = filasLotesMano(r).filter(f => cajasDeFila(f) > 0)
+        .map(f => ({ lote: normalizarLoteMano(f.lote), saldo: null, desde: null, q: cajasDeFila(f), excede: 0 }))
+      const asignado = porLote.reduce((s, l) => s + l.q, 0)
+      return { pedido, asignado, falta: pedido === null ? null : pedido - asignado, sinLugar: false, porLote, faltante: 0, aMano: true }
+    }
+
+    // La asignación de cualquier renglón: a mano o contra los lotes con stock.
+    function asignacionDe(r) {
+      return lotesAMano(r) ? asignacionMano(r) : asignacion(r, listaLotesDe(r))
+    }
+
+    // Lo que falta en los lotes escritos, o null. Sin ninguno escrito: null
+    // (va sin lote). Cada fila escrita: lote y cajas; y la suma, el total.
+    function faltaLotesMano(r) {
+      const filas = filasLotesMano(r).filter(f => normalizarLoteMano(f.lote) || (f.cajas !== null && f.cajas !== undefined && f.cajas !== ''))
+      if (!filas.length) return null
+      for (let k = 0; k < filas.length; k++) {
+        const lote = normalizarLoteMano(filas[k].lote)
+        if (!lote) return `escribí el lote de las ${enteroHoja(cajasDeFila(filas[k]))} cajas`
+        if (!(cajasDeFila(filas[k]) > 0)) return `poné las cajas del lote ${lote}`
+        if (lote.length > LARGO_LOTE_MANO) return `el lote ${lote} es muy largo (${LARGO_LOTE_MANO} letras como mucho)`
+      }
+      const a = asignacionMano(r)
+      if (a.falta === null) return null
+      if (a.falta > 0) return `faltan asignar ${cantidadRenglon(r, a.falta)} a los lotes`
+      if (a.falta < 0) return `asignaste ${cantidadRenglon(r, -a.falta)} de más a los lotes`
+      return null
+    }
+
+    // Los lotes que viajan: [{ lote, cajas }] o null (sin ninguno: la base pone 'SIN LOTE').
+    function lotesManoParaBase(r) {
+      const out = filasLotesMano(r).filter(f => cajasDeFila(f) > 0 && normalizarLoteMano(f.lote))
+        .map(f => ({ lote: normalizarLoteMano(f.lote), cajas: cajasDeFila(f) }))
+      return out.length ? out : null
+    }
+
+    // El pie: "Asignado X de Y · faltan Z", o "Va sin lote".
+    function htmlResumenLotesMano(r) {
+      const a = asignacionMano(r)
+      if (a.pedido === null) return '<span class="rt-lotes__resumen">Poné las cajas y escribí de qué lotes salen.</span>'
+      if (!(a.asignado > 0)) return '<span class="rt-estado-lotes rt-estado-lotes--falta">Va sin lote</span><span class="rt-lotes__resumen">Sin lotes escritos sale como «SIN LOTE».</span>'
+      const asignado = `<div class="rt-lote__asignado"><small>Asignado</small><span>${esc(enteroHoja(a.asignado))} <em>de ${esc(enteroHoja(a.pedido))}</em></span></div>`
+      const estadoLotes = a.falta > 0 ? `<span class="rt-estado-lotes rt-lotes__falta">faltan ${esc(cantidadRenglon(r, a.falta))}</span>`
+        : a.falta < 0 ? `<span class="rt-estado-lotes rt-estado-lotes--falta">${esc(cantidadRenglon(r, -a.falta))} de más</span>`
+        : '<span class="rt-estado-lotes rt-estado-lotes--ok">✓ Asignado completo</span>'
+      return `${asignado}${estadoLotes}`
+    }
+
+    function htmlLotesMano(r, i) {
+      const filas = filasLotesMano(r)
+      const titulo = tipoRenglon(r) === 'reposicion' ? '¿De qué lote salen las que se reponen?' : '¿De qué lotes?'
+      const cuerpo = filas.map((f, k) =>
+        `<div class="rt-lote-mano">` +
+        `<label class="rt-lote-mano__campo"><span>Lote</span><input type="text" class="rt-input" data-r-lm-lote="${i}" data-k="${k}" value="${esc(f.lote ?? '')}" ` +
+        `maxlength="${LARGO_LOTE_MANO}" autocomplete="off" autocapitalize="characters" placeholder="Ej. 10430" aria-label="Lote ${k + 1}"></label>` +
+        `<label class="rt-lote-mano__campo rt-lote-mano__campo--cajas"><span>Cajas</span><input type="text" class="rt-input" data-r-lm-cajas="${i}" data-k="${k}" ` +
+        `inputmode="numeric" autocomplete="off" placeholder=" " aria-label="Cajas del lote ${k + 1}"></label>` +
+        (filas.length > 1 ? `<button type="button" class="rt-lote-mano__quitar" data-r-lm-quitar="${i}" data-k="${k}" aria-label="Quitar el lote ${k + 1}">×</button>` : '') +
+        `</div>`).join('')
+      return `<div class="rt-lote rt-lote--mano"><div class="rt-lote__cab"><span class="rt-lote__titulo"><strong>${esc(titulo)}</strong>` +
+        `<span>Escribilos: esta fábrica no lleva el stock del producto terminado.</span></span></div>` +
+        `<div class="rt-lote__cuerpo"><div class="rt-lotes-mano" role="group" aria-label="Los lotes, escritos a mano">${cuerpo}</div>` +
+        `<div class="rt-lote__limpiar"><button type="button" class="rt-link" data-r-lm-agregar="${i}">+ Agregar lote</button></div></div>` +
+        `<div class="rt-lote__pie" data-r-lotes-resumen="${i}">${htmlResumenLotesMano(r)}</div></div>`
+    }
+
+    function agregarLoteMano(i) {
+      const r = renglon(i)
+      if (!r) return
+      const filas = filasLotesMano(r).map(f => ({ ...f }))
+      filas.push({ lote: '', cajas: null })
+      r.lotesMano = { clave: claveLotesRenglon(r), filas }
+      tocarRenglon()
+      const campos = document.getElementById('rt-renglones')?.querySelectorAll?.(`[data-r-lm-lote="${Number(i)}"]`)
+      campos?.[campos.length - 1]?.focus?.()
+    }
+
+    function quitarLoteMano(i, k) {
+      const r = renglon(i)
+      if (!r) return
+      const filas = filasLotesMano(r).filter((_, j) => j !== Number(k))
+      r.lotesMano = { clave: claveLotesRenglon(r), filas: filas.length ? filas : [{ lote: '', cajas: null }] }
+      tocarRenglon()
+    }
+
+    // Lo que se escribe en una fila: no redibuja el renglón (el foco no se
+    // pierde), solo el pie. El lote, en mayúsculas mientras se escribe.
+    function escribirLoteMano(t) {
+      const esLote = t.dataset.rLmLote !== undefined
+      if (!esLote && t.dataset.rLmCajas === undefined) return false
+      const i = esLote ? t.dataset.rLmLote : t.dataset.rLmCajas
+      const f = filaLoteMano(renglon(i), t.dataset.k)
+      if (!f) return true
+      if (esLote) {
+        const may = String(t.value).toUpperCase()
+        if (may !== t.value) {
+          const a = t.selectionStart, b = t.selectionEnd
+          t.value = may
+          try { t.setSelectionRange(a, b) } catch { /* sin selección */ }
+        }
+        f.lote = t.value
+      } else f.cajas = leerCampoNumero(t)
+      pintarResumenLotes(i)
+      pintarPie()
+      guardarBorrador()
+      return true
+    }
+
     // Los lotes leídos de un renglón (la lista) o null.
     function listaLotesDe(r) {
       // Una devolución no saca nada del stock: no tiene lotes (22/10/2026).
@@ -1958,7 +2139,8 @@
 
     // ¿El renglón ya sabe qué es (para leer sus lotes)?
     // (Una devolución no: no saca nada del stock.)
-    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId) && saleDelStock(r)
+    // (Sin control de stock, el producto no lee lotes: se escriben a mano.)
+    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId) && saleDelStock(r) && !lotesAMano(r)
 
     // Lee los lotes de los renglones que ya saben qué son y todavía no los
     // tienen. asegurarLotes() no vuelve a leer lo que ya está.
@@ -2118,8 +2300,8 @@
       if (!r.presentacionId) return 'elegí la presentación'
       if (r.conCono && !r.marcaId) return 'elegí el cono (si es común, elegí «Sin cono»)'
       if (r.cajas === null || r.cajas === undefined || !(Number(r.cajas) > 0) || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'
-      if (esRenglonDev(r)) return faltaDevolucion(r) ?? (saleDelStock(r) ? faltaEnLotes(r) : null)
-      return faltaEnLotes(r)
+      if (esRenglonDev(r)) return faltaDevolucion(r) ?? (saleDelStock(r) ? (lotesAMano(r) ? faltaLotesMano(r) : faltaEnLotes(r)) : null)
+      return lotesAMano(r) ? faltaLotesMano(r) : faltaEnLotes(r)
     }
 
     // Lo repartido entre los lotes: nada (sale sola de los más viejos) o
@@ -2200,7 +2382,8 @@
     // 'lotes' [{lote, cantidad}]. Sin 'lotes', la base descuenta sola de los
     // más viejos. NADA de precio: la carga no lo tiene.
     function itemParaBase(r) {
-      const lotes = lotesParaBase(r, listaLotesDe(r))
+      // Sin control de stock: los lotes escritos (o ninguno: 'SIN LOTE').
+      const lotes = lotesAMano(r) ? lotesManoParaBase(r) : lotesParaBase(r, listaLotesDe(r))
       if (r.insumoId) {
         const ins = { insumo_id: r.insumoId, cantidad: Number(r.cantidad) }
         if (lotes) ins.lotes = lotes
@@ -2830,7 +3013,8 @@
       const grupos = gruposCatalogo(cat, busqueda, stockConos, { devolucion })
       const q = limpio(busqueda)
       // Sin buscar se ven solo los que tienen stock: se dice cómo encontrar el resto.
-      const pista = q || devolucion ? '' : '<p class="rt-pista">Escribí para buscar también lo que no tiene stock.</p>'
+      // Sin control de stock, los productos están todos: lo que se busca es un insumo sin stock.
+      const pista = q || devolucion ? '' : `<p class="rt-pista">${cat?.sinControl === true ? 'Escribí para buscar también los insumos sin stock.' : 'Escribí para buscar también lo que no tiene stock.'}</p>`
       if (!grupos.length) {
         return q ? `<span class="rt-texto-suave">Nada coincide con «${esc(q)}».</span>` : pista
       }
@@ -3239,6 +3423,8 @@
     // marca, cada uno con la fecha, cuánto queda y SU campo. Sin repartir, la
     // base descuenta sola de los más viejos.
     function htmlLoteRenglon(r, i) {
+      // Sin control de stock: los lotes se escriben (26/10/2026).
+      if (lotesAMano(r)) return htmlLotesMano(r, i)
       if (!renglonConLotes(r)) return ''
       const info = estado.lotes.get(claveLotesRenglon(r))
       let cuerpo
@@ -3342,7 +3528,9 @@
     // Tocarlo lo vuelve a abrir; la ✕ lo quita.
     function htmlTarjetaRenglon(r, i, cat, conErrores) {
       const falta = conErrores ? faltanRenglon(r) : null
-      const a = asignacion(r, listaLotesDe(r))
+      const a = asignacionDe(r)
+      // Sin lotes: de los más viejos, o (sin control de stock) "va sin lote".
+      const sinLotes = a.aMano ? 'va sin lote' : 'de los lotes más viejos'
       const esInsumo = !!r.insumoId
       const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === r.productoId)?.nombre ?? ''), esInsumo)
       const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
@@ -3352,9 +3540,9 @@
       // las cajas; una reposición, además, "Se repone · sin cargo" y de qué
       // lotes sale (22/10/2026). La carga no muestra plata: nunca "$ 0".
       const tipo = tipoRenglon(r)
-      let textoLotesR = lotes.length ? lotes.join(' · ') : 'de los lotes más viejos'
+      let textoLotesR = lotes.length ? lotes.join(' · ') : sinLotes
       if (tipo === 'devolucion') textoLotesR = textoDevolucionRenglon(r)
-      else if (tipo === 'reposicion') textoLotesR = `Se repone · sin cargo · ${textoDevolucionRenglon(r)} · sale ${lotes.length ? 'de ' + lotes.join(' · ') : 'de los lotes más viejos'}`
+      else if (tipo === 'reposicion') textoLotesR = `Se repone · sin cargo · ${textoDevolucionRenglon(r)} · ${lotes.length ? 'sale de ' + lotes.join(' · ') : (a.aMano ? sinLotes : 'sale de los lotes más viejos')}`
       const faltante = (a.faltante ?? 0) > 0 ? cantidadRenglon(r, a.faltante) : null
       const pedido = cantidadPedida(r)
       const pi = esInsumo ? partesCantidadInsumo(r, pedido) : null
@@ -3421,6 +3609,13 @@
         const modo = modoInsumoRenglon(x)
         enlazarCampoNumero(input, { decimales: modo ? modo.decimales : decimalesDeUnidad(x?.unidad) })
         if (x) ponerNumero(input, cantidadEnCampo(x.cantidad, modo))
+      }
+      // Sin control de stock: las cajas de cada lote escrito.
+      for (const input of cont.querySelectorAll('[data-r-lm-cajas]')) {
+        enlazarCampoNumero(input, { decimales: DECIMALES_CAJAS })
+        const x = f.renglones[Number(input.dataset.rLmCajas)]
+        const fila = x ? filasLotesMano(x)[Number(input.dataset.k)] : null
+        if (fila && fila.cajas !== null && fila.cajas !== undefined) ponerNumero(input, fila.cajas)
       }
       // Lo que sale de cada lote, con los decimales del renglón.
       for (const input of cont.querySelectorAll('[data-r-lote-cant]')) {
@@ -3495,7 +3690,7 @@
       if (!r || !cont) return
       const lista = listaLotesDe(r)
       const pie = cont.querySelector(`[data-r-lotes-resumen="${Number(i)}"]`)
-      if (pie) pie.innerHTML = htmlResumenLotes(r, lista)
+      if (pie) pie.innerHTML = lotesAMano(r) ? htmlResumenLotesMano(r) : htmlResumenLotes(r, lista)
       // La pregunta "¿De dónde salen?" se redibuja solo si cambió (aparece,
       // desaparece o cambia la cuenta): si no, el foco de su nota no se pierde.
       const caja = cont.querySelector(`[data-r-faltante-caja="${Number(i)}"]`)
@@ -3871,14 +4066,14 @@
       const c = clienteDe(f.clienteId)
       const apodo = (Array.isArray(c?.apodos) ? c.apodos : []).map(limpio).find(Boolean)
       const fila = (r) => {
-        const a = asignacion(r, listaLotesDe(r))
+        const a = asignacionDe(r)
         const tipo = tipoRenglon(r)
         let lote = a.asignado > 0
           ? a.porLote.filter(l => l.q > 0).map(l => `${nombreLote(l.lote)}: ${cantidadRenglon(r, l.q)}`).join(' · ')
-          : 'De los lotes más viejos'
+          : (a.aMano ? 'Va sin lote' : 'De los lotes más viejos')
         // Devoluciones (22/10/2026): el motivo y qué se hace; sin plata.
         if (tipo === 'devolucion') lote = 'Se descuenta de la orden · ' + textoDevolucionRenglon(r)
-        else if (tipo === 'reposicion') lote = 'Se repone · sin cargo · ' + textoDevolucionRenglon(r) + ' · sale ' + (a.asignado > 0 ? 'de ' + lote : 'de los lotes más viejos')
+        else if (tipo === 'reposicion') lote = 'Se repone · sin cargo · ' + textoDevolucionRenglon(r) + ' · ' + (a.asignado > 0 ? 'sale de ' + lote : (a.aMano ? 'va sin lote' : 'sale de los lotes más viejos'))
         const esInsumo = !!r.insumoId
         const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === r.productoId)?.nombre ?? ''), esInsumo)
         const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
@@ -4784,6 +4979,9 @@
         else if ((b = e.target.closest('[data-r-presentacion]'))) elegirPresentacionRenglon(b.dataset.rPresentacion, b.dataset.id)
         else if ((b = e.target.closest('[data-r-completar]'))) completarLotes(b.dataset.rCompletar)
         else if ((b = e.target.closest('[data-r-lotes-limpiar]'))) limpiarLotes(b.dataset.rLotesLimpiar)
+        // Sin control de stock: los lotes escritos (26/10/2026).
+        else if ((b = e.target.closest('[data-r-lm-agregar]'))) agregarLoteMano(b.dataset.rLmAgregar)
+        else if ((b = e.target.closest('[data-r-lm-quitar]'))) quitarLoteMano(b.dataset.rLmQuitar, b.dataset.k)
         else if ((b = e.target.closest('[data-r-quitar]'))) quitarRenglon(b.dataset.rQuitar)
         // La devolución (22/10/2026).
         else if ((b = e.target.closest('[data-r-dev-motivo]'))) elegirMotivoDevolucion(b.dataset.rDevMotivo, b.dataset.valor)
@@ -4794,6 +4992,7 @@
         const t = e.target
         if (escribirOrigen(t)) return
         if (escribirDevolucion(t)) return
+        if (escribirLoteMano(t)) return
         if (t.dataset.rCajas !== undefined) {
           const r = renglon(t.dataset.rCajas)
           if (r) { r.cajas = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCajas); pintarPie(); guardarBorrador() }
