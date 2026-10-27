@@ -91,10 +91,17 @@ const FUNCIONES_BASE = [
   'textoDevolucionRenglon', 'totalDevueltasForm', 'htmlTituloDevolucion', 'htmlDevolucionRenglon', 'agregarDevolucion',
   'elegirMotivoDevolucion', 'elegirTratoDevolucion', 'elegirDestinoDevolucion', 'escribirDevolucion', 'devueltasDeOrden',
   // El cliente que es otra empresa del grupo (24/10/2026)
-  'empresaGrupoDe', 'esEntreEmpresas', 'nombreEmpresaGrupo', 'textoEntreEmpresas', 'leerEmpresasGrupo',
+  'empresaGrupoDe', 'esEntreEmpresas', 'nombreEmpresaGrupo', 'textoEntreEmpresas', 'textoNumerarInterna', 'leerEmpresasGrupo',
   // La fábrica sin control de stock (26/10/2026): los lotes escritos a mano.
   'sinControlStock', 'lotesAMano', 'normalizarLoteMano', 'filasLotesMano', 'filaLoteMano', 'asignacionMano', 'asignacionDe',
   'faltaLotesMano', 'lotesManoParaBase', 'htmlResumenLotesMano', 'htmlLotesMano', 'agregarLoteMano', 'quitarLoteMano', 'escribirLoteMano',
+  // La venta por unidad (27/10/2026): los conos de papel sueltos.
+  'presentacionDeRenglon', 'sinStockRenglon', 'porUnidadRenglon', 'productoDeRenglon', 'textoSueltosForm', 'textoCajasForm',
+  'sueltosDeOrden', 'textoCajasOrden',
+  'esPorUnidadHoja', 'palabraUnidadesHoja', 'cantidadUnidadesHoja', 'unidadesDeRenglonHoja', 'totalUnidadesSueltasOrden',
+  // Subir remitos Rosario (27/10/2026): el botón de entrada lo prende
+  // pintarEncabezado(). El resto lo suma test-retiros-subir-remitos.js.
+  'pintarEntradaRemitos', 'puedeSubirRemitos', 'fabricasRemitos', 'leerFabricasSinControl',
 ]
 
 const CONSTANTES_BASE = [

@@ -2524,6 +2524,38 @@
       color: var(--color-texto);
     }
     .valor-stock--sin { color: var(--bordo-oscuro); font-weight: 600; }
+    /* Precios de compra (27/10/2026): Insumo | Precio unitario | IVA % | Precio
+       final. En el celular, el insumo arriba y las tres celdas abajo, cada
+       una con su rótulo; desde 720 px, una tabla con cabecera. */
+    .tarjeta-lista.fila-precio {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.375rem 0.75rem;
+      align-items: start; width: 100%; text-align: left; font-family: var(--fuente); cursor: pointer; min-width: 0;
+    }
+    .fila-precio__insumo { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+    .fila-precio__origen { font-size: 0.75rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .fila-precio__celda { display: flex; flex-direction: column; min-width: 0; }
+    .fila-precio__rot { font-size: 0.6875rem; color: var(--color-texto-2); text-transform: uppercase; letter-spacing: 0.03em; }
+    .fila-precio__val { font-weight: 700; font-size: 0.875rem; color: var(--color-texto); overflow-wrap: anywhere; }
+    .fila-precio__bulto { margin-top: 0.125rem; font-size: 0.75rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .tarjeta-lista.fila-precio--sin { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+    .fila-precio--sin .fila-precio__insumo { grid-column: auto; }
+    .precios-cabecera { display: none; }
+    .costo-origen { margin: -0.25rem 0 0.75rem; font-size: 0.8125rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .costo-origen:empty { display: none; }
+    .costo-final { font-weight: 700; }
+    #costo-iva-otro { margin-top: 0.5rem; }
+    .costo-hist__tipo { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-texto-2); }
+    @media (min-width: 720px) {
+      .precios-cabecera {
+        display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 0.75rem;
+        padding: 0 1rem 0.375rem; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.03em; color: var(--color-texto-2);
+      }
+      .tarjeta-lista.fila-precio { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); }
+      .fila-precio__insumo { grid-column: auto; }
+      .fila-precio__rot { display: none; }
+      .tarjeta-lista.fila-precio--sin { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+    }
     .fila-costo {
       display: flex;
       align-items: center;
@@ -2547,7 +2579,7 @@
       text-align: right;
     }
     .fila-costo__costo { font-weight: 700; color: var(--color-texto); font-size: 0.9375rem; overflow-wrap: anywhere; }
-    .chip-sin-costo, .variacion-costo {
+    .chip-sin-costo {
       display: inline-block;
       border-radius: 999px;
       padding: 0.125rem 0.5rem;
@@ -2556,9 +2588,6 @@
       white-space: nowrap;
     }
     .chip-sin-costo { background: var(--bordo-suave); color: var(--bordo-oscuro); border: 1px solid var(--bordo); }
-    .variacion-costo--sube { background: var(--bordo-suave); color: var(--bordo-oscuro); }
-    .variacion-costo--baja { background: var(--verde-suave); color: var(--verde-oscuro); }
-    .variacion-costo--igual { background: var(--color-superficie); color: var(--color-texto-2); }
     .costos-resumen { margin: 0 0 0.5rem; font-size: 0.8125rem; font-weight: 650; color: var(--bordo-oscuro); }
     .costo-modos { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; min-width: 0; }
     .costo-modos[hidden] { display: none; }
@@ -2676,7 +2705,7 @@
       <button type="button" class="pestana-stock" data-vista="recuento">Recuento</button>
       <!-- 11/10/2026 (M8): quien ve costos sin stock:ver no tiene la vista de
            stock (donde vive el botón Costos): llega por esta pestaña. -->
-      <button type="button" class="pestana-stock" data-vista="costos" hidden>Costos</button>
+      <button type="button" class="pestana-stock" data-vista="costos" hidden>Precios de compra</button>
     </div>
 
     <!-- ══ VISTA: STOCK ACTUAL ═══════════════════════════════════════════ -->
@@ -2700,7 +2729,7 @@
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-mermas">Mermas</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-traspaso" hidden>Traspaso a otra fábrica</button>
         <!-- Costos de insumos (09/10/2026): solo con stock:ver_costos en alguna fábrica. -->
-        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-costos" hidden>Costos</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-costos" hidden>Precios de compra</button>
       </div>
 
       <!-- Stock valorizado (09/10/2026): de la fábrica de la barra, solo con
@@ -3044,7 +3073,7 @@
       <div class="chips-unidad" id="chips-unidad-costos" hidden></div>
       <input type="search" class="buscador-stock" id="buscador-costos" placeholder="Buscar por nombre o marca…" autocomplete="off">
       <div class="lista-contenido" id="lista-costos"></div>
-      <div class="estado-vacio-stock" id="costos-cargando" hidden>Cargando los costos…</div>
+      <div class="estado-vacio-stock" id="costos-cargando" hidden>Cargando los precios…</div>
       <div class="estado-vacio-stock" id="costos-vacio" hidden></div>
     </div><!-- /vista-costos -->
 
@@ -3106,12 +3135,13 @@
       <div class="detalle-insumo__marca" id="costo-unidad"></div>
 
       <div class="total-stock">
-        <span class="total-stock__etiqueta">Costo actual</span>
+        <span class="total-stock__etiqueta">Precio actual</span>
         <span class="total-stock__valor" id="costo-actual">—</span>
       </div>
+      <div class="costo-origen" id="costo-origen"></div>
 
       <div id="costo-carga" hidden>
-        <div class="hist-titulo-bloque">Cargar un costo nuevo</div>
+        <div class="hist-titulo-bloque">Cargar un precio a mano</div>
         <div class="costo-modos" id="costo-modos" role="group" aria-label="Cómo lo escribís" hidden>
           <button type="button" class="costo-modo" data-costo-modo="bulto" aria-pressed="false">Por bulto</button>
           <button type="button" class="costo-modo" data-costo-modo="unidad" aria-pressed="true">Por unidad</button>
@@ -3120,6 +3150,21 @@
           <label for="costo-precio" id="costo-precio-rotulo">Precio</label>
           <input type="text" id="costo-precio" inputmode="decimal" autocomplete="off">
           <div class="costo-equivale" id="costo-equivale" aria-live="polite"></div>
+        </div>
+        <!-- El IVA del precio (27/10/2026): guardar_costo_insumo lo recibe como
+             p_alicuota_iva; el precio se guarda SIN IVA. -->
+        <div class="campo-stock">
+          <label for="costo-iva">IVA %</label>
+          <select id="costo-iva">
+            <option value="">Elegí</option>
+            <option value="0">0 % (sin IVA)</option>
+            <option value="10.5">10,5 %</option>
+            <option value="21">21 %</option>
+            <option value="27">27 %</option>
+            <option value="otro">Otro</option>
+          </select>
+          <input type="text" id="costo-iva-otro" inputmode="decimal" autocomplete="off" aria-label="Otro IVA %" placeholder="Otro IVA %" hidden>
+          <div class="costo-equivale costo-final" id="costo-final" aria-live="polite"></div>
         </div>
         <div class="campo-stock">
           <label for="costo-desde">Vigente desde</label>
@@ -3131,11 +3176,11 @@
         </div>
         <div class="rec-aviso" id="costo-error" hidden></div>
         <div class="modal-stock__acciones">
-          <button type="button" class="btn-stock btn-stock--primario" id="btn-guardar-costo">Guardar el costo</button>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-guardar-costo">Guardar el precio</button>
         </div>
       </div>
 
-      <div class="hist-titulo-bloque">Historial de costos</div>
+      <div class="hist-titulo-bloque">Historial de precios</div>
       <div class="estado-vacio-stock" id="costo-historial-cargando" hidden>Cargando el historial…</div>
       <div id="costo-historial"></div>
     </div>
@@ -10147,17 +10192,6 @@
       return f.toISOString().slice(0, 10)
     }
 
-    // ↑ en bordó (subió: más caro), ↓ en verde (bajó), = en gris. Sin dato,
-    // nada.
-    function htmlVariacion(pct) {
-      const n = numeroCosto(pct)
-      if (n === null) return ''
-      const txt = formatearNumeroAr(Math.abs(n), { decimales: 1, minimos: 0 })
-      if (n > 0) return `<span class="variacion-costo variacion-costo--sube" title="Subió contra el costo anterior">↑ ${esc(txt)} %</span>`
-      if (n < 0) return `<span class="variacion-costo variacion-costo--baja" title="Bajó contra el costo anterior">↓ ${esc(txt)} %</span>`
-      return '<span class="variacion-costo variacion-costo--igual">= 0 %</span>'
-    }
-
     // ── El stock valorizado (en la lista de stock) ─────────────────────────
 
     // De qué fábrica se valoriza: la de la barra si ahí se ven costos; con
@@ -10277,19 +10311,93 @@
       }
       estado.costos = { unidad, filas: null, error: null }
       renderizarCostos()
-      const [{ data, error }] = await Promise.all([
+      // PRECIOS DE COMPRA (27/10/2026): precios_compra() da por insumo el
+      // último precio (de un ingreso o cargado a mano, el más nuevo) SIN IVA
+      // por unidad de medida, su IVA y el final (leída con pg_get_functiondef
+      // el 27/10/2026). costos_insumos() sigue para los insumos con stock que
+      // todavía no tienen ninguno: van arriba, "Sin precio", para cargarlo a
+      // mano. Si esa falla se ven igual los precios.
+      const [precios, costos] = await Promise.all([
+        supabase.rpc('precios_compra', { p_unidad_negocio_id: unidad }),
         supabase.rpc('costos_insumos', { p_unidad_negocio_id: unidad }),
         cargarBultosCatalogoCostos(),
       ])
       if (turno !== estado.turnoCostos) return true
-      if (error) {
-        console.error('costos_insumos:', error)
-        estado.costos = { unidad, filas: null, error: error.message || 'No se pudieron leer los costos.' }
+      if (precios.error) {
+        console.error('precios_compra:', precios.error)
+        estado.costos = { unidad, filas: null, error: precios.error.message || 'No se pudieron leer los precios.' }
       } else {
-        estado.costos = { unidad, filas: Array.isArray(data) ? data : [], error: null }
+        if (costos.error) console.error('costos_insumos:', costos.error)
+        estado.costos = { unidad, filas: filasPreciosCompra(precios.data, costos.error ? [] : costos.data), error: null }
       }
       renderizarCostos()
-      return !error
+      return !precios.error
+    }
+
+    // Los de precios_compra, más los insumos de costos_insumos que no tienen
+    // ninguno (con el precio en null).
+    function filasPreciosCompra(precios, costos) {
+      const con = (Array.isArray(precios) ? precios : []).filter(p => p?.insumo_id)
+      const ya = new Set(con.map(p => p.insumo_id))
+      const sin = (Array.isArray(costos) ? costos : []).filter(c => c?.insumo_id && !ya.has(c.insumo_id)).map(c => ({
+        insumo_id: c.insumo_id, insumo: c.insumo, marca: c.marca ?? null, unidad_medida: c.unidad_medida,
+        contenido_bulto: null, nombre_bulto: null, precio_unitario: null, alicuota_iva: null, precio_final: null,
+        fecha: null, origen: null, proveedor: null, comprobante: null,
+      }))
+      return [...con, ...sin]
+    }
+
+    // La plata de un precio: dos decimales, y cuatro para los chicos (una
+    // bolsita a $ 0,3456).
+    function plataPrecioCompra(n) {
+      const v = numeroCosto(n)
+      return v === null ? '—' : plataCosto(v, Math.abs(v) < 10 ? 4 : 2)
+    }
+
+    function textoIvaPrecio(iva) {
+      const n = numeroCosto(iva)
+      return n === null ? '—' : `${formatearNumeroAr(n, { decimales: 2, minimos: 0 })} %`
+    }
+
+    const NOMBRES_COMPROBANTE = { factura_a: 'Factura A', factura_x: 'Factura X', remito: 'Remito', sin_comprobante: 'Sin comprobante' }
+
+    // precios_compra arma el comprobante con concat_ws(' ', tipo_doc,
+    // numero_doc): "factura_a 0001-00001234" → "Factura A 0001-00001234".
+    function textoComprobante(c) {
+      const t = String(c ?? '').trim()
+      if (!t) return ''
+      const [tipo, ...resto] = t.split(/\s+/)
+      return NOMBRES_COMPROBANTE[tipo] ? [NOMBRES_COMPROBANTE[tipo], ...resto].join(' ') : t
+    }
+
+    // De dónde salió: "Compra · Molino Pepe · Factura A 0001-00001234 ·
+    // 27/10/2026", o "Cargado a mano · <nota> · 27/10/2026" (en los manuales
+    // el comprobante es la nota).
+    function textoOrigenPrecio(f) {
+      const fecha = f.fecha ? formatearFecha(String(f.fecha)) : ''
+      if (f.origen === 'compra') return ['Compra', f.proveedor, textoComprobante(f.comprobante), fecha].filter(Boolean).join(' · ')
+      if (f.origen === 'manual') return ['Cargado a mano', f.comprobante, fecha].filter(Boolean).join(' · ')
+      return 'Todavía no tiene precio de compra en esta fábrica'
+    }
+
+    // Lo que trae un bulto: el del catálogo que manda precios_compra y, si no,
+    // el de la fábrica (presentacionCosto).
+    function contenidoBultoPrecio(f) {
+      const c = numeroCosto(f.contenido_bulto)
+      if (c && c > 0) return c
+      return presentacionCosto(estado.costos?.unidad, f.insumo_id)?.contenido ?? null
+    }
+
+    // "bolsa de 25 kg con IVA: $ 21.175,00".
+    function textoBultoConIva(f) {
+      const c = contenidoBultoPrecio(f), fin = numeroCosto(f.precio_final)
+      if (!c || c === 1 || fin === null) return ''
+      const nombre = String(f.nombre_bulto ?? '').trim() || 'bulto'
+      return `${nombre} de ${formatearCantidadStock(c, f.unidad_medida)} con IVA: ${plataCosto(Math.round(fin * c * 100) / 100)}`
+    }
+
+    function htmlCabeceraPrecios() {
+      return '<div class="precios-cabecera" aria-hidden="true"><span>Insumo</span><span>Precio unitario</span><span>IVA %</span><span>Precio final</span></div>'
     }
 
     // Los sin costo ARRIBA (es lo que falta cargar); el resto, en el orden de
@@ -10299,25 +10407,30 @@
         const t = normalizar(estado.busquedaCostos)
         return !t || normalizar(`${f.insumo} ${f.marca || ''}`).includes(t)
       })
-      const sin = filas.filter(f => numeroCosto(f.costo_unitario) === null)
-      const con = filas.filter(f => numeroCosto(f.costo_unitario) !== null)
+      const sin = filas.filter(f => numeroCosto(f.precio_unitario) === null)
+      const con = filas.filter(f => numeroCosto(f.precio_unitario) !== null)
       return [...sin, ...con]
     }
 
     function htmlFilaCosto(f) {
-      const costo = numeroCosto(f.costo_unitario)
-      const meta = costo === null ? 'Todavía no tiene costo cargado en esta fábrica'
-        : [f.vigente_desde ? `desde ${formatearFecha(String(f.vigente_desde))}` : '', f.cargado_por ? `cargó ${f.cargado_por}` : ''].filter(Boolean).join(' · ')
-      const derecha = costo === null
-        ? '<span class="chip-sin-costo">Sin costo</span>'
-        : `<span class="fila-costo__costo">${esc(textoCostoUnitario(costo, f.unidad_medida, presentacionCosto(estado.costos?.unidad, f.insumo_id)))}</span>${htmlVariacion(f.variacion_pct)}`
+      const pu = numeroCosto(f.precio_unitario)
+      const nombre = `<span class="fila-stock__nombre">${esc(f.insumo)}${f.marca ? ` <span class="fila-costo__marca">· ${esc(f.marca)}</span>` : ''}</span>`
+      const insumo = `<span class="fila-precio__insumo">${nombre}<span class="fila-precio__origen">${esc(textoOrigenPrecio(f))}</span></span>`
+      if (pu === null) {
+        return `
+        <button type="button" class="tarjeta-lista fila-precio fila-precio--sin" data-costo="${esc(f.insumo_id)}">
+          ${insumo}
+          <span class="fila-precio__celda"><span class="chip-sin-costo">Sin precio</span></span>
+        </button>`
+      }
+      const unidad = porUnidadDeMedida(f.unidad_medida)
+      const bulto = textoBultoConIva(f)
       return `
-        <button type="button" class="tarjeta-lista fila-costo${costo === null ? ' fila-costo--sin' : ''}" data-costo="${esc(f.insumo_id)}">
-          <span class="fila-costo__info">
-            <span class="fila-stock__nombre">${esc(f.insumo)}${f.marca ? ` <span class="fila-costo__marca">· ${esc(f.marca)}</span>` : ''}</span>
-            <span class="fila-stock__meta"><span class="fila-stock__meta-texto">${esc(meta)}</span></span>
-          </span>
-          <span class="fila-costo__derecha">${derecha}</span>
+        <button type="button" class="tarjeta-lista fila-precio" data-costo="${esc(f.insumo_id)}">
+          ${insumo}
+          <span class="fila-precio__celda" data-col="unitario"><span class="fila-precio__rot">Precio unitario</span><span class="fila-precio__val">${esc(`${plataPrecioCompra(pu)} ${unidad}`)}</span></span>
+          <span class="fila-precio__celda" data-col="iva"><span class="fila-precio__rot">IVA %</span><span class="fila-precio__val">${esc(textoIvaPrecio(f.alicuota_iva))}</span></span>
+          <span class="fila-precio__celda" data-col="final"><span class="fila-precio__rot">Precio final</span><span class="fila-precio__val">${esc(`${plataPrecioCompra(f.precio_final)} ${unidad}`)}</span>${bulto ? `<span class="fila-precio__bulto">${esc(bulto)}</span>` : ''}</span>
         </button>`
     }
 
@@ -10346,13 +10459,13 @@
       const lista = unidadesConCostos()
       cargandoEl.hidden = !(estado.costos && estado.costos.filas === null && !estado.costos.error)
       if (sinPermisoEnBarra(lista)) {
-        pintarAvisoUnidad('costos-aviso-unidad', textoSinPermiso('ver los costos'))
+        pintarAvisoUnidad('costos-aviso-unidad', textoSinPermiso('ver los precios de compra'))
         listaEl.innerHTML = ''
         vacioEl.hidden = true
         return
       }
       if (!estado.costosUnidad) {
-        pintarAvisoUnidad('costos-aviso-unidad', lista.length > 1 ? 'Elegí de qué fábrica ver los costos: cada fábrica tiene los suyos.' : '')
+        pintarAvisoUnidad('costos-aviso-unidad', lista.length > 1 ? 'Elegí de qué fábrica ver los precios: cada fábrica tiene los suyos.' : '')
         listaEl.innerHTML = ''
         vacioEl.hidden = true
         return
@@ -10360,7 +10473,7 @@
       pintarAvisoUnidad('costos-aviso-unidad', '')
       const c = estado.costos
       if (!c || c.filas === null) {
-        listaEl.innerHTML = c?.error ? `<div class="rec-aviso">${esc('No se pudieron leer los costos: ' + c.error)}</div>` : ''
+        listaEl.innerHTML = c?.error ? `<div class="rec-aviso">${esc('No se pudieron leer los precios: ' + c.error)}</div>` : ''
         vacioEl.hidden = true
         return
       }
@@ -10370,13 +10483,14 @@
         vacioEl.hidden = false
         vacioEl.textContent = c.filas.length
           ? 'No se encontró ningún insumo con ese nombre o marca.'
-          : `${nombreDeUnidadBarra(c.unidad)} todavía no tiene insumos con stock ni costos cargados.`
+          : `${nombreDeUnidadBarra(c.unidad)} todavía no tiene insumos con stock ni precios de compra.`
         return
       }
       vacioEl.hidden = true
-      const sin = filas.filter(f => numeroCosto(f.costo_unitario) === null).length
-      const resumen = sin ? `<div class="costos-resumen">${esc(textoInsumosSinCosto(sin))}</div>` : ''
-      listaEl.innerHTML = resumen + filas.map(htmlFilaCosto).join('')
+      const sin = filas.filter(f => numeroCosto(f.precio_unitario) === null).length
+      const resumen = sin ? `<div class="costos-resumen">${esc(sin === 1 ? '1 insumo sin precio' : `${sin} insumos sin precio`)}</div>` : ''
+      const cabecera = filas.length > sin ? htmlCabeceraPrecios() : ''
+      listaEl.innerHTML = resumen + cabecera + filas.map(htmlFilaCosto).join('')
       listaEl.querySelectorAll('[data-costo]').forEach(b => b.addEventListener('click', () => abrirCosto(b.dataset.costo)))
     }
 
@@ -10429,8 +10543,33 @@
 
     function rotuloPrecioCosto(m) {
       return m.modo === 'bulto'
-        ? `Precio por bulto de ${formatearCantidadStock(m.contenido, m.unidad)}`
-        : `Precio ${porUnidadDeMedida(m.unidad)}`
+        ? `Precio por bulto de ${formatearCantidadStock(m.contenido, m.unidad)}, sin IVA`
+        : `Precio ${porUnidadDeMedida(m.unidad)}, sin IVA`
+    }
+
+    // "$ 700,0000 por kg + IVA 21 % = $ 847,00 por kg", o "Sin precio".
+    function textoPrecioActual(f) {
+      const pu = numeroCosto(f?.precio_unitario)
+      if (pu === null) return 'Sin precio'
+      const unidad = porUnidadDeMedida(f.unidad_medida)
+      return `${plataPrecioCompra(pu)} ${unidad} + IVA ${textoIvaPrecio(f.alicuota_iva)} = ${plataPrecioCompra(f.precio_final)} ${unidad}`
+    }
+
+    // El IVA elegido en el modal: un número de 0 a 100, null sin elegir, o
+    // NaN si "Otro" no se puede leer.
+    function ivaDelModalCosto() {
+      const sel = document.getElementById('costo-iva').value
+      if (sel === '') return null
+      if (sel !== 'otro') return Number(sel)
+      const v = leerCampoNumero(document.getElementById('costo-iva-otro'))
+      return v === null ? NaN : v
+    }
+
+    // Debajo del IVA: el final con IVA de lo que se va a guardar.
+    function textoFinalCosto(m, precio, iva) {
+      const unit = costoUnitarioDe(precio, m.modo, m.contenido)
+      if (unit === null || iva === null || !Number.isFinite(iva)) return ''
+      return `Precio final con IVA: ${plataPrecioCompra(unit * (1 + iva / 100))} ${porUnidadDeMedida(m.unidad)}`
     }
 
     // Debajo del campo: lo que se va a guardar (en bulto) o cuánto es el
@@ -10461,6 +10600,13 @@
       ponerNumero(precio, null)
       document.getElementById('costo-desde').value = hoyArgentinaCostos()
       document.getElementById('costo-nota').value = ''
+      // El IVA arranca sin elegir: un precio a mano sin decir el IVA no se
+      // guarda (0 si vino sin IVA).
+      document.getElementById('costo-iva').value = ''
+      const otro = document.getElementById('costo-iva-otro')
+      enlazarCampoNumero(otro, { decimales: 2 })
+      ponerNumero(otro, null)
+      otro.hidden = true
       document.getElementById('modal-costo').hidden = false
       abrirConHistorial(cerrarModalCosto)
       pintarModalCosto()
@@ -10476,7 +10622,8 @@
     function pintarModalCosto() {
       const m = estado.costo
       if (!m) return
-      document.getElementById('costo-actual').textContent = textoCostoUnitario(m.fila.costo_unitario, m.unidadMedida, { contenido: m.contenido, vista: m.vista })
+      document.getElementById('costo-actual').textContent = textoPrecioActual(m.fila)
+      document.getElementById('costo-origen').textContent = numeroCosto(m.fila.precio_unitario) === null ? '' : textoOrigenPrecio(m.fila)
       const puedeCargar = puedeCostosEn('cargar_costos', m.unidad)
       document.getElementById('costo-carga').hidden = !puedeCargar
       if (puedeCargar) {
@@ -10490,11 +10637,14 @@
         document.getElementById('costo-precio-rotulo').textContent = rotuloPrecioCosto({ ...m, unidad: m.unidadMedida })
         document.getElementById('costo-equivale').textContent =
           textoEquivaleCosto({ ...m, unidad: m.unidadMedida }, leerCampoNumero(document.getElementById('costo-precio')))
+        document.getElementById('costo-iva-otro').hidden = document.getElementById('costo-iva').value !== 'otro'
+        document.getElementById('costo-final').textContent =
+          textoFinalCosto({ ...m, unidad: m.unidadMedida }, leerCampoNumero(document.getElementById('costo-precio')), ivaDelModalCosto())
         const err = document.getElementById('costo-error')
         err.hidden = !m.error
         err.textContent = m.error || ''
         document.getElementById('btn-guardar-costo').disabled = m.enviando
-        document.getElementById('btn-guardar-costo').textContent = m.enviando ? 'Guardando…' : 'Guardar el costo'
+        document.getElementById('btn-guardar-costo').textContent = m.enviando ? 'Guardando…' : 'Guardar el precio'
       }
       pintarHistorialCosto()
     }
@@ -10515,11 +10665,23 @@
       if (!m) return
       const yo = m
       document.getElementById('costo-historial-cargando').hidden = false
-      const { data, error } = await supabase.from('insumo_costos')
-        .select('id, costo_unitario, vigente_desde, nota, cargado_por, cargado_en, anulado, anulado_por, anulado_en, origen')
-        .eq('unidad_negocio_id', m.unidad).eq('insumo_id', m.fila.insumo_id)
-        .order('vigente_desde', { ascending: false }).order('cargado_en', { ascending: false })
+      // Las COMPRAS (27/10/2026): los renglones de ingreso de este insumo con
+      // precio; la policy de materia_prima_items deja verlos con
+      // materia_prima:ver_todo (o los propios), así que a quien no la tiene le
+      // llegan menos y se dice. La fábrica se mira del ingreso.
+      const [{ data, error }, compras] = await Promise.all([
+        supabase.from('insumo_costos')
+          .select('id, costo_unitario, alicuota_iva, vigente_desde, nota, cargado_por, cargado_en, anulado, anulado_por, anulado_en, origen')
+          .eq('unidad_negocio_id', m.unidad).eq('insumo_id', m.fila.insumo_id)
+          .order('vigente_desde', { ascending: false }).order('cargado_en', { ascending: false }),
+        supabase.from('materia_prima_items')
+          .select('id, precio_unitario, alicuota_iva, created_at, materia_prima_ingresos(fecha, tipo_doc, numero_doc, razon_social, unidad_negocio_id)')
+          .eq('insumo_id', m.fila.insumo_id).not('precio_unitario', 'is', null),
+      ])
       if (estado.costo !== yo) return
+      if (compras.error) console.error('materia_prima_items (compras):', compras.error)
+      yo.errorCompras = compras.error ? (compras.error.message || 'No se pudieron leer las compras.') : null
+      yo.compras = compras.error ? [] : comprasDelHistorial(compras.data, m.unidad)
       document.getElementById('costo-historial-cargando').hidden = true
       if (error) {
         console.error('insumo_costos:', error)
@@ -10551,12 +10713,42 @@
       return ['Anulado', quien ? `por ${quien}` : '', cuando ? `el ${cuando}` : ''].filter(Boolean).join(' ')
     }
 
+    // Las compras de esta fábrica, de la más nueva a la más vieja, con el
+    // precio SIN IVA por unidad y su IVA.
+    function comprasDelHistorial(filas, unidad) {
+      return (Array.isArray(filas) ? filas : [])
+        .filter(c => c?.materia_prima_ingresos?.unidad_negocio_id === unidad && numeroCosto(c.precio_unitario) !== null && numeroCosto(c.precio_unitario) > 0)
+        .map(c => ({
+          id: c.id, precio: numeroCosto(c.precio_unitario), iva: numeroCosto(c.alicuota_iva) ?? 0,
+          fecha: c.materia_prima_ingresos.fecha ?? null, proveedor: c.materia_prima_ingresos.razon_social ?? null,
+          comprobante: [c.materia_prima_ingresos.tipo_doc, c.materia_prima_ingresos.numero_doc].filter(Boolean).join(' '),
+          orden: String(c.created_at ?? ''),
+        }))
+        .sort((a, b) => String(b.fecha ?? '').localeCompare(String(a.fecha ?? '')) || b.orden.localeCompare(a.orden))
+    }
+
+    // "$ 700,0000 por kg + IVA 21 %".
+    function textoPrecioConIva(precio, iva, unidad) {
+      return `${plataPrecioCompra(precio)} ${porUnidadDeMedida(unidad)} + IVA ${textoIvaPrecio(iva ?? 0)}`
+    }
+
+    function htmlComprasHistorial(m) {
+      const avisoCompras = m.errorCompras ? `<div class="rec-aviso">${esc('No se pudieron leer las compras: ' + m.errorCompras)}</div>` : ''
+      return avisoCompras + (m.compras ?? []).map(c => `
+          <div class="costo-hist">
+            <div class="costo-hist__tipo">Compra</div>
+            <div class="costo-hist__fila"><span class="costo-hist__valor">${esc(textoPrecioConIva(c.precio, c.iva, m.unidadMedida))}</span></div>
+            <div class="costo-hist__meta">${esc([c.proveedor, textoComprobante(c.comprobante), c.fecha ? formatearFecha(String(c.fecha)) : ''].filter(Boolean).join(' · '))}</div>
+          </div>`).join('')
+    }
+
     function htmlHistorialCosto(m) {
       if (m.errorHistorial) return `<div class="rec-aviso">${esc('No se pudo leer el historial: ' + m.errorHistorial)}</div>`
       if (!m.historial) return ''
-      if (!m.historial.length) return '<div class="estado-vacio-stock">Todavía no se cargó ningún costo de este insumo en esta fábrica.</div>'
+      const compras = htmlComprasHistorial(m)
+      if (!m.historial.length && !compras) return '<div class="estado-vacio-stock">Todavía no hay ningún precio de este insumo en esta fábrica.</div>'
       const puedeAnular = puedeCostosEn('cargar_costos', m.unidad)
-      return m.historial.map(h => {
+      return compras + m.historial.map(h => {
         const quien = h.cargado_por ? (m.nombres.get(h.cargado_por) || 'alguien') : ''
         const meta = [h.vigente_desde ? `desde ${formatearFecha(String(h.vigente_desde))}` : '', quien ? `cargó ${quien}` : ''].filter(Boolean).join(' · ')
         const confirmando = m.anulando === h.id
@@ -10573,8 +10765,9 @@
             : `<button type="button" class="btn-stock btn-stock--alerta btn-stock--chico" data-costo-anular="${esc(h.id)}">Anular</button>`
         return `
           <div class="costo-hist${h.anulado ? ' costo-hist--anulado' : ''}">
+            <div class="costo-hist__tipo">Cargado a mano</div>
             <div class="costo-hist__fila">
-              <span class="costo-hist__valor">${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida, { contenido: m.contenido, vista: m.vista }))}</span>
+              <span class="costo-hist__valor">${esc(textoCostoUnitario(h.costo_unitario, m.unidadMedida, { contenido: m.contenido, vista: m.vista }) + ` + IVA ${textoIvaPrecio(h.alicuota_iva ?? 0)}`)}</span>
               ${confirmando ? '' : acciones}
             </div>
             <div class="costo-hist__meta">${esc(meta)}</div>
@@ -10606,8 +10799,10 @@
 
     // Valida antes de llamar con los MISMOS textos de la base; un error de la
     // base va TAL CUAL, pegado al botón. Un doble toque manda una sola vez.
-    function validarCosto(m, unitario, desde, hoy) {
+    function validarCosto(m, unitario, desde, hoy, iva) {
       if (unitario === null) return m.modo === 'bulto' ? 'Escribí el precio del bulto.' : 'Poné un costo válido (0 o más).'
+      if (iva === null) return 'Elegí el IVA (0 % si vino sin IVA).'
+      if (!Number.isFinite(iva) || iva < 0 || iva > 100) return 'El IVA va de 0 a 100 %.'
       if (desde && desde > sumarDiasIso(hoy, 60)) return 'La fecha no puede ser tan adelante.'
       return null
     }
@@ -10619,14 +10814,15 @@
       const unitario = costoUnitarioDe(precio, m.modo, m.contenido)
       const desde = document.getElementById('costo-desde').value || null
       const nota = document.getElementById('costo-nota').value.trim() || null
-      const problema = validarCosto(m, unitario, desde, hoyArgentinaCostos())
+      const iva = ivaDelModalCosto()
+      const problema = validarCosto(m, unitario, desde, hoyArgentinaCostos(), iva)
       if (problema) { m.error = problema; pintarModalCosto(); return }
       m.enviando = true
       m.error = null
       pintarModalCosto()
       const { error } = await supabase.rpc('guardar_costo_insumo', {
         p_unidad_negocio_id: m.unidad, p_insumo_id: m.fila.insumo_id, p_costo_unitario: unitario,
-        p_vigente_desde: desde, p_nota: nota,
+        p_vigente_desde: desde, p_nota: nota, p_alicuota_iva: iva,
       })
       if (estado.costo !== m) return
       m.enviando = false
@@ -10636,9 +10832,11 @@
         pintarModalCosto()
         return
       }
-      mostrarExito('Costo guardado.')
+      mostrarExito('Precio guardado.')
       ponerNumero(document.getElementById('costo-precio'), null)
       document.getElementById('costo-nota').value = ''
+      document.getElementById('costo-iva').value = ''
+      ponerNumero(document.getElementById('costo-iva-otro'), null)
       await despuesDeCambiarCosto(m)
     }
 
@@ -10686,7 +10884,7 @@
       transito: 'Transferencias entre unidades',
       mermas: 'Mermas',
       traspaso: 'Traspaso a otra fábrica',
-      costos: 'Costos de insumos',
+      costos: 'Precios de compra',
       terminado: 'Producto terminado',
     }
 
@@ -12279,6 +12477,8 @@
     document.querySelectorAll('[data-costo-modo]').forEach(b => b.addEventListener('click', () => cambiarModoCosto(b.dataset.costoModo)))
     document.getElementById('costo-precio').addEventListener('input', () => { if (estado.costo) { estado.costo.error = null; pintarModalCosto() } })
     document.getElementById('btn-guardar-costo').addEventListener('click', guardarCosto)
+    document.getElementById('costo-iva').addEventListener('change', () => { if (estado.costo) { estado.costo.error = null; pintarModalCosto() } })
+    document.getElementById('costo-iva-otro').addEventListener('input', () => { if (estado.costo) { estado.costo.error = null; pintarModalCosto() } })
     document.getElementById('btn-volver-de-mermas').addEventListener('click', () => mostrarVista('stock'))
 
     // ── Traspaso a otra fábrica ────────────────────────────────────────────
@@ -12737,11 +12937,16 @@
 
     // Los clientes de esas fábricas que son otra empresa del grupo, con el
     // nombre de esa empresa (unidades_negocio la lee cualquier usuario).
+    // La consulta ya pide solo esas fábricas y los activos; igual se vuelve a
+    // mirar acá (auditoría del 27/10/2026): con Nuss en la barra no se ofrece
+    // nunca un cliente de Dolce ni uno dado de baja, aunque la consulta cambie.
     async function leerClientesGrupo(fabricas) {
-      const { data, error } = await supabase.from('clientes').select('id, nombre, unidad_negocio_id, unidad_grupo_id')
+      const { data, error } = await supabase.from('clientes').select('id, nombre, activo, unidad_negocio_id, unidad_grupo_id')
         .in('unidad_negocio_id', fabricas).eq('activo', true).not('unidad_grupo_id', 'is', null).order('nombre')
       if (error) throw error
-      const clientes = (data ?? []).filter(c => c?.unidad_grupo_id && c.unidad_grupo_id !== c.unidad_negocio_id)
+      const deEstas = new Set(fabricas.map(String))
+      const clientes = (data ?? []).filter(c => c?.activo === true && deEstas.has(String(c.unidad_negocio_id)) &&
+        c.unidad_grupo_id && c.unidad_grupo_id !== c.unidad_negocio_id)
       const ids = [...new Set(clientes.flatMap(c => [c.unidad_grupo_id, c.unidad_negocio_id]))]
       const nombres = new Map()
       if (ids.length) {

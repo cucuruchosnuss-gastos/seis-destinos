@@ -76,7 +76,7 @@ const EJECUTAR_TAMBIEN = [
 const RENDERS = [
   'esc', 'poblarSelect', 'poblarSelectMoneda', 'poblarSelectProyecto', 'crearMultiselect', 'crearSelectorOrden',
   'renderizarFiltros', 'renderizarTotalGastos', 'renderizarCardGasto',
-  'htmlSeccionComprobante', 'htmlTotalesPorUnidad', 'htmlSelectProyectoEdicion',
+  'htmlSeccionComprobante', 'htmlTotalesPorUnidad', 'htmlSelectProyectoEdicion', 'htmlDetalleFacturaCompra',
   // De js/barra-unidad.js (lo encuentra extraer.js por el import).
   'pasaFiltroUnidad',
   'htmlAvisoDuplicado', 'pintarAvisoDuplicado', 'renderizarAvisoDuplicado', 'volverOrigenSiCorresponde',
@@ -455,6 +455,24 @@ async function correrRenders(S) {
   await S.mostrarDetalleFactura(factura.id)
   chequearMarcas(chk, 'detalle de la factura', html('detalle-factura-contenido'),
     ['f_razon', 'f_tipo', 'f_numero', 'f_moneda', 'f_lugar', 'f_obs', 'f_foto', 'f_prov', 'f_cat', 'f_unidad'])
+  // La de Ingreso de materia prima (27/10/2026): la foto y los renglones
+  // vienen de detalle_factura_compra(), leídos por el OCR.
+  S.__setDatos('facturas_pendientes', { ...factura, comprobante_url: null, modulo_origen: 'materia_prima' })
+  S.__setRpc('detalle_factura_compra', { data: {
+    origen: 'materia_prima', ingreso_id: 'i1', foto_url: 'uid-yo/mp/' + marca('fc_foto'),
+    renglones_factura: [{ descripcion: marca('fc_desc'), cantidad: 2, unidad: marca('fc_unidad'), precio_unitario: 10, alicuota_iva: 21, precio_total: 20 }],
+    items_ingreso: [],
+  }, error: null })
+  await S.mostrarDetalleFactura(factura.id)
+  chequearMarcas(chk, 'detalle de la factura de compra (renglones)', html('detalle-factura-contenido'), ['fc_foto', 'fc_desc', 'fc_unidad', 'f_moneda'])
+  S.__setRpc('detalle_factura_compra', { data: {
+    origen: 'materia_prima', ingreso_id: 'i1', foto_url: null, renglones_factura: [],
+    items_ingreso: [{ insumo: marca('fc_insumo'), marca: marca('fc_marca'), unidad: marca('fc_iunidad'), cantidad: 3 }],
+  }, error: null })
+  await S.mostrarDetalleFactura(factura.id)
+  chequearMarcas(chk, 'detalle de la factura de compra (lo que entró al stock)', html('detalle-factura-contenido'), ['fc_insumo', 'fc_marca', 'fc_iunidad'])
+  S.__setRpc('detalle_factura_compra', { data: null, error: null })
+  S.__setDatos('facturas_pendientes', factura)
   await S.mostrarDetalleFactura(factura.id)
   S.mostrarFormularioEdicionFactura(factura.id)
   chequearMarcas(chk, 'formulario de edición de la factura', html('detalle-factura-contenido'),
@@ -599,8 +617,11 @@ const SEGURAS = {
     html: FILA_HTML,
     'iconoCategoriaHtml(f.categorias.nombre)': ICONO,
     "filaHtml('Categoría', f.categorias ? `${iconoCategoriaHtml(f.categorias.nombre)} ${esc(f.categorias.nombre)}` : null)": 'filaHtml() con el ícono (constante) y esc() del nombre, armado en el call site',
-    'htmlSeccionComprobante(f.comprobante_url)': 'HTML de htmlSeccionComprobante(), que escapa la ruta (ejecutada con marcas)',
+    'htmlSeccionComprobante(fotoFactura)': 'HTML de htmlSeccionComprobante(), que escapa la ruta (ejecutada con marcas, también con la foto de Ingreso)',
+    "htmlDetalleFacturaCompra(detalleCompra, f.moneda || 'ARS')": 'HTML de htmlDetalleFacturaCompra(), que escapa adentro (ejecutada con marcas)',
   },
+  // Detalle de la factura de compra (27/10/2026).
+  htmlDetalleFacturaCompra: { tabla: HTML_PROPIO },
   mostrarFormularioEdicionFactura: {
     label: CAMPO, html: CAMPO,
   },

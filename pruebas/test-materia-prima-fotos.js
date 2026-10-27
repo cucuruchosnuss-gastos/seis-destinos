@@ -20,6 +20,7 @@
 
 const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
+const { conPrecioMp, CONSTANTES_PRECIO_MP } = require('./precio-mp-comun')
 const { arnes, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
 
@@ -73,9 +74,9 @@ let S
 try {
   S = construirCon(ARCHIVO, {
     preludio: PRELUDIO,
-    constantes: ['BUCKET_FOTOS_MP', 'SEGUNDOS_FIRMA_FOTO_MP', 'MENSAJES_FOTO_MP'],
-    funciones: ['esc', 'rutaFotoMp', 'clasificarErrorFirmaMp', 'firmarFotoMp', 'abrirFotoMp', 'manejarClickFotoMp',
-      'subirArchivoMp', 'avisoOcr', 'leerConIA', 'filaItemParaBase', 'hayDiferenciaReal', 'diferenciaDe', 'esFactura'],
+    constantes: ['BUCKET_FOTOS_MP', 'SEGUNDOS_FIRMA_FOTO_MP', 'MENSAJES_FOTO_MP', ...CONSTANTES_PRECIO_MP],
+    funciones: conPrecioMp(['esc', 'rutaFotoMp', 'clasificarErrorFirmaMp', 'firmarFotoMp', 'abrirFotoMp', 'manejarClickFotoMp',
+      'subirArchivoMp', 'avisoOcr', 'leerConIA', 'filaItemParaBase', 'hayDiferenciaReal', 'diferenciaDe', 'esFactura']),
     retorno: `estado, __log, __setFirma(f){ __firma = f }, __bloquear(b){ __ventanaBloqueada = b }, BUCKET_FOTOS_MP, SEGUNDOS_FIRMA_FOTO_MP, MENSAJES_FOTO_MP`,
   })
 } catch (e) {

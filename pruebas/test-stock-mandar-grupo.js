@@ -9,7 +9,8 @@
 //    "Enviar a otra unidad" (#btn-mandar-grupo): visibles con retiros:cargar
 //    en la fábrica de la barra (con "Todas", en alguna);
 //  - qué clientes se leen (los de esas fábricas con unidad_grupo_id) y con qué
-//    nombre de empresa;
+//    nombre de empresa; aunque la base devolviera de más, nunca se ofrece un
+//    cliente de otra fábrica ni uno inactivo (auditoría del 27/10/2026);
 //  - con UNA empresa, derecho a retiros.html?cliente=<id>; con varias, se
 //    elige; sin ninguna o con error, se dice; todo escapado;
 //  - el botón de crear transferencias nuevas ya no está, y ver / aceptar /
@@ -80,8 +81,8 @@ function armar({ alcance = { unidades: ['u-n'] }, barra = null, rol = 'usuario' 
   return S
 }
 const NOMBRES = [{ id: 'u-n', nombre: 'Cucuruchos Nuss' }, { id: 'u-d', nombre: 'Dolce Pasta' }, { id: 'u-m', nombre: 'Mengui' }]
-const DOLCE_EN_NUSS = { id: 'c-dolce', nombre: 'DOLCE PASTA SRL', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-d' }
-const NUSS_EN_DOLCE = { id: 'c-paz', nombre: 'PAZ, MIRTA', unidad_negocio_id: 'u-d', unidad_grupo_id: 'u-n' }
+const DOLCE_EN_NUSS = { id: 'c-dolce', nombre: 'DOLCE PASTA SRL', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-d', activo: true }
+const NUSS_EN_DOLCE = { id: 'c-paz', nombre: 'PAZ, MIRTA', unidad_negocio_id: 'u-d', unidad_grupo_id: 'u-n', activo: true }
 
 // ═══ La pantalla: los botones ═════════════════════════════════════════════
 {
@@ -167,7 +168,7 @@ esperas.push((async () => {
 
 esperas.push((async () => {
   const S = armar({ barra: 'u-n' })
-  S.__tablas.clientes = [DOLCE_EN_NUSS, { id: 'c-mengui', nombre: 'HELADITOS ORLY', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-m' }]
+  S.__tablas.clientes = [DOLCE_EN_NUSS, { id: 'c-mengui', nombre: 'HELADITOS ORLY', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-m', activo: true }]
   S.__tablas.unidades_negocio = NOMBRES
   await S.mandarAOtraEmpresa()
   const h = S.__el('stock-grupo').innerHTML
@@ -178,11 +179,61 @@ esperas.push((async () => {
 // Un cliente que apunta a su propia fábrica no es "otra empresa".
 esperas.push((async () => {
   const S = armar({ barra: 'u-n' })
-  S.__tablas.clientes = [{ id: 'c-raro', nombre: 'NUSS', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-n' }]
+  S.__tablas.clientes = [{ id: 'c-raro', nombre: 'NUSS', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-n', activo: true }]
   S.__tablas.unidades_negocio = NOMBRES
   await S.mandarAOtraEmpresa()
   const h = S.__el('stock-grupo').innerHTML
   chk('un cliente que es la misma fábrica no cuenta', S.__idas.length === 0 && h.includes('no tiene ninguna otra empresa del grupo'), h)
+})())
+
+// ═══ Solo la fábrica de la barra y solo activos (auditoría 27/10/2026) ═════
+// La prueba devuelve TODO lo de la tabla sin filtrar, como si la consulta no
+// filtrara: la pantalla igual tiene que quedarse con lo que corresponde.
+const INACTIVO_EN_NUSS = { id: 'c-viejo', nombre: 'DOLCE VIEJO', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-d', activo: false }
+esperas.push((async () => {
+  // Nuss en la barra, permiso en Nuss y en Dolce: solo Dolce, elegida sola.
+  const S = armar({ barra: 'u-n', alcance: { unidades: ['u-n', 'u-d'] } })
+  S.__tablas.clientes = [NUSS_EN_DOLCE, INACTIVO_EN_NUSS, DOLCE_EN_NUSS]
+  S.__tablas.unidades_negocio = NOMBRES
+  await S.mandarAOtraEmpresa()
+  const f = S.__consultas[0][1]
+  chk('Nuss en la barra (con permiso en Nuss y Dolce): pide solo Nuss', f.some(x => x[0] === 'in' && x[1] === 'unidad_negocio_id' && JSON.stringify(x[2]) === '["u-n"]'))
+  chk('… y aunque vengan de más, va derecho a DOLCE PASTA SRL (sin PAZ, MIRTA de Dolce ni el inactivo)',
+    JSON.stringify(S.__idas) === '["retiros.html?cliente=c-dolce"]' && S.estado.grupo === null, JSON.stringify(S.__idas))
+  const solo = await S.leerClientesGrupo(['u-n'])
+  chk('leerClientesGrupo: solo los de esas fábricas y activos', JSON.stringify(solo.map(o => o.id)) === '["c-dolce"]', JSON.stringify(solo))
+})())
+
+esperas.push((async () => {
+  // Dolce en la barra: solo PAZ, MIRTA.
+  const S = armar({ barra: 'u-d', alcance: { unidades: ['u-n', 'u-d'] } })
+  S.__tablas.clientes = [DOLCE_EN_NUSS, NUSS_EN_DOLCE]
+  S.__tablas.unidades_negocio = NOMBRES
+  await S.mandarAOtraEmpresa()
+  chk('Dolce en la barra: va derecho a PAZ, MIRTA', JSON.stringify(S.__idas) === '["retiros.html?cliente=c-paz"]', JSON.stringify(S.__idas))
+})())
+
+esperas.push((async () => {
+  // "Todas": las dos fábricas con permiso, sin el inactivo ni Mengui (sin permiso).
+  const S = armar({ barra: null, alcance: { unidades: ['u-n', 'u-d'] } })
+  S.__tablas.clientes = [DOLCE_EN_NUSS, NUSS_EN_DOLCE, INACTIVO_EN_NUSS,
+    { id: 'c-de-mengui', nombre: 'NUSS EN MENGUI', unidad_negocio_id: 'u-m', unidad_grupo_id: 'u-n', activo: true }]
+  S.__tablas.unidades_negocio = NOMBRES
+  await S.mandarAOtraEmpresa()
+  const h = S.__el('stock-grupo').innerHTML
+  chk('"Todas": ofrece las dos con permiso', S.__idas.length === 0 && h.includes('cliente=c-dolce') && h.includes('cliente=c-paz'), h)
+  chk('… sin el inactivo', !h.includes('c-viejo') && !h.includes('DOLCE VIEJO'), h)
+  chk('… ni el de una fábrica sin permiso', !h.includes('c-de-mengui'), h)
+})())
+
+esperas.push((async () => {
+  // Una fila sin "activo" (o con activo distinto de true) no cuenta.
+  const S = armar({ barra: 'u-n' })
+  S.__tablas.clientes = [{ id: 'c-sin', nombre: 'SIN DATO', unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-d' }]
+  await S.mandarAOtraEmpresa()
+  chk('un cliente sin activo = true no cuenta', S.__idas.length === 0 && S.__el('stock-grupo').innerHTML.includes('no tiene ninguna otra empresa del grupo'))
+  const sel = S.__consultas[0][1].find(x => x[0] === 'select')
+  chk('… y la consulta trae activo para poder mirarlo', /\bactivo\b/.test(sel?.[1] || ''), sel?.[1])
 })())
 
 // ═══ Ninguna, error, sin permiso ══════════════════════════════════════════
@@ -232,8 +283,8 @@ esperas.push((async () => {
 esperas.push((async () => {
   const S = armar({ barra: null, alcance: { todas: true } })
   S.__tablas.clientes = [
-    { id: marca('id'), nombre: marca('cliente'), unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-x' },
-    { id: 'c2', nombre: 'OTRO', unidad_negocio_id: 'u-d', unidad_grupo_id: 'u-y' },
+    { id: marca('id'), nombre: marca('cliente'), unidad_negocio_id: 'u-n', unidad_grupo_id: 'u-x', activo: true },
+    { id: 'c2', nombre: 'OTRO', unidad_negocio_id: 'u-d', unidad_grupo_id: 'u-y', activo: true },
   ]
   S.__tablas.unidades_negocio = [{ id: 'u-x', nombre: marca('empresa') }, { id: 'u-y', nombre: 'Y' }, { id: 'u-n', nombre: marca('desde') }, { id: 'u-d', nombre: 'D' }]
   await S.mandarAOtraEmpresa()

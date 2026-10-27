@@ -93,7 +93,8 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(page.locator('#rt-resumen .rt-aviso-entre')).toHaveText(TEXTO);
     await expect(page.locator('#rt-resumen')).toContainText('25,5 kg');
     await page.locator('#rt-confirmar').click();
-    await expect(page.locator('#rt-hecho')).toContainText('N-0042');
+    // 27/10/2026: la orden a otra empresa es una orden interna (N-I-…).
+    await expect(page.locator('#rt-hecho')).toContainText('N-I-0042');
     const reg = rpc.find(r => r.nombre === 'registrar_orden_retiro');
     expect(reg?.params?.p_cliente_id).toBe('c-dp');
     expect(reg.params.p_items.some(i => i.presentacion_id === 'pr1'), 'con producto terminado').toBe(true);

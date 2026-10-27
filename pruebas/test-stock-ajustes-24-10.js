@@ -205,6 +205,12 @@ function nuevo({ tareas = new Map([['stock:ver', { todas: true }], ['stock:ver_c
   S.__setDatos('insumos', CATALOGO)
   S.__setRpc('stock_valorizado', () => ({ data: [], error: null }))
   S.__setRpc('costos_insumos', (p) => ({ data: p.p_unidad_negocio_id === NUSS ? COSTOS_NUSS : [], error: null }))
+  // Precios de compra (27/10/2026): los mismos, sin IVA y sin el bulto (el
+  // bulto sale de presentacionCosto, que es lo que se prueba acá).
+  S.__setRpc('precios_compra', (p) => ({ data: p.p_unidad_negocio_id === NUSS ? COSTOS_NUSS.map(c => ({
+    insumo_id: c.insumo_id, insumo: c.insumo, marca: null, unidad_medida: c.unidad_medida, contenido_bulto: null, nombre_bulto: null,
+    precio_unitario: c.costo_unitario, alicuota_iva: '0', precio_final: c.costo_unitario, fecha: '2026-10-01', origen: 'manual', proveedor: null, comprobante: null,
+  })) : [], error: null }))
   S.__setRpc('lotes_usados_sin_ingreso', () => ({ data: [], error: null }))
   return S
 }
@@ -235,9 +241,10 @@ async function correr() {
     chk('sal: un 0 en el catálogo no es un bulto → el de la fábrica (25)', p('sal').contenido === 25, JSON.stringify(p('sal')))
     chk('un insumo que no está en ningún lado: sin bulto, en su unidad', p('nada').contenido === null && p('nada').vista === 'base', JSON.stringify(p('nada')))
     const h = S.__el('lista-costos').innerHTML
-    chk('la fila de la harina: "$ 25.000,00 el bulto de 25 kg · $ 1.000,00 por kg"', /\$ 25\.000,00 el bulto de 25 kg · \$ 1\.000,00 por kg/.test(h), h)
-    chk('la del azúcar sigue con su bulto de 50 kg', /\$ 100,00 el bulto de 50 kg · \$ 2,00 por kg/.test(h), h)
-    chk('la de la lecitina, por bidón de 20 kg del catálogo', /\$ 6\.000,00 el bulto de 20 kg · \$ 300,00 por kg/.test(h), h)
+    // La lista es de precios de compra (27/10/2026): el bulto, con IVA, debajo del final.
+    chk('la fila de la harina: "bulto de 25 kg con IVA: $ 25.000,00"', /fila-precio__bulto">bulto de 25 kg con IVA: \$ 25\.000,00</.test(h), h)
+    chk('la del azúcar sigue con su bulto de 50 kg', /fila-precio__bulto">bulto de 50 kg con IVA: \$ 100,00</.test(h), h)
+    chk('la de la lecitina, por bidón de 20 kg del catálogo', /fila-precio__bulto">bulto de 20 kg con IVA: \$ 6\.000,00</.test(h), h)
     // Otra fábrica y vuelta: el catálogo se leyó UNA vez.
     await S.alCambiarBarra(barra(DOLCE))
     await S.cargarCostos()
@@ -254,8 +261,9 @@ async function correr() {
     await tick()
     const m = S.estado.costo
     chk('el modal de la harina: bulto de 25 kg y arranca por bulto', m.contenido === 25 && m.modo === 'bulto', JSON.stringify({ c: m.contenido, modo: m.modo }))
-    chk('rótulo: "Precio por bulto de 25 kg"', S.__el('costo-precio-rotulo').textContent === 'Precio por bulto de 25 kg', S.__el('costo-precio-rotulo').textContent)
+    chk('rótulo: "Precio por bulto de 25 kg, sin IVA"', S.__el('costo-precio-rotulo').textContent === 'Precio por bulto de 25 kg, sin IVA', S.__el('costo-precio-rotulo').textContent)
     S.__el('costo-precio').value = '17.500'
+    S.__el('costo-iva').value = '21'
     S.pintarModalCosto()
     chk('debajo: "→ $ 700,00 por kg"', S.__el('costo-equivale').textContent === '→ $ 700,00 por kg', S.__el('costo-equivale').textContent)
     S.__setRpc('guardar_costo_insumo', () => ({ data: 'nuevo', error: null }))

@@ -44,12 +44,12 @@ const tandas = [
       { nombre: 'la devolución saca stock', de: "      return tipoRenglon(r) !== 'devolucion'\n", a: '      return true\n' },
       { nombre: 'la devolución tiene lotes', de: '      if (!saleDelStock(r)) return null\n', a: '' },
       // 26/10/2026: renglonConLotes también mira lotesAMano (la fábrica sin control).
-      { nombre: 'la devolución lee lotes', de: ' && saleDelStock(r) && !lotesAMano(r)\n', a: ' && !lotesAMano(r)\n' },
+      { nombre: 'la devolución lee lotes', de: ' && saleDelStock(r) && !lotesAMano(r) && !sinStockRenglon(r)\n', a: ' && !lotesAMano(r) && !sinStockRenglon(r)\n' },
       { nombre: 'cambiar a devolución no suelta los lotes', de: '      if (r.dev.trato !== trato) r.lotes = {}\n', a: '' },
       // Los totales
-      { nombre: 'la devolución suma a lo que se lleva', de: " && tipoRenglon(r) !== 'devolucion' && Number(r.cajas) > 0", a: ' && Number(r.cajas) > 0' },
+      { nombre: 'la devolución suma a lo que se lleva', de: " && tipoRenglon(r) !== 'devolucion' && !porUnidadRenglon(r) && Number(r.cajas) > 0", a: ' && !porUnidadRenglon(r) && Number(r.cajas) > 0' },
       { nombre: 'el total sin las devueltas', de: " + (devueltas ? ` · devueltas ${enteroHoja(devueltas)}` : '')\n    }", a: '\n    }' },
-      { nombre: 'Mis retiros cuenta la devolución', de: "(r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0))", a: '(Number(r.cajas) || 0)' },
+      { nombre: 'Mis retiros cuenta la devolución', de: "(r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || 0))", a: '(esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || 0))' },
       // El catálogo
       { nombre: 'la devolución ofrece insumos', de: "GRUPOS_RETIRO.filter(g => !devolucion || g.tipo !== 'insumos')", a: 'GRUPOS_RETIRO' },
       { nombre: 'la devolución esconde lo sin stock', de: '(q || devolucion ? true : hayStock(o))', a: '(q ? true : hayStock(o))' },
@@ -91,7 +91,7 @@ const tandas = [
     manuales: [
       { nombre: 'la hoja sin "−" en la devolución', de: "    return r?.movimiento === 'devolucion' && c !== '—' ? `−${c}` : c", a: '    return c' },
       { nombre: 'la hoja sin ordenar', de: '  return [...lista.filter(r => !esDevolucionHoja(r)), ...lista.filter(esDevolucionHoja)]', a: '  return lista' },
-      { nombre: 'el total de cajas cuenta la devolución', de: "(r?.esInsumo || r?.movimiento === 'devolucion' ? 0 :", a: '(r?.esInsumo ? 0 :' },
+      { nombre: 'el total de cajas cuenta la devolución', de: "(r?.esInsumo || r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 :", a: '(r?.esInsumo || esPorUnidadHoja(r) ? 0 :' },
       { nombre: 'las unidades cuentan la devolución', de: " && r?.movimiento !== 'devolucion')", a: ')' },
       { nombre: 'sin las devueltas', de: '  return (orden?.renglones ?? []).reduce((s, r) => s + (esDevolucionHoja(r) ? (Number(r.cajas) || 0) : 0), 0)', a: '  return 0' },
       { nombre: 'la reposición no cuenta como devuelta', de: "  return r?.movimiento === 'devolucion' || r?.movimiento === 'reposicion'\n", a: "  return r?.movimiento === 'devolucion'\n" },
@@ -108,7 +108,7 @@ const tandas = [
       { nombre: 'el detalle sin el lote', de: "    lote ? `lote ${lote}` : '', textoDestinoDevuelto(r?.destino)]", a: "    textoDestinoDevuelto(r?.destino)]" },
       { nombre: 'el texto sin la sección', de: "    lineas.push('', 'Devoluciones:')", a: "    lineas.push('')" },
       { nombre: 'el texto repite las devoluciones', de: '    if (esDevolucionHoja(r)) continue\n', a: '' },
-      { nombre: 'el texto sin "−"', de: "${r.movimiento === 'devolucion' ? '−' : ''}${enteroHoja(r.cajas)} cajas · ${desc} (${detalleDevolucionHoja(r)})", a: '${enteroHoja(r.cajas)} cajas · ${desc} (${detalleDevolucionHoja(r)})' },
+      { nombre: 'el texto sin "−"', de: "lineas.push(`- ${r.movimiento === 'devolucion' ? '−' : ''}${esPorUnidadHoja(r)", a: "lineas.push(`- ${esPorUnidadHoja(r)" },
     ],
   },
 ]
