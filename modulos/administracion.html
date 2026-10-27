@@ -760,6 +760,31 @@
     .ad-rm-renglon__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0; }
     .ad-rm-acciones { min-width: 0; }
     .ad-rm-acciones > .ad-btn { margin: 0.375rem 0 0.5rem; }
+    /* ── Los acopios (27/10/2026) ──────────────────────────────────────
+       Lo que el cliente ya pagó y retira de a poco: "Quedan N de M cajas"
+       con su barra (celeste, el color del talonario de acopio). En la
+       revisión de un remito de acopio, el saldo al lado de cada renglón; si
+       no hay o no alcanza, en AMARILLO. */
+    .ad-acopio { gap: 0.3125rem; }
+    .ad-acopio__producto { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+    .ad-acopio__quedan { font-weight: 800; font-size: 1.0625rem; font-variant-numeric: tabular-nums; color: #0B4F7A; }
+    .ad-acopio__barra { display: block; height: 8px; border-radius: 999px; background: #E4F2FB; border: 1px solid #5AA9DA; overflow: hidden; min-width: 0; }
+    .ad-acopio__barra > span { display: block; height: 100%; background: #5AA9DA; }
+    .ad-acopio--terminado .ad-acopio__quedan, .ad-acopio--anulado .ad-acopio__producto { color: var(--ad-texto-secundario); }
+    .ad-acopio--anulado { background: var(--color-superficie); }
+    .ad-acopios-anulados { margin: 0.75rem 0 0; min-width: 0; }
+    .ad-acopios-anulados > summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; color: var(--ad-texto-secundario); }
+    .ad-acopios-anulados > .ad-lista { margin-top: 0.5rem; }
+    .ad-acopio-mov { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem 0; border-bottom: 1px solid var(--color-borde); min-width: 0; }
+    .ad-acopio-mov:last-child { border-bottom: 0; }
+    .ad-acopio-mov__datos { display: flex; align-items: center; gap: 0.375rem 0.5rem; flex-wrap: wrap; min-width: 0; }
+    .ad-acopio-mov__cajas { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ad-acopio-mov .ad-link { min-height: 44px; }
+    .ad-ac-total { margin: 0 0 0.75rem; font-weight: 700; overflow-wrap: anywhere; }
+    .ad-rm-acopio { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 700; color: #0B4F7A; overflow-wrap: anywhere; }
+    .ad-rm-acopio--falta { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border: 2px solid var(--amarillo); border-radius: 8px; padding: 0.375rem 0.5rem; }
+    .ad-cuenta-grupo__empresas { margin: 0.25rem 0 0; display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: center; overflow-wrap: anywhere; min-width: 0; }
+    .ad-cuenta-grupo .ad-link { min-height: 44px; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -896,6 +921,24 @@
         <h1 class="ad-titulo" id="ad-remito-titulo">Remito precargado</h1>
       </div>
       <div id="ad-remito-cuerpo"></div>
+    </section>
+
+    <!-- ══ LOS ACOPIOS (27/10/2026) ═══════════════════════════════════════
+         En las fábricas con algún acopio o sin control de stock (Dolce). El
+         listado, "Nuevo acopio" y el detalle de uno con sus retiros. -->
+    <section id="ad-vista-acopios" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-acopios-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Acopios</h1>
+      </div>
+      <div id="ad-acopios-cuerpo"></div>
+    </section>
+    <section id="ad-vista-acopio" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-acopio-volver">&lsaquo; Acopios</button>
+        <h1 class="ad-titulo" id="ad-acopio-titulo">Acopio</h1>
+      </div>
+      <div id="ad-acopio-cuerpo"></div>
     </section>
 
     <!-- ══ CLIENTES ═══════════════════════════════════════════════════════ -->
@@ -1616,6 +1659,15 @@
       remito: null,
       remitosResueltos: new Set(),
       talonarioOrdenes: 'oficial',
+      // LOS ACOPIOS (27/10/2026): por fábrica, si tiene alguno (las con
+      // control de stock: la sección aparece recién cuando hay); la lista
+      // ({ empresaId, filas, error, clienteId, nuevo, aviso }); el abierto; y
+      // la empresa del principal de cada cliente vinculado (clientes.
+      // cliente_principal_id → unidad, null si no se pudo leer).
+      hayAcopios: new Map(),
+      acopios: null,
+      acopio: null,
+      principales: new Map(),
       trabajando: false,
       // Clientes
       saldos: null,          // lo que devolvió clientes_con_saldo (null = todavía no)
@@ -1733,6 +1785,10 @@
       // acepta quien pone los precios, la misma tarea que exige
       // resolver_faltante_retiro().
       { id: 'revisar', titulo: 'Retiros por revisar', permiso: ['retiros', 'precios'] },
+      // Los acopios (27/10/2026): con retiros:ver o retiros:precios (los que
+      // deja leer acopios_lista; cargar y anular piden precios), y SOLO en una
+      // fábrica con algún acopio o sin control de stock (hoy Dolce).
+      { id: 'acopios', titulo: 'Acopios', permiso: ['retiros', 'ver'], tambien: (u) => puedeEn('retiros', 'precios', u), solo: (u) => acopiosEnEmpresa(u) },
       // La cartera de cheques (mudada de cheques.html el 26/09/2026): NO es
       // de una empresa. La ve quien hoy puede ver Cheques: cobranzas:ver_todo
       // o cobranzas:procesar, con bypass de super_admin.
@@ -1771,6 +1827,7 @@
     function seccionVisible(s, unidadId = estado.empresaId) {
       if (s.soloSuperAdmin) return estado.miRolApp === 'super_admin'
       if (s.global) return estado.miRolApp === 'super_admin' || s.tareas.some(t => estado.misTareas.has(t))
+      if (typeof s.solo === 'function' && s.solo(unidadId) !== true) return false
       return puedeEn(s.permiso[0], s.permiso[1], unidadId) || (typeof s.tambien === 'function' && s.tambien(unidadId) === true)
     }
 
@@ -1857,7 +1914,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar', 'ad-vista-retenciones', 'ad-vista-prestamos', 'ad-vista-prestamo',
-      'ad-vista-entre', 'ad-vista-comisiones', 'ad-vista-remito']
+      'ad-vista-entre', 'ad-vista-comisiones', 'ad-vista-remito', 'ad-vista-acopios', 'ad-vista-acopio']
     // Las vistas que no son de una empresa: el selector de empresa se esconde.
     const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-retenciones', 'ad-vista-prestamos', 'ad-vista-prestamo',
       'ad-vista-entre', 'ad-vista-comisiones']
@@ -1883,6 +1940,8 @@
       'ad-vista-entre': 'Entre empresas',
       'ad-vista-comisiones': 'Configuración de comisiones',
       'ad-vista-remito': 'Remito precargado',
+      'ad-vista-acopios': 'Acopios',
+      'ad-vista-acopio': 'Acopio',
     }
 
     function mostrarVista(id) {
@@ -2185,8 +2244,10 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function leerClientes(unidadId) {
+      // cliente_principal_id (27/10/2026): el mismo cliente en otra empresa
+      // del grupo (FERNANDEZ RICARDO de Dolce → el de Nuss).
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, pct_parte_a, comision_habitual, apodos, provisorio, unidad_grupo_id')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, pct_parte_a, cliente_principal_id, comision_habitual, apodos, provisorio, unidad_grupo_id')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -2315,6 +2376,38 @@
         tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.empresaId) { estado.catalogo = c; estado.catalogoEmpresa = unidad } }))
       }
       await Promise.all(tareas)
+      // De qué empresa es el principal de cada vinculado (27/10/2026): solo
+      // si hay alguno, y nunca frena (si falla, "otra empresa del grupo").
+      await leerPrincipales(estado.clientes)
+    }
+
+    // "FERNANDEZ RICARDO (también en Nuss)" (27/10/2026). La empresa del
+    // principal se lee de clientes (su policy: retiros:ver / pedidos en esa
+    // empresa); lo que no se pudo leer queda en null y no se vuelve a pedir.
+    async function leerPrincipales(clientes) {
+      const ids = [...new Set((Array.isArray(clientes) ? clientes : []).map(c => c?.cliente_principal_id).filter(Boolean))]
+      if (!(estado.principales instanceof Map)) estado.principales = new Map()
+      const faltan = ids.filter(id => !estado.principales.has(id))
+      if (!faltan.length) return
+      try {
+        const { data, error } = await supabase.from('clientes').select('id, unidad_negocio_id').in('id', faltan)
+        if (error) throw error
+        for (const f of Array.isArray(data) ? data : []) if (f?.id) estado.principales.set(f.id, f.unidad_negocio_id ?? null)
+      } catch (err) {
+        console.error('No se pudo leer la empresa de los clientes vinculados:', err)
+      }
+      for (const id of faltan) if (!estado.principales.has(id)) estado.principales.set(id, null)
+    }
+
+    // " (también en Nuss)", o '' si no está vinculado. Texto plano: quien lo
+    // pone en HTML lo escapa.
+    function textoTambienEn(c) {
+      if (!c?.cliente_principal_id) return ''
+      const u = estado.principales?.get?.(c.cliente_principal_id) ?? null
+      // El principal en esta misma empresa no es "otra" cuenta del grupo.
+      if (u && u === estado.empresaId) return ''
+      const e = u ?(estado.empresas ?? []).find(x => x.id === u) : null
+      return ` (también en ${e ? nombreCorto(e) : 'otra empresa del grupo'})`
     }
 
     function clienteDe(id) {
@@ -2455,6 +2548,8 @@
       prestamos: { trazo: 'prestamos', modulo: 'gastos' },
       entre: { trazo: 'entre', modulo: 'administracion' },
       comisiones: { trazo: 'comisiones', modulo: 'retiros' },
+      // Los acopios (27/10/2026): celeste, el color del talonario de acopio.
+      acopios: { trazo: 'retiros', c: '#0B4F7A', t: '#E4F2FB' },
     }
 
     function htmlTrazo(clave, tam = 18) {
@@ -2594,6 +2689,7 @@
       }
       if (s.id === 'entre') return contenidoSeccionEntre(p)
       if (s.id === 'comisiones') return contenidoSeccionComisiones(p)
+      if (s.id === 'acopios') return contenidoSeccionAcopios(p)
       return { numero: null, unidad: '', lineas: [] }
     }
 
@@ -2623,7 +2719,7 @@
     // Las pestañas de sección del encabezado (el orden del diseño). Solo las
     // que la persona puede ver; Inicio siempre.
     const PESTANAS = [
-      ['inicio', 'Inicio'], ['cobranzas', 'Cobranzas'], ['ordenes', 'Órdenes'], ['revisar', 'Por revisar'], ['clientes', 'Clientes'],
+      ['inicio', 'Inicio'], ['cobranzas', 'Cobranzas'], ['ordenes', 'Órdenes'], ['acopios', 'Acopios'], ['revisar', 'Por revisar'], ['clientes', 'Clientes'],
       ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['retenciones', 'Retenciones'], ['prestamos', 'Préstamos'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
       ['entre', 'Entre empresas'], ['comisiones', 'Comisiones'],
     ]
@@ -2638,6 +2734,7 @@
       'ad-vista-entre': 'entre',
       'ad-vista-comisiones': 'comisiones',
       'ad-vista-remito': 'ordenes',
+      'ad-vista-acopios': 'acopios', 'ad-vista-acopio': 'acopios',
     }
 
     // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
@@ -2769,6 +2866,9 @@
         contarEntrePortada().then(r => { p.entre = r }).catch(err => { console.error('No se pudieron contar los movimientos entre empresas:', err); p.errorEntre = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
+      // Los acopios (27/10/2026): primero si la fábrica tiene alguno o no
+      // controla el stock (la pestaña aparece recién ahí); después, cuántos.
+      contarAcopiosPortada(p, turno, unidad)
       if (SECCIONES.some(s => s.id === 'comisiones' && seccionVisible(s))) {
         leerVendedores().then(v => { p.vendedores = v }).catch(err => { console.error('No se pudieron leer los vendedores:', err); p.errorVendedores = 'No se pudo leer.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
@@ -2793,6 +2893,7 @@
       const s = seccionesVisibles().find(x => x.id === id)
       if (!s) return
       if (id === 'ordenes') mostrarOrdenes()
+      else if (id === 'acopios') mostrarAcopios()
       else if (id === 'clientes') mostrarClientes()
       else if (id === 'listas') mostrarListas()
       else if (id === 'importar') mostrarImportar()
@@ -3640,7 +3741,7 @@
     // su nota; el selector si no tiene producto (o se tocó "Cambiar"); la
     // cantidad y los lotes; "Aceptar sugerencia", "No va en la orden" y
     // "Quitar". Omitido: tachado en gris, con "Va en la orden".
-    function htmlRenglonRemito(r, i, cat) {
+    function htmlRenglonRemito(r, i, cat, rm = estado.remito) {
       const rmLeido = limpio(r.texto_leido) ? `<p class="ad-rm-leido">Leído: «${esc(limpio(r.texto_leido))}»</p>` : ''
       const rmNota = limpio(r.nota) ? `<p class="ad-rm-nota">${esc(limpio(r.nota))}</p>` : ''
       // (El omitido sale antes, tachado: acá nunca es amarillo.)
@@ -3666,7 +3767,8 @@
           (pr?.con_cono ? htmlConoRemito(r, i, cat) : '') +
           `<div class="ad-campo ad-rm-cantidad"><label for="ad-rm-cantidad-${esc(i)}">${esc(rotulo)}</label>` +
           `<input type="text" class="ad-input" id="ad-rm-cantidad-${esc(i)}" data-rm-cantidad="${esc(i)}" inputmode="decimal" autocomplete="off"></div>` +
-          (r.presentacionId ? htmlLotesRemito(r, i) : '')
+          // Talonario Acopio: el saldo del acopio que va a descontar (27/10/2026).
+          (r.presentacionId ? htmlSaldoAcopioRemito(rm, r, i) + htmlLotesRemito(r, i) : '')
       }
       const rmAceptar = puedeAceptarSugerencia(r) ? `<button type="button" class="ad-btn ad-btn--secundario" data-rm-aceptar="${esc(i)}">Aceptar sugerencia</button>` : ''
       return `<div class="ad-rm-renglon${amarillo ? ' ad-rm-renglon--revisar' : ''}" data-rm-renglon="${esc(i)}">${rmCab}${rmLeido}${rmNota}${cuerpo}` +
@@ -3688,7 +3790,7 @@
         const razon = limpio(c.razon_social) && normalizar(c.razon_social) !== normalizar(c.nombre) ? limpio(c.razon_social) : ''
         const detalle = [razon, limpio(c.localidad)].filter(Boolean).join(' · ')
         return `<button type="button" class="ad-opcion-cliente" data-rm-cliente="${esc(c.id)}">` +
-          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + (apodo ? ' · ' + apodo : ''))}</span>` +
+          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + textoTambienEn(c) + (apodo ? ' · ' + apodo : ''))}</span>` +
           `${detalle ? `<span class="ad-opcion-cliente__detalle">${esc(detalle)}</span>` : ''}</button>`
       }).join('') + '</div>'
     }
@@ -3944,6 +4046,7 @@
       f.talonario = t
       marcarSucioRemito()
       pintarRemito()
+      cargarAcopiosRemito()
     }
 
     function elegirClienteRemito(id) {
@@ -3954,6 +4057,7 @@
       f.clienteBusqueda = ''
       marcarSucioRemito()
       pintarRemito()
+      cargarAcopiosRemito()
     }
 
     function cambiarClienteRemito() {
@@ -4013,6 +4117,7 @@
         r.cantidad = leerCampoNumero(t)
         marcarSucioRemito()
         pintarPieLotesRemito(d.rmCantidad)
+        pintarAcopiosRemito()
       } else if (d.rmLote !== undefined || d.rmLoteCajas !== undefined) {
         const i = d.rmLote !== undefined ? d.rmLote : d.rmLoteCajas
         const r = renglonRemito(i)
@@ -4101,6 +4206,8 @@
       }
       if (estado.remito !== rm) return
       pintarRemito()
+      // De acopio: el saldo de cada renglón, al costado de la foto (no la frena).
+      cargarAcopiosRemito(rm)
       await cargarFotoRemito(rm)
     }
 
@@ -4746,6 +4853,26 @@
       }
     }
 
+    // ── EL PRECIO CON LA LISTA DE OTRA EMPRESA (27/10/2026) ───────────────
+    // listas_precios.unidad_negocio_id ≠ la de la orden: la empresa de la
+    // lista, o null si es la misma (o si no se pudo leer: entonces se sigue
+    // como siempre y el renglón sin precio queda para escribirlo). La lista se
+    // lee con la policy "retiros: leer listas" (retiros:ver / precios /
+    // cargar en la empresa de la lista).
+    async function unidadListaDeOtraEmpresa(listaId, unidadOrden) {
+      if (!listaId || !unidadOrden) return null
+      if (estado.listas?.unidad === unidadOrden && (estado.listas.filas ?? []).some(l => l?.id === listaId)) return null
+      try {
+        const { data, error } = await supabase.from('listas_precios').select('id, unidad_negocio_id').eq('id', listaId).maybeSingle()
+        if (error) throw error
+        const u = data?.unidad_negocio_id ?? null
+        return u && u !== unidadOrden ? u : null
+      } catch (err) {
+        console.error('No se pudo leer de qué empresa es la lista de precios:', err)
+        return null
+      }
+    }
+
     // El precio de UNA presentación en la lista (el último vigente a la
     // fecha), o null si no tiene o no se puede leer.
     async function precioPropioEnLista(listaId, presentacionId, fecha) {
@@ -4761,6 +4888,37 @@
         console.error('No se pudo leer el precio de la presentación en la lista:', err)
         return null
       }
+    }
+
+    // La presentación de la orden en la empresa de la lista:
+    // _presentacion_en_unidad(p_presentacion_id, p_unidad) (verificada el
+    // 27/10/2026: mismo producto por nombre, cono sí/no, media caja y
+    // unidades; sin equivalente devuelve la misma). Si falla, la misma.
+    async function presentacionEnUnidad(presentacionId, unidad) {
+      try {
+        const { data, error } = await supabase.rpc('_presentacion_en_unidad', { p_presentacion_id: presentacionId, p_unidad: unidad })
+        if (error) throw error
+        return typeof data === 'string' && data ? data : presentacionId
+      } catch (err) {
+        console.error('No se pudo buscar el producto equivalente en la otra empresa:', err)
+        return presentacionId
+      }
+    }
+
+    // precio_venta() con la presentación equivalente si la lista es de otra
+    // empresa; con su nombre ("Nuss") para decir de dónde salió el precio.
+    // `unidadLista` es la promesa de unidadListaDeOtraEmpresa: el pedido de
+    // siempre sale enseguida (así una lista de la misma empresa no espera
+    // nada) y, si la lista resulta de otra, se pide con la equivalente.
+    async function leerPrecioVentaEn(listaId, it, fecha, unidadLista) {
+      const propio = leerPrecioVenta(listaId, it, fecha)
+      const unidad = await unidadLista
+      if (!unidad) return propio
+      const pres = await presentacionEnUnidad(it.presentacion_id, unidad)
+      // Sin equivalente, la misma presentación: vale lo que ya se pidió.
+      const r = pres === it.presentacion_id ? await propio : await leerPrecioVenta(listaId, { ...it, presentacion_id: pres }, fecha)
+      const e = (estado.empresas ?? []).find(x => x.id === unidad)
+      return { ...r, empresaLista: e ? nombreCorto(e) : 'otra empresa del grupo' }
     }
 
     let turnoValorizar = 0
@@ -4794,9 +4952,16 @@
       // Una devolución se propone al precio de la lista (positivo: resta).
       const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it) && tipoItem(it) !== 'reposicion') : []
       const porClave = new Map()
+      // La lista de OTRA empresa del grupo (27/10/2026, FERNANDEZ RICARDO de
+      // Dolce con la Lista 1 de Nuss): el precio se lee en la presentación
+      // equivalente de esa empresa (_presentacion_en_unidad), como lo hace
+      // valorizar_orden_retiro. Es una promesa (null = la lista es de la
+      // empresa de la orden): mientras se lee, precio_venta ya salió como
+      // siempre.
+      const unidadLista = productos.length ? unidadListaDeOtraEmpresa(listaId, o.unidad_negocio_id) : null
       for (const it of productos) {
         const k = it.presentacion_id + '|' + (it.marca_id ?? '')
-        if (!porClave.has(k)) porClave.set(k, leerPrecioVenta(listaId, it, o.fecha))
+        if (!porClave.has(k)) porClave.set(k, leerPrecioVentaEn(listaId, it, o.fecha, unidadLista))
       }
       const trabajoProductos = Promise.all([...porClave].map(async ([k, p]) => [k, await p]))
       const trabajoResto = (async () => {
@@ -4824,7 +4989,7 @@
           v.precios[it.id] = r.precio
           v.desdeLista.add(it.id)
           const conCono = !!(estado.catalogo?.presentaciones ?? []).find(p => p.id === it.presentacion_id)?.con_cono || !!r.datos?.papel_conito
-          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono), grave: false }
+          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono) + (r.empresaLista ? ' · de ' + r.empresaLista : ''), grave: false }
         } else {
           v.origen[it.id] = { texto: r?.error ?? r?.motivo ?? 'No se pudo leer el precio de la lista.', grave: true }
         }
@@ -5723,6 +5888,860 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // LOS ACOPIOS (27/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Un acopio es mercadería que el cliente ya compró (y se le facturó) y
+    // retira de a poco con el talonario celeste de ACOPIO. La base (verificada
+    // con pg_get_functiondef el 27/10/2026):
+    //  - acopios_lista(p_unidad_negocio_id, p_cliente_id default null) → id,
+    //    cliente_id, cliente, presentacion_id, producto, unidades_por_caja,
+    //    marca_id, cono, cajas, retiradas, saldo, estado ('activo' |
+    //    'terminado' | 'anulado'), fecha, numero_remito, numero_factura,
+    //    precio_caja (null sin retiros:precios), observaciones, ultimo_retiro.
+    //    Ya viene ordenada: activos, terminados, anulados (fecha desc). La
+    //    deja leer retiros:ver / precios / cargar en la fábrica.
+    //  - crear_acopio(p_unidad_negocio_id, p_cliente_id, p_presentacion_id,
+    //    p_marca_id, p_cajas, p_fecha, p_numero_remito, p_numero_factura,
+    //    p_precio_caja, p_observaciones) → uuid, con retiros:precios. Con
+    //    precio > 0 le carga al cliente cajas × precio (cliente_movimientos
+    //    'acopio'); sin precio, nada.
+    //  - anular_acopio(p_id, p_motivo ≥ 3): solo sin retiros ("Ese acopio ya
+    //    tiene retiros: anulá primero las órdenes de acopio."); revierte la
+    //    cuenta con 'anulacion_acopio'.
+    //  - acopio_movimientos (acopio_id, orden_retiro_id, cajas: negativo =
+    //    retiro; la anulación de la orden lo devuelve en positivo, fecha,
+    //    motivo): la misma policy que acopios.
+    //  - confirmar_remito_precarga con talonario 'acopio' descuenta del acopio
+    //    activo del cliente (mismo producto y cono, el más viejo primero) y la
+    //    orden queda en $ 0; si no alcanza, el error va tal cual.
+    // La sección se ve en una fábrica con algún acopio o SIN control de stock
+    // (Dolce): en las demás, Administración queda como siempre.
+    const ESTADOS_ACOPIO = ['activo', 'terminado', 'anulado']
+    const LARGO_NUMERO_ACOPIO = 30
+
+    function acopiosVacio(empresaId) {
+      return { empresaId, filas: null, error: null, clienteId: '', nuevo: null, aviso: null }
+    }
+
+    function acopiosEnEmpresa(unidadId = estado.empresaId) {
+      return !!unidadId && (sinControlStockEmpresa(unidadId) || estado.hayAcopios?.get?.(unidadId) === true)
+    }
+
+    // ¿Tiene la fábrica algún acopio? Solo se pregunta en una con control de
+    // stock (en la que no controla, la sección va siempre) y una vez.
+    async function asegurarAcopiosEmpresa(unidadId = estado.empresaId) {
+      if (!unidadId) return
+      await leerSinControl(unidadId)
+      if (sinControlStockEmpresa(unidadId) || estado.hayAcopios?.has?.(unidadId)) return
+      if (!puedeEn('retiros', 'ver', unidadId) && !puedeEn('retiros', 'precios', unidadId)) return
+      try {
+        const { data, error } = await supabase.from('acopios').select('id').eq('unidad_negocio_id', unidadId).limit(1)
+        if (error) throw error
+        if (!(estado.hayAcopios instanceof Map)) estado.hayAcopios = new Map()
+        estado.hayAcopios.set(unidadId, Array.isArray(data) && data.length > 0)
+      } catch (err) {
+        console.error('No se pudo ver si la fábrica tiene acopios:', err)
+      }
+    }
+
+    async function leerAcopios(unidadId, clienteId = null) {
+      const { data, error } = await supabase.rpc('acopios_lista', { p_unidad_negocio_id: unidadId, p_cliente_id: clienteId })
+      if (error) throw error
+      return (Array.isArray(data) ? data : []).filter(a => a && a.id)
+    }
+
+    function estadoAcopio(a) {
+      return ESTADOS_ACOPIO.includes(a?.estado) ? a.estado : 'activo'
+    }
+
+    function cajasAcopio(n) {
+      const v = Number(n)
+      return n === null || n === undefined || n === '' || !Number.isFinite(v) ? 0 : Math.trunc(v)
+    }
+
+    // "Quedan 70 de 100 cajas".
+    function textoQuedanAcopio(a) {
+      const total = cajasAcopio(a?.cajas)
+      return `Quedan ${enteroHoja(cajasAcopio(a?.saldo))} de ${enteroHoja(total)} ${total === 1 ? 'caja' : 'cajas'}`
+    }
+
+    // Lo retirado, de 0 a 100 (la barra).
+    function porcentajeAcopio(a) {
+      const total = cajasAcopio(a?.cajas)
+      if (!(total > 0)) return 0
+      return Math.min(100, Math.max(0, Math.round(cajasAcopio(a?.retiradas) / total * 100)))
+    }
+
+    // "Tallarín al huevo · ×10 · cono LELONA".
+    function nombreProductoAcopio(a) {
+      const u = cajasAcopio(a?.unidades_por_caja)
+      return [limpio(a?.producto) || 'Producto (no se pudo leer)', u > 0 ? '×' + enteroHoja(u) : '', limpio(a?.cono) ? 'cono ' + limpio(a.cono) : '']
+        .filter(Boolean).join(' · ')
+    }
+
+    // "Remito 3021 · Factura A-0001-00001234".
+    function papelesAcopio(a) {
+      return [limpio(a?.numero_remito) ? 'Remito ' + limpio(a.numero_remito) : '', limpio(a?.numero_factura) ? 'Factura ' + limpio(a.numero_factura) : '']
+        .filter(Boolean).join(' · ')
+    }
+
+    function htmlBarraAcopio(a) {
+      const pct = porcentajeAcopio(a)
+      return `<span class="ad-acopio__barra" role="progressbar" aria-label="Retirado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${esc(pct)}">` +
+        `<span style="width: ${esc(pct)}%"></span></span>`
+    }
+
+    function htmlSelloEstadoAcopio(a) {
+      const est = estadoAcopio(a)
+      return est === 'terminado' ? '<span class="ad-sello">Terminado</span>'
+        : est === 'anulado' ? '<span class="ad-sello ad-sello--rm-error">Anulado</span>' : ''
+    }
+
+    function htmlTarjetaAcopio(a) {
+      const est = estadoAcopio(a)
+      const acMeta = [fechaCorta(a.fecha), papelesAcopio(a), a.ultimo_retiro ? 'último retiro ' + fechaCorta(a.ultimo_retiro) : ''].filter(Boolean).join(' · ')
+      return `<button type="button" class="ad-fila ad-acopio ad-acopio--${esc(est)}" data-acopio="${esc(a.id)}">` +
+        `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(limpio(a.cliente) || 'Cliente (no se pudo leer)')}</span>${htmlSelloEstadoAcopio(a)}</span>` +
+        `<span class="ad-acopio__producto">${esc(nombreProductoAcopio(a))}</span>` +
+        (est === 'anulado' ? '' : `<span class="ad-acopio__quedan">${esc(textoQuedanAcopio(a))}</span>${htmlBarraAcopio(a)}`) +
+        `<span class="ad-fila__meta">${esc(acMeta)}</span></button>`
+    }
+
+    function acopiosFiltrados(ac = estado.acopios) {
+      const filas = Array.isArray(ac?.filas) ? ac.filas : []
+      return ac?.clienteId ? filas.filter(a => a.cliente_id === ac.clienteId) : filas
+    }
+
+    // El filtro: los clientes que tienen algún acopio, por nombre.
+    function htmlFiltroAcopios(ac) {
+      const vistos = new Map()
+      for (const a of Array.isArray(ac?.filas) ? ac.filas : []) if (a?.cliente_id && !vistos.has(a.cliente_id)) vistos.set(a.cliente_id, limpio(a.cliente) || 'Cliente')
+      const acOpciones = [...vistos].sort((x, y) => normalizar(x[1]).localeCompare(normalizar(y[1])))
+        .map(([id, n]) => `<option value="${esc(id)}"${id === ac.clienteId ? ' selected' : ''}>${esc(n)}</option>`).join('')
+      return '<div class="ad-campo"><label for="ad-acopios-cliente">Cliente</label>' +
+        `<select class="ad-select" id="ad-acopios-cliente" data-ac-filtro><option value="">Todos los clientes</option>${acOpciones}</select></div>`
+    }
+
+    // Activos arriba, terminados abajo y los anulados al final, cerrados.
+    function htmlListaAcopios(ac) {
+      if (ac?.error) return `<div class="ad-aviso ad-aviso--grave">${esc(ac.error)}</div>`
+      if (!Array.isArray(ac?.filas)) return '<div class="ad-vacio">Cargando los acopios…</div>'
+      const filas = acopiosFiltrados(ac)
+      if (!filas.length) return `<div class="ad-vacio">${esc(ac.clienteId ? 'Ese cliente no tiene acopios.' : 'Todavía no hay acopios en esta fábrica.')}</div>`
+      const de = (e) => filas.filter(a => estadoAcopio(a) === e)
+      const activos = de('activo'), terminados = de('terminado'), anulados = de('anulado')
+      return `<h2 class="ad-subtitulo">${esc('Activos (' + activos.length + ')')}</h2>` +
+        (activos.length ? `<div class="ad-lista">${activos.map(htmlTarjetaAcopio).join('')}</div>` : '<p class="ad-texto-suave">Ninguno activo.</p>') +
+        (terminados.length ? `<h2 class="ad-subtitulo">${esc('Terminados (' + terminados.length + ')')}</h2><div class="ad-lista">${terminados.map(htmlTarjetaAcopio).join('')}</div>` : '') +
+        (anulados.length ? `<details class="ad-acopios-anulados" data-acopios-anulados><summary>${esc('Anulados (' + anulados.length + ')')}</summary>` +
+          `<div class="ad-lista">${anulados.map(htmlTarjetaAcopio).join('')}</div></details>` : '')
+    }
+
+    // Cargar y anular: retiros:precios en la fábrica (lo que piden crear_acopio y anular_acopio).
+    function puedeCargarAcopio(unidadId = estado.empresaId) {
+      return puedeEn('retiros', 'precios', unidadId)
+    }
+
+    function pintarAcopios() {
+      const ac = estado.acopios
+      const el = document.getElementById('ad-acopios-cuerpo')
+      if (!ac || !el) return
+      const acAviso = ac.aviso ? `<p class="ad-aviso" id="ad-acopios-aviso" role="status">${esc(ac.aviso)}</p>` : ''
+      const acBoton = puedeCargarAcopio() && !ac.nuevo ? '<div class="ad-barra-acciones"><button type="button" class="ad-btn" data-ac-accion="nuevo">+ Nuevo acopio</button></div>' : ''
+      el.innerHTML = acAviso + (ac.nuevo ? htmlNuevoAcopio(ac.nuevo) : '') + acBoton +
+        `<div class="ad-tarjeta ad-filtros">${htmlFiltroAcopios(ac)}</div><div id="ad-acopios-lista">${htmlListaAcopios(ac)}</div>`
+      if (ac.nuevo) enlazarNuevoAcopio(el)
+    }
+
+    async function mostrarAcopios({ recargar = true } = {}) {
+      if (!puedeEn('retiros', 'ver') && !puedeEn('retiros', 'precios')) { mostrarInicio(); return }
+      if (estado.acopios?.empresaId !== estado.empresaId) estado.acopios = acopiosVacio(estado.empresaId)
+      mostrarVista('ad-vista-acopios')
+      pintarAcopios()
+      if (!recargar && Array.isArray(estado.acopios.filas)) return
+      await cargarAcopios()
+    }
+
+    let turnoAcopios = 0
+
+    async function cargarAcopios() {
+      const ac = estado.acopios
+      if (!ac) return
+      const turno = ++turnoAcopios
+      try {
+        const filas = await leerAcopios(ac.empresaId)
+        if (turno !== turnoAcopios || estado.acopios !== ac) return
+        ac.filas = filas
+        ac.error = null
+        if (filas.length) {
+          if (!(estado.hayAcopios instanceof Map)) estado.hayAcopios = new Map()
+          estado.hayAcopios.set(ac.empresaId, true)
+        }
+      } catch (err) {
+        if (turno !== turnoAcopios || estado.acopios !== ac) return
+        console.error('No se pudieron leer los acopios:', err)
+        ac.error = 'No se pudieron leer los acopios. Revisá la conexión y volvé a entrar.'
+      }
+      pintarAcopios()
+    }
+
+    // La tarjeta de la portada: cuántos activos y cuántas cajas quedan.
+    async function contarAcopiosPortada(p, turno, unidad) {
+      try {
+        await asegurarAcopiosEmpresa(unidad)
+        if (turno !== turnoPortada) return
+        if (!SECCIONES.some(s => s.id === 'acopios' && seccionVisible(s, unidad))) return
+        pintarPortada()
+        const filas = await leerAcopios(unidad)
+        p.acopios = filas
+      } catch (err) {
+        console.error('No se pudieron contar los acopios:', err)
+        p.errorAcopios = 'No se pudo contar.'
+      }
+      if (turno === turnoPortada) pintarPortada()
+    }
+
+    function contenidoSeccionAcopios(p) {
+      const filas = Array.isArray(p?.acopios) ? p.acopios : null
+      const activos = filas ? filas.filter(a => estadoAcopio(a) === 'activo') : []
+      const quedan = activos.reduce((s, a) => s + Math.max(cajasAcopio(a.saldo), 0), 0)
+      return { numero: filas ? activos.length : null, unidad: activos.length === 1 ? 'acopio activo' : 'acopios activos',
+        carga: !filas && !p?.errorAcopios, error: p?.errorAcopios,
+        lineas: filas ? [activos.length ? `Quedan ${enteroHoja(quedan)} ${quedan === 1 ? 'caja' : 'cajas'} por retirar` : 'Ninguno por retirar', { ir: 'Ver acopios ›' }] : [] }
+    }
+
+    // ── Nuevo acopio ───────────────────────────────────────────────────────
+    function nuevoAcopioVacio() {
+      return { clienteId: null, clienteBusqueda: '', presentacionId: null, marcaId: null, busqueda: '', marcaBusqueda: '', eligiendo: true,
+        cajas: null, fecha: hoyArgentina(), numeroRemito: '', numeroFactura: '', precio: null, observaciones: '', error: null, guardando: false }
+    }
+
+    async function abrirNuevoAcopio() {
+      const ac = estado.acopios
+      if (!ac || !puedeCargarAcopio()) return
+      const n = nuevoAcopioVacio()
+      ac.nuevo = n
+      ac.aviso = null
+      pintarAcopios()
+      try {
+        await asegurarDatosEmpresa()
+      } catch (err) {
+        console.error('No se pudieron leer los clientes o los productos:', err)
+        n.error = 'No se pudieron leer los clientes o los productos. Revisá la conexión y volvé a entrar.'
+      }
+      if (estado.acopios !== ac || ac.nuevo !== n) return
+      pintarAcopios()
+      document.getElementById('ad-ac-cliente-buscar')?.focus?.()
+    }
+
+    // El buscador de clientes del módulo (nombre, razón social o apodo),
+    // entre los activos de la fábrica: lo mismo que pide crear_acopio.
+    function htmlClientesAcopio(n) {
+      const q = limpio(n?.clienteBusqueda)
+      if (q.length < MIN_LETRAS_BUSCAR) return `<p class="ad-texto-suave">${esc('Escribí al menos ' + MIN_LETRAS_BUSCAR + ' letras para buscar el cliente.')}</p>`
+      if (!Array.isArray(estado.clientes)) return '<p class="ad-texto-suave">Cargando los clientes…</p>'
+      const lista = clientesParaAsentar(estado.clientes.filter(c => c.activo !== false), q).slice(0, MAX_RESULTADOS_CLIENTES)
+      if (!lista.length) return '<p class="ad-texto-suave">Ningún cliente de esta fábrica coincide.</p>'
+      return '<div class="ad-opciones-clientes">' + lista.map(c => {
+        const apodo = apodoMostrarRet(c, q)
+        const razon = limpio(c.razon_social) && normalizar(c.razon_social) !== normalizar(c.nombre) ? limpio(c.razon_social) : ''
+        const detalle = [razon, limpio(c.localidad)].filter(Boolean).join(' · ')
+        return `<button type="button" class="ad-opcion-cliente" data-ac-cliente="${esc(c.id)}">` +
+          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + textoTambienEn(c) + (apodo ? ' · ' + apodo : ''))}</span>` +
+          `${detalle ? `<span class="ad-opcion-cliente__detalle">${esc(detalle)}</span>` : ''}</button>`
+      }).join('') + '</div>'
+    }
+
+    function htmlClienteAcopio(n) {
+      if (n.clienteId) {
+        const c = clienteDe(n.clienteId)
+        return '<div class="ad-campo"><span class="ad-campo__rotulo">Cliente</span>' +
+          `<div class="ad-ret-elegido"><span class="ad-ret-elegido__nombre">${esc((c?.nombre ?? 'Cliente (no se pudo leer)') + textoTambienEn(c))}</span>` +
+          '<button type="button" class="ad-btn ad-btn--suave" data-ac-accion="cambiar-cliente">Cambiar</button></div></div>'
+      }
+      return '<div class="ad-campo"><label for="ad-ac-cliente-buscar">Cliente</label>' +
+        `<input type="search" class="ad-input" id="ad-ac-cliente-buscar" data-ac-cliente-buscar value="${esc(n.clienteBusqueda)}" autocomplete="off" maxlength="80" placeholder="Nombre, razón social o apodo">` +
+        `<div id="ad-ac-clientes">${htmlClientesAcopio(n)}</div></div>`
+    }
+
+    // El MISMO catálogo de la Carga sin control de stock (gruposRemito: SIN
+    // CONO y CON CONO, el cono después), sin los insumos: un acopio es de
+    // producto terminado.
+    function htmlOpcionesAcopio(cat, busqueda) {
+      if (!cat) return '<p class="ad-texto-suave">Cargando los productos…</p>'
+      const grupos = gruposRemito(cat, busqueda).filter(g => g.tipo !== 'insumos')
+      const q = limpio(busqueda)
+      if (!grupos.length) return `<p class="ad-texto-suave">${esc(q ? 'Nada coincide con «' + q + '».' : 'No hay productos activos en esta fábrica.')}</p>`
+      return grupos.map(g => `<div class="ad-rm-grupo"><p class="ad-rm-grupo__titulo">${esc(g.titulo)}</p>` +
+        g.lista.map(o => `<button type="button" class="ad-rm-opcion" data-ac-producto="${esc(o.presentacionId)}">${esc(o.nombre)}` +
+          `${o.conCono ? '<span class="ad-rm-opcion__detalle">elegí el cono</span>' : ''}</button>`).join('') + '</div>').join('')
+    }
+
+    function htmlMarcasAcopio(n, cat) {
+      const q = normalizar(n.marcaBusqueda)
+      const lista = (cat?.marcas ?? []).filter(m => !q || normalizar(m.nombre).includes(q)).slice(0, 12)
+      if (!lista.length) return q ? `<span class="ad-texto-suave">${esc('Ningún cono coincide con «' + limpio(n.marcaBusqueda) + '».')}</span>` : ''
+      return lista.map(m => `<button type="button" class="ad-rm-opcion ad-rm-opcion--cono" data-ac-marca="${esc(m.id)}" aria-pressed="${m.id === n.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+    }
+
+    function htmlProductoAcopio(n, cat) {
+      const elegido = !!n.presentacionId && !n.eligiendo
+      if (!elegido) {
+        return '<div class="ad-campo ad-rm-selector"><label class="ad-campo__rotulo" for="ad-ac-buscar">Producto</label>' +
+          `<input type="search" class="ad-input" id="ad-ac-buscar" data-ac-buscar value="${esc(n.busqueda)}" autocomplete="off" maxlength="60" placeholder="Buscar el producto">` +
+          `<div class="ad-rm-opciones" role="group" aria-label="Producto" id="ad-ac-opciones">${htmlOpcionesAcopio(cat, n.busqueda)}</div></div>`
+      }
+      const pr = presentacionRemito(cat, n.presentacionId)
+      return '<div class="ad-campo"><span class="ad-campo__rotulo">Producto</span>' +
+        `<div class="ad-rm-elegido"><span class="ad-rm-elegido__nombre">${esc(nombreRenglonRemito(cat, { presentacionId: n.presentacionId, marcaId: n.marcaId }))}</span>` +
+        '<button type="button" class="ad-link" data-ac-accion="cambiar-producto">Cambiar</button></div></div>' +
+        (pr?.con_cono ? '<div class="ad-campo"><label for="ad-ac-cono">Cono</label>' +
+          `<input type="search" class="ad-input" id="ad-ac-cono" data-ac-cono-buscar value="${esc(n.marcaBusqueda)}" autocomplete="off" maxlength="60" placeholder="Buscar el cono…">` +
+          `<div class="ad-rm-opciones ad-rm-opciones--conos" id="ad-ac-marcas">${htmlMarcasAcopio(n, cat)}</div></div>` : '')
+    }
+
+    // Lo que se le carga en la cuenta: cajas × precio (2 decimales, como la base).
+    function importeAcopio(n) {
+      const cajas = Number(n?.cajas), precio = Number(n?.precio)
+      if (n?.cajas === null || n?.cajas === undefined || n?.precio === null || n?.precio === undefined) return null
+      if (!Number.isFinite(cajas) || !Number.isFinite(precio) || !(precio > 0) || !(cajas > 0)) return null
+      return Math.round(cajas * precio * 100) / 100
+    }
+
+    function textoTotalAcopio(n) {
+      const t = importeAcopio(n)
+      return t === null ? 'Sin precio: no se carga nada en la cuenta del cliente.' : 'Se le carga ' + importeHoja(t) + ' en la cuenta del cliente.'
+    }
+
+    function htmlNuevoAcopio(n) {
+      const cat = estado.catalogo
+      const acDis = n.guardando ? ' disabled' : ''
+      return '<div class="ad-panel ad-tarjeta" id="ad-ac-nuevo"><h2 class="ad-subtitulo">Nuevo acopio</h2>' +
+        htmlClienteAcopio(n) + htmlProductoAcopio(n, cat) +
+        '<div class="ad-fila-campos">' +
+        '<div class="ad-campo"><label for="ad-ac-cajas">Cajas</label><input type="text" class="ad-input" id="ad-ac-cajas" data-ac-numero="cajas" inputmode="numeric" autocomplete="off"></div>' +
+        `<div class="ad-campo"><label for="ad-ac-fecha">Fecha</label><input type="date" class="ad-input" id="ad-ac-fecha" data-ac-campo="fecha" value="${esc(n.fecha)}" max="${esc(hoyArgentina())}"></div></div>` +
+        '<div class="ad-fila-campos">' +
+        `<div class="ad-campo"><label for="ad-ac-remito">N° de remito (el blanco)</label><input type="text" class="ad-input" id="ad-ac-remito" data-ac-campo="numeroRemito" value="${esc(n.numeroRemito)}" maxlength="${LARGO_NUMERO_ACOPIO}" autocomplete="off"></div>` +
+        `<div class="ad-campo"><label for="ad-ac-factura">N° de factura</label><input type="text" class="ad-input" id="ad-ac-factura" data-ac-campo="numeroFactura" value="${esc(n.numeroFactura)}" maxlength="${LARGO_NUMERO_ACOPIO}" autocomplete="off"></div></div>` +
+        '<div class="ad-campo"><label for="ad-ac-precio">Precio por caja (opcional)</label><input type="text" class="ad-input" id="ad-ac-precio" data-ac-numero="precio" inputmode="decimal" autocomplete="off">' +
+        '<span class="ad-campo__ayuda">Si ponés precio se le carga en la cuenta (cajas × precio). Sin precio, el acopio queda solo para retirar.</span></div>' +
+        `<p class="ad-ac-total" id="ad-ac-total">${esc(textoTotalAcopio(n))}</p>` +
+        `<div class="ad-campo"><label for="ad-ac-observaciones">Observaciones</label><textarea class="ad-textarea" id="ad-ac-observaciones" data-ac-campo="observaciones" maxlength="500">${esc(n.observaciones)}</textarea></div>` +
+        (n.error ? `<p class="ad-error-pegado" id="ad-ac-error" role="alert">${esc(n.error)}</p>` : '') +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-ac-accion="guardar"${acDis}>${n.guardando ? 'Guardando…' : 'Guardar el acopio'}</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-ac-accion="cancelar"${acDis}>Cancelar</button></div></div>`
+    }
+
+    // Los números se enlazan DESPUÉS de dibujarlos (nunca en un value="…").
+    function enlazarNuevoAcopio(el) {
+      const n = estado.acopios?.nuevo
+      if (!n) return
+      for (const input of el.querySelectorAll('[data-ac-numero]')) {
+        const campo = input.dataset.acNumero
+        enlazarCampoNumero(input, { decimales: campo === 'cajas' ? 0 : DECIMALES_PRECIO })
+        ponerNumero(input, campo === 'cajas' ? n.cajas : n.precio)
+      }
+    }
+
+    function errorNuevoAcopio(n) {
+      if (!n?.clienteId) return 'Elegí el cliente.'
+      const pr = presentacionRemito(estado.catalogo, n.presentacionId)
+      if (!n.presentacionId || !pr) return 'Elegí el producto.'
+      if (pr.con_cono && !n.marcaId) return 'Elegí el cono.'
+      const cajas = Number(n.cajas)
+      if (n.cajas === null || n.cajas === undefined || !Number.isInteger(cajas) || cajas <= 0) return 'Poné las cajas del acopio (un número entero, más que cero).'
+      if (!esFechaIso(n.fecha)) return 'Poné la fecha.'
+      if (n.fecha > hoyArgentina()) return 'La fecha no puede ser futura.'
+      if (n.precio !== null && n.precio !== undefined && !(Number(n.precio) >= 0)) return 'El precio no puede ser negativo.'
+      return null
+    }
+
+    function parametrosCrearAcopio(n, unidadId) {
+      const pr = presentacionRemito(estado.catalogo, n.presentacionId)
+      const precio = n.precio === null || n.precio === undefined || n.precio === '' ? null : Number(n.precio)
+      return {
+        p_unidad_negocio_id: unidadId, p_cliente_id: n.clienteId, p_presentacion_id: n.presentacionId,
+        p_marca_id: pr?.con_cono ? (n.marcaId ?? null) : null, p_cajas: Number(n.cajas), p_fecha: n.fecha,
+        p_numero_remito: limpio(n.numeroRemito) || null, p_numero_factura: limpio(n.numeroFactura) || null,
+        p_precio_caja: Number.isFinite(precio) ? precio : null, p_observaciones: limpio(n.observaciones) || null,
+      }
+    }
+
+    async function guardarNuevoAcopio() {
+      const ac = estado.acopios
+      const n = ac?.nuevo
+      if (!n || n.guardando || !puedeCargarAcopio(ac.empresaId)) return
+      const falta = errorNuevoAcopio(n)
+      if (falta) { n.error = falta; pintarAcopios(); return }
+      n.guardando = true
+      n.error = null
+      pintarAcopios()
+      const params = parametrosCrearAcopio(n, ac.empresaId)
+      try {
+        const { error } = await supabase.rpc('crear_acopio', params)
+        if (error) throw error
+      } catch (err) {
+        // El error de la base, TAL CUAL.
+        console.error('No se pudo cargar el acopio:', err)
+        n.guardando = false
+        n.error = err?.message || 'No se pudo cargar el acopio. Probá de nuevo.'
+        if (estado.acopios === ac && ac.nuevo === n) pintarAcopios()
+        return
+      }
+      const cli = clienteDe(n.clienteId)
+      const total = importeAcopio(n)
+      ac.nuevo = null
+      ac.aviso = `Acopio cargado: ${enteroHoja(params.p_cajas)} ${params.p_cajas === 1 ? 'caja' : 'cajas'} de ${nombreRenglonRemito(estado.catalogo, { presentacionId: n.presentacionId, marcaId: params.p_marca_id })}` +
+        ` para ${limpio(cli?.nombre) || 'el cliente'}` + (total !== null ? ` · se le cargó ${importeHoja(total)} en la cuenta.` : '.')
+      if (!(estado.hayAcopios instanceof Map)) estado.hayAcopios = new Map()
+      estado.hayAcopios.set(ac.empresaId, true)
+      ac.filas = null
+      pintarAcopios()
+      await cargarAcopios()
+    }
+
+    function accionAcopios(a) {
+      const ac = estado.acopios
+      if (!ac) return
+      const n = ac.nuevo
+      if (a === 'nuevo') abrirNuevoAcopio()
+      else if (!n || n.guardando) return
+      else if (a === 'cancelar') { ac.nuevo = null; pintarAcopios() }
+      else if (a === 'guardar') guardarNuevoAcopio()
+      else if (a === 'cambiar-cliente') {
+        n.clienteId = null
+        pintarAcopios()
+        document.getElementById('ad-ac-cliente-buscar')?.focus?.()
+      } else if (a === 'cambiar-producto') {
+        n.eligiendo = true
+        n.busqueda = ''
+        pintarAcopios()
+        document.getElementById('ad-ac-buscar')?.focus?.()
+      }
+    }
+
+    function elegirClienteAcopio(id) {
+      const n = estado.acopios?.nuevo
+      const c = clienteDe(id)
+      if (!n || !c || c.activo === false) return
+      n.clienteId = id
+      n.clienteBusqueda = ''
+      n.error = null
+      pintarAcopios()
+    }
+
+    function elegirProductoAcopio(presentacionId) {
+      const n = estado.acopios?.nuevo
+      const pr = presentacionRemito(estado.catalogo, presentacionId)
+      if (!n || !pr) return
+      if (!pr.con_cono) n.marcaId = null
+      n.presentacionId = pr.id
+      n.eligiendo = false
+      n.busqueda = ''
+      n.error = null
+      pintarAcopios()
+    }
+
+    function elegirMarcaAcopio(marcaId) {
+      const n = estado.acopios?.nuevo
+      if (!n || !(estado.catalogo?.marcas ?? []).some(m => m.id === marcaId)) return
+      n.marcaId = marcaId
+      n.marcaBusqueda = ''
+      n.error = null
+      pintarAcopios()
+    }
+
+    function alTocarAcopios(e) {
+      const b = e?.target?.closest?.('button')
+      if (!b || b.disabled) return
+      const d = b.dataset
+      if (d.acopio !== undefined) abrirAcopio(d.acopio)
+      else if (d.acCliente !== undefined) elegirClienteAcopio(d.acCliente)
+      else if (d.acProducto !== undefined) elegirProductoAcopio(d.acProducto)
+      else if (d.acMarca !== undefined) elegirMarcaAcopio(d.acMarca)
+      else if (d.acAccion !== undefined) accionAcopios(d.acAccion)
+    }
+
+    // Lo que se escribe no redibuja (el foco no se pierde): solo los
+    // resultados del buscador y el total.
+    function alEscribirAcopios(e) {
+      const t = e?.target
+      const n = estado.acopios?.nuevo
+      if (!n || !t?.dataset) return
+      const d = t.dataset
+      if (d.acClienteBuscar !== undefined) {
+        n.clienteBusqueda = t.value
+        const el = document.getElementById('ad-ac-clientes')
+        if (el) el.innerHTML = htmlClientesAcopio(n)
+      } else if (d.acBuscar !== undefined) {
+        n.busqueda = t.value
+        const el = document.getElementById('ad-ac-opciones')
+        if (el) el.innerHTML = htmlOpcionesAcopio(estado.catalogo, n.busqueda)
+      } else if (d.acConoBuscar !== undefined) {
+        n.marcaBusqueda = t.value
+        const el = document.getElementById('ad-ac-marcas')
+        if (el) el.innerHTML = htmlMarcasAcopio(n, estado.catalogo)
+      } else if (d.acCampo !== undefined) {
+        if (!['fecha', 'numeroRemito', 'numeroFactura', 'observaciones'].includes(d.acCampo)) return
+        n[d.acCampo] = t.value
+      } else if (d.acNumero !== undefined) {
+        if (d.acNumero === 'cajas') n.cajas = leerCampoNumero(t)
+        else if (d.acNumero === 'precio') n.precio = leerCampoNumero(t)
+        else return
+        const el = document.getElementById('ad-ac-total')
+        if (el) el.textContent = textoTotalAcopio(n)
+      }
+    }
+
+    function alCambiarAcopios(e) {
+      const t = e?.target
+      const ac = estado.acopios
+      if (!ac || t?.dataset?.acFiltro === undefined) return
+      ac.clienteId = String(t.value ?? '')
+      const el = document.getElementById('ad-acopios-lista')
+      if (el) el.innerHTML = htmlListaAcopios(ac)
+    }
+
+    // ── Un acopio: sus retiros y Anular ────────────────────────────────────
+    function acopioDe(id) {
+      return (estado.acopios?.filas ?? []).find(a => a.id === id) ?? (estado.cliente?.acopios?.filas ?? []).find(a => a.id === id) ?? null
+    }
+
+    // Cada movimiento con su orden (el código y el N° de acopio, que es el
+    // numero_remito de la orden del talonario de acopio).
+    async function leerMovimientosAcopio(id) {
+      const { data, error } = await supabase.from('acopio_movimientos')
+        .select('id, orden_retiro_id, orden_retiro_item_id, cajas, fecha, motivo, creado_en').eq('acopio_id', id).order('fecha').order('creado_en')
+      if (error) throw error
+      const movs = Array.isArray(data) ? data : []
+      const ids = [...new Set(movs.map(m => m.orden_retiro_id).filter(Boolean))]
+      const ordenes = new Map()
+      if (ids.length) {
+        const r = await supabase.from('ordenes_retiro').select('id, codigo, numero_remito, talonario, fecha, estado').in('id', ids)
+        if (r.error) console.error('No se pudieron leer las órdenes del acopio:', r.error)
+        else for (const o of r.data ?? []) if (o?.id) ordenes.set(o.id, o)
+      }
+      return { movs, ordenes }
+    }
+
+    // El motivo de la anulación (acopios_lista no lo trae).
+    async function leerAnulacionAcopio(id) {
+      try {
+        const { data, error } = await supabase.from('acopios').select('id, anulado_motivo, anulado_en').eq('id', id).maybeSingle()
+        if (error) throw error
+        return data ?? null
+      } catch (err) {
+        console.error('No se pudo leer la anulación del acopio:', err)
+        return null
+      }
+    }
+
+    let turnoAcopio = 0
+
+    async function abrirAcopio(id, { volver = 'acopios' } = {}) {
+      if (!id) return
+      const turno = ++turnoAcopio
+      const det = { id, fila: acopioDe(id), movs: null, ordenes: new Map(), error: null, anular: null, aviso: null, anulacion: null, volver }
+      estado.acopio = det
+      document.getElementById('ad-acopio-volver').innerHTML = volver === 'cliente' ? '&lsaquo; Cuenta del cliente' : '&lsaquo; Acopios'
+      mostrarVista('ad-vista-acopio')
+      pintarAcopio()
+      try {
+        if (!det.fila) {
+          const filas = await leerAcopios(estado.empresaId)
+          det.fila = filas.find(a => a.id === id) ?? null
+          if (!det.fila) det.error = 'No se encontró el acopio: puede ser de una fábrica que no ves.'
+        }
+        if (det.fila) {
+          const [r, anul] = await Promise.all([leerMovimientosAcopio(id), estadoAcopio(det.fila) === 'anulado' ? leerAnulacionAcopio(id) : null])
+          det.movs = r.movs
+          det.ordenes = r.ordenes
+          det.anulacion = anul
+        }
+      } catch (err) {
+        console.error('No se pudo leer el acopio:', err)
+        det.error = 'No se pudo leer el acopio. Revisá la conexión y volvé a entrar.'
+      }
+      if (turno === turnoAcopio && estado.acopio === det) pintarAcopio()
+    }
+
+    function htmlMovimientoAcopio(m, ordenes) {
+      const o = m.orden_retiro_id ? ordenes?.get?.(m.orden_retiro_id) ?? null : null
+      const cajas = cajasAcopio(m.cajas)
+      const acOrden = m.orden_retiro_id
+        ? (puedeVerLaOrden() ? `<button type="button" class="ad-link" data-ac-orden="${esc(m.orden_retiro_id)}">${esc('Orden ' + (limpio(o?.codigo) || '(sin código)'))}</button>`
+          : `<span>${esc('Orden ' + (limpio(o?.codigo) || '(sin código)'))}</span>`) : ''
+      const acNumero = o?.talonario === 'acopio' && limpio(o?.numero_remito) ? `<span class="ad-sello ad-sello--acopio">${esc('Acopio N° ' + limpio(o.numero_remito))}</span>` : ''
+      const acQue = cajas < 0 ? 'Retiro' : (limpio(m.motivo) || 'Devuelto (se anuló la orden)')
+      return '<div class="ad-acopio-mov"><div class="ad-acopio-mov__datos">' +
+        `<span>${esc(fechaCorta(m.fecha))}</span>${acOrden}${acNumero}<span class="ad-texto-suave">${esc(acQue)}</span></div>` +
+        `<span class="ad-acopio-mov__cajas">${esc((cajas < 0 ? '−' : '+') + enteroHoja(Math.abs(cajas)) + (Math.abs(cajas) === 1 ? ' caja' : ' cajas'))}</span></div>`
+    }
+
+    // Anular: con retiros:precios, si no está anulado y no tiene retiros (lo
+    // que dice anular_acopio: la suma de sus movimientos es 0).
+    function puedeAnularAcopio(a) {
+      return !!a && estadoAcopio(a) !== 'anulado' && cajasAcopio(a.retiradas) === 0 && puedeCargarAcopio()
+    }
+
+    function htmlAnularAcopio(det) {
+      const a = det.fila
+      if (estadoAcopio(a) === 'anulado' || !puedeCargarAcopio()) return ''
+      if (!puedeAnularAcopio(a)) return '<p class="ad-texto-suave">Tiene retiros: para anularlo, anulá primero las órdenes de acopio.</p>'
+      const n = det.anular
+      if (!n) return '<div class="ad-barra-acciones"><button type="button" class="ad-btn ad-btn--suave" data-ac-det="anular">Anular el acopio</button></div>'
+      const acDis = n.enviando ? ' disabled' : ''
+      return '<div class="ad-panel ad-panel--peligro" id="ad-ac-panel-anular"><div class="ad-campo">' +
+        '<label for="ad-ac-motivo">¿Por qué se anula? (obligatorio)</label>' +
+        `<textarea class="ad-textarea" id="ad-ac-motivo" data-ac-motivo maxlength="300">${esc(n.motivo)}</textarea>` +
+        `<span class="ad-campo__ayuda">${esc(a.precio_caja !== null && a.precio_caja !== undefined && Number(a.precio_caja) > 0 ? 'Lo que se le cargó en la cuenta al cliente se revierte.' : 'No tiene nada cargado en la cuenta del cliente.')}</span></div>` +
+        (n.error ? `<p class="ad-error-pegado" id="ad-ac-anular-error" role="alert">${esc(n.error)}</p>` : '') +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--peligro" data-ac-det="anular-si"${acDis}>${n.enviando ? 'Anulando…' : 'Anular el acopio'}</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-ac-det="anular-no"${acDis}>Cancelar</button></div></div>`
+    }
+
+    function htmlDetalleAcopio(det) {
+      if (det.error) return `<div class="ad-aviso ad-aviso--grave">${esc(det.error)}</div>`
+      const a = det.fila
+      if (!a) return '<div class="ad-vacio">Cargando el acopio…</div>'
+      const est = estadoAcopio(a)
+      const precio = a.precio_caja === null || a.precio_caja === undefined ? null : Number(a.precio_caja)
+      const datos = [
+        htmlDatoAd('Fecha', fechaCorta(a.fecha)),
+        htmlDatoAd('N° de remito (el blanco)', limpio(a.numero_remito) || '—'),
+        htmlDatoAd('N° de factura', limpio(a.numero_factura) || '—'),
+        precio !== null && Number.isFinite(precio) ? htmlDatoAd('Precio por caja', importeHoja(precio) + ' · total ' + importeHoja(Math.round(precio * cajasAcopio(a.cajas) * 100) / 100)) : '',
+      ].join('')
+      const acObs = limpio(a.observaciones) ? `<p class="ad-texto-suave">${esc(limpio(a.observaciones))}</p>` : ''
+      const acAnulado = est === 'anulado' ? `<div class="ad-aviso ad-aviso--grave">${esc('Anulado' + (limpio(det.anulacion?.anulado_motivo) ? ': ' + limpio(det.anulacion.anulado_motivo) : '.'))}</div>` : ''
+      const movs = Array.isArray(det.movs) ? det.movs : null
+      const acMovs = movs === null ? '<div class="ad-vacio">Cargando los retiros…</div>'
+        : movs.length ? movs.map(m => htmlMovimientoAcopio(m, det.ordenes)).join('') : '<p class="ad-texto-suave">Todavía no tiene retiros.</p>'
+      const acAviso = det.aviso ? `<p class="ad-aviso" id="ad-ac-aviso" role="status">${esc(det.aviso)}</p>` : ''
+      return acAviso + acAnulado + '<div class="ad-tarjeta">' +
+        `<div class="ad-fila__linea"><span class="ad-renglon__desc">${esc(limpio(a.cliente) || 'Cliente (no se pudo leer)')}</span>${htmlSelloEstadoAcopio(a)}</div>` +
+        `<p class="ad-acopio__producto">${esc(nombreProductoAcopio(a))}</p>` +
+        (est === 'anulado' ? '' : `<p class="ad-acopio__quedan" data-acopio-quedan>${esc(textoQuedanAcopio(a))}</p>${htmlBarraAcopio(a)}`) +
+        `<div class="ad-datos">${datos}</div>${acObs}</div>` +
+        `<div class="ad-tarjeta"><h2 class="ad-subtitulo">Retiros</h2><div data-acopio-movs>${acMovs}</div></div>` + htmlAnularAcopio(det)
+    }
+
+    function pintarAcopio() {
+      const det = estado.acopio
+      const el = document.getElementById('ad-acopio-cuerpo')
+      if (!det || !el) return
+      document.getElementById('ad-acopio-titulo').textContent = det.fila ? 'Acopio · ' + (limpio(det.fila.cliente) || 'Cliente') : 'Acopio'
+      el.innerHTML = htmlDetalleAcopio(det)
+    }
+
+    async function confirmarAnularAcopio() {
+      const det = estado.acopio
+      const n = det?.anular
+      if (!n || n.enviando || !puedeAnularAcopio(det.fila)) return
+      const motivo = limpio(n.motivo)
+      if (motivo.length < LARGO_MINIMO_MOTIVO) { n.error = `Poné el motivo (${LARGO_MINIMO_MOTIVO} letras o más).`; pintarAcopio(); return }
+      n.enviando = true
+      n.error = null
+      pintarAcopio()
+      try {
+        const { error } = await supabase.rpc('anular_acopio', { p_id: det.id, p_motivo: motivo })
+        if (error) throw error
+      } catch (err) {
+        console.error('No se pudo anular el acopio:', err)
+        n.enviando = false
+        n.error = err?.message || 'No se pudo anular el acopio. Probá de nuevo.'
+        if (estado.acopio === det) pintarAcopio()
+        return
+      }
+      const habiaPrecio = det.fila.precio_caja !== null && det.fila.precio_caja !== undefined && Number(det.fila.precio_caja) > 0
+      det.anular = null
+      det.fila = { ...det.fila, estado: 'anulado' }
+      det.anulacion = { anulado_motivo: motivo }
+      det.aviso = 'Acopio anulado.' + (habiaPrecio ? ' Se revirtió lo que se le había cargado en la cuenta.' : '')
+      if (estado.acopios?.empresaId === estado.empresaId && Array.isArray(estado.acopios.filas)) {
+        estado.acopios.filas = estado.acopios.filas.map(a => a.id === det.id ? { ...a, estado: 'anulado' } : a)
+      }
+      if (estado.acopio === det) pintarAcopio()
+    }
+
+    function alTocarAcopio(e) {
+      const b = e?.target?.closest?.('button')
+      const det = estado.acopio
+      if (!b || b.disabled || !det) return
+      const d = b.dataset
+      if (d.acOrden !== undefined) { if (puedeVerLaOrden()) abrirOrdenDesde(d.acOrden); return }
+      if (d.acDet === 'anular') {
+        det.anular = { motivo: '', error: null, enviando: false }
+        pintarAcopio()
+        document.getElementById('ad-ac-motivo')?.focus?.()
+      } else if (d.acDet === 'anular-no') { det.anular = null; pintarAcopio() }
+      else if (d.acDet === 'anular-si') confirmarAnularAcopio()
+    }
+
+    function alEscribirAcopio(e) {
+      const t = e?.target
+      const n = estado.acopio?.anular
+      if (n && t?.dataset?.acMotivo !== undefined) n.motivo = t.value
+    }
+
+    // "‹ Acopios" vuelve a la lista (al día si se anuló uno); desde la cuenta
+    // del cliente, a esa cuenta tal como estaba.
+    function volverDeAcopio() {
+      const det = estado.acopio
+      if (det?.volver === 'cliente' && estado.cliente) {
+        mostrarVista('ad-vista-cliente')
+        if (det.fila && estadoAcopio(det.fila) === 'anulado' && estado.cliente.acopios) {
+          estado.cliente.acopios.filas = (estado.cliente.acopios.filas ?? []).filter(a => a.id !== det.id)
+          pintarCliente()
+        }
+        return
+      }
+      mostrarAcopios({ recargar: false })
+    }
+
+    // ── En la cuenta del cliente: sus acopios activos (27/10/2026) ─────────
+    async function cargarAcopiosCliente(c) {
+      if (!c?.id) return
+      const unidad = estado.empresaId
+      try {
+        await asegurarAcopiosEmpresa(unidad)
+        if (!acopiosEnEmpresa(unidad) || (!puedeEn('retiros', 'ver', unidad) && !puedeEn('retiros', 'precios', unidad))) { c.acopios = null; return }
+        const filas = await leerAcopios(unidad, c.id)
+        c.acopios = { filas: filas.filter(a => estadoAcopio(a) === 'activo'), error: null }
+      } catch (err) {
+        console.error('No se pudieron leer los acopios del cliente:', err)
+        c.acopios = { filas: [], error: 'No se pudieron leer los acopios del cliente.' }
+      }
+    }
+
+    function htmlAcopiosCliente(c) {
+      const a = c?.acopios
+      if (!a) return ''
+      if (a.error) return `<p class="ad-texto-suave">${esc(a.error)}</p>`
+      if (!a.filas?.length) return ''
+      return '<div class="ad-tarjeta" data-acopios-cliente><h2 class="ad-subtitulo">Acopios activos</h2>' + a.filas.map(x =>
+        `<button type="button" class="ad-renglon ad-renglon--boton" data-cliente-acopio="${esc(x.id)}"><div>` +
+        `<div class="ad-renglon__desc">${esc(nombreProductoAcopio(x))}</div>` +
+        `<div class="ad-renglon__lotes">${esc([fechaCorta(x.fecha), papelesAcopio(x)].filter(Boolean).join(' · '))} · <span class="ad-renglon__ver">Ver los retiros ›</span></div></div>` +
+        `<div class="ad-renglon__plata"><div class="ad-fila__importe">${esc(textoQuedanAcopio(x))}</div>${htmlBarraAcopio(x)}</div></button>`).join('') + '</div>'
+    }
+
+    // ── La cuenta en el grupo (27/10/2026) ─────────────────────────────────
+    // cuenta_cliente_consolidada(p_cliente_id) (verificada el 27/10/2026):
+    // el cliente, su principal (clientes.cliente_principal_id) y los que lo
+    // apuntan, cada uno con su empresa y su saldo; solo las empresas donde se
+    // tiene retiros:ver. Se muestra si el cliente está vinculado o si hay más
+    // de una cuenta.
+    async function cargarCuentaGrupo(c) {
+      if (!c?.id) return
+      try {
+        const { data, error } = await supabase.rpc('cuenta_cliente_consolidada', { p_cliente_id: c.id })
+        if (error) throw error
+        c.grupo = { filas: (Array.isArray(data) ? data : []).filter(f => f?.cliente_id), error: null }
+      } catch (err) {
+        console.error('No se pudo leer la cuenta en el grupo:', err)
+        c.grupo = { filas: [], error: 'No se pudo leer la cuenta en el grupo.' }
+        return
+      }
+      // "También es cliente de…" no repite las cuentas que ya están acá.
+      const enGrupo = new Set(c.grupo.filas.length > 1 ? c.grupo.filas.map(f => f.cliente_id) : [])
+      if (enGrupo.size && Array.isArray(c.otras?.filas)) c.otras = { ...c.otras, filas: c.otras.filas.filter(f => !enGrupo.has(f.cliente_id)) }
+    }
+
+    function nombreEmpresaGrupo(f) {
+      const e = (estado.empresas ?? []).find(x => x.id === f?.unidad_negocio_id)
+      return e ? nombreCorto(e) : (limpio(f?.empresa) || 'Otra empresa')
+    }
+
+    function htmlCuentaGrupo(c, cli) {
+      const g = c?.grupo
+      if (!g) return ''
+      const vinculado = !!cli?.cliente_principal_id
+      if (g.error) return vinculado ? `<p class="ad-texto-suave">${esc(g.error)}</p>` : ''
+      const filas = g.filas ?? []
+      if (!(filas.length > 1 || (vinculado && filas.length))) return ''
+      const centavos = filas.reduce((s, f) => s + Math.round((Number(f.saldo) || 0) * 100), 0)
+      const partes = filas.map(f => {
+        const texto = nombreEmpresaGrupo(f) + ' ' + importeHoja(Number(f.saldo) || 0)
+        if (f.cliente_id === c.id) return `<strong>${esc(texto)}</strong>`
+        const abre = (!estado.unidadBarra || estado.unidadBarra === f.unidad_negocio_id) && empresasDeAdministracion().some(e => e.id === f.unidad_negocio_id)
+        return abre ? `<button type="button" class="ad-link" data-otra-cuenta="${esc(f.cliente_id)}" data-otra-unidad="${esc(f.unidad_negocio_id)}">${esc(texto)}</button>` : `<span>${esc(texto)}</span>`
+      })
+      return '<div class="ad-tarjeta ad-cuenta-grupo" data-cuenta-grupo><div class="ad-fila__linea"><span class="ad-dato__rotulo">Cuenta en el grupo</span>' +
+        `<span class="ad-total">${esc(importeHoja(centavos / 100))}</span></div>` +
+        `<p class="ad-cuenta-grupo__empresas">${partes.join('<span aria-hidden="true">·</span>')}</p></div>`
+    }
+
+    // ── En la revisión de un remito de talonario ACOPIO (27/10/2026) ───────
+    // Al lado de cada renglón, el saldo del acopio que va a descontar
+    // confirmar_remito_precarga: los activos del cliente con el MISMO
+    // producto y cono (si hay varios, se suman). Si no hay o no alcanza, en
+    // amarillo; es solo un aviso: el error definitivo lo da la base al
+    // confirmar, tal cual.
+    function claveAcopio(presentacionId, marcaId) {
+      return String(presentacionId ?? '') + '|' + String(marcaId ?? '')
+    }
+
+    async function cargarAcopiosRemito(rm = estado.remito) {
+      const f = rm?.form
+      if (!f || f.talonario !== 'acopio' || !f.clienteId) return
+      if (rm.acopios?.clienteId === f.clienteId && !rm.acopios.error) return
+      const a = { clienteId: f.clienteId, filas: null, error: null, cargando: true }
+      rm.acopios = a
+      pintarAcopiosRemito(rm)
+      try {
+        a.filas = await leerAcopios(rm.fila?.unidad_negocio_id ?? estado.empresaId, a.clienteId)
+      } catch (err) {
+        console.error('No se pudo leer el acopio del cliente:', err)
+        a.error = 'No se pudo leer el acopio del cliente: revisá la conexión.'
+      }
+      a.cargando = false
+      if (estado.remito === rm && rm.acopios === a) pintarAcopiosRemito(rm)
+    }
+
+    // null (no va), { cargando }, { error } o { saldo, pide, alcanza }.
+    function saldoAcopioRemito(rm, r) {
+      const f = rm?.form
+      if (!f || f.talonario !== 'acopio' || !f.clienteId || !r?.presentacionId || r.omitir === true) return null
+      const a = rm.acopios
+      if (!a || a.clienteId !== f.clienteId || a.cargando) return { cargando: true }
+      if (a.error) return { error: a.error }
+      const k = claveAcopio(r.presentacionId, r.marcaId)
+      const saldo = (a.filas ?? []).filter(x => estadoAcopio(x) === 'activo' && claveAcopio(x.presentacion_id, x.marca_id) === k)
+        .reduce((s, x) => s + Math.max(cajasAcopio(x.saldo), 0), 0)
+      const pide = (f.renglones ?? []).filter(x => x.omitir !== true && x.presentacionId && claveAcopio(x.presentacionId, x.marcaId) === k)
+        .reduce((s, x) => s + (Number(x.cantidad) > 0 ? Number(x.cantidad) : 0), 0)
+      return { saldo, pide, alcanza: saldo > 0 && pide <= saldo }
+    }
+
+    function htmlSaldoAcopioRemito(rm, r, i) {
+      const s = saldoAcopioRemito(rm, r)
+      if (!s) return ''
+      let texto
+      let clase = 'ad-rm-acopio'
+      if (s.cargando) texto = 'Buscando el acopio del cliente…'
+      else if (s.error) texto = s.error
+      else if (!s.alcanza) {
+        clase += ' ad-rm-acopio--falta'
+        texto = s.saldo > 0 ? `No hay acopio de esto para el cliente: quedan ${enteroHoja(s.saldo)} ${s.saldo === 1 ? 'caja' : 'cajas'} y el remito pide ${enteroHoja(s.pide)}.`
+          : 'No hay acopio de esto para el cliente.'
+      } else texto = `Acopio: quedan ${enteroHoja(s.saldo)} ${s.saldo === 1 ? 'caja' : 'cajas'}` + (s.pide > 0 ? `; después de este remito, ${enteroHoja(s.saldo - s.pide)}.` : '.')
+      return `<p class="${esc(clase)}" data-rm-acopio="${esc(i)}">${esc(texto)}</p>`
+    }
+
+    // Sin redibujar el remito (el foco no se pierde): solo los saldos.
+    function pintarAcopiosRemito(rm = estado.remito) {
+      const cuerpo = document.getElementById('ad-remito-cuerpo')
+      if (!rm?.form || !cuerpo) return
+      for (const el of cuerpo.querySelectorAll?.('[data-rm-acopio]') ?? []) {
+        const i = Number(el.dataset.rmAcopio)
+        const r = rm.form.renglones[i]
+        el.outerHTML = r ? htmlSaldoAcopioRemito(rm, r, i) : ''
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // CLIENTES — la lista con su saldo (retiros:ver), su cuenta corriente,
     // y con retiros:precios su ficha completa, el saldo inicial y los ajustes
     // ═══════════════════════════════════════════════════════════════════════
@@ -5732,6 +6751,8 @@
       comision: 'Comisión', retencion: 'Retención',
       // 24/10/2026: la nota de débito al cliente y su anulación.
       nota_debito: 'Nota de débito', anulacion_nota_debito: 'Anulación de nota de débito',
+      // 27/10/2026: el acopio con precio (cajas × precio, al cargarlo) y su anulación.
+      acopio: 'Acopio', anulacion_acopio: 'Anulación de acopio',
     }
 
     // clientes_con_saldo() trae el saldo, la lista, los retiros del mes, si
@@ -5836,7 +6857,7 @@
       const limiteTexto = limite === null ? '' : ' · límite ' + importeHoja(limite)
       const it = estado.interruptor?.id === c.cliente_id ? estado.interruptor : null
       const fila = `<button type="button" class="ad-fila${pasa ? ' ad-fila--atencion' : ''}${c.apagado ? ' ad-fila--apagada' : ''}" data-cliente="${esc(c.cliente_id)}">` +
-        `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
+        `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc((c.nombre ?? '') + textoTambienEn(fichaCliente(c.cliente_id)))}</span>` +
         `<span class="ad-fila__importe${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(c.saldo))}</span></span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
         `${c.empresa ? htmlSelloEmpresa(c.unidad_negocio_id, c.empresa) : ''}` +
@@ -6849,10 +7870,11 @@
       const extras = [htmlOtrasCuentas(c, saldo),
         cli?.activo === false ? '<div class="ad-aviso">Cliente apagado: no aparece para cargar retiros, pedidos ni cobranzas.</div>' : '',
         cli && textoCodigoAnterior(cli.codigo_anterior) ? `<p class="ad-texto-suave">${esc(textoCodigoAnterior(cli.codigo_anterior))}</p>` : ''].join('')
-      const cabecera = extras + `<div class="ad-tarjeta"><div class="ad-fila__linea"><span class="ad-dato__rotulo">Saldo</span>` +
+      // Arriba, la cuenta en el grupo; debajo del saldo, sus acopios activos (27/10/2026).
+      const cabecera = htmlCuentaGrupo(c, cli) + extras + `<div class="ad-tarjeta"><div class="ad-fila__linea"><span class="ad-dato__rotulo">Saldo</span>` +
         `<span class="ad-total${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(saldo))}</span></div>` +
         `${limite !== null ? `<p class="ad-texto-suave">${esc('Límite de crédito ' + importeHoja(limite))}</p>` : ''}` +
-        `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>`
+        `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>` + htmlAcopiosCliente(c)
       if (!c.cuenta.length) return cabecera + '<div class="ad-vacio">Todavía no tiene movimientos.</div>'
       // Una cobranza asentada se abre (su detalle, con "Reabrir"), y un
       // movimiento de una orden de retiro abre la orden (14/10/2026; con
@@ -6983,6 +8005,12 @@
         console.error('No se pudieron leer las otras cuentas del cliente:', err)
         estado.cliente.otras = { filas: [], error: 'No se pudo ver si también es cliente de otras fábricas.' }
       }
+      pintarCliente()
+      // Sus acopios activos y la cuenta en el grupo (27/10/2026), después:
+      // tampoco demoran la cuenta, y cada uno dice solo si falla.
+      const cl = estado.cliente
+      await Promise.all([cargarAcopiosCliente(cl), cargarCuentaGrupo(cl)])
+      if (turno !== turnoCliente || estado.cliente !== cl) return
       pintarCliente()
     }
 
@@ -13625,6 +14653,14 @@
       document.getElementById('ad-remito-volver').addEventListener('click', () => volverDeRemito())
       document.getElementById('ad-remito-cuerpo').addEventListener('click', (e) => alTocarRemito(e))
       document.getElementById('ad-remito-cuerpo').addEventListener('input', (e) => alEscribirRemito(e))
+      // Los acopios (27/10/2026).
+      document.getElementById('ad-acopios-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-acopios-cuerpo').addEventListener('click', (e) => alTocarAcopios(e))
+      document.getElementById('ad-acopios-cuerpo').addEventListener('input', (e) => alEscribirAcopios(e))
+      document.getElementById('ad-acopios-cuerpo').addEventListener('change', (e) => alCambiarAcopios(e))
+      document.getElementById('ad-acopio-volver').addEventListener('click', () => volverDeAcopio())
+      document.getElementById('ad-acopio-cuerpo').addEventListener('click', (e) => alTocarAcopio(e))
+      document.getElementById('ad-acopio-cuerpo').addEventListener('input', (e) => alEscribirAcopio(e))
       document.getElementById('ad-btn-valorizar').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-corregir-valor').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-imprimir').addEventListener('click', () => imprimirOrden())
@@ -13702,6 +14738,8 @@
       document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
         const nota = e.target.closest('[data-cuenta-nota-debito]')
         if (nota && estado.cliente) { abrirNotaDebito(nota.dataset.cuentaNotaDebito); return }
+        const ac = e.target.closest('[data-cliente-acopio]')
+        if (ac && estado.cliente) { abrirAcopio(ac.dataset.clienteAcopio, { volver: 'cliente' }); return }
         const b = e.target.closest('[data-cuenta-cobranza]')
         if (b && estado.cliente) abrirCobranzaDesdeCuenta(b.dataset.cuentaCobranza)
         const r = e.target.closest('[data-orden-retiro]')

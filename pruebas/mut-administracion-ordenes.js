@@ -108,7 +108,7 @@ correrMutaciones({
     // Valorizar con precio_venta() (30/09/2026)
     { nombre: 'precio_venta sin el cono del renglón', de: '          p_lista_id: listaId, p_presentacion_id: it.presentacion_id, p_marca_id: it.marca_id ?? null, p_fecha: fecha,', a: '          p_lista_id: listaId, p_presentacion_id: it.presentacion_id, p_marca_id: null, p_fecha: fecha,' },
     { nombre: 'precio_venta sin la fecha del retiro', de: '          p_lista_id: listaId, p_presentacion_id: it.presentacion_id, p_marca_id: it.marca_id ?? null, p_fecha: fecha,', a: '          p_lista_id: listaId, p_presentacion_id: it.presentacion_id, p_marca_id: it.marca_id ?? null, p_fecha: null,' },
-    { nombre: 'una llamada por renglón aunque se repita', de: '        if (!porClave.has(k)) porClave.set(k, leerPrecioVenta(listaId, it, o.fecha))', a: '        porClave.set(k + it.id, leerPrecioVenta(listaId, it, o.fecha))' },
+    { nombre: 'una llamada por renglón aunque se repita', de: '        if (!porClave.has(k)) porClave.set(k, leerPrecioVentaEn(listaId, it, o.fecha, unidadLista))', a: '        porClave.set(k + it.id, leerPrecioVentaEn(listaId, it, o.fecha, unidadLista))' },
     { nombre: 'sin_precio no se mira', de: '        if (!data || data.sin_precio) {', a: '        if (!data) {' },
     { nombre: 'un error de la llamada inventa un cero', de: "        return { error: 'No se pudo leer el precio de la lista.' + (limpio(err?.message) ? ' ' + limpio(err.message) : '') }", a: '        return { precio: 0, datos: {} }' },
     { nombre: 'el error no dice cuál fue', de: "        return { error: 'No se pudo leer el precio de la lista.' + (limpio(err?.message) ? ' ' + limpio(err.message) : '') }", a: "        return { error: 'No se pudo leer el precio de la lista.' }" },
