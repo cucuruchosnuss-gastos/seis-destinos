@@ -18,6 +18,7 @@ for (const u of t.unidades_negocio) {
 t.clientes.push({ id: 'c-dp', unidad_negocio_id: 'u-n', nombre: 'DOLCE PASTA SRL', razon_social: 'DOLCE PASTA SRL', apodos: [], cuit: '33709335419',
   domicilio: null, localidad: 'Rosario', email: null, transporte_habitual: 'Camión propio', activo: true, provisorio: false, unidad_grupo_id: 'u-d' });
 
-base.rpc.registrar_orden_retiro = { orden_id: 'o-42', numero: 42, codigo: 'N-0042', stock_insuficiente: [], entre_empresas: true };
+// 27/10/2026: la orden a otra empresa es una orden interna, con su numeración.
+base.rpc.registrar_orden_retiro = { orden_id: 'o-42', numero: 42, codigo: 'N-I-0042', stock_insuficiente: [], entre_empresas: true };
 
 module.exports = base;

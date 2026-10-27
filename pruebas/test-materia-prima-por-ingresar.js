@@ -17,6 +17,7 @@
 
 const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
+const { conPrecioMp, CONSTANTES_PRECIO_MP } = require('./precio-mp-comun')
 const { arnes, marca, chequearMarcas, estaticoAcotado, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
 const { fuenteNumeros } = require('./numeros-comun')
@@ -137,7 +138,7 @@ const CONSTANTES = ['AVISO_POR_INGRESAR', 'ETIQUETA_ORIGEN_POR_INGRESAR', 'puede
 
 function nuevo() {
   return construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
+    preludio: PRELUDIO, funciones: conPrecioMp(FUNCIONES), constantes: [...CONSTANTES, ...CONSTANTES_PRECIO_MP],
     retorno: `estado, __log, __els, __el(id){ return document.getElementById(id) },
       __setRpc(n, f){ __rpc[n] = f }, __setCabecera(c){ __cabecera = c }, __setDescarga(f){ __descarga = f },
       __setOcr(f){ __ocr = f }, __setInsertItems(f){ __insertItems = f }, __setTarjetas(t){ __tarjetas = t }, AVISO_POR_INGRESAR`,
@@ -499,9 +500,26 @@ estaticoAcotado(chk, ARCHIVO, FUENTE,
   try { viejo = execFileSync('git', ['show', `${BASELINE}:modulos/materia-prima.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }) } catch { viejo = '' }
   chk(`se pudo leer el baseline ${BASELINE}`, viejo.length > 100000)
   if (viejo.length > 100000) {
+    // El precio de compra (27/10/2026) sumó a filaItemParaBase y a
+    // itemDesdeOcr SOLO estas líneas: sacándolas, tienen que quedar idénticas.
+    const AGREGADO_PRECIO = [
+      '// El precio de compra SIN IVA por unidad de medida y su alícuota',
+      '// (27/10/2026). En mixto, el mismo en cada fila.',
+      '...precioParaBase(item, estado.wizard.encabezado.tipoDoc),',
+      'const precioOcr = precioDesdeOcr(crudo, bultos, contenido)',
+      'const ivaOcr = ivaDesdeOcr(crudo)',
+      '// EL PRECIO (27/10/2026): como lo dice el papel (por bulto o por',
+      '// unidad), sin IVA; el IVA del renglón si lo trae. Ver "EL PRECIO DE',
+      '// COMPRA".',
+      'precio: precioOcr.precio, precioPorBulto: precioOcr.porBulto, precioDeOcr: precioOcr.precio != null,',
+      'iva: ivaOcr, ivaOtro: ivaOcr != null && !ALICUOTAS_IVA.includes(ivaOcr),',
+    ]
+    const sinPrecio = c => c.split('\n').filter(l => !AGREGADO_PRECIO.includes(l.trim())).join('\n')
     for (const fn of ['filasItemParaBase', 'filaItemParaBase', 'crearInsumosNuevos', 'fusionarEntregas', 'guardarAliasNuevos', 'itemDesdeOcr']) {
-      chk(`${fn} quedó idéntica al baseline`, extraerFn(viejo, fn) === extraerFn(FUENTE, fn))
+      chk(`${fn} quedó idéntica al baseline (salvo el precio)`, extraerFn(viejo, fn) === sinPrecio(extraerFn(FUENTE, fn)))
     }
+    chk('filaItemParaBase manda el precio', extraerFn(FUENTE, 'filaItemParaBase').includes('...precioParaBase(item, estado.wizard.encabezado.tipoDoc),'))
+    chk('itemDesdeOcr lee el precio y el IVA', extraerFn(FUENTE, 'itemDesdeOcr').includes('const precioOcr = precioDesdeOcr(crudo, bultos, contenido)') && extraerFn(FUENTE, 'itemDesdeOcr').includes('const ivaOcr = ivaDesdeOcr(crudo)'))
   }
 }
 
