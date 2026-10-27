@@ -32,7 +32,7 @@ correrMutaciones({
     { nombre: 'la lista no lee el tipo', de: "select('orden_id, cajas, insumo_id, tipo')", a: "select('orden_id, cajas, insumo_id')" },
     { nombre: 'la lista cuenta la devolución', de: '(cajas.get(it.orden_id) ?? 0) + cajasQueSalen(it))', a: '(cajas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))' },
     { nombre: 'la lista sin las devueltas', de: "(o.devueltas ? ` · devolvió ${enteroHoja(o.devueltas)}` : '')", a: "''" },
-    { nombre: 'la fila sin "a favor"', de: 'importeHoja(totalFila, o.moneda) + textoAFavor(totalFila)', a: 'importeHoja(totalFila, o.moneda)' },
+    { nombre: 'la fila sin "a favor"', de: "        ? importeHoja(totalFila, o.moneda) + textoAFavor(totalFila) : 'sin valorizar'", a: "        ? importeHoja(totalFila, o.moneda) : 'sin valorizar'" },
     // El detalle
     { nombre: 'el detalle no lee el tipo', de: 'turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto', a: 'turno_produccion_id' },
     { nombre: 'el detalle sin la sección', de: '      const renglones = d.items.filter(it => !esItemDev(it)).map(', a: '      const renglones = d.items.map(' },

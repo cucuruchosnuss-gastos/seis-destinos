@@ -720,7 +720,7 @@
     .ad-rm-foto__zoom { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; }
     .ad-rm-foto__nivel { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.5rem; text-align: center; }
     .ad-rm-foto__lienzo { overflow: auto; max-height: 70vh; border-radius: var(--radio-input); background: var(--color-superficie); }
-    @media (max-width: 1023.98px) { .ad-rm-foto__lienzo { max-height: 55vh; } }
+    @media (max-width: 1023.98px) { .ad-rm-foto__lienzo { max-height: 45vh; } }
     .ad-rm-foto__img { display: block; max-width: none; height: auto; }
     .ad-rm-renglones { display: flex; flex-direction: column; gap: 0.625rem; margin: 0 0 0.75rem; min-width: 0; }
     .ad-rm-renglon { border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.75rem; min-width: 0; background: var(--color-fondo); }
@@ -749,6 +749,7 @@
     .ad-rm-opcion__detalle { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
     .ad-rm-cantidad .ad-input { max-width: 10rem; }
     .ad-rm-lotes { margin: 0 0 0.5rem; min-width: 0; }
+    .ad-rm-lotes > .ad-campo__rotulo { display: block; margin: 0 0 0.375rem; }
     .ad-rm-lote { display: flex; gap: 0.5rem; align-items: flex-end; margin: 0 0 0.375rem; min-width: 0; }
     .ad-rm-lote__campo { display: flex; flex-direction: column; gap: 0.125rem; flex: 1 1 0; min-width: 0; font-size: 0.8125rem; font-weight: 700; }
     .ad-rm-lote__campo--cajas { flex: 0 0 6rem; }
@@ -3312,8 +3313,9 @@
     function htmlFilaOrdenRemito(o) {
       const cli = clienteDe(o.cliente_id)
       const numero = textoNumeroRemito(o) || 'Sin N° de remito'
-      const conComision = o.estado !== 'anulada' && Number(o.comision_importe) > 0
-      const totalFila = conComision ? totalConComision(o.total, o.comision_importe) : o.total
+      // Con la comisión cargada, el total con la comisión (como htmlFilaOrden).
+      const comisionRemito = o.estado !== 'anulada' && Number(o.comision_importe) > 0
+      const totalRemito = comisionRemito ? totalConComision(o.total, o.comision_importe) : o.total
       const valorizada = o.estado_valorizacion === 'valorizada'
       const pendiente = o.estado === 'confirmada' && !valorizada
       const meta = [cli?.nombre ?? 'Cliente', fechaCorta(o.fecha), o.codigo ? 'Orden ' + o.codigo : ''].filter(Boolean).join(' · ')
@@ -3321,7 +3323,7 @@
         `<span class="ad-fila__linea"><span class="ad-rm-numero${limpio(o.numero_remito) ? '' : ' ad-rm-numero--sin'}">${esc(numero)}</span>` +
         `<span class="ad-fila__sellos">${htmlSelloOrden(o)}${htmlSelloAcopio(o)}${htmlSelloEntre(o)}</span></span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta)}</span>` +
-        (valorizada ? `<span class="ad-fila__importe">${esc(importeHoja(totalFila, o.moneda) + textoAFavor(totalFila))}</span>` : '') + '</span></button>'
+        (valorizada ? `<span class="ad-fila__importe">${esc(importeHoja(totalRemito, o.moneda) + textoAFavor(totalRemito))}</span>` : '') + '</span></button>'
     }
 
     // ── La lista de arriba: los remitos por revisar ───────────────────────
@@ -3628,6 +3630,7 @@
     function htmlRenglonRemito(r, i, cat) {
       const rmLeido = limpio(r.texto_leido) ? `<p class="ad-rm-leido">Leído: «${esc(limpio(r.texto_leido))}»</p>` : ''
       const rmNota = limpio(r.nota) ? `<p class="ad-rm-nota">${esc(limpio(r.nota))}</p>` : ''
+      // (El omitido sale antes, tachado: acá nunca es amarillo.)
       const amarillo = r.revisar === true && r.omitir !== true
       const sello = r.omitir === true ? '<span class="ad-sello ad-sello--omitido">No va en la orden</span>'
         : amarillo ? '<span class="ad-sello ad-sello--amarillo">Revisar</span>' : ''
