@@ -311,7 +311,7 @@ async function pruebas() {
     chk('admin: guarda con guardar_cobranza_completa', r.ok && ll?.nombre === 'guardar_cobranza_completa', ll?.nombre)
     chk('admin: p_transferencias con cuenta, importe NÚMERO, fecha y referencia sin espacios',
       JSON.stringify(ll?.params.p_transferencias) === JSON.stringify([{ cuenta_id: 'cta-dolce', importe: 10000, fecha: '2026-09-30', referencia: 'op 123',
-        banco_origen: null, ordenante: null, cuit_ordenante: null, foto_id: null, origen_datos: 'manual', ocr_propuesto: null }]),
+        banco_origen: null, medio: 'transferencia', ordenante: null, cuit_ordenante: null, foto_id: null, origen_datos: 'manual', ocr_propuesto: null }]),
       JSON.stringify(ll?.params.p_transferencias))
     const e = ll?.params.p_cheques.find(c => c.es_echeck)
     chk('e-cheque en p_cheques: sin foto, sin chequera, origen manual', e && e.foto_id === null && e.sucursal_codigo === null &&

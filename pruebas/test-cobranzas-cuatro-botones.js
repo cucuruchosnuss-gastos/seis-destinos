@@ -277,7 +277,7 @@ async function pruebas() {
     chk('editar: sus botones aparecen apretados', boton(A, '[data-abrir-forma]', 'cheque').getAttribute('aria-pressed') === 'true' && boton(A, '[data-abrir-forma]', 'efectivo').getAttribute('aria-pressed') === 'false')
     chk('fuente: la edición lee tipo y mime de las fotos y los datos nuevos de las transferencias',
       /select\('id, storage_path, ocr_crudo, ocr_modelo, tipo, mime'\)/.test(FUENTE) &&
-      /select\('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto'\)/.test(FUENTE))
+      /select\('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto, medio'\)/.test(FUENTE))
     const C = sandbox(CHOFER)
     const fc = C.formularioVacio('e2')
     fc.modo = 'edicion'

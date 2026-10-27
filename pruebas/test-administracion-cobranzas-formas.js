@@ -139,6 +139,11 @@ async function pruebas() {
     chk('un e-cheque con foto_id igual no ofrece la foto', !/data-cob-foto/.test(ch) && /forma-pago--echeck/.test(ch))
     const sin = S.htmlTransferenciaCob({ cuenta_id: 'x', importe: 5, fecha: null, referencia: '' }, new Map())
     chk('una cuenta sin nombre: "una cuenta de banco"', /entró en una cuenta de banco/.test(sin) && !/Ref\./.test(sin))
+    // El depósito en efectivo (cobranza_transferencias.medio, 27/10/2026).
+    chk('una transferencia no dice depósito', !/Depósito en efectivo/.test(sin) && !/Depósito/.test(S.htmlTransferenciaCob({ cuenta_id: 'x', importe: 5, medio: 'transferencia' }, new Map())))
+    const dep = S.htmlTransferenciaCob({ cuenta_id: 'cta-macro', importe: 500000, fecha: '2026-10-27', referencia: '4471', medio: 'deposito_efectivo' }, new Map([['cta-macro', { nombre: 'Macro Paz Mirta' }]]))
+    chk('un depósito dice "Depósito en efectivo" antes de la cuenta', /Depósito en efectivo · entró en Macro Paz Mirta · 27\/10/.test(dep), dep)
+    chk('fuente: las transferencias se leen con medio', /\.select\('id, cobranza_id, cuenta_id, importe, fecha, referencia, medio'\)/.test(src))
     chk('formas de una cobranza sin poder ver sus cheques: la cantidad alcanza', /forma-pago--cheque/.test(S.htmlFormasDeCobranza({ efectivo: 0, cheques: 2 }, [], [])))
   }
 

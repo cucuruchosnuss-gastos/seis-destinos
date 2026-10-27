@@ -65,5 +65,12 @@ correrMutaciones({
       de: '&amp;volver=${encodeURIComponent(\'administracion.html?seccion=cobranzas\')}">Sumar', a: '">Sumar' },
     { nombre: 'sin link para cargar una cobranza',
       de: 'id="ad-cobranzas-cargar" href="cobranzas.html"', a: 'id="ad-cobranzas-cargar" href="#"' },
+    // ── El depósito en efectivo (27/10/2026) ───────────────────────────────
+    { nombre: 'el depósito no lo dice',
+      de: "      if (t.medio === 'deposito_efectivo') partes.splice(1, 0, 'Depósito en efectivo')\n", a: '' },
+    { nombre: 'toda transferencia dice depósito',
+      de: "      if (t.medio === 'deposito_efectivo') partes.splice(1, 0,", a: '      if (true) partes.splice(1, 0,' },
+    { nombre: 'las transferencias se leen sin medio',
+      de: ".select('id, cobranza_id, cuenta_id, importe, fecha, referencia, medio')", a: ".select('id, cobranza_id, cuenta_id, importe, fecha, referencia')" },
   ],
 })

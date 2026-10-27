@@ -83,6 +83,31 @@ const HOY = new Date('2026-10-02T12:00:00Z')
   const largo = N.normalizarTransferencia({ referencia: 'x'.repeat(150) }, HOY)
   chk('transferencia: referencia hasta 100 (CHECK de la tabla)', largo.referencia.length === 100)
 
+  // ── v2 (27/10/2026): medio, destinatario y CBU que recibe ──────────────
+  chk('medio: sin medio → "transferencia"', t3.medio === 'transferencia', t3.medio)
+  chk('medio: "deposito_efectivo" exacto se respeta', N.normalizarTransferencia({ medio: 'deposito_efectivo', importe: 5 }, HOY).medio === 'deposito_efectivo')
+  chk('medio: cualquier otra cosa → "transferencia"', ['Deposito_efectivo', 'deposito efectivo', 'deposito', 'efectivo', ' deposito_efectivo', 1, null, {}]
+    .every(m => N.normalizarTransferencia({ medio: m, importe: 5 }, HOY).medio === 'transferencia'))
+  const dep = N.normalizarTransferencia({
+    medio: 'deposito_efectivo', importe: 813174.25, fecha: '2026-10-27', ordenante: null,
+    destinatario: '  PAZ   MIRTA ', cbu_destino: '2850324830094103159311',
+  }, HOY)
+  chk('depósito: sin ordenante queda null (no se inventa)', dep.ordenante === null && dep.cuit_ordenante === null && dep.controles.cuit_ok === null)
+  chk('destinatario: texto con los espacios ordenados', dep.destinatario === 'PAZ MIRTA', dep.destinatario)
+  chk('destinatario: hasta 150', N.normalizarTransferencia({ destinatario: 'y'.repeat(200) }, HOY).destinatario.length === 150)
+  chk('destinatario: lo que no es texto → null', [null, undefined, 123, '   ', {}].every(d => N.normalizarTransferencia({ destinatario: d }, HOY).destinatario === null))
+  chk('cbu_destino: 22 dígitos se conserva como texto', dep.cbu_destino === '2850324830094103159311' && typeof dep.cbu_destino === 'string')
+  chk('cbu_destino: con espacios o guiones, solo los dígitos', N.normalizarTransferencia({ cbu_destino: '2850324-8 3009410315 9311' }, HOY).cbu_destino === '2850324830094103159311')
+  chk('cbu_destino: con ceros adelante se conserva', N.normalizarTransferencia({ cbu_destino: '0070324830094103159311' }, HOY).cbu_destino === '0070324830094103159311')
+  chk('cbu_destino: que no tiene 22 dígitos → null', ['285032483009410315931', '28503248300941031593111', '', 'sin cbu', null].every(c => N.normalizarTransferencia({ cbu_destino: c }, HOY).cbu_destino === null))
+  chk('cbu_destino: un número de 22 cifras (JSON) se pierde y va a null o a sus dígitos, nunca a otro CBU',
+    (() => { const r = N.normalizarTransferencia({ cbu_destino: 2850324830094103159311 }, HOY).cbu_destino; return r === null || r === '2850324830094103159311' })())
+  const soloMedio = N.normalizarRespuesta('transferencia', { comprobantes: [{ medio: 'transferencia' }, { medio: 'deposito_efectivo' }, { medio: 'deposito_efectivo', notas: 'borroso' }] }, HOY)
+  chk('respuesta: un comprobante con solo "medio" (o medio y notas) es ruido', soloMedio.length === 0, JSON.stringify(soloMedio))
+  const conDestino = N.normalizarRespuesta('transferencia', { comprobantes: [{ medio: 'deposito_efectivo', destinatario: 'PAZ MIRTA' }, { cbu_destino: '2850324830094103159311' }] }, HOY)
+  chk('respuesta: con destinatario o CBU sí es una propuesta', conDestino.length === 2 && conDestino[0].medio === 'deposito_efectivo')
+  chk('respuesta: un e-cheque no lleva medio, destinatario ni CBU', !('medio' in N.normalizarRespuesta('echeque', { comprobantes: [{ cmc7 }] }, HOY)[0]))
+
   // ── E-cheque ────────────────────────────────────────────────────────────
   const e = N.normalizarEcheque({
     banco_codigo: '999', cmc7, numero: '11111111', emisor: 'ANATOLIA SA', cuit_emisor: '33709335419',
@@ -133,6 +158,12 @@ const HOY = new Date('2026-10-02T12:00:00Z')
   chk('index: los prompts nombran bancos y billeteras argentinas', ['Macro', 'Nación', 'Santander', 'Galicia', 'Mercado Pago'].every(b => FUENTE_INDEX.includes(b)))
   chk('index: devuelve crudo y propuestos', /crudo, propuestos \}/.test(FUENTE_INDEX))
   chk('index: importa la normalización de normalizar.js', /from '\.\/normalizar\.js'/.test(FUENTE_INDEX))
+  chk('index v2: el JSON pedido trae medio, destinatario y cbu_destino',
+    /"medio": "transferencia" \| "deposito_efectivo"/.test(FUENTE_INDEX) && /"destinatario": "texto" \| null/.test(FUENTE_INDEX) && /"cbu_destino": "22 dígitos" \| null/.test(FUENTE_INDEX))
+  chk('index v2: un depósito en efectivo no tiene ordenante', /DEPÓSITO EFECTIVO EN CUENTA/.test(FUENTE_INDEX) && /NO tiene ordenante: ordenante = null/.test(FUENTE_INDEX))
+  chk('index v2: la empresa que recibe nunca es el ordenante', /NUNCA pongas a la empresa que recibe como\s+ordenante/.test(FUENTE_INDEX))
+  chk('index v2: el importe es el de antes de la comisión', /el importe es el de ANTES de la\s+comisión/.test(FUENTE_INDEX))
+  chk('index v2: ok:false sin propuestas igual devuelve lo crudo', /ok: false, modelo, crudo, propuestos, mensaje: 'No se encontraron datos/.test(FUENTE_INDEX))
 
   console.log(`\n${ok}/${ok + fallas.length} verificaciones OK`)
   if (fallas.length) {
