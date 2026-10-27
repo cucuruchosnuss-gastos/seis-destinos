@@ -43,6 +43,7 @@ correrMutacionesEnVarios([
       // La instalación con tope y reintento (26/10/2026).
       { nombre: 'la instalación sin su tope', de: '        timeout-minutes: 20\n', a: '' },
       { nombre: 'la instalación con el tope del trabajo', de: '        timeout-minutes: 20\n', a: '        timeout-minutes: 30\n' },
+      { nombre: 'vuelve a ubuntu-latest', de: '    runs-on: ubuntu-24.04', a: '    runs-on: ubuntu-latest' },
       { nombre: 'un solo intento', de: '          for i in 1 2 3; do\n', a: '          for i in 1; do\n' },
       { nombre: 'cada intento sin tope', de: 'if timeout 360 npx playwright install', a: 'if npx playwright install' },
       { nombre: 'otro nombre de workflow', de: 'name: Navegador\n\non:', a: 'name: Navegador en dos\n\non:' },

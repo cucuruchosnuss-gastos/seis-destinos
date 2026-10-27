@@ -137,6 +137,7 @@ chk('el nombre de cada trabajo dice su mitad', new RegExp(`^\\s+name: Navegador 
 const timeouts = [...sinComentarios.matchAll(/^ {4}timeout-minutes: (\d+)$/gm)].map(m => Number(m[1]))
 chk('un tope por trabajo, de 30 minutos o menos', timeouts.length === 1 && timeouts[0] > 0 && timeouts[0] <= 30, timeouts)
 chk('instala Chromium y WebKit', /npx playwright install --with-deps chromium webkit/.test(sinComentarios))
+chk('en Ubuntu 24.04 fijo (en Ubuntu 26 la instalación se colgaba)', /^ {4}runs-on: ubuntu-24\.04$/m.test(sinComentarios))
 // 26/10/2026: la instalación se colgó dos veces hasta el tope del trabajo.
 const pasoInstalar = (sinComentarios.match(/- name: Instalar Chromium y WebKit[^\n]*\n(?: {8}[^\n]*\n)+/) || [''])[0]
 const topePaso = Number((pasoInstalar.match(/^ {8}timeout-minutes: (\d+)$/m) || [])[1])
