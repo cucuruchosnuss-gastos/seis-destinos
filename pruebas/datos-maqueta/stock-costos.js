@@ -3,7 +3,10 @@
 // SIN cambiarlos —las otras pruebas de Stock los usan tal cual— y le suma las
 // dos tareas de costos (ver y cargar en Nuss; en Dolce solo ver, para que con
 // "Todas" se pida la fábrica), las respuestas de costos_insumos y
-// stock_valorizado y el historial de insumo_costos.
+// stock_valorizado y el historial de insumo_costos. Desde el 27/10/2026 la
+// pantalla es "Precios de compra": precios_compra() (la harina de una compra
+// con IVA 21 y su bolsa de 25 kg; la lecitina a mano con IVA 10,5) y las
+// compras de la harina en materia_prima_items para el historial.
 //
 //   http://localhost:4180/modulos/stock.html?maqueta=stock-costos
 'use strict';
@@ -38,6 +41,20 @@ const VALORIZADO_NUSS = [
   { insumo_id: 'i-caja', insumo: 'Caja N°1', marca: 'Nuss', categoria: 'Cajas', unidad_medida: 'un', cantidad: '1200', costo_unitario: null, costo_desde: null, valor: null },
   { insumo_id: 'i-harina', insumo: 'Harina 000', marca: null, categoria: 'Harinas', unidad_medida: 'kg', cantidad: '6250', costo_unitario: '1100.0000', costo_desde: '2026-10-01', valor: '6875000.00' },
   { insumo_id: 'i-lecitina', insumo: 'Lecitina de soja', marca: null, categoria: 'Aditivos', unidad_medida: 'kg', cantidad: '12.5', costo_unitario: '5432.1234', costo_desde: '2026-09-15', valor: '67901.54' },
+];
+
+// precios_compra, como la base: los numeric como texto.
+const PRECIOS_NUSS = [
+  { insumo_id: 'i-harina', insumo: 'Harina 000', marca: null, unidad_medida: 'kg', contenido_bulto: '25', nombre_bulto: 'bolsa', precio_unitario: '1100.0000', alicuota_iva: '21', precio_final: '1331.0000', fecha: '2026-10-20', origen: 'compra', proveedor: 'Molino del Sur', comprobante: 'factura_a 0001-00004321' },
+  { insumo_id: 'i-lecitina', insumo: 'Lecitina de soja con un nombre larguísimo para ver que no empuje el ancho', marca: null, unidad_medida: 'kg', contenido_bulto: null, nombre_bulto: null, precio_unitario: '5432.1234', alicuota_iva: '10.5', precio_final: '6002.5964', fecha: '2026-09-15', origen: 'manual', proveedor: null, comprobante: 'Lista de septiembre' },
+];
+base.rpc.precios_compra = {
+  __segun: [{ si: { p_unidad_negocio_id: NUSS }, r: PRECIOS_NUSS }],
+  __defecto: [],
+};
+t.materia_prima_items = [
+  { id: 'mpi-2', insumo_id: 'i-harina', precio_unitario: '1100.0000', alicuota_iva: '21', created_at: '2026-10-20T12:00:00Z', materia_prima_ingresos: { fecha: '2026-10-20', tipo_doc: 'factura_a', numero_doc: '0001-00004321', razon_social: 'Molino del Sur', unidad_negocio_id: NUSS } },
+  { id: 'mpi-1', insumo_id: 'i-harina', precio_unitario: '1000.0000', alicuota_iva: '21', created_at: '2026-09-20T12:00:00Z', materia_prima_ingresos: { fecha: '2026-09-20', tipo_doc: 'factura_a', numero_doc: '0001-00004100', razon_social: 'Molino del Sur', unidad_negocio_id: NUSS } },
 ];
 
 base.rpc.costos_insumos = {

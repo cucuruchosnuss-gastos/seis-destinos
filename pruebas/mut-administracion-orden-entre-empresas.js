@@ -52,7 +52,7 @@ const r = correrMutaciones({
     { nombre: '"Comisión sin cargar" también entre empresas', de: ' && comisionHabitualDe(cli) !== null && !empresaGrupoDe(cli)', a: ' && comisionHabitualDe(cli) !== null' },
     { nombre: 'la lista de clientes sin "Empresa del grupo"', de: "        `${empresaGrupoDe(fichaCliente(c.cliente_id)) ? '<span class=\"ad-sello ad-sello--entre\" data-sello-entre>Empresa del grupo</span>' : ''}` +\n", a: '' },
     // El detalle
-    { nombre: 'el detalle sin el dato "Entre empresas"', de: "        datos.push(htmlDatoAd('Entre empresas', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))\n", a: '' },
+    { nombre: 'el detalle sin el dato "Entre empresas"', de: "        datos.push(htmlDatoAd('Orden interna', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))\n", a: '' },
     { nombre: 'el detalle sin el sello', de: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}</div><div class="ad-datos">', a: '${htmlSelloOrden(o)}</div><div class="ad-datos">' },
     { nombre: 'el detalle con la comisión', de: '${htmlDeudaEntre(o)}` : htmlComisionOrden(d)', a: '` : htmlComisionOrden(d)' },
     { nombre: 'el detalle trata la orden como común', de: '          : entre ? `<p class="ad-total">', a: '          : false ? `<p class="ad-total">' },
@@ -70,7 +70,12 @@ const r = correrMutaciones({
     { nombre: 'la ficha con otro texto', de: "'Es la empresa ' + nombre + ' del grupo.", a: "'Del grupo: ' + nombre + '." },
     // Entre empresas: la orden de cada deuda
     { nombre: 'el código de cualquier tipo', de: "      if (f?.tipo !== 'otro') return null\n      const m = RE_CODIGO_ORDEN_ENTRE", a: '      const m = RE_CODIGO_ORDEN_ENTRE' },
-    { nombre: '"orden" sin el límite de palabra', de: '/\\borden(?: de retiro)? ([A-Z]{1,3}-\\d{3,})\\b/i', a: '/orden(?: de retiro)? ([A-Z]{1,3}-\\d{3,})\\b/i' },
+    { nombre: '"orden" sin el límite de palabra', de: '/\\borden(?: de retiro)? ([A-Z]{1,3}-(?:I-)?\\d{3,})\\b/i', a: '/orden(?: de retiro)? ([A-Z]{1,3}-(?:I-)?\\d{3,})\\b/i' },
+    // La orden interna (27/10/2026)
+    { nombre: 'el código de una interna no se reconoce', de: '([A-Z]{1,3}-(?:I-)?\\d{3,})\\b/i', a: '([A-Z]{1,3}-\\d{3,})\\b/i' },
+    { nombre: 'la lista vuelve a ordenar por numero', de: ".order('codigo', { ascending: false })", a: ".order('numero', { ascending: false })" },
+    { nombre: 'el detalle de la cuenta no saca el código de una interna', de: '|[A-Z]+-(?:I-)?\\d+)/', a: '|[A-Z]+-\\d+)/' },
+    { nombre: 'el sello vuelve a decir "Entre empresas"', de: '>Orden interna</span>`\n    }', a: '>Entre empresas</span>`\n    }' },
     { nombre: 'la fila sin la orden', de: '${htmlOrdenEntre(f)}${valorHtmlEntre}', a: '${valorHtmlEntre}' },
     { nombre: 'el link sin permiso', de: "      return !!o?.id && !!o.unidad && puedeEn('retiros', 'ver', o.unidad) && empresasDeAdministracion().some(e => e.id === o.unidad)", a: '      return !!o?.id' },
     { nombre: 'sin leer la tabla', de: "        const { data, error } = await supabase.from('movimientos_entre_unidades').select('id, orden_retiro_id').in('id', deudas.map(f => f.referencia_id))\n        if (error) throw error\n        for (const m of data ?? []) if (m?.id && m.orden_retiro_id) porMov.set(m.id, m.orden_retiro_id)", a: '' },

@@ -83,11 +83,11 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   const S = nuevo()
   preparar(S)
   const h = S.htmlFilaOrden({ ...ORDEN, cajas: 10, insumos: 0, devueltas: 0 })
-  chk('la fila dice "Entre empresas"', /ad-sello--entre[^>]*>Entre empresas</.test(h), h)
+  chk('la fila dice "Orden interna" (27/10/2026)', /ad-sello--entre[^>]*>Orden interna</.test(h), h)
   chk('el título del sello nombra a la que recibe', /title="Otra empresa del grupo: Dolce Pasta"/.test(h))
   chk('sin "Comisión sin cargar" aunque el cliente tenga comisión habitual', !/Comisión sin cargar/.test(h))
   const h2 = S.htmlFilaOrden({ ...ORDEN, cliente_id: 'c1', cajas: 10, insumos: 0, devueltas: 0 })
-  chk('un cliente común: sin el sello y con "Comisión sin cargar"', !/Entre empresas/.test(h2) && /Comisión sin cargar/.test(h2))
+  chk('un cliente común: sin el sello y con "Comisión sin cargar"', !/Orden interna/.test(h2) && /Comisión sin cargar/.test(h2))
   chk('faltaComision: nunca para otra empresa del grupo', S.faltaComision(ORDEN, CLIENTES[0]) === false && S.faltaComision({ ...ORDEN, cliente_id: 'c1' }, CLIENTES[1]) === true)
   const lista = S.ordenesComisionSinCargar([ORDEN, { ...ORDEN, id: 'o2', cliente_id: 'c1' }], CLIENTES)
   chk('el filtro "Con comisión sin cargar" no cuenta las órdenes entre empresas', lista.length === 1 && lista[0].id === 'o2')
@@ -99,8 +99,8 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   preparar(S)
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
-    chk('el detalle tiene el sello "Entre empresas"', /ad-sello--entre[^>]*>Entre empresas</.test(h))
-    chk('el dato "Entre empresas" dice quién es y que entró a su stock', /Entre empresas<\/span><span class="ad-dato__valor">Es Dolce Pasta, otra empresa del grupo: lo que salió entró a su stock\./.test(h))
+    chk('el detalle tiene el sello "Orden interna"', /ad-sello--entre[^>]*>Orden interna</.test(h))
+    chk('el dato "Orden interna" dice quién es y que entró a su stock', /Orden interna<\/span><span class="ad-dato__valor">Es Dolce Pasta, otra empresa del grupo: lo que salió entró a su stock\./.test(h))
     chk('el total', /Total \$\s500\.000,00/.test(h))
     chk('la deuda entre empresas, no la cuenta corriente', /Queda como deuda de Dolce Pasta con Cucuruchos Nuss \(Entre empresas\): no va a la cuenta corriente/.test(h))
     chk('sin comisión (ni el botón ni la línea)', !/Comisión/.test(h) && !/ad-btn-comision/.test(h))
@@ -118,7 +118,7 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   preparar(S, { orden: { ...ORDEN, cliente_id: 'c1' } })
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
-    chk('cliente común: sin sello ni deuda entre empresas', !/Entre empresas/.test(h) && !/data-entre-deuda/.test(h))
+    chk('cliente común: sin sello ni deuda entre empresas', !/Orden interna/.test(h) && !/Entre empresas/.test(h) && !/data-entre-deuda/.test(h))
     chk('cliente común: la comisión y las facturas', /Comisión: sin cargar/.test(h) && /ad-btn-comision/.test(h) && /Facturas de ARCA/.test(h))
     chk('cliente común: "Dividir para facturar"', el(S, 'ad-btn-dividir').hidden === false)
   }))
@@ -129,7 +129,7 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   preparar(S, { orden: { ...ORDEN, estado: 'anulada', anulada_motivo: 'Error de carga' } })
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
-    chk('anulada: sello y total, sin la frase de la deuda', /Entre empresas/.test(h) && /Total \$\s500\.000,00/.test(h) && !/data-entre-deuda/.test(h))
+    chk('anulada: sello y total, sin la frase de la deuda', /Orden interna/.test(h) && /Total \$\s500\.000,00/.test(h) && !/data-entre-deuda/.test(h))
   }))
 }
 
@@ -320,6 +320,17 @@ const F = (o) => ({ fecha: '2026-10-24', tipo: 'otro', de_unidad_id: 'u-n', de_u
   chequearMarcas(chk, 'la ficha entre empresas', S.htmlFichaEntre(CLIENTES[0]), ['recibe'])
   chequearMarcas(chk, 'la orden de una deuda (link)', S.htmlOrdenEntre(F({ orden: { id: marca('id-orden'), codigo: marca('codigo'), unidad: 'u-n' } })), ['id-orden', 'codigo'])
   chequearMarcas(chk, 'la orden de una deuda (sin link)', S.htmlOrdenEntre(F({ orden: { id: null, codigo: marca('codigo2'), unidad: null } })), ['codigo2'])
+}
+
+// ── La orden interna (27/10/2026): su propia numeración, <prefijo>-I-0001 ──
+{
+  const S = nuevo()
+  const F = (o) => ({ tipo: 'otro', detalle: 'Valorización de la orden N-I-0001', ...o })
+  chk('el código de una orden interna (N-I-0001)', S.codigoOrdenEntre(F({})) === 'N-I-0001')
+  chk('… y el de una anulación de una interna', S.codigoOrdenEntre(F({ detalle: 'Anulación de la orden D-I-0012: error' })) === 'D-I-0012')
+  chk('la lista se ordena por fecha y código, no por numero (N-I-0001 y N-0001 llevan numero 1)',
+    /\.order\('fecha', \{ ascending: false \}\)\.order\('codigo', \{ ascending: false \}\)/.test(src) && !/\.order\('numero'/.test(src))
+  chk('el detalle de la cuenta saca también el código de una interna', src.includes("base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-(?:I-)?\\d+)/, '')"))
 }
 
 fin(esperas)

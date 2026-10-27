@@ -1,8 +1,9 @@
 // Costos de insumos (09/10/2026), en la maqueta: en Stock el total valorizado
-// y el valor de cada insumo, la pantalla "Costos" (los sin costo arriba, la
-// variación ↑ / ↓) y el modal de un insumo (escribir por bulto de 25 kg →
-// por kg; el historial con Anular y su confirmación propia), ENTERO a la
-// vista; en Administración → una lista, los renglones de insumos a precio fijo
+// y el valor de cada insumo, la pantalla "Precios de compra" (27/10/2026:
+// Insumo | Precio unitario | IVA % | Precio final, la bolsa con IVA, de dónde
+// salió, los sin precio arriba) y el modal de un insumo (escribir por bulto de
+// 25 kg → por kg, sin IVA, con el IVA aparte; el historial con las compras y
+// Anular con su confirmación propia), ENTERO a la vista; en Administración → una lista, los renglones de insumos a precio fijo
 // o a costo + %. A 390 y 1280 px, sin scroll horizontal ni errores. Corre
 // SIEMPRE, sin credenciales.
 const { test, expect } = require('@playwright/test');
@@ -50,13 +51,27 @@ for (const ancho of [390, 1280]) {
     await page.locator('.barra-unidad__chip[data-unidad="u-n"]').first().click();
     await expect(total).toContainText('Stock valorizado: $');
 
-    // La pantalla de costos.
+    // La pantalla de precios de compra.
+    await expect(page.locator('#btn-ver-costos')).toHaveText('Precios de compra');
     await page.locator('#btn-ver-costos').click();
     const costos = page.locator('#lista-costos');
     await expect(costos.locator('[data-costo]').first()).toHaveAttribute('data-costo', 'i-caja');
-    await expect(costos).toContainText('Sin costo');
-    await expect(costos.locator('.variacion-costo--sube')).toHaveText('↑ 12,2 %');
-    await expect(costos.locator('.variacion-costo--baja')).toHaveText('↓ 9,5 %');
+    await expect(costos).toContainText('Sin precio');
+    const harina = costos.locator('[data-costo="i-harina"]');
+    await expect(harina.locator('[data-col="unitario"] .fila-precio__val')).toHaveText('$ 1.100,00 por kg');
+    await expect(harina.locator('[data-col="iva"] .fila-precio__val')).toHaveText('21 %');
+    await expect(harina.locator('[data-col="final"] .fila-precio__val')).toHaveText('$ 1.331,00 por kg');
+    await expect(harina.locator('.fila-precio__bulto')).toHaveText('bolsa de 25 kg con IVA: $ 33.275,00');
+    await expect(harina.locator('.fila-precio__origen')).toHaveText('Compra · Molino del Sur · Factura A 0001-00004321 · 20/10/2026');
+    await expect(costos.locator('[data-costo="i-lecitina"] .fila-precio__origen')).toHaveText('Cargado a mano · Lista de septiembre · 15/09/2026');
+    // La cabecera de columnas: en la compu sí, en el celular cada celda dice su rótulo.
+    if (ancho >= 720) {
+      await expect(costos.locator('.precios-cabecera')).toBeVisible();
+      await expect(harina.locator('.fila-precio__rot').first()).toBeHidden();
+    } else {
+      await expect(costos.locator('.precios-cabecera')).toBeHidden();
+      await expect(harina.locator('.fila-precio__rot').first()).toBeVisible();
+    }
     await sinScrollHorizontal(page);
     await captura(page, `costos-lista-${ancho}`, info);
 
@@ -64,10 +79,19 @@ for (const ancho of [390, 1280]) {
     await costos.locator('[data-costo="i-harina"]').click();
     const modal = page.locator('#modal-costo');
     await expect(modal).toBeVisible();
-    await expect(page.locator('#costo-precio-rotulo')).toHaveText('Precio por bulto de 25 kg');
+    await expect(page.locator('#costo-actual')).toHaveText('$ 1.100,00 por kg + IVA 21 % = $ 1.331,00 por kg');
+    await expect(page.locator('#costo-origen')).toHaveText('Compra · Molino del Sur · Factura A 0001-00004321 · 20/10/2026');
+    await expect(page.locator('#costo-precio-rotulo')).toHaveText('Precio por bulto de 25 kg, sin IVA');
     await page.locator('#costo-precio').fill('27500');
     await expect(page.locator('#costo-equivale')).toHaveText('→ $ 1.100,00 por kg');
+    await page.locator('#costo-iva').selectOption('21');
+    await expect(page.locator('#costo-final')).toHaveText('Precio final con IVA: $ 1.331,00 por kg');
     await expect(page.locator('#costo-historial')).toContainText('Factura de octubre del molino');
+    // Las compras, la más nueva primero.
+    const compras = page.locator('#costo-historial .costo-hist', { hasText: 'Molino del Sur' });
+    await expect(compras).toHaveCount(2);
+    await expect(compras.first()).toContainText('$ 1.100,00 por kg + IVA 21 %');
+    await expect(compras.first()).toContainText('Factura A 0001-00004321 · 20/10/2026');
     await expect(page.locator('#costo-historial .costo-hist--anulado')).toHaveCount(1);
     await expect(page.locator('#costo-historial .costo-hist__anulado')).toHaveText('Anulado por Facu Maqueta el 01/09/2026');
     await modalEnteroALaVista(page, '#modal-costo .modal-stock__panel');

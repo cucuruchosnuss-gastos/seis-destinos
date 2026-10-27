@@ -221,9 +221,10 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await page.locator('#btn-ver-costos').click();
     const costos = page.locator('#lista-costos');
     const harina = costos.locator('[data-costo="i-harina"]');
-    await expect(harina).toContainText(/\$ 27\.500,00 el bulto de 25\skg · \$ 1\.100,00 por kg/);
-    const lecitina = costos.locator('[data-costo="i-lecitina"] .fila-costo__costo');
-    if (await lecitina.count()) expect(nb(await lecitina.textContent())).not.toContain('bulto');
+    // Precios de compra (27/10/2026): el precio por kg y, debajo del final, la bolsa con IVA.
+    await expect(harina.locator('[data-col="unitario"]')).toContainText('$ 1.100,00 por kg');
+    await expect(harina.locator('.fila-precio__bulto')).toHaveText(/bolsa de 25\skg con IVA: \$ 33\.275,00/);
+    await expect(costos.locator('[data-costo="i-lecitina"] .fila-precio__bulto')).toHaveCount(0);
     await sinScroll(page, 'los costos');
     await captura(page, `bulto-costos-${nombre}`, info);
     expect(errores, errores.join('\n')).toEqual([]);

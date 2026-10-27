@@ -70,7 +70,9 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await page.locator('[data-r-listo="0"]').click();
     await expect(page.locator('#rt-aviso-entre')).toBeVisible();
     await expect(page.locator('#rt-aviso-entre')).toHaveText(TEXTO);
-    await expect(page.locator('#rt-cliente-elegido .rt-sello--entre')).toHaveText(/Entre empresas/i);
+    // 27/10/2026: es una ORDEN INTERNA, con su numeración N-I-….
+    await expect(page.locator('#rt-cliente-elegido .rt-sello--entre')).toHaveText('Orden interna');
+    await expect(page.locator('#rt-cliente-elegido .rt-numerar')).toHaveText('Se numera al confirmar: N-I-…');
     await expect(page.locator('#rt-agregar')).toBeVisible();
     await expect(page.locator('#rt-agregar-devolucion')).toBeHidden();
     expect(await sinCostado(page), 'sin scroll de costado en la orden').toBe(true);
@@ -80,8 +82,9 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await expect(page.locator('#rt-resumen .rt-aviso-entre')).toHaveText('Va al stock de Dolce Pasta con los mismos lotes');
     expect(await sinCostado(page), 'sin scroll de costado en el resumen').toBe(true);
     await page.locator('#rt-confirmar').click();
-    await expect(page.locator('#rt-hecho')).toContainText('N-0042');
-    await expect(page.locator('#rt-hecho .rt-aviso-entre')).toHaveText('Entre empresas: lo que salió entra al stock de Dolce Pasta.');
+    await expect(page.locator('#rt-hecho')).toContainText('N-I-0042');
+    await expect(page.locator('#rt-hecho .rt-hecho__rotulo')).toHaveText('Orden interna confirmada');
+    await expect(page.locator('#rt-hecho .rt-aviso-entre')).toHaveText('Orden interna: lo que salió entra al stock de Dolce Pasta.');
     const reg = rpc.find(r => r.nombre === 'registrar_orden_retiro')
     expect(reg?.params?.p_cliente_id).toBe('c-dp');
     expect(reg.params.p_items.every(i => !i.tipo || i.tipo === 'retiro'), 'sin devoluciones').toBe(true);
@@ -120,7 +123,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
 
     // La lista: el sello.
     const fila = page.locator('#ad-ordenes-lista [data-orden="o42"]');
-    await expect(fila.locator('.ad-sello--entre')).toHaveText(/Entre empresas/i);
+    await expect(fila.locator('.ad-sello--entre')).toHaveText('Orden interna');
     await expect(page.locator('#ad-ordenes-lista [data-orden="o12"] .ad-sello--entre')).toHaveCount(0);
     expect(await sinCostado(page), 'sin scroll de costado en la lista').toBe(true);
 
@@ -160,14 +163,14 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await abrirAdministracion(page, '&seccion=entre');
     await expect(page.locator('#ad-vista-entre')).toBeVisible();
     const link = page.locator('#ad-entre-lista [data-entre-orden="o42"]').first();
-    await expect(link).toHaveText('N-0042');
+    await expect(link).toHaveText('N-I-0042');
     await expect(page.locator('#ad-entre-lista [data-entre-orden-fila]')).toHaveCount(2);
     expect(await sinCostado(page), 'sin scroll de costado en Entre empresas').toBe(true);
     await link.scrollIntoViewIfNeeded();
     await captura(page, `entre-empresas-movimientos-${nombre}`, info);
     await link.click();
     await expect(page.locator('#ad-vista-orden')).toBeVisible();
-    await expect(page.locator('#ad-orden-titulo')).toHaveText('Orden N-0042');
+    await expect(page.locator('#ad-orden-titulo')).toHaveText('Orden N-I-0042');
     await expect(page.locator('#ad-orden-cuerpo [data-entre-deuda]')).toBeVisible();
 
     // Clientes: "Empresa del grupo" y la ficha.
