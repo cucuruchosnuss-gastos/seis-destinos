@@ -65,7 +65,7 @@ const FUNCIONES_BASE = [
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
-  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
+  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja', 'textoRemitoHoja',
   'faltanteDeRenglon', 'descripcionHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La hoja nueva (26/10/2026): CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE.
   'porCajaHoja', 'nombreConoHoja', 'conMayuscula', 'bultoInsumoHoja', 'descripcionCortaHoja', 'htmlDescripcionHoja', 'bultosHoja',
