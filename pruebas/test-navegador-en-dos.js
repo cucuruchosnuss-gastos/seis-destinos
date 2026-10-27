@@ -132,9 +132,27 @@ chk('la matriz tiene una entrada por mitad (1 y 2)', JSON.stringify(valores) ===
 chk('fail-fast: false (una mitad que falla no corta la otra)', /^\s+fail-fast: false$/m.test(sinComentarios))
 chk('cada trabajo recibe su mitad en E2E_MITAD', /^\s+E2E_MITAD: \$\{\{ matrix\.mitad \}\}$/m.test(sinComentarios))
 chk('el nombre de cada trabajo dice su mitad', new RegExp(`^\\s+name: Navegador \\$\\{\\{ matrix\\.mitad \\}\\}/${MITADES}$`, 'm').test(sinComentarios))
-const timeouts = [...sinComentarios.matchAll(/timeout-minutes: (\d+)/g)].map(m => Number(m[1]))
+// El del trabajo va a 4 espacios; el de un paso, más adentro (26/10/2026: la
+// instalación de los navegadores tiene su propio tope, ver abajo).
+const timeouts = [...sinComentarios.matchAll(/^ {4}timeout-minutes: (\d+)$/gm)].map(m => Number(m[1]))
 chk('un tope por trabajo, de 30 minutos o menos', timeouts.length === 1 && timeouts[0] > 0 && timeouts[0] <= 30, timeouts)
-chk('instala Chromium y WebKit', /npx playwright install --with-deps chromium webkit/.test(sinComentarios))
+// 26/10/2026: la instalación con sus dependencias (apt-get) se colgó cuatro
+// veces en el día. El trabajo corre en la imagen oficial de Playwright, de la
+// MISMA versión que el proyecto, y no instala nada con apt.
+const lock = JSON.parse(leer(path.join(RAIZ, 'package-lock.json')))
+const versionPw = lock.packages?.['node_modules/@playwright/test']?.version
+const imagen = (sinComentarios.match(/^ {6}image: mcr\.microsoft\.com\/playwright:v([\d.]+)-noble$/m) || [])[1]
+chk('corre en la imagen oficial de Playwright', !!imagen, imagen)
+chk('… de la misma versión que @playwright/test en package-lock.json', imagen === versionPw, `imagen ${imagen}, proyecto ${versionPw}`)
+chk('… con --ipc=host (lo pide Playwright para Chromium en un contenedor)', /^ {6}options: --ipc=host$/m.test(sinComentarios))
+chk('en Ubuntu 24.04 fijo', /^ {4}runs-on: ubuntu-24\.04$/m.test(sinComentarios))
+// 27/10/2026: en el contenedor el shell predeterminado es sh; el paso de las
+// credenciales usa ${!v} (bash) y en main dio exit 2.
+chk('los pasos corren con bash (en el contenedor el predeterminado es sh)', /^ {4}defaults:\n {6}run:\n {8}shell: bash$/m.test(sinComentarios))
+chk('Chromium y WebKit, sin --with-deps (nada de apt)', /npx playwright install chromium webkit/.test(sinComentarios) && !/--with-deps/.test(sinComentarios))
+const pasoNavegadores = (sinComentarios.match(/- name: Chromium y WebKit[^\n]*\n(?: {8}[^\n]*\n)+/) || [''])[0]
+const topePaso = Number((pasoNavegadores.match(/^ {8}timeout-minutes: (\d+)$/m) || [])[1])
+chk('ese paso tiene su propio tope, menor que el del trabajo', topePaso > 0 && topePaso < timeouts[0], pasoNavegadores)
 chk('corre Playwright con npm run e2e', /^\s+run: npm run e2e$/m.test(sinComentarios))
 chk('un artefacto por mitad, con nombre distinto', /^\s+name: capturas-\$\{\{ matrix\.mitad \}\}$/m.test(sinComentarios))
 chk('… que se sube aunque falle', /if: always\(\)\n\s+with:\n\s+name: capturas-/.test(sinComentarios))

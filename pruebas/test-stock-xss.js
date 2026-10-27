@@ -588,6 +588,13 @@ const SEGURAS = {
     "grupos.map(g => htmlFilaSinIngreso(g, conUnidad)).join('')": 'HTML de htmlFilaSinIngreso(), que escapa adentro (ejecutado con texto malicioso en test-stock-lotes-sin-ingreso.js)',
     avisos: 'HTML armado arriba en la misma función, con esc() del nombre de la fábrica y del error de la base, o vacío (ejecutado con texto malicioso en test-stock-lotes-sin-ingreso.js)',
   },
+  // "Mandar a otra empresa del grupo" (26/10/2026).
+  htmlPanelGrupo: {
+    cerrar: 'HTML fijo del botón Cancelar, una const de la misma función',
+  },
+  pintarPanelGrupo: {
+    'htmlPanelGrupo(g)': 'HTML de htmlPanelGrupo(), que escapa adentro empresa, cliente, fábrica e id (ejecutado con texto malicioso en test-stock-mandar-grupo.js)',
+  },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo
 // no tiene sentido copiar: el callback que recibe htmlAgrupado().

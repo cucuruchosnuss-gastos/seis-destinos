@@ -1266,7 +1266,9 @@
         estado.mis = null
         estado.form = null
       }
-      abrirFormulario()
+      // Devuelve la promesa: abrirConCliente() la espera para elegir el
+      // cliente con la lista ya leída (los demás no la esperan).
+      return abrirFormulario()
     }
 
     function confirmarCambioEmpresa() {
@@ -2479,9 +2481,11 @@
       return limpio(estado.empresasGrupo?.get(id)) || 'otra empresa del grupo'
     }
 
+    // 26/10/2026 ("Mandar a otra empresa del grupo"): dice adónde va y que van
+    // los mismos lotes (_orden_grupo_espejar los copia).
     function textoEntreEmpresas(c) {
       const id = empresaGrupoDe(c)
-      return id ? `Entre empresas: lo que sale entra al stock de ${nombreEmpresaGrupo(id)}` : ''
+      return id ? `Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes` : ''
     }
 
     // ── el cliente ─────────────────────────────────────────────────────────
@@ -5099,6 +5103,52 @@
       mostrarEleccionEmpresa()
     }
 
+    // ── MANDAR A OTRA EMPRESA DEL GRUPO (26/10/2026) ───────────────────────
+    // Stock → "Mandar a otra empresa del grupo" trae ?cliente=<id>: el cliente
+    // que ES esa empresa (clientes.unidad_grupo_id). La orden arranca en la
+    // fábrica de ese cliente y con él ya elegido; se carga producto terminado
+    // e insumos como en cualquier orden, y arriba dice "Va al stock de <empresa>
+    // con los mismos lotes". Si quedó una orden a medio cargar, NO se pisa:
+    // sigue esa y se avisa. Un cliente que no es otra empresa del grupo, que no
+    // es de una fábrica donde se puede cargar o que no se encuentra se avisa,
+    // y la Carga sigue como siempre.
+    function clienteDeLaUrl() {
+      try { return new URLSearchParams(window.location.search).get('cliente') || null } catch { return null }
+    }
+
+    function sacarClienteDeLaUrl() {
+      try {
+        const u = new URL(window.location.href)
+        u.searchParams.delete('cliente')
+        history.replaceState(history.state, '', u.pathname + u.search + u.hash)
+      } catch { /* sin URL: queda */ }
+    }
+
+    async function abrirConCliente(id) {
+      let c = null
+      try {
+        const { data, error } = await supabase.from('clientes').select('id, unidad_negocio_id, unidad_grupo_id, activo').eq('id', id).maybeSingle()
+        if (error) throw error
+        c = data
+      } catch (err) {
+        console.error('No se pudo leer el cliente del link:', err)
+        mostrarError('No se pudo leer a qué empresa mandar. Elegí el cliente acá.')
+        return false
+      }
+      if (!c || c.activo === false || !empresaGrupoDe(c) || !empresasDeCarga().some(e => e.id === c.unidad_negocio_id)) {
+        mostrarError('No se encontró esa empresa del grupo en una fábrica donde puedas cargar órdenes.')
+        return false
+      }
+      if (formTieneDatos(leerBorrador()?.form) && retomarBorrador()) {
+        mostrarError('Tenías una orden a medio cargar: terminala o vaciala, y volvé a «Mandar a otra empresa del grupo».')
+        return true
+      }
+      estado.form = null
+      await aplicarEmpresa(c.unidad_negocio_id)
+      if (estado.empresaId === c.unidad_negocio_id && estado.form) elegirCliente(id)
+      return true
+    }
+
     // Si quedó una orden a medio cargar (el celular se bloqueó, se recargó la
     // página), sigue donde estaba: con su empresa y su uuid.
     function retomarBorrador() {
@@ -5134,6 +5184,10 @@
       document.getElementById('rt-cargando').hidden = true
       conectarTodo()
       alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
+      // "Mandar a otra empresa del grupo" (Stock, 26/10/2026): ?cliente=<id>.
+      const clienteUrl = clienteDeLaUrl()
+      if (clienteUrl) sacarClienteDeLaUrl()
+      if (clienteUrl && await abrirConCliente(clienteUrl)) { if (window.lucide) window.lucide.createIcons(); return }
       if (!retomarBorrador()) empezarOrden()
       if (window.lucide) window.lucide.createIcons()
     }
