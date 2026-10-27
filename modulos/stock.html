@@ -739,28 +739,6 @@
       overflow-wrap: anywhere;
     }
     .stock-eleccion__texto { font-size: 0.9375rem; color: var(--color-texto-2); overflow-wrap: anywhere; }
-    /* El tercero, "Mandar a otra empresa del grupo" (26/10/2026): a lo ancho. */
-    .stock-eleccion__opcion--grupo { grid-column: 1 / -1; min-height: 6rem; }
-    .stock-grupo {
-      margin: 0 0 1rem;
-      padding: 1rem;
-      border: 1px solid var(--color-borde);
-      border-radius: 16px;
-      background: var(--color-fondo);
-      min-width: 0;
-    }
-    .stock-grupo__titulo { font-weight: 700; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
-    .stock-grupo__opciones { display: grid; gap: 0.5rem; }
-    .stock-grupo__opcion {
-      display: flex; flex-direction: column; justify-content: center; gap: 0.125rem;
-      min-height: 3.5rem; padding: 0.75rem 1rem; border-radius: 12px;
-      border: 1px solid var(--color-borde); color: var(--color-texto); text-decoration: none;
-      overflow-wrap: anywhere; box-sizing: border-box;
-    }
-    .stock-grupo__opcion:hover, .stock-grupo__opcion:focus-visible { border-color: var(--color-acento); text-decoration: none; }
-    .stock-grupo__opcion strong { font-size: 1.0625rem; }
-    .stock-grupo__opcion span { font-size: 0.875rem; color: var(--color-texto-2); }
-    .stock-grupo__cerrar { margin-top: 0.75rem; min-height: 44px; }
     body.stock-en-eleccion .vista-stock,
     body.stock-en-eleccion .pestanas-stock,
     body.stock-en-eleccion .stock-actualizado { display: none !important; }
@@ -2655,18 +2633,7 @@
         <span class="stock-eleccion__titulo">Insumos y materias primas</span>
         <span class="stock-eleccion__texto">El stock de cada insumo, el catálogo, el recuento y los costos.</span>
       </button>
-      <!-- 26/10/2026: mandar mercadería a otra empresa del grupo es una orden
-           de retiro a esa empresa como cliente (la Carga): producto terminado
-           e insumos juntos, con sus lotes. Solo con retiros:cargar. -->
-      <button type="button" class="stock-eleccion__opcion stock-eleccion__opcion--grupo" id="btn-entrada-grupo" hidden>
-        <span class="stock-eleccion__titulo">Mandar a otra empresa del grupo</span>
-        <span class="stock-eleccion__texto">Producto terminado e insumos juntos: entran al stock de la otra empresa con los mismos lotes.</span>
-      </button>
     </div>
-
-    <!-- A qué empresa (cuando hay más de una, o no hay ninguna). Lo dibuja
-         pintarPanelGrupo(). -->
-    <div class="stock-grupo" id="stock-grupo" role="dialog" aria-label="A qué empresa del grupo" hidden></div>
 
     <!-- Solo se dibuja si hay DOS vistas para elegir: una pestaña sola no es
          una elección, es ruido. -->
@@ -2691,10 +2658,7 @@
 
       <div class="barra-acciones" id="acciones-stock" hidden>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-registrar-movimiento" hidden>Corregir stock</button>
-        <!-- 26/10/2026: ya no se crean transferencias nuevas de insumos (ver,
-             aceptar y rechazar las que hay sigue igual): se manda con una orden
-             de retiro a la otra empresa, que lleva también producto terminado. -->
-        <button type="button" class="btn-stock btn-stock--chico" id="btn-mandar-grupo" hidden>Mandar a otra empresa del grupo</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-enviar-transferencia" hidden>Enviar a otra unidad</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-transito">En tránsito<span id="burbuja-transito"></span></button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-mermas">Mermas</button>
@@ -4187,9 +4151,6 @@
     // unidad: guarda lo contado antes de cambiar y relee (con su turno).
     async function alCambiarBarra(e) {
       aplicarEstadoBarra(e)
-      // Mandar a otra empresa del grupo: depende de la fábrica de la barra.
-      cerrarPanelGrupo()
-      pintarMandarGrupo()
       if (estado.cargados.has('stock')) { renderizarStock(); cargarValorizado() }
       if (estado.cargados.has('costos')) cargarCostos()
       if (estado.cargados.has('historial')) renderizarHistorial()
@@ -12251,11 +12212,7 @@
     })
 
     // ── Transferencias entre unidades ────────────────────────────────────────
-    // 26/10/2026: el botón de crear una transferencia nueva ya no está (el
-    // modal sigue en el código); "Mandar a otra empresa del grupo" lo reemplaza.
-    document.getElementById('btn-mandar-grupo').addEventListener('click', mandarAOtraEmpresa)
-    document.getElementById('btn-entrada-grupo').addEventListener('click', mandarAOtraEmpresa)
-    document.getElementById('stock-grupo').addEventListener('click', (ev) => { if (ev.target.closest('[data-grupo-cerrar]')) cerrarPanelGrupo() })
+    document.getElementById('btn-enviar-transferencia').addEventListener('click', abrirModalTransferencia)
     document.getElementById('btn-transf-agregar-item').addEventListener('click', abrirModalTransfItem)
     document.getElementById('btn-confirmar-transf').addEventListener('click', confirmarTransferencia)
     document.querySelectorAll('[data-cerrar-transf]').forEach(el =>
@@ -12705,112 +12662,6 @@
       return 'produccion-gestion.html?vista=stock' + (conVolver ? '&desde=stock' : '')
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // MANDAR A OTRA EMPRESA DEL GRUPO (26/10/2026)
-    // ═══════════════════════════════════════════════════════════════════════
-    //
-    // Para mandar mercadería a Rosario o a Mengui lo único a mano era la
-    // transferencia de insumos, que no lleva producto terminado. Lo decidido
-    // (24/10/2026) es la ORDEN DE RETIRO a la otra empresa como cliente
-    // (clientes.unidad_grupo_id): lleva producto terminado e insumos juntos,
-    // descuenta del origen y entra en el stock de la otra empresa con los
-    // mismos lotes (_orden_grupo_espejar, leída con pg_get_functiondef el
-    // 26/10/2026), y se valoriza con la lista interna. Acá: el tercer botón de
-    // la entrada y el que reemplaza a "Enviar a otra unidad". Llevan a la
-    // Carga (retiros.html?cliente=<id>) con el cliente que es esa empresa: con
-    // UNO solo, derecho; con varios, se elige; sin ninguno, se dice.
-    // Visibles con retiros:cargar en la fábrica de la barra (con "Todas", en
-    // alguna de las de la barra).
-
-    function fabricasParaMandar() {
-      const elegida = estado.unidadBarra
-      if (elegida) return puedeTareaEn('retiros:cargar', elegida) ? [elegida] : []
-      const ids = [...(estado.unidadesBarra ?? []), ...(estado.unidadesStock ?? [])].map(u => u?.id).filter(Boolean)
-      return [...new Set(ids)].filter(id => puedeTareaEn('retiros:cargar', id))
-    }
-
-    function pintarMandarGrupo() {
-      const puede = fabricasParaMandar().length > 0
-      document.getElementById('btn-entrada-grupo').hidden = !puede
-      document.getElementById('btn-mandar-grupo').hidden = !puede
-    }
-
-    // Los clientes de esas fábricas que son otra empresa del grupo, con el
-    // nombre de esa empresa (unidades_negocio la lee cualquier usuario).
-    async function leerClientesGrupo(fabricas) {
-      const { data, error } = await supabase.from('clientes').select('id, nombre, unidad_negocio_id, unidad_grupo_id')
-        .in('unidad_negocio_id', fabricas).eq('activo', true).not('unidad_grupo_id', 'is', null).order('nombre')
-      if (error) throw error
-      const clientes = (data ?? []).filter(c => c?.unidad_grupo_id && c.unidad_grupo_id !== c.unidad_negocio_id)
-      const ids = [...new Set(clientes.flatMap(c => [c.unidad_grupo_id, c.unidad_negocio_id]))]
-      const nombres = new Map()
-      if (ids.length) {
-        const u = await supabase.from('unidades_negocio').select('id, nombre').in('id', ids)
-        if (!u.error) for (const x of u.data ?? []) nombres.set(x.id, x.nombre)
-      }
-      return clientes.map(c => ({
-        id: c.id, nombre: c.nombre,
-        empresa: nombres.get(c.unidad_grupo_id) || nombreDeUnidadBarra(c.unidad_grupo_id),
-        desde: nombres.get(c.unidad_negocio_id) || nombreDeUnidadBarra(c.unidad_negocio_id),
-      }))
-    }
-
-    // El link a la Carga (en el panel, el href se arma igual, con
-    // encodeURIComponent a la vista del control de XSS).
-    function urlMandarGrupo(id) {
-      return 'retiros.html?cliente=' + encodeURIComponent(id)
-    }
-
-    function irA(url) {
-      window.location.href = url
-    }
-
-    async function mandarAOtraEmpresa() {
-      const fabricas = fabricasParaMandar()
-      if (!fabricas.length) return
-      estado.grupo = { cargando: true, error: null, opciones: [] }
-      pintarPanelGrupo()
-      let opciones
-      try {
-        opciones = await leerClientesGrupo(fabricas)
-      } catch (err) {
-        console.error('No se pudieron leer las empresas del grupo:', err)
-        estado.grupo = { cargando: false, error: 'No se pudieron leer las empresas del grupo. Revisá la conexión y probá de nuevo.', opciones: [] }
-        pintarPanelGrupo()
-        return
-      }
-      // Una sola: derecho a la Carga, ya elegida.
-      if (opciones.length === 1) { estado.grupo = null; pintarPanelGrupo(); irA(urlMandarGrupo(opciones[0].id)); return }
-      estado.grupo = { cargando: false, error: null, opciones }
-      pintarPanelGrupo()
-    }
-
-    function htmlPanelGrupo(g) {
-      const cerrar = '<button type="button" class="btn-stock btn-stock--chico stock-grupo__cerrar" data-grupo-cerrar>Cancelar</button>'
-      if (g.cargando) return '<p class="stock-grupo__titulo">Buscando las empresas del grupo…</p>'
-      if (g.error) return `<p class="stock-grupo__titulo">${esc(g.error)}</p>${cerrar}`
-      if (!g.opciones.length) return '<p class="stock-grupo__titulo">Esta fábrica no tiene ninguna otra empresa del grupo como cliente. Se carga en Administración → Clientes.</p>' + cerrar
-      const varias = new Set(g.opciones.map(o => o.desde)).size > 1
-      return '<p class="stock-grupo__titulo">¿A qué empresa?</p><div class="stock-grupo__opciones">' +
-        g.opciones.map(o => `<a class="stock-grupo__opcion" href="retiros.html?cliente=${encodeURIComponent(o.id)}" data-grupo-cliente="${esc(o.id)}">` +
-          `<strong>${esc(o.empresa)}</strong><span>${esc(o.nombre)}${varias ? ` · desde ${esc(o.desde)}` : ''}</span></a>`).join('') +
-        '</div>' + cerrar
-    }
-
-    function pintarPanelGrupo() {
-      const el = document.getElementById('stock-grupo')
-      if (!el) return
-      const g = estado.grupo
-      el.innerHTML = g ? htmlPanelGrupo(g) : ''
-      el.hidden = !g
-      if (g) el.scrollIntoView?.({ block: 'nearest' })
-    }
-
-    function cerrarPanelGrupo() {
-      estado.grupo = null
-      pintarPanelGrupo()
-    }
-
     function mostrarEleccion() {
       estado.enEleccion = true
       document.body?.classList.add('stock-en-eleccion')
@@ -13008,8 +12859,10 @@
       // Sin `ver` no hay nada que mostrar — no es una restricción agregada, es
       // que no hay pantalla posible.
       document.getElementById('btn-registrar-movimiento').hidden = !(verStock && (ajusta || daBaja))
-      // 26/10/2026: "Enviar a otra unidad" ya no está: lo reemplaza "Mandar a
-      // otra empresa del grupo" (pintarMandarGrupo, cuando la barra ya está).
+      // Enviar necesita ADEMÁS verStock: el modal muestra el saldo disponible
+      // para elegir, y ese saldo sale de v_stock_por_lote (security_invoker)
+      // sobre el libro, cuyo RLS es `ver`. Sin ver no hay nada que mostrar.
+      document.getElementById('btn-enviar-transferencia').hidden = !(verStock && envia)
       // El tránsito es solo lectura de una vista filtrada por las unidades que
       // la persona ve: alcanza con verStock.
       document.getElementById('btn-ver-transito').hidden = !verStock
@@ -13025,9 +12878,6 @@
       // porque vive en la vista de stock). La barra ya sabe sus unidades.
       await estado.barraLista
       document.getElementById('btn-ver-costos').hidden = !(verStock && puedeVerCostosAlgo())
-      // "Mandar a otra empresa del grupo" (26/10/2026): con retiros:cargar en
-      // la fábrica de la barra; por eso, con la barra ya leída.
-      pintarMandarGrupo()
       if (inicial === 'costos') await cargarCostos()
 
       if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()

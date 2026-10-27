@@ -335,10 +335,7 @@ async function correr() {
     if (antes) {
       const marcas = t => new Set([...t.matchAll(/\b(id="[a-z][\w-]*"|data-[a-z][\w-]*)/g)].map(m => m[1]))
       const ahora = marcas(FUENTE)
-      // "Enviar a otra unidad" se fue a propósito el 26/10/2026 (lo reemplaza
-      // "Mandar a otra empresa del grupo"; lo mira test-stock-mandar-grupo.js).
-      const SE_FUERON = new Set(['id="btn-enviar-transferencia"'])
-      const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !SE_FUERON.has(m))
+      const faltan = [...marcas(antes)].filter(m => !ahora.has(m))
       chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
       chk(`en ${BASE_COMMIT} los lotes sin ingreso decían siempre "kg" (lo que este cambio arregla)`, /formatearCantidadStock\(g\.kg, 'kg'\)/.test(antes))
     }

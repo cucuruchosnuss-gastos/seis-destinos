@@ -67,8 +67,6 @@ const PRELUDIO = `
     },
   }
   const anotar = (n) => async () => { __llamadas.push([n]) }
-  // "Mandar a otra empresa del grupo" (26/10/2026): lo prueba test-stock-mandar-grupo.js.
-  function pintarMandarGrupo() { __llamadas.push(['pintarMandarGrupo']) }
   var cargarStock = anotar('cargarStock'), cargarInsumos = anotar('cargarInsumos'), cargarRecuento = anotar('cargarRecuento')
   var cargarUnidadesRecuento = async () => { __llamadas.push(['cargarUnidadesRecuento']) }
   var cargarUnidadesBaja = anotar('cargarUnidadesBaja'), cargarUnidadesEnvio = anotar('cargarUnidadesEnvio'), cargarDestinos = anotar('cargarDestinos')

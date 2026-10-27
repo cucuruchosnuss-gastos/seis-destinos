@@ -51,7 +51,7 @@ const r = correrMutaciones({
     { nombre: 'un unidad_grupo_id vacío cuenta', de: "      return typeof id === 'string' && id ? id : null", a: '      return id ?? null' },
     { nombre: 'nunca es entre empresas', de: '      return !!empresaGrupoDe(clienteDe(f?.clienteId))', a: '      return false' },
     { nombre: 'sin nombre no dice "otra empresa del grupo"', de: "      return limpio(estado.empresasGrupo?.get(id)) || 'otra empresa del grupo'", a: "      return limpio(estado.empresasGrupo?.get(id)) || ''" },
-    { nombre: 'el aviso con otro texto', de: '`Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes`', a: '`Va al stock: ${nombreEmpresaGrupo(id)}`' },
+    { nombre: 'el aviso con otro texto', de: '`Entre empresas: lo que sale entra al stock de ${nombreEmpresaGrupo(id)}`', a: '`Entre empresas: ${nombreEmpresaGrupo(id)}`' },
     // El cliente elegido
     { nombre: 'sin el sello en el cliente elegido', de: `\`\${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Entre empresas</span>' : ''}</span>\``, a: "`</span>`" },
     { nombre: 'sin el aviso en el cliente elegido', de: '        (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : \'\')', a: "        ''" },

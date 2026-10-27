@@ -1,8 +1,6 @@
 // Cómo se pide una cantidad (05/10/2026), en la maqueta `cantidades`. El caso
 // que lo motivó: 1 bolsa de azúcar de Nuss a Mengui se mandó como 1 kg.
-//  - (Stock → Enviar a otra unidad se fue el 26/10/2026: lo reemplaza "Mandar a
-//    otra empresa del grupo", e2e/68. Lo de abajo era de ese modal.)
-//    Antes: el azúcar (vista en bultos, bolsas de 50 kg)
+//  - Stock → Enviar a otra unidad: el azúcar (vista en bultos, bolsas de 50 kg)
 //    pide "bultos de 50 kg" y debajo "= 50 kg"; la harina (vista en kilos)
 //    pide "kg"; la lecitina (un lote en dos presentaciones) pide "kg" con el
 //    aviso. A la base van 50 y 1.
@@ -32,6 +30,64 @@ async function sinScroll(page) {
 }
 
 for (const ancho of [390, 1280]) {
+  test(`stock: enviar a otra fábrica pide la cantidad como está configurado el insumo, a ${ancho} px`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    const rpc = anotarRpc(page);
+    await page.setViewportSize({ width: ancho, height: 900 });
+    await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=cantidades`);
+    await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
+    await page.reload();
+
+    await page.locator('#btn-enviar-transferencia').click();
+    await page.locator('[data-destino-transf="u-d"]').click();
+
+    // Con un lote de una sola presentación, el campo aparece solo; con dos,
+    // recién al elegir la presentación.
+    const agregar = async (buscar, id, { esperarCampo = true } = {}) => {
+      await page.locator('#btn-transf-agregar-item').click();
+      await page.locator('#ti-buscar-insumo').fill(buscar);
+      await page.locator(`[data-sug-ti="${id}"]`).click();
+      if (esperarCampo) await expect(page.locator('#ti-campo-cantidad')).toBeVisible();
+    };
+
+    // El azúcar: en bultos de 50 kg.
+    await agregar('Azúcar', 'i-azucar');
+    await expect(page.locator('#ti-unidad-cantidad')).toHaveText(/bultos de 50\skg/);
+    await page.locator('#ti-cantidad').fill('1');
+    await expect(page.locator('#ti-equivale-cantidad')).toBeVisible();
+    expect(nb(await page.locator('#ti-equivale-cantidad').textContent())).toBe('= 50 kg');
+    await captura(page, `cantidades-envio-azucar-${ancho}`, info);
+    await sinScroll(page);
+    await page.locator('#btn-transf-confirmar-item').click();
+    await expect(page.locator('#modal-transf-item')).toBeHidden();
+
+    // La harina: en kilos aunque venga en bolsas de 25.
+    await agregar('Harina', 'i-harina');
+    await expect(page.locator('#ti-unidad-cantidad')).toHaveText('kg');
+    await expect(page.locator('#ti-equivale-cantidad')).toBeHidden();
+    await page.locator('#ti-cantidad').fill('1');
+    await page.locator('#btn-transf-confirmar-item').click();
+    await expect(page.locator('#modal-transf-item')).toBeHidden();
+
+    // La lecitina: un lote en dos presentaciones → en kg, con el aviso.
+    await agregar('Lecitina', 'i-lecitina', { esperarCampo: false });
+    await page.locator('[data-pres-ti="50"]').click();
+    await expect(page.locator('#ti-unidad-cantidad')).toHaveText('kg');
+    await expect(page.locator('#ti-aviso-unidad')).toBeVisible();
+    expect(nb(await page.locator('#ti-aviso-unidad').textContent())).toMatch(/25 kg y de 50 kg.*se pide en kg/);
+    await captura(page, `cantidades-envio-lecitina-${ancho}`, info);
+    await page.locator('[data-cerrar-transf-item]').last().click();
+
+    await expect(page.locator('#transf-lista-items')).toContainText('Azúcar');
+    await page.locator('#btn-confirmar-transf').click();
+    await expect.poll(() => rpc.find(r => r.nombre === 'crear_transferencia_stock')).toBeTruthy();
+    const items = rpc.find(r => r.nombre === 'crear_transferencia_stock').params.p_items;
+    expect(items.map(i => i.cantidad), JSON.stringify(items)).toEqual([50, 1]);
+
+    await sinScroll(page);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
   test(`stock: corregir stock pide la cantidad como está configurado el insumo, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
