@@ -36,10 +36,17 @@ concurrency:
 jobs:
   navegador:
     name: Navegador ${{ matrix.mitad }}/2
-    # 26/10/2026: ubuntu-latest está pasando a Ubuntu 26 (aviso de GitHub del
-    # 19/10) y en esas máquinas la instalación de Chromium y WebKit con sus
-    # dependencias se colgó o falló tres veces en el día. Fijo en 24.04.
+    # 26/10/2026: la instalación de Chromium y WebKit CON SUS DEPENDENCIAS
+    # (apt-get) se colgó en una de las dos máquinas cuatro veces en el día, en
+    # ubuntu-latest y en 24.04, con tope y con reintento. El trabajo corre
+    # adentro de la imagen oficial de Playwright, que ya trae los navegadores y
+    # todo lo del sistema: no se instala nada con apt. La versión de la imagen
+    # es la de @playwright/test en package-lock.json (lo controla
+    # test-navegador-en-dos.js).
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
     timeout-minutes: 30
     strategy:
       # Si una mitad falla, la otra termina igual: así se ven todas las fallas.
@@ -69,18 +76,12 @@ jobs:
           cache: npm
       - run: npm ci
       # WebKit es el iPhone de e2e/filtros-dispositivos.spec.js (04/10/2026) y
-      # de e2e/detalles-dispositivos.spec.js (05/10/2026).
-      # 26/10/2026: dos veces en el día esta instalación se colgó hasta el tope
-      # de 30 minutos (no las pruebas) y hubo que volver a correr todo. Cada
-      # intento tiene 6 minutos y se reintenta hasta 3 veces.
-      - name: Instalar Chromium y WebKit (con tope y reintento)
-        timeout-minutes: 20
-        run: |
-          for i in 1 2 3; do
-            if timeout 360 npx playwright install --with-deps chromium webkit; then exit 0; fi
-            echo "El intento $i no terminó en 6 minutos o falló: se reintenta"
-          done
-          exit 1
+      # de e2e/detalles-dispositivos.spec.js (05/10/2026). La imagen ya los
+      # trae; esto solo baja los navegadores (sin apt) si alguna vez la versión
+      # de la imagen y la del proyecto no coinciden. Con tope, por las dudas.
+      - name: Chromium y WebKit (vienen en la imagen)
+        timeout-minutes: 8
+        run: npx playwright install chromium webkit
       - name: ¿Están las credenciales del robot?
         run: |
           if [ "$GITHUB_REF" != "refs/heads/main" ]; then
