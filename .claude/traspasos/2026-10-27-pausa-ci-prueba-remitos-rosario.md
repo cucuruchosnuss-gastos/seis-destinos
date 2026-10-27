@@ -71,6 +71,13 @@ la rama).
    y el AGREGADO de valorizar con la lista de otra empresa (_presentacion_en_unidad). Se integra apenas esté en verde.
 3. Un solo resumen al final de las dos tareas.
 
+## Aviso: otra sesión trabajó en la misma carpeta
+A las 08:54 otra sesión cambió la carpeta compartida (`seis-destinos`) a main, hizo un merge local de
+ci-prueba/mandar-filtro-fabrica (c5cbf50, main local sin pushear) y la pasó a ci-prueba/mandar-filtro-fabrica. Por eso
+este traspaso cayó primero en esa rama (ad93ddc, ya pusheada por esa sesión con e61cd69 encima: son solo dos archivos de
+.claude/, no se sacaron para no forzar trabajo ajeno). Acá quedó copiado en ci-prueba/remitos-rosario. Al retomar,
+trabajar desde la carpeta `C:\Users\facun\proyectos\sd-remitos-rosario` (worktree de esta rama).
+
 ## Qué sigue
 Retomar con la skill `retomar-sesion-cortada` si algo quedó sin commitear, y el punto 1 de arriba.
 
