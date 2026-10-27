@@ -93,6 +93,10 @@ export function normalizarTransferencia(c, hoy = new Date()) {
     // El número de operación es un IDENTIFICADOR: va como texto, tal cual (sin
     // espacios en los bordes), hasta 100 letras (CHECK de la tabla).
     referencia: textoONull(c?.referencia, 100),
+    // v2 (27/10/2026): depósito en efectivo, destinatario y CBU que recibe.
+    medio: c?.medio === 'deposito_efectivo' ? 'deposito_efectivo' : 'transferencia',
+    destinatario: textoONull(c?.destinatario, 150),
+    cbu_destino: (() => { const d = soloDigitos(c?.cbu_destino); return d && d.length === 22 ? d : null })(),
     notas: textoONull(c?.notas, 300),
     controles: {
       cuit_ok: controlCuit(cuit_ordenante),
@@ -150,7 +154,7 @@ export function normalizarRespuesta(tipo, crudo, hoy = new Date()) {
     .filter(c => typeof c === 'object' && c !== null)
     .map(c => norm(c, hoy))
     // Un comprobante sin NINGÚN dato no es una propuesta: es ruido.
-    .filter(p => Object.entries(p).some(([k, v]) => k !== 'controles' && k !== 'notas' && v !== null))
+    .filter(p => Object.entries(p).some(([k, v]) => k !== 'controles' && k !== 'notas' && k !== 'medio' && v !== null))
 }
 
 // El tipo de archivo que se manda al modelo. El del blob, si es uno de los

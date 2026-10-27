@@ -1503,7 +1503,7 @@
             <button type="button" class="cob-btn cob-btn--foto" data-subir-comprobante="transferencia" data-origen="archivo">&#128206; Archivo</button>
             <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-transferencia">&#9998; Cargar a mano</button>
           </div>
-          <div class="cob-campo__ayuda" data-ayuda-comprobante="transferencia">La captura o el PDF del comprobante: se lee solo y después lo revisás.</div>
+          <div class="cob-campo__ayuda" data-ayuda-comprobante="transferencia">La captura, la foto, el ticket del depósito o el PDF: se lee solo y después lo revisás. En Galería y Archivo podés elegir varios de una vez.</div>
           <div id="cob-comprobantes-transferencia"></div>
           <div id="cob-lista-transferencias"></div>
         </div>
@@ -2130,10 +2130,52 @@
       }
     }
 
+    // El DEPÓSITO EN EFECTIVO (27/10/2026): un ticket del banco sin ordenante.
+    // Va en cobranza_transferencias.medio ('transferencia' | 'deposito_efectivo',
+    // text not null default 'transferencia' con su CHECK; la agregó el chat de
+    // la base y _cobranza_escribir_transferencias lee t->>'medio', verificado
+    // con pg_get_functiondef el 27/10/2026). El medio leído queda además en
+    // ocr_propuesto.
+    const MEDIOS_TRANSFERENCIA = ['transferencia', 'deposito_efectivo']
+    const NOTA_DEPOSITO = 'Depósito en efectivo'
+
+    function esDeposito(t) {
+      return t?.medio === 'deposito_efectivo'
+    }
+
+    // RESPALDO: antes de la columna, la rama guardaba el depósito con la nota
+    // al principio de banco_origen ("Depósito en efectivo · Banco Macro"). Esa
+    // versión nunca llegó a main y el 27/10 no había ninguna fila así; si
+    // apareciera una, se separa. banco_origen → { medio, banco_origen }.
+    function separarNotaDeposito(bancoOrigen) {
+      const b = String(bancoOrigen ?? '')
+      if (b !== NOTA_DEPOSITO && !b.startsWith(NOTA_DEPOSITO + ' · ')) return { medio: 'transferencia', banco_origen: b }
+      return { medio: 'deposito_efectivo', banco_origen: b.slice(NOTA_DEPOSITO.length + 3) }
+    }
+
+    // Una fila de cobranza_transferencias → { medio, banco_origen }. Manda la
+    // columna medio; la nota en banco_origen es solo el respaldo.
+    function medioDeFila(t) {
+      const respaldo = separarNotaDeposito(t?.banco_origen)
+      return {
+        medio: t?.medio === 'deposito_efectivo' ? 'deposito_efectivo' : respaldo.medio,
+        banco_origen: respaldo.banco_origen,
+      }
+    }
+
+    // La cuenta propia cuyo CBU es el del comprobante, entre las que se pueden
+    // elegir. Sin CBU de 22 números, o con más de una que coincida, ninguna.
+    function cuentaPorCbu(cbu) {
+      const buscado = String(cbu ?? '').replace(/\D/g, '')
+      if (buscado.length !== 22) return null
+      const iguales = cuentasParaElegir(null).filter(c => String(c.cbu ?? '').replace(/\D/g, '') === buscado)
+      return iguales.length === 1 ? iguales[0] : null
+    }
+
     function transferenciaVacia(fecha) {
       return {
         id: crypto.randomUUID(), cuenta_id: '', cuenta_nombre: '', importe: '', fecha: fecha || hoyArgentina(), referencia: '',
-        banco_origen: '', ordenante: '', cuit_ordenante: '', foto_id: null, ocr_propuesto: null,
+        banco_origen: '', ordenante: '', cuit_ordenante: '', foto_id: null, ocr_propuesto: null, medio: 'transferencia',
       }
     }
 
@@ -2141,26 +2183,37 @@
     // leer). El nombre se guarda en la transferencia para poder mostrarla en
     // el borrador sin señal.
     function transferenciaDesdeBase(t, cuentas) {
+      const { medio, banco_origen } = medioDeFila(t)
       return {
         id: t.id, cuenta_id: t.cuenta_id ?? '',
         cuenta_nombre: cuentas?.get?.(t.cuenta_id)?.nombre ?? '',
         importe: t.importe ?? '', fecha: t.fecha ?? '', referencia: t.referencia ?? '',
-        banco_origen: t.banco_origen ?? '', ordenante: t.ordenante ?? '', cuit_ordenante: t.cuit_ordenante ?? '',
-        foto_id: t.foto_id ?? null, ocr_propuesto: t.ocr_propuesto ?? null,
+        banco_origen, ordenante: t.ordenante ?? '', cuit_ordenante: t.cuit_ordenante ?? '',
+        foto_id: t.foto_id ?? null, ocr_propuesto: t.ocr_propuesto ?? null, medio,
         origen_datos_previo: t.origen_datos ?? null,
       }
     }
 
     // Una transferencia PROPUESTA por el lector nuevo. La cuenta propia donde
-    // entró NO la lee: se elige siempre.
+    // entró se PRESELECCIONA si el CBU del comprobante es el de una cuenta que
+    // se puede elegir (27/10/2026); la persona la puede cambiar. Si no, se
+    // elige. Quién pagó puede no ser el cliente (un empleado, un familiar): no
+    // se compara con el cliente ni se usa para elegirlo.
     function transferenciaDesdeOcr(pr, fotoId, fechaCobranza) {
       const t = transferenciaVacia(fechaCobranza)
       t.importe = typeof pr?.importe === 'number' && Number.isFinite(pr.importe) ? pr.importe : ''
       if (pr?.fecha) t.fecha = pr.fecha
+      t.medio = pr?.medio === 'deposito_efectivo' ? 'deposito_efectivo' : 'transferencia'
       t.banco_origen = pr?.banco_origen ?? ''
       t.ordenante = pr?.ordenante ?? ''
       t.cuit_ordenante = pr?.cuit_ordenante ?? ''
       t.referencia = pr?.referencia ?? ''
+      const cuenta = cuentaPorCbu(pr?.cbu_destino)
+      if (cuenta) {
+        t.cuenta_id = cuenta.id
+        t.cuenta_nombre = cuenta.nombre ?? ''
+        t.cuentaPorCbu = true
+      }
       t.foto_id = fotoId ?? null
       t.ocr_propuesto = pr ?? null
       return t
@@ -2196,7 +2249,9 @@
       const igual = Number(pr.importe ?? NaN) === Number(a.importe ?? NaN) &&
         (pr.fecha ?? null) === a.fecha && (pr.banco_origen ?? null) === a.banco_origen &&
         (pr.ordenante ?? null) === a.ordenante && (pr.cuit_ordenante ?? null) === a.cuit_ordenante &&
-        (pr.referencia ?? null) === a.referencia
+        (pr.referencia ?? null) === a.referencia &&
+        // Un comprobante leído antes de la v2 del lector no trae medio: era una transferencia.
+        (pr.medio === 'deposito_efectivo') === esDeposito(t)
       return igual ? 'ocr' : 'ocr_corregido'
     }
 
@@ -2209,6 +2264,8 @@
         // El número de operación va en referencia (texto, tal cual).
         referencia: c.referencia,
         banco_origen: c.banco_origen,
+        // 'transferencia' | 'deposito_efectivo' (cobranza_transferencias.medio).
+        medio: esDeposito(t) ? 'deposito_efectivo' : 'transferencia',
         ordenante: c.ordenante,
         cuit_ordenante: c.cuit_ordenante,
         foto_id: t.foto_id ?? null,
@@ -2319,6 +2376,7 @@
                 <span class="cob-cheque__monto">${escCob(formatearImporte(t.importe))}</span>
                 ${htmlEtiquetaForma('transferencia')}
               </div>
+              ${t.medio === 'deposito_efectivo' ? '<div class="cob-cheque__titulo">Depósito en efectivo</div>' : ''}
               <div class="cob-cheque__pie">Entró en ${escCob(cuenta)}${esFechaIso(t.fecha) ? ` · ${escCob(formatearFechaCob(t.fecha))}` : ''}</div>
               ${desde ? `<div class="cob-cheque__sub">Desde ${escCob(desde)}</div>` : ''}
               ${t.referencia ? `<div class="cob-cheque__sub">Referencia: ${escCob(t.referencia)}</div>` : ''}
@@ -2343,11 +2401,11 @@
     }
     const TEXTO_OTRO_COMPROBANTE = {
       echeque: '+ Otro e-cheque: sacale foto a la captura, elegila de la galería o de un archivo (imagen o PDF), o cargalo a mano.',
-      transferencia: '+ Otra transferencia: sacale foto al comprobante, elegilo de la galería o de un archivo (imagen o PDF), o cargala a mano.',
+      transferencia: '+ Otra transferencia o depósito: sacale foto al comprobante, elegí uno o varios de la galería o de un archivo (imagen o PDF), o cargala a mano.',
     }
     const TEXTO_PRIMER_COMPROBANTE = {
       echeque: 'La captura del banco o el PDF del e-cheque: se lee solo y después lo revisás.',
-      transferencia: 'La captura o el PDF del comprobante: se lee solo y después lo revisás.',
+      transferencia: 'La captura, la foto, el ticket del depósito o el PDF: se lee solo y después lo revisás. En Galería y Archivo podés elegir varios de una vez.',
     }
 
     // El tipo de una foto del formulario. Un borrador viejo no lo trae: todas
@@ -2490,17 +2548,21 @@
     // del lector la da por leída SIN datos: se avisa y se carga a mano, con el
     // comprobante igual adjunto. Devuelve true si agregó algo a la lista.
     async function leerComprobante(f, foto) {
+      const soltarTurno = await esperarTurnoDelLector(foto)
       try {
         const { data, error } = await supabase.functions.invoke('ocr-cobranza-comprobantes', {
           body: { storage_path: foto.storage_path, tipo: tipoFoto(foto) },
         })
         if (error) throw error
         foto.leida = true
+        // Lo crudo se archiva SIEMPRE que venga, también con ok:false: es el
+        // papel de lo que respondió el modelo.
         foto.ocr_modelo = data?.modelo ?? null
         foto.ocr_crudo = data?.crudo ?? null
         const propuestos = data?.ok && Array.isArray(data.propuestos) ? data.propuestos : []
+        // El lector ya termina su mensaje con "Cargalo a mano.": no se repite.
         foto.error = propuestos.length ? null
-          : (data?.mensaje || 'No se pudo leer el comprobante.') + ' Cargalo a mano: el comprobante queda adjunto.'
+          : String(data?.mensaje || 'No se pudo leer el comprobante.').replace(/\s*Cargalo a mano\.?\s*$/, '') + ' Cargalo a mano: el comprobante queda adjunto.'
         agregarPropuestos(f, foto, propuestos)
         await guardarBorrador()
         return true
@@ -2511,13 +2573,44 @@
           marcarFotoEnMemoria(foto, { errorRed: true })
           return false
         }
-        const detalle = await mensajeDelLector(err)
+        // El cuerpo del error se lee UNA sola vez: trae el mensaje y, si el
+        // lector llegó a responder, lo crudo (se archiva igual).
+        let cuerpo = null
+        try { cuerpo = typeof err?.context?.json === 'function' ? await err.context.json() : null } catch { /* no era JSON */ }
+        const detalle = cuerpo?.mensaje ? String(cuerpo.mensaje) : (err?.message || 'error desconocido')
         foto.leida = true
+        if (cuerpo?.crudo != null) {
+          foto.ocr_crudo = cuerpo.crudo
+          foto.ocr_modelo = cuerpo.modelo ?? null
+        }
         foto.error = `El lector no pudo leer el comprobante (${detalle}). Cargalo a mano: el comprobante queda adjunto.`
         agregarPropuestos(f, foto, [])
         await guardarBorrador()
         return true
+      } finally {
+        soltarTurno()
       }
+    }
+
+    // Los comprobantes se leen DE A UNO (27/10/2026): con varios elegidos de
+    // una vez, en paralelo el lector puede cortar por exceso de pedidos, y un
+    // corte así queda para cargar a mano. Cada uno igual va solo al lector y
+    // trae su propia propuesta. Los que esperan dicen "en espera". Devuelve la
+    // función que libera el turno (leerComprobante la llama en su finally).
+    async function esperarTurnoDelLector(foto) {
+      const anterior = estado.colaLector ?? Promise.resolve()
+      let soltar
+      const turno = new Promise(r => { soltar = r })
+      estado.colaLector = anterior.then(() => turno)
+      if ((estado.lecturasComprobantes ?? 0) > 0) {
+        marcarFotoEnMemoria(foto, { fase: 'en_espera' })
+        pintarEstadoFotos()
+      }
+      estado.lecturasComprobantes = (estado.lecturasComprobantes ?? 0) + 1
+      await anterior
+      marcarFotoEnMemoria(foto, { fase: 'leyendo', leyendoDesde: Date.now() })
+      pintarEstadoFotos()
+      return () => { estado.lecturasComprobantes--; soltar() }
     }
 
     // Al subir el comprobante de un e-cheque su tarjeta aparece EN EL MOMENTO
@@ -2547,6 +2640,7 @@
       const n = `Comprobante ${i + 1}`
       let texto = ''
       if (foto.enCurso && foto.fase === 'subiendo') texto = 'subiendo…'
+      else if (foto.enCurso && foto.fase === 'en_espera') texto = 'en espera: se lee cuando termine el anterior.'
       else if (foto.enCurso && foto.fase === 'leyendo') texto = 'leyendo… (tarda unos segundos)'
       else if (foto.error) texto = foto.error
       else if (!foto.subida) texto = 'sin señal: se sube solo cuando vuelva.'
@@ -2772,15 +2866,16 @@
       const cuenta = t.cuenta_nombre || estado.cuentasBanco?.get?.(t.cuenta_id)?.nombre || 'Cuenta de banco'
       const origen = textoOrigenComprobante(origenDatosTransferencia(t))
       const avisoCuitT = avisoCuit(t.cuit_ordenante)
+      const deposito = esDeposito(t)
       const cabecera = `
           <div class="cob-cheque__cabecera">
             <div class="cob-cheque__resumen">
-              <div class="cob-cheque__titulo">${htmlEtiquetaForma('transferencia')} Transferencia ${escCob(i + 1)}</div>
+              <div class="cob-cheque__titulo">${htmlEtiquetaForma('transferencia')} ${deposito ? escCob(NOTA_DEPOSITO) : 'Transferencia'} ${escCob(i + 1)}</div>
             </div>
             ${editable ? `<button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-transf="${escCob(t.id)}">Quitar</button>` : ''}
           </div>`
       if (!editable) {
-        const desde = [t.banco_origen, t.ordenante].map(textoOpcional).filter(Boolean).join(' · ')
+        const desde = [deposito ? NOTA_DEPOSITO : '', t.banco_origen, t.ordenante].map(textoOpcional).filter(Boolean).join(' · ')
         return `
         <div class="cob-cheque cob-transferencia" data-transf="${escCob(t.id)}">${cabecera}
           <div class="cob-cheque__top"><span class="cob-cheque__monto">${escCob(formatearImporte(leerNumeroAr(t.importe)))}</span></div>
@@ -2805,6 +2900,13 @@
             <div class="cob-campo__ayuda" data-transf-origen="${escCob(t.id)}"${origen ? '' : ' hidden'}>${escCob(origen)}</div>
             ${t.foto_id ? `<div class="cob-acciones" style="margin-top:0">${htmlBotonComprobante(t.foto_id)}</div>` : ''}
             <div class="cob-campo">
+              <label>Cómo pagó</label>
+              <div class="cob-chips">
+                <button type="button" class="cob-chip ${deposito ? '' : 'cob-chip--activo'}" data-transf-medio="transferencia" data-transf-id="${escCob(t.id)}">Transferencia</button>
+                <button type="button" class="cob-chip ${deposito ? 'cob-chip--activo' : ''}" data-transf-medio="deposito_efectivo" data-transf-id="${escCob(t.id)}">${escCob(NOTA_DEPOSITO)}</button>
+              </div>
+            </div>
+            <div class="cob-campo">
               <label>Importe</label>
               <input type="text" inputmode="decimal" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="importe" data-importe-forma placeholder="0,00">
             </div>
@@ -2813,15 +2915,15 @@
               <input type="date" data-transf-id="${escCob(t.id)}" data-transf-campo="fecha" value="${escCob(t.fecha)}">
             </div>
             <div class="cob-campo">
-              <label>Banco de origen</label>
-              <input type="text" maxlength="80" autocomplete="off" list="cob-bancos-origen" data-transf-id="${escCob(t.id)}" data-transf-campo="banco_origen" value="${escCob(t.banco_origen)}" placeholder="Banco o billetera desde donde transfirió">
+              <label>${deposito ? 'Banco donde se depositó' : 'Banco de origen'}</label>
+              <input type="text" maxlength="80" autocomplete="off" list="cob-bancos-origen" data-transf-id="${escCob(t.id)}" data-transf-campo="banco_origen" value="${escCob(t.banco_origen)}" placeholder="${deposito ? 'El banco del ticket' : 'Banco o billetera desde donde transfirió'}">
             </div>
             <div class="cob-campo">
-              <label>Quién transfirió (opcional)</label>
+              <label>${deposito ? 'Quién depositó (opcional)' : 'Quién transfirió (opcional)'}</label>
               <input type="text" maxlength="150" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="ordenante" value="${escCob(t.ordenante)}" placeholder="Nombre o razón social">
             </div>
             <div class="cob-campo">
-              <label>CUIT de quien transfirió (opcional)</label>
+              <label>${deposito ? 'CUIT de quien depositó (opcional)' : 'CUIT de quien transfirió (opcional)'}</label>
               <input type="text" inputmode="numeric" maxlength="13" autocomplete="off" data-transf-id="${escCob(t.id)}" data-transf-campo="cuit_ordenante" value="${escCob(t.cuit_ordenante)}" placeholder="11 números">
               <div class="cob-aviso" data-transf-aviso-cuit="${escCob(t.id)}"${avisoCuitT ? '' : ' hidden'}>${escCob(avisoCuitT)}</div>
             </div>
@@ -2832,6 +2934,7 @@
             <div class="cob-campo">
               <label>Cuenta propia donde entró</label>
               <select data-transf-id="${escCob(t.id)}" data-transf-campo="cuenta_id">${htmlOpcionesCuentas(t)}</select>
+              <div class="cob-campo__ayuda" data-transf-aviso-cbu="${escCob(t.id)}"${t.cuentaPorCbu ? '' : ' hidden'}>Elegida por el CBU del comprobante: cambiala si no es.</div>
               ${sinCuentas}
             </div>
             <div class="cob-campo__error" data-transf-errores="${escCob(t.id)}"${errores.length ? '' : ' hidden'}>${errores.map(escCob).join('<br>')}</div>
@@ -2985,13 +3088,20 @@
     function actualizarTransferencia(id, campo, valor) {
       const t = transfDelForm(id)
       if (!t || !puedeProcesar()) return
+      if (campo === 'medio' && !MEDIOS_TRANSFERENCIA.includes(valor)) return
       t[campo] = valor
       if (campo === 'cuenta_id') {
         t.cuenta_nombre = (estado.cuentasBancoLista ?? []).find(c => c.id === valor)?.nombre ?? ''
+        // La eligió la persona: el aviso del CBU ya no corresponde.
+        t.cuentaPorCbu = false
+        const aviso = [...(document.querySelectorAll?.('[data-transf-aviso-cbu]') ?? [])].find(x => x.dataset?.transfAvisoCbu === id)
+        if (aviso) aviso.hidden = true
       }
       t.tocado = true
       guardarBorrador()
-      pintarErroresForma('transf', id, erroresDeTransferencia(t), avisoCuit(t.cuit_ordenante), textoOrigenComprobante(origenDatosTransferencia(t)))
+      // El medio cambia el título y los rótulos de la tarjeta: se repinta.
+      if (campo === 'medio') pintarFormasNuevas()
+      else pintarErroresForma('transf', id, erroresDeTransferencia(t), avisoCuit(t.cuit_ordenante), textoOrigenComprobante(origenDatosTransferencia(t)))
       pintarTotalYGuardado()
     }
 
@@ -3021,10 +3131,11 @@
     }
 
     function alTocarEnFormas(ev) {
-      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-quitar-echeck], [data-quitar-transf], [data-ver-comprobante], [data-subir-comprobante]')
+      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-transf-medio], [data-quitar-echeck], [data-quitar-transf], [data-ver-comprobante], [data-subir-comprobante]')
       if (!el) return
       const d = el.dataset
       if (d.echeckTipo) actualizarEcheck(d.echeckId, 'tipo', d.echeckTipo)
+      else if (d.transfMedio) actualizarTransferencia(d.transfId, 'medio', d.transfMedio)
       else if (d.quitarEcheck) quitarEcheck(d.quitarEcheck)
       else if (d.quitarTransf) quitarTransferencia(d.quitarTransf)
       else if (d.verComprobante) abrirComprobante(d.verComprobante)
@@ -3040,7 +3151,8 @@
       try {
         const [emp, cuentas] = await Promise.all([
           supabase.from('v_empleados_publico').select('id').eq('tipo', 'empresa'),
-          supabase.from('cuentas_caja').select('id, nombre, medio, moneda, unidad_negocio_id, empleado_id, activa').eq('medio', 'banco').eq('activa', true).order('nombre'),
+          // El cbu, para preseleccionar la cuenta de un comprobante leído (27/10/2026).
+          supabase.from('cuentas_caja').select('id, nombre, medio, moneda, unidad_negocio_id, empleado_id, activa, cbu').eq('medio', 'banco').eq('activa', true).order('nombre'),
         ])
         if (emp.error) throw emp.error
         if (cuentas.error) throw cuentas.error
@@ -4570,7 +4682,7 @@
           supabase.from('cobranza_historial').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           // Las transferencias (30/09/2026). Su policy deja leerlas a quien
           // cargó la cobranza o a quien tiene cobranzas:procesar.
-          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, foto_id').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, foto_id, medio').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (turno !== turnoDetalle) return
         if (cab.error) throw cab.error
@@ -5156,7 +5268,7 @@
           supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
           supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_fotos').select('id, storage_path, ocr_crudo, ocr_modelo, tipo, mime').eq('cobranza_id', cobranzaId).order('created_at'),
-          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto, medio').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (cab.error) throw cab.error
         if (!cab.data) { mostrarError('No se encontró la cobranza.'); return }
