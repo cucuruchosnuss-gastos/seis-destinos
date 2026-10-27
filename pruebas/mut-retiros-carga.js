@@ -64,7 +64,7 @@ correrMutaciones({
     { nombre: 'no se recuerda la empresa', de: '      guardarPreferencia(CLAVE_EMPRESA, id)\n', a: '' },
     { nombre: 'cargan también las empresas de ver', de: "      const lista = (estado.empresas ?? []).filter(e => puedeCargarEn(e.id))", a: "      const lista = (estado.empresas ?? []).filter(e => true)" },
     { nombre: 'la fábrica de pruebas se ve', de: '      return sinUnidadesDePrueba(lista, estado.fabrica)', a: '      return lista' },
-    { nombre: 'el banner se esconde con empresa elegida', de: "      el.hidden = !empresaActual() || ['rt-vista-empresa', 'rt-vista-mis', 'rt-vista-mio'].includes(estado.vista)", a: '      el.hidden = true' },
+    { nombre: 'el banner se esconde con empresa elegida', de: "      el.hidden = !empresaActual() || ['rt-vista-empresa', 'rt-vista-mis', 'rt-vista-mio', 'rt-vista-remitos'].includes(estado.vista)", a: '      el.hidden = true' },
     // El cliente
     { nombre: 'no busca por apodo', de: '        (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))', a: '        false)' },
     { nombre: 'no busca por razón social', de: ' || normalizar(c.razon_social).includes(q) ||', a: ' ||' },
