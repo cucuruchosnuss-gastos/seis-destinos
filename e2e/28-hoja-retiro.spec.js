@@ -54,7 +54,7 @@ async function armarYMedir(page, n, conPrecios = false) {
     for (const el of document.querySelectorAll('.rh-hoja *')) {
       const cs = getComputedStyle(el);
       if (cs.textOverflow === 'ellipsis') cortados.push('ellipsis: ' + el.className);
-      if (el.matches('.rh-producto, .rh-lote, .rh-legal, .rh-cliente__nombre, .rh-firma, .rh-entrego') && (el.scrollWidth > el.clientWidth + 1)) cortados.push('ancho: ' + el.className + ' ' + el.textContent.slice(0, 40));
+      if (el.matches('.rh-producto, .rh-desc, .rh-tot, .rh-lote, .rh-legal, .rh-cliente__nombre, .rh-firma, .rh-entrego') && (el.scrollWidth > el.clientWidth + 1)) cortados.push('ancho: ' + el.className + ' ' + el.textContent.slice(0, 40));
     }
     // Cada renglón, el pie y la leyenda, ADENTRO de su copia (nada recortado por overflow).
     const afuera = [];
@@ -136,12 +136,13 @@ test('40 renglones: hojas enteras, sin cortar renglones', async ({ page }, info)
   expect(await guardarPdf(page, 'hoja-40-renglones', info), 'el PDF tiene una página por hoja').toBe(2 * n);
 });
 
-test('con precios (Administración): también entra y suma PRECIO y SUBTOTAL', async ({ page }) => {
+test('con precios (Administración): también entra y suma P. UNIT. e IMPORTE', async ({ page }) => {
   const { plan, m } = await armarYMedir(page, 3, true);
   expect(plan.modo).toBe('media');
   expect(m.cortados, m.cortados.join('\n')).toEqual([]);
   expect(m.afuera, m.afuera.join(', ')).toEqual([]);
   const cab = await page.locator('.rh-tabla thead').first().innerText();
-  expect(cab).toMatch(/PRECIO/);
-  expect(cab).toMatch(/SUBTOTAL/);
+  // La hoja nueva (26/10/2026): CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE | P. UNIT. | IMPORTE.
+  expect(cab).toMatch(/P\. UNIT\./);
+  expect(cab).toMatch(/IMPORTE/);
 });

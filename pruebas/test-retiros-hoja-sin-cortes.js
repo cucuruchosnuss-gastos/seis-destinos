@@ -208,7 +208,9 @@ async function casosMedirHoja() {
   chk('los estilos de la hoja se agregan ANTES que el <link> de la letra', /s\.textContent = ESTILOS_HOJA\s+doc\.head\.appendChild\(s\)[\s\S]{0,400}f\.href = FUENTE_HOJA\s+doc\.head\.appendChild\(f\)\n\}/.test(comun))
   chk('medirHoja pone el texto ANTES de esperar la letra y los estilos', /caja\.innerHTML = htmlHoja\(orden, \{ conPrecios, copias: una \}\)\n\s+const estilos = await esperarHojaLista\(caja, doc\)/.test(comun))
   chk('… y espera la hoja de la letra (load / error) con tope', /fuente\.addEventListener\('load', r, \{ once: true \}\); fuente\.addEventListener\('error', r, \{ once: true \}\)/.test(comun))
-  chk('los renglones en 14 px y las cajas en 18 px', /\.rh-tabla td \{ font-size: 14px;/.test(css) && /\.rh-cajas \{ font-size: 18px !important;/.test(css) && /\.rh-insumo \.rh-cajas \{ font-size: 14px !important;/.test(css))
+  chk('los renglones en 14 px y las cajas en 18 px', /\.rh-tabla td \{ font-size: 14px;/.test(css) && /\.rh-cajas \{ font-size: 18px !important;/.test(css) &&
+    // 26/10/2026 (la hoja nueva): la CANT. de un insumo es un número solo, del mismo tamaño.
+    !/\.rh-insumo \.rh-cajas/.test(css))
   chk('el renglón justo: cajas con interlineado 1', /\.rh-cajas \{[^}]*line-height: 1 !important/.test(css))
   chk('la cabecera y el logo de 56 px', S.ALTO_LOGO_HOJA_PX === 56 && /\.rh-cab \{[^}]*min-height: 56px/.test(css) && /\.rh-logo \{ width: 56px; height: 56px;/.test(css))
   chk('los espacios entre bloques de 3 px', /\.rh-copia \{[^}]*gap: 3px/.test(css))

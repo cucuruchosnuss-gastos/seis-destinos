@@ -408,7 +408,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('el insumo lleva su nombre, su marca y sus lotes con cantidad', rs[1].producto === 'Harina 000' && rs[1].marca === 'Molino Cañuelas' && rs[1].lotes[0].lote === 'H-10' && rs[1].lotes[0].cantidad === 30)
   chk('un renglón sin tipo se toma como producto (como antes)', !S.renglonesParaHoja({ renglones: [{ producto: 'X', cajas: 1 }] })[0].esInsumo)
   const hoja = S.htmlHoja(S.ordenParaHoja(o), { conPrecios: false, copias: S.COPIAS_IMPRESION })
-  chk('la hoja impresa muestra el insumo con su cantidad y unidad', /Harina 000 · Molino Cañuelas/.test(hoja) && /30 kg/.test(hoja))
+  chk('la hoja impresa muestra el insumo con su cantidad y unidad', /rh-producto">Harina 000</.test(hoja) && /Molino Cañuelas/.test(hoja) && /30 kg/.test(hoja))
   chk('la hoja sin precios sigue sin columnas de plata', !/Precio|Subtotal|\$/.test(hoja))
   const texto = S.textoOrden(S.ordenParaHoja(o))
   chk('el texto para compartir lleva el insumo', /- 30 kg · Harina 000 · Molino Cañuelas/.test(texto) && /y 1 renglón de materia prima e insumos/.test(texto))

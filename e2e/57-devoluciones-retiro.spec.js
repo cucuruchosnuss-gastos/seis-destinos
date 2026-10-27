@@ -158,9 +158,10 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await expect(hoja.locator('.rh-hoja--media'), 'la hoja con devoluciones va en media hoja').toHaveCount(1);
     await expect(hoja.locator('.rh-hoja--media .rh-copia')).toHaveCount(2);
     await expect(hoja.locator('.rh-hoja--media .rh-copia').nth(1).locator('.rh-devuelto__titulo')).toHaveCount(1);
-    await expect(hoja.locator('.rh-copia').first().locator('.rh-cajas')).toHaveText(['5', '−2', '1', '6']);
+    // La hoja nueva (26/10/2026): la fila TOTAL ya no lleva su número en la columna CANT.
+    await expect(hoja.locator('.rh-copia').first().locator('.rh-cajas')).toHaveText(['5', '−2', '1']);
     await expect(hoja.locator('.rh-copia').first()).toContainText('Devolución · Rotura · lote 6249-1 · vuelven al stock');
-    await expect(hoja.locator('.rh-copia').first()).toContainText('TOTAL DE CAJAS · devueltas 3');
+    await expect(hoja.locator('.rh-copia').first()).toContainText('TOTAL · 6 cajas de producto · devueltas 3');
     expect(await hoja.innerText()).not.toMatch(/\$/);
     const afuera = await page.evaluate(() => {
       const out = [];

@@ -311,8 +311,8 @@ const HOJA = {
   chk('la devolución con "−" y el lote que trajo', /<td class="rh-num rh-cajas">−2<\/td>/.test(h) && /<td class="rh-lote">6249<\/td>/.test(h))
   chk('el motivo debajo del producto', /rh-devuelto__motivo">Devolución · Rotura · lote 6249 · se descartan</.test(h) && /rh-devuelto__motivo">Reposición · Humedad · vuelven al stock</.test(h))
   chk('la reposición: de qué lote salió', /<td class="rh-lote">7030-2<\/td>/.test(h))
-  chk('un retiro sigue igual que siempre', /<tr class="rh-fila"><td class="rh-num rh-cajas">1<\/td><td class="rh-producto">Cucurucho grande · Caja x 100 · sin cono<\/td>/.test(h))
-  chk('TOTAL DE CAJAS: lo que se lleva (retiro + reposición) y las devueltas', /<td class="rh-num rh-cajas">3<\/td><td colspan="2" class="rh-total__rotulo">TOTAL DE CAJAS<span class="rh-total__insumos"> · devueltas 4<\/span>/.test(h))
+  chk('un retiro sigue igual que siempre (con la hoja nueva del 26/10/2026)', /<tr class="rh-fila"><td class="rh-num rh-cajas">1<\/td><td class="rh-producto">Cucurucho grande<\/td><td class="rh-desc">×100<\/td>/.test(h))
+  chk('la fila TOTAL: lo que se lleva (retiro + reposición) y las devueltas', /<td colspan="3" class="rh-total__rotulo">TOTAL · 3 cajas de producto<span class="rh-total__insumos"> · devueltas 4<\/span>/.test(h))
   chk('la hoja sin precios no tiene plata ni "a favor"', !/\$|a favor/.test(h))
   const hp = S.htmlHoja(orden, { conPrecios: true })
   // importeHoja separa el "$" con un espacio duro (\s lo toma).

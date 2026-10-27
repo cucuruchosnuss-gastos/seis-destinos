@@ -19,7 +19,7 @@
 //    en kilos; "quedan" y "hay" dicen bultos con los kilos al lado;
 //  - óleo (20 kg) en la tarjeta del renglón: "2" / "bultos de 20 kg";
 //  - lecitina (vista base) y un 'bulto' sin contenido conocido: por kg;
-//  - la hoja: "4 bultos de 25 kg (100 kg)".
+//  - la hoja (la nueva, 26/10/2026): CANT. 4, "Júpiter · bulto de 25 kg" y TOTAL 100 kg.
 //
 //   node pruebas/test-retiros-insumos-bulto.js
 
@@ -227,8 +227,8 @@ const selDe = (S, tabla) => ((S.__llamadas.consultas.find(c => c[0] === tabla) |
   ] }
   const rs = S.renglonesParaHoja(o)
   chk('la hoja sabe lo que trae un bulto de harina (y la lecitina no)', rs[0].contenido === 25 && rs[1].contenido === null)
-  chk('"4 bultos de 25 kg (100 kg)"', nb(S.cantidadHoja(rs[0])) === '4 bultos de 25 kg (100 kg)')
-  chk('la lecitina sigue "2 kg"', nb(S.cantidadHoja(rs[1])) === '2 kg')
+  chk('CANT. 4 (los bultos), "Júpiter · bulto de 25 kg" y TOTAL 100 kg', S.cantidadColHoja(rs[0]) === '4' && S.descripcionCortaHoja(rs[0]) === 'Júpiter · bulto de 25 kg' && nb(S.totalColHoja(rs[0])) === '100 kg', S.descripcionCortaHoja(rs[0]))
+  chk('la lecitina sigue en kilos: CANT. 2, "Por kg" y TOTAL 2 kg', S.cantidadColHoja(rs[1]) === '2' && S.descripcionCortaHoja(rs[1]) === 'Por kg' && nb(S.totalColHoja(rs[1])) === '2 kg')
   chk('la hoja de la Carga NO tiene precios', !/rh-plata/.test(S.htmlFilaHoja(rs[0], false, 'ARS')))
 }
 

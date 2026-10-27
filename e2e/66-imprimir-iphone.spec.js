@@ -120,7 +120,7 @@ test('iPhone, Administración: la orden abierta se imprime EN el toque, con prec
   await page.locator('#ad-btn-imprimir').click();
   expect(await impresiones(page), 'una impresión, dentro del toque').toEqual([{ enToque: true }]);
   await expect(page.locator('#ad-impresion .rh-copia')).toHaveCount(2);
-  await expect(page.locator('#ad-impresion')).toContainText('PRECIO');
+  await expect(page.locator('#ad-impresion')).toContainText('P. UNIT.');
   expect(errores, errores.join('\n')).toEqual([]);
 });
 

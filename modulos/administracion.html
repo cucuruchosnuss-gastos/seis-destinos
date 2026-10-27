@@ -2119,7 +2119,9 @@
       const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
       if (e3) throw e3
       const { data: insumos, error: e4 } = await supabase.from('insumos')
-        .select('id, nombre, marca, unidad_medida, categoria, activo, vista_preferida, contenido_bulto').order('categoria').order('nombre')
+        // nombre_bulto (26/10/2026, la hoja nueva: "bolsa de 25 kg"; text,
+        // nullable, sin default según information_schema el 26/10/2026).
+        .select('id, nombre, marca, unidad_medida, categoria, activo, vista_preferida, contenido_bulto, nombre_bulto').order('categoria').order('nombre')
       if (e4) throw e4
       const contenidos = await leerContenidosInsumos(unidadId)
       return {
@@ -2209,7 +2211,7 @@
       const ins = insumoDe(cat, it.insumo_id)
       return {
         nombre: ins?.nombre ?? 'Insumo (no se pudo leer)', marca: ins?.marca ?? null,
-        unidad: ins?.unidad_medida ?? null,
+        unidad: ins?.unidad_medida ?? null, nombreBulto: ins?.nombre_bulto ?? null,
       }
     }
 
@@ -2282,7 +2284,10 @@
       const prod = pr ? (cat?.productos ?? []).find(x => x.id === pr.producto_id) : null
       let cono = '—'
       if (pr) cono = !pr.con_cono ? 'Sin cono' : (it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? 'Cono que no se pudo leer') : 'Falta el cono')
-      return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono }
+      // La hoja nueva (26/10/2026): las unidades por caja y el NOMBRE del cono
+      // (o null), sin la presentación.
+      const conoNombre = pr?.con_cono && it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? null) : null
+      return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono, conoNombre, porCaja: pr?.unidades_por_caja ?? null }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3824,7 +3829,7 @@
             // por bulto si sabe lo que trae uno (`contenido`; si no, null).
             const modo = modoPrecioRenglon(d, it)
             return { esInsumo: true, producto: pi.nombre, marca: pi.marca, cantidad: it.cantidad, unidad: pi.unidad,
-              contenido: modo?.porBulto ? modo.contenido : null,
+              contenido: modo?.porBulto ? modo.contenido : null, nombreBulto: pi.nombreBulto,
               lotes: lotesDeRenglon(d.lotes, it, d.lotesInsumos) ?? [],
               precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,
               subtotal: o.estado_valorizacion === 'valorizada' ? it.subtotal : null }

@@ -236,13 +236,14 @@ export function nombreInsumoHoja(r) {
 // Cada copia: la cabecera (logo en círculo, la fábrica y sus datos, "RETIRO DE
 // MERCADERÍA" con la copia, y el recuadro con el número de orden y la fecha),
 // el cliente (nombre grande; a la derecha la localidad y el transporte o
-// "Retira: en fábrica"), la tabla CAJAS · PRODUCTO · LOTE (el nombre ENTERO,
-// en dos renglones si hace falta, nunca "…") con TOTAL DE CAJAS, y el pie:
-// "Entregó", FIRMA / ACLARACIÓN / DNI y la leyenda legal entera.
+// "Retira: en fábrica"), la tabla CANT. · PRODUCTO · DESCRIPCIÓN · TOTAL ·
+// LOTE (26/10/2026; el nombre ENTERO, en dos renglones si hace falta, nunca
+// "…") con la fila TOTAL, y el pie: "Entregó", FIRMA / ACLARACIÓN / DNI y la
+// leyenda legal entera.
 //
-// CON PRECIOS (Administración): suma PRECIO y SUBTOTAL a la tabla y el total
-// en pesos al lado de TOTAL DE CAJAS. Sin `conPrecios: true`, ninguna columna
-// de plata, aunque el objeto traiga precios.
+// CON PRECIOS (Administración): suma P. UNIT. e IMPORTE a la tabla y el total
+// en pesos en la fila TOTAL. Sin `conPrecios: true`, ninguna columna de plata,
+// aunque el objeto traiga precios.
 export const COPIAS_IMPRESION = ['ORIGINAL', 'DUPLICADO']
 // El PDF es IGUAL a la impresión (26/10/2026): original y duplicado. En media
 // hoja, los dos en la misma A4 con la línea de corte; en hojas enteras, cada
@@ -296,21 +297,9 @@ function htmlClienteHoja(cli, transporte) {
     `<span>${escHoja(textoTransporteHoja(transporte))}</span></div></div>`
 }
 
-// "7021 ×15 · 7033 ×10", y lo que no estaba en stock (el lote "SIN STOCK")
-// como "faltan 14". Los lotes son IDENTIFICADORES: van tal cual.
+// Lo que no estaba en stock va en el lote "SIN STOCK" y la hoja lo dice
+// "faltan 14" (htmlLotesHoja, 26/10/2026; antes textoLotesHoja, en texto).
 export const LOTE_SIN_STOCK_HOJA = 'SIN STOCK'
-export function textoLotesHoja(lotes, unidad = null) {
-  const lista = Array.isArray(lotes) ? lotes : []
-  if (!lista.length) return '—'
-  const cuanto = (l) => unidad ? cantidadInsumoHoja(l?.cantidad, unidad) : enteroHoja(l?.cajas)
-  return lista.map(l => {
-    const lote = String(l?.lote ?? '—')
-    const c = unidad ? l?.cantidad : l?.cajas
-    if (lote === LOTE_SIN_STOCK_HOJA) return `faltan ${cuanto(l)}`
-    if (c === null || c === undefined || c === '') return lote
-    return lista.length === 1 ? lote : `${lote} ×${cuanto(l)}`
-  }).join(' · ')
-}
 
 // Lo que faltó de un renglón (su lote "SIN STOCK"), o null.
 function faltanteDeRenglon(r) {
@@ -320,18 +309,130 @@ function faltanteDeRenglon(r) {
   return n > 0 ? n : null
 }
 
-// "Cucurucho grande · Caja x 100 · LOLO": el producto con su presentación y
-// su cono (o "sin cono"); un insumo con su marca. ENTERO, siempre.
-export function descripcionHoja(r) {
-  if (r?.esInsumo) return nombreInsumoHoja(r)
-  const cono = String(r?.cono ?? '').trim()
-  return [r?.producto, r?.presentacion, cono && cono !== '—' ? (cono === 'Sin cono' ? 'sin cono' : cono) : '']
-    .map(x => String(x ?? '').trim()).filter(Boolean).join(' · ') || '—'
+// ── LA HOJA NUEVA (26/10/2026, aprobada por Facu con un ejemplo) ───────────
+// Columnas CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE (con precios, además
+// P. UNIT. e IMPORTE), un renglón por producto:
+//  - CANT.: producto terminado = cajas; insumo por bulto = bultos; insumo sin
+//    bulto = su cantidad (el número solo).
+//  - PRODUCTO: el nombre del producto o del insumo, en negrita, entero.
+//  - DESCRIPCIÓN: producto terminado SOLO "×{unidades por caja}" y, con cono,
+//    " · con cono {CONO}" (el cono en negrita): NUNCA el nombre de la
+//    presentación ("Caja sin cono", "Media caja", "Caja N°2"…), ni "sin cono",
+//    ni la doble bolsa, ni la caja. Insumo: la marca (si tiene) y " · {bolsa,
+//    caja, bidón…} de {contenido} {unidad}" si va por bulto
+//    (insumos.nombre_bulto; null = "bulto"), o " · por unidad" / " · por kg".
+//  - TOTAL: producto terminado = cajas × unidades por caja en "un."; insumo =
+//    la cantidad en su unidad.
+//  - LOTE: uno = el lote; varios = "6262-1 (30) · 6263-2 (12)" con la cantidad
+//    más chica; ninguno = "—".
+// Un renglón de producto trae `producto`, `cajas`, `unidades`, `porCaja`
+// (unidades por caja; si falta, unidades ÷ cajas) y `conoNombre` (el cono, o
+// null); uno de insumo `producto`, `marca`, `cantidad`, `unidad`, `contenido`
+// (lo que trae un bulto SOLO si va por bulto) y `nombreBulto`.
+export const NOMBRE_BULTO_HOJA = 'bulto'
+export const POR_UNIDAD_HOJA = { un: 'por unidad', kg: 'por kg', lt: 'por litro' }
+
+// Lo que la pantalla manda en `cono` cuando NO hay un cono que nombrar.
+const SIN_NOMBRE_DE_CONO = new Set(['', '—', 'sin cono', 'falta el cono', 'cono que no se pudo leer'])
+
+export function porCajaHoja(r) {
+  const n = Number(r?.porCaja)
+  if (n > 0) return n
+  const c = Number(r?.cajas), u = Number(r?.unidades)
+  return c > 0 && u > 0 && Number.isInteger(u / c) ? u / c : null
 }
 
-function cantidadHoja(r) {
-  if (r?.movimiento === 'devolucion') return enteroHoja(r?.cajas) === '—' ? '—' : `−${enteroHoja(r.cajas)}`
-  return r?.esInsumo ? cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido) : enteroHoja(r?.cajas)
+export function nombreConoHoja(r) {
+  const c = String(r?.conoNombre ?? r?.cono ?? '').trim()
+  return SIN_NOMBRE_DE_CONO.has(c.toLowerCase()) ? '' : c
+}
+
+function conMayuscula(t) {
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t
+}
+
+// La parte del bulto de un insumo: "bolsa de 25 kg", o "por kg".
+export function bultoInsumoHoja(r) {
+  const contenido = Number(r?.contenido)
+  const u = String(r?.unidad ?? '').trim()
+  if (contenido > 0) {
+    const nombre = String(r?.nombreBulto ?? '').trim() || NOMBRE_BULTO_HOJA
+    return `${nombre} de ${cantidadInsumoHoja(contenido, u || null)}`
+  }
+  return POR_UNIDAD_HOJA[u] ?? (u ? `por ${unidadHoja(u)}` : '')
+}
+
+// La DESCRIPCIÓN en texto (para las notas y las pruebas): "×240 · con cono
+// DUOMO", "Wali · bolsa de 25 kg", "Bolsa de 50 kg".
+export function descripcionCortaHoja(r) {
+  if (r?.esInsumo) {
+    const marca = String(r?.marca ?? '').trim()
+    return conMayuscula([marca, bultoInsumoHoja(r)].filter(Boolean).join(' · '))
+  }
+  const n = porCajaHoja(r)
+  const cono = nombreConoHoja(r)
+  return [n ? `×${enteroHoja(n)}` : '', cono ? `con cono ${cono}` : ''].filter(Boolean).join(' · ')
+}
+
+// La misma, en HTML: el cono en negrita.
+function htmlDescripcionHoja(r) {
+  if (r?.esInsumo) return escHoja(descripcionCortaHoja(r))
+  const n = porCajaHoja(r)
+  const cono = nombreConoHoja(r)
+  return [n ? escHoja(`×${enteroHoja(n)}`) : '', cono ? `con cono <strong class="rh-cono">${escHoja(cono)}</strong>` : ''].filter(Boolean).join(' · ')
+}
+
+// El renglón entero en una línea (las notas del faltante): el producto y su
+// descripción. ENTERO, siempre.
+export function descripcionHoja(r) {
+  const nombre = String(r?.producto ?? '').trim() || (r?.esInsumo ? 'Insumo' : '—')
+  const d = descripcionCortaHoja(r)
+  return d ? `${nombre} ${r?.esInsumo ? '· ' : ''}${d}` : nombre
+}
+
+// Los bultos de un renglón de insumo por bulto (null si no va por bulto).
+function bultosHoja(r) {
+  const contenido = Number(r?.contenido)
+  const n = Number(r?.cantidad)
+  return r?.esInsumo && contenido > 0 && Number.isFinite(n) ? n / contenido : null
+}
+
+// CANT.
+export function cantidadColHoja(r) {
+  if (!r?.esInsumo) {
+    const c = enteroHoja(r?.cajas)
+    return r?.movimiento === 'devolucion' && c !== '—' ? `−${c}` : c
+  }
+  const b = bultosHoja(r)
+  if (b !== null) return formatearNumeroAr(b, { decimales: 3, minimos: 0 })
+  const n = r?.cantidad
+  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+  return formatearNumeroAr(Number(n), { decimales: decimalesDeUnidad(r?.unidad), minimos: 0 })
+}
+
+// TOTAL.
+export function totalColHoja(r) {
+  if (r?.esInsumo) return cantidadInsumoHoja(r.cantidad, r.unidad)
+  let u = Number(r?.unidades)
+  if (!(u > 0)) { const n = porCajaHoja(r), c = Number(r?.cajas); u = n && c > 0 ? n * c : NaN }
+  if (!Number.isFinite(u) || u <= 0) return '—'
+  return `${r?.movimiento === 'devolucion' ? '−' : ''}${enteroHoja(u)} un.`
+}
+
+// LOTE, en HTML: la cantidad entre paréntesis va más chica.
+function htmlLotesHoja(lotes, unidad = null) {
+  const lista = Array.isArray(lotes) ? lotes : []
+  if (!lista.length) return '—'
+  const cuanto = (l) => unidad ? cantidadInsumoHoja(l?.cantidad, unidad) : enteroHoja(l?.cajas)
+  return lista.map(l => {
+    const lote = String(l?.lote ?? '—')
+    const c = unidad ? l?.cantidad : l?.cajas
+    if (lote === LOTE_SIN_STOCK_HOJA) return escHoja(`faltan ${cuanto(l)}`)
+    if (lista.length === 1 || c === null || c === undefined || c === '') return escHoja(lote)
+    // Cada lote con su cantidad va junto: la línea se corta entre lotes, nunca
+    // adentro de uno ("W-" / "0915").
+    return `<span class="rh-lote__uno">${escHoja(lote)} <span class="rh-lote__cant">(${escHoja(cuanto(l))})</span></span>`
+  }).join(' · ')
 }
 
 // Una devolución o reposición: la cantidad (en negativo la devolución), el
@@ -341,63 +442,80 @@ function cantidadHoja(r) {
 // mide renglón por renglón igual que siempre.
 function htmlFilaDevolucionHoja(r, conPrecios, moneda, primera) {
   const repone = r.movimiento === 'reposicion'
-  const q = cantidadHoja(r)
-  const lote = repone ? textoLotesHoja(r?.lotes) : (String(r?.loteDevuelto ?? '').trim() || '—')
+  const lote = repone ? htmlLotesHoja(r?.lotes) : escHoja(String(r?.loteDevuelto ?? '').trim() || '—')
   let precio = ''
   if (conPrecios) {
     precio = repone
       ? `<td class="rh-num rh-plata">${escHoja('Se repone')}</td><td class="rh-num rh-plata">${escHoja(importeHoja(0, moneda))}</td>`
       : `<td class="rh-num rh-plata">${escHoja(importeHoja(r?.precio, moneda))}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
   }
-  return `<tr class="rh-fila rh-devuelto${primera ? ' rh-devuelto--primera' : ''}"><td class="rh-num rh-cajas">${escHoja(q)}</td>` +
-    `<td class="rh-producto">${primera ? '<span class="rh-devuelto__titulo">DEVOLUCIONES</span>' : ''}${escHoja(descripcionHoja(r))}` +
-    `<span class="rh-devuelto__motivo">${escHoja(detalleDevolucionHoja(r))}</span></td><td class="rh-lote">${escHoja(lote)}</td>${precio}</tr>`
+  return `<tr class="rh-fila rh-devuelto${primera ? ' rh-devuelto--primera' : ''}"><td class="rh-num rh-cajas">${escHoja(cantidadColHoja(r))}</td>` +
+    `<td class="rh-producto">${primera ? '<span class="rh-devuelto__titulo">DEVOLUCIONES</span>' : ''}${escHoja(String(r?.producto ?? '').trim() || '—')}</td>` +
+    `<td class="rh-desc">${htmlDescripcionHoja(r)}<span class="rh-devuelto__motivo">${escHoja(detalleDevolucionHoja(r))}</span></td>` +
+    `<td class="rh-num rh-tot">${escHoja(totalColHoja(r))}</td><td class="rh-lote">${lote}</td>${precio}</tr>`
 }
 
 function htmlFilaHoja(r, conPrecios, moneda, primeraDevolucion = false) {
   if (esDevolucionHoja(r)) return htmlFilaDevolucionHoja(r, conPrecios, moneda, primeraDevolucion)
-  const lotes = textoLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)
   let precio = ''
   if (conPrecios) {
     const p = r?.esInsumo ? precioInsumoHoja(r, moneda) : importeHoja(r?.precio, moneda)
     precio = `<td class="rh-num rh-plata">${escHoja(p)}</td><td class="rh-num rh-plata">${escHoja(importeHoja(r?.subtotal, moneda))}</td>`
   }
-  return `<tr class="rh-fila${r?.esInsumo ? ' rh-insumo' : ''}"><td class="rh-num rh-cajas">${escHoja(cantidadHoja(r))}</td>` +
-    `<td class="rh-producto">${escHoja(descripcionHoja(r))}</td><td class="rh-lote">${escHoja(lotes)}</td>${precio}</tr>`
+  return `<tr class="rh-fila${r?.esInsumo ? ' rh-insumo' : ''}"><td class="rh-num rh-cajas">${escHoja(cantidadColHoja(r))}</td>` +
+    `<td class="rh-producto">${escHoja(String(r?.producto ?? '').trim() || (r?.esInsumo ? 'Insumo' : '—'))}</td>` +
+    `<td class="rh-desc">${htmlDescripcionHoja(r)}</td><td class="rh-num rh-tot">${escHoja(totalColHoja(r))}</td>` +
+    `<td class="rh-lote">${htmlLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)}</td>${precio}</tr>`
 }
 
-// Las cantidades de los insumos, sumadas por unidad ("100 un. + 25,5 kg"):
-// kilos y unidades no se suman entre sí.
-function totalInsumosHoja(orden) {
-  const porUnidad = new Map()
+// LA FILA TOTAL: "TOTAL · 42 cajas de producto + 20 bultos + 160 un." (sin
+// las partes en 0) y, en la columna TOTAL, los kilos de los insumos (y los
+// litros, aparte: no se suman entre sí).
+export function rotuloTotalHoja(orden) {
+  let cajas = 0, bultos = 0, unidades = 0
   for (const r of orden?.renglones ?? []) {
-    if (!r?.esInsumo || !(Number(r.cantidad) > 0)) continue
-    const u = String(r.unidad ?? '')
-    porUnidad.set(u, (porUnidad.get(u) ?? 0) + Number(r.cantidad))
+    if (!r || r.movimiento === 'devolucion') continue
+    if (!r.esInsumo) { cajas += Number(r.cajas) || 0; continue }
+    const b = bultosHoja(r)
+    if (b !== null) bultos += b
+    else if (String(r.unidad ?? '') === 'un') unidades += Number(r.cantidad) || 0
   }
-  return [...porUnidad.entries()].map(([u, n]) => cantidadInsumoHoja(n, u || null)).join(' + ')
+  const plural = (n, uno, varios) => `${formatearNumeroAr(n, { decimales: 3, minimos: 0 })} ${n === 1 ? uno : varios}`
+  const partes = [
+    cajas > 0 ? plural(cajas, 'caja de producto', 'cajas de producto') : '',
+    bultos > 0 ? plural(bultos, 'bulto', 'bultos') : '',
+    unidades > 0 ? `${formatearNumeroAr(unidades, { decimales: 0, minimos: 0 })} un.` : '',
+  ].filter(Boolean)
+  return partes.length ? `TOTAL · ${partes.join(' + ')}` : 'TOTAL'
+}
+
+export function totalPesoHoja(orden) {
+  const suma = { kg: 0, lt: 0 }
+  for (const r of orden?.renglones ?? []) {
+    const u = String(r?.unidad ?? '')
+    if (r?.esInsumo && (u === 'kg' || u === 'lt') && Number(r.cantidad) > 0) suma[u] += Number(r.cantidad)
+  }
+  return ['kg', 'lt'].filter(u => suma[u] > 0).map(u => cantidadInsumoHoja(suma[u], u)).join(' + ')
 }
 
 function htmlTablaHoja(renglones, conPrecios, moneda, { conTotal, orden }) {
-  const col = '<colgroup><col class="rh-col-cajas"><col class="rh-col-producto"><col class="rh-col-lote">' +
+  const col = '<colgroup><col class="rh-col-cant"><col class="rh-col-producto"><col class="rh-col-desc"><col class="rh-col-tot"><col class="rh-col-lote">' +
     (conPrecios ? '<col class="rh-col-precio"><col class="rh-col-precio">' : '') + '</colgroup>'
-  const hayInsumo = (orden?.renglones ?? []).some(r => r?.esInsumo)
-  const cab = '<tr><th class="rh-num">CAJAS</th><th>PRODUCTO</th><th>LOTE</th>' +
-    (conPrecios ? `<th class="rh-num">${hayInsumo ? 'PRECIO' : 'PRECIO X CAJA'}</th><th class="rh-num">SUBTOTAL</th>` : '') + '</tr>'
+  const cab = '<tr><th class="rh-num">CANT.</th><th>PRODUCTO</th><th>DESCRIPCIÓN</th><th class="rh-num">TOTAL</th><th>LOTE</th>' +
+    (conPrecios ? '<th class="rh-num">P. UNIT.</th><th class="rh-num">IMPORTE</th>' : '') + '</tr>'
   const primeraDev = renglones.findIndex(esDevolucionHoja)
   const filas = renglones.map((r, k) => htmlFilaHoja(r, conPrecios, moneda, k === primeraDev)).join('')
   let pie = ''
   if (conTotal) {
-    const insumos = totalInsumosHoja(orden)
     const devueltas = totalCajasDevueltas(orden)
     const aFavor = conPrecios && Number(orden?.total) < 0
     const extra = (devueltas ? ` · devueltas ${enteroHoja(devueltas)}` : '') + (aFavor ? ' · a favor del cliente' : '')
-    pie = `<tfoot><tr class="rh-total"><td class="rh-num rh-cajas">${escHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
-      `<td colspan="2" class="rh-total__rotulo">TOTAL DE CAJAS${insumos ? ` <span class="rh-total__insumos">+ ${escHoja(insumos)}</span>` : ''}` +
+    pie = `<tfoot><tr class="rh-total"><td colspan="3" class="rh-total__rotulo">${escHoja(rotuloTotalHoja(orden))}` +
       `${extra ? `<span class="rh-total__insumos">${escHoja(extra)}</span>` : ''}</td>` +
+      `<td class="rh-num rh-tot rh-total__peso">${escHoja(totalPesoHoja(orden))}</td><td></td>` +
       (conPrecios ? `<td></td><td class="rh-num rh-plata rh-total__plata">${escHoja(importeHoja(orden?.total, moneda))}</td>` : '') + '</tr></tfoot>'
   }
-  return `<table class="rh-tabla">${col}<thead>${cab}</thead><tbody>${filas}</tbody>${pie}</table>`
+  return `<table class="rh-tabla${conPrecios ? ' rh-tabla--precios' : ''}">${col}<thead>${cab}</thead><tbody>${filas}</tbody>${pie}</table>`
 }
 
 // Las observaciones y el faltante (si hay), en un renglón chico debajo de la tabla.
@@ -798,14 +916,22 @@ export const ESTILOS_HOJA = `
 .rh-cliente__nombre { font-size: 26px; font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
 .rh-cliente__der { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 14px; flex-shrink: 0; max-width: 45%; }
 .rh-tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.rh-col-cajas { width: 74px; } .rh-col-producto { width: auto; } .rh-col-lote { width: 120px; } .rh-col-precio { width: 96px; }
+.rh-col-cant { width: 58px; } .rh-col-producto { width: auto; } .rh-col-desc { width: 196px; } .rh-col-tot { width: 92px; } .rh-col-lote { width: 148px; } .rh-col-precio { width: 92px; }
+.rh-tabla--precios .rh-col-cant { width: 50px; } .rh-tabla--precios .rh-col-desc { width: 134px; } .rh-tabla--precios .rh-col-tot { width: 80px; } .rh-tabla--precios .rh-col-lote { width: 120px; } .rh-tabla--precios .rh-col-precio { width: 88px; }
+.rh-tabla.rh-tabla--precios td { padding: 1px 6px; }
 .rh-tabla th { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-align: left; border-bottom: 1px solid #000; padding: 1px 6px 2px; }
 .rh-tabla td { font-size: 14px; padding: 2px 6px; border-bottom: 1px solid #000; line-height: 1.15; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
 .rh-tabla tr { break-inside: avoid; page-break-inside: avoid; }
 .rh-num { text-align: right !important; font-variant-numeric: tabular-nums; }
 .rh-cajas { font-size: 18px !important; font-weight: 800; line-height: 1 !important; white-space: nowrap; }
-.rh-insumo .rh-cajas { font-size: 14px !important; white-space: normal; }
-.rh-producto { font-weight: 600; }
+
+.rh-producto { font-weight: 800; }
+.rh-desc { font-weight: 400; }
+.rh-cono { font-weight: 800; }
+.rh-tot { white-space: nowrap; font-weight: 600; }
+.rh-lote__cant { font-size: 11px; }
+.rh-lote__uno { display: inline-block; max-width: 100%; }
+.rh-total__peso { font-size: 14px !important; font-weight: 800; }
 .rh-devuelto--primera td { border-top: 2px solid #000; }
 .rh-devuelto__titulo, .rh-devuelto__motivo { display: block; font-size: 12px; }
 .rh-devuelto__titulo { font-weight: 800; letter-spacing: 0.12em; }

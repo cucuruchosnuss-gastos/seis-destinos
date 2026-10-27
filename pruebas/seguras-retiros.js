@@ -103,6 +103,10 @@ const SEGURAS_HOJA = [
   ['htmlClienteHoja(orden?.cliente, orden?.transporte)', 'HTML armado por htmlClienteHoja(), que escapa el nombre, la localidad y el transporte'],
   ['htmlTablaHoja(renglones, conPrecios, orden?.moneda || \'ARS\', { conTotal: ultima, orden })', 'HTML armado por htmlTablaHoja(), que escapa cada dato con escHoja()'],
   ['htmlCopiaHoja(orden, c, { conPrecios: precios, renglones: todos.slice(d, h), pagina: i + 1, paginas: plan.paginas.length, entera: true })', 'HTML armado por htmlCopiaHoja(), que escapa todo'],
+  // La hoja nueva (26/10/2026): la descripción con el cono en negrita.
+  ['lote', 'HTML ya escapado: htmlFilaDevolucionHoja() arma el lote con htmlLotesHoja() (que escapa cada lote y cantidad) o con escHoja() del lote que trajo'],
+  ['htmlLotesHoja(r?.lotes, r?.esInsumo ? r.unidad : null)', 'HTML armado por htmlLotesHoja(), que escapa con escHoja() cada lote y su cantidad (ejecutado con texto malicioso en test-retiros-hoja-nueva.js)'],
+  ['htmlDescripcionHoja(r)', 'HTML armado por htmlDescripcionHoja(), que escapa con escHoja() el texto y el nombre del cono (ejecutado con texto malicioso en test-retiros-hoja-nueva.js)'],
 ]
 
 module.exports = { SEGURAS_RETIROS, SEGURAS_REGEX_RETIROS, SEGURAS_HOJA }
