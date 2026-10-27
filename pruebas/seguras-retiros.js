@@ -82,6 +82,9 @@ const SEGURAS_RETIROS = [
   // La fábrica sin control de stock (26/10/2026): los lotes escritos a mano.
   ['LARGO_LOTE_MANO', 'número: constante del código (40, el largo que acepta la base)'],
   ['htmlResumenLotesMano(r)', 'HTML armado por htmlResumenLotesMano(), que escapa cada número (ejecutado con marcas en test-retiros-sin-control.js)'],
+  // La venta por unidad (27/10/2026): adentro de un esc(`…`).
+  ['enteroHoja(pr.unidades_por_caja)', 'adentro de esc(…): el número de unidades por caja de la presentación'],
+  ['uno', 'adentro de esc(…): "cono", "unidad" o "caja", palabras fijas de palabraUnidadesHoja()'],
 ]
 
 const SEGURAS_REGEX_RETIROS = [
