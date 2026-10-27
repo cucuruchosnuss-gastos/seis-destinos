@@ -75,7 +75,8 @@ const el = (S, id) => S.__doc.getElementById(id)
   const f = conEmpresa(S)
   S.elegirCliente('c-dp')
   const h = el(S, 'rt-cliente-elegido').innerHTML
-  chk('el cliente elegido dice "Entre empresas"', /rt-sello--entre">Entre empresas</.test(h))
+  chk('el cliente elegido dice "Orden interna" (27/10/2026)', /rt-sello--entre">Orden interna</.test(h))
+  chk('… y que se numera aparte: N-I-…', /rt-numerar">Se numera al confirmar: N-I-…</.test(h), h)
   chk('el aviso visible, con la empresa que recibe', /id="rt-aviso-entre" role="note">Va al stock de Dolce Pasta con los mismos lotes</.test(h), h)
   chk('sin "Devolución de mercadería"', el(S, 'rt-agregar-devolucion').hidden === true)
   const cat = el(S, 'rt-aviso-entre-catalogo')
@@ -88,7 +89,8 @@ const el = (S, id) => S.__doc.getElementById(id)
   chk('al cambiar el cliente vuelve el botón', el(S, 'rt-agregar-devolucion').hidden === false)
   S.elegirCliente('c1')
   const h2 = el(S, 'rt-cliente-elegido').innerHTML
-  chk('un cliente común: sin aviso ni sello', !/rt-aviso-entre/.test(h2) && !/Entre empresas/.test(h2))
+  chk('un cliente común: sin aviso ni sello', !/rt-aviso-entre/.test(h2) && !/Orden interna/.test(h2))
+  chk('un cliente común: se numera como siempre', /rt-numerar">Se numera al confirmar</.test(h2))
   chk('un cliente común: el aviso del catálogo se esconde', el(S, 'rt-aviso-entre-catalogo').hidden === true && el(S, 'rt-aviso-entre-catalogo').textContent === '')
   chk('un cliente común: con "Devolución de mercadería"', el(S, 'rt-agregar-devolucion').hidden === false)
   S.agregarDevolucion()
@@ -150,7 +152,8 @@ const el = (S, id) => S.__doc.getElementById(id)
   esperas.push(S.confirmar().then(() => {
     chk('la orden confirmada sabe que fue entre empresas', S.estado.hecho?.entre === 'Dolce Pasta')
     const h = S.htmlHecho(S.estado.hecho)
-    chk('la orden confirmada lo dice', /rt-aviso-entre" role="note">Entre empresas: lo que salió entra al stock de Dolce Pasta\.</.test(h), h)
+    chk('la orden confirmada lo dice', /rt-aviso-entre" role="note">Orden interna: lo que salió entra al stock de Dolce Pasta\.</.test(h), h)
+    chk('… y arriba "Orden interna confirmada"', /rt-hecho__rotulo">Orden interna confirmada</.test(h))
   }))
 }
 {
@@ -165,7 +168,7 @@ const el = (S, id) => S.__doc.getElementById(id)
   S.__setRpc((n) => n === 'registrar_orden_retiro'
     ? { data: { orden_id: 'o2', numero: 43, codigo: 'N-0043', stock_insuficiente: [] }, error: null } : { data: [], error: null })
   esperas.push(S.confirmar().then(() => {
-    chk('cliente común: sin "Entre empresas"', S.estado.hecho?.entre === null && !/rt-aviso-entre/.test(S.htmlHecho(S.estado.hecho)))
+    chk('cliente común: sin "Orden interna"', S.estado.hecho?.entre === null && !/rt-aviso-entre/.test(S.htmlHecho(S.estado.hecho)) && /rt-hecho__rotulo">Retiro confirmado</.test(S.htmlHecho(S.estado.hecho)))
   }))
 }
 {
@@ -228,6 +231,25 @@ const el = (S, id) => S.__doc.getElementById(id)
   f.editando = null
   chequearMarcas(chk, 'el resumen', S.htmlResumen(f, CAT), ['empresa'])
   chequearMarcas(chk, 'la orden confirmada', S.htmlHecho({ codigo: 'N-1', entre: marca('empresa2'), cliente: null, total: '' }), ['empresa2'])
+}
+
+// ── La orden interna se numera aparte (27/10/2026) ─────────────────────────
+{
+  const S = nuevo()
+  conEmpresa(S)
+  chk('interna: "Se numera al confirmar: N-I-…"', S.textoNumerarInterna(CLIENTES[0]) === 'Se numera al confirmar: N-I-…', S.textoNumerarInterna(CLIENTES[0]))
+  chk('común: como siempre', S.textoNumerarInterna(CLIENTES[1]) === 'Se numera al confirmar')
+  S.estado.empresaId = 'u-nada'
+  chk('sin el prefijo de la empresa: no se inventa', S.textoNumerarInterna(CLIENTES[0]) === 'Se numera al confirmar (orden interna)')
+  chk('la orden confirmada muestra el código que manda la base', /rt-codigo-grande">N-I-0001</.test(S.htmlHecho({ codigo: 'N-I-0001', entre: 'Dolce Pasta', cliente: null, total: '' })))
+  // El prefijo es un dato de la base (unidades_negocio): escapado.
+  S.estado.empresaId = 'u-n'
+  const emp = S.empresaActual()
+  if (emp) emp.prefijo = marca('prefijo')
+  const f = S.estado.form
+  f.clienteId = 'c-dp'
+  chequearMarcas(chk, 'el "Se numera al confirmar" de una interna', S.htmlClienteElegido(f), emp ? ['prefijo'] : [])
+  chk('la empresa actual se pudo marcar', !!emp)
 }
 
 fin(esperas)

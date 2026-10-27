@@ -65,9 +65,11 @@ correrMutacionesEnVarios([
     original: path.join(RAIZ, 'modulos/stock.html'),
     funciones: [],
     manuales: [
-      { nombre: 'stock: el costo de la lista ignora la presentación (solo por kg)',
-        de: '${esc(textoCostoUnitario(costo, f.unidad_medida, presentacionCosto(estado.costos?.unidad, f.insumo_id)))}',
-        a: '${esc(textoCostoUnitario(costo, f.unidad_medida))}' },
+      // Desde precios-compra (27/10/2026) la lista dice el precio por unidad y
+      // el bulto con IVA: sin el contenido de la fábrica, el bulto desaparece.
+      { nombre: 'stock: el bulto de la lista ignora la presentación de la fábrica',
+        de: '      return presentacionCosto(estado.costos?.unidad, f.insumo_id)?.contenido ?? null',
+        a: '      return null' },
       { nombre: 'stock: el costo por bulto sin el kilo al lado',
         de: '      return `${plataCosto(precioDesdeBase(v, modo, { decimalesBase: 4 }))} el ${modo.rotulo} · ${porUnidad}`',
         a: '      return `${plataCosto(precioDesdeBase(v, modo, { decimalesBase: 4 }))} el ${modo.rotulo}`' },

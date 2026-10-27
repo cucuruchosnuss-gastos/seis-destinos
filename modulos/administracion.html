@@ -2728,11 +2728,12 @@
         : '<span class="ad-sello ad-sello--pendiente">Sin valorizar</span>'
     }
 
-    // El sello de una orden a otra empresa del grupo (24/10/2026).
+    // El sello de una orden a otra empresa del grupo (24/10/2026). Desde el
+    // 27/10/2026 es una "Orden interna", con su numeración <prefijo>-I-0001.
     function htmlSelloEntre(o) {
       if (!ordenEntreEmpresas(o)) return ''
       const recibe = nombreEmpresa(empresaGrupoDe(clienteDe(o.cliente_id)))
-      return `<span class="ad-sello ad-sello--entre" data-sello-entre title="${esc(recibe ? 'Otra empresa del grupo: ' + recibe : 'Otra empresa del grupo')}">Entre empresas</span>`
+      return `<span class="ad-sello ad-sello--entre" data-sello-entre title="${esc(recibe ? 'Otra empresa del grupo: ' + recibe : 'Otra empresa del grupo')}">Orden interna</span>`
     }
 
     // ── LA COMISIÓN DE UNA ORDEN (06/10/2026) ─────────────────────────────
@@ -2982,7 +2983,9 @@
       if (filtros.estado) q = q.eq('estado', filtros.estado)
       if (filtros.sinValorizar) q = q.eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')
       if (filtros.sinComision) q = q.eq('estado', 'confirmada').eq('estado_valorizacion', 'valorizada').is('comision_modo', null)
-      const { data, error } = await q.order('fecha', { ascending: false }).order('numero', { ascending: false })
+      // Por fecha y CÓDIGO, no por numero (27/10/2026): las órdenes internas
+      // tienen su propia numeración (N-I-0001 lleva numero = 1 igual que N-0001).
+      const { data, error } = await q.order('fecha', { ascending: false }).order('codigo', { ascending: false })
       if (error) throw error
       const ordenes = filtros.sinComision ? ordenesComisionSinCargar(data ?? [], clientes) : (data ?? [])
       // Las cajas de cada orden (y cuántos renglones de insumos lleva), en
@@ -3299,7 +3302,7 @@
       const entre = ordenEntreEmpresas(o)
       if (entre) {
         const recibe = nombreEmpresa(empresaGrupoDe(cli)) || 'otra empresa del grupo'
-        datos.push(htmlDatoAd('Entre empresas', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))
+        datos.push(htmlDatoAd('Orden interna', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))
       }
       const anulada = o.estado === 'anulada' ? `<div class="ad-aviso ad-aviso--grave">${esc('Anulada. Motivo: ' + (o.anulada_motivo || '—'))}</div>` : ''
       const hayProductos = d.items.some(it => !it.insumo_id)
@@ -5644,7 +5647,7 @@
       if (!m?.orden_retiro_id) return detalleRetencion(base) || (ETIQUETA_MOVIMIENTO[m?.tipo] ?? '—')
       const codigo = codigos?.get(m.orden_retiro_id)
       // La comisión dice "Comisión orden N° 12 (5%)": el número ya está en el código.
-      const resto = base.replace(/^Orden de retiro (?:N°\s*\d+|[A-Z]+-\d+)/, '').replace(/ · Comisión orden N°\s*\d+/, ' · Comisión')
+      const resto = base.replace(/^Orden de retiro (?:N°\s*\d+|[A-Z]+-(?:I-)?\d+)/, '').replace(/ · Comisión orden N°\s*\d+/, ' · Comisión')
       return 'Orden de retiro ' + (codigo || '(sin código)') + resto
     }
 
@@ -11025,7 +11028,8 @@
     // (la leen super_admin y taller:precios) y, si no se puede, del código del
     // concepto. El id y la empresa salen de ordenes_retiro (retiros:ver en esa
     // empresa); sin eso el código va sin link.
-    const RE_CODIGO_ORDEN_ENTRE = /\borden(?: de retiro)? ([A-Z]{1,3}-\d{3,})\b/i
+    // Con la orden interna (27/10/2026) el código puede ser N-I-0001.
+    const RE_CODIGO_ORDEN_ENTRE = /\borden(?: de retiro)? ([A-Z]{1,3}-(?:I-)?\d{3,})\b/i
 
     function codigoOrdenEntre(f) {
       if (f?.tipo !== 'otro') return null

@@ -4,9 +4,9 @@
 // SIN cambiarlos, y suma:
 //  - el cliente "DOLCE PASTA SRL" de Nuss con unidad_grupo_id = Dolce Pasta y
 //    la lista interna "Nuss → Dolce Pasta (interna)" (es_interna);
-//  - dos órdenes a ese cliente: N-0042 valorizada y N-0043 sin valorizar;
-//  - en movimientos_entre_empresas, la deuda de la N-0042 ("Orden de retiro
-//    N-0042") y su corrección, y en movimientos_entre_unidades su
+//  - dos órdenes a ese cliente: N-I-0042 valorizada y N-I-0043 sin valorizar;
+//  - en movimientos_entre_empresas, la deuda de la N-I-0042 ("Orden de retiro
+//    N-I-0042") y su corrección, y en movimientos_entre_unidades su
 //    orden_retiro_id (la tabla que lee super_admin).
 //
 //   http://localhost:4180/modulos/administracion.html?maqueta=orden-entre-empresas
@@ -22,10 +22,10 @@ t.clientes.push({ id: 'c-dp', codigo_anterior: null, unidad_negocio_id: 'u-n', n
 t.listas_precios.push({ id: 'l-int', unidad_negocio_id: 'u-n', nombre: 'Nuss → Dolce Pasta (interna)', moneda: 'ARS', activa: true, es_base: false, es_interna: true });
 
 t.ordenes_retiro.unshift(
-  { id: 'o42', numero: 42, codigo: 'N-0042', unidad_negocio_id: 'u-n', fecha: '2026-10-24', estado: 'confirmada', estado_valorizacion: 'valorizada',
+  { id: 'o42', numero: 42, codigo: 'N-I-0042', unidad_negocio_id: 'u-n', fecha: '2026-10-24', estado: 'confirmada', estado_valorizacion: 'valorizada',
     total: 500000, moneda: 'ARS', cliente_id: 'c-dp', cargada_por: 'emp-9', cargada_en: '2026-10-24T13:10:00Z', transporte: 'Camión propio', observaciones: null,
     comision_modo: null, comision_valor: null, comision_importe: null, comision_factura_id: null, division_pct_a: null },
-  { id: 'o43', numero: 43, codigo: 'N-0043', unidad_negocio_id: 'u-n', fecha: '2026-10-24', estado: 'confirmada', estado_valorizacion: 'pendiente',
+  { id: 'o43', numero: 43, codigo: 'N-I-0043', unidad_negocio_id: 'u-n', fecha: '2026-10-24', estado: 'confirmada', estado_valorizacion: 'pendiente',
     total: 0, moneda: 'ARS', cliente_id: 'c-dp', cargada_por: 'emp-9', cargada_en: '2026-10-24T15:40:00Z', transporte: 'Camión propio', observaciones: null,
     comision_modo: null, comision_valor: null, comision_importe: null, comision_factura_id: null, division_pct_a: null },
 );
@@ -50,11 +50,11 @@ const DE_N = { de_unidad_id: 'u-n', de_unidad: 'Cucuruchos Nuss' }, A_D = { a_un
 const F = (o) => ({ fecha: '2026-10-24', tipo: 'otro', ...DE_N, ...A_D, moneda: 'ARS', cantidad: null, unidad_medida: null, presentacion_id: null, insumo_id: null,
   referencia_tipo: 'movimiento_entre_unidades', marca_id: null, con_precio: null, ...o });
 base.rpc.movimientos_entre_empresas.unshift(
-  F({ detalle: 'Corrección de la valorización de la orden N-0042', importe: '25000.00', referencia_id: 'mu-o42b' }),
-  F({ detalle: 'Orden de retiro N-0042', importe: '500000.00', referencia_id: 'mu-o42' }),
+  F({ detalle: 'Corrección de la valorización de la orden N-I-0042', importe: '25000.00', referencia_id: 'mu-o42b' }),
+  F({ detalle: 'Orden de retiro N-I-0042', importe: '500000.00', referencia_id: 'mu-o42' }),
 );
 
-// Valorizar la N-0043 (sin precios cargados en la lista interna: se escriben).
+// Valorizar la N-I-0043 (sin precios cargados en la lista interna: se escriben).
 base.rpc.valorizar_orden_retiro = { total: 200000, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false };
 
 module.exports = base;
