@@ -435,6 +435,12 @@ const NUEVAS_PLANTA = [
   'recargarOConCola', 'turnosConCierreEnCola', 'htmlErroresCola', 'pintarCartelCola', 'reintentarCarga', 'descartarCarga',
   'precargarCopias', 'registrarServiceWorker', 'pedirRevisionVersion', 'alMensajeSW', 'mostrarAvisoVersion', 'actualizarVersion',
   'etiquetaMasa',
+  // Sin internet de verdad y el PIN sin internet (27/10/2026). chequearRed
+  // NO es la real: es un doble del preludio que contesta __red.hay.
+  'clavePinSinRed', 'almacenPinesMemoria', 'abrirPinesIdb', 'almacenPines', 'aBase64', 'deBase64', 'salCompleta',
+  'hashPin', 'igualesSeguro', 'guardarPinSinRed', 'olvidarPinSinRed', 'verificarPinSinRed',
+  'chequearRedPlanta', 'anotarChequeoRed', 'conChequeoDeRed', 'recordarPinSinRed', 'verificarPinPlantaSinRed',
+  'masaEmpezada', 'revalidarSiVolvioLaRed', 'revisarInactividadConRed',
   // La calculadora de cajas (06/10/2026)
   'sumarCajas', 'recordarCajas', 'sumarCajasAgregar', 'deshacerCajasAgregar', 'borrarCajasAgregar',
   // Un solo "sin cono" (10/10/2026)
@@ -478,7 +484,12 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // Sin internet (06/10/2026): de js/sin-internet.js y de la planta
   'NOMBRE_BASE', 'VERSION_BASE', 'CADA_REINTENTO_MS', 'GUARDAR_ENVIADOS_MS', 'VIDA_COPIA_MS', 'ORDEN',
   'CLAVE_SESION_SB', 'CADA_PRECARGA_MS', 'CADA_REVISAR_VERSION_MS', 'MS_TODO_ENVIADO',
-  'MENSAJE_ABRIR_SIN_RED', 'MENSAJE_PIN_SIN_RED', 'MENSAJE_LOTE_NUEVO_SIN_RED', 'MENSAJE_SIN_RED',
+  'MENSAJE_ABRIR_SIN_RED', 'MENSAJE_LOTE_NUEVO_SIN_RED', 'MENSAJE_SIN_RED',
+  // El PIN sin internet (27/10/2026). ITERACIONES_PIN no: el preludio pone
+  // pocas vueltas para que la suite no tarde (las 600.000 las prueba
+  // test-produccion-sin-internet-pin.js contra js/sin-internet.js).
+  'MENSAJE_PIN_SIN_RED_SIN_HASH', 'MENSAJE_PIN_SIN_RED_CAMBIAR', 'MOTIVOS_OLVIDAR_PIN', 'CADA_CHEQUEO_MS',
+  'NOMBRE_BASE_PINES', 'VIDA_PIN_SIN_RED_MS', 'FALLOS_PIN_SIN_RED', 'BLOQUEO_PIN_SIN_RED_MS',
   // Un solo "sin cono" (10/10/2026)
   'TEXTO_FALTA_CONO', 'TEXTO_ELEGI_CONO',
   // El lote nuevo por error (14/10/2026)
@@ -562,6 +573,17 @@ const PRELUDIO = `
   var reintentando = false
   // Sin internet (06/10/2026): los let del módulo y de js/sin-internet.js.
   var colaInstancia = null, almacenUnico = null, precargando = null, sinInternetInstalado = false
+  // Sin internet de verdad (27/10/2026): el chequeo contra Supabase es un
+  // doble (el tiempo máximo de 5 s lo prueba la suite contra el real).
+  // __red.hay: true | false, o una función. __red.chequeos cuenta las preguntas.
+  var chequeoEnCurso = null, revisandoInactividad = false, pinesUnico = null
+  var SUPABASE_URL = 'https://ejemplo.supabase.co', SUPABASE_KEY = 'clave'
+  var ITERACIONES_PIN = 1000
+  var __red = { hay: true, chequeos: 0 }
+  function chequearRed() {
+    __red.chequeos++
+    return Promise.resolve(!!(typeof __red.hay === 'function' ? __red.hay() : __red.hay))
+  }
   var relojBotonRegistrada = null
   var turnoBurbujaConos = 0
   var turnoResumenConfig = 0
@@ -674,7 +696,7 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
       __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
-      __uuids(){ return __uuids }, __timeouts, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo }, __win: window,
+      __uuids(){ return __uuids }, __red, __timeouts, __nav: navigator, __canales, __registros, __tiempoReal(){ return __tiempoReal }, __canalVivo(){ return canalVivo }, __win: window,
       ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }

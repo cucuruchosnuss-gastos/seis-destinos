@@ -391,6 +391,8 @@
     .pr-lat__col { min-width: 0; line-height: 1.15; display: flex; flex-direction: column; }
     .pr-lat__nombre { font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pr-lat__puesto { font-size: 12.5px; color: var(--p-gris); }
+    .pr-lat__sin-red { font-size: 12px; font-weight: 800; color: var(--p-mal-txt); white-space: nowrap; }
+    .pr-lat__sin-red-corto { display: none; }
     .pr-lat__cambiar-v { display: none; font-size: 12px; color: var(--p-gris); }
     .pr-lat__cambiar { height: 36px; border-radius: 9px; border: 0; background: var(--p-renglon); font-size: 13.5px; font-weight: 700; color: var(--p-tinta-2); }
     .pr-lat__reloj { display: none; }
@@ -435,6 +437,8 @@
       }
       .pr-lat__donde, .pr-lat__puesto { display: none; }
       .pr-lat__cambiar-v { display: block; }
+      .pr-lat__sin-red-largo, .pr-lat__sin-red + .pr-lat__cambiar-v { display: none; }
+      .pr-lat__sin-red-corto { display: inline; }
       .pr-lat__cambiar { position: absolute; inset: 0; height: auto; background: transparent; color: transparent; font-size: 0; border-radius: 12px; }
       .pr-lat__reloj { grid-area: reloj; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
       .pr-reloj-hora { font-family: var(--p-titulo); font-size: 20px; font-weight: 800; }
@@ -2658,10 +2662,13 @@
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr, leerNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
-    import { supabase } from '../js/supabase.js'
+    import { supabase, SUPABASE_URL, SUPABASE_KEY } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { cantidadSegunVista, textoSegunVista } from '../js/cantidades.js'
-    import { crearCola, almacenPlanta, esErrorDeRedCarga, resumenDeCola, textoCartelCola, sesionGuardada, CADA_REINTENTO_MS } from '../js/sin-internet.js'
+    import {
+      crearCola, almacenPlanta, esErrorDeRedCarga, resumenDeCola, textoCartelCola, sesionGuardada, CADA_REINTENTO_MS,
+      chequearRed, CADA_CHEQUEO_MS, guardarPinSinRed, verificarPinSinRed, olvidarPinSinRed,
+    } from '../js/sin-internet.js'
 
     mostrarBannerVersion()
 
@@ -3027,6 +3034,9 @@
         `<div class="pr-lat__persona"><span class="pr-lat__ini pr-lat__ini--${modo}" aria-hidden="true">${esc(inicialesDe(nombre))}</span>` +
         `<span class="pr-lat__col"><span class="pr-lat__nombre">${esc(nombre)}</span>` +
         `<span class="pr-lat__puesto">${esc(puestoEnLateral())}</span>` +
+        // Entró con el PIN guardado en la tablet, sin red (27/10/2026).
+        // Parada no entra entero: dice "Sin red" en el renglón de "Cambiar".
+        (estado.persona?.sinRed ? '<span class="pr-lat__sin-red" id="pr-lat-sin-red"><span class="pr-lat__sin-red-largo">Modo sin internet</span><span class="pr-lat__sin-red-corto">Sin red</span></span>' : '') +
         `<span class="pr-lat__cambiar-v">${esc(TITULO_DE_MODO[modo])} · Cambiar</span></span></div>` +
         '<button type="button" class="pr-lat__cambiar" id="pr-lat-cambiar">Cambiar de persona</button></div>'
     }
@@ -4133,6 +4143,27 @@
       return true
     }
 
+    // EL RELOJ (27/10/2026): el 27/10 se cortó internet con el wifi conectado
+    // (navigator.onLine seguía en true), la tablet volvió sola a "¿Quién
+    // sos?" y el masero no pudo poner el PIN. Antes de cerrar, se le pregunta
+    // a Supabase si hay internet de verdad (chequearRedPlanta, 5 s como
+    // máximo): si no contesta, NO se cierra, y queda anotado "sin red" (el
+    // cartel lo dice) hasta que un chequeo vuelva a contestar.
+    let revisandoInactividad = false
+    async function revisarInactividadConRed(ahora = Date.now()) {
+      if (revisandoInactividad || sinInternet() || !vencioPorInactividad(estado.ultimoToque, ahora)) return false
+      const hayQueCerrar = estado.modo === 'masa' ? !!estado.maestro : (!!estado.maestro || !!estado.persona)
+      if (!hayQueCerrar) return false
+      revisandoInactividad = true
+      try {
+        if (!(await chequearRedPlanta())) return false
+        // Si tocaron la pantalla mientras se preguntaba, ya no vence.
+        return revisarInactividad(Math.max(ahora, Date.now()))
+      } finally {
+        revisandoInactividad = false
+      }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
@@ -4198,7 +4229,8 @@
         const p = JSON.parse(leerSesion(clavePersona(modo)) ?? 'null')
         if (!p || typeof p.id !== 'string' || typeof p.nombre !== 'string') return null
         if (p.puesto !== PUESTO_DE_MODO[modo]) return null
-        return { id: p.id, nombre: p.nombre, puesto: p.puesto }
+        // La que entró sin red sigue marcada después de recargar.
+        return p.sinRed === true ? { id: p.id, nombre: p.nombre, puesto: p.puesto, sinRed: true } : { id: p.id, nombre: p.nombre, puesto: p.puesto }
       } catch { return null }
     }
 
@@ -4314,6 +4346,9 @@
     // La persona verificada queda adentro. El PIN no se guarda en ningún lado.
     function entrar(persona) {
       estado.persona = { id: persona.id, nombre: persona.nombre, puesto: persona.puesto ?? null }
+      // Entró con el PIN guardado en la tablet, sin red (27/10/2026): se ve en
+      // la barra y, al volver la red, vuelve a poner el PIN.
+      if (persona.sinRed === true) estado.persona.sinRed = true
       // El acceso maestro NO se guarda: dura lo que dura la memoria, y
       // guardarlo lo dejaría adentro del modo después de recargar, sin el
       // maestro activo. Guardarlo además pisaría al masero o al encargado que
@@ -4405,6 +4440,9 @@
         return { texto: hora ? `Probá de nuevo a las ${hora}` : 'Quedó bloqueado unos minutos.', bloqueadoHasta: res.bloqueado_hasta }
       }
       if (motivo === 'pin_incorrecto') return { texto: textoIntentos(res.intentos_restantes) }
+      // Sin internet (27/10/2026): los motivos del PIN guardado en la tablet.
+      if (motivo === 'sin_red_sin_pin') return { texto: MENSAJE_PIN_SIN_RED_SIN_HASH }
+      if (motivo === 'sin_red_debe_cambiar') return { texto: MENSAJE_PIN_SIN_RED_CAMBIAR }
       return { texto: 'No se pudo verificar el PIN. Probá de nuevo.' }
     }
 
@@ -4583,19 +4621,34 @@
       p.enviando = true
       pintarPin()
       let res
-      try {
-        const { data, error } = await supabase.rpc('verificar_pin_produccion', {
-          p_empleado_id: p.personaId, p_unidad_negocio_id: estado.unidadId,
-          p_puesto: p.puesto, p_pin: p.digitos,
-        })
-        if (error) throw error
-        res = data
-      } catch (err) {
-        console.error('verificar_pin_produccion:', err)
-        p.enviando = false
-        p.mensaje = { texto: esErrorDeRedCarga(err) ? MENSAJE_PIN_SIN_RED : 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }
-        p.digitos = ''
-        return pintarPin()
+      // SIN INTERNET (27/10/2026): sin red (o si la red no contesta), el PIN
+      // se compara con el hash que guardó esta tablet la última vez que esa
+      // persona entró CON red (js/sin-internet.js, 7 días).
+      if (sinInternet()) res = await verificarPinPlantaSinRed(p)
+      else {
+        try {
+          const { data, error } = await conChequeoDeRed(supabase.rpc('verificar_pin_produccion', {
+            p_empleado_id: p.personaId, p_unidad_negocio_id: estado.unidadId,
+            p_puesto: p.puesto, p_pin: p.digitos,
+          }))
+          if (error) throw error
+          res = data
+        } catch (err) {
+          console.error('verificar_pin_produccion:', err)
+          if (!esErrorDeRedCarga(err)) {
+            p.enviando = false
+            p.mensaje = { texto: 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }
+            p.digitos = ''
+            return pintarPin()
+          }
+          estado.sinRedChequeo = true
+          pintarCartelCola()
+          res = await verificarPinPlantaSinRed(p)
+        }
+        // Con red: el PIN que entró queda guardado (su hash) para cuando no
+        // haya; uno que hay que cambiar, marcado; uno que ya no sirve, borrado.
+        if (res?.ok === true && !res.sin_red) recordarPinSinRed(p, p.digitos, !!res.debe_cambiar)
+        else if (MOTIVOS_OLVIDAR_PIN.includes(res?.motivo)) olvidarPinSinRed({ personaId: p.personaId, unidadId: estado.unidadId, puesto: p.puesto }).catch(() => { /* nada */ })
       }
       p.enviando = false
       if (!res || res.ok !== true) {
@@ -4612,7 +4665,7 @@
         p.mal = false
         return pintarPin()
       }
-      return entrar({ id: p.personaId, nombre: p.personaNombre, puesto: p.puesto })
+      return entrar({ id: p.personaId, nombre: p.personaNombre, puesto: p.puesto, sinRed: res.sin_red === true })
     }
 
     async function enviarCambioPin() {
@@ -4636,7 +4689,7 @@
         p.pinNuevo = null
         p.digitos = ''
         p.mal = true
-        p.mensaje = { texto: err?.message || 'No se pudo cambiar el PIN. Probá de nuevo.' }
+        p.mensaje = { texto: esErrorDeRedCarga(err) ? MENSAJE_PIN_SIN_RED_CAMBIAR : (err?.message || 'No se pudo cambiar el PIN. Probá de nuevo.') }
         return pintarPin()
       }
       p.enviando = false
@@ -4648,6 +4701,8 @@
         p.fase = res?.motivo === 'pin_repetido' ? 'nuevo' : 'pin'
         return pintarPin()
       }
+      // El PIN nuevo ya vale sin red (27/10/2026).
+      recordarPinSinRed(p, p.pinNuevo)
       return entrar({ id: p.personaId, nombre: p.personaNombre, puesto: p.puesto })
     }
 
@@ -5325,7 +5380,8 @@
       // Un solo reloj: el cierre por inactividad y la cuenta regresiva del
       // bloqueo del PIN, que se destraba sola cuando llega a cero.
       setInterval(() => {
-        revisarInactividad()
+        revisarInactividadConRed()
+        revalidarSiVolvioLaRed()
         if (estado.pin && estado.pin.bloqueadoHasta) pintarPin()
       }, 1000)
     }
@@ -13395,15 +13451,17 @@
     //  · Lo que espera se ve "pendiente de enviar" (planillaConCola) y arriba
     //    el cartel fijo (pintarCartelCola).
     //  · Lo que NO anda sin red, con un mensaje claro: abrir una planilla nueva
-    //    (el número de lote lo da la base), pasar a un lote nuevo, y cambiar
-    //    de usuario con el PIN. La persona que estaba adentro NO sale por estar
-    //    sin red (revisarInactividad no corre sin internet).
+    //    (el número de lote lo da la base), pasar a un lote nuevo, el acceso
+    //    maestro y cambiar un PIN. La persona que estaba adentro NO sale por
+    //    estar sin red (revisarInactividad no corre sin internet).
+    //  · (27/10/2026) "Sin red" no es solo navigator.onLine: un chequeo contra
+    //    Supabase (chequearRedPlanta) lo confirma, y sin red el PIN se compara
+    //    con el hash que guardó la tablet (7 días): ver EL PIN SIN INTERNET.
     const CLAVE_SESION_SB = 'sb-xtorxouhzuizdvawqakb-auth-token'
     const CADA_PRECARGA_MS = 5 * 60 * 1000
     const CADA_REVISAR_VERSION_MS = 15 * 60 * 1000
     const MS_TODO_ENVIADO = 4000
     const MENSAJE_ABRIR_SIN_RED = 'Sin internet no se puede abrir una planilla nueva: seguí cargando en la que está abierta.'
-    const MENSAJE_PIN_SIN_RED = 'Sin internet no se puede cambiar de usuario con el PIN. Sigue adentro quien estaba: cuando vuelva la señal, probá de nuevo.'
     const MENSAJE_LOTE_NUEVO_SIN_RED = 'Sin internet no se puede pasar a un lote nuevo: el número del lote lo da la base. Anotá la vuelta sin lote nuevo, o esperá la señal.'
     const MENSAJE_SIN_RED = 'Sin internet esto no se puede hacer: probá cuando vuelva la señal.'
     let colaInstancia = null
@@ -13414,16 +13472,107 @@
       return colaInstancia
     }
 
-    // ¿Se está trabajando sin internet? El navegador lo dice, o la última
-    // vuelta de la cola no pudo llegar a la base.
+    // ¿Se está trabajando sin internet? El navegador lo dice, la última
+    // vuelta de la cola no pudo llegar a la base, o el chequeo contra
+    // Supabase no contestó (27/10/2026: con el wifi conectado y sin internet,
+    // navigator.onLine sigue en true).
     function sinInternet() {
-      return (typeof navigator !== 'undefined' && navigator?.onLine === false) || !!colaInstancia?.sinRed
+      return (typeof navigator !== 'undefined' && navigator?.onLine === false) || !!colaInstancia?.sinRed || estado.sinRedChequeo === true
+    }
+
+    // ── ¿Hay internet de verdad? (27/10/2026) ─────────────────────────────
+    // chequearRed (js/sin-internet.js) le pregunta a Supabase, con 5 s como
+    // máximo. Corre cada 30 s, antes de cerrar por inactividad y al poner el
+    // PIN. Un solo chequeo a la vez: los que piden mientras tanto esperan ese.
+    let chequeoEnCurso = null
+    function chequearRedPlanta() {
+      if (chequeoEnCurso) return chequeoEnCurso
+      chequeoEnCurso = Promise.resolve()
+        .then(() => chequearRed({ base: SUPABASE_URL, clave: SUPABASE_KEY }))
+        .catch(() => false)
+        .then(hay => { anotarChequeoRed(hay); return hay })
+        .finally(() => { chequeoEnCurso = null })
+      return chequeoEnCurso
+    }
+
+    // Lo que dijo el chequeo. Si la red VOLVIÓ, lo mismo que 'online': la
+    // cola sale, la copia se renueva y el cartel se actualiza.
+    function anotarChequeoRed(hay) {
+      const estabaSinRed = estado.sinRedChequeo === true
+      estado.sinRedChequeo = !hay
+      if (!hay) estado.redCaida = true
+      pintarCartelCola()
+      if (hay && estabaSinRed) {
+        procesarColaPlanta().then(() => { precargarCopias(); pedirRevisionVersion() }).catch(err => console.error('al volver la red:', err))
+      }
+      return hay
+    }
+
+    // Una RPC contra el chequeo: si el chequeo dice "sin red" antes de que la
+    // RPC conteste, no se esperan los 20 s de la RPC (tira como la red).
+    function conChequeoDeRed(promesa) {
+      return new Promise((res, rej) => {
+        let listo = false
+        Promise.resolve(promesa).then(v => { listo = true; res(v) }, e => { listo = true; rej(e) })
+        chequearRedPlanta().then(hay => {
+          if (!listo && !hay) rej(new TypeError('Failed to fetch (sin internet)'))
+        })
+      })
+    }
+
+    // ── El PIN sin internet (27/10/2026) ──────────────────────────────────
+    // El hash lo guarda y lo compara js/sin-internet.js (PBKDF2, 7 días). El
+    // PIN viaja solo hasta ahí: nunca en claro a ningún almacenamiento.
+    const MENSAJE_PIN_SIN_RED_SIN_HASH = 'Sin internet. Esta persona tiene que haber entrado con internet en los últimos 7 días.'
+    const MENSAJE_PIN_SIN_RED_CAMBIAR = 'Sin internet. Este PIN hay que cambiarlo primero, y eso necesita internet.'
+    const MOTIVOS_OLVIDAR_PIN = ['sin_pin', 'sin_puesto', 'pin_vencido']
+
+    function recordarPinSinRed(p, pin, debeCambiar = false) {
+      return guardarPinSinRed({ personaId: p.personaId, unidadId: estado.unidadId, puesto: p.puesto, pin, debeCambiar })
+        .catch(err => { console.error('PIN sin internet (guardar):', err); return null })
+    }
+
+    async function verificarPinPlantaSinRed(p) {
+      try {
+        return await verificarPinSinRed({ personaId: p.personaId, unidadId: estado.unidadId, puesto: p.puesto, pin: p.digitos })
+      } catch (err) {
+        console.error('PIN sin internet (verificar):', err)
+        return { ok: false, motivo: 'sin_red_sin_pin' }
+      }
+    }
+
+    // Una masa que el masero ya empezó a tocar (eligió el tamaño, cambió algo
+    // o escribió el motivo). La que se abre sola después de registrar otra,
+    // sin tocar, no cuenta: igual queda en su borrador.
+    function masaEmpezada(b) {
+      if (!b) return false
+      return tamanoElegido(b.doble) !== null || b.cambiada === true || b.como === 'modificar' || String(b.motivo ?? '').trim() !== ''
+    }
+
+    // Volvió la red y adentro está alguien que entró SIN red: a la primera
+    // pausa (nada a medio cargar) vuelve a poner el PIN, que ahora verifica la
+    // base como siempre. Lo que cargó sin red sale igual con la cola.
+    function revalidarSiVolvioLaRed() {
+      const per = estado.persona
+      if (!per?.sinRed || sinInternet() || estado.maestro) return false
+      if (estado.vista === 'pr-quien' || aMedioCargar() || estado.confirma || estado.panelLote) return false
+      if (estado.vista === 'pr-receta' && masaEmpezada(estado.masa)) return false
+      estado.persona = null
+      estado.pin = null
+      estado.quienOtra = false
+      estado.volverA = null
+      mostrarQuien()
+      if (estado.pin) { estado.pin.mensaje = { texto: 'Volvió internet: poné tu PIN de nuevo para seguir.' }; pintarPin() }
+      return true
     }
 
     // Manda UNA carga de la cola. Las masas por registrar_masa (ya era a
     // prueba de duplicados con su p_client_uuid); todo lo demás por
     // ejecutar_tablet, con la clave de la carga.
     async function enviarCargaCola(item, params) {
+      // El chequeo ya dijo que no hay red: ni se intenta (no se esperan los
+      // 20 s de un pedido colgado). La cola la vuelve a probar sola.
+      if (estado.sinRedChequeo === true) return { data: null, error: new TypeError('Failed to fetch (sin internet)') }
       if (item.operacion === 'registrar_masa') {
         const r = await supabase.rpc('registrar_masa', params)
         if (!r?.error) {
@@ -13755,7 +13904,8 @@
         if (navigator.onLine === false) return
         if (estado.copiaDesde != null || estado.redCaida) { estado.copiaDesde = null; estado.redCaida = false; pintarCartelCola() }
       })
-      window.addEventListener('online', () => { procesarColaPlanta().then(() => { precargarCopias(); pedirRevisionVersion() }) })
+      // Primero el chequeo: con su "sin red" anotado la cola ni lo intenta.
+      window.addEventListener('online', () => { chequearRedPlanta().then(() => procesarColaPlanta()).then(() => { precargarCopias(); pedirRevisionVersion() }) })
       window.addEventListener('offline', () => pintarCartelCola())
       document.getElementById('pr-cola-cartel').addEventListener('click', ev => {
         const r = ev.target.closest('[data-cola-reintentar]'); if (r) return reintentarCarga(r.dataset.colaReintentar)
@@ -13763,6 +13913,9 @@
       })
       document.getElementById('pr-version-actualizar').addEventListener('click', actualizarVersion)
       setInterval(() => { if (navigator.onLine !== false) procesarColaPlanta() }, CADA_REINTENTO_MS)
+      // ¿Hay internet de verdad? (27/10/2026): el wifi conectado no alcanza.
+      setInterval(() => chequearRedPlanta(), CADA_CHEQUEO_MS)
+      chequearRedPlanta()
       setInterval(() => precargarCopias(), CADA_PRECARGA_MS)
       setInterval(() => pedirRevisionVersion(), CADA_REVISAR_VERSION_MS)
       registrarServiceWorker()

@@ -42,7 +42,7 @@ correrMutacionesProduccion({
     { nombre: 'confirmar abrir sin red manda igual', de: "      if (sinInternet()) { err.textContent = MENSAJE_ABRIR_SIN_RED; err.hidden = false; return }\n", a: '' },
     { nombre: 'el reintento de abrir usa otra clave', de: '        if (form.envio?.clave !== clave) form.envio = { clave, id: crypto.randomUUID() }', a: '        form.envio = { clave, id: crypto.randomUUID() }' },
     { nombre: 'abrir no lee { turnos }', de: '        const data = Array.isArray(resp?.turnos) ? resp.turnos : resp', a: '        const data = resp' },
-    { nombre: 'el PIN sin red dice el mensaje viejo', de: "        p.mensaje = { texto: esErrorDeRedCarga(err) ? MENSAJE_PIN_SIN_RED : 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }", a: "        p.mensaje = { texto: 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }" },
+    { nombre: 'el PIN sin red sin hash dice el mensaje genérico', de: "      if (motivo === 'sin_red_sin_pin') return { texto: MENSAJE_PIN_SIN_RED_SIN_HASH }\n", a: '' },
     { nombre: 'sin red, la persona sale por inactividad', de: '      if (sinInternet()) return false\n', a: '' },
     { nombre: 'lote nuevo sin red se manda igual', de: "      if (loteNuevo && sinInternet()) {\n        f.errorBase = MENSAJE_LOTE_NUEVO_SIN_RED\n        return pintarResumenParada(ahora)\n      }\n", a: '' },
     { nombre: 'el cierre sin red da error en vez de quedar en la tablet', de: "        if (r.resultado === 'rechazo') throw r.error ?? new Error('No se pudo cerrar la planilla.')", a: "        if (r.resultado !== 'ok') throw r.error ?? new Error('No se pudo cerrar la planilla.')" },

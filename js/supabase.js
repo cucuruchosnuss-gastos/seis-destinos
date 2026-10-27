@@ -6,8 +6,9 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { instalarSalud } from './salud.js'
 import { crearFetchConCopia } from './sin-internet.js'
 
-const SUPABASE_URL = 'https://xtorxouhzuizdvawqakb.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_G8GZe2uAvb6VdJ1S4DD8nA_CC7iugYw'
+// Exportadas para el chequeo de red de la planta (chequearRed, 27/10/2026).
+export const SUPABASE_URL = 'https://xtorxouhzuizdvawqakb.supabase.co'
+export const SUPABASE_KEY = 'sb_publishable_G8GZe2uAvb6VdJ1S4DD8nA_CC7iugYw'
 
 if (SUPABASE_KEY === 'SUPABASE_PUBLISHABLE_KEY') {
   console.warn('⚠️  Reemplazá SUPABASE_PUBLISHABLE_KEY en js/supabase.js con tu API key real.')

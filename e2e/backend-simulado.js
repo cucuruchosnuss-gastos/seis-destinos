@@ -130,4 +130,4 @@ const DATOS_PLANTA = {
   },
 };
 
-module.exports = { backendSimulado, sembrarSesion, sesion, DATOS_PLANTA, CLAVE_SESION, URL_SUPABASE };
+module.exports = { backendSimulado, sembrarSesion, sesion, DATOS_PLANTA, CLAVE_SESION, URL_SUPABASE, USUARIO };

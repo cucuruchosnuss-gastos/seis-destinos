@@ -113,6 +113,9 @@ esperas.push((async () => {
   })
   for (const t of ['1', '3', '5', '7']) S.teclaPin(t)
   await S.teclaPin('entrar')
+  // El PIN se manda solo con el cuarto número y no se espera: desde el
+  // 27/10/2026 pasa también por el chequeo de red, que suma vueltas.
+  await new Promise(r => setImmediate(r))
   const v = S.__llamadas.rpc.filter(([n]) => n === 'verificar_pin_produccion').pop()
   chk('verificar_pin_produccion con la persona guardada y el puesto del modo',
     v && v[1].p_empleado_id === 'e-masero' && v[1].p_puesto === 'masero' && v[1].p_unidad_negocio_id === 'u-cn', JSON.stringify(v))

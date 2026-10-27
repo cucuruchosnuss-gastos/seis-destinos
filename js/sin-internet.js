@@ -5,7 +5,7 @@
 // que esperaba en la tablet eran las masas, y solo si la pantalla ya estaba
 // abierta.
 //
-// Este archivo tiene las tres piezas que lo resuelven, y lo usa SOLO la
+// Este archivo tiene las piezas que lo resuelven, y lo usa SOLO la
 // planta (modulos/produccion.html, a través de js/supabase.js cuando la
 // página tiene <meta name="sd-sin-internet">):
 //
@@ -35,6 +35,13 @@
 // 3. LA SESIÓN SIN RED. Con el token vencido y sin red, supabase-js no
 //    devuelve sesión (no la borra: un corte de red no es un cierre de sesión).
 //    sesionGuardada() la lee del almacenamiento para que la planta abra igual.
+//
+// 4. ¿HAY INTERNET DE VERDAD? (27/10/2026) chequearRed(): navigator.onLine
+//    solo dice si hay wifi. Ver la sección 4.
+//
+// 5. EL PIN SIN INTERNET (27/10/2026): un hash PBKDF2 del último PIN que
+//    entró con red, por persona + fábrica + puesto, que vale 7 días. Ver la
+//    sección 5.
 //
 // Su escape no hace falta: este archivo no arma HTML.
 
@@ -475,4 +482,189 @@ export function sesionGuardada(clave, almacen = globalThis.localStorage) {
     if (s && s.user?.id && s.refresh_token) return s
   } catch { /* nada */ }
   return null
+}
+
+// ── 4 · ¿HAY INTERNET DE VERDAD? (27/10/2026) ────────────────────────────────
+// El caso real: se cortó internet con el wifi conectado. navigator.onLine
+// siguió en true (eso solo dice que hay wifi), la tablet volvió por
+// inactividad a "¿Quién sos?" y el masero no pudo poner el PIN.
+// Este chequeo le pregunta a Supabase: GET a /auth/v1/health (la salud de
+// Auth, chiquita y sin sesión), con la key en la URL para que no haya
+// preflight, y un tiempo máximo corto. Cualquier respuesta HTTP de menos de
+// 500 es "hay red"; un fetch que falla, que no contesta a tiempo o un 5xx es
+// "sin red". Sin base no se puede preguntar: no se inventa un corte.
+export const ESPERA_CHEQUEO_MS = 5000
+export const CADA_CHEQUEO_MS = 30 * 1000
+
+export async function chequearRed({
+  base, clave = '', fetchBase = globalThis.fetch?.bind(globalThis), espera = ESPERA_CHEQUEO_MS, nav = globalThis.navigator,
+} = {}) {
+  if (nav && nav.onLine === false) return false
+  if (!base || !fetchBase) return true
+  const corte = typeof AbortController === 'function' ? new AbortController() : null
+  let t
+  try {
+    const resp = await Promise.race([
+      fetchBase(`${base}/auth/v1/health?apikey=${encodeURIComponent(clave)}`, { method: 'GET', cache: 'no-store', credentials: 'omit', signal: corte?.signal }),
+      new Promise((_, rej) => { t = setTimeout(() => { try { corte?.abort() } catch { /* nada */ } rej(new Error('tiempo agotado')) }, espera) }),
+    ])
+    return typeof resp?.status === 'number' && resp.status > 0 && resp.status < 500
+  } catch {
+    return false
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+// ── 5 · EL PIN SIN INTERNET (27/10/2026) ─────────────────────────────────────
+// Cada vez que verificar_pin_produccion dice que sí (con red), la tablet
+// guarda, por persona + fábrica + puesto, un HASH del PIN (PBKDF2-SHA-256 de
+// WebCrypto, con una sal al azar de ESTA tablet para ESA persona y muchas
+// vueltas) y la fecha. Sin red, el teclado compara contra ese hash si tiene
+// menos de 7 días. NUNCA el PIN en claro, nunca en localStorage: va en su
+// propia base de IndexedDB ('sd-planta-pines'), aparte de la cola, así abrirla
+// nunca puede trabar la cola.
+// Igual que la base: 5 errores seguidos lo bloquean 5 minutos (si no, sin red
+// se podrían probar los 10.000 PINes en la tablet).
+// Un PIN que la base marcó debe_cambiar no se guarda, y borra el que hubiera:
+// sin red no entra.
+export const NOMBRE_BASE_PINES = 'sd-planta-pines'
+export const VIDA_PIN_SIN_RED_MS = 7 * 24 * 3600 * 1000
+export const ITERACIONES_PIN = 600000
+export const FALLOS_PIN_SIN_RED = 5
+export const BLOQUEO_PIN_SIN_RED_MS = 5 * 60 * 1000
+
+export function clavePinSinRed({ personaId, unidadId, puesto }) {
+  return `${unidadId ?? ''}|${personaId ?? ''}|${puesto ?? ''}`
+}
+
+export function almacenPinesMemoria() {
+  const m = new Map()
+  return {
+    tipo: 'memoria',
+    async leer(k) { return m.has(k) ? structuredCloneSeguro(m.get(k)) : null },
+    async guardar(o) { m.set(o.clave, structuredCloneSeguro(o)) },
+    async borrar(k) { m.delete(k) },
+  }
+}
+
+export function abrirPinesIdb(nombre = NOMBRE_BASE_PINES, idb = globalThis.indexedDB) {
+  if (!idb) return Promise.resolve(almacenPinesMemoria())
+  return new Promise((res, rej) => {
+    const p = idb.open(nombre, 1)
+    p.onupgradeneeded = () => { if (!p.result.objectStoreNames.contains('pines')) p.result.createObjectStore('pines', { keyPath: 'clave' }) }
+    p.onsuccess = () => res(p.result)
+    p.onerror = () => rej(p.error)
+    p.onblocked = () => rej(new Error('IndexedDB bloqueada'))
+  }).then(db => {
+    const tx = (modo) => db.transaction('pines', modo).objectStore('pines')
+    return {
+      tipo: 'idb',
+      leer: (k) => promesaDe(tx('readonly').get(k)).then(v => v ?? null),
+      guardar: (o) => promesaDe(tx('readwrite').put(o)).then(() => undefined),
+      borrar: (k) => promesaDe(tx('readwrite').delete(k)).then(() => undefined),
+    }
+  }).catch(err => {
+    // Sin IndexedDB: en memoria. Sin red no va a haber PIN guardado después
+    // de recargar, y el mensaje lo dice; nada se traba.
+    console.error('IndexedDB (pines):', err)
+    return almacenPinesMemoria()
+  })
+}
+
+let pinesUnico = null
+export function almacenPines() {
+  if (!pinesUnico) pinesUnico = abrirPinesIdb()
+  return pinesUnico
+}
+
+function aBase64(bytes) {
+  let s = ''
+  for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b)
+  return btoa(s)
+}
+
+function deBase64(texto) {
+  const s = atob(String(texto ?? ''))
+  const out = new Uint8Array(s.length)
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i)
+  return out
+}
+
+// La sal de verdad: los bytes al azar de esta tablet MÁS la clave (fábrica,
+// persona y puesto), así el mismo PIN da otro hash en otra tablet y para
+// otra persona.
+function salCompleta(sal, clave) {
+  const extra = new TextEncoder().encode('|' + clave)
+  const s = deBase64(sal)
+  const out = new Uint8Array(s.length + extra.length)
+  out.set(s, 0); out.set(extra, s.length)
+  return out
+}
+
+export async function hashPin(pin, sal, clave, iteraciones = ITERACIONES_PIN, sutil = globalThis.crypto?.subtle) {
+  if (!sutil) throw new Error('Esta tablet no tiene WebCrypto.')
+  const llave = await sutil.importKey('raw', new TextEncoder().encode(String(pin)), 'PBKDF2', false, ['deriveBits'])
+  const bits = await sutil.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salCompleta(sal, clave), iterations: iteraciones }, llave, 256)
+  return aBase64(bits)
+}
+
+// Compara sin cortar en la primera diferencia.
+function igualesSeguro(a, b) {
+  const x = String(a ?? ''), y = String(b ?? '')
+  let d = x.length ^ y.length
+  for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0)
+  return d === 0
+}
+
+// Después de un verificar_pin_produccion OK con red. Con debe_cambiar, pisa
+// lo que hubiera con una marca SIN hash: sin red no entra, y lo dice.
+export async function guardarPinSinRed({
+  almacen = almacenPines, personaId, unidadId, puesto, pin, debeCambiar = false,
+  ahora = () => Date.now(), cripto = globalThis.crypto, iteraciones = ITERACIONES_PIN,
+}) {
+  const a = await (typeof almacen === 'function' ? almacen() : almacen)
+  const clave = clavePinSinRed({ personaId, unidadId, puesto })
+  if (debeCambiar) { const marca = { clave, debe_cambiar: true, guardado: ahora() }; await a.guardar(marca); return marca }
+  if (!pin) { await a.borrar(clave); return null }
+  const sal = aBase64(cripto.getRandomValues(new Uint8Array(16)))
+  const hash = await hashPin(pin, sal, clave, iteraciones, cripto.subtle)
+  const reg = { clave, hash, sal, iteraciones, guardado: ahora(), fallos: 0, bloqueado_hasta: null }
+  await a.guardar(reg)
+  return reg
+}
+
+// Cuando la base dice que ese PIN ya no sirve (sin PIN, sin el puesto, el
+// temporal venció): sin red tampoco.
+export async function olvidarPinSinRed({ almacen = almacenPines, personaId, unidadId, puesto }) {
+  const a = await (typeof almacen === 'function' ? almacen() : almacen)
+  await a.borrar(clavePinSinRed({ personaId, unidadId, puesto }))
+}
+
+// Sin red. Devuelve lo mismo que verificar_pin_produccion ({ ok: true } o
+// { ok: false, motivo, … }) más dos motivos propios: 'sin_red_sin_pin' (no
+// hay hash, o tiene 7 días o más) y 'sin_red_debe_cambiar'.
+export async function verificarPinSinRed({
+  almacen = almacenPines, personaId, unidadId, puesto, pin,
+  ahora = () => Date.now(), sutil = globalThis.crypto?.subtle,
+}) {
+  const a = await (typeof almacen === 'function' ? almacen() : almacen)
+  const clave = clavePinSinRed({ personaId, unidadId, puesto })
+  const reg = await a.leer(clave)
+  if (reg?.debe_cambiar) return { ok: false, motivo: 'sin_red_debe_cambiar' }
+  if (!reg || !reg.hash) return { ok: false, motivo: 'sin_red_sin_pin' }
+  const t = ahora()
+  if (!(t - Number(reg.guardado) < VIDA_PIN_SIN_RED_MS)) return { ok: false, motivo: 'sin_red_sin_pin' }
+  if (reg.bloqueado_hasta && Number(reg.bloqueado_hasta) > t) {
+    return { ok: false, motivo: 'bloqueado', bloqueado_hasta: new Date(Number(reg.bloqueado_hasta)).toISOString() }
+  }
+  const hash = await hashPin(pin, reg.sal, clave, Number(reg.iteraciones) || ITERACIONES_PIN, sutil)
+  if (igualesSeguro(hash, reg.hash)) {
+    if (reg.fallos || reg.bloqueado_hasta) await a.guardar({ ...reg, fallos: 0, bloqueado_hasta: null })
+    return { ok: true, debe_cambiar: false, sin_red: true }
+  }
+  const fallos = (Number(reg.fallos) || 0) + 1
+  const bloquea = fallos >= FALLOS_PIN_SIN_RED
+  await a.guardar({ ...reg, fallos: bloquea ? 0 : fallos, bloqueado_hasta: bloquea ? t + BLOQUEO_PIN_SIN_RED_MS : null })
+  return { ok: false, motivo: 'pin_incorrecto', intentos_restantes: Math.max(0, FALLOS_PIN_SIN_RED - fallos) }
 }
