@@ -133,6 +133,7 @@ for (const [filas, error, esperado, nombre] of [
   [[{ id: 'u-d', controla_stock_terminado: null }], null, '', 'null → con control'],
   [[{ id: 'u-x', controla_stock_terminado: false }], null, '', 'una fábrica donde no carga no cuenta'],
   [null, { message: 'x' }, '', 'si no se puede leer → ninguna'],
+  [[{ id: 'u-d', controla_stock_terminado: false }], { message: 'x' }, '', 'con error, aunque vengan filas → ninguna'],
 ]) {
   esperas.push((async () => {
     const S = armar({ sinControl: [] })
@@ -194,7 +195,7 @@ esperas.push((async () => {
   S.pintarRemitos()
   chk('sin elegir, la cámara y la galería quedan apagadas', S.__els.get('rt-remitos-camara').disabled === true && S.__els.get('rt-remitos-galeria').disabled === true)
   S.elegirFabricaRemitos('u-n')
-  chk('una fábrica con control no se puede elegir', S.fabricaRemitos() === null)
+  chk('una fábrica con control no se puede elegir (ni se recuerda)', S.fabricaRemitos() === null && S.datosRemitos().fabricaId === null && !S.__ls.has(S.CLAVE_REMITOS_FABRICA))
   S.elegirFabricaRemitos('u-d2')
   chk('elegida Dolce Centro: queda esa y se recuerda', S.fabricaRemitos()?.id === 'u-d2' && S.__ls.get(S.CLAVE_REMITOS_FABRICA) === 'u-d2')
   chk('la elegida queda marcada', S.htmlFabricaRemitos().includes('data-remito-fabrica="u-d2" aria-pressed="true"'))
@@ -352,7 +353,8 @@ esperas.push((async () => {
   chk('recargada: crear_remito_precarga con el client_uuid guardado', crearLlamadas(S).length === 1 && crearLlamadas(S)[0][1].p_client_uuid === 'cu-1' && crearLlamadas(S)[0][1].p_foto_path === 'uid-1/remitos/f1.jpg')
   chk('recargada: la perdida no se intenta', S.__llamadas.subidas.length === 0)
   S.reintentarRemito('cu-2')
-  chk('la perdida no tiene reintento', crearLlamadas(S).length === 1)
+  chk('la perdida no tiene reintento (sigue diciendo que se perdió)', crearLlamadas(S).length === 1 &&
+    S.datosRemitos().cola.find(i => i.clientUuid === 'cu-2')?.error === S.TEXTO_FOTO_PERDIDA)
   S.quitarRemitoDeCola('cu-2')
   chk('"Quitar" la saca de la cola', !S.datosRemitos().cola.some(i => i.clientUuid === 'cu-2'))
   const S2 = armar({ ls: [['retiros.remitos.cola', '{roto']] })
@@ -385,6 +387,16 @@ esperas.push((async () => {
   S.reintentarRemito('rp-5')
   chk('Reintentar vuelve a llamar a ocr-remito con el mismo remito', S.__llamadas.invocaciones.length === 2 && S.__llamadas.invocaciones[1][1].body.remito_id === 'rp-5')
   chk('mientras relee: "Leyendo…"', S.estadoRemitoSubido(f).texto === 'Leyendo…')
+  // Reintentada con éxito y la base todavía en "leyendo": ya no es "No se pudo leer".
+  const S3 = armar()
+  S3.__tablas.remitos_precarga = () => ({ data: [{ id: 'rp-8', estado: 'leyendo', subido_en: hace(1) }], error: null })
+  ctl(S3).invocar(async () => ({ data: null, error: { message: 'cayó' } }))
+  S3.lanzarLectura('rp-8')
+  await asentar()
+  ctl(S3).invocar(async () => ({ data: { ok: true }, error: null }))
+  S3.reintentarRemito('rp-8')
+  await asentar()
+  chk('reintentada con éxito: se olvida la falla y vuelve a "Leyendo…"', S3.estadoRemitoSubido(S3.datosRemitos().filas[0]).texto === 'Leyendo…' && !S3.datosRemitos().lecturaFallida.has('rp-8'))
   const ok = armar()
   ctl(ok).invocar(async () => ({ data: { error: 'No se ve el número' }, error: null }))
   ok.__tablas.remitos_precarga = []
@@ -451,6 +463,8 @@ esperas.push((async () => {
   S.__tablas.remitos_precarga = [{ id: 'rp-7', estado: 'leyendo', subido_en: hace(0), foto_path: S.datosRemitos().cola[0].ruta }]
   await S.leerMisRemitos()
   chk('cuando la lista la trae, sale de la cola (no aparece dos veces)', S.datosRemitos().cola.length === 0 && S.remitosParaMostrar().length === 1)
+  S.encolarFotos([foto('b.jpg')])
+  chk('la foto nueva (en la cola) va arriba de las de la base', S.remitosParaMostrar().map(x => x.clave)[1] === 'rp-7' && S.remitosParaMostrar()[0].clave === S.datosRemitos().cola[0].clientUuid)
 })())
 esperas.push((async () => {
   // El sondeo: vuelve a pedir la lista, solo en esta pantalla.
@@ -506,22 +520,31 @@ esperas.push((async () => {
 
 // ═══ El escape de lo que viene de la base ══════════════════════════════════
 {
-  const S = armar({ sinControl: ['u-d', 'u-d2'], empresas: [NUSS, DOLCE, { ...DOLCE2, nombre: marca('fabrica') }] })
+  const FID = marca('fid')
+  const S = armar({ sinControl: ['u-d', FID], empresas: [NUSS, DOLCE, { ...DOLCE2, id: FID, nombre: marca('fabrica') }] })
   S.estado.vista = 'rt-vista-remitos'
   const d = S.datosRemitos()
   d.filas = [
-    { id: 'x1', estado: 'precargada', numero_remito: marca('numero'), unidad_negocio_id: 'u-d2', subido_en: hace(1) },
+    { id: 'x1', estado: 'precargada', numero_remito: marca('numero'), unidad_negocio_id: FID, subido_en: hace(1) },
     { id: 'x2', estado: 'descartada', descartado_motivo: marca('motivo'), subido_en: hace(2) },
-    { id: 'x3', estado: 'error', error: marca('error'), subido_en: hace(3) },
-    { id: marca('id'), estado: 'confirmada', orden: { codigo: marca('codigo') }, subido_en: hace(4) },
+    { id: marca('iderr'), estado: 'error', error: marca('error'), subido_en: hace(3) },
+    { id: marca('id'), estado: 'confirmada', orden: { codigo: marca('codigo') }, subido_en: hace(4), foto_path: 'f-id' },
   ]
+  d.miniaturas.set('f-id', 'https://xtor.supabase.co/firmado')
   d.lecturaFallida.set('x4', marca('fallo'))
-  d.filas.push({ id: 'x4', estado: 'leyendo', subido_en: hace(5) })
-  d.miniaturas.set(undefined, 'javascript:alert(1)')
+  d.filas.push({ id: 'x4', estado: 'leyendo', subido_en: hace(5), foto_path: 'f-mala' })
+  d.miniaturas.set('f-mala', 'javascript:alert(1)')
+  d.cola.push({ clientUuid: marca('cu'), unidadId: 'u-d', ruta: 'r', paso: 'perdida', error: null, creadoEn: hace(0) })
   S.pintarRemitos()
-  const html = S.__els.get('rt-remitos-lista').innerHTML + S.__els.get('rt-remitos-fabrica').innerHTML
+  const lista = S.__els.get('rt-remitos-lista').innerHTML
+  const html = lista + S.__els.get('rt-remitos-fabrica').innerHTML
   chk('ninguna marca cruda en Mis remitos subidos', !/<b data-xss=/.test(html), (html.match(/.{0,60}<b data-xss=[^>]*>/) || [''])[0])
-  for (const c of ['numero', 'motivo', 'error', 'id', 'codigo', 'fallo', 'fabrica']) chk(`«${c}» escapado`, html.includes(escapada(c)))
+  for (const c of ['numero', 'motivo', 'error', 'id', 'iderr', 'codigo', 'fallo', 'fabrica', 'fid', 'cu']) chk(`«${c}» escapado`, html.includes(escapada(c)))
+  chk('la miniatura de la fila con id raro: su clave escapada', lista.includes(`data-remito-miniatura="${S.esc(marca('id'))}"`))
+  chk('Reintentar y Quitar con la clave escapada', lista.includes(`data-remito-reintentar="${S.esc(marca('iderr'))}"`) && lista.includes(`data-remito-quitar="${S.esc(marca('cu'))}"`))
+  chk('una miniatura javascript: no se dibuja', !lista.includes('data-remito-miniatura="x4"'))
+  const S1 = armar({ sinControl: [FID], empresas: [{ ...DOLCE, id: FID, nombre: marca('unica') }] })
+  chk('una sola fábrica: su nombre escapado', S1.htmlFabricaRemitos().includes(escapada('unica')) && !/<b data-xss=/.test(S1.htmlFabricaRemitos()))
   chk('un link que no es https ni blob: no es miniatura', S.urlMiniaturaSegura('javascript:alert(1)') === null && S.urlMiniaturaSegura('data:image/png;base64,x') === null &&
     S.urlMiniaturaSegura('https://x/y') === 'https://x/y' && S.urlMiniaturaSegura('blob:http://localhost/1') === 'blob:http://localhost/1')
 }

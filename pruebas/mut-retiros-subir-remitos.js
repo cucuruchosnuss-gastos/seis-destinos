@@ -38,7 +38,9 @@ correrMutaciones({
   original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/retiros.html'),
   escape: 'esc',
   funciones: ['htmlRemitoSubido', 'htmlMisRemitos', 'htmlFabricaRemitos'],
-  equivalentes: [],
+  equivalentes: [
+    { expr: 'esc(d.error)', motivo: 'd.error es uno de dos textos constantes del código ("No se pudieron leer tus remitos subidos…"), nunca de la base' },
+  ],
   manuales: [
     // ── Quién ve el botón ──────────────────────────────────────────────
     { nombre: 'el botón sin mirar si carga ahí', de: '      return empresasDeCarga().filter(e => sin.has(e.id))', a: '      return (estado.empresas ?? []).filter(e => sin.has(e.id))' },
