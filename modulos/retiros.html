@@ -1437,7 +1437,9 @@
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
         supabase.from('marcas_personalizadas')
           .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
-        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true).order('nombre'),
+        // nombre_bulto (26/10/2026, la hoja nueva: "bolsa de 25 kg"; text,
+        // nullable, sin default según information_schema el 26/10/2026).
+        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto, nombre_bulto').eq('activo', true).order('nombre'),
         supabase.from('unidades_negocio').select('controla_stock_terminado').eq('id', unidadId).maybeSingle(),
       ])
       if (c.error) throw c.error
@@ -1481,9 +1483,11 @@
       const filas = (Array.isArray(filasInsumos) ? filasInsumos : []).filter(i => i?.id)
       const vistas = new Map(filas.map(i => [i.id, i.vista_preferida ?? 'base']))
       const delCatalogo = new Map(filas.map(i => [i.id, contenidoUnico([i.contenido_bulto])]))
+      const nombresBulto = new Map(filas.map(i => [i.id, limpio(i.nombre_bulto) || null]))
       for (const i of cat?.insumos ?? []) {
         i.vista_preferida = vistas.get(i.id) ?? 'base'
         i.contenido = delCatalogo.get(i.id) ?? contenidos?.get(i.id) ?? null
+        i.nombre_bulto = nombresBulto.get(i.id) ?? null
       }
       return cat
     }
@@ -4603,9 +4607,12 @@
       return (o?.renglones ?? []).map(r => r?.tipo === 'insumo'
         // Por bulto (23/10/2026): con lo que trae un bulto, la hoja dice
         // "4 bultos de 25 kg (100 kg)"; si no se sabe, en su unidad.
+        // La hoja nueva (26/10/2026): "bolsa de 25 kg" (insumos.nombre_bulto).
         ? { esInsumo: true, producto: r.insumo, marca: r.marca_insumo, cantidad: r.cantidad, unidad: r.unidad_medida, lotes: r.lotes ?? [],
-            contenido: contenidoParaHoja(r.insumo_id, r.unidad_medida) }
-        : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo),
+            contenido: contenidoParaHoja(r.insumo_id, r.unidad_medida), nombreBulto: insumoDe(estado.catalogo, r.insumo_id)?.nombre_bulto ?? null }
+        // mis_ordenes_retiro no trae las unidades por caja: la hoja las saca de
+        // unidades ÷ cajas. El cono, por su nombre (r.marca) o ninguno.
+        : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo), conoNombre: limpio(r.marca) || null,
             cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [],
             // Devoluciones (22/10/2026): mis_ordenes_retiro trae el tipo en
             // 'movimiento' (su 'tipo' es producto / insumo).

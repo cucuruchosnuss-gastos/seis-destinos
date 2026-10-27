@@ -46,7 +46,8 @@ correrMutaciones({
     // La media hoja más justa
     { nombre: 'los renglones vuelven a 16 px', de: '.rh-tabla td { font-size: 14px;', a: '.rh-tabla td { font-size: 16px;' },
     { nombre: 'las cajas vuelven a 22 px', de: '.rh-cajas { font-size: 18px !important;', a: '.rh-cajas { font-size: 22px !important;' },
-    { nombre: 'las cajas de insumo a 16 px', de: '.rh-insumo .rh-cajas { font-size: 14px !important;', a: '.rh-insumo .rh-cajas { font-size: 16px !important;' },
+    // 26/10/2026 (la hoja nueva): la CANT. de un insumo es del mismo tamaño que la de un producto.
+    { nombre: 'las cajas de insumo vuelven a 14 px', de: '.rh-producto { font-weight: 800; }', a: '.rh-producto { font-weight: 800; }\n.rh-insumo .rh-cajas { font-size: 14px !important; white-space: normal; }' },
     { nombre: 'las cajas con interlineado de antes', de: 'font-weight: 800; line-height: 1 !important; white-space: nowrap; }', a: 'font-weight: 800; line-height: 1.1; white-space: nowrap; }' },
     { nombre: 'los espacios entre bloques de 8 px', de: 'flex-direction: column; gap: 3px; break-inside', a: 'flex-direction: column; gap: 8px; break-inside' },
     { nombre: 'la cabecera de 70 px', de: 'export const ALTO_LOGO_HOJA_PX = 56', a: 'export const ALTO_LOGO_HOJA_PX = 70' },

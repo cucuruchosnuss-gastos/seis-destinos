@@ -99,8 +99,9 @@ for (const [ancho, alto] of TAMANOS) {
     // La hoja muestra los lotes escritos.
     await expect(page.locator('#rt-hecho-imprimir')).toBeEnabled();
     await page.locator('#rt-hecho-imprimir').click();
-    await expect.poll(() => page.locator('#rt-impresion').innerHTML()).toContain('10430 ×30');
-    await expect(page.locator('#rt-impresion')).toContainText('10433 ×39');
+    // La hoja nueva (26/10/2026): "10430 (30) · 10433 (39)", la cantidad más chica.
+    await expect.poll(() => page.locator('#rt-impresion').innerHTML()).toContain('10430 <span class="rh-lote__cant">(30)</span>');
+    await expect(page.locator('#rt-impresion')).toContainText('10433 (39)');
     expect(errores, errores.join('\n')).toEqual([]);
   });
 

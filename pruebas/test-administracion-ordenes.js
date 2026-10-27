@@ -486,7 +486,7 @@ async function hojaArmada() { for (let i = 0; i < 30; i++) await new Promise(r =
     S.imprimirOrden()
     await hojaArmada()
     const h = S.__els.get('ad-impresion').innerHTML
-    chk('imprimir desde Administración lleva PRECIOS', S.__impresiones() === 1 && /PRECIO X CAJA/.test(h) && /\$ 30\.000,00/.test(h) && /rh-total__plata">\$ 46\.000,00/.test(h))
+    chk('imprimir desde Administración lleva PRECIOS', S.__impresiones() === 1 && /P\. UNIT\./.test(h) && /\$ 30\.000,00/.test(h) && /rh-total__plata">\$ 46\.000,00/.test(h))
     chk('con la misma hoja: dos copias y la leyenda', (h.match(/<section class="rh-copia/g) || []).length === 2 && /No válido como factura/.test(h))
     chk('con el logo de la empresa de la orden', /logo-cucuruchos-nuss\.png/.test(h) && /NUSS SRL/.test(h))
     chk('y quién la cargó', /Entregó: <strong>Emanuel Romero<\/strong>/.test(h))
@@ -497,7 +497,7 @@ async function hojaArmada() { for (let i = 0; i < 30; i++) await new Promise(r =
     T.imprimirOrden()
     await hojaArmada()
     const h = T.__els.get('ad-impresion').innerHTML
-    chk('sin valorizar, la hoja con precios dice "—" (nunca $ 0,00)', /PRECIO X CAJA/.test(h) && !/0,00/.test(h))
+    chk('sin valorizar, la hoja con precios dice "—" (nunca $ 0,00)', /P\. UNIT\./.test(h) && !/0,00/.test(h))
   }))
 }
 {
@@ -564,7 +564,7 @@ const LISTA_INS = [...LISTA, { presentacion_id: null, insumo_id: 'ins-h', precio
     const pv = S.parametrosValorizar(S.estado.orden)
     chk('se manda el precio de cada renglón, también el del insumo', pv.p_precios.i1 === 3000 && pv.p_precios.i3 === 100)
     const hoja = S.htmlHoja(S.ordenParaHoja(S.estado.orden), { conPrecios: true })
-    chk('la hoja con precios lleva el insumo con su cantidad', /Harina 000 · Molino/.test(hoja) && /25,5 kg/.test(hoja))
+    chk('la hoja con precios lleva el insumo con su cantidad', /rh-producto">Harina 000</.test(hoja) && /Molino/.test(hoja) && /25,5 kg/.test(hoja))
   }))
 }
 {

@@ -66,7 +66,10 @@ const FUNCIONES_BASE = [
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
   'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
-  'textoLotesHoja', 'faltanteDeRenglon', 'descripcionHoja', 'cantidadHoja', 'totalInsumosHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
+  'faltanteDeRenglon', 'descripcionHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
+  // La hoja nueva (26/10/2026): CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE.
+  'porCajaHoja', 'nombreConoHoja', 'conMayuscula', 'bultoInsumoHoja', 'descripcionCortaHoja', 'htmlDescripcionHoja', 'bultosHoja',
+  'cantidadColHoja', 'totalColHoja', 'htmlLotesHoja', 'rotuloTotalHoja', 'totalPesoHoja',
   // La impresión nueva (07/10/2026): medida, media hoja u hojas enteras.
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
   // Imprimir pegado al toque, por el iPhone (26/10/2026): del común y de la pantalla.
@@ -100,6 +103,7 @@ const CONSTANTES_BASE = [
   'MARCA_A_ELEGIR', 'TEXTO_FALTA_CONO', 'PASOS_RETIRO', 'COLOR_TAMANO_RETIRO', 'COLOR_INSUMO_RETIRO', 'TONOS_RETIRO', 'PALETA_CONO_RETIRO', 'TEXTO_SIN_SENAL', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
   'LINK_TRASPASO', 'ultimoOrigenDibujado', ...CONSTANTES_FR,
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'ESTILOS_LISTO',
+  'NOMBRE_BULTO_HOJA', 'POR_UNIDAD_HOJA', 'SIN_NOMBRE_DE_CONO',
   // Los insumos por bulto (23/10/2026), de js/cantidades.js
   ...CONSTANTES_CANTIDADES, 'DECIMALES_BULTOS_CARGA', ...CONSTANTES_PRECIO,
   'MOTIVOS_DEVOLUCION', 'LARGO_LOTE_DEVUELTO',

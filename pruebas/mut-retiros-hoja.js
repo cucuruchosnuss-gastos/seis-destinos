@@ -29,8 +29,8 @@ correrMutaciones({
     { nombre: 'el texto no lleva los insumos', de: '      lineas.push(`- ${cantidadInsumoBultoHoja(r.cantidad, r.unidad, r.contenido)} · ${nombreInsumoHoja(r)}${lotesI}`)\n', a: '' },
     { nombre: 'los lotes del insumo en cajas', de: '      return c === null || c === undefined || c === \'\' ? lote : `${lote} (${cantidadInsumoHoja(c, unidad)})`', a: '      return `${lote} (${enteroHoja(l?.cajas)})`' },
     // La hoja del diseño (29/09/2026): escapado
-    { nombre: "sin escHoja en el producto", de: "<td class=\"rh-producto\">${escHoja(descripcionHoja(r))}</td>", a: "<td class=\"rh-producto\">${descripcionHoja(r)}</td>" },
-    { nombre: "sin escHoja en la cantidad", de: "<td class=\"rh-num rh-cajas\">${escHoja(cantidadHoja(r))}</td>", a: "<td class=\"rh-num rh-cajas\">${cantidadHoja(r)}</td>" },
+    { nombre: "sin escHoja en el producto", de: "`<td class=\"rh-producto\">${escHoja(String(r?.producto ?? '').trim() || (r?.esInsumo ? 'Insumo' : '—'))}</td>`", a: "`<td class=\"rh-producto\">${String(r?.producto ?? '').trim() || (r?.esInsumo ? 'Insumo' : '—')}</td>`" },
+    // (26/10/2026: "sin escHoja en la cantidad" se fue: la CANT. de la hoja nueva es siempre un número.)
     { nombre: "sin escHoja en observaciones", de: "<strong>Observaciones:</strong> ${escHoja(obs)} ", a: "<strong>Observaciones:</strong> ${obs} " },
     { nombre: "sin escHoja en el faltante", de: "<strong>Faltante:</strong> ${escHoja(faltantes.join('; '))}", a: "<strong>Faltante:</strong> ${faltantes.join('; ')}" },
     { nombre: "sin escHoja en el detalle de anulada", de: "<span class=\"rh-anulada__detalle\">${escHoja(detalle)}</span>", a: "<span class=\"rh-anulada__detalle\">${detalle}</span>" },
@@ -38,15 +38,16 @@ correrMutaciones({
     { nombre: "el precio del insumo sin su unidad", de: "p === '—' || !u ? p : p + ' / ' + u", a: "p" },
     { nombre: "la leyenda legal se va", de: "    `<p class=\"rh-legal\">${escHoja(LEYENDA_LEGAL)}</p>` +", a: "    ``+" },
     { nombre: "sin el sello de anulada", de: "    (anulada ? htmlSelloAnulada(orden) : '') + `</section>`", a: "    `</section>`" },
-    { nombre: "los insumos suman al total de cajas de la hoja", de: "  return [...porUnidad.entries()].map(([u, n]) => cantidadInsumoHoja(n, u || null)).join(' + ')", a: "  return ''" },
-    { nombre: "el faltante no se nombra en los lotes", de: "    if (lote === LOTE_SIN_STOCK_HOJA) return `faltan ${cuanto(l)}`\n", a: "" },
-    { nombre: "sin cono no se dice", de: "(cono === 'Sin cono' ? 'sin cono' : cono)", a: "(cono === 'Sin cono' ? '' : cono)" },
+    { nombre: "los kilos de los insumos no se suman en la fila TOTAL", de: "  return ['kg', 'lt'].filter(u => suma[u] > 0).map(u => cantidadInsumoHoja(suma[u], u)).join(' + ')", a: "  return ''" },
+    // (26/10/2026: el faltante y el lote solo en la hoja nueva, en mut-retiros-hoja-nueva.js.)
+    // 26/10/2026: la hoja NUNCA dice "sin cono" (test-retiros-hoja-nueva.js).
+    { nombre: "vuelve a decir sin cono", de: "const SIN_NOMBRE_DE_CONO = new Set(['', '—', 'sin cono',", a: "const SIN_NOMBRE_DE_CONO = new Set(['', '—'," },
     // LA IMPRESIÓN NUEVA (07/10/2026): escapado
     { nombre: 'sin escHoja en los datos de la empresa', de: 'datos.map(d => `<span>${escHoja(d)}</span>`)', a: 'datos.map(d => `<span>${d}</span>`)' },
     { nombre: 'sin escHoja en el nombre del cliente', de: '<strong class="rh-cliente__nombre">${escHoja(nombre)}</strong>', a: '<strong class="rh-cliente__nombre">${nombre}</strong>' },
     { nombre: 'sin escHoja en la localidad', de: 'localidad ? `<span>${escHoja(localidad)}</span>`', a: 'localidad ? `<span>${localidad}</span>`' },
     { nombre: 'sin escHoja en el transporte', de: '<span>${escHoja(textoTransporteHoja(transporte))}</span>', a: '<span>${textoTransporteHoja(transporte)}</span>' },
-    { nombre: 'sin escHoja en el lote', de: '<td class="rh-lote">${escHoja(lotes)}</td>', a: '<td class="rh-lote">${lotes}</td>' },
+    { nombre: 'sin escHoja en el lote', de: '    if (lista.length === 1 || c === null || c === undefined || c === \'\') return escHoja(lote)', a: '    if (lista.length === 1 || c === null || c === undefined || c === \'\') return lote' },
     { nombre: 'sin escHoja en el precio', de: '<td class="rh-num rh-plata">${escHoja(p)}</td>', a: '<td class="rh-num rh-plata">${p}</td>' },
     { nombre: 'sin escHoja en el rótulo de la copia', de: '<span class="rh-titulo__copia">${escHoja(rotuloCopiaHoja(copia, pagina, paginas, entera))}</span>', a: '<span class="rh-titulo__copia">${rotuloCopiaHoja(copia, pagina, paginas, entera)}</span>' },
     // La hoja nueva: lo que tiene que decir
@@ -62,7 +63,7 @@ correrMutaciones({
     { nombre: 'una sola copia al imprimir', de: "export const COPIAS_IMPRESION = ['ORIGINAL', 'DUPLICADO']", a: "export const COPIAS_IMPRESION = ['ORIGINAL']" },
     // 26/10/2026: el PDF lleva las dos copias, como la impresión.
     { nombre: 'el PDF con una sola copia', de: "export const COPIAS_PDF = ['ORIGINAL', 'DUPLICADO']", a: "export const COPIAS_PDF = ['ORIGINAL']" },
-    { nombre: 'un lote solo repite su cantidad', de: '    return lista.length === 1 ? lote : ', a: '    return false ? lote : ' },
+    // (26/10/2026: el faltante y el lote solo en la hoja nueva, en mut-retiros-hoja-nueva.js.)
     { nombre: 'el producto se corta con "…"', de: '.rh-tabla td { font-size: 14px; padding: 2px 6px; border-bottom: 1px solid #000; line-height: 1.15; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }', a: '.rh-tabla td { font-size: 14px; padding: 2px 6px; border-bottom: 1px solid #000; line-height: 1.15; vertical-align: top; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' },
     { nombre: 'la leyenda se puede partir', de: '.rh-legal { margin: 0; font-size: 12px; text-align: center; white-space: nowrap; }', a: '.rh-legal { margin: 0; font-size: 12px; text-align: center; }' },
     { nombre: 'el logo a color', de: ' filter: grayscale(1); }', a: ' }' },

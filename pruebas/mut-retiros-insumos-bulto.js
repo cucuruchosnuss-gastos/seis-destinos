@@ -13,12 +13,12 @@ correrMutaciones({
   funciones: [],
   manuales: [
     { nombre: 'el catálogo no trae la vista',
-      de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true)",
-      a: ".select('id, nombre, marca, categoria, unidad_medida, contenido_bulto').eq('activo', true)" },
+      de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto, nombre_bulto').eq('activo', true)",
+      a: ".select('id, nombre, marca, categoria, unidad_medida, contenido_bulto, nombre_bulto').eq('activo', true)" },
     // El catálogo manda (24/10/2026): insumos.contenido_bulto
     { nombre: 'no se lee insumos.contenido_bulto (sin stock:ver, todo por kg)',
-      de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto').eq('activo', true)",
-      a: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida').eq('activo', true)" },
+      de: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto, nombre_bulto').eq('activo', true)",
+      a: ".select('id, nombre, marca, categoria, unidad_medida, vista_preferida, nombre_bulto').eq('activo', true)" },
     { nombre: 'el catálogo no cuenta: el contenido sale solo del stock',
       de: '        i.contenido = delCatalogo.get(i.id) ?? contenidos?.get(i.id) ?? null',
       a: '        i.contenido = contenidos?.get(i.id) ?? null' },
@@ -71,7 +71,7 @@ correrMutaciones({
       de: "      const cuanto = o.grupo === 'insumos' ? cantidadRenglon({ insumoId: o.insumoId, unidad: o.unidad }, o.stock) : `${enteroHoja(o.stock)} cajas`",
       a: "      const cuanto = o.grupo === 'insumos' ? cantidadInsumoHoja(o.stock, o.unidad) : `${enteroHoja(o.stock)} cajas`" },
     { nombre: 'la hoja no sabe lo que trae un bulto',
-      de: '            contenido: contenidoParaHoja(r.insumo_id, r.unidad_medida) }',
-      a: '            contenido: null }' },
+      de: '            contenido: contenidoParaHoja(r.insumo_id, r.unidad_medida), nombreBulto:',
+      a: '            contenido: null, nombreBulto:' },
   ],
 })

@@ -25,7 +25,7 @@
 //    lo escrito por bulto viaja por kg (18.000 la bolsa de 25 → 720), y el
 //    subtotal es el de la base;
 //  - un renglón cuyos lotes tienen dos presentaciones va por kg;
-//  - la hoja con precios: "4 bultos de 25 kg (100 kg)" y "$ 17.500,00 /
+//  - la hoja con precios (la nueva, 26/10/2026): "Júpiter · bulto de 25 kg", 100 kg y "$ 17.500,00 /
 //    bulto";
 //  - la lista de precios: la tarjeta dice "$ 17.500,00 el bulto de 25 kg
 //    ($ 700,00 por kg)", el editor pide "Precio por bulto de 25 kg" y guarda
@@ -208,7 +208,7 @@ function conCatalogoReal(S) {
     chk('bolsa de 30 kg guardada 583,33: se ve $ 17.500,00, no 17.499,90', h.includes('$ 17.500,00 x bulto de 30 kg') && !h.includes('17.499,9'))
     chk('azúcar sin movimientos que se vean: usa el contenido de la empresa (50 kg)', h.includes('1 bulto de 50 kg · Azúcar') && h.includes('$ 17.500,00 x bulto de 50 kg'))
     const hoja = nb(S.htmlHoja(S.ordenParaHoja(S.estado.orden), { conPrecios: true }))
-    chk('la hoja: "4 bultos de 25 kg (100 kg)"', hoja.includes('4 bultos de 25 kg (100 kg)'))
+    chk('la hoja: CANT. 4, "Júpiter · bulto de 25 kg" y TOTAL 100 kg', hoja.includes('rh-cajas">4</td><td class="rh-producto">Harina 000</td><td class="rh-desc">Júpiter · bulto de 25 kg</td><td class="rh-num rh-tot">100 kg</td>'), hoja.slice(hoja.indexOf('Harina 000') - 80, hoja.indexOf('Harina 000') + 200))
     chk('la hoja: "$ 17.500,00 / bulto"', hoja.includes('$ 17.500,00 / bulto'))
     chk('la hoja: la lecitina sigue "/ kg"', hoja.includes('$ 4.200,00 / kg'))
     chk('la hoja: la bolsa de 30 kg tampoco dice 17.499,90', !hoja.includes('17.499,9'))
