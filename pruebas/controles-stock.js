@@ -45,6 +45,8 @@ const RETIRADOS = {
   'data:data-unidad-hist': 'el chip de unidad del historial: ' + MOTIVO_BARRA,
   'control:button[data-unidad-merma][type=button]': 'el chip de unidad de mermas: ' + MOTIVO_BARRA,
   'data:data-unidad-merma': 'el chip de unidad de mermas: ' + MOTIVO_BARRA,
+  'id:btn-enviar-transferencia': 'el botón de crear transferencias nuevas de insumos (\'Enviar a otra unidad\'): lo reemplaza \'Mandar a otra empresa del grupo\' (#btn-mandar-grupo), una orden de retiro a la otra empresa que lleva también producto terminado (26/10/2026, rama ci-prueba/mandar-a-otra-empresa); el modal sigue en el código y ver / aceptar / rechazar las pendientes sigue igual',
+  'control:button#btn-enviar-transferencia[type=button]': 'el mismo botón (ver arriba)',
 }
 
 // Controles que SIGUEN estando pero aparecen MENOS veces: clave → [cuántas
