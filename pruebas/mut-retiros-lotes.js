@@ -39,7 +39,8 @@ correrMutaciones({
     { nombre: 'el cono no va en el nombre', de: "nombre: `${base.nombre} · ${cono}`,", a: 'nombre: base.nombre,' },
     { nombre: 'sin stock por cono no se dice "entre todos los conos"', de: "con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: stockPres, entreConos: true })", a: "con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: stockPres })" },
     { nombre: '"sin stock" no se marca en bordó', de: '? `<span class="rt-opcion__sin-stock">sin stock</span>`', a: '? `<span>sin stock</span>`' },
-    { nombre: 'no se dice la pista de buscar', de: "      const pista = q || devolucion ? '' : '<p class=\"rt-pista\">Escribí para buscar también lo que no tiene stock.</p>'", a: "      const pista = ''" },
+    // 26/10/2026: la pista cambia de texto sin control de stock (la fábrica sin control).
+    { nombre: 'no se dice la pista de buscar', de: "      const pista = q || devolucion ? '' :", a: "      const pista = true ? '' :" },
     { nombre: 'la opción con cono no lleva el cono', de: ' data-marca="${esc(marca)}"${titulo}>${cuerpo}</button>`', a: '${titulo}>${cuerpo}</button>`' },
     { nombre: 'elegir la opción no toma la presentación', de: '      if (pr) {\n        r.presentacionId = pr.id', a: '      if (false) {\n        r.presentacionId = pr.id' },
     { nombre: 'elegir la opción no toma el cono', de: "        r.marcaId = r.conCono && marcaId && marcaId !== MARCA_A_ELEGIR ? marcaId : null", a: '        r.marcaId = null' },
@@ -67,7 +68,8 @@ correrMutaciones({
     { nombre: 'no se dice cuánto falta asignar', de: 'rt-lotes__falta">Falta asignar ${esc(cantidadRenglon(r, a.falta))}</span>`', a: 'rt-lotes__falta">Falta asignar</span>`' },
     { nombre: 'no se dice el total pedido', de: '`<em>de ${esc(r.insumoId ? cantidadInsumoHoja(a.pedido, r.unidad) : enteroHoja(a.pedido))}</em></span></div>`', a: '`</span></div>`' },
     { nombre: 'lo que falta asignar con lugar no bloquea', de: "      if (a.falta > 0 && !a.sinLugar) return", a: '      if (false) return' },
-    { nombre: 'asignar de más no bloquea', de: '      if (a.falta < 0) return `asignaste', a: '      if (false) return `asignaste' },
+    // 26/10/2026: la de los lotes escritos (sin control) dice lo mismo; esta es la de los lotes con stock.
+    { nombre: 'asignar de más no bloquea', de: '      if (a.falta < 0) return `asignaste ${cantidadRenglon(r, -a.falta)} de más a los lotes`\n      if (a.falta > 0 && !a.sinLugar)', a: '      if (false) return `asignaste ${cantidadRenglon(r, -a.falta)} de más a los lotes`\n      if (a.falta > 0 && !a.sinLugar)' },
     { nombre: 'un lote que no está en la lista se cuenta', de: "      const porLote = (Array.isArray(lista) ? lista : []).map(l => {", a: "      const porLote = [...(Array.isArray(lista) ? lista : []), ...Object.keys(asignados).filter(k => !(lista ?? []).some(l => l.lote === k)).map(k => ({ lote: k, saldo: 1e9 }))].map(l => {" },
     { nombre: 'sinLugar mira un solo lote', de: '      const sinLugar = porLote.every(l => l.q >= l.saldo)', a: '      const sinLugar = porLote.some(l => l.q >= l.saldo)' },
     // El payload con 'lotes'
