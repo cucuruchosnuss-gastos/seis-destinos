@@ -146,6 +146,9 @@ chk('corre en la imagen oficial de Playwright', !!imagen, imagen)
 chk('… de la misma versión que @playwright/test en package-lock.json', imagen === versionPw, `imagen ${imagen}, proyecto ${versionPw}`)
 chk('… con --ipc=host (lo pide Playwright para Chromium en un contenedor)', /^ {6}options: --ipc=host$/m.test(sinComentarios))
 chk('en Ubuntu 24.04 fijo', /^ {4}runs-on: ubuntu-24\.04$/m.test(sinComentarios))
+// 27/10/2026: en el contenedor el shell predeterminado es sh; el paso de las
+// credenciales usa ${!v} (bash) y en main dio exit 2.
+chk('los pasos corren con bash (en el contenedor el predeterminado es sh)', /^ {4}defaults:\n {6}run:\n {8}shell: bash$/m.test(sinComentarios))
 chk('Chromium y WebKit, sin --with-deps (nada de apt)', /npx playwright install chromium webkit/.test(sinComentarios) && !/--with-deps/.test(sinComentarios))
 const pasoNavegadores = (sinComentarios.match(/- name: Chromium y WebKit[^\n]*\n(?: {8}[^\n]*\n)+/) || [''])[0]
 const topePaso = Number((pasoNavegadores.match(/^ {8}timeout-minutes: (\d+)$/m) || [])[1])

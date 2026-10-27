@@ -45,6 +45,7 @@ correrMutacionesEnVarios([
       { nombre: 'la imagen de otra versión', de: 'image: mcr.microsoft.com/playwright:v1.63.0-noble', a: 'image: mcr.microsoft.com/playwright:v1.62.0-noble' },
       { nombre: 'sin la imagen', de: '    container:\n      image: mcr.microsoft.com/playwright:v1.63.0-noble\n      options: --ipc=host\n', a: '' },
       { nombre: 'sin --ipc=host', de: '      options: --ipc=host\n', a: '' },
+      { nombre: 'sin bash (el contenedor usa sh)', de: '    defaults:\n      run:\n        shell: bash\n', a: '' },
       { nombre: 'vuelve a ubuntu-latest', de: '    runs-on: ubuntu-24.04', a: '    runs-on: ubuntu-latest' },
       { nombre: 'el paso de los navegadores sin su tope', de: '        timeout-minutes: 8\n', a: '' },
       { nombre: 'el paso de los navegadores con el tope del trabajo', de: '        timeout-minutes: 8\n', a: '        timeout-minutes: 30\n' },
