@@ -311,6 +311,10 @@ const CAMBIADOS_A_PROPOSITO = {
     // vista #vista-terminado de Stock (test-stock-entrada.js y
     // test-stock-terminado.js miran el botón nuevo).
     'control:a#btn-entrada-terminado[href=produccion-gestion.html?vista=stock&amp;desde=stock]': 'pasó a <button id="btn-entrada-terminado">',
+    // Rama mandar-a-otra-empresa (26/10/2026): "Enviar a otra unidad" se fue;
+    // lo reemplaza "Mandar a otra empresa del grupo" (test-stock-mandar-grupo.js).
+    'id:btn-enviar-transferencia': 'reemplazado por #btn-mandar-grupo',
+    'control:button#btn-enviar-transferencia[type=button]': 'reemplazado por #btn-mandar-grupo',
   },
   'administracion.html': {
     // Rama cheques-importe-completo (24/10/2026): la base mete SIEMPRE el

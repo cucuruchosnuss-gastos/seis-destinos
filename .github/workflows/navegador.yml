@@ -36,7 +36,17 @@ concurrency:
 jobs:
   navegador:
     name: Navegador ${{ matrix.mitad }}/2
-    runs-on: ubuntu-latest
+    # 26/10/2026: la instalación de Chromium y WebKit CON SUS DEPENDENCIAS
+    # (apt-get) se colgó en una de las dos máquinas cuatro veces en el día, en
+    # ubuntu-latest y en 24.04, con tope y con reintento. El trabajo corre
+    # adentro de la imagen oficial de Playwright, que ya trae los navegadores y
+    # todo lo del sistema: no se instala nada con apt. La versión de la imagen
+    # es la de @playwright/test en package-lock.json (lo controla
+    # test-navegador-en-dos.js).
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
     timeout-minutes: 30
     strategy:
       # Si una mitad falla, la otra termina igual: así se ven todas las fallas.
@@ -66,8 +76,12 @@ jobs:
           cache: npm
       - run: npm ci
       # WebKit es el iPhone de e2e/filtros-dispositivos.spec.js (04/10/2026) y
-      # de e2e/detalles-dispositivos.spec.js (05/10/2026).
-      - run: npx playwright install --with-deps chromium webkit
+      # de e2e/detalles-dispositivos.spec.js (05/10/2026). La imagen ya los
+      # trae; esto solo baja los navegadores (sin apt) si alguna vez la versión
+      # de la imagen y la del proyecto no coinciden. Con tope, por las dudas.
+      - name: Chromium y WebKit (vienen en la imagen)
+        timeout-minutes: 8
+        run: npx playwright install chromium webkit
       - name: ¿Están las credenciales del robot?
         run: |
           if [ "$GITHUB_REF" != "refs/heads/main" ]; then

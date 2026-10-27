@@ -2,7 +2,8 @@
 // falso, sin credenciales), a 390, 360, tablet (768 × 1024) y 1280 px:
 //  - LA CARGA (retiros.html, datos `retiros-entre-empresas`): al elegir el
 //    cliente "DOLCE PASTA SRL" (unidad_grupo_id = Dolce Pasta) se ve "Entre
-//    empresas: lo que sale entra al stock de Dolce Pasta" y NO se ofrece
+//    empresas…" (desde el 26/10/2026, "Va al stock de Dolce Pasta con los
+//    mismos lotes") y NO se ofrece
 //    "Devolución de mercadería"; el resumen lo repite, a la base va lo de
 //    siempre y la orden confirmada dice adónde entró. Con otro cliente, la
 //    devolución vuelve.
@@ -52,7 +53,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     // (en el celular la tarjeta del cliente no se ve en ese paso) y sin devolución.
     await page.locator('#rt-cliente-buscar').fill('dolce');
     await page.locator('[data-cliente="c-dp"]').first().click();
-    const TEXTO = 'Entre empresas: lo que sale entra al stock de Dolce Pasta';
+    const TEXTO = 'Va al stock de Dolce Pasta con los mismos lotes';
     const avisoPaso = page.locator(ancho < 1024 ? '#rt-aviso-entre-catalogo' : '#rt-aviso-entre');
     await expect(avisoPaso).toBeVisible();
     await expect(avisoPaso).toHaveText(TEXTO);
@@ -76,7 +77,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await captura(page, `entre-empresas-orden-${nombre}`, info);
     await page.locator('#rt-revisar').click();
     await expect(page.locator('#rt-vista-resumen')).toBeVisible();
-    await expect(page.locator('#rt-resumen .rt-aviso-entre')).toHaveText('Entre empresas: lo que sale entra al stock de Dolce Pasta');
+    await expect(page.locator('#rt-resumen .rt-aviso-entre')).toHaveText('Va al stock de Dolce Pasta con los mismos lotes');
     expect(await sinCostado(page), 'sin scroll de costado en el resumen').toBe(true);
     await page.locator('#rt-confirmar').click();
     await expect(page.locator('#rt-hecho')).toContainText('N-0042');
