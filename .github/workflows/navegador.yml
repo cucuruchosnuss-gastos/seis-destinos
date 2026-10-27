@@ -47,6 +47,12 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
+    # Adentro de un contenedor el shell de los "run" es sh, no bash: el paso de
+    # las credenciales del robot usa ${!v} (solo bash) y en main dio "exit 2"
+    # (27/10/2026; en las ramas sale antes de llegar a esa línea).
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 30
     strategy:
       # Si una mitad falla, la otra termina igual: así se ven todas las fallas.
