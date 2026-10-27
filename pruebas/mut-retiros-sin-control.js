@@ -27,8 +27,8 @@ correrMutaciones({
     { nombre: 'sinControl aunque no se pueda leer', de: "      cat.sinControl = !u.error && u.data?.controla_stock_terminado === false", a: "      cat.sinControl = !!u.error || u.data?.controla_stock_terminado === false" },
     { nombre: 'controla_stock_terminado de cualquier fábrica', de: ".select('controla_stock_terminado').eq('id', unidadId).maybeSingle()", a: ".select('controla_stock_terminado').maybeSingle()" },
     // ── El catálogo ────────────────────────────────────────────────────
-    { nombre: 'sin control igual muestra el stock', de: "const stockPres = cat?.sinControl === true || pr.stock_cajas === null", a: "const stockPres = pr.stock_cajas === null" },
-    { nombre: 'sin control, con cono, por cono con stock', de: "        if (cat?.sinControl === true) { con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: null }); continue }\n", a: '' },
+    { nombre: 'sin control igual muestra el stock', de: "const libre = cat?.sinControl === true || pr.sin_stock === true", a: "const libre = pr.sin_stock === true" },
+    { nombre: 'sin control, con cono, por cono con stock', de: "        if (libre) { con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: null }); continue }\n", a: '' },
     { nombre: 'la pista de siempre también sin control', de: "${cat?.sinControl === true ? 'Escribí para buscar también los insumos sin stock.' : 'Escribí para buscar también lo que no tiene stock.'}", a: 'Escribí para buscar también lo que no tiene stock.' },
     // ── Cuándo se escriben los lotes ───────────────────────────────────
     { nombre: 'también los insumos se escriben a mano', de: '      return !!r && !r.insumoId && !!r.presentacionId && saleDelStock(r) && sinControlStock()', a: '      return !!r && (!!r.insumoId || !!r.presentacionId) && saleDelStock(r) && sinControlStock()' },
@@ -56,8 +56,8 @@ correrMutaciones({
     { nombre: 'viajan los lotes sin normalizar', de: '        .map(f => ({ lote: normalizarLoteMano(f.lote), cajas: cajasDeFila(f) }))', a: '        .map(f => ({ lote: f.lote, cajas: cajasDeFila(f) }))' },
     // ── Los textos ─────────────────────────────────────────────────────
     { nombre: 'sin lotes no avisa "Va sin lote"', de: '<span class="rt-estado-lotes rt-estado-lotes--falta">Va sin lote</span>', a: '<span class="rt-estado-lotes rt-estado-lotes--falta"></span>' },
-    { nombre: 'la tarjeta dice "de los más viejos" sin control', de: "      const sinLotes = a.aMano ? 'va sin lote' : 'de los lotes más viejos'", a: "      const sinLotes = 'de los lotes más viejos'" },
-    { nombre: 'el resumen dice "De los más viejos" sin control', de: "          : (a.aMano ? 'Va sin lote' : 'De los lotes más viejos')", a: "          : 'De los lotes más viejos'" },
+    { nombre: 'la tarjeta dice "de los más viejos" sin control', de: "      const sinLotes = a.aMano || a.sinStock ? 'va sin lote' : 'de los lotes más viejos'", a: "      const sinLotes = a.sinStock ? 'va sin lote' : 'de los lotes más viejos'" },
+    { nombre: 'el resumen dice "De los más viejos" sin control', de: "          : (a.aMano || a.sinStock ? 'Va sin lote' : 'De los lotes más viejos')", a: "          : (a.sinStock ? 'Va sin lote' : 'De los lotes más viejos')" },
     { nombre: 'la tarjeta y el resumen no muestran los lotes escritos', de: '      const a = asignacionDe(r)\n      // Sin lotes: de los más viejos', a: '      const a = asignacion(r, listaLotesDe(r))\n      // Sin lotes: de los más viejos' },
     { nombre: 'el pie sin lo que falta', de: '`<span class="rt-estado-lotes rt-lotes__falta">faltan ${esc(cantidadRenglon(r, a.falta))}</span>`', a: "''" },
   ],
