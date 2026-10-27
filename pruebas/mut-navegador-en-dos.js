@@ -39,7 +39,12 @@ correrMutacionesEnVarios([
       { nombre: 'cortar la corrida empezada', de: '  cancel-in-progress: false\n\njobs:', a: '  cancel-in-progress: true\n\njobs:' },
       { nombre: 'la clave del robot llega a las ramas', de: "E2E_SERVICE_ROLE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.E2E_SERVICE_ROLE_KEY || '' }}", a: 'E2E_SERVICE_ROLE_KEY: ${{ secrets.E2E_SERVICE_ROLE_KEY }}' },
       { nombre: 'tope de 60 minutos', de: 'timeout-minutes: 30', a: 'timeout-minutes: 60' },
-      { nombre: 'sin WebKit', de: 'chromium webkit', a: 'chromium' },
+      { nombre: 'sin WebKit', de: 'chromium webkit; then', a: 'chromium; then' },
+      // La instalación con tope y reintento (26/10/2026).
+      { nombre: 'la instalación sin su tope', de: '        timeout-minutes: 20\n', a: '' },
+      { nombre: 'la instalación con el tope del trabajo', de: '        timeout-minutes: 20\n', a: '        timeout-minutes: 30\n' },
+      { nombre: 'un solo intento', de: '          for i in 1 2 3; do\n', a: '          for i in 1; do\n' },
+      { nombre: 'cada intento sin tope', de: 'if timeout 360 npx playwright install', a: 'if npx playwright install' },
       { nombre: 'otro nombre de workflow', de: 'name: Navegador\n\non:', a: 'name: Navegador en dos\n\non:' },
       { nombre: 'sin las ramas ci-prueba', de: "branches: [main, 'ci-prueba/**']", a: 'branches: [main]' },
       { nombre: 'sin la noche', de: "    - cron: '0 8 * * *'\n", a: '' },

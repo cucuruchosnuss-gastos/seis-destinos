@@ -132,9 +132,16 @@ chk('la matriz tiene una entrada por mitad (1 y 2)', JSON.stringify(valores) ===
 chk('fail-fast: false (una mitad que falla no corta la otra)', /^\s+fail-fast: false$/m.test(sinComentarios))
 chk('cada trabajo recibe su mitad en E2E_MITAD', /^\s+E2E_MITAD: \$\{\{ matrix\.mitad \}\}$/m.test(sinComentarios))
 chk('el nombre de cada trabajo dice su mitad', new RegExp(`^\\s+name: Navegador \\$\\{\\{ matrix\\.mitad \\}\\}/${MITADES}$`, 'm').test(sinComentarios))
-const timeouts = [...sinComentarios.matchAll(/timeout-minutes: (\d+)/g)].map(m => Number(m[1]))
+// El del trabajo va a 4 espacios; el de un paso, más adentro (26/10/2026: la
+// instalación de los navegadores tiene su propio tope, ver abajo).
+const timeouts = [...sinComentarios.matchAll(/^ {4}timeout-minutes: (\d+)$/gm)].map(m => Number(m[1]))
 chk('un tope por trabajo, de 30 minutos o menos', timeouts.length === 1 && timeouts[0] > 0 && timeouts[0] <= 30, timeouts)
 chk('instala Chromium y WebKit', /npx playwright install --with-deps chromium webkit/.test(sinComentarios))
+// 26/10/2026: la instalación se colgó dos veces hasta el tope del trabajo.
+const pasoInstalar = (sinComentarios.match(/- name: Instalar Chromium y WebKit[^\n]*\n(?: {8}[^\n]*\n)+/) || [''])[0]
+const topePaso = Number((pasoInstalar.match(/^ {8}timeout-minutes: (\d+)$/m) || [])[1])
+chk('la instalación tiene su propio tope, menor que el del trabajo', topePaso > 0 && topePaso < timeouts[0], pasoInstalar)
+chk('… cada intento con su tope (timeout) y se reintenta', /for i in 1 2 3; do/.test(pasoInstalar) && /timeout \d+ npx playwright install --with-deps chromium webkit/.test(pasoInstalar), pasoInstalar)
 chk('corre Playwright con npm run e2e', /^\s+run: npm run e2e$/m.test(sinComentarios))
 chk('un artefacto por mitad, con nombre distinto', /^\s+name: capturas-\$\{\{ matrix\.mitad \}\}$/m.test(sinComentarios))
 chk('… que se sube aunque falle', /if: always\(\)\n\s+with:\n\s+name: capturas-/.test(sinComentarios))
