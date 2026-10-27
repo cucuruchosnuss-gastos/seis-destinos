@@ -23,6 +23,9 @@
 //
 // Publicada por Claude el 02/10/2026 después de auditarla (rama
 // ci-prueba/cobranzas-cuatro-botones, 0d73a72), con sus DOS archivos.
+// v2 (27/10/2026, chat de la base): tickets de depósito en efectivo, fotos de
+// pantalla, PDF con formato inglés, importe sin la comisión, y los campos nuevos
+// medio, destinatario y cbu_destino (la pantalla puede ignorarlos).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { TIPOS, mimeDe, normalizarRespuesta, rutaValida } from './normalizar.js'
@@ -37,9 +40,8 @@ const BYTES_MAXIMO = 10 * 1024 * 1024
 
 const REGLAS_COMUNES = `REGLAS:
 - Es un comprobante ARGENTINO: captura de pantalla de un home banking o de una
-  billetera (Macro, Nación, Santander, Galicia, BBVA, Provincia, Credicoop,
-  ICBC, Brubank, Ualá, Mercado Pago, Naranja X, Personal Pay, Modo, etc.) o un
-  PDF que bajó el banco.
+  billetera, un PDF que bajó el banco, una foto de la pantalla o un ticket de
+  papel del banco.
 - Leé por SIGNIFICADO, no por posición: cada banco ubica los datos distinto.
 - Si un dato no se ve o no estás seguro, usá null. NUNCA inventes ni completes
   un dígito que no ves. Un null se corrige en segundos; un dato inventado puede
@@ -52,20 +54,48 @@ const REGLAS_COMUNES = `REGLAS:
 - Si el archivo trae VARIOS comprobantes, uno por cada uno, de arriba hacia
   abajo.`
 
-const PROMPT_TRANSFERENCIA = `En el archivo hay uno o más COMPROBANTES DE TRANSFERENCIA BANCARIA que un
-cliente le mandó a la empresa como pago. Extraé los datos de CADA comprobante.
+const PROMPT_TRANSFERENCIA = `En el archivo hay uno o más COMPROBANTES DE PAGO que un cliente le mandó a la
+empresa: transferencias bancarias o depósitos. Extraé los datos de CADA uno.
+
+PUEDEN VENIR ASÍ (27/10/2026, casos reales):
+- Captura del celular de un home banking o billetera (BNA+, Macro, Mercado Pago,
+  Santander, Galicia, Brubank, Ualá, Naranja X, Modo, Personal Pay, etc.).
+- PDF que baja el banco ("Transferencia a terceros", "Comprobante de
+  transferencia"), a veces con importes en formato inglés: "$ 813,174.25" es
+  813174.25.
+- FOTO de la pantalla de una computadora mostrando el comprobante: puede estar
+  torcida, con reflejos o con la barra de Windows abajo. Leé solo el comprobante.
+- TICKET de papel de un cajero automático o de la caja del banco, por ejemplo
+  "DEPÓSITO EFECTIVO EN CUENTA" (fecha, hora, terminal, operación, titular,
+  importe). Un depósito en efectivo NO tiene ordenante: ordenante = null.
+- Un comprobante donde solo figura el DESTINATARIO (la empresa) y no quién
+  transfirió: ordenante = null. NUNCA pongas a la empresa que recibe como
+  ordenante.
+
+LA EMPRESA QUE RECIBE es la del grupo: PAZ MIRTA (CUIT 20924106795, Banco Macro,
+CBU 2850324830094103159311), DOLCE PASTA SRL (CUIT 33709335419) u otra del grupo.
+Ese es el DESTINATARIO, no el ordenante.
 
 QUÉ BUSCAR:
-- importe: el monto transferido.
-- fecha: la fecha de la transferencia (no la de impresión del comprobante).
-- banco_origen: el banco o la billetera DESDE donde se hizo (el del logo o el
-  "Cuenta origen"; si no se ve, null).
-- ordenante: quién transfirió (nombre o razón social del "Titular", "Origen",
-  "Ordenante" o "De").
-- cuit_ordenante: el CUIT o CUIL de quien transfirió.
-- referencia: el NÚMERO DE OPERACIÓN o de comprobante ("N° de operación",
-  "Número de control", "ID de transacción", "Código de referencia"). Tal cual,
-  como texto.
+- medio: "transferencia" o "deposito_efectivo" (ticket de depósito en efectivo).
+- importe: el monto que LLEGA a la cuenta de la empresa: "Monto", "Importe",
+  "Importe a transferir". Si el comprobante suma comisión e IVA de la comisión
+  ("Importe Total" = importe + comisión + IVA), el importe es el de ANTES de la
+  comisión, y la comisión va en notas.
+- fecha: la fecha de la operación (no la de impresión).
+- banco_origen: el banco o billetera DESDE donde se pagó (logo, "Cuenta origen",
+  la billetera del ordenante como "Mercado Pago"). En un depósito, el banco donde
+  se depositó.
+- ordenante: quién pagó ("Ordenante", "Origen", "De", "Titular" de la cuenta
+  origen). Puede ser una persona distinta del cliente (un empleado o un familiar
+  que transfiere por él): ponela tal cual.
+- cuit_ordenante: el CUIT o CUIL de quien pagó.
+- referencia: el número de operación o de transacción ("N° de operación",
+  "Número de transacción", "Nro. de Referencia", "Operación", "Código de
+  identificación"). Si hay varios, el "N° de operación" o "Número de
+  transacción"; los otros, en notas.
+- destinatario: el titular de la cuenta que recibe.
+- cbu_destino: el CBU de la cuenta que recibe, si se ve (22 dígitos).
 
 ${REGLAS_COMUNES}
 
@@ -73,13 +103,16 @@ Respondé ÚNICAMENTE con este JSON, sin texto antes ni después:
 {
   "comprobantes": [
     {
+      "medio": "transferencia" | "deposito_efectivo",
       "importe": número | null,
       "fecha": "YYYY-MM-DD" | null,
       "banco_origen": "texto" | null,
       "ordenante": "texto" | null,
       "cuit_ordenante": "11 dígitos" | null,
       "referencia": "texto" | null,
-      "notas": "cualquier duda de lectura, breve" | null
+      "destinatario": "texto" | null,
+      "cbu_destino": "22 dígitos" | null,
+      "notas": "cualquier duda de lectura, la comisión si la hay, breve" | null
     }
   ]
 }`
