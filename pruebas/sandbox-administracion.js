@@ -12,6 +12,26 @@ const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
 const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
+// Los acopios, la cuenta en el grupo, "(también en Nuss)" y valorizar con la
+// lista de otra empresa (27/10/2026). Van todas a la base: las llaman la
+// portada, la cuenta del cliente, valorizar y la revisión de un remito.
+const FUNCIONES_ACOPIOS = [
+  'leerPrincipales', 'textoTambienEn', 'unidadListaDeOtraEmpresa', 'presentacionEnUnidad', 'leerPrecioVentaEn',
+  'acopiosVacio', 'acopiosEnEmpresa', 'asegurarAcopiosEmpresa', 'leerAcopios', 'estadoAcopio', 'cajasAcopio', 'textoQuedanAcopio', 'porcentajeAcopio',
+  'nombreProductoAcopio', 'papelesAcopio', 'htmlBarraAcopio', 'htmlSelloEstadoAcopio', 'htmlTarjetaAcopio', 'acopiosFiltrados', 'htmlFiltroAcopios',
+  'htmlListaAcopios', 'puedeCargarAcopio', 'pintarAcopios', 'mostrarAcopios', 'cargarAcopios', 'contarAcopiosPortada', 'contenidoSeccionAcopios',
+  'nuevoAcopioVacio', 'abrirNuevoAcopio', 'htmlClientesAcopio', 'htmlClienteAcopio', 'htmlOpcionesAcopio', 'htmlMarcasAcopio', 'htmlProductoAcopio',
+  'importeAcopio', 'textoTotalAcopio', 'htmlNuevoAcopio', 'enlazarNuevoAcopio', 'errorNuevoAcopio', 'parametrosCrearAcopio', 'guardarNuevoAcopio',
+  'accionAcopios', 'elegirClienteAcopio', 'elegirProductoAcopio', 'elegirMarcaAcopio', 'alTocarAcopios', 'alEscribirAcopios', 'alCambiarAcopios',
+  'acopioDe', 'leerMovimientosAcopio', 'leerAnulacionAcopio', 'abrirAcopio', 'htmlMovimientoAcopio', 'puedeAnularAcopio', 'htmlAnularAcopio',
+  'htmlDetalleAcopio', 'pintarAcopio', 'confirmarAnularAcopio', 'alTocarAcopio', 'alEscribirAcopio', 'volverDeAcopio',
+  'cargarAcopiosCliente', 'htmlAcopiosCliente', 'cargarCuentaGrupo', 'nombreEmpresaGrupo', 'htmlCuentaGrupo',
+  'claveAcopio', 'cargarAcopiosRemito', 'saldoAcopioRemito', 'htmlSaldoAcopioRemito', 'pintarAcopiosRemito',
+  // Lo de la Carga que usan "Nuevo acopio" y el saldo en el remito.
+  'presentacionRemito', 'productoDePresentacionRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
+  'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
+]
+
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
   'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles', 'moduloVisible',
@@ -206,6 +226,8 @@ const FUNCIONES_BASE = [
   'sinControlStockEmpresa', 'leerSinControl', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio', 'numeroRemitoN', 'ordenarPorRemito',
   'ordenesVisibles', 'htmlTalonariosOrdenes', 'elegirTalonarioOrdenes', 'htmlFilaOrdenRemito', 'remitosPorRevisar', 'leerRemitosPrecarga',
   'cargarRemitosPrecarga', 'amarillosDe', 'nombreClienteRemito', 'htmlTarjetaRemito', 'htmlRemitosPrecarga', 'pintarRemitosPrecarga',
+  // Los acopios, la cuenta en el grupo y la lista de otra empresa (27/10/2026)
+  ...FUNCIONES_ACOPIOS,
 ]
 
 const CONSTANTES_BASE = [
@@ -249,6 +271,8 @@ const CONSTANTES_BASE = [
   'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
   // Los remitos precargados de Rosario (27/10/2026)
   'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO',
+  // Los acopios (27/10/2026)
+  'ESTADOS_ACOPIO', 'LARGO_NUMERO_ACOPIO', 'GRUPOS_REMITO',
 ]
 
 const PRELUDIO = `
@@ -304,6 +328,7 @@ const PRELUDIO = `
   var turnoPrestamos = 0
   var turnoPrestamo = 0
   var turnoVolver = 0
+  var turnoAcopios = 0, turnoAcopio = 0
   // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
   var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }
@@ -400,6 +425,22 @@ const OPCIONALES_FN = {
 const OPCIONALES_CONST = {
   TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'",
   ESTADOS_REMITO_POR_REVISAR: 'var ESTADOS_REMITO_POR_REVISAR = []', ETIQUETA_ESTADO_REMITO: 'var ETIQUETA_ESTADO_REMITO = {}', TALONARIOS: 'var TALONARIOS = []', CAMPOS_REMITO: "var CAMPOS_REMITO = ''",
+  ESTADOS_ACOPIO: "var ESTADOS_ACOPIO = ['activo', 'terminado', 'anulado']", LARGO_NUMERO_ACOPIO: 'var LARGO_NUMERO_ACOPIO = 30',
+  GRUPOS_REMITO: 'var GRUPOS_REMITO = []',
+}
+// Los acopios (27/10/2026): una copia de antes no tiene ninguna de estas.
+// Las que llaman las funciones de siempre tienen su reemplazo que no hace
+// nada (sin acopios, sin cuenta en el grupo, la lista de la misma empresa);
+// las demás, uno que devuelve '' (un pedazo de HTML o un texto) o null.
+const REEMPLAZOS_ACOPIOS = {
+  acopiosEnEmpresa: 'function acopiosEnEmpresa() { return false }',
+  leerPrecioVentaEn: 'function leerPrecioVentaEn(l, it, f) { return leerPrecioVenta(l, it, f) }',
+  presentacionEnUnidad: 'async function presentacionEnUnidad(p) { return p }',
+  contenidoSeccionAcopios: "function contenidoSeccionAcopios() { return { numero: null, unidad: '', lineas: [] } }",
+  leerAcopios: 'async function leerAcopios() { return [] }',
+}
+for (const n of FUNCIONES_ACOPIOS) {
+  OPCIONALES_FN[n] = REEMPLAZOS_ACOPIOS[n] ?? (/^(html|texto|nombre|papeles)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
 }
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
@@ -408,10 +449,12 @@ function construirAdministracion(ruta, { funciones = [], constantes = [], prelud
   const fnFaltan = Object.keys(OPCIONALES_FN).filter(n => falta(n, new RegExp('function ' + n + '\\(')))
   const constFaltan = Object.keys(OPCIONALES_CONST).filter(n => falta(n, new RegExp('const ' + n + ' =')))
   const stubs = [...fnFaltan.map(n => OPCIONALES_FN[n]), ...constFaltan.map(n => OPCIONALES_CONST[n])].join('\n')
-  const todasConst = [...CONSTANTES_BASE, ...constantes].filter(c => !constFaltan.includes(c))
+  // Sin repetidos (27/10/2026): una suite puede pedir algo que ya está en la
+  // base (un const repetido no compila).
+  const todasConst = [...new Set([...CONSTANTES_BASE, ...constantes])].filter(c => !constFaltan.includes(c))
   return construirCon(ruta, {
     preludio: PRELUDIO + preludioEstado + preludioExtra + (stubs ? '\n' + stubs + '\n' : ''),
-    funciones: [...FUNCIONES_BASE, ...funciones].filter(f => !fnFaltan.includes(f)),
+    funciones: [...new Set([...FUNCIONES_BASE, ...funciones])].filter(f => !fnFaltan.includes(f)),
     constantes: todasConst,
     retorno: `${[...todasConst, ...constFaltan].join(', ')}, ${fnFaltan.map(f => f + ', ').join('')}estado, __els, __doc: document, __llamadas, __ls, __tablas, __win: window,
       __setRpc(f){ __rpc = f }, __impresiones(){ return __impresiones }, __setNav(n){ navigator = n }, __urlsFirmadas(){ return __urlsFirmadas },

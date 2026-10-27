@@ -89,7 +89,8 @@ correrMutaciones({
     { nombre: 'la otra cuenta se abre sin cambiar de empresa',
       de: '      pasarAEmpresa(unidad)\n      abrirCliente(id)', a: '      abrirCliente(id)' },
     { nombre: 'el id de la otra cuenta sin escapar',
-      de: 'data-otra-cuenta="${esc(f.cliente_id)}"', a: 'data-otra-cuenta="${f.cliente_id}"' },
+      // (27/10/2026: la cuenta en el grupo también lo tiene; el contexto la hace única.)
+      de: 'data-otra-cuenta="${esc(f.cliente_id)}" data-otra-unidad="${esc(f.unidad_negocio_id)}">${esc(nombre)}', a: 'data-otra-cuenta="${f.cliente_id}" data-otra-unidad="${esc(f.unidad_negocio_id)}">${esc(nombre)}' },
     { nombre: 'el nombre de la otra fábrica sin escapar',
       de: '>${esc(nombre)}</button>` : `<strong>${esc(nombre)}</strong>`', a: '>${nombre}</button>` : `<strong>${esc(nombre)}</strong>`' },
     { nombre: 'el clic no abre la otra cuenta',
