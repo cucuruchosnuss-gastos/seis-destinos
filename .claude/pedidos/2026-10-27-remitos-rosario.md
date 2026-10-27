@@ -27,3 +27,16 @@ C) Revisar (modulos/administracion.html, Órdenes): "Remitos precargados · por 
 D) Ficha, hoja impresa y PDF de una orden con numero_remito: "Remito N° X".
 E) Suites test-/mut-, maqueta con una precargada con renglones amarillos, e2e a 390 y 1280. Documentar en
    docs/memoria/retiros.md y administracion.md.
+
+AGREGADO (mismo día; base ya en producción, verificada con pg_get_functiondef el 27/10/2026):
+1. Talonario 'oficial' | 'acopio' en remitos_precarga y ordenes_retiro (numeración por talonario). La IA lo detecta;
+   en la revisión, selector Oficial / Acopio (8.º parámetro p_talonario de actualizar_remito_precarga); el listado de
+   órdenes con solapas Oficial / Acopio, cada una por su número; la orden de acopio lleva el sello "Acopio".
+2. Renglón "omitir" (mercadería de terceros: envases, salsas): "No va en la orden" lo tacha en gris; la IA lo marca en
+   lo que claramente no es del catálogo.
+3. Reglas de lectura: "com" = sin cono; "ILUST." = cono de papel ilustración (QUINTANA, MARBET, RIO); "C. Gde/Mini/ST/
+   Chico" = Cucuruchón (NUSS = la caja); "Cap. x80" = Capelina Grande; "Cono 40x180 RIO" = Barquillo 40 x4 caja N°2 ×180
+   cono RIO; "Reposición" → amarillo con nota "reposición"; pallets / a granel / "Acopio MAS" → observaciones;
+   clientes por nombre, razón social, apodos y número.
+4. confirmar_remito_precarga rechaza el remito a una empresa del grupo que ya entró como ingreso allá: mensaje tal cual
+   y un botón directo a Descartar con el motivo "ya ingresado".
