@@ -95,6 +95,10 @@ const FUNCIONES_BASE = [
   // La fábrica sin control de stock (26/10/2026): los lotes escritos a mano.
   'sinControlStock', 'lotesAMano', 'normalizarLoteMano', 'filasLotesMano', 'filaLoteMano', 'asignacionMano', 'asignacionDe',
   'faltaLotesMano', 'lotesManoParaBase', 'htmlResumenLotesMano', 'htmlLotesMano', 'agregarLoteMano', 'quitarLoteMano', 'escribirLoteMano',
+  // La venta por unidad (27/10/2026): los conos de papel sueltos.
+  'presentacionDeRenglon', 'sinStockRenglon', 'porUnidadRenglon', 'productoDeRenglon', 'textoSueltosForm', 'textoCajasForm',
+  'sueltosDeOrden', 'textoCajasOrden',
+  'esPorUnidadHoja', 'palabraUnidadesHoja', 'cantidadUnidadesHoja', 'unidadesDeRenglonHoja', 'totalUnidadesSueltasOrden',
 ]
 
 const CONSTANTES_BASE = [

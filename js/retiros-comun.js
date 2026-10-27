@@ -186,8 +186,14 @@ export function detalleDevolucionHoja(r) {
 }
 
 // Las cajas que SE LLEVA (retiros y reposiciones): una devolución no sale.
+// Lo que se vende POR UNIDAD (los conos sueltos) no son cajas: va aparte.
 export function totalCajasOrden(orden) {
-  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo || r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0)), 0)
+  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo || r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || 0)), 0)
+}
+
+// Las unidades sueltas que se lleva (lo que se vende por unidad).
+export function totalUnidadesSueltasOrden(orden) {
+  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.movimiento !== 'devolucion' && esPorUnidadHoja(r) ? unidadesDeRenglonHoja(r) : 0), 0)
 }
 
 // Las cajas que TRAJO el cliente (devoluciones y reposiciones).
@@ -342,6 +348,38 @@ export function porCajaHoja(r) {
   return c > 0 && u > 0 && Number.isInteger(u / c) ? u / c : null
 }
 
+// ── LA VENTA POR UNIDAD (27/10/2026) ───────────────────────────────────────
+// Una presentación con producto_presentaciones.sin_stock = true o con 1
+// unidad por caja ("Conos de papel sueltos · Por cono", en Nuss y en Dolce;
+// leído con information_schema el 27/10/2026) se cuenta en UNIDADES, nunca en
+// cajas: "720 conos". En la hoja: CANT. = los conos, DESCRIPCIÓN sin "×1",
+// TOTAL "720 un.", y en la fila TOTAL va con las unidades ("TOTAL · 3 cajas de
+// producto + 720 un."), no con las cajas. El renglón lo marca `sinStock`
+// (si se sabe) o sus 1 unidad por caja (porCaja, o unidades ÷ cajas).
+export function esPorUnidadHoja(r) {
+  if (!r || r.esInsumo || r.insumo_id || r.insumoId || r.tipo === 'insumo') return false
+  return r.sinStock === true || r.sin_stock === true || porCajaHoja(r) === 1
+}
+
+// La palabra del producto: "conos" para los conos, si no "unidades".
+export function palabraUnidadesHoja(producto, n) {
+  const conos = /^\s*conos?\b/i.test(String(producto ?? ''))
+  return Number(n) === 1 ? (conos ? 'cono' : 'unidad') : (conos ? 'conos' : 'unidades')
+}
+
+// "720 conos", "1 cono", "12 unidades".
+export function cantidadUnidadesHoja(producto, n) {
+  return `${enteroHoja(n)} ${palabraUnidadesHoja(producto, n)}`
+}
+
+// Las unidades de un renglón de producto: las que trae, o cajas × por caja.
+function unidadesDeRenglonHoja(r) {
+  const u = Number(r?.unidades)
+  if (u > 0) return u
+  const n = porCajaHoja(r), c = Number(r?.cajas)
+  return n && c > 0 ? n * c : 0
+}
+
 export function nombreConoHoja(r) {
   const c = String(r?.conoNombre ?? r?.cono ?? '').trim()
   return SIN_NOMBRE_DE_CONO.has(c.toLowerCase()) ? '' : c
@@ -369,7 +407,7 @@ export function descripcionCortaHoja(r) {
     const marca = String(r?.marca ?? '').trim()
     return conMayuscula([marca, bultoInsumoHoja(r)].filter(Boolean).join(' · '))
   }
-  const n = porCajaHoja(r)
+  const n = esPorUnidadHoja(r) ? null : porCajaHoja(r)
   const cono = nombreConoHoja(r)
   return [n ? `×${enteroHoja(n)}` : '', cono ? `con cono ${cono}` : ''].filter(Boolean).join(' · ')
 }
@@ -377,7 +415,7 @@ export function descripcionCortaHoja(r) {
 // La misma, en HTML: el cono en negrita.
 function htmlDescripcionHoja(r) {
   if (r?.esInsumo) return escHoja(descripcionCortaHoja(r))
-  const n = porCajaHoja(r)
+  const n = esPorUnidadHoja(r) ? null : porCajaHoja(r)
   const cono = nombreConoHoja(r)
   return [n ? escHoja(`×${enteroHoja(n)}`) : '', cono ? `con cono <strong class="rh-cono">${escHoja(cono)}</strong>` : ''].filter(Boolean).join(' · ')
 }
@@ -475,7 +513,12 @@ export function rotuloTotalHoja(orden) {
   let cajas = 0, bultos = 0, unidades = 0
   for (const r of orden?.renglones ?? []) {
     if (!r || r.movimiento === 'devolucion') continue
-    if (!r.esInsumo) { cajas += Number(r.cajas) || 0; continue }
+    if (!r.esInsumo) {
+      // Lo que se vende por unidad (los conos sueltos) va con las unidades.
+      if (esPorUnidadHoja(r)) unidades += unidadesDeRenglonHoja(r)
+      else cajas += Number(r.cajas) || 0
+      continue
+    }
     const b = bultosHoja(r)
     if (b !== null) bultos += b
     else if (String(r.unidad ?? '') === 'un') unidades += Number(r.cantidad) || 0
@@ -524,7 +567,8 @@ function htmlNotasHoja(orden) {
   const faltantes = (orden?.renglones ?? []).map(r => {
     const f = faltanteDeRenglon(r)
     if (f === null) return null
-    const cuanto = r.esInsumo ? cantidadInsumoHoja(f, r.unidad) : `${enteroHoja(f)} ${f === 1 ? 'caja' : 'cajas'}`
+    const cuanto = r.esInsumo ? cantidadInsumoHoja(f, r.unidad)
+      : esPorUnidadHoja(r) ? cantidadUnidadesHoja(r.producto, f) : `${enteroHoja(f)} ${f === 1 ? 'caja' : 'cajas'}`
     return `${cuanto} de ${descripcionHoja(r)}`
   }).filter(Boolean)
   if (!obs && !faltantes.length) return ''
@@ -996,16 +1040,20 @@ export function textoOrden(orden) {
     }
     const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
     const lotes = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes)})` : ''
-    lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)
+    lineas.push(`- ${esPorUnidadHoja(r) ? cantidadUnidadesHoja(r.producto, r.cajas) : `${enteroHoja(r.cajas)} cajas`} · ${desc}${lotes}`)
   }
   if (devoluciones.length) {
     lineas.push('', 'Devoluciones:')
     for (const r of devoluciones) {
       const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
-      lineas.push(`- ${r.movimiento === 'devolucion' ? '−' : ''}${enteroHoja(r.cajas)} cajas · ${desc} (${detalleDevolucionHoja(r)})`)
+      lineas.push(`- ${r.movimiento === 'devolucion' ? '−' : ''}${esPorUnidadHoja(r) ? cantidadUnidadesHoja(r.producto, r.cajas) : `${enteroHoja(r.cajas)} cajas`} · ${desc} (${detalleDevolucionHoja(r)})`)
     }
   }
-  lineas.push('', `Total: ${enteroHoja(totalCajasOrden(orden))} cajas` +
+  // Las unidades sueltas (los conos) aparte de las cajas: "3 cajas + 720 un.".
+  const sueltas = totalUnidadesSueltasOrden(orden)
+  const cajasTotal = totalCajasOrden(orden)
+  const totalProductos = [cajasTotal || !sueltas ? `${enteroHoja(cajasTotal)} cajas` : '', sueltas ? `${enteroHoja(sueltas)} un.` : ''].filter(Boolean).join(' + ')
+  lineas.push('', `Total: ${totalProductos}` +
     (insumos ? ` y ${insumos} ${insumos === 1 ? 'renglón' : 'renglones'} de materia prima e insumos` : '') +
     (devoluciones.length ? ` · devueltas ${enteroHoja(totalCajasDevueltas(orden))}` : ''))
   if (String(orden?.observaciones ?? '').trim()) lineas.push(`Observaciones: ${String(orden.observaciones).trim()}`)

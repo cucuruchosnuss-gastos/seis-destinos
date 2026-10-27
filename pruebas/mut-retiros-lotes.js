@@ -79,7 +79,7 @@ correrMutaciones({
     { nombre: 'lo que no entra no va a SIN STOCK', de: '      if (a.falta > 0 && a.sinLugar) out.push({ lote: LOTE_FALTANTE, [clave]: a.falta })\n', a: '' },
     { nombre: 'lo que falta con lugar también va a SIN STOCK', de: '      if (a.falta > 0 && a.sinLugar) out.push({ lote: LOTE_FALTANTE, [clave]: a.falta })', a: '      if (a.falta > 0) out.push({ lote: LOTE_FALTANTE, [clave]: a.falta })' },
     { nombre: 'viajan los lotes en cero', de: '      const out = a.porLote.filter(l => l.q > 0).map(', a: '      const out = a.porLote.map(' },
-    { nombre: 'sin repartir viajan lotes vacíos', de: '      if (!(a.asignado > 0)) return null\n      const clave', a: '      const clave' },
+    { nombre: 'sin repartir viajan lotes vacíos', de: '      if (a.sinStock || !(a.asignado > 0)) return null\n      const clave', a: '      if (a.sinStock) return null\n      const clave' },
     { nombre: 'el stock sin lote de un insumo se descarta', de: '        if (lote === LOTE_FALTANTE) continue', a: '        if (!lote || lote === LOTE_FALTANTE) continue' },
     { nombre: 'SIN STOCK se ofrece como lote de insumo', de: '        if (lote === LOTE_FALTANTE) continue', a: '' },
     // El faltante que no bloquea
