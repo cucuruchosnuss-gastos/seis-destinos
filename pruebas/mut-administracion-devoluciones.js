@@ -29,14 +29,14 @@ correrMutaciones({
     { nombre: 'los movimientos viejos no se ven', de: '        ? l.orden_retiro_item_id === it.id\n        : l.presentacion_id === it.presentacion_id', a: '        ? l.orden_retiro_item_id === it.id\n        : false && l.presentacion_id === it.presentacion_id' },
     { nombre: 'no se lee el renglón de cada lote', de: "'presentacion_id, marca_id, lote, cajas, orden_retiro_item_id'", a: "'presentacion_id, marca_id, lote, cajas'" },
     // La lista
-    { nombre: 'la lista no lee el tipo', de: "select('orden_id, cajas, insumo_id, tipo')", a: "select('orden_id, cajas, insumo_id')" },
+    { nombre: 'la lista no lee el tipo', de: "select('orden_id, cajas, unidades, insumo_id, tipo')", a: "select('orden_id, cajas, unidades, insumo_id')" },
     { nombre: 'la lista cuenta la devolución', de: '(cajas.get(it.orden_id) ?? 0) + cajasQueSalen(it))', a: '(cajas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))' },
     { nombre: 'la lista sin las devueltas', de: "(o.devueltas ? ` · devolvió ${enteroHoja(o.devueltas)}` : '')", a: "''" },
     { nombre: 'la fila sin "a favor"', de: "        ? importeHoja(totalFila, o.moneda) + textoAFavor(totalFila) : 'sin valorizar'", a: "        ? importeHoja(totalFila, o.moneda) : 'sin valorizar'" },
     // El detalle
     { nombre: 'el detalle no lee el tipo', de: 'turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto', a: 'turno_produccion_id' },
     { nombre: 'el detalle sin la sección', de: '      const renglones = d.items.filter(it => !esItemDev(it)).map(', a: '      const renglones = d.items.map(' },
-    { nombre: 'el detalle sin "−"', de: "      desc = (tipo === 'devolucion' ? '−' : '') + enteroHoja(it.cajas)", a: '      desc = enteroHoja(it.cajas)' },
+    { nombre: 'el detalle sin "−"', de: "      desc = (tipo === 'devolucion' ? '−' : '') + (suelto ?", a: '      desc = (suelto ?' },
     { nombre: 'la devolución con lotes de stock', de: "        if (tipo === 'devolucion') detalle = textoDevolucionItem(it)\n", a: '' },
     { nombre: 'la reposición sin sus lotes', de: "detalle = textoDevolucionItem(it) + ' · sale de ' + textoLotesIt", a: 'detalle = textoDevolucionItem(it)' },
     { nombre: 'sin el sello del tipo', de: "      const sello = esItemDev(it) ?", a: '      const sello = false ?' },

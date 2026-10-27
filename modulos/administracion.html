@@ -1547,6 +1547,7 @@
       nuevaImpresion, prepararHoja, imprimirHoja, olvidarHoja, esIos, mostrarListoParaImprimir,
       cantidadInsumoHoja, unidadHoja, cargarScript, LIBRERIAS_PDF,
       ordenarRenglonesHoja, textoDestinoDevuelto,
+          esPorUnidadHoja, palabraUnidadesHoja, cantidadUnidadesHoja,
     } from '../js/retiros-comun.js'
     // Los insumos por bulto (23/10/2026): la cantidad y el precio de un
     // insumo marcado 'bulto' se dicen y se piden por bulto; a la base va la
@@ -2203,7 +2204,7 @@
       let presentaciones = []
       if (ids.length) {
         const r = await supabase.from('producto_presentaciones')
-          .select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, activa, orden').in('producto_id', ids).order('orden')
+          .select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, activa, orden, sin_stock').in('producto_id', ids).order('orden')
         if (r.error) throw r.error
         presentaciones = r.data ?? []
       }
@@ -2378,7 +2379,9 @@
       // La hoja nueva (26/10/2026): las unidades por caja y el NOMBRE del cono
       // (o null), sin la presentación.
       const conoNombre = pr?.con_cono && it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? null) : null
-      return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono, conoNombre, porCaja: pr?.unidades_por_caja ?? null }
+      // sinStock (27/10/2026): se vende por unidad (los conos sueltos).
+      return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono, conoNombre, porCaja: pr?.unidades_por_caja ?? null,
+        sinStock: pr?.sin_stock === true }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3077,24 +3080,31 @@
       // Las cajas de cada orden (y cuántos renglones de insumos lleva), en
       // una sola consulta.
       const cajas = new Map()
+      const sueltas = new Map()
       const insumos = new Map()
       const devueltas = new Map()
       if (ordenes.length) {
-        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas, insumo_id, tipo').in('orden_id', ordenes.map(o => o.id))
+        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas, unidades, insumo_id, tipo').in('orden_id', ordenes.map(o => o.id))
         if (r.error) throw r.error
         for (const it of r.data ?? []) {
           if (it.insumo_id) insumos.set(it.orden_id, (insumos.get(it.orden_id) ?? 0) + 1)
+          // Lo que se vende por unidad (1 unidad por caja: los conos sueltos,
+          // 27/10/2026) no son cajas: van aparte, en unidades.
+          else if (esPorUnidadHoja(it)) sueltas.set(it.orden_id, (sueltas.get(it.orden_id) ?? 0) + cajasQueSalen(it))
           else cajas.set(it.orden_id, (cajas.get(it.orden_id) ?? 0) + cajasQueSalen(it))
           // Las devoluciones y reposiciones (22/10/2026): lo que trajo.
           if (esItemDev(it)) devueltas.set(it.orden_id, (devueltas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))
         }
       }
-      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : (insumos.has(o.id) ? 0 : null), insumos: insumos.get(o.id) ?? 0, devueltas: devueltas.get(o.id) ?? 0 }))
+      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : (insumos.has(o.id) || sueltas.has(o.id) ? 0 : null), sueltas: sueltas.get(o.id) ?? 0,
+        insumos: insumos.get(o.id) ?? 0, devueltas: devueltas.get(o.id) ?? 0 }))
     }
 
     function htmlFilaOrden(o) {
       const cli = clienteDe(o.cliente_id)
-      const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + enteroHoja(o.cajas) + ' cajas' +
+      // "3 cajas + 720 un." (lo que se vende por unidad, aparte).
+      const cajasTexto = [Number(o.cajas) > 0 || !(o.sueltas > 0) ? enteroHoja(o.cajas) + ' cajas' : '', o.sueltas > 0 ? enteroHoja(o.sueltas) + ' un.' : ''].filter(Boolean).join(' + ')
+      const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + cajasTexto +
         (o.insumos ? ` · ${o.insumos} de materia prima e insumos` : '') + (o.devueltas ? ` · devolvió ${enteroHoja(o.devueltas)}` : '')
       // Con la comisión cargada, el importe es el total con la comisión.
       const conComision = o.estado !== 'anulada' && Number(o.comision_importe) > 0
@@ -4369,14 +4379,16 @@
         const p = partesRenglon(cat, it)
         const lotes = lotesDeRenglon(d.lotes, it)
         const tipo = tipoItem(it)
-        desc = (tipo === 'devolucion' ? '−' : '') + enteroHoja(it.cajas) + ' cajas · ' + [p.producto, p.presentacion, p.cono].join(' · ')
+        const suelto = esPorUnidadHoja({ ...p, cajas: it.cajas, unidades: it.unidades })
+        desc = (tipo === 'devolucion' ? '−' : '') + (suelto ? cantidadUnidadesHoja(p.producto, it.cajas) : enteroHoja(it.cajas) + ' cajas') + ' · ' + [p.producto, p.presentacion, p.cono].join(' · ')
         const textoLotesIt = lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes)
         // Devolución: el motivo, el lote que trajo y qué se hizo con las cajas
         // (no sale de ningún lote). Reposición: eso y de qué lotes salió.
         if (tipo === 'devolucion') detalle = textoDevolucionItem(it)
         else if (tipo === 'reposicion') detalle = textoDevolucionItem(it) + ' · sale de ' + textoLotesIt
-        else detalle = enteroHoja(it.unidades) + ' unidades · ' + textoLotesIt
-        porQue = 'caja'
+        else detalle = (suelto ? '' : enteroHoja(it.unidades) + ' unidades · ') + textoLotesIt
+        // Por unidad (27/10/2026): "Precio x cono", como cualquier presentación de 1.
+        porQue = suelto ? palabraUnidadesHoja(p.producto, 1) : 'caja'
       }
       const moneda = d.orden.moneda || 'ARS'
       let plata = ''
@@ -4682,6 +4694,9 @@
     // precio_venta(): "lista Heladerías · $ 135,23 por unidad + conito $ 8,50".
     // Con cono sin conito cargado en la lista lo dice (no inventa "$ 0").
     function textoOrigenPrecio(r, conCono) {
+      // Lo que se vende por unidad, con el precio propio de la presentación
+      // en la lista: "lista X · $ 27,00 por cono".
+      if (r?.propio) return [limpio(r.lista) ? 'lista ' + limpio(r.lista) : '', textoPrecioUnitario(r.precio_caja) + ' por ' + (r.palabra || 'unidad')].filter(Boolean).join(' · ')
       const partes = []
       if (limpio(r?.lista)) partes.push('lista ' + limpio(r.lista))
       let unidad = textoPrecioUnitario(r?.producto_unitario) + ' por unidad'
@@ -4705,13 +4720,43 @@
           p_lista_id: listaId, p_presentacion_id: it.presentacion_id, p_marca_id: it.marca_id ?? null, p_fecha: fecha,
         })
         if (error) throw error
-        if (!data || data.sin_precio) return { sinPrecio: true, motivo: limpio(data?.motivo) || 'El producto no tiene precio en la lista.' }
+        if (!data || data.sin_precio) {
+          // LA VENTA POR UNIDAD (27/10/2026): precio_venta (leída con
+          // pg_get_functiondef el 27/10/2026) toma el precio de la presentación
+          // SIN cono del producto, y los conos sueltos solo tienen "Por cono"
+          // (con cono): no lo encuentra. Para lo que se vende por unidad se
+          // propone el precio que la lista tiene para ESA presentación ($ 27
+          // el cono en la Lista 1), sin conito aparte.
+          const p = partesRenglon(estado.catalogo, it)
+          if (esPorUnidadHoja({ ...p, cajas: it.cajas, unidades: it.unidades })) {
+            const propio = await precioPropioEnLista(listaId, it.presentacion_id, fecha)
+            if (propio !== null) return { precio: propio, datos: { propio: true, lista: limpio(data?.lista) || null, precio_caja: propio, palabra: palabraUnidadesHoja(p.producto, 1) } }
+          }
+          return { sinPrecio: true, motivo: limpio(data?.motivo) || 'El producto no tiene precio en la lista.' }
+        }
         const precio = data.precio_caja === null || data.precio_caja === undefined || data.precio_caja === '' ? null : Number(data.precio_caja)
         if (precio === null || !Number.isFinite(precio)) return { sinPrecio: true, motivo: 'La lista no devolvió un precio para este producto.' }
         return { precio, datos: data }
       } catch (err) {
         console.error('No se pudo leer el precio de la lista:', err)
         return { error: 'No se pudo leer el precio de la lista.' + (limpio(err?.message) ? ' ' + limpio(err.message) : '') }
+      }
+    }
+
+    // El precio de UNA presentación en la lista (el último vigente a la
+    // fecha), o null si no tiene o no se puede leer.
+    async function precioPropioEnLista(listaId, presentacionId, fecha) {
+      try {
+        let q = supabase.from('lista_precios_items').select('precio_caja, vigente_desde')
+          .eq('lista_id', listaId).eq('presentacion_id', presentacionId)
+        if (fecha) q = q.lte('vigente_desde', fecha)
+        const { data, error } = await q.order('vigente_desde', { ascending: false }).limit(1)
+        if (error) throw error
+        const n = Number(data?.[0]?.precio_caja)
+        return data?.[0] && Number.isFinite(n) && n >= 0 ? n : null
+      } catch (err) {
+        console.error('No se pudo leer el precio de la presentación en la lista:', err)
+        return null
       }
     }
 

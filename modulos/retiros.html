@@ -999,6 +999,7 @@
       enteroHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION, nuevaImpresion, prepararHoja, imprimirHoja,
       cantidadInsumoHoja, unidadHoja, decimalesDeUnidad, cantidadInsumoBultoHoja,
       ordenarRenglonesHoja, textoDestinoDevuelto,
+      esPorUnidadHoja, palabraUnidadesHoja, cantidadUnidadesHoja,
     } from '../js/retiros-comun.js'
     // La unidad al lado de un campo de cantidad ("kg", "L", "u"), la misma
     // regla que Stock e Ingreso (05/10/2026). Desde el 23/10/2026, también
@@ -1543,7 +1544,7 @@
     // unidades_negocio.controla_stock_terminado (cat.sinControl). Si no se
     // puede leer, se sigue como una fábrica con control (lo de siempre).
     async function leerCatalogo(unidadId) {
-      const [c, m, t, u] = await Promise.all([
+      const [c, m, t, u, s] = await Promise.all([
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
         supabase.from('marcas_personalizadas')
           .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
@@ -1551,6 +1552,9 @@
         // nullable, sin default según information_schema el 26/10/2026).
         supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto, nombre_bulto').eq('activo', true).order('nombre'),
         supabase.from('unidades_negocio').select('controla_stock_terminado').eq('id', unidadId).maybeSingle(),
+        // LA VENTA POR UNIDAD (27/10/2026): producto_presentaciones.sin_stock
+        // (boolean, default false; catalogo_para_retiro no lo trae).
+        supabase.from('producto_presentaciones').select('id').eq('sin_stock', true),
       ])
       if (c.error) throw c.error
       if (m.error) throw m.error
@@ -1558,6 +1562,9 @@
       if (u.error) console.error('No se pudo leer si la fábrica controla el stock:', u.error)
       const cat = catalogoDesdeRpc(c.data, m.data, t.error ? [] : t.data)
       cat.sinControl = !u.error && u.data?.controla_stock_terminado === false
+      if (s.error) console.error('No se pudo leer qué se vende sin stock:', s.error)
+      const sinStock = new Set((s.error ? [] : s.data ?? []).map(x => x?.id).filter(Boolean))
+      for (const pr of cat.presentaciones) if (sinStock.has(pr.id)) pr.sin_stock = true
       return conBultosDeInsumos(cat, t.error ? [] : t.data, await leerContenidosInsumos(unidadId))
     }
 
@@ -1746,9 +1753,12 @@
           nombre: `${limpio(prod.nombre)} · ${limpio(pr.nombre)}`, textos: [prod.nombre, pr.nombre] }
         // Sin control de stock (26/10/2026): todos, sin cuánto hay ni "sin
         // stock", y con cono una sola opción (el cono se elige después).
-        const stockPres = cat?.sinControl === true || pr.stock_cajas === null || pr.stock_cajas === undefined ? null : Number(pr.stock_cajas)
+        // Lo que se vende sin stock (27/10/2026, los conos sueltos): igual,
+        // aunque la fábrica controle el stock.
+        const libre = cat?.sinControl === true || pr.sin_stock === true
+        const stockPres = libre || pr.stock_cajas === null || pr.stock_cajas === undefined ? null : Number(pr.stock_cajas)
         if (!base.conCono) { sin.push({ ...base, grupo: 'sin_cono', marcaId: null, stock: stockPres }); continue }
-        if (cat?.sinControl === true) { con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: null }); continue }
+        if (libre) { con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: null }); continue }
         if (stockConos instanceof Map) {
           // UN SOLO "SIN CONO" (10/10/2026): solo los conos CON NOMBRE. El
           // "Común" adentro de "Caja con cono" (clave 'presentacion|') ya no se
@@ -2039,6 +2049,11 @@
     //   faltante  = lo que NO está en stock y va a quedar pendiente de revisión
     //               (null si no se puede saber).
     function asignacion(r, lista) {
+      // Lo que se vende sin stock: todo asignado, sin lotes ni faltante.
+      if (sinStockRenglon(r)) {
+        const p = cantidadPedida(r)
+        return { pedido: p, asignado: p ?? 0, falta: p === null ? null : 0, sinLugar: false, porLote: [], faltante: 0, sinStock: true }
+      }
       const pedido = cantidadPedida(r)
       const asignados = r?.lotes && typeof r.lotes === 'object' ? r.lotes : {}
       const porLote = (Array.isArray(lista) ? lista : []).map(l => {
@@ -2078,7 +2093,7 @@
     // cantidad en un insumo; el stock sin lote de un insumo va con lote ''.
     function lotesParaBase(r, lista) {
       const a = asignacion(r, lista)
-      if (!(a.asignado > 0)) return null
+      if (a.sinStock || !(a.asignado > 0)) return null
       const clave = r.insumoId ? 'cantidad' : 'cajas'
       const out = a.porLote.filter(l => l.q > 0).map(l => ({ lote: l.lote, [clave]: l.q }))
       if (a.falta > 0 && a.sinLugar) out.push({ lote: LOTE_FALTANTE, [clave]: a.falta })
@@ -2107,10 +2122,40 @@
       return cat?.sinControl === true
     }
 
+    // ── LA VENTA POR UNIDAD (27/10/2026) ───────────────────────────────────
+    //
+    // "Conos de papel sueltos · Por cono" (Nuss y Dolce): producto_
+    // presentaciones.sin_stock = true y 1 unidad por caja. registrar_orden_
+    // retiro (leída con pg_get_functiondef el 27/10/2026) NO mira el stock de
+    // esa presentación: sin "lotes" va un lote 'SIN LOTE' que entra y sale en
+    // el mismo momento, y nunca hay faltante. En la Carga: siempre en el
+    // catálogo, sin lotes (ni la lista ni a mano), sin "¿De dónde salen?", y
+    // la cantidad en UNIDADES con la palabra del producto ("¿Cuántos conos se
+    // lleva?"), nunca "cajas" (también con 1 unidad por caja sin sin_stock).
+    // El cono se elige como siempre. A la base van las "cajas" (= conos).
+    function presentacionDeRenglon(r, cat = estado.catalogo) {
+      return r?.presentacionId ? (cat?.presentaciones ?? []).find(x => x.id === r.presentacionId) ?? null : null
+    }
+
+    function sinStockRenglon(r, cat = estado.catalogo) {
+      return !!r && !r.insumoId && presentacionDeRenglon(r, cat)?.sin_stock === true
+    }
+
+    function porUnidadRenglon(r, cat = estado.catalogo) {
+      if (!r || r.insumoId) return false
+      const pr = presentacionDeRenglon(r, cat)
+      return pr?.sin_stock === true || Number(pr?.unidades_por_caja) === 1
+    }
+
+    function productoDeRenglon(r, cat = estado.catalogo) {
+      return (cat?.productos ?? []).find(p => p.id === r?.productoId)?.nombre ?? ''
+    }
+
     // ¿Los lotes de este renglón se escriben a mano? Producto que sale del
-    // stock (retiro o reposición) de una fábrica sin control.
+    // stock (retiro o reposición) de una fábrica sin control (lo que se vende
+    // sin stock no lleva lotes).
     function lotesAMano(r) {
-      return !!r && !r.insumoId && !!r.presentacionId && saleDelStock(r) && sinControlStock()
+      return !!r && !r.insumoId && !!r.presentacionId && saleDelStock(r) && sinControlStock() && !sinStockRenglon(r)
     }
 
     function normalizarLoteMano(t) {
@@ -2256,7 +2301,8 @@
     // ¿El renglón ya sabe qué es (para leer sus lotes)?
     // (Una devolución no: no saca nada del stock.)
     // (Sin control de stock, el producto no lee lotes: se escriben a mano.)
-    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId) && saleDelStock(r) && !lotesAMano(r)
+    // (Lo que se vende sin stock tampoco: no lleva lotes.)
+    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId) && saleDelStock(r) && !lotesAMano(r) && !sinStockRenglon(r)
 
     // Lee los lotes de los renglones que ya saben qué son y todavía no los
     // tienen. asegurarLotes() no vuelve a leer lo que ya está.
@@ -2536,8 +2582,25 @@
     }
 
     // Las cajas que se LLEVA (retiros y reposiciones): una devolución no sale.
+    // Lo que se vende por unidad (los conos sueltos) va aparte (27/10/2026).
     function totalCajasForm(f) {
-      return f.renglones.reduce((s, r) => s + (!r.insumoId && tipoRenglon(r) !== 'devolucion' && Number(r.cajas) > 0 ? Number(r.cajas) : 0), 0)
+      return f.renglones.reduce((s, r) => s + (!r.insumoId && tipoRenglon(r) !== 'devolucion' && !porUnidadRenglon(r) && Number(r.cajas) > 0 ? Number(r.cajas) : 0), 0)
+    }
+
+    // "720 conos" (o "720 un." si se mezclan productos que se venden por unidad).
+    function textoSueltosForm(f) {
+      const rs = (f?.renglones ?? []).filter(r => !r.insumoId && tipoRenglon(r) !== 'devolucion' && porUnidadRenglon(r) && Number(r.cajas) > 0)
+      if (!rs.length) return ''
+      const n = rs.reduce((s, r) => s + Number(r.cajas), 0)
+      const palabras = new Set(rs.map(r => palabraUnidadesHoja(productoDeRenglon(r), 2)))
+      return palabras.size === 1 ? cantidadUnidadesHoja(productoDeRenglon(rs[0]), n) : `${enteroHoja(n)} un.`
+    }
+
+    // Las cajas y los sueltos: "3 cajas + 720 conos".
+    function textoCajasForm(f) {
+      const sueltos = textoSueltosForm(f)
+      const cajas = totalCajasForm(f)
+      return [cajas || !sueltos ? `${enteroHoja(cajas)} cajas` : '', sueltos].filter(Boolean).join(' + ')
     }
 
     // Las cajas que TRAJO el cliente (devoluciones y reposiciones).
@@ -2548,7 +2611,7 @@
     function textoCuentaForm(f) {
       const insumos = f.renglones.filter(r => r.insumoId).length
       const n = f.renglones.length - insumos
-      return `${n} ${n === 1 ? 'producto' : 'productos'} · ${enteroHoja(totalCajasForm(f))} cajas` +
+      return `${n} ${n === 1 ? 'producto' : 'productos'} · ${textoCajasForm(f)}` +
         (insumos ? ` · ${insumos} de materia prima e insumos` : '')
     }
 
@@ -2562,7 +2625,7 @@
       }
       const insumos = [...porUnidad.entries()].map(([u, n]) => cantidadInsumoHoja(n, u || null))
       const devueltas = totalDevueltasForm(f)
-      return [`${enteroHoja(totalCajasForm(f))} cajas`, ...insumos].join(' + ') + (devueltas ? ` · devueltas ${enteroHoja(devueltas)}` : '')
+      return [textoCajasForm(f), ...insumos].join(' + ') + (devueltas ? ` · devueltas ${enteroHoja(devueltas)}` : '')
     }
 
     // Cuántos renglones tienen algo que no está en stock.
@@ -3240,14 +3303,14 @@
       if (!lista.length) return `<div class="rt-aviso">Este producto no tiene presentaciones ${r.conCono ? 'con cono' : 'sin cono'}.</div>`
       return `<span class="rt-campo__rotulo">Presentación</span><div class="rt-opciones" role="group" aria-label="Presentación">` +
         lista.map(pr => `<button type="button" class="rt-opcion" data-r-presentacion="${i}" data-id="${esc(pr.id)}" aria-pressed="${pr.id === r.presentacionId ? 'true' : 'false'}">` +
-          `<span>${esc(pr.nombre)}</span>${pr.unidades_por_caja ? `<span class="rt-opcion__detalle">${esc(enteroHoja(pr.unidades_por_caja))} por caja</span>` : ''}</button>`).join('') +
+          `<span>${esc(pr.nombre)}</span>${pr.unidades_por_caja ? `<span class="rt-opcion__detalle">${esc(Number(pr.unidades_por_caja) === 1 || pr.sin_stock === true ? 'por unidad' : `${enteroHoja(pr.unidades_por_caja)} por caja`)}</span>` : ''}</button>`).join('') +
         `</div>`
     }
 
     // Una cantidad en la unidad del renglón: "12 cajas" o "25,5 kg".
     // Un insumo por bulto (23/10/2026): "2 bultos (50 kg)".
     function cantidadRenglon(r, n) {
-      if (!r?.insumoId) return `${enteroHoja(n)} cajas`
+      if (!r?.insumoId) return porUnidadRenglon(r) ? cantidadUnidadesHoja(productoDeRenglon(r), n) : `${enteroHoja(n)} cajas`
       const modo = modoInsumoRenglon(r)
       if (!modo?.enBultos || n === null || n === undefined || n === '') return cantidadInsumoHoja(n, r.unidad)
       return textoSegunVista({ cantidad: n, unidad: r.unidad, vista: 'bulto', contenido: modo.contenido }, { conKilos: true })
@@ -3600,7 +3663,7 @@
         const pr = (cat?.presentaciones ?? []).find(x => x.id === r.presentacionId)
         const col = colorProductoRetiro(prod?.nombre ?? '')
         const cono = r.conCono ? htmlChipCono(textoCono(cat, true, r.marcaId), r.marcaId) : ''
-        const sub = [r.conCono ? 'con cono' : 'sin cono', pr?.media_caja ? 'media caja' : (pr ? 'caja completa' : '')].filter(Boolean).join(' · ')
+        const sub = [r.conCono ? 'con cono' : 'sin cono', pr?.media_caja ? 'media caja' : (pr ? (porUnidadRenglon(r) ? 'por unidad' : 'caja completa') : '')].filter(Boolean).join(' · ')
         cabeza = `<div class="rt-elegido" style="--rt-color: ${col.c}; --rt-tinte: ${col.t}; --rt-oscuro: ${col.dk}"><span class="rt-elegido__texto">` +
           `<span class="rt-elegido__nombre">${esc(prod ? nombreProductoPresentacion(cat, r.productoId, r.presentacionId) : 'Producto (no se pudo leer)')}</span>` +
           `<span class="rt-elegido__sub">${cono}<span>${esc(sub)}</span></span></span>` +
@@ -3610,10 +3673,16 @@
         // borrador viejo).
         const faltaElegir = !r.presentacionId || r.marcaElegir === true || (r.conCono && !r.marcaId)
         if (faltaElegir) opciones = `<div class="rt-opciones-bloque">${htmlConoRenglon(r, i, cat)}${htmlPresentacionesRenglon(r, i, cat)}</div>`
-        cuanto = `<div class="rt-cuanto"><label for="rt-r-cajas-${i}">${esRenglonDev(r) ? '¿Cuántas cajas devuelve?' : '¿Cuántas cajas se lleva?'}</label>` +
-          `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="Una caja menos">−</button>` +
+        // Por unidad (27/10/2026): "¿Cuántos conos se lleva?", nunca cajas.
+        const sueltos = porUnidadRenglon(r) ? palabraUnidadesHoja(productoDeRenglon(r), 2) : null
+        const pregunta = sueltos
+          ? (esRenglonDev(r) ? `¿Cuántos ${sueltos} devuelve?` : `¿Cuántos ${sueltos} se lleva?`).replace('¿Cuántos unidades', '¿Cuántas unidades')
+          : (esRenglonDev(r) ? '¿Cuántas cajas devuelve?' : '¿Cuántas cajas se lleva?')
+        const uno = sueltos ? palabraUnidadesHoja(productoDeRenglon(r), 1) : 'caja'
+        cuanto = `<div class="rt-cuanto"><label for="rt-r-cajas-${i}">${esc(pregunta)}</label>` +
+          `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="${esc(`${uno === 'cono' ? 'Un' : 'Una'} ${uno} menos`)}">−</button>` +
           `<input type="text" class="rt-input" id="rt-r-cajas-${i}" data-r-cajas="${i}" autocomplete="off">` +
-          `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="Una caja más">+</button></div>`
+          `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="${esc(`${uno === 'cono' ? 'Un' : 'Una'} ${uno} más`)}">+</button></div>`
       }
       const dev = esRenglonDev(r) && !r.insumoId
       return `<div class="rt-editor${falta ? ' rt-renglon--error' : ''}${dev ? ' rt-editor--dev' : ''}" data-renglon="${i}">${dev ? htmlTituloDevolucion() : ''}${cabeza}${opciones}${cuanto}` +
@@ -3647,8 +3716,9 @@
     function htmlTarjetaRenglon(r, i, cat, conErrores) {
       const falta = conErrores ? faltanRenglon(r) : null
       const a = asignacionDe(r)
-      // Sin lotes: de los más viejos, o (sin control de stock) "va sin lote".
-      const sinLotes = a.aMano ? 'va sin lote' : 'de los lotes más viejos'
+      // Sin lotes: de los más viejos, o (sin control de stock, o lo que se
+      // vende sin stock) "va sin lote".
+      const sinLotes = a.aMano || a.sinStock ? 'va sin lote' : 'de los lotes más viejos'
       const esInsumo = !!r.insumoId
       const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === r.productoId)?.nombre ?? ''), esInsumo)
       const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
@@ -3665,7 +3735,7 @@
       const pedido = cantidadPedida(r)
       const pi = esInsumo ? partesCantidadInsumo(r, pedido) : null
       const q = pedido === null ? '—' : (esInsumo ? pi.q : (tipo === 'devolucion' ? '−' : '') + enteroHoja(pedido))
-      const u = esInsumo ? pi.u : 'cajas'
+      const u = esInsumo ? pi.u : (porUnidadRenglon(r) ? palabraUnidadesHoja(productoDeRenglon(r), pedido) : 'cajas')
       return `<div class="rt-item${faltante ? ' rt-item--faltante' : ''}${falta ? ' rt-item--error' : ''}${tipo !== 'retiro' ? ' rt-item--dev' : ''}" style="--rt-color: ${col.c}">` +
         `<button type="button" class="rt-item__cuerpo" data-r-editar="${i}" aria-label="Cambiar el renglón ${i + 1}: ${esc(nombre)}">` +
         `<span class="rt-item__prod"><span class="rt-item__nombre">${esc(nombre)}</span><span class="rt-item__cono">${cono}</span></span>` +
@@ -4186,9 +4256,10 @@
       const fila = (r) => {
         const a = asignacionDe(r)
         const tipo = tipoRenglon(r)
-        let lote = a.asignado > 0
+        // Lo que se vende sin stock (27/10/2026) no lleva lotes.
+        let lote = a.sinStock ? 'Va sin lote' : a.asignado > 0
           ? a.porLote.filter(l => l.q > 0).map(l => `${nombreLote(l.lote)}: ${cantidadRenglon(r, l.q)}`).join(' · ')
-          : (a.aMano ? 'Va sin lote' : 'De los lotes más viejos')
+          : (a.aMano || a.sinStock ? 'Va sin lote' : 'De los lotes más viejos')
         // Devoluciones (22/10/2026): el motivo y qué se hace; sin plata.
         if (tipo === 'devolucion') lote = 'Se descuenta de la orden · ' + textoDevolucionRenglon(r)
         else if (tipo === 'reposicion') lote = 'Se repone · sin cargo · ' + textoDevolucionRenglon(r) + ' · ' + (a.asignado > 0 ? 'sale de ' + lote : (a.aMano ? 'va sin lote' : 'sale de los lotes más viejos'))
@@ -4199,7 +4270,7 @@
         const pedido = cantidadPedida(r)
         const pi = esInsumo ? partesCantidadInsumo(r, r.cantidad) : null
         const q = esInsumo ? pi.q : (tipo === 'devolucion' ? '−' : '') + enteroHoja(r.cajas)
-        const u = esInsumo ? pi.u : 'cajas'
+        const u = esInsumo ? pi.u : (porUnidadRenglon(r) ? palabraUnidadesHoja(productoDeRenglon(r), r.cajas) : 'cajas')
         return `<div class="rt-resumen-fila" style="--rt-color: ${col.c}"><span class="rt-resumen-fila__desc">${esc(nombre)}` +
           `${cono ? ` <span class="rt-resumen-fila__cono">${esc(cono)}</span>` : ''}` +
           `${esInsumo ? ' <span class="rt-sello rt-sello--insumo">Insumo</span>' : ''}` +
@@ -4724,6 +4795,8 @@
         // unidades ÷ cajas. El cono, por su nombre (r.marca) o ninguno.
         : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo), conoNombre: limpio(r.marca) || null,
             cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [],
+            // Lo que se vende sin stock (27/10/2026): va por unidad en la hoja.
+            sinStock: (estado.catalogo?.presentaciones ?? []).find(x => x.id === r.presentacion_id)?.sin_stock === true,
             // Devoluciones (22/10/2026): mis_ordenes_retiro trae el tipo en
             // 'movimiento' (su 'tipo' es producto / insumo).
             movimiento: r.movimiento ?? 'retiro', motivo: r.motivo_devolucion ?? null,
@@ -4843,9 +4916,26 @@
       return Array.isArray(data) ? data : []
     }
 
-    // Las cajas que se llevó: una devolución no suma (22/10/2026).
+    // Las cajas que se llevó: una devolución no suma (22/10/2026), y lo que
+    // se vende por unidad va aparte (27/10/2026).
     function cajasDeOrden(o) {
-      return (o?.renglones ?? []).reduce((s, r) => s + (r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0)), 0)
+      return (o?.renglones ?? []).reduce((s, r) => s + (r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || 0)), 0)
+    }
+
+    // "720 conos" de una orden mía (o "720 un." si se mezclan productos).
+    function sueltosDeOrden(o) {
+      const rs = (o?.renglones ?? []).filter(r => r?.movimiento !== 'devolucion' && esPorUnidadHoja(r) && Number(r.cajas) > 0)
+      if (!rs.length) return ''
+      const n = rs.reduce((s, r) => s + Number(r.cajas), 0)
+      const palabras = new Set(rs.map(r => palabraUnidadesHoja(r.producto, 2)))
+      return palabras.size === 1 ? cantidadUnidadesHoja(rs[0].producto, n) : `${enteroHoja(n)} un.`
+    }
+
+    // "3 cajas + 720 conos".
+    function textoCajasOrden(o) {
+      const sueltos = sueltosDeOrden(o)
+      const cajas = cajasDeOrden(o)
+      return [cajas || !sueltos ? `${enteroHoja(cajas)} cajas` : '', sueltos].filter(Boolean).join(' + ')
     }
 
     // Las cajas que trajo (devoluciones y reposiciones).
@@ -4860,7 +4950,7 @@
       const anulada = o.estado === 'anulada'
       const insumos = (o.renglones ?? []).filter(r => r?.tipo === 'insumo').length
       const devueltas = devueltasDeOrden(o)
-      const meta = fechaCorta(o.fecha) + ' · ' + enteroHoja(cajasDeOrden(o)) + ' cajas' +
+      const meta = fechaCorta(o.fecha) + ' · ' + textoCajasOrden(o) +
         (insumos ? ` · ${insumos} de materia prima e insumos` : '') + (devueltas ? ` · devolvió ${enteroHoja(devueltas)}` : '')
       return `<div class="rt-mia"><button type="button" class="rt-fila${anulada ? ' rt-fila--anulada' : ''}" data-mia="${esc(o.orden_id)}">` +
         `<span class="rt-fila__logo">${htmlMarcaEmpresa(empresaActual())}</span>` +
@@ -4932,8 +5022,10 @@
           const lotes = 'Insumo · ' + (r.lotes.length ? 'lote ' + textoLotes(r.lotes, r.unidad) : 'de los lotes más viejos')
           return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div></div>`
         }
-        const desc = enteroHoja(r.cajas) + ' cajas · ' + [r.producto, r.presentacion, r.cono].filter(Boolean).join(' · ')
-        const lotes = enteroHoja(r.unidades) + ' unidades · lotes ' + textoLotes(r.lotes)
+        // Por unidad (27/10/2026): "720 conos", sin repetir las unidades.
+        const suelto = esPorUnidadHoja(r)
+        const desc = (suelto ? cantidadUnidadesHoja(r.producto, r.cajas) : enteroHoja(r.cajas) + ' cajas') + ' · ' + [r.producto, r.presentacion, r.cono].filter(Boolean).join(' · ')
+        const lotes = (suelto ? '' : enteroHoja(r.unidades) + ' unidades · ') + 'lotes ' + textoLotes(r.lotes)
         return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div>${htmlFaltanteMio(o.renglones?.[i], o)}</div>`
       }
       const devs = comoHoja.map((r, i) => [r, i]).filter(([r]) => esDev(r))
@@ -4944,7 +5036,7 @@
         htmlDatoRt('Fecha', fechaHoraHoja(o.cargada_en)) + htmlDatoRt('Cliente', o.cliente ?? '—') +
         htmlDatoRt('Transporte', limpio(o.transporte) || '—') +
         (String(o.observaciones ?? '').trim() ? htmlDatoRt('Observaciones', String(o.observaciones).trim()) : '') +
-        `</div><div class="rt-lista">${renglones}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span><span class="rt-total__valor">${esc(enteroHoja(cajasDeOrden(o)))} cajas` +
+        `</div><div class="rt-lista">${renglones}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span><span class="rt-total__valor">${esc(textoCajasOrden(o))}` +
         `${devueltas ? ` <small>${esc('· devueltas ' + enteroHoja(devueltas))}</small>` : ''}</span></p>`
     }
 
