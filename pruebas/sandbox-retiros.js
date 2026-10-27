@@ -65,7 +65,7 @@ const FUNCIONES_BASE = [
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
-  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
+  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja', 'textoRemitoHoja',
   'faltanteDeRenglon', 'descripcionHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La hoja nueva (26/10/2026): CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE.
   'porCajaHoja', 'nombreConoHoja', 'conMayuscula', 'bultoInsumoHoja', 'descripcionCortaHoja', 'htmlDescripcionHoja', 'bultosHoja',
@@ -99,6 +99,9 @@ const FUNCIONES_BASE = [
   'presentacionDeRenglon', 'sinStockRenglon', 'porUnidadRenglon', 'productoDeRenglon', 'textoSueltosForm', 'textoCajasForm',
   'sueltosDeOrden', 'textoCajasOrden',
   'esPorUnidadHoja', 'palabraUnidadesHoja', 'cantidadUnidadesHoja', 'unidadesDeRenglonHoja', 'totalUnidadesSueltasOrden',
+  // Subir remitos Rosario (27/10/2026): el botón de entrada lo prende
+  // pintarEncabezado(). El resto lo suma test-retiros-subir-remitos.js.
+  'pintarEntradaRemitos', 'puedeSubirRemitos', 'fabricasRemitos', 'leerFabricasSinControl',
 ]
 
 const CONSTANTES_BASE = [

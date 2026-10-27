@@ -87,6 +87,14 @@ const SEGURAS_RETIROS = [
   ['uno', 'adentro de esc(…): "cono", "unidad" o "caja", palabras fijas de palabraUnidadesHoja()'],
 ]
 
+// 27/10/2026: subir remitos Rosario ("Mis remitos subidos").
+SEGURAS_RETIROS.push(
+  ['ICONO_REMITO', 'HTML constante del código: el ícono de un remito sin miniatura'],
+  ['tipoRemito', 'texto constante del código: estadoRemitoSubido() / estadoRemitoEnCola() devuelven uno de seis tipos fijos'],
+  ['fotoRemito', 'HTML armado en htmlRemitoSubido(): la <img> sin src (lo pone pintarRemitos() por el DOM) con esc() de la clave, o el ícono constante'],
+  ['selloAcopio', 'HTML constante del código: el sello "Acopio", o vacío'],
+)
+
 const SEGURAS_REGEX_RETIROS = [
 ]
 

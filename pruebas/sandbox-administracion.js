@@ -99,7 +99,7 @@ const FUNCIONES_BASE = [
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
-  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
+  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja', 'textoRemitoHoja',
   'faltanteDeRenglon', 'descripcionHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La hoja nueva (26/10/2026): CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE.
   'porCajaHoja', 'nombreConoHoja', 'conMayuscula', 'bultoInsumoHoja', 'descripcionCortaHoja', 'htmlDescripcionHoja', 'bultosHoja',
@@ -203,6 +203,11 @@ const FUNCIONES_BASE = [
   // La orden a otra empresa del grupo (24/10/2026)
   'empresaGrupoDe', 'ordenEntreEmpresas', 'textoDeudaEntre', 'htmlDeudaEntre', 'htmlSelloEntre', 'htmlFichaEntre', 'ponerEmpresa',
   'codigoOrdenEntre', 'puedeAbrirOrdenEntre', 'htmlOrdenEntre', 'vincularOrdenesEntre', 'abrirOrdenEntre',
+  // Los remitos precargados de Rosario (27/10/2026): lo que usan Órdenes y la
+  // ficha (el resto lo pide test-administracion-remitos-precarga.js).
+  'sinControlStockEmpresa', 'leerSinControl', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio', 'numeroRemitoN', 'ordenarPorRemito',
+  'ordenesVisibles', 'htmlTalonariosOrdenes', 'elegirTalonarioOrdenes', 'htmlFilaOrdenRemito', 'remitosPorRevisar', 'leerRemitosPrecarga',
+  'cargarRemitosPrecarga', 'amarillosDe', 'nombreClienteRemito', 'htmlTarjetaRemito', 'htmlRemitosPrecarga', 'pintarRemitosPrecarga',
 ]
 
 const CONSTANTES_BASE = [
@@ -244,6 +249,8 @@ const CONSTANTES_BASE = [
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
   // Dividir para facturar (21/10/2026)
   'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
+  // Los remitos precargados de Rosario (27/10/2026)
+  'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO',
 ]
 
 const PRELUDIO = `
@@ -370,8 +377,32 @@ const OPCIONALES_FN = {
   htmlSoloProvisorios: "function htmlSoloProvisorios() { return '' }",
   // La fábrica de la nota para Anular (24/10/2026): una copia de antes no la lee.
   leerUnidadNotaDebito: 'async function leerUnidadNotaDebito() { return null }',
+  // Los remitos precargados (27/10/2026): una copia de antes no los tiene
+  // (todas sus fábricas son "con control": nada cambia).
+  sinControlStockEmpresa: 'function sinControlStockEmpresa() { return false }',
+  leerSinControl: 'async function leerSinControl() {}',
+  talonarioDe: "function talonarioDe() { return 'oficial' }",
+  textoNumeroRemito: "function textoNumeroRemito() { return '' }",
+  htmlSelloAcopio: "function htmlSelloAcopio() { return '' }",
+  numeroRemitoN: 'function numeroRemitoN() { return null }',
+  ordenarPorRemito: 'function ordenarPorRemito(l) { return Array.isArray(l) ? l : [] }',
+  ordenesVisibles: 'function ordenesVisibles(l = estado.ordenes) { return Array.isArray(l) ? l : [] }',
+  htmlTalonariosOrdenes: "function htmlTalonariosOrdenes() { return '' }",
+  elegirTalonarioOrdenes: 'function elegirTalonarioOrdenes() {}',
+  htmlFilaOrdenRemito: "function htmlFilaOrdenRemito() { return '' }",
+  remitosPorRevisar: 'function remitosPorRevisar() { return [] }',
+  leerRemitosPrecarga: 'async function leerRemitosPrecarga() { return [] }',
+  cargarRemitosPrecarga: 'async function cargarRemitosPrecarga() {}',
+  amarillosDe: 'function amarillosDe() { return 0 }',
+  nombreClienteRemito: "function nombreClienteRemito() { return '' }",
+  htmlTarjetaRemito: "function htmlTarjetaRemito() { return '' }",
+  htmlRemitosPrecarga: "function htmlRemitosPrecarga() { return '' }",
+  pintarRemitosPrecarga: 'function pintarRemitosPrecarga() {}',
 }
-const OPCIONALES_CONST = { TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'" }
+const OPCIONALES_CONST = {
+  TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'",
+  ESTADOS_REMITO_POR_REVISAR: 'var ESTADOS_REMITO_POR_REVISAR = []', ETIQUETA_ESTADO_REMITO: 'var ETIQUETA_ESTADO_REMITO = {}', TALONARIOS: 'var TALONARIOS = []', CAMPOS_REMITO: "var CAMPOS_REMITO = ''",
+}
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
   const texto = require('fs').readFileSync(ruta, 'utf8')

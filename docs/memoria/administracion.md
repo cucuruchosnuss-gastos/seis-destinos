@@ -65,3 +65,53 @@
   - **ANULAR, EN LA FÁBRICA DE LA NOTA (24/10/2026, rama `ci-prueba/ajustes-24-10`; traspaso `.claude/traspasos/2026-10-24-ajustes-24-10.md`).** `puedeAnularNotaDebito(d, unidadId)` repite la regla de `anular_nota_debito` (`pg_get_functiondef`, 24/10/2026): la **emitida** con `retiros:precios` **en la fábrica de la nota** (`puedeEn('retiros','precios', notas_debito.unidad_negocio_id)`, como `tiene_tarea_alcance`) o `cobranzas:procesar`; la **recibida** con `cuentas_corrientes:registrar_pago`. Antes miraba `retiros:precios` de cualquier fábrica (la base después decía "No tenés permiso."). `datos_nota_debito` NO trae la fábrica: `abrirNotaDebito` la lee a la vez con `leerUnidadNotaDebito(id)` (`notas_debito.select('id, unidad_negocio_id').eq('id', …)`, policy `notas_debito_ver`) y la guarda en `estado.notaDebito.unidadId`; si no se puede leer, Anular queda solo para `cobranzas:procesar`. La barra de arriba no cuenta. La base coincide con lo pedido (nada que anotar). Suites `test-/mut-administracion-anular-nota-debito.js` (26; 10/10), `e2e/64-ajustes-24-10.spec.js`; `sandbox-administracion.js` suma `leerUnidadNotaDebito` (con su reemplazo para copias viejas).
 
    - **LA VENTA POR UNIDAD (27/10/2026, rama `ci-prueba/venta-por-unidad`; ver `retiros.md`).** Las presentaciones de 1 por caja o con `sin_stock` (los "Conos de papel sueltos · Por cono") se dicen en unidades: el catálogo lee `sin_stock` y `partesRenglon` lo pasa (`sinStock`) a la hoja; la lista de órdenes lee también las `unidades` de cada renglón y dice "3 cajas + 720 un." (un renglón con cajas = unidades es por unidad); la ficha "720 conos · Conos de papel sueltos · …" y, al valorizar, **"Precio x cono"** (el precio es por cono, como cualquier presentación de 1 unidad: `precio_venta` de la Lista 1 propone $ 27 y el subtotal es precio × conos, sin cambios en la base).
+
+## Remitos precargados de Rosario (27/10/2026)
+
+Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, pedido `.claude/pedidos/2026-10-27-remitos-rosario.md`, partes C y D). En Rosario (Dolce Pasta, `controla_stock_terminado = false`) Manuel saca la foto de un remito escrito a mano, la IA (Edge Function `ocr-remito`, la escribe otra parte) deja una **precarga** en `remitos_precarga` y acá Yanina la revisa, la corrige y la confirma. La orden que sale se valoriza como cualquier otra.
+
+- **La base** (verificada con `pg_get_functiondef` el 27/10/2026, con el agregado de talonario y omitir del mismo día):
+  - `actualizar_remito_precarga(p_id, p_numero_remito, p_fecha, p_cliente_id, p_transporte, p_observaciones, p_items, p_talonario)` deja el remito en 'precargada'. El talonario null deja el que estaba; la pantalla lo manda SIEMPRE.
+  - `_remito_items_normalizar` deja `revisar = not omitir and (revisar or sin presentación ni insumo or sin cantidad)`. Por eso lo que Yanina ya corrigió viaja con `revisar: false`.
+  - `confirmar_remito_precarga(p_id)` saltea los omitidos y arma la orden con `registrar_orden_retiro`. Le pone a la orden `numero_remito` y `talonario`, y en las observaciones 'Remito N' o 'Acopio N'. Si ya estaba confirmado devuelve `reintento`.
+  - Los errores de confirmar van TAL CUAL: amarillo, cajas enteras, lotes que no suman, "elegí el producto (o marcalo "no va en la orden")", "no tiene renglones para la orden", "(talonario Y) ya está cargado (orden Z)" y "ya entró como ingreso en la otra empresa…".
+  - `descartar_remito_precarga(p_id, p_motivo)` pide un motivo de 3 letras o más.
+  - Volver a leer: `supabase.functions.invoke('ocr-remito', { body: { remito_id } })`.
+  - La foto se firma con `createSignedUrl('comprobantes', foto_path, 600)`, con la policy "comprobantes: ver fotos de remitos precargados".
+- **Solo en una fábrica SIN control de stock.** `leerSinControl(unidad)` lee `unidades_negocio.controla_stock_terminado` una vez por fábrica (`estado.sinControl`). Solo `false` cuenta: si no se puede leer, es una fábrica de siempre. `sinControlStockEmpresa()` decide. **En Nuss y Mengui, Órdenes no cambia:** no se consulta `remitos_precarga`, `#ad-remitos` y `#ad-ordenes-talonario` quedan vacíos, y la lista es la de `htmlFilaOrden` en el orden de la base.
+- **Arriba de Órdenes**, "Remitos precargados · por revisar":
+  - Va en `#ad-remitos` (`htmlRemitosPrecarga`, `htmlTarjetaRemito`) con el contador `[data-remitos-cuenta]`.
+  - Entran los estados precargada, error y leyendo, el más nuevo primero (`remitosPorRevisar`, por `subido_en`).
+  - Cada tarjeta muestra el N° (o "Sin número"), el estado, el sello Acopio, cuántos renglones hay en amarillo, el cliente (o «lo leído»), el error de la IA y la hora en que se subió.
+  - Lo confirmado o descartado en la visita queda en `estado.remitosResueltos` y no vuelve aunque una lectura vieja lo traiga.
+- **Abajo**, las órdenes de la fábrica en solapas Oficial / Acopio (`htmlTalonariosOrdenes`, `estado.talonarioOrdenes`; talonario null = oficial).
+  - Cada solapa va por `numero_remito_n` de mayor a menor, con las sin número al final en el orden que vinieron (`ordenarPorRemito`, `ordenesVisibles`).
+  - La fila (`htmlFilaOrdenRemito`) muestra el "Remito N° X" / "Acopio N° X" grande, el sello Valorizada / Sin valorizar (`htmlSelloOrden`, que decide con `estado_valorizacion`), el sello Acopio, el cliente, la fecha, la orden y el total si está valorizada.
+  - Tocarla abre la ficha de siempre (`data-orden`). `leerOrdenes` trae además `numero_remito, numero_remito_n, talonario`.
+- **El remito abierto** es la vista `ad-vista-remito` (`abrirRemito`, `pintarRemito`; "‹ Órdenes" avisa una vez si hay cambios sin guardar).
+  - **La foto** va al lado en la compu (desde 1024 px, sticky) y arriba en el celular. Tiene zoom propio de 100 a 300 % (`js/ampliar.js` no sirve: copia paneles y en el celular no aparece). El link firmado se pone por la propiedad `src` (`ponerSrcFotoRemito`), nunca dentro del HTML, y solo si es https, blob o data:image (`urlFotoSegura`).
+  - **El encabezado** tiene el talonario (Oficial / Acopio), el N°, la fecha (no futura), el transporte y las observaciones. El cliente se elige con el buscador del módulo (`clientesParaAsentar` + `apodoMostrarRet`, entre los activos de la fábrica) y la pantalla muestra «lo leído en la foto» con "Buscar así".
+  - **Los renglones** usan el MISMO catálogo de la Carga sin control de stock (`opcionesRemito` / `gruposRemito`: SIN CONO, CON CONO con el cono después, y los insumos al buscar). Solo se ofrecen presentaciones y productos activos, porque la base anula los otros.
+  - Cada renglón lleva la cantidad (cajas, o la unidad del insumo) y, si es producto, los lotes escritos a mano (lote + cajas, "+ Agregar lote", "Asignado X de Y · faltan Z" / "Va sin lote", `htmlResumenLotesRemito`).
+  - El renglón con `revisar` va en AMARILLO (`.ad-rm-renglon--revisar`) con «Leído: …» y la nota de la IA. La reposición llega así, con la nota "reposición".
+  - Elegir el producto (o el insumo) pone `revisar = false`. "Aceptar sugerencia" aparece si la IA reconoció el producto o el insumo y la cantidad, y solo saca el amarillo.
+  - "No va en la orden" (`omitir`) tacha el renglón en gris y "Va en la orden" lo deshace. Un omitido no cuenta en los amarillos y viaja con `revisar: false`.
+  - Se agregan y quitan renglones.
+  - **Lo que viaja**: `itemRemitoParaBase` arma `{ texto_leido, cantidad, presentacion_id, marca_id, insumo_id, lotes, revisar, omitir, nota }`. Los lotes van en mayúsculas, sin bordes y con cajas enteras.
+- **Los botones** (solo con `retiros:cargar` en la fábrica; sin él, el remito se mira y lo dice):
+  - Guardar.
+  - Volver a leer: avisa que pisa lo no guardado y el formulario queda con lo leído. El error de la función se muestra tal cual, el del cuerpo si viene.
+  - Confirmar: guarda primero si hay cambios. El error de la base va TAL CUAL en `#ad-rm-error`, y si dice "ya entró como ingreso" aparece **"Descartar (ya ingresado)"**, que descarta con ese motivo. Al confirmar avisa "Remito N° X confirmado: es la orden D-0009", lo saca de la lista y vuelve a Órdenes.
+  - Descartar: con motivo de 3 letras o más.
+- **"Remito N° X" en la ficha, la hoja y el PDF.**
+  - La ficha (`htmlDetalleOrden`) dice "Remito N° X" o "Acopio N° X" (`textoNumeroRemito`, `[data-orden-remito]`) y lleva el sello Acopio. `leerOrden` trae `numero_remito, talonario`.
+  - `ordenParaHoja` pasa `numeroRemito` y `talonario`.
+  - En `js/retiros-comun.js`, `textoRemitoHoja(orden)` pone el texto en el recuadro de la orden (`.rh-orden__remito`, debajo de la fecha, con escHoja) y en el texto para compartir. El PDF arma la misma `htmlHoja`.
+  - Sin número, nada cambia (`test-retiros-hoja-nueva.js` y `e2e/69` siguen igual).
+  - La Carga (`modulos/retiros.html`) no arma órdenes con remito. Si "Mis retiros" tiene que imprimir el N°, hay que pasarle `numeroRemito` y `talonario` a la hoja desde allá.
+- **Pruebas:**
+  - `test-/mut-administracion-remitos-precarga.js` (187; 96/96 + 54 equivalentes, cada uno con su motivo; baseline `f364914`).
+  - `test-/mut-retiros-hoja-remito.js` (17; 13/13, con baseline `f364914`).
+  - La maqueta `administracion-remitos` (Dolce elegida: una precargada con amarillos —"Cono dulce 48 con cono Lelona", nota "leí Lelona, ¿LEROMA?"—, una en error, una leyendo, una de acopio y una confirmada; órdenes oficiales y de acopio, con y sin N°, valorizadas y no).
+  - `e2e/71-revisar-remitos.spec.js` (8, a 390 y 1280).
+  - `sandbox-administracion.js` suma las funciones de Órdenes, con reemplazos para copias viejas, y `textoRemitoHoja`, igual que `sandbox-retiros.js`. `seguras-administracion.js` justifica las interpolaciones nuevas.

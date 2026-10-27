@@ -589,6 +589,16 @@ function htmlSelloAnulada(orden) {
     (detalle ? `<span class="rh-anulada__detalle">${escHoja(detalle)}</span>` : '') + `</div></div>`
 }
 
+// EL REMITO DE PAPEL (27/10/2026, los remitos de Rosario): una orden que
+// salió de un remito precargado lleva su número (ordenes_retiro.numero_remito)
+// y su talonario ('acopio' o el oficial, null = oficial). La hoja, el PDF y el
+// texto dicen "Remito N° 0001-00003100" o "Acopio N° 977492". Sin número, nada.
+export function textoRemitoHoja(orden) {
+  const n = String(orden?.numeroRemito ?? '').trim()
+  if (!n) return ''
+  return `${orden?.talonario === 'acopio' ? 'Acopio' : 'Remito'} N° ${n}`
+}
+
 // "ORIGINAL", o "ORIGINAL · HOJA 1 DE 3" en hojas enteras.
 export function rotuloCopiaHoja(copia, pagina = 1, paginas = 1, entera = false) {
   return entera ? `${copia} · HOJA ${pagina} DE ${paginas}` : copia
@@ -600,6 +610,7 @@ function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, pagina
   const anulada = orden?.estado === 'anulada'
   const ultima = pagina === paginas
   const fecha = orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)
+  const remito = textoRemitoHoja(orden)
   return `<section class="rh-copia${anulada ? ' rh-copia--anulada' : ''}" data-copia="${escHoja(copia)}">` +
     `<header class="rh-cab">${htmlEmpresaHoja(orden?.empresa)}` +
     `<div class="rh-titulo"><span class="rh-titulo__grande">ORDEN DE PEDIDO</span>` +
@@ -607,7 +618,8 @@ function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, pagina
     (anulada ? '<span class="rh-titulo__anulada">ANULADA</span>' : '') + '</div>' +
     `<div class="rh-orden"><span class="rh-orden__rotulo">ORDEN N°</span>` +
     `<span class="rh-codigo">${escHoja(orden?.codigo || '—')}</span>` +
-    `<span class="rh-orden__fecha">${escHoja(fecha)}</span></div></header>` +
+    `<span class="rh-orden__fecha">${escHoja(fecha)}</span>` +
+    (remito ? `<span class="rh-orden__remito">${escHoja(remito)}</span>` : '') + `</div></header>` +
     htmlClienteHoja(orden?.cliente, orden?.transporte) +
     htmlTablaHoja(renglones, conPrecios, orden?.moneda || 'ARS', { conTotal: ultima, orden }) +
     (ultima ? htmlNotasHoja(orden) + htmlPieHoja(orden) : `<p class="rh-sigue">Sigue en la hoja ${escHoja(pagina + 1)}.</p>`) +
@@ -954,6 +966,7 @@ export const ESTILOS_HOJA = `
 .rh-orden__rotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
 .rh-codigo { font-size: 28px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rh-orden__fecha { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.rh-orden__remito { font-size: 11px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; border-top: 1px solid #000; padding-top: 1px; margin-top: 1px; max-width: 100%; }
 .rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 3px; }
 .rh-cliente__izq { display: flex; flex-direction: column; min-width: 0; }
 .rh-rotulo { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
@@ -1025,6 +1038,7 @@ export function textoOrden(orden) {
     `Fecha: ${orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)}`,
     `Cliente: ${cli}`,
   ]
+  if (textoRemitoHoja(orden)) lineas.splice(1, 0, textoRemitoHoja(orden))
   if (String(orden?.transporte ?? '').trim()) lineas.push(`Transporte: ${String(orden.transporte).trim()}`)
   if (orden?.estado === 'anulada') lineas.push('ANULADA')
   lineas.push('')
