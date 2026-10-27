@@ -67,7 +67,17 @@ jobs:
       - run: npm ci
       # WebKit es el iPhone de e2e/filtros-dispositivos.spec.js (04/10/2026) y
       # de e2e/detalles-dispositivos.spec.js (05/10/2026).
-      - run: npx playwright install --with-deps chromium webkit
+      # 26/10/2026: dos veces en el día esta instalación se colgó hasta el tope
+      # de 30 minutos (no las pruebas) y hubo que volver a correr todo. Cada
+      # intento tiene 6 minutos y se reintenta hasta 3 veces.
+      - name: Instalar Chromium y WebKit (con tope y reintento)
+        timeout-minutes: 20
+        run: |
+          for i in 1 2 3; do
+            if timeout 360 npx playwright install --with-deps chromium webkit; then exit 0; fi
+            echo "El intento $i no terminó en 6 minutos o falló: se reintenta"
+          done
+          exit 1
       - name: ¿Están las credenciales del robot?
         run: |
           if [ "$GITHUB_REF" != "refs/heads/main" ]; then
