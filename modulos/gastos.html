@@ -1006,6 +1006,25 @@
 
     .resumen-fila__etiqueta { color: var(--color-texto-suave); flex-shrink: 0; }
     .resumen-fila__valor    { font-weight: 600; color: var(--color-texto); text-align: right; }
+
+    /* Detalle de la factura de compra (27/10/2026): la tabla de renglones
+       se desplaza DENTRO de la sección; la página no se corre de costado. */
+    .detalle-compra__scroll { overflow-x: auto; margin: 0 -0.25rem 0.5rem; padding: 0 0.25rem; }
+    .detalle-compra { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    .detalle-compra th {
+      text-align: left; font-weight: 600; color: var(--color-texto-suave); white-space: nowrap;
+      padding: 0.375rem 0.5rem; border-bottom: 1px solid var(--color-borde-fuerte);
+    }
+    .detalle-compra td { padding: 0.4375rem 0.5rem; border-bottom: 1px solid var(--color-borde); vertical-align: top; }
+    .detalle-compra tr:last-child td { border-bottom: none; }
+    .detalle-compra td:first-child { min-width: 10rem; }
+    .detalle-compra .detalle-compra__num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .detalle-compra__leyenda { margin: 0 0 0.625rem; font-size: 0.8125rem; color: var(--color-texto-suave); }
+    /* En la ventana Ampliar (js/ampliar.js) todo corta línea en cualquier
+       letra: acá los números y los títulos quedan enteros y la tabla se
+       desplaza dentro de su caja. */
+    .amp .detalle-compra * { overflow-wrap: normal; }
+    .amp .detalle-compra .detalle-compra__num, .amp .detalle-compra th { white-space: nowrap !important; }
     /* En el celular (10/10/2026, e2e/31-vistas-faltantes): el ícono de la
        categoría va al lado del nombre. Con el `svg { display: block }` de
        main.css quedaba arriba, solo, en un renglón aparte. */
@@ -3425,6 +3444,15 @@
       const partes = String(ruta ?? '').split('/')
       if (partes.length < 2 || !partes[0]) return null
       if (partes[0] === estado.sesion?.user?.id) return true
+      // Foto de Ingreso de una factura de compra (<uid>/mp/…, 27/10/2026): la
+      // deja ver la policy "ver fotos de facturas de compra desde cuentas
+      // corrientes" con estas dos tareas. Sin ellas todavía puede dejarla ver
+      // materia_prima:ver_todo en la fábrica del ingreso, que acá no se sabe:
+      // decide Storage. (Los gastos nunca guardan rutas /mp/: la foto que
+      // viene de Ingreso se copia a la carpeta del usuario.)
+      if (partes.length === 3 && partes[1] === 'mp') {
+        return tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago') ? true : null
+      }
       if (partes.length !== 2) return null
       return tieneTarea('gastos', 'ver_exportar') || tieneTarea('cuentas_corrientes', 'ver_todo')
     }
@@ -3498,6 +3526,133 @@
       const boton = e.target.closest('[data-ruta-comprobante]')
       if (!boton) return
       abrirFotoComprobante(boton.dataset.rutaComprobante)
+    }
+
+    // DETALLE DE LA FACTURA DE COMPRA (27/10/2026). La factura que carga
+    // Ingreso de materia prima no tiene comprobante_url: la foto quedó en el
+    // ingreso, y los renglones (lo que leyó el OCR) también. Los trae
+    // detalle_factura_compra(); acá solo se arman. armarDetalleFacturaCompra()
+    // no tiene HTML: la prueba test-gastos-detalle-factura-compra.js.
+    const MENSAJES_DETALLE_COMPRA = {
+      sin_permiso: 'No tenés permiso para ver el detalle',
+      otro:        'No se pudo cargar el detalle de la factura. Probá de nuevo en un momento.',
+    }
+
+    function numeroDetalleCompra(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = typeof v === 'number' ? v : Number(String(v).trim())
+      return Number.isFinite(n) ? n : null
+    }
+
+    function redondearDetalleCompra(n) {
+      return Math.round((n + Number.EPSILON) * 100) / 100
+    }
+
+    // Lo que viene de la base, en números o null. El precio de cada renglón
+    // es SIN IVA (así lo lee el OCR) y su total también: cantidad × precio.
+    // Los totales de abajo son los leídos de la factura; si faltan, se suman
+    // de los renglones (solo si están todos).
+    function armarDetalleFacturaCompra(d) {
+      const renglones = (Array.isArray(d?.renglones_factura) ? d.renglones_factura : []).map(r => {
+        const cantidad = numeroDetalleCompra(r?.cantidad)
+        const unitario = numeroDetalleCompra(r?.precio_unitario)
+        const alicuota = numeroDetalleCompra(r?.alicuota_iva)
+        const total = numeroDetalleCompra(r?.precio_total) ??
+          (cantidad !== null && unitario !== null ? redondearDetalleCompra(cantidad * unitario) : null)
+        return {
+          descripcion: String(r?.descripcion ?? '').trim(),
+          cantidad, unidad: String(r?.unidad ?? '').trim(), unitario, alicuota,
+          unitarioConIva: unitario !== null && alicuota !== null ? redondearDetalleCompra(unitario * (1 + alicuota / 100)) : null,
+          total,
+        }
+      })
+      const sumar = (xs) => xs.length && xs.every(x => x !== null)
+        ? redondearDetalleCompra(xs.reduce((a, b) => a + b, 0)) : null
+      const neto = numeroDetalleCompra(d?.importe_neto) ?? sumar(renglones.map(r => r.total))
+      const iva = numeroDetalleCompra(d?.importe_iva) ??
+        sumar(renglones.map(r => r.total !== null && r.alicuota !== null ? r.total * r.alicuota / 100 : null))
+      const total = numeroDetalleCompra(d?.importe_total) ??
+        (neto !== null && iva !== null ? redondearDetalleCompra(neto + iva) : null)
+      const items = (Array.isArray(d?.items_ingreso) ? d.items_ingreso : []).map(i => ({
+        insumo: String(i?.insumo ?? '').trim(),
+        marca: String(i?.marca ?? '').trim(),
+        cantidad: numeroDetalleCompra(i?.cantidad),
+        unidad: String(i?.unidad ?? '').trim(),
+      }))
+      return { renglones, totales: { neto, iva, total }, items, sinDetalle: renglones.length === 0 }
+    }
+
+    // Por el código del error, nunca por el texto. La RPC solo levanta una
+    // excepción, la de permiso (raise sin código: P0001); 42501 es el de
+    // Postgres si alguna vez le sacan el grant.
+    function clasificarErrorDetalleCompra(error) {
+      if (!error) return null
+      const codigo = String(error.code ?? '')
+      return codigo === 'P0001' || codigo === '42501' ? 'sin_permiso' : 'otro'
+    }
+
+    function textoCantidadDetalleCompra(cantidad, unidad) {
+      if (cantidad === null) return '—'
+      const n = formatearNumeroAr(cantidad, { decimales: 3, minimos: 0 })
+      return unidad ? `${n} ${unidad}` : n
+    }
+
+    function textoAlicuotaDetalleCompra(alicuota) {
+      return alicuota === null ? '—' : `${formatearNumeroAr(alicuota, { decimales: 2, minimos: 0 })} %`
+    }
+
+    // resultado = { data, error } de la RPC. Sin ingreso (la factura no vino
+    // de Ingreso), '' : no hay nada que mostrar.
+    function htmlDetalleFacturaCompra(resultado, moneda = 'ARS') {
+      const falla = clasificarErrorDetalleCompra(resultado?.error)
+      if (falla) return `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalle de la factura</div>
+          <p class="resumen-fila__etiqueta" style="margin:0;">${esc(MENSAJES_DETALLE_COMPRA[falla])}</p>
+        </div>`
+      if (!resultado?.data?.ingreso_id) return ''
+      const m = armarDetalleFacturaCompra(resultado.data)
+      const tabla = m.sinDetalle ? `
+          <p class="detalle-compra__leyenda">La factura no tiene el detalle leído. Esto es lo que entró al stock:</p>
+          <div class="detalle-compra__scroll">
+            <table class="detalle-compra">
+              <thead><tr><th>Insumo</th><th>Marca</th><th class="detalle-compra__num">Cantidad</th></tr></thead>
+              <tbody>${m.items.map(i => `
+                <tr>
+                  <td>${esc(i.insumo || '—')}</td>
+                  <td>${esc(i.marca || '—')}</td>
+                  <td class="detalle-compra__num">${esc(textoCantidadDetalleCompra(i.cantidad, i.unidad))}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+          </div>` : `
+          <div class="detalle-compra__scroll">
+            <table class="detalle-compra">
+              <thead><tr>
+                <th>Descripción</th><th class="detalle-compra__num">Cantidad</th><th class="detalle-compra__num">P. unit. sin IVA</th>
+                <th class="detalle-compra__num">IVA</th><th class="detalle-compra__num">P. unit. con IVA</th><th class="detalle-compra__num">Total sin IVA</th>
+              </tr></thead>
+              <tbody>${m.renglones.map(r => `
+                <tr>
+                  <td>${esc(r.descripcion || '—')}</td>
+                  <td class="detalle-compra__num">${esc(textoCantidadDetalleCompra(r.cantidad, r.unidad))}</td>
+                  <td class="detalle-compra__num">${esc(formatearImporte(r.unitario, moneda))}</td>
+                  <td class="detalle-compra__num">${esc(textoAlicuotaDetalleCompra(r.alicuota))}</td>
+                  <td class="detalle-compra__num">${esc(formatearImporte(r.unitarioConIva, moneda))}</td>
+                  <td class="detalle-compra__num">${esc(formatearImporte(r.total, moneda))}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+          </div>`
+      const t = m.totales
+      const hayTotales = t.neto !== null || t.iva !== null || t.total !== null
+      return `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalle de la factura</div>
+          ${tabla}
+          ${hayTotales ? `
+          <div class="resumen-fila"><span class="resumen-fila__etiqueta">Neto</span><span class="resumen-fila__valor">${esc(formatearImporte(t.neto, moneda))}</span></div>
+          <div class="resumen-fila"><span class="resumen-fila__etiqueta">IVA</span><span class="resumen-fila__valor">${esc(formatearImporte(t.iva, moneda))}</span></div>
+          <div class="resumen-fila resumen-fila--importe"><span class="resumen-fila__etiqueta">Total</span><span class="resumen-importe">${esc(formatearImporte(t.total, moneda))}</span></div>` : ''}
+        </div>`
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -6698,7 +6853,7 @@
         .select(`
           id, razon_social, tipo_documento, numero_comprobante, importe, moneda,
           fecha_factura, lugar, observaciones, comprobante_url, estado, saldo_pendiente,
-          proveedor_id,
+          proveedor_id, modulo_origen,
           proveedores (id, razon_social),
           categorias (id, nombre, icon),
           unidades_negocio (id, nombre)
@@ -6712,6 +6867,19 @@
       }
 
       estado.facturaDetalleActual = f
+
+      // La de Ingreso (o una sin foto propia): la foto y los renglones salen
+      // de detalle_factura_compra(). Un error no frena la pantalla: lo dice
+      // la sección del detalle, y solo en la de Ingreso (en otra factura sin
+      // foto no hay detalle que buscar).
+      const deIngreso = f.modulo_origen === 'materia_prima'
+      let detalleCompra = null
+      if (!f.comprobante_url || deIngreso) {
+        const r = await supabase.rpc('detalle_factura_compra', { p_factura_id: id })
+        if (r.error) console.error('[detalle_factura_compra]', r.error)
+        detalleCompra = r.error && !deIngreso ? null : { data: r.data ?? null, error: r.error ?? null }
+      }
+      const fotoFactura = detalleCompra?.data?.foto_url || f.comprobante_url
 
       // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
       // tipeó un usuario o leyó el OCR. filaHtml() es la única que deja pasar
@@ -6754,7 +6922,9 @@
           ${fila('Observaciones', f.observaciones)}
         </div>
 
-        ${htmlSeccionComprobante(f.comprobante_url)}
+        ${htmlDetalleFacturaCompra(detalleCompra, f.moneda || 'ARS')}
+
+        ${htmlSeccionComprobante(fotoFactura)}
       `
       lucide.createIcons()
 
