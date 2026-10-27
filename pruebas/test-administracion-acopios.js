@@ -578,5 +578,35 @@ const IT = (x) => ({ texto_leido: '', cantidad: null, presentacion_id: null, mar
   const rm = { form: { talonario: 'acopio', clienteId: 'c-x', renglones: [] }, acopios: { clienteId: 'c-x', filas: [], error: marca('errorLectura') } }
   chequearMarcas(chk, 'htmlSaldoAcopioRemito', S.htmlSaldoAcopioRemito(rm, { presentacionId: 'pr-x', cantidad: 1 }, 0), ['errorLectura'])
 }
+{
+  // Los ids y lo escrito, también escapados.
+  const S = nuevo()
+  enDolce(S)
+  const malo = A({ id: 'a-x', cliente_id: marca('clienteId'), cliente: 'Cliente', presentacion_id: 'pr-tall', producto: 'P', unidades_por_caja: 1, cajas: 5, saldo: 5,
+    estado: 'activo', fecha: '2026-10-01' })
+  chequearMarcas(chk, 'htmlFiltroAcopios (ids)', S.htmlFiltroAcopios({ ...S.acopiosVacio('u-d'), filas: [malo] }), ['clienteId'])
+  S.estado.acopios = { ...S.acopiosVacio('u-d'), filas: [], aviso: marca('aviso') }
+  S.pintarAcopios()
+  chequearMarcas(chk, 'pintarAcopios (aviso)', cuerpoAcopios(S), ['aviso'])
+  S.estado.clientes = [{ id: marca('idCliente'), nombre: 'Bodega', activo: true }]
+  chequearMarcas(chk, 'htmlClientesAcopio (id)', S.htmlClientesAcopio({ clienteBusqueda: 'bod' }), ['idCliente'])
+  const cat = { productos: [{ id: 'p-x', nombre: 'Pan', activo: true }], presentaciones: [{ id: marca('idPres'), producto_id: 'p-x', nombre: 'Caja', con_cono: false, activa: true }],
+    marcas: [{ id: marca('idMarca'), nombre: 'LOLO' }], insumos: [] }
+  chequearMarcas(chk, 'htmlOpcionesAcopio (id)', S.htmlOpcionesAcopio(cat, ''), ['idPres'])
+  chequearMarcas(chk, 'htmlOpcionesAcopio (lo buscado)', S.htmlOpcionesAcopio(cat, marca('busco')), ['busco'])
+  chequearMarcas(chk, 'htmlMarcasAcopio (id)', S.htmlMarcasAcopio({ marcaBusqueda: '' }, cat), ['idMarca'])
+  chequearMarcas(chk, 'htmlMarcasAcopio (lo buscado)', S.htmlMarcasAcopio({ marcaBusqueda: marca('buscoCono') }, cat), ['buscoCono'])
+  chequearMarcas(chk, 'htmlProductoAcopio (lo buscado)', S.htmlProductoAcopio({ ...S.nuevoAcopioVacio(), busqueda: marca('escrito') }, cat), ['escrito'])
+  S.estado.catalogo = { productos: [{ id: 'p-c', nombre: 'Cono', activo: true }], presentaciones: [{ id: 'pr-c', producto_id: 'p-c', nombre: 'Caja', con_cono: true, activa: true }], marcas: [], insumos: [] }
+  chequearMarcas(chk, 'htmlProductoAcopio (el cono buscado)', S.htmlProductoAcopio({ ...S.nuevoAcopioVacio(), presentacionId: 'pr-c', eligiendo: false, marcaBusqueda: marca('conoEscrito') }, S.estado.catalogo), ['conoEscrito'])
+  const fila = A({ id: 'a-y', cliente_id: 'c', cliente: 'C', presentacion_id: 'pr-tall', producto: 'P', unidades_por_caja: 1, cajas: 5, saldo: 5, estado: 'activo', fecha: '2026-10-01' })
+  chequearMarcas(chk, 'htmlDetalleAcopio (la orden y Anular)', S.htmlDetalleAcopio({ fila, movs: [{ orden_retiro_id: marca('idOrden'), cajas: -1, fecha: '2026-10-02' }], ordenes: new Map(),
+    anular: { motivo: marca('motivoEscrito'), error: marca('errorBase') } }), ['idOrden', 'motivoEscrito', 'errorBase'])
+  chequearMarcas(chk, 'htmlDetalleAcopio (el motivo de la anulación)', S.htmlDetalleAcopio({ fila: { ...fila, estado: 'anulado' }, movs: [], ordenes: new Map(),
+    anulacion: { anulado_motivo: marca('motivoBase') } }), ['motivoBase'])
+  S.estado.empresas = [...S.estado.empresas, { id: 'u-m', nombre: marca('empresaPropia') }]
+  const g = S.htmlCuentaGrupo({ id: 'c-fer', grupo: { filas: [{ cliente_id: 'c-fer', unidad_negocio_id: 'u-m', saldo: 1 }, { cliente_id: marca('idOtra'), unidad_negocio_id: 'u-m', saldo: 2 }], error: null } }, { cliente_principal_id: 'x' })
+  chequearMarcas(chk, 'htmlCuentaGrupo (la propia y el link)', g, ['empresaPropia', 'idOtra'])
+}
 
 fin()

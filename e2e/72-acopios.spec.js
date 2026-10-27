@@ -132,7 +132,8 @@ for (const [ancho, alto] of TAMANOS) {
     await captura(page, `acopios-nuevo-${ancho}`, info);
     await page.locator('[data-ac-accion="guardar"]').click();
     await expect(page.locator('#ad-acopios-aviso')).toContainText('Acopio cargado: 12 cajas de Cono dulce 48');
-    const p = (await expect.poll(() => rpc.find(r => r.nombre === 'crear_acopio')?.params).toBeTruthy(), rpc.find(r => r.nombre === 'crear_acopio').params);
+    await expect.poll(() => rpc.some(r => r.nombre === 'crear_acopio')).toBe(true);
+    const p = rpc.find(r => r.nombre === 'crear_acopio').params;
     expect(p).toMatchObject({ p_unidad_negocio_id: 'u-d', p_cliente_id: 'c-d-fer', p_presentacion_id: 'pr-d-cono', p_marca_id: 'm-lel', p_cajas: 12, p_numero_remito: '3050',
       p_numero_factura: 'A-0001-77', p_precio_caja: 1500.5, p_observaciones: null });
     expect(errores, errores.join('\n')).toEqual([]);
@@ -184,7 +185,10 @@ for (const [ancho, alto] of TAMANOS) {
     await expect.poll(async () => nb(await grupo.textContent())).toContain('$ 470.000,00');
     await expect.poll(async () => nb(await grupo.textContent())).toContain('Nuss $ 350.000,00');
     await expect.poll(async () => nb(await grupo.textContent())).toContain('Dolce Pasta $ 120.000,00');
-    await expect(grupo.locator('[data-otra-cuenta="c-n-fer"]')).toBeVisible();
+    // Con Dolce elegida en la barra de arriba, la cuenta de Nuss se dice pero no
+    // se abre desde acá (la empresa la decide la barra, como "También es
+    // cliente de…"; el link lo prueba test-administracion-acopios.js).
+    await expect(grupo.locator('[data-otra-cuenta]')).toHaveCount(0);
     await sinScrollHorizontal(page);
     await captura(page, `acopios-cuenta-grupo-${ancho}`, info);
 

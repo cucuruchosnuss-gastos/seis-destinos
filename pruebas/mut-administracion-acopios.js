@@ -66,6 +66,12 @@ correrMutaciones({
     { expr: "esc((cajas < 0 ? '−' : '+') + enteroHoja(Math.abs(cajas)) + (Math.abs(cajas) === 1 ? ' caja' : ' cajas'))", motivo: 'un número formateado con texto constante' },
     { expr: 'esc(importeHoja(centavos / 100))', motivo: 'un importe formateado por importeHoja()' },
     { expr: 'esc(clase)', motivo: 'una de dos clases constantes' },
+    { expr: 'esc(ac.error)', motivo: 'texto constante: lo pone cargarAcopios() (nunca el de la base)' },
+    { expr: 'esc(det.error)', motivo: 'texto constante: lo pone abrirAcopio() (nunca el de la base)' },
+    { expr: 'esc(det.aviso)', motivo: 'texto constante: lo pone confirmarAnularAcopio()' },
+    { expr: 'esc(a.error)', motivo: 'texto constante: lo pone cargarAcopiosCliente()' },
+    { expr: 'esc(g.error)', motivo: 'texto constante: lo pone cargarCuentaGrupo()' },
+    { expr: 'esc(f.unidad_negocio_id)', motivo: 'el id de una empresa que ya está en estado.empresas (el link solo sale si empresasDeAdministracion() la tiene)' },
     { expr: 'esc(i)', motivo: 'el índice del renglón (un número de la pantalla)' },
     { expr: "esc(a.precio_caja !== null && a.precio_caja !== undefined && Number(a.precio_caja) > 0 ? 'Lo que se le cargó en la cuenta al cliente se revierte.' : 'No tiene nada cargado en la cuenta del cliente.')", motivo: 'texto constante' },  ],
   manuales: [
