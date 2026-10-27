@@ -2485,6 +2485,16 @@
       return limpio(estado.empresasGrupo?.get(id)) || 'otra empresa del grupo'
     }
 
+    // 27/10/2026: la orden a otra empresa del grupo es una ORDEN INTERNA, con
+    // su propia numeración: <prefijo>-I-0001 (_numerar_orden_retiro, leída
+    // con pg_get_functiondef el 27/10/2026). El código lo pone la base al
+    // confirmar; acá se anticipa la forma ("N-I-…"), nunca el número.
+    function textoNumerarInterna(c) {
+      if (!empresaGrupoDe(c)) return 'Se numera al confirmar'
+      const pref = limpio(empresaActual()?.prefijo)
+      return pref ? `Se numera al confirmar: ${pref}-I-…` : 'Se numera al confirmar (orden interna)'
+    }
+
     // 26/10/2026 ("Mandar a otra empresa del grupo"): dice adónde va y que van
     // los mismos lotes (_orden_grupo_espejar los copia).
     function textoEntreEmpresas(c) {
@@ -2510,8 +2520,8 @@
         `<span class="rt-cliente-elegido__nombre">${esc(c ? c.nombre : 'Cliente (no se pudo leer)')}</span>` +
         `${d ? `<span class="rt-cliente-elegido__detalle">${esc(d)}</span>` : ''}` +
         `${c?.provisorio === true ? '<span class="rt-sello rt-sello--provisorio" title="Cliente nuevo: lo completa administración">Provisorio</span>' : ''}` +
-        `${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Entre empresas</span>' : ''}</span>` +
-        `<span class="rt-numerar">Se numera al confirmar</span>` +
+        `${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Orden interna</span>' : ''}</span>` +
+        `<span class="rt-numerar">${esc(textoNumerarInterna(c))}</span>` +
         `<button type="button" class="rt-link" id="rt-cliente-cambiar">Cambiar</button></div>` +
         (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : '')
     }
@@ -4492,9 +4502,9 @@
         ? '<div class="rt-aviso">Esta orden ya había entrado antes de que se cortara la conexión: no se cargó dos veces.</div>' : ''
       const cuando = h.orden?.cargada_en ? fechaHoraHoja(h.orden.cargada_en) : ''
       const detalle = [[h.cliente?.nombre, h.total].filter(Boolean).join(' · '), cuando].filter(Boolean)
-      const entre = h.entre ? `<p class="rt-aviso-entre" role="note">${esc('Entre empresas: lo que salió entra al stock de ' + h.entre + '.')}</p>` : ''
+      const entre = h.entre ? `<p class="rt-aviso-entre" role="note">${esc('Orden interna: lo que salió entra al stock de ' + h.entre + '.')}</p>` : ''
       return `<span class="rt-hecho__ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>` +
-        `<span class="rt-hecho__rotulo">Retiro confirmado</span>` +
+        `<span class="rt-hecho__rotulo">${h.entre ? 'Orden interna confirmada' : 'Retiro confirmado'}</span>` +
         `<div class="rt-codigo-grande">${esc(h.codigo || '—')}</div>` +
         `${detalle.length ? `<p class="rt-hecho__detalle">${detalle.map(esc).join('<br>')}</p>` : ''}${entre}${aviso}${htmlEstadoFaltantes(h)}`
     }

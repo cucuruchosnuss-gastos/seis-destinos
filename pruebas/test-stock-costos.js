@@ -8,8 +8,12 @@
 //  - el total valorizado suma EN CENTAVOS solo los insumos con costo, y cuenta
 //    los sin costo ("N insumos sin costo"); un ausente es "—", nunca "$ 0";
 //  - con "Todas" y varias fábricas con costos, se pide la fábrica;
-//  - la lista de costos: los sin costo arriba ("Sin costo"), la variación ↑
-//    en bordó y ↓ en verde;
+//  - la lista de PRECIOS DE COMPRA (27/10/2026, precios_compra()): Insumo |
+//    Precio unitario | IVA % | Precio final, el bulto con IVA, de dónde salió
+//    (compra o a mano) y los insumos con stock sin ninguno arriba ("Sin
+//    precio", de costos_insumos);
+//  - el IVA al cargar a mano (p_alicuota_iva; sin elegir no se guarda) y el
+//    historial con las compras de la fábrica;
 //  - cargar un costo: 1 bulto de 50 kg a $ 50.000 viaja como 1.000 por kg a
 //    guardar_costo_insumo; por unidad viaja lo escrito; cambiar de modo vacía
 //    el campo; sin cargar_costos no hay formulario; un doble toque manda UNA
@@ -45,7 +49,7 @@ const STUBS = new Set([
 const RENDERS = ['esc', 'pasaFiltroUnidad', 'sinUnidadesDePrueba', 'alCambiarBarra', 'cargarStock', 'renderizarStock',
   'cargarValorizado', 'pintarValorizado', 'resumenValorizado', 'puedeVerCostosAlgo', 'puedeCostosEn',
   'abrirCostos', 'cargarCostos', 'renderizarCostos', 'abrirCosto', 'cerrarModalCosto', 'cambiarModoCosto',
-  'guardarCosto', 'anularCosto', 'pintarModalCosto', 'pintarHistorialCosto', 'costoUnitarioDe', 'htmlVariacion',
+  'guardarCosto', 'anularCosto', 'pintarModalCosto', 'pintarHistorialCosto', 'costoUnitarioDe', 'plataPrecioCompra',
   ...FUNCIONES_CANTIDADES, 'unidadCorta',
   // El costo por bulto (23/10/2026): textoCostoUnitario usa js/cantidades.js
   ...FUNCIONES_PRECIO]
@@ -112,7 +116,7 @@ const PRELUDIO = `
     q.in = (c, v) => { q.filtros.push(['in', c, v]); return q }
     q.eq = (c, v) => { q.filtros.push([c, v]); return q }
     q.maybeSingle = () => q
-    q.then = (res, rej) => Promise.resolve({ data: (__datos[tabla] ?? [])
+    q.then = (res, rej) => __datos[tabla]?.error ? Promise.resolve({ data: null, error: __datos[tabla].error }).then(res, rej) : Promise.resolve({ data: (__datos[tabla] ?? [])
       .filter(f => q.filtros.every(([op, c, v]) => op !== 'in' || v.includes(f[c])))
       .map(f => ({ ...f })), error: null }).then(res, rej)
     return q
@@ -178,6 +182,13 @@ const COSTOS_NUSS = [
   { insumo_id: 'bolsa', insumo: 'Bolsa 100x80', marca: null, categoria: 'Bolsas', unidad_medida: 'un', costo_unitario: null, vigente_desde: null, cargado_por: null, costo_anterior: null, variacion_pct: null },
 ]
 
+// precios_compra (27/10/2026): la harina de una compra, con IVA 21 y su bolsa
+// de 50 kg; el azúcar cargado a mano, sin IVA. La bolsa no tiene ninguno.
+const PRECIOS_NUSS = [
+  { insumo_id: 'harina', insumo: 'Harina 000', marca: 'Wali', unidad_medida: 'kg', contenido_bulto: '50', nombre_bulto: 'bolsa', precio_unitario: '1000.0000', alicuota_iva: '21', precio_final: '1210.0000', fecha: '2026-10-20', origen: 'compra', proveedor: 'Molino Pepe', comprobante: 'factura_a 0001-00001234' },
+  { insumo_id: 'azucar', insumo: 'Azúcar', marca: null, unidad_medida: 'kg', contenido_bulto: '10', nombre_bulto: null, precio_unitario: '2.0000', alicuota_iva: '0', precio_final: '2.0000', fecha: '2026-09-01', origen: 'manual', proveedor: null, comprobante: 'Lista de octubre' },
+]
+
 const SRC = scriptModulo(ARCHIVO)
 let MOLDE = null
 try { MOLDE = clausura(SRC) } catch (e) { chk('la clausura de funciones se arma', false, String(e && e.stack || e)) }
@@ -195,12 +206,13 @@ function nuevo({ tareas = new Map([['stock:ver', { todas: true }]]), rol = 'usua
   S.__setDatos('v_stock_cobertura', [])
   S.__setRpc('stock_valorizado', (p) => ({ data: p.p_unidad_negocio_id === NUSS ? VALORIZADO_NUSS : [], error: null }))
   S.__setRpc('costos_insumos', () => ({ data: COSTOS_NUSS, error: null }))
+  S.__setRpc('precios_compra', (p) => ({ data: p.p_unidad_negocio_id === NUSS ? PRECIOS_NUSS : [], error: null }))
   return S
 }
 const barra = (elegida, unidades = BARRA) => ({ elegida, unidades, mostrar: true })
 const lista = S => S.__el('lista-stock').innerHTML
 const total = S => S.__el('stock-valorizado')
-const RPCS_COSTOS = ['costos_insumos', 'stock_valorizado', 'guardar_costo_insumo', 'anular_costo_insumo']
+const RPCS_COSTOS = ['costos_insumos', 'precios_compra', 'stock_valorizado', 'guardar_costo_insumo', 'anular_costo_insumo']
 const llamadasCostos = S => S.__llamadas.filter(l => RPCS_COSTOS.includes(l.n))
 const verCostosNuss = () => new Map([['stock:ver', { todas: true }], ['stock:ver_costos', { unidades: [NUSS] }], ['stock:cargar_costos', { unidades: [NUSS] }]])
 const tick = () => new Promise(r => setTimeout(r, 0))
@@ -295,38 +307,56 @@ async function correr() {
     chk('error: lo dice tal cual', /no se pudo calcular \(No tenés permiso para ver el stock valorizado\.\)/.test(total(S).textContent), total(S).textContent)
   }
 
-  // ── 3. La lista de costos ─────────────────────────────────────────────────
+  // ── 3. La lista de precios de compra ──────────────────────────────────────
   {
     const S = nuevo({ tareas: verCostosNuss() })
     await S.alCambiarBarra(barra(NUSS))
     await S.cargarStock()
     await S.cargarCostos()
+    const p = S.__llamadas.filter(l => l.n === 'precios_compra')
+    chk('precios_compra con la fábrica', p.length === 1 && p[0].p.p_unidad_negocio_id === NUSS)
     const c = S.__llamadas.filter(l => l.n === 'costos_insumos')
-    chk('costos_insumos con la fábrica', c.length === 1 && c[0].p.p_unidad_negocio_id === NUSS)
+    chk('costos_insumos con la fábrica (para los sin precio)', c.length === 1 && c[0].p.p_unidad_negocio_id === NUSS)
     const h = S.__el('lista-costos').innerHTML
-    chk('los sin costo van arriba', h.indexOf('data-costo="bolsa"') !== -1 && h.indexOf('data-costo="bolsa"') < h.indexOf('data-costo="harina"'))
-    chk('dice "Sin costo"', /chip-sin-costo">Sin costo</.test(h))
-    chk('cuenta los sin costo', /1 insumo sin costo/.test(h))
-    chk('el costo por kg con 4 decimales', /\$ 1\.000,00 por kg/.test(h), h)
-    // Por bulto (23/10/2026): la harina va por bulto de 50 kg, con el kilo al
-    // lado; el azúcar de este stock es 'base' y sigue por kg.
-    chk('la harina (bulto de 50 kg): "$ 50.000,00 el bulto de 50 kg · $ 1.000,00 por kg"', /\$ 50\.000,00 el bulto de 50 kg · \$ 1\.000,00 por kg/.test(h), h)
-    chk('el azúcar (vista base) sigue solo por kg', /fila-costo__costo">\$ 2,00 por kg</.test(h), h)
-    chk('desde y quién', /desde 01\/10\/2026 · cargó Facundo/.test(h))
-    chk('subió: ↑ en bordó', /variacion-costo--sube[^>]*>↑ 11,1 %/.test(h))
-    chk('bajó: ↓ en verde', /variacion-costo--baja[^>]*>↓ 20 %/.test(h))
+    chk('los sin precio van arriba', h.indexOf('data-costo="bolsa"') !== -1 && h.indexOf('data-costo="bolsa"') < h.indexOf('data-costo="harina"'))
+    chk('dice "Sin precio"', /chip-sin-costo">Sin precio</.test(h))
+    chk('cuenta los sin precio', /1 insumo sin precio/.test(h))
+    chk('una sola fila por insumo (la harina de costos_insumos no se repite)', (h.match(/data-costo="harina"/g) || []).length === 1)
+    chk('la cabecera: Insumo | Precio unitario | IVA % | Precio final',
+      /<div class="precios-cabecera" aria-hidden="true"><span>Insumo<\/span><span>Precio unitario<\/span><span>IVA %<\/span><span>Precio final<\/span><\/div>/.test(h))
+    chk('el precio unitario sin IVA', /data-col="unitario"><span class="fila-precio__rot">Precio unitario<\/span><span class="fila-precio__val">\$ 1\.000,00 por kg</.test(h), h)
+    chk('el IVA', /data-col="iva"><span class="fila-precio__rot">IVA %<\/span><span class="fila-precio__val">21 %</.test(h))
+    chk('el final con IVA', /data-col="final"><span class="fila-precio__rot">Precio final<\/span><span class="fila-precio__val">\$ 1\.210,00 por kg</.test(h))
+    chk('la bolsa de 50 kg con IVA', /fila-precio__bulto">bolsa de 50 kg con IVA: \$ 60\.500,00</.test(h), h)
+    chk('de dónde salió: la compra', /Compra · Molino Pepe · Factura A 0001-00001234 · 20\/10\/2026/.test(h), h)
+    chk('de dónde salió: a mano, con la nota', /Cargado a mano · Lista de octubre · 01\/09\/2026/.test(h))
+    chk('sin IVA: 0 %', /data-col="iva"><span class="fila-precio__rot">IVA %<\/span><span class="fila-precio__val">0 %</.test(h))
+    // El azúcar no tiene presentación en la fábrica: su bulto de 10 kg sale
+    // solo del catálogo (contenido_bulto de precios_compra), sin nombre.
+    chk('el bulto del catálogo, sin nombre: "bulto de 10 kg"', /fila-precio__bulto">bulto de 10 kg con IVA: \$ 20,00</.test(h), h)
+    chk('el sin precio no dice bulto', (h.match(/fila-precio__bulto/g) || []).length === 2)
+    chk('los precios chicos con 4 decimales', S.plataPrecioCompra('0.3456') === '$ 0,3456' && S.plataPrecioCompra('700') === '$ 700,00')
+  }
+  // Si costos_insumos falla, los precios se ven igual.
+  {
+    const S = nuevo({ tareas: verCostosNuss() })
+    S.__setRpc('costos_insumos', () => ({ data: null, error: { message: 'x' } }))
+    await S.alCambiarBarra(barra(NUSS))
+    await S.cargarCostos()
+    const h = S.__el('lista-costos').innerHTML
+    chk('sin costos_insumos: los precios igual, sin los "Sin precio"', /data-costo="harina"/.test(h) && !/data-costo="bolsa"/.test(h), h)
   }
   // Con Todas y dos fábricas: chips, y no se consulta hasta elegir.
   {
     const S = nuevo({ tareas: new Map([['stock:ver', { todas: true }], ['stock:ver_costos', { todas: true }]]) })
     await S.alCambiarBarra(barra(null))
     await S.cargarCostos()
-    chk('Todas: no consulta sin elegir', S.__llamadas.filter(l => l.n === 'costos_insumos').length === 0)
+    chk('Todas: no consulta sin elegir', S.__llamadas.filter(l => l.n === 'precios_compra' || l.n === 'costos_insumos').length === 0)
     chk('Todas: pide la fábrica', /Elegí de qué fábrica/.test(S.__el('costos-aviso-unidad').textContent))
     chk('Todas: chips de fábrica', /data-unidad-costos="u-nuss"/.test(S.__el('chips-unidad-costos').innerHTML))
     S.estado.costosUnidad = DOLCE
     await S.cargarCostos()
-    const c = S.__llamadas.filter(l => l.n === 'costos_insumos')
+    const c = S.__llamadas.filter(l => l.n === 'precios_compra')
     chk('Todas: con la elegida, consulta esa', c.length === 1 && c[0].p.p_unidad_negocio_id === DOLCE)
   }
   // La fábrica de pruebas no se ofrece.
@@ -353,13 +383,22 @@ async function correr() {
     const m = S.estado.costo
     chk('la harina tiene bulto de 50 kg (contenido_unico)', m.contenido === 50)
     chk('con vista "bulto", arranca por bulto', m.modo === 'bulto')
-    chk('rótulo: "Precio por bulto de 50 kg"', S.__el('costo-precio-rotulo').textContent === 'Precio por bulto de 50 kg', S.__el('costo-precio-rotulo').textContent)
+    chk('rótulo: "Precio por bulto de 50 kg, sin IVA"', S.__el('costo-precio-rotulo').textContent === 'Precio por bulto de 50 kg, sin IVA', S.__el('costo-precio-rotulo').textContent)
+    chk('el precio actual con IVA', S.__el('costo-actual').textContent === '$ 1.000,00 por kg + IVA 21 % = $ 1.210,00 por kg', S.__el('costo-actual').textContent)
+    chk('… y de dónde salió', S.__el('costo-origen').textContent === 'Compra · Molino Pepe · Factura A 0001-00001234 · 20/10/2026')
+    chk('el IVA arranca sin elegir', S.__el('costo-iva').value === '' && S.__el('costo-iva-otro').hidden === true)
     chk('la fecha arranca en hoy', /^\d{4}-\d{2}-\d{2}$/.test(S.__el('costo-desde').value))
     chk('hay formulario', S.__el('costo-carga').hidden === false)
     S.__el('costo-precio').value = '50.000'
     S.__setRpc('guardar_costo_insumo', () => ({ data: 'nuevo-id', error: null }))
     S.pintarModalCosto()
     chk('debajo: "→ $ 1.000,00 por kg"', S.__el('costo-equivale').textContent === '→ $ 1.000,00 por kg', S.__el('costo-equivale').textContent)
+    // Sin IVA elegido: no se guarda.
+    await S.guardarCosto()
+    chk('sin IVA elegido: no llama y lo pide', S.__llamadas.filter(l => l.n === 'guardar_costo_insumo').length === 0 && S.__el('costo-error').textContent === 'Elegí el IVA (0 % si vino sin IVA).', S.__el('costo-error').textContent)
+    S.__el('costo-iva').value = '21'
+    S.pintarModalCosto()
+    chk('el final con IVA debajo', S.__el('costo-final').textContent === 'Precio final con IVA: $ 1.210,00 por kg', S.__el('costo-final').textContent)
     // Doble toque: una sola llamada.
     const a = S.guardarCosto(), b = S.guardarCosto()
     await Promise.all([a, b])
@@ -368,14 +407,16 @@ async function correr() {
     chk('1 bulto de 50 kg a $ 50.000 viaja como 1.000 por kg', g[0]?.p.p_costo_unitario === 1000, JSON.stringify(g[0]))
     chk('con la fábrica y el insumo', g[0]?.p.p_unidad_negocio_id === NUSS && g[0]?.p.p_insumo_id === 'harina')
     chk('con la fecha y la nota (vacía = null)', /^\d{4}-\d{2}-\d{2}$/.test(g[0]?.p.p_vigente_desde) && g[0]?.p.p_nota === null)
-    chk('después de guardar relee los costos', S.__llamadas.filter(l => l.n === 'costos_insumos').length === 2)
-    chk('avisa que se guardó', S.__exitos.includes('Costo guardado.'))
+    chk('con el IVA (p_alicuota_iva)', g[0]?.p.p_alicuota_iva === 21, JSON.stringify(g[0]))
+    chk('después de guardar relee los precios', S.__llamadas.filter(l => l.n === 'precios_compra').length === 2)
+    chk('avisa que se guardó', S.__exitos.includes('Precio guardado.'))
+    chk('… y el IVA vuelve a "Elegí"', S.__el('costo-iva').value === '')
   }
   // Por unidad: viaja lo escrito; cambiar de modo vacía el campo.
   {
     const S = await conModal()
     S.cambiarModoCosto('unidad')
-    chk('cambiar de modo', S.estado.costo.modo === 'unidad' && S.__el('costo-precio-rotulo').textContent === 'Precio por kg')
+    chk('cambiar de modo', S.estado.costo.modo === 'unidad' && S.__el('costo-precio-rotulo').textContent === 'Precio por kg, sin IVA')
     S.__el('costo-precio').value = '1.234,5678'
     S.cambiarModoCosto('bulto')
     chk('cambiar de modo VACÍA el campo', S.__el('costo-precio').value === '')
@@ -384,9 +425,28 @@ async function correr() {
     S.pintarModalCosto()
     chk('por kg, con bulto conocido, dice cuánto es el bulto', /el bulto de 50 kg/.test(S.__el('costo-equivale').textContent), S.__el('costo-equivale').textContent)
     S.__setRpc('guardar_costo_insumo', () => ({ data: 'x', error: null }))
+    S.__el('costo-iva').value = '0'
     await S.guardarCosto()
     const g = S.__llamadas.filter(l => l.n === 'guardar_costo_insumo')
     chk('por kg viaja lo escrito con 4 decimales', g[0]?.p.p_costo_unitario === 1234.5678, JSON.stringify(g[0]))
+    chk('sin IVA: 0', g[0]?.p.p_alicuota_iva === 0)
+  }
+  // "Otro" IVA: se escribe; uno imposible no se manda.
+  {
+    const S = await conModal()
+    S.cambiarModoCosto('unidad')
+    S.__el('costo-precio').value = '100'
+    S.__el('costo-iva').value = 'otro'
+    S.pintarModalCosto()
+    chk('"Otro" muestra el campo', S.__el('costo-iva-otro').hidden === false)
+    S.__el('costo-iva-otro').value = '150'
+    await S.guardarCosto()
+    chk('un IVA de 150: no llama, con el texto de la base', S.__llamadas.filter(l => l.n === 'guardar_costo_insumo').length === 0 && S.__el('costo-error').textContent === 'El IVA va de 0 a 100 %.')
+    S.__el('costo-iva-otro').value = '2,5'
+    S.__setRpc('guardar_costo_insumo', () => ({ data: 'x', error: null }))
+    await S.guardarCosto()
+    const g = S.__llamadas.filter(l => l.n === 'guardar_costo_insumo')
+    chk('"Otro" 2,5 viaja como 2.5', g.length === 1 && g[0].p.p_alicuota_iva === 2.5, JSON.stringify(g))
   }
   // Sin presentación: solo por unidad.
   {
@@ -401,6 +461,7 @@ async function correr() {
     await S.guardarCosto()
     chk('vacío: no llama y lo dice', S.__llamadas.filter(l => l.n === 'guardar_costo_insumo').length === 0 && S.__el('costo-error').hidden === false, S.__el('costo-error').textContent)
     S.__el('costo-precio').value = '100'
+    S.__el('costo-iva').value = '21'
     S.__el('costo-desde').value = '2099-01-01'
     await S.guardarCosto()
     chk('fecha muy adelante: no llama', S.__llamadas.filter(l => l.n === 'guardar_costo_insumo').length === 0 && /tan adelante/.test(S.__el('costo-error').textContent))
@@ -409,6 +470,7 @@ async function correr() {
   {
     const S = await conModal()
     S.__el('costo-precio').value = '100'
+    S.__el('costo-iva').value = '21'
     S.__setRpc('guardar_costo_insumo', () => ({ data: null, error: { message: 'No tenés permiso para cargar costos en esta fábrica.' } }))
     await S.guardarCosto()
     chk('el error de la base tal cual', S.__el('costo-error').textContent === 'No tenés permiso para cargar costos en esta fábrica.' && S.__el('costo-error').hidden === false)
@@ -431,12 +493,21 @@ async function correr() {
       { id: 'c1', costo_unitario: '900', vigente_desde: '2026-09-01', nota: null, cargado_por: 'e1', cargado_en: '2026-09-01T10:00:00Z', anulado: true, anulado_por: 'e2', anulado_en: '2026-09-02T02:30:00Z', origen: 'manual' },
     ])
     S.__setDatos('v_empleados_publico', [{ id: 'e1', nombre: 'Facundo' }, { id: 'e2', nombre: 'Pablo' }])
+    S.__setDatos('materia_prima_items', [
+      { id: 'mi-1', precio_unitario: '1000.0000', alicuota_iva: '21', created_at: '2026-10-20T10:00:00Z', materia_prima_ingresos: { fecha: '2026-10-20', tipo_doc: 'factura_a', numero_doc: '0001-00001234', razon_social: 'Molino Pepe', unidad_negocio_id: NUSS } },
+      { id: 'mi-2', precio_unitario: '950', alicuota_iva: '21', created_at: '2026-10-05T10:00:00Z', materia_prima_ingresos: { fecha: '2026-10-05', tipo_doc: 'remito', numero_doc: 'R-77', razon_social: 'Molino Pepe', unidad_negocio_id: NUSS } },
+      { id: 'mi-3', precio_unitario: '1', alicuota_iva: '21', created_at: '2026-10-21T10:00:00Z', materia_prima_ingresos: { fecha: '2026-10-21', tipo_doc: 'factura_a', numero_doc: 'DOLCE-1', razon_social: 'Otro', unidad_negocio_id: DOLCE } },
+    ])
     await S.alCambiarBarra(barra(NUSS))
     await S.cargarStock()
     await S.cargarCostos()
     S.abrirCosto('harina')
     await tick(); await tick()
     const h = S.__el('costo-historial').innerHTML
+    chk('el historial trae las compras de la fábrica', /costo-hist__tipo">Compra</.test(h) && /\$ 1\.000,00 por kg \+ IVA 21 %/.test(h) && /Molino Pepe · Factura A 0001-00001234 · 20\/10\/2026/.test(h), h)
+    chk('… la más nueva primero', h.indexOf('0001-00001234') < h.indexOf('R-77'))
+    chk('… y no las de otra fábrica', !/DOLCE-1/.test(h))
+    chk('el cargado a mano dice su IVA', /costo-hist__tipo">Cargado a mano</.test(h) && /por kg \+ IVA 0 %/.test(h), h)
     chk('el historial con quién (por v_empleados_publico)', /cargó Facundo/.test(h), h)
     chk('la nota', /Factura 123/.test(h))
     chk('el anulado tachado y sin botón', /costo-hist--anulado/.test(h) && (h.match(/data-costo-anular="/g) || []).length === 1)
@@ -456,6 +527,30 @@ async function correr() {
     const an = S.__llamadas.filter(l => l.n === 'anular_costo_insumo')
     chk('confirmado: una sola llamada con el id', an.length === 1 && an[0].p.p_id === 'c2')
   }
+  // Si las compras no se pueden leer, se dice y se ven los cargados a mano.
+  {
+    const S = nuevo({ tareas: verCostosNuss() })
+    S.__setDatos('insumo_costos', [{ id: 'c2', costo_unitario: '1000', alicuota_iva: '10.5', vigente_desde: '2026-10-01', nota: null, cargado_por: null, anulado: false }])
+    S.__setDatos('materia_prima_items', { error: { message: 'permission denied for table materia_prima_items' } })
+    await S.alCambiarBarra(barra(NUSS))
+    await S.cargarCostos()
+    S.abrirCosto('azucar')
+    await tick(); await tick()
+    const h = S.__el('costo-historial').innerHTML
+    chk('compras con error: se dice tal cual', /No se pudieron leer las compras: permission denied for table materia_prima_items/.test(h), h)
+    chk('… y el cargado a mano igual, con su IVA', /\+ IVA 10,5 %/.test(h))
+  }
+  {
+    const S = nuevo({ tareas: verCostosNuss() })
+    S.__setDatos('insumo_costos', [])
+    S.__setDatos('materia_prima_items', [])
+    await S.alCambiarBarra(barra(NUSS))
+    await S.cargarCostos()
+    S.abrirCosto('bolsa')
+    await tick(); await tick()
+    chk('sin ninguno: se dice', /Todavía no hay ningún precio de este insumo en esta fábrica\./.test(S.__el('costo-historial').innerHTML))
+    chk('sin precio: "Sin precio" y sin de dónde', S.__el('costo-actual').textContent === 'Sin precio' && S.__el('costo-origen').textContent === '')
+  }
   {
     const S = await conModal()
     S.estado.costo.historial = [{ id: 'c9', costo_unitario: '5', vigente_desde: '2026-10-01', cargado_por: null, anulado: false }]
@@ -469,10 +564,16 @@ async function correr() {
   {
     const malo = '"><img src=x onerror=alert(1)>'
     const S = nuevo({ tareas: verCostosNuss() })
+    S.__setRpc('precios_compra', () => ({ data: [
+      { ...PRECIOS_NUSS[0], insumo: malo, marca: malo, proveedor: malo, comprobante: malo, nombre_bulto: malo, unidad_medida: '<i>kg' },
+      { ...PRECIOS_NUSS[1], insumo_id: 'p"><em>' },
+    ], error: null }))
     S.__setRpc('costos_insumos', () => ({ data: [
-      { ...COSTOS_NUSS[0], insumo: malo, marca: malo, cargado_por: malo, variacion_pct: '5', unidad_medida: '<i>kg' },
       { ...COSTOS_NUSS[2], insumo_id: 'z"><u>', insumo: 'Otro' },
     ], error: null }))
+    S.__setDatos('materia_prima_items', [
+      { id: 'mi', precio_unitario: '1', alicuota_iva: '21', created_at: '2026-10-20T10:00:00Z', materia_prima_ingresos: { fecha: '2026-10-20', tipo_doc: malo, numero_doc: malo, razon_social: malo, unidad_negocio_id: NUSS } },
+    ])
     S.__setDatos('insumo_costos', [
       { id: 'x"><b', costo_unitario: '1', vigente_desde: '2026-10-01', nota: malo, cargado_por: 'e1', anulado: false },
       { id: 'y"><s>', costo_unitario: '2', vigente_desde: '2026-09-01', nota: null, cargado_por: 'e1', anulado: false },
@@ -493,6 +594,7 @@ async function correr() {
     chk('el id del costo escapado en el atributo', !/data-costo-anular-si="x"><b"/.test(todo) && /data-costo-anular-si="x&quot;&gt;&lt;b"/.test(todo))
     chk('el id del otro costo escapado en Anular', !/<s>/.test(todo) && /data-costo-anular="y&quot;&gt;&lt;s&gt;"/.test(todo), todo)
     chk('el id del insumo escapado', !/<u>/.test(todo) && /data-costo="z&quot;&gt;&lt;u&gt;"/.test(todo))
+    chk('el id de un insumo con precio escapado', !/<em>/.test(todo) && /data-costo="p&quot;&gt;&lt;em&gt;"/.test(todo))
     chk('la unidad de medida escapada', !/<i>/.test(todo) && /&lt;i&gt;kg/.test(todo))
     S.estado.costo.errorHistorial = malo
     S.pintarHistorialCosto()
@@ -504,7 +606,7 @@ async function correr() {
     chk('el id de la fábrica en los chips escapado', !/<q>/.test(chipsM) && /u&quot;&gt;&lt;q&gt;/.test(chipsM), chipsM)
     chk('el error del historial escapado', !/<img src=x/.test(S.__el('costo-historial').innerHTML) && /&lt;img/.test(S.__el('costo-historial').innerHTML))
     const S2 = nuevo({ tareas: verCostosNuss() })
-    S2.__setRpc('costos_insumos', () => ({ data: null, error: { message: malo } }))
+    S2.__setRpc('precios_compra', () => ({ data: null, error: { message: malo } }))
     await S2.alCambiarBarra(barra(NUSS))
     await S2.cargarCostos()
     chk('el error de la base escapado', !/<img src=x/.test(S2.__el('lista-costos').innerHTML) && /&lt;img/.test(S2.__el('lista-costos').innerHTML))
@@ -512,9 +614,10 @@ async function correr() {
 
   // ── 7. El cableado ──────────────────────────────────────────────────────
   chk('el botón Costos depende de ver_costos en alguna fábrica', /getElementById\('btn-ver-costos'\)\.hidden = !\(verStock && puedeVerCostosAlgo\(\)\)/.test(SRC))
-  chk('el botón Costos nace escondido', /id="btn-ver-costos" hidden>Costos</.test(FUENTE))
+  chk('el botón "Precios de compra" nace escondido', /id="btn-ver-costos" hidden>Precios de compra</.test(FUENTE))
+  chk('la pestaña también se llama "Precios de compra"', /data-vista="costos" hidden>Precios de compra</.test(FUENTE))
   chk('el total nace escondido', /<div class="stock-valorizado" id="stock-valorizado" hidden><\/div>/.test(FUENTE))
-  chk('el historial trae quién anuló y cuándo', /select\('id, costo_unitario, vigente_desde, nota, cargado_por, cargado_en, anulado, anulado_por, anulado_en, origen'\)/.test(SRC))
+  chk('el historial trae quién anuló y cuándo', /select\('id, costo_unitario, alicuota_iva, vigente_desde, nota, cargado_por, cargado_en, anulado, anulado_por, anulado_en, origen'\)/.test(SRC))
   chk('las tareas se leen con su alcance', /\.select\('modulo, tarea, alcance'\)/.test(SRC) && /estado\.alcancesTareas = new Map/.test(SRC))
   chk('costos es un drill-down de Stock', /costos: 'stock' \}/.test(SRC))
   const bloque = SRC.slice(SRC.indexOf('// COSTOS DE INSUMOS Y STOCK VALORIZADO'), SRC.indexOf('// PESTAÑAS'))

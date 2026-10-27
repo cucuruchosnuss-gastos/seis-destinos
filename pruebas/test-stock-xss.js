@@ -483,9 +483,17 @@ const SEGURAS = {
   },
   // Costos de insumos (09/10/2026): los html* escapan adentro y
   // test-stock-costos.js los EJECUTA con texto malicioso en cada dato.
-  htmlFilaCosto: { 'htmlVariacion(f.variacion_pct)': H_COSTOS, derecha: HTML_PROPIO },
-  renderizarCostos: { resumen: HTML_PROPIO, "filas.map(htmlFilaCosto).join('')": H_COSTOS },
-  htmlHistorialCosto: { acciones: HTML_PROPIO },
+  // Precios de compra (27/10/2026): el nombre y el insumo son HTML propio
+  // (cada dato con esc); la plata y la unidad van adentro de un esc(`…`).
+  htmlFilaCosto: {
+    nombre: HTML_PROPIO, insumo: HTML_PROPIO,
+    'plataPrecioCompra(pu)': DENTRO_DE_ESC, unidad: DENTRO_DE_ESC, 'plataPrecioCompra(f.precio_final)': DENTRO_DE_ESC,
+  },
+  renderizarCostos: {
+    resumen: HTML_PROPIO, "filas.map(htmlFilaCosto).join('')": H_COSTOS, sin: DENTRO_DE_ESC,
+    cabecera: 'HTML constante de htmlCabeceraPrecios()',
+  },
+  htmlHistorialCosto: { acciones: HTML_PROPIO, 'textoIvaPrecio(h.alicuota_iva ?? 0)': DENTRO_DE_ESC },
   pintarHistorialCosto: { 'htmlHistorialCosto(m)': H_COSTOS },
   // La tarjeta sumada de "Todas" (barra de unidad, 28/09/2026).
   htmlGrupoStock: {

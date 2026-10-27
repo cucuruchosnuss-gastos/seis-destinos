@@ -53,7 +53,7 @@ const r = correrMutaciones({
     { nombre: 'sin nombre no dice "otra empresa del grupo"', de: "      return limpio(estado.empresasGrupo?.get(id)) || 'otra empresa del grupo'", a: "      return limpio(estado.empresasGrupo?.get(id)) || ''" },
     { nombre: 'el aviso con otro texto', de: '`Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes`', a: '`Va al stock: ${nombreEmpresaGrupo(id)}`' },
     // El cliente elegido
-    { nombre: 'sin el sello en el cliente elegido', de: `\`\${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Entre empresas</span>' : ''}</span>\``, a: "`</span>`" },
+    { nombre: 'sin el sello en el cliente elegido', de: `\`\${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Orden interna</span>' : ''}</span>\``, a: "`</span>`" },
     { nombre: 'sin el aviso en el cliente elegido', de: '        (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : \'\')', a: "        ''" },
     { nombre: 'el aviso del cliente sin esc', de: 'id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>', a: 'id="rt-aviso-entre" role="note">${textoEntreEmpresas(c)}</p>' },
     { nombre: 'el catálogo sin el aviso', de: '      avisoCatalogo.textContent = textoEntreEmpresas(clienteDe(f.clienteId))\n', a: '' },
@@ -69,7 +69,13 @@ const r = correrMutaciones({
     { nombre: 'la orden confirmada no sabe que fue entre empresas', de: 'entre: data?.entre_empresas === true || esEntreEmpresas(f) ?', a: 'entre: false ?' },
     { nombre: 'solo la base dice entre empresas (sin el cliente)', de: 'nombreEmpresaGrupo(empresaGrupoDe(clienteDe(f.clienteId))) : null,', a: "'' : null," },
     { nombre: 'la orden confirmada sin el aviso', de: "${entre}${aviso}${htmlEstadoFaltantes(h)}", a: '${aviso}${htmlEstadoFaltantes(h)}' },
-    { nombre: 'el aviso de la orden confirmada sin esc', de: "${esc('Entre empresas: lo que salió entra al stock de ' + h.entre + '.')}", a: "${'Entre empresas: lo que salió entra al stock de ' + h.entre + '.'}" },
+    { nombre: 'el aviso de la orden confirmada sin esc', de: "${esc('Orden interna: lo que salió entra al stock de ' + h.entre + '.')}", a: "${'Orden interna: lo que salió entra al stock de ' + h.entre + '.'}" },
+    // La orden interna (27/10/2026)
+    { nombre: 'la interna se numera como una común', de: "      if (!empresaGrupoDe(c)) return 'Se numera al confirmar'\n      const pref", a: "      return 'Se numera al confirmar'\n      const pref" },
+    { nombre: 'la interna sin la I', de: "Se numera al confirmar: ${pref}-I-…", a: "Se numera al confirmar: ${pref}-…" },
+    { nombre: 'sin prefijo se inventa uno', de: "      return pref ? `Se numera al confirmar: ${pref}-I-…` : 'Se numera al confirmar (orden interna)'", a: "      return `Se numera al confirmar: ${pref || 'N'}-I-…`" },
+    { nombre: 'el número de la carga sin esc', de: '<span class="rt-numerar">${esc(textoNumerarInterna(c))}</span>', a: '<span class="rt-numerar">${textoNumerarInterna(c)}</span>' },
+    { nombre: 'la confirmada no dice "Orden interna"', de: "${h.entre ? 'Orden interna confirmada' : 'Retiro confirmado'}", a: 'Retiro confirmado' },
   ],
 })
 console.log(`\nTOTAL: ${r.detectadas}/${r.total} mutaciones detectadas${r.equivalentes ? ` (+${r.equivalentes} equivalentes)` : ''}`)
