@@ -15,3 +15,11 @@ Rama `ci-prueba/ocr-cobranzas-tickets` desde `origin/main` `7793c83`. No se publ
 5. `npm run pruebas` en verde, check-scripts, y mirarla en maqueta a 390 y 1280 px.
 
 Al terminar: hash de la rama, lo decidido sin consultar, lo no probado y "Qué automatizaría ahora". Un solo resumen y, como último mensaje: TERMINADO — mandar al chat.
+
+## AGREGADO (27/10/2026, antes de integrar)
+El chat de la base ya agregó `cobranza_transferencias.medio` (text not null default 'transferencia', check in ('transferencia','deposito_efectivo')) y `_cobranza_escribir_transferencias` ya lee `t->>'medio'` (verificarlo con pg_get_functiondef).
+1. Mandar "medio" en cada transferencia y dejar de meter "Depósito en efectivo · " en banco_origen (sacar bancoOrigenParaBase y el maxlength 57: vuelve a 80).
+2. Leer "medio" en los dos select de cobranza_transferencias y usarlo en transferenciaDesdeBase. separarNotaDeposito solo como respaldo para un banco_origen que ya empiece con la nota.
+3. Donde se muestra una cobranza asentada, que el depósito diga "Depósito en efectivo".
+4. Ajustar suites y mutaciones; npm run pruebas en verde. Después INTEGRÁ (no toca la tablet).
+Mismo cierre: UN resumen y "TERMINADO — mandar al chat".

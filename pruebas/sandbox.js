@@ -28,7 +28,7 @@ const FUNCIONES_PAGO = [
   // E-cheque desde un PDF (14/10/2026): la tarjeta aparece al subir y se completa.
   'escritoPorPersona', 'echequeSinDatos', 'completarEcheque', 'tarjetaParaComprobante', 'textoLecturaEcheque', 'restaurarFoco',
   // Depósito en efectivo, cuenta por CBU y comprobantes de a uno (27/10/2026).
-  'esDeposito', 'bancoOrigenParaBase', 'separarNotaDeposito', 'cuentaPorCbu', 'esperarTurnoDelLector',
+  'esDeposito', 'separarNotaDeposito', 'medioDeFila', 'cuentaPorCbu', 'esperarTurnoDelLector',
 ]
 const CONSTANTES_PAGO = [
   'FORMAS_PAGO', 'SECCION_FORMA', 'TEXTO_OTRO_COMPROBANTE', 'TEXTO_PRIMER_COMPROBANTE', 'TIPOS_COMPROBANTE', 'BANCOS_ORIGEN',

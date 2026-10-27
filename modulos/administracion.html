@@ -9124,7 +9124,7 @@
       if (!ids.length) return { transferencias, cuentas, error: null }
       try {
         const { data, error } = await supabase.from('cobranza_transferencias')
-          .select('id, cobranza_id, cuenta_id, importe, fecha, referencia')
+          .select('id, cobranza_id, cuenta_id, importe, fecha, referencia, medio')
           .in('cobranza_id', ids).order('created_at')
         if (error) throw error
         for (const x of data ?? []) transferencias.set(x.cobranza_id, [...(transferencias.get(x.cobranza_id) ?? []), x])
@@ -9253,10 +9253,12 @@
     }
 
     // Una transferencia: importe, la cuenta de banco donde entró, fecha y
-    // referencia. `cuentas`: Map id → { nombre }.
+    // referencia. `cuentas`: Map id → { nombre }. Un depósito en efectivo
+    // (cobranza_transferencias.medio, 27/10/2026) lo dice.
     function htmlTransferenciaCob(t, cuentas) {
       const cuenta = cuentas?.get?.(t.cuenta_id)?.nombre || 'una cuenta de banco'
       const partes = [importeCob(t.importe), 'entró en ' + cuenta]
+      if (t.medio === 'deposito_efectivo') partes.splice(1, 0, 'Depósito en efectivo')
       if (esFechaIso(t.fecha)) partes.push(fechaCorta(t.fecha))
       if (limpio(t.referencia)) partes.push('Ref. ' + limpio(t.referencia))
       return `<div class="ad-cob__cheque">${htmlFormaPago('transferencia')}<span class="ad-cob__cheque-texto">${esc(partes.join(' · '))}</span></div>`

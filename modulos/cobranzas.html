@@ -2131,10 +2131,10 @@
     }
 
     // El DEPÓSITO EN EFECTIVO (27/10/2026): un ticket del banco sin ordenante.
-    // cobranza_transferencias no tiene columna para el medio (verificado con
-    // information_schema ese día), así que se guarda como transferencia y la
-    // nota va al principio de banco_origen: "Depósito en efectivo · Banco
-    // Macro". Al volver de la base se separa. El medio leído queda además en
+    // Va en cobranza_transferencias.medio ('transferencia' | 'deposito_efectivo',
+    // text not null default 'transferencia' con su CHECK; la agregó el chat de
+    // la base y _cobranza_escribir_transferencias lee t->>'medio', verificado
+    // con pg_get_functiondef el 27/10/2026). El medio leído queda además en
     // ocr_propuesto.
     const MEDIOS_TRANSFERENCIA = ['transferencia', 'deposito_efectivo']
     const NOTA_DEPOSITO = 'Depósito en efectivo'
@@ -2143,18 +2143,24 @@
       return t?.medio === 'deposito_efectivo'
     }
 
-    // banco_origen tal como va a la base (hasta 80, como el campo).
-    function bancoOrigenParaBase(t) {
-      const banco = textoOpcional(t?.banco_origen)
-      if (!esDeposito(t)) return banco
-      return [NOTA_DEPOSITO, banco].filter(Boolean).join(' · ').slice(0, 80)
-    }
-
-    // banco_origen como vino de la base → { medio, banco_origen }.
+    // RESPALDO: antes de la columna, la rama guardaba el depósito con la nota
+    // al principio de banco_origen ("Depósito en efectivo · Banco Macro"). Esa
+    // versión nunca llegó a main y el 27/10 no había ninguna fila así; si
+    // apareciera una, se separa. banco_origen → { medio, banco_origen }.
     function separarNotaDeposito(bancoOrigen) {
       const b = String(bancoOrigen ?? '')
       if (b !== NOTA_DEPOSITO && !b.startsWith(NOTA_DEPOSITO + ' · ')) return { medio: 'transferencia', banco_origen: b }
       return { medio: 'deposito_efectivo', banco_origen: b.slice(NOTA_DEPOSITO.length + 3) }
+    }
+
+    // Una fila de cobranza_transferencias → { medio, banco_origen }. Manda la
+    // columna medio; la nota en banco_origen es solo el respaldo.
+    function medioDeFila(t) {
+      const respaldo = separarNotaDeposito(t?.banco_origen)
+      return {
+        medio: t?.medio === 'deposito_efectivo' ? 'deposito_efectivo' : respaldo.medio,
+        banco_origen: respaldo.banco_origen,
+      }
     }
 
     // La cuenta propia cuyo CBU es el del comprobante, entre las que se pueden
@@ -2177,7 +2183,7 @@
     // leer). El nombre se guarda en la transferencia para poder mostrarla en
     // el borrador sin señal.
     function transferenciaDesdeBase(t, cuentas) {
-      const { medio, banco_origen } = separarNotaDeposito(t.banco_origen)
+      const { medio, banco_origen } = medioDeFila(t)
       return {
         id: t.id, cuenta_id: t.cuenta_id ?? '',
         cuenta_nombre: cuentas?.get?.(t.cuenta_id)?.nombre ?? '',
@@ -2257,8 +2263,9 @@
         fecha: c.fecha,
         // El número de operación va en referencia (texto, tal cual).
         referencia: c.referencia,
-        // Un depósito en efectivo lleva su nota acá (ver NOTA_DEPOSITO).
-        banco_origen: bancoOrigenParaBase(t),
+        banco_origen: c.banco_origen,
+        // 'transferencia' | 'deposito_efectivo' (cobranza_transferencias.medio).
+        medio: esDeposito(t) ? 'deposito_efectivo' : 'transferencia',
         ordenante: c.ordenante,
         cuit_ordenante: c.cuit_ordenante,
         foto_id: t.foto_id ?? null,
@@ -2369,6 +2376,7 @@
                 <span class="cob-cheque__monto">${escCob(formatearImporte(t.importe))}</span>
                 ${htmlEtiquetaForma('transferencia')}
               </div>
+              ${t.medio === 'deposito_efectivo' ? '<div class="cob-cheque__titulo">Depósito en efectivo</div>' : ''}
               <div class="cob-cheque__pie">Entró en ${escCob(cuenta)}${esFechaIso(t.fecha) ? ` · ${escCob(formatearFechaCob(t.fecha))}` : ''}</div>
               ${desde ? `<div class="cob-cheque__sub">Desde ${escCob(desde)}</div>` : ''}
               ${t.referencia ? `<div class="cob-cheque__sub">Referencia: ${escCob(t.referencia)}</div>` : ''}
@@ -2908,7 +2916,7 @@
             </div>
             <div class="cob-campo">
               <label>${deposito ? 'Banco donde se depositó' : 'Banco de origen'}</label>
-              <input type="text" maxlength="${deposito ? 57 : 80}" autocomplete="off" list="cob-bancos-origen" data-transf-id="${escCob(t.id)}" data-transf-campo="banco_origen" value="${escCob(t.banco_origen)}" placeholder="${deposito ? 'El banco del ticket' : 'Banco o billetera desde donde transfirió'}">
+              <input type="text" maxlength="80" autocomplete="off" list="cob-bancos-origen" data-transf-id="${escCob(t.id)}" data-transf-campo="banco_origen" value="${escCob(t.banco_origen)}" placeholder="${deposito ? 'El banco del ticket' : 'Banco o billetera desde donde transfirió'}">
             </div>
             <div class="cob-campo">
               <label>${deposito ? 'Quién depositó (opcional)' : 'Quién transfirió (opcional)'}</label>
@@ -4674,7 +4682,7 @@
           supabase.from('cobranza_historial').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           // Las transferencias (30/09/2026). Su policy deja leerlas a quien
           // cargó la cobranza o a quien tiene cobranzas:procesar.
-          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, foto_id').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, foto_id, medio').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (turno !== turnoDetalle) return
         if (cab.error) throw cab.error
@@ -5260,7 +5268,7 @@
           supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
           supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_fotos').select('id, storage_path, ocr_crudo, ocr_modelo, tipo, mime').eq('cobranza_id', cobranzaId).order('created_at'),
-          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_transferencias').select('id, cuenta_id, importe, fecha, referencia, banco_origen, ordenante, cuit_ordenante, foto_id, origen_datos, ocr_propuesto, medio').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
         if (cab.error) throw cab.error
         if (!cab.data) { mostrarError('No se encontró la cobranza.'); return }

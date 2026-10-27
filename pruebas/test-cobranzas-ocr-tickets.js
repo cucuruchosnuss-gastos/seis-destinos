@@ -1,9 +1,9 @@
 // Comprobantes de Cobranzas con la v2 del lector (27/10/2026), en
 // modulos/cobranzas.html:
 //  - DEPÓSITO EN EFECTIVO: si el lector dice medio = 'deposito_efectivo', la
-//    tarjeta dice "Depósito en efectivo", sin ordenante obligatorio; la base no
-//    tiene columna para el medio, así que viaja como transferencia con la nota
-//    al principio de banco_origen, y al volver de la base se separa;
+//    tarjeta dice "Depósito en efectivo", sin ordenante obligatorio; viaja en
+//    cobranza_transferencias.medio y vuelve de ahí (una fila vieja con la nota
+//    en banco_origen se separa: respaldo); el detalle lo dice;
 //  - el CBU del comprobante PRESELECCIONA la cuenta propia si coincide con UNA
 //    de las que se pueden elegir (la persona la cambia);
 //  - lo crudo del lector se archiva también cuando la lectura falla;
@@ -109,7 +109,7 @@ const FUNCIONES = [
   'htmlEtiquetaForma', 'erroresDeEcheque', 'echequeParaBase', 'echequeDesdeBase', 'erroresDeCheque', 'dvBcra',
   'erroresDeTransferencia', 'transferenciaParaBase', 'transferenciaDesdeBase', 'nombresDeCuentas',
   'sumaImportes', 'totalesPorForma', 'usaCobranzaCompleta', 'cuentasParaElegir', 'htmlDatosCheque', 'textoDiasHastaPago',
-  'nombreUnidadCob', 'htmlOpcionesCuentas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'pintarFormasNuevas',
+  'nombreUnidadCob', 'htmlOpcionesCuentas', 'htmlEcheckForm', 'htmlTransferenciaForm', 'pintarFormasNuevas', 'htmlTransferenciaDetalle',
   'pintarResumenFormas', 'htmlResumenFormas', 'echeckDelForm', 'transfDelForm', 'agregarEcheck', 'agregarTransferencia',
   'quitarEcheck', 'quitarTransferencia', 'actualizarEcheck', 'actualizarTransferencia', 'pintarErroresForma',
   'alEscribirEnFormas', 'alTocarEnFormas',
@@ -183,25 +183,36 @@ async function pruebas() {
     chk('depósito: "Quién depositó (opcional)" y "Banco donde se depositó"', /Quién depositó \(opcional\)/.test(h) && /Banco donde se depositó/.test(h) && /CUIT de quien depositó \(opcional\)/.test(h))
     chk('depósito: sin ordenante NO hay error', S.erroresDeTransferencia(Object.assign({}, t, { tocado: true })).length === 0, JSON.stringify(S.erroresDeTransferencia(t)))
     const b = S.transferenciaParaBase(t)
-    chk('depósito para la base: viaja como transferencia con la nota en banco_origen', b.banco_origen === 'Depósito en efectivo · Banco Macro' && b.ordenante === null && !('medio' in b), JSON.stringify(b))
-    chk('depósito sin tocar: "ocr" (la nota no cuenta como corrección)', b.origen_datos === 'ocr', b.origen_datos)
+    chk('depósito para la base: medio "deposito_efectivo" y el banco tal cual (sin nota)', b.medio === 'deposito_efectivo' && b.banco_origen === 'Banco Macro' && b.ordenante === null, JSON.stringify(b))
+    chk('depósito sin tocar: "ocr"', b.origen_datos === 'ocr', b.origen_datos)
     chk('depósito: el medio leído queda en ocr_propuesto', b.ocr_propuesto?.medio === 'deposito_efectivo')
-    chk('depósito sin banco: la nota sola', S.bancoOrigenParaBase({ medio: 'deposito_efectivo', banco_origen: '  ' }) === 'Depósito en efectivo')
-    chk('depósito: banco_origen nunca pasa de 80', S.bancoOrigenParaBase({ medio: 'deposito_efectivo', banco_origen: 'x'.repeat(80) }).length === 80)
-    chk('una transferencia no lleva nota', S.bancoOrigenParaBase({ medio: 'transferencia', banco_origen: 'BNA+' }) === 'BNA+' &&
-      S.bancoOrigenParaBase({ banco_origen: 'BNA+' }) === 'BNA+')
-    // Vuelve de la base.
-    const vuelta = S.transferenciaDesdeBase({ id: 'tb', cuenta_id: 'cta-paz', importe: 500000, fecha: '2026-10-27', banco_origen: b.banco_origen,
-      ordenante: null, cuit_ordenante: null, referencia: '4471', foto_id: null, ocr_propuesto: b.ocr_propuesto, origen_datos: 'ocr' }, S.estado.cuentasBanco)
-    chk('de la base: la nota se separa (medio y banco por su lado)', vuelta.medio === 'deposito_efectivo' && vuelta.banco_origen === 'Banco Macro', JSON.stringify(vuelta))
-    chk('de la base y vuelta: la misma banco_origen (no se duplica la nota)', S.transferenciaParaBase(vuelta).banco_origen === 'Depósito en efectivo · Banco Macro')
-    chk('de la base y vuelta: sigue "ocr"', S.transferenciaParaBase(vuelta).origen_datos === 'ocr')
-    chk('de la base: un banco que no empieza con la nota es transferencia', S.separarNotaDeposito('Depósito en efectivos SA').medio === 'transferencia' &&
+    chk('una transferencia viaja con medio "transferencia"', S.transferenciaParaBase(Object.assign(S.transferenciaVacia(), { banco_origen: 'BNA+' })).medio === 'transferencia' &&
+      S.transferenciaParaBase(Object.assign(S.transferenciaVacia(), { medio: undefined })).medio === 'transferencia')
+    chk('el banco del depósito tiene sus 80 letras', /data-transf-campo="banco_origen"/.test(h) && !/maxlength="57"/.test(h) && /maxlength="80" autocomplete="off" list="cob-bancos-origen"/.test(h))
+    // Vuelve de la base: manda la columna medio.
+    const fila = { id: 'tb', cuenta_id: 'cta-paz', importe: 500000, fecha: '2026-10-27', banco_origen: 'Banco Macro', medio: 'deposito_efectivo',
+      ordenante: null, cuit_ordenante: null, referencia: '4471', foto_id: b.foto_id, ocr_propuesto: b.ocr_propuesto, origen_datos: 'ocr' }
+    const vuelta = S.transferenciaDesdeBase(fila, S.estado.cuentasBanco)
+    chk('de la base: la columna medio', vuelta.medio === 'deposito_efectivo' && vuelta.banco_origen === 'Banco Macro', JSON.stringify(vuelta))
+    chk('de la base y vuelta: lo mismo, y sigue "ocr"', JSON.stringify(S.transferenciaParaBase(vuelta)) === JSON.stringify(b), JSON.stringify(S.transferenciaParaBase(vuelta)))
+    chk('de la base: medio "transferencia" o sin medio → transferencia', S.transferenciaDesdeBase({ ...fila, medio: 'transferencia' }).medio === 'transferencia' &&
+      S.transferenciaDesdeBase({ ...fila, medio: undefined }).medio === 'transferencia')
+    // Respaldo: una fila vieja con la nota en banco_origen (el 27/10 no había ninguna).
+    const vieja = S.transferenciaDesdeBase({ ...fila, medio: 'transferencia', banco_origen: 'Depósito en efectivo · Banco Macro' })
+    chk('respaldo: la nota vieja se separa y es depósito', vieja.medio === 'deposito_efectivo' && vieja.banco_origen === 'Banco Macro', JSON.stringify(vieja))
+    chk('respaldo: guardada de nuevo, sin la nota y con la columna', S.transferenciaParaBase(vieja).banco_origen === 'Banco Macro' && S.transferenciaParaBase(vieja).medio === 'deposito_efectivo')
+    chk('respaldo: un banco que no empieza con la nota es transferencia', S.separarNotaDeposito('Depósito en efectivos SA').medio === 'transferencia' &&
       S.separarNotaDeposito(null).medio === 'transferencia' && S.separarNotaDeposito('Depósito en efectivo').banco_origen === '')
+    chk('fuente: los dos select de cobranza_transferencias traen medio',
+      (FUENTE.match(/from\('cobranza_transferencias'\)\.select\('id, cuenta_id, [^']*\bmedio'\)/g) || []).length === 2)
+    // La cobranza ya guardada (el detalle).
+    const det = S.htmlTransferenciaDetalle(fila, S.estado.cuentasBanco)
+    chk('detalle: el depósito dice "Depósito en efectivo"', /<div class="cob-cheque__titulo">Depósito en efectivo<\/div>/.test(det) && /Desde Banco Macro/.test(det), det)
+    chk('detalle: una transferencia no lo dice', !/Depósito en efectivo/.test(S.htmlTransferenciaDetalle({ ...fila, medio: 'transferencia' }, S.estado.cuentasBanco)))
     // Cambiar el medio a mano.
     S.alTocarEnFormas({ target: { closest: () => ({ dataset: { transfMedio: 'transferencia', transfId: t.id } }) } })
     chk('tocar "Transferencia" cambia el medio', t.medio === 'transferencia')
-    chk('cambiar el medio leído: "ocr_corregido"', S.transferenciaParaBase(t).origen_datos === 'ocr_corregido' && S.transferenciaParaBase(t).banco_origen === 'Banco Macro')
+    chk('cambiar el medio leído: "ocr_corregido"', S.transferenciaParaBase(t).origen_datos === 'ocr_corregido' && S.transferenciaParaBase(t).medio === 'transferencia')
     chk('cambiar el medio repinta la tarjeta', /Transferencia 1<\/div>/.test(el(S, 'cob-lista-transferencias').innerHTML))
     S.actualizarTransferencia(t.id, 'medio', 'cheque')
     chk('un medio que no existe no se acepta', t.medio === 'transferencia')

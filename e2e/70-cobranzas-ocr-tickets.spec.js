@@ -11,8 +11,8 @@
 //    cuenta "Banco Macro · Nuss" ya elegida por el CBU (con su aviso);
 //  - la captura de BNA+ trae a quien transfirió (no es el cliente) y no frena
 //    nada; el que no se leyó deja su tarjeta vacía con el comprobante;
-//  - guardar: el depósito viaja como transferencia con "Depósito en efectivo ·
-//    Banco Macro" en banco_origen, y lo crudo del que falló viaja igual.
+//  - guardar: el depósito viaja con medio 'deposito_efectivo' (y su banco tal
+//    cual), los otros con 'transferencia', y lo crudo del que falló viaja igual.
 // Sin scroll horizontal ni errores de JavaScript. Corre SIEMPRE, sin
 // credenciales.
 const fs = require('fs');
@@ -136,7 +136,8 @@ for (const t of [{ nombre: '1280', ancho: 1280, alto: 900 }, { nombre: '390', an
     });
     await page.locator('#cob-btn-guardar').click();
     await expect.poll(() => !!p, { timeout: 15000 }).toBe(true);
-    expect(p.p_transferencias.map(x => x.banco_origen)).toEqual(['Depósito en efectivo · Banco Macro', 'BNA+', null]);
+    expect(p.p_transferencias.map(x => x.banco_origen)).toEqual(['Banco Macro', 'BNA+', null]);
+    expect(p.p_transferencias.map(x => x.medio)).toEqual(['deposito_efectivo', 'transferencia', 'transferencia']);
     expect(p.p_transferencias[0].ordenante).toBeNull();
     expect(p.p_transferencias[1].ordenante).toBe('FERNANDEZ RICARDO');
     expect(p.p_cliente_id).toBe('cli-jm-n');
