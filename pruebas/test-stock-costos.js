@@ -336,6 +336,16 @@ async function correr() {
     chk('el bulto del catálogo, sin nombre: "bulto de 10 kg"', /fila-precio__bulto">bulto de 10 kg con IVA: \$ 20,00</.test(h), h)
     chk('el sin precio no dice bulto', (h.match(/fila-precio__bulto/g) || []).length === 2)
     chk('los precios chicos con 4 decimales', S.plataPrecioCompra('0.3456') === '$ 0,3456' && S.plataPrecioCompra('700') === '$ 700,00')
+    // Sin contenido_bulto en precios_compra, el bulto sale de la presentación
+    // de la fábrica (presentacionCosto: la única que tiene en stock).
+    S.estado.stock = [{ unidad_negocio_id: NUSS, insumo_id: 'sal', presentaciones: 1, contenido_unico: '5', vista_preferida: 'bulto' }]
+    const sinCatalogo = { insumo_id: 'sal', unidad_medida: 'kg', contenido_bulto: null, nombre_bulto: null, precio_final: '100' }
+    chk('sin contenido del catálogo, el bulto sale de la fábrica: "bulto de 5 kg"', S.textoBultoConIva(sinCatalogo) === 'bulto de 5 kg con IVA: $ 500,00', S.textoBultoConIva(sinCatalogo))
+    // El historial: un insumo que se ve por unidad no dice el bulto.
+    const porKg = S.textoCostoUnitario('700', 'kg', { contenido: 25, vista: 'base' })
+    chk('historial con vista por kg: sin el bulto', porKg === '$ 700,00 por kg', porKg)
+    const porBolsa = S.textoCostoUnitario('700', 'kg', { contenido: 25, vista: 'bulto' })
+    chk('historial con vista por bulto: el bulto de 25 kg', /^\$ 17\.500,00 el .*25 kg.* · \$ 700,00 por kg$/.test(porBolsa), porBolsa)
   }
   // Si costos_insumos falla, los precios se ven igual.
   {

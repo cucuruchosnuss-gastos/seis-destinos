@@ -20,6 +20,7 @@
 const path = require('path')
 const { execFileSync } = require('child_process')
 const { construirCon, scriptModulo } = require('./sandbox')
+const { conPrecioMp, CONSTANTES_PRECIO_MP } = require('./precio-mp-comun')
 const { fuenteNumeros, inputFalso } = require('./numeros-comun')
 const { FUNCIONES_CANTIDADES, FUNCIONES_CARGA, CONSTANTES_CARGA } = require('./cantidades-comun')
 const { extraerFn } = require('./extraer')
@@ -158,7 +159,7 @@ const FUNCIONES = [
 const CONSTANTES = ['UNIDADES_ENTERAS', 'DECIMALES_CANTIDAD', 'CAMPOS_CANTIDAD_ITEM', 'TOLERANCIA_CANTIDAD', 'TIPOS_CON_CIRCUITO', ...CONSTANTES_CARGA]
 
 const S = construirCon(ARCHIVO, {
-  preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
+  preludio: PRELUDIO, funciones: conPrecioMp(FUNCIONES), constantes: [...CONSTANTES, ...CONSTANTES_PRECIO_MP],
   retorno: 'estado, __els, __llamadas, __setRpc(f){ __rpc = f }, campo, document, __internos',
 })
 
