@@ -228,6 +228,8 @@ const NUEVAS_GESTION = [
   'pintarTituloConfig', 'tocarCono', 'conosDelFiltro', 'listaConosVisible', 'htmlFilaCono', 'elegirFiltroConos',
   'sinPinEnUnidad', 'rolesDe', 'deQuienHoja', 'pedirCerrarHoja', 'volverAHojaPines',
   'puedeCorregirSublote', 'htmlEditorSublote', 'horarioTurno', 'minutosParadasTurno', 'pintarDetalleHistorial',
+  // Inicio tarde de producción (27/10/2026)
+  'inicioTardeDe', 'textoInicioTarde', 'htmlChipTarde',
   'abrirCorreccionSublote', 'cerrarCorreccionSublote', 'faltaEnCorreccion', 'guardarCorreccionSublote',
   // Lo que salió por retiros en el stock terminado (26/09/2026)
   'cargarPermisoRetiros', 'puedeVerRetirosEn', 'salidasPorRetiro', 'codigoRetiro', 'htmlRetirosStock',
@@ -456,6 +458,10 @@ const NUEVAS_PLANTA = [
   'leerLotesNoRegistrados', 'guardarLotesNoRegistrados', 'loteConStock', 'lotesNoRegistradosDe',
   'recordarLotesNoRegistrados', 'olvidarLoteNoRegistrado', 'filasNoRegistradas', 'htmlFilaNoRegistrada',
   'elegirLoteNoRegistrado', 'htmlOjoCaja',
+  // Inicio tarde de producción (27/10/2026)
+  'minutosTarde', 'inicioTardeDe', 'textoInicioTarde', 'htmlAccionTarde', 'abrirTardeVentana', 'cerrarTardeVentana',
+  'muestraHoraTarde', 'htmlHorasTarde', 'demoraTarde', 'pintarTardeVentana', 'teclaTardeVentana', 'campoTardeVentana',
+  'ahoraTardeVentana', 'motivoTardeVentana', 'pedidoInicioTarde', 'confirmarTardeVentana', 'teclaVentanaTarde',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -495,7 +501,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   // El lote nuevo por error (14/10/2026)
   'MINUTOS_SIN_LOTE_NUEVO', 'MINUTOS_ANULAR_POR_ERROR',
   // "¿Quisiste decir…?" (21/10/2026)
-  'ESPERA_PARECIDOS_MS', 'MIN_LETRAS_PARECIDOS']
+  'ESPERA_PARECIDOS_MS', 'MIN_LETRAS_PARECIDOS',
+  // Inicio tarde de producción (27/10/2026)
+  'MOTIVOS_TARDE', 'MAX_TARDE_MIN']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

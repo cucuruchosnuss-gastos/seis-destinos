@@ -143,6 +143,42 @@ esperas.push((async () => {
   await T.mostrarHistorial()
   chk('si llega al tope de 1000, lo avisa', /primeros 1000 turnos/.test(T.__doc.getElementById('pr-historial-aviso').innerHTML))
 
+  // ── Inicio tarde de producción (27/10/2026) ───────────────────────────
+  // registrar_inicio_tarde corrige hora_inicio, guarda hora_largada y el
+  // motivo en largada_motivo. El caso real: lote 6270, turno de 15:00, se
+  // empezó a producir 17:53 porque faltó un operario.
+  const IT = armar()
+  Object.assign(IT.__tablas, {
+    maquinas: [{ id: 'm2', nombre: 'Máquina 2' }],
+    turnos_produccion: [
+      { id: 't6270', lote: 6270, maquina_id: 'm2', fecha: '2026-10-27', turno: 'Tarde', encargado_id: 'e-x', estado: 'cerrado',
+        hora_inicio: '15:00:00', hora_largada: '17:53:00', largada_motivo: 'Falta de operario' },
+      { id: 'tn', lote: 6271, maquina_id: 'm2', fecha: '2026-10-27', turno: 'Noche', encargado_id: 'e-x', estado: 'cerrado',
+        hora_inicio: '22:00:00', hora_largada: '00:30:00', largada_motivo: 'Falta de masa' },
+      // Con hora de largada pero sin motivo: es "Empezó a producir", no un inicio tarde.
+      { id: 'ts', lote: 6272, maquina_id: 'm2', fecha: '2026-10-27', turno: 'Mañana', encargado_id: 'e-x', estado: 'cerrado',
+        hora_inicio: '06:00:00', hora_largada: '06:40:00', largada_motivo: null }],
+  })
+  await IT.mostrarHistorial()
+  const qIT = (IT.__llamadas.consultas.find(([t]) => t === 'turnos_produccion')?.[1] ?? []).find(x => x[0] === 'select')?.[1] ?? ''
+  chk('la lista de planillas lee hora_largada y largada_motivo', /hora_largada/.test(qIT) && /largada_motivo/.test(qIT), qIT)
+  const hIT = IT.__doc.getElementById('pr-historial-lista').innerHTML
+  chk('la fila del lote 6270 lleva el chip "Inicio tarde 2 h 53 min", con el texto entero al pasar por encima',
+    /pr-of-chip--tarde" title="Inicio tarde: 15:00 → 17:53 \(2 h 53 min\) · Falta de operario">Inicio tarde 2 h 53 min</.test(hIT), hIT.slice(0, 1500))
+  chk('el turno noche cruza la medianoche: 22:00 → 00:30 son 2 h 30 min', />Inicio tarde 2 h 30 min</.test(hIT))
+  chk('sin motivo no hay chip de inicio tarde', (hIT.match(/pr-of-chip--tarde/g) ?? []).length === 2)
+  chk('inicioTardeDe: con la largada a la misma hora del inicio no es un inicio tarde',
+    IT.inicioTardeDe({ hora_inicio: '15:00:00', hora_largada: '15:00:00', largada_motivo: 'x' }) === null)
+  const DT = armar()
+  Object.assign(DT.__tablas, DETALLE, { turnos_produccion: [{ ...DETALLE.turnos_produccion[0], hora_inicio: '15:00:00', hora_largada: '17:53:00', largada_motivo: 'Falta de operario' }] })
+  const dT = await DT.leerDetalleTurno('t1')
+  const selT = ((DT.__llamadas.consultas.find(([t]) => t === 'turnos_produccion')?.[1] ?? []).find(x => x[0] === 'select')?.[1] ?? '').split(/,\s*/)
+  chk('el detalle del turno lee largada_motivo', selT.includes('largada_motivo') && selT.includes('hora_largada'), selT.join('|'))
+  const htmlDT = DT.htmlDetalleTurno(dT)
+  chk('el detalle dice "Inicio tarde: 15:00 → 17:53 (2 h 53 min) · Falta de operario"',
+    htmlDT.includes('<div class="pg-turno__tarde">Inicio tarde: 15:00 → 17:53 (2 h 53 min) · Falta de operario</div>'), htmlDT.slice(0, 900))
+  chk('sin inicio tarde el detalle no lo menciona', !/pg-turno__tarde/.test(IT.htmlDetalleTurno({ ...dT, turno: { ...dT.turno, largada_motivo: null } })))
+
   // ── Detalle ───────────────────────────────────────────────────────────
   const D = armar()
   Object.assign(D.__tablas, DETALLE)
@@ -317,6 +353,14 @@ esperas.push((async () => {
   chequearMarcas(chk, 'fila del historial', X.htmlFilaHistorial(filaX, h), ['maquina', 'encargado', 'turnoId', 'lote', 'turno'])
   chequearMarcas(chk, 'tabla de turnos', X.htmlTablaTurnos({ ...h, turnos: [filaX] }), ['maquina', 'encargado', 'turnoId', 'lote', 'turno'])
   chequearMarcas(chk, 'chip de estado desconocido', X.htmlEstadoTurno(marca('estadoRaro')), ['estadoRaro'])
+  // El inicio tarde (27/10/2026): el motivo es texto libre («Otro»).
+  const filaTarde = { ...filaX, hora_inicio: '15:00:00', hora_largada: '17:53:00', largada_motivo: marca('motivoTarde') }
+  chequearMarcas(chk, 'fila con inicio tarde', X.htmlFilaHistorial(filaTarde, h), ['motivoTarde'])
+  chequearMarcas(chk, 'detalle con inicio tarde', X.htmlDetalleTurno({
+    turno: { lote: 1, fecha: '2026-10-27', turno: 'Tarde', encargado_id: 'e', estado: 'cerrado', hora_inicio: '15:00:00', hora_largada: '17:53:00', largada_motivo: marca('motivoTardeDet') },
+    operarios: [], nombres: new Map(), masas: [], items: [], recItems: [], ingredientes: [], insumos: [], paradas: [], producido: [], correcciones: [],
+    presentaciones: [], productos: [], marcas: [],
+  }), ['motivoTardeDet'])
   const dm = {
     turno: { lote: marca('loteT'), fecha: '2026-09-22', turno: marca('turnoT'), encargado_id: 'e', estado: 'cerrado', hora_inicio: '<i>x', hora_apagado: '<u>y', scrap_kg: 1, observaciones: marca('obs'),
       forzado_por: 'e', forzado_en: '2026-09-23T10:00:00Z', forzado_motivo: marca('forzado') },

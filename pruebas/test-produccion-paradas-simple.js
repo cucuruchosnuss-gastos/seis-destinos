@@ -129,7 +129,7 @@ chk('la ventana de la hora: un diálogo con el teclado de la planta, nunca un in
 chk('"¿A qué hora terminó de producir?" en el cierre, como botón (mismo id)', /<button type="button" id="pr-cierre-hora"/.test(FUENTE) &&
   /¿A QUÉ HORA TERMINÓ DE PRODUCIR\?/.test(FUENTE) && /id="pr-cierre-campo-motivo" hidden/.test(FUENTE))
 chk('la planilla lee la hora de largada, el horario de la planilla y el de la unidad',
-  /hora_inicio, hora_fin, hora_largada'\)\s*\n?\s*\.eq\('id', turnoId\)/.test(FUENTE) && /from\('horarios_turno'\)\.select\('turno, hora_inicio, hora_fin, activo'\)/.test(FUENTE))
+  /hora_inicio, hora_fin, hora_largada(, largada_motivo)?'\)\s*\n?\s*\.eq\('id', turnoId\)/.test(FUENTE) && /from\('horarios_turno'\)\.select\('turno, hora_inicio, hora_fin, activo'\)/.test(FUENTE))
 
 esperas.push((async () => {
   // ═══ CASO 1 · "Empezó a producir 06:40" y verlo en la planilla ═══════════
@@ -672,7 +672,7 @@ function gestion({ paradas = PARADAS_G } = {}) {
   const h = G.horarioTurno({ fecha: '2026-10-05', hora_inicio: '06:00:00', hora_fin: '15:00:00', hora_largada: '06:40:00', hora_apagado: '13:10:00', estado: 'cerrado', cerrado_en: '2026-10-05T16:20:00Z' })
   chk('historial: "06:00 a 15:00 · empezó a producir 06:40 · terminó de producir 13:10"', /06:00 a 15:00 · empezó a producir 06:40 · terminó de producir 13:10/.test(h), h)
   chk('… sin largada no la nombra', !/empezó/.test(G.horarioTurno({ fecha: '2026-10-05', hora_inicio: '06:00:00', estado: 'abierto' })))
-  chk('el detalle lee hora_largada', /hora_apagado, hora_largada, scrap_kg/.test(FUENTE_G))
+  chk('el detalle lee hora_largada', /hora_apagado, hora_largada, (largada_motivo, )?scrap_kg/.test(FUENTE_G))
 }
 
 const AHORA_V = new Date('2026-09-30T14:00:00Z')
