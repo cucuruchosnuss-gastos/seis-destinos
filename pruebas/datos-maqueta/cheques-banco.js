@@ -72,9 +72,14 @@ t.cobranza_cheques.push(
 
 base.rpc = Object.assign(base.rpc ?? {}, {
   enviar_cheques_al_banco: { cheques: 2, total: 537300.5 },
-  // IMPORTE COMPLETO (24/10/2026): la base mete el valor completo y ya no
-  // carga el gasto de intereses (acreditado = bruto, descuento 0, sin gasto).
-  acreditar_cheques: [{ cuenta: 'Banco Macro · Nuss', cheques: 3, bruto: 550000, acreditado: 550000, descuento: 0, caja_movimiento_id: 'cm-acr', gasto_id: null }],
+  // ACREDITAR VENTA Y DEPÓSITO (28/10/2026): un renglón por cuenta y modo.
+  // Las dos ventas (chq-b1 y chq-b2, $ 500.000) acreditaron $ 490.000 (gasto
+  // de $ 10.000) y el depósito (chq-b3, $ 50.000) entró entero con $ 1.500
+  // de gastos del banco. La base crea los dos gastos sola.
+  acreditar_cheques: [
+    { cuenta: 'Banco Macro · Nuss', modo: 'venta', cheques: 2, bruto: 500000, acreditado: 490000, gastos: 10000, caja_movimiento_id: 'cm-acr', gasto_id: 'g-acr-venta' },
+    { cuenta: 'Banco Macro · Nuss', modo: 'deposito', cheques: 1, bruto: 50000, acreditado: 50000, gastos: 1500, caja_movimiento_id: 'cm-acr', gasto_id: 'g-acr-deposito' },
+  ],
   cancelar_envio_cheques: 2,
   depositar_cheques: { cheques: 2, bruto: 537300.5, neto: 537300.5, descuento: 0, caja_movimiento_id: 'cm-dep', gasto_id: null },
   vender_cheques: { cheques: 1, bruto: 387300.5, neto: 387300.5, descuento: 0, caja_movimiento_id: 'cm-ven', gasto_id: null },

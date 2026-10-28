@@ -87,8 +87,13 @@ const OPCIONALES = [
   'htmlOpcionesClienteRechazo', 'leerCamposRechazo', 'listaRenglonesRechazo', 'escribirRenglonRechazo', 'agregarRenglonRechazo',
   'quitarRenglonRechazo', 'pintarRenglonesRechazo', 'pintarResultadosRechazo', 'pintarMotivosRechazo', 'pintarClienteRechazo',
   'pintarResumenRechazo', 'pintarErrorRechazo', 'pintarBotonRechazo', 'pintarRechazo', 'confirmarRechazo', 'conectarRechazo',
-  // importe completo: los gastos del banco, aparte (24/10/2026)
-  'htmlGastosBanco', 'entradasPorCuenta', 'unidadUnicaDe',
+  // importe completo (24/10/2026); el botón "Cargar el gasto del banco"
+  // (htmlGastosBanco, unidadUnicaDe) se sacó el 28/10/2026.
+  'entradasPorCuenta',
+  // acreditar venta y depósito (28/10/2026): el gasto se crea al acreditar
+  'textoEntranSinGasto', 'modoEnBanco', 'bloquesEnBanco', 'htmlBloquesEnBanco', 'esVentaEnBanco', 'textoInicialAcreditar',
+  'cuentaAcreditar', 'vivoAcreditar', 'totalesAcreditar', 'textoModoGasto', 'textoGastosAcreditar', 'htmlFilaAcreditar',
+  'pintarVivoAcreditar', 'alEscribirAcreditar',
 ]
 const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
   // endosar a un proveedor (29/09/2026)
@@ -100,8 +105,8 @@ const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADO
   // Cheque rechazado (24/10/2026)
   'ESTADOS_SALIDOS_Y_RECHAZADOS', 'MOTIVOS_RECHAZO', 'CONCEPTO_GASTO_RECHAZO', 'ESPERA_BUSQUEDA_RECHAZO', 'LARGO_MINIMO_RECHAZO',
   'LARGO_MINIMO_MOTIVO_RECHAZO', 'TOPE_PDF_RECHAZO', 'puedeRechazar',
-  // importe completo (24/10/2026)
-  'CATEGORIA_GASTOS_BANCARIOS']
+  // acreditar venta y depósito (28/10/2026)
+  'BLOQUES_EN_BANCO']
 
 const PRELUDIO = `
   ${fuenteNumeros()}

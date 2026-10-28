@@ -29,7 +29,7 @@ const TOPE_MS = 120000
 // sigue en la lista, la prueba da rojo), y una rota que no está da rojo.
 const YA_ROTAS = new Set([
   'mut-administracion-cuenta-a-orden.js', 'mut-administracion-prestamos.js', 'mut-administracion-seguridad.js',
-  'mut-caja-ingreso-externo.js', 'mut-cheques-banco.js', 'mut-cheques-barra-unidad.js', 'mut-cheques-celular.js',
+  'mut-caja-ingreso-externo.js', 'mut-cheques-barra-unidad.js', 'mut-cheques-celular.js',
   'mut-cheques-vista.js', 'mut-conos-todos.js', 'mut-cuenta-unica.js', 'mut-cuentas-corrientes-nota-credito.js',
   'mut-cuentas-corrientes-pago-mixto.js', 'mut-cuentas-corrientes-saldo-inicial.js', 'mut-dashboard-pendientes.js',
   'mut-embeds-ambiguos.js', 'mut-permisos-pantallas-stock.js', 'mut-produccion-acceso.js', 'mut-produccion-cierre.js',

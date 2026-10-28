@@ -537,10 +537,11 @@ if (SOLO !== 'render') {
       // "Ver el gasto" de una venta (13/10/2026), a una página fija de este
       // sitio, con el id del gasto por encodeURIComponent y el atributo entre
       // comillas DOBLES.
-      // Y (24/10/2026) "Cargar el gasto del banco": gastos.html?nuevo=1 con
-      // la categoría y la fábrica, cada una por encodeURIComponent.
+      // El "Cargar el gasto del banco" (gastos.html?nuevo=1, 24/10/2026) se
+      // sacó el 28/10/2026: el gasto lo crea la base al acreditar, y su
+      // "Ver el gasto" del resultado es el mismo gastos.html?gasto=.
       const linkPago = /^href$/i.test(nombreAttr) &&
-        (/href="(cuentas-corrientes\.html\?pago|gastos\.html\?gasto)=$/.test(tramo) || /href="gastos\.html\?nuevo=1&amp;categoria=(\u0001&amp;unidad=)?$/.test(tramo)) &&
+        /href="(cuentas-corrientes\.html\?pago|gastos\.html\?gasto)=$/.test(tramo) &&
         /^encodeURIComponent\([\w.]+\)$/.test(String(x.expr).trim())
       if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr) && !linkPago) enUrl.push(`${x.linea} (${nombreAttr})`)
     }

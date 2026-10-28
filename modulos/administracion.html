@@ -16088,11 +16088,6 @@
     .chq-venta-resumen strong { font-variant-numeric: tabular-nums; }
     .chq-venta-resumen__total { font-weight: 700; }
     .chq-link-gasto { font-size: 0.8125rem; font-weight: 600; color: var(--naranja-oscuro); white-space: nowrap; }
-    /* IMPORTE COMPLETO (24/10/2026): el aviso de que los gastos del banco se
-       cargan aparte y el botón que lleva a cargarlos en Gastos. */
-    .chq-venta-resumen .chq-gastos-banco { display: block; }
-    .chq-gastos-banco { overflow-wrap: anywhere; }
-    .chq-gastos-banco__ir { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 0.5rem; text-decoration: none; text-align: center; }
     /* EN DOS PASOS (13/10/2026): "Ya se acreditó", la vista "En el banco" y
        cargar lo acreditado. */
     .chq-ya { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font-size: 0.875rem; margin: 0 0 0.875rem; cursor: pointer; }
@@ -16127,6 +16122,15 @@
     .chq-acr-fila { border-top: 1px solid var(--color-divisor); padding-top: 0.5rem; margin-top: 0.5rem; }
     .chq-acr-fila__cheque { font-size: 0.875rem; margin-bottom: 0.25rem; overflow-wrap: anywhere; }
     .chq-acr-fila .chq-campo { margin-bottom: 0; }
+    /* ACREDITAR VENTA Y DEPÓSITO (28/10/2026): los dos bloques de «En el
+       banco» y, al acreditar, lo que se dice en vivo abajo de cada campo. */
+    .chq-banco-bloque { min-width: 0; margin-bottom: 1rem; }
+    .chq-banco-bloque__cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; margin-bottom: 0.5rem; }
+    .chq-banco-bloque__titulo { flex: 1 1 14rem; min-width: 0; margin: 0; font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
+    .chq-banco-bloque__total { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .chq-acr-monto { width: 100%; max-width: 16rem; font-variant-numeric: tabular-nums; }
+    .chq-acr-fila__vivo { font-size: 0.8125rem; color: var(--color-texto-2); margin-top: 0.25rem; overflow-wrap: anywhere; }
+    .chq-acr-fila__vivo--error { color: var(--rojo-oscuro); font-weight: 600; }
 
     /* CHEQUE RECHAZADO (24/10/2026). En ROJO (--rojo-suave de fondo, el chip
        en --rojo-oscuro sobre blanco, 7,4:1) y con una franja --rojo a la
@@ -16266,9 +16270,9 @@
             <label for="chq-acr-fecha">¿Qué día acreditó el banco?</label>
             <input type="date" id="chq-acr-fecha">
           </div>
-          <!-- IMPORTE COMPLETO (24/10/2026): ya no se escribe lo que acreditó
-               el banco. Entra el valor completo de cada cheque; los gastos o
-               intereses del banco se cargan aparte en Gastos. -->
+          <!-- 28/10/2026: por cheque, "Monto acreditado" (venta: el banco
+               acredita el neto) o "Gastos del banco" (depósito: entra el
+               importe completo). El gasto lo carga acreditar_cheques solo. -->
           <div id="chq-acr-lista"></div>
           <div class="chq-venta-resumen" id="chq-acr-resumen"></div>
           <div class="chq-campo__error" id="chq-acr-error" hidden></div>
@@ -16503,7 +16507,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr } from '../js/utils.js'
+    import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr, leerNumeroAr } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import {
       dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
@@ -17997,10 +18001,13 @@
       return `Vendido${cuando}${cuenta ? ` · ${cuenta}` : ''}${acredito}`
     }
 
-    // "Ver el gasto": el gasto del interés de una venta (gastos.html?gasto=).
-    // El id va con encodeURIComponent y el atributo entre comillas DOBLES.
+    // "Ver el gasto": el gasto del banco que se cargó solo al acreditar
+    // (gastos.html?gasto=). Desde el 28/10/2026 acreditar_cheques lo carga en
+    // la venta (comisión e intereses) Y en el depósito (gastos del banco), y
+    // deja su id en venta_gasto_id en los dos. El id va con
+    // encodeURIComponent y el atributo entre comillas DOBLES.
     function htmlLinkGastoVenta(ch) {
-      return ch?.estado === 'vendido' && ch.venta_gasto_id
+      return (ch?.estado === 'vendido' || ch?.estado === 'depositado') && ch.venta_gasto_id
         ? `<a class="chq-link-gasto" href="gastos.html?gasto=${encodeURIComponent(ch.venta_gasto_id)}">Ver el gasto</a>` : ''
     }
 
@@ -18132,9 +18139,9 @@
     // Las dos meten UN ingreso por el total en la cuenta y vender deja el
     // cheque 'vendido'. IMPORTE COMPLETO (24/10/2026, leído con
     // pg_get_functiondef ese día): la base IGNORA p_neto (lo pisa con el
-    // total) y ya NO carga el gasto de intereses; los gastos o intereses del
-    // banco se cargan aparte en Gastos, categoría "Gastos bancarios y
-    // comisiones" (htmlGastosBanco lleva ahí). p_neto se sigue mandando,
+    // total) y ya NO carga el gasto de intereses; desde el 28/10/2026 el
+    // gasto del banco se carga solo al ACREDITAR (en dos pasos, ver "EN EL
+    // BANCO"), y por este camino no hay ninguno. p_neto se sigue mandando,
     // con el total, porque vender_cheques no tiene default. La cuenta:
     // cualquier banco de la Empresa en pesos (un cheque de Dolce se puede
     // depositar en un banco de Nuss: queda entre empresas). El endoso a un
@@ -18209,28 +18216,15 @@
       return `${uno ? 'El cheque es' : 'Hay cheques'} de otra fábrica (${partes.join(' y ')}) y la cuenta es de ${deLaCuenta}: queda como movimiento entre empresas.`
     }
 
-    // LOS GASTOS DEL BANCO, APARTE (24/10/2026). La categoría de Gastos donde
-    // se cargan a mano los intereses y comisiones del banco. Se nombra por su
-    // id (leído en `categorias` el 24/10/2026): el nombre ya cambió una vez
-    // (era la de los intereses de la venta de cheques; quedó el mismo id).
-    const CATEGORIA_GASTOS_BANCARIOS = { id: '7041825a-5a0c-484b-be07-17f9978a0d97', nombre: 'Gastos bancarios y comisiones' }
-
-    // "Entran $ X a <cuenta>. Los gastos o intereses del banco se cargan
-    // aparte en Gastos, categoría 'Gastos bancarios y comisiones'." y el botón
-    // que lleva a cargarlo: gastos.html?nuevo=1&categoria=<id>&unidad=<fábrica>
-    // abre el wizard de Gastos con la categoría (y la fábrica de la cuenta, si
-    // se sabe; vacía, Gastos la ignora) ya elegidas.
-    // entradas: [{ cuenta, centavos }] (una por cuenta). nuevaPestana: en el
-    // diálogo, antes de confirmar, Gastos se abre aparte para no perder lo
-    // que se está cargando. HTML: el texto con esc(); el href, con
-    // encodeURIComponent y entre comillas DOBLES.
-    function htmlGastosBanco(entradas, unidadId, { nuevaPestana = false } = {}) {
-      const entran = (entradas ?? []).map(x => `Entran ${formatearImporte((Number(x?.centavos) || 0) / 100)} a ${x?.cuenta || 'la cuenta elegida'}.`).join(' ')
-      const texto = `${entran}${entran ? ' ' : ''}Los gastos o intereses del banco se cargan aparte en Gastos, categoría '${CATEGORIA_GASTOS_BANCARIOS.nombre}'.`
-      const unidad = unidadId || ''
-      const destino = nuevaPestana ? ' target="_blank" rel="noopener"' : ''
-      return `<div class="chq-gastos-banco"><span>${esc(texto)}</span><br>` +
-        `<a class="chq-btn chq-btn--chico chq-gastos-banco__ir" data-gastos-banco href="gastos.html?nuevo=1&amp;categoria=${encodeURIComponent(CATEGORIA_GASTOS_BANCARIOS.id)}&amp;unidad=${encodeURIComponent(unidad)}"${destino}>Cargar el gasto del banco</a></div>`
+    // LOS GASTOS DEL BANCO (28/10/2026, pedido de Facu: sin pasos de más).
+    // Ya no hay un botón que lleve a cargarlo a mano en Gastos: el
+    // gasto lo crea SOLO acreditar_cheques al acreditar (ver "EN EL BANCO").
+    // Con "Ya se acreditó" (depositar_cheques / vender_cheques, un solo paso)
+    // entra el importe completo y no se carga ningún gasto: se dice, y se
+    // dice cómo cargarlo (mandarlo al banco y acreditarlo). Texto plano.
+    function textoEntranSinGasto(centavos, cuentaNombre) {
+      return `Entran ${formatearImporte((Number(centavos) || 0) / 100)} a ${cuentaNombre || 'la cuenta elegida'}. ` +
+        'Así no se carga ningún gasto del banco: si cobró gastos, sacá el tilde de «Ya se acreditó» y cargalos al acreditar.'
     }
 
     // Lo que se valida ANTES de llamar, con las MISMAS reglas que la base
@@ -18288,10 +18282,10 @@
       const cuenta = cuentaNombre || 'la cuenta'
       const entraron = Number.isFinite(bruto) ? formatearImporte(bruto) : 'la plata'
       if (tipo === 'vendido') {
-        // Desde el 24/10/2026 la base ya no carga el gasto de intereses: se
-        // recuerda que va aparte.
+        // Por este camino (un solo paso) entra el importe completo y no se
+        // carga gasto: el gasto del banco se carga al acreditar (28/10/2026).
         const que = n === 1 ? 'Se vendió 1 cheque' : `Se vendieron ${n} cheques`
-        return `${que}: entraron ${entraron} en ${cuenta}. Los gastos del banco se cargan aparte en Gastos.`
+        return `${que}: entraron ${entraron} en ${cuenta}.`
       }
       const que = n === 1 ? 'Se depositó 1 cheque' : `Se depositaron ${n} cheques`
       return `${que} en ${cuenta}: entraron ${entraron}.`
@@ -18410,10 +18404,10 @@
       if (!s.ya) {
         html += `<div><span>Se mandan a ${esc(cuenta?.nombre ?? 'la cuenta elegida')} para ${s.tipo === 'vendido' ? 'vender' : 'depositar'}. La plata no se mueve todavía: cuando el banco acredite, se carga en «En el banco».</span></div>`
       } else {
-        // IMPORTE COMPLETO (24/10/2026): vender o depositar, entra el total;
-        // los gastos del banco se cargan aparte (el botón abre Gastos en otra
-        // pestaña, así no se pierde lo que se está cargando acá).
-        html += htmlGastosBanco([{ cuenta: cuenta?.nombre ?? 'la cuenta elegida', centavos: brutoCent }], cuenta?.unidad_negocio_id ?? null, { nuevaPestana: true })
+        // IMPORTE COMPLETO (24/10/2026): vender o depositar, entra el total.
+        // Desde el 28/10/2026 el gasto del banco se carga SOLO al acreditar:
+        // por este camino no se carga ninguno, y se dice.
+        html += `<div><span>${esc(textoEntranSinGasto(brutoCent, cuenta?.nombre))}</span></div>`
       }
       resumen.innerHTML = html
       resumen.hidden = false
@@ -18472,17 +18466,33 @@
     // EN EL BANCO (13/10/2026): los cheques que se mandaron al banco y todavía
     // no se acreditaron (estado 'en_banco'). Mandarlos NO mueve plata
     // (enviar_cheques_al_banco); cuando el banco acredita —1 a 3 días después—
-    // se acredita (acreditar_cheques): un ingreso en la cuenta por el IMPORTE
-    // COMPLETO (24/10/2026: la base ignora lo "acreditado" que se mande y ya
-    // no carga el gasto de intereses; los gastos del banco se cargan aparte,
-    // en Gastos, categoría 'Gastos bancarios y comisiones'). Si el banco no lo
-    // tomó, vuelve a la cartera (cancelar_envio_cheques, con motivo).
-    // Agrupados por cuenta y fecha de envío.
+    // se acredita (acreditar_cheques). VENTA Y DEPÓSITO SE ACREDITAN DISTINTO
+    // (28/10/2026, leído con pg_get_functiondef ese día):
+    //   acreditar_cheques(p_items jsonb, p_fecha date), p_items un array de
+    //     { cheque_id, acreditado }  si se mandó a VENDER (salida_modo 'venta'):
+    //       el banco acredita el NETO; la base exige 0 < acreditado <= importe
+    //       (sin él, el importe completo);
+    //     { cheque_id, gastos }      si se mandó a DEPOSITAR: entra el importe
+    //       completo y los gastos salen aparte; 0 <= gastos < importe (sin
+    //       él, 0).
+    //   La base mete UN ingreso por el bruto en cada cuenta y crea SOLA el
+    //   gasto (categoría "Gastos bancarios y comisiones"), uno por cuenta y
+    //   modo cuando suma más de cero. Devuelve un renglón por cuenta y modo:
+    //   { cuenta, modo, cheques, bruto, acreditado, gastos,
+    //     caja_movimiento_id, gasto_id } (gasto_id null sin gasto). El cheque
+    //   queda 'vendido' (con venta_neto) o 'depositado', con venta_gasto_id
+    //   en los dos si hubo gasto. Fecha obligatoria, no futura, no antes del
+    //   envío. Permiso: cobranzas:procesar.
+    // Si el banco no lo tomó, vuelve a la cartera (cancelar_envio_cheques,
+    // con motivo). La vista: dos bloques (los que se mandaron a vender y los
+    // que se mandaron a depositar), y adentro, por cuenta y fecha de envío.
     // ═══════════════════════════════════════════════════════════════════════
 
     // Lo que se eligió en esta vista. Aparte de la selección de la cartera:
-    // son otros cheques y otras acciones.
-    const bancoUI = { ids: new Set(), panel: null, enviando: false, resultado: '' }
+    // son otros cheques y otras acciones. valores: lo escrito en cada cheque
+    // al acreditar (id → texto del campo: lo acreditado si es venta, los
+    // gastos si es depósito).
+    const bancoUI = { ids: new Set(), panel: null, enviando: false, resultado: '', valores: new Map() }
 
     const TEXTO_MOTIVO_NO_TOMO = 'Poné el motivo (por ejemplo: "el banco no lo aceptó").'
 
@@ -18531,11 +18541,19 @@
       return `En el banco${cuando}${cuenta ? ` · ${cuenta}` : ''} · para ${ch?.salida_modo === 'venta' ? 'vender' : 'depositar'}`
     }
 
-    // Agrupados por cuenta y fecha de envío; los más viejos primero.
+    // Venta o depósito: lo que no es venta se acredita como depósito (la
+    // base hace lo mismo: if salida_modo = 'venta' … else …).
+    function modoEnBanco(ch) {
+      return ch?.salida_modo === 'venta' ? 'venta' : 'deposito'
+    }
+
+    // Agrupados por cuenta y fecha de envío; los más viejos primero. La
+    // clave lleva el modo: una venta y un depósito de la misma cuenta y día
+    // van en grupos distintos (cada uno en su bloque).
     function gruposEnBanco(filas, cuentasPorId) {
       const grupos = new Map()
       for (const ch of filas ?? []) {
-        const clave = `${ch.salida_cuenta_id ?? ''}|${ch.envio_fecha ?? ''}`
+        const clave = `${modoEnBanco(ch)}|${ch.salida_cuenta_id ?? ''}|${ch.envio_fecha ?? ''}`
         let g = grupos.get(clave)
         if (!g) {
           const c = cuentasPorId?.get?.(ch.salida_cuenta_id)
@@ -18548,6 +18566,37 @@
       for (const g of grupos.values()) g.cheques.sort((a, b) => String(a.numero ?? '').localeCompare(String(b.numero ?? '')))
       return [...grupos.values()].sort((a, b) =>
         String(a.fecha ?? '').localeCompare(String(b.fecha ?? '')) || String(a.cuenta).localeCompare(String(b.cuenta), 'es'))
+    }
+
+    // DOS BLOQUES (28/10/2026): primero los que se mandaron a vender y
+    // después los que se mandaron a depositar, cada uno con su total (se
+    // acreditan distinto). Solo los que tienen cheques.
+    const BLOQUES_EN_BANCO = [
+      { modo: 'venta', titulo: 'Vendidos · esperando acreditación' },
+      { modo: 'deposito', titulo: 'Depositados · esperando acreditación' },
+    ]
+
+    function bloquesEnBanco(filas, cuentasPorId) {
+      return BLOQUES_EN_BANCO.map(b => {
+        const cheques = (filas ?? []).filter(ch => modoEnBanco(ch) === b.modo)
+        return { ...b, cheques, centavos: centavosDe(cheques), grupos: gruposEnBanco(cheques, cuentasPorId) }
+      }).filter(b => b.cheques.length)
+    }
+
+    function htmlBloquesEnBanco(bloques, elegidos, puede, cobranzas, hoy) {
+      return bloques.map(b => {
+        const n = b.cheques.length
+        const total = (n === 1 ? '1 cheque · ' : n + ' cheques · ') + formatearImporte(b.centavos / 100)
+        const grupos = htmlGruposEnBanco(b.grupos, elegidos, puede, cobranzas, hoy)
+        return `
+        <section class="chq-banco-bloque" data-banco-bloque="${esc(b.modo)}">
+          <div class="chq-banco-bloque__cab">
+            <h2 class="chq-banco-bloque__titulo">${esc(b.titulo)}</h2>
+            <div class="chq-banco-bloque__total">${esc(total)}</div>
+          </div>
+          ${grupos}
+        </section>`
+      }).join('')
     }
 
     function htmlGruposEnBanco(grupos, elegidos, puede, cobranzas, hoy) {
@@ -18586,10 +18635,11 @@
           </label>`
     }
 
-    // ── Lo que entra (24/10/2026: el IMPORTE COMPLETO) ───────────────────
-    // Ya no se reparte lo acreditado (el total del banco o la tasa): la base
-    // mete el valor completo de cada cheque. Por cuenta, en el orden en que
-    // aparecen: [{ cuentaId, cuenta, unidadId, centavos, cheques }].
+    // ── Lo que entra en cada cuenta ──────────────────────────────────────
+    // acreditar_cheques mete UN ingreso por el importe completo (el bruto)
+    // en cada cuenta; el gasto del banco sale aparte (28/10/2026). Por
+    // cuenta, en el orden en que aparecen:
+    // [{ cuentaId, cuenta, unidadId, centavos, cheques }].
     function entradasPorCuenta(cheques, cuentasPorId) {
       const m = new Map()
       for (const ch of cheques ?? []) {
@@ -18606,15 +18656,98 @@
       return [...m.values()]
     }
 
-    // La fábrica del gasto del banco: la de las cuentas, si es UNA sola.
-    function unidadUnicaDe(entradas) {
-      const us = new Set((entradas ?? []).map(e => e?.unidadId).filter(Boolean))
-      return us.size === 1 ? us.values().next().value : null
+    // ── Lo que acreditó el banco, cheque por cheque (28/10/2026) ─────────
+    // VENTA: "Monto acreditado" (viene el importe; se corrige con lo que
+    // acreditó de verdad) y la diferencia es el gasto. DEPÓSITO: "Gastos del
+    // banco" (viene 0) y entra el importe completo. Los montos se leen con
+    // el parser argentino de js/utils.js (leerNumeroAr: "980.000,50").
+    function esVentaEnBanco(ch) {
+      return modoEnBanco(ch) === 'venta'
     }
 
-    // La misma regla de acreditar_cheques, dicha antes de mandar (la fecha;
-    // lo acreditado ya no se escribe).
-    function erroresAcreditar(cheques, fecha, hoy) {
+    // Lo que viene escrito en el campo: el importe en una venta, 0 en un
+    // depósito. Con el formato del campo ("1.000.000" o "250.000,50").
+    function textoInicialAcreditar(ch) {
+      if (!esVentaEnBanco(ch)) return '0'
+      const imp = Number(ch?.importe)
+      return Number.isFinite(imp) ? formatearNumeroAr(imp, { decimales: 2, minimos: Number.isInteger(imp) ? 0 : 2 }) : ''
+    }
+
+    // La cuenta de UN cheque con lo escrito, con las MISMAS reglas que
+    // acreditar_cheques (una validación más permisiva deja pasar lo que la
+    // base rechaza; una más estricta traba lo que sí entra). En centavos.
+    //   venta:    0 < acreditado <= importe; gasto = importe − acreditado.
+    //   depósito: 0 <= gastos < importe (vacío = 0); acredita el importe.
+    // → { venta, importeCent, acreditadoCent, gastoCent, error } (los
+    // centavos en null si hay error; error '' si está bien).
+    function cuentaAcreditar(ch, texto) {
+      const venta = esVentaEnBanco(ch)
+      const importeCent = aCentavos(ch?.importe)
+      const r = { venta, importeCent, acreditadoCent: null, gastoCent: null, error: '' }
+      const nro = `Cheque Nº ${ch?.numero ?? '—'}`
+      const tope = formatearImporte(importeCent / 100)
+      const t = String(texto ?? '').trim()
+      if (t.startsWith('-')) {
+        r.error = venta ? `${nro}: lo acreditado tiene que ser mayor a cero.` : `${nro}: los gastos no pueden ser negativos.`
+        return r
+      }
+      if (venta && t === '') {
+        r.error = `${nro}: escribí el monto acreditado.`
+        return r
+      }
+      const n = t === '' ? 0 : leerNumeroAr(t, { decimales: 2 })
+      if (n === null) {
+        r.error = `${nro}: «${t}» no es un monto válido.`
+        return r
+      }
+      const c = aCentavos(n)
+      if (venta) {
+        if (c <= 0) r.error = `${nro}: lo acreditado tiene que ser mayor a cero.`
+        else if (c > importeCent) r.error = `${nro}: lo acreditado no puede ser más que el importe (${tope}).`
+        else { r.acreditadoCent = c; r.gastoCent = importeCent - c }
+        return r
+      }
+      if (c >= importeCent) r.error = `${nro}: los gastos tienen que ser menos que el importe (${tope}).`
+      else { r.acreditadoCent = importeCent; r.gastoCent = c }
+      return r
+    }
+
+    // Lo que se dice abajo del campo, en vivo. Texto plano.
+    //   venta:    "Diferencia $ 20.000,00 (2 %) → se carga como gasto"
+    //             (sin diferencia: "Sin diferencia: no se carga gasto.")
+    //   depósito: "Se acredita $ 1.000.000,00 · gasto $ 1.500,00"
+    //             (sin gastos: "Se acredita $ 1.000.000,00 · sin gasto")
+    // Con un error, el error. → { texto, error }
+    function vivoAcreditar(ch, texto) {
+      const r = cuentaAcreditar(ch, texto)
+      if (r.error) return { texto: r.error, error: true }
+      if (r.venta) {
+        if (!r.gastoCent) return { texto: 'Sin diferencia: no se carga gasto.', error: false }
+        const pct = r.importeCent ? r.gastoCent * 100 / r.importeCent : 0
+        return { texto: `Diferencia ${formatearImporte(r.gastoCent / 100)} (${formatearNumeroAr(pct, { decimales: 2, minimos: 0 })} %) → se carga como gasto`, error: false }
+      }
+      return { texto: `Se acredita ${formatearImporte(r.importeCent / 100)} · ${r.gastoCent ? `gasto ${formatearImporte(r.gastoCent / 100)}` : 'sin gasto'}`, error: false }
+    }
+
+    // Los totales de lo elegido, en centavos: lo que entra (el importe de
+    // todos), el gasto que se va a cargar y cuántos tienen un monto mal
+    // escrito (su gasto no se suma). valores: id → texto (sin uno, lo de la
+    // base: venta = el importe, depósito = 0).
+    function totalesAcreditar(cheques, valores) {
+      let gastoCent = 0
+      let conError = 0
+      for (const ch of cheques ?? []) {
+        if (!valores?.has?.(ch.id)) continue
+        const r = cuentaAcreditar(ch, valores.get(ch.id))
+        if (r.error) conError++
+        else gastoCent += r.gastoCent
+      }
+      return { brutoCent: centavosDe(cheques), gastoCent, conError }
+    }
+
+    // La misma regla de acreditar_cheques, dicha antes de mandar: la fecha y
+    // lo escrito en cada cheque.
+    function erroresAcreditar(cheques, fecha, hoy, valores) {
       const e = []
       if (!cheques.length) e.push('Elegí al menos un cheque.')
       if (!esFechaIso(fecha)) e.push('Falta la fecha.')
@@ -18623,24 +18756,72 @@
         const envio = cheques.map(ch => ch.envio_fecha).filter(esFechaIso).sort().pop()
         if (envio && diasEntre(envio, fecha) < 0) e.push(`La fecha no puede ser anterior al envío al banco (${formatearFechaCob(envio)}).`)
       }
+      for (const ch of cheques) {
+        if (!valores?.has?.(ch.id)) continue
+        const r = cuentaAcreditar(ch, valores.get(ch.id))
+        if (r.error) e.push(r.error)
+      }
       return e
     }
 
-    // Tal cual viaja: solo los cheques y la fecha. acreditar_cheques lee
-    // cheque_id e IGNORA "acreditado" desde el 24/10/2026 (pg_get_functiondef
-    // de ese día: v_acr := ch.importe), así que no se manda.
-    function parametrosAcreditar(cheques, fecha) {
-      return { p_items: cheques.map(ch => ({ cheque_id: ch.id })), p_fecha: fecha }
+    // Tal cual viaja. Cada ítem: { cheque_id, acreditado } si se mandó a
+    // vender, { cheque_id, gastos } si se mandó a depositar (en pesos, desde
+    // los centavos: sin el error del punto flotante). Un cheque sin nada
+    // escrito (o mal escrito) va solo con su id: la base usa lo de siempre
+    // (venta = el importe completo, depósito = sin gastos). erroresAcreditar
+    // frena antes uno mal escrito.
+    function parametrosAcreditar(cheques, fecha, valores) {
+      return {
+        p_items: cheques.map(ch => {
+          const item = { cheque_id: ch.id }
+          if (!valores?.has?.(ch.id)) return item
+          const r = cuentaAcreditar(ch, valores.get(ch.id))
+          if (r.error) return item
+          if (r.venta) item.acreditado = r.acreditadoCent / 100
+          else item.gastos = r.gastoCent / 100
+          return item
+        }),
+        p_fecha: fecha,
+      }
     }
 
-    // Lo que dice la pantalla al terminar, con lo que DEVOLVIÓ la base (una
-    // fila por cuenta), y el botón para cargar los gastos del banco. HTML:
-    // todo escapado.
+    function textoModoGasto(modo) {
+      return modo === 'venta' ? 'venta' : 'depósito'
+    }
+
+    // Los gastos que creó la base, con los renglones que DEVOLVIÓ (uno por
+    // cuenta y modo): "Gastos del banco cargados: $ 20.000,00 (Macro ·
+    // venta), $ 1.500,00 (Macro · depósito)." o "No se cargó ningún gasto del
+    // banco." Sin respuesta: ''. Texto plano.
+    function textoGastosAcreditar(res) {
+      if (!Array.isArray(res)) return ''
+      const gastos = res.filter(r => aCentavos(r?.gastos) > 0)
+      if (!gastos.length) return 'No se cargó ningún gasto del banco.'
+      return 'Gastos del banco cargados: ' +
+        gastos.map(r => `${formatearImporte(aCentavos(r.gastos) / 100)} (${r?.cuenta ?? 'la cuenta'} · ${textoModoGasto(r?.modo)})`).join(', ') + '.'
+    }
+
+    // Lo que dice la pantalla al terminar, con lo que DEVOLVIÓ la base (un
+    // renglón por cuenta y modo): lo que entró en cada cuenta, cada gasto
+    // que se cargó con "Ver el gasto" (o que no se cargó ninguno) y los
+    // cheques que quedan entre empresas. HTML: todo escapado; el id del gasto
+    // con encodeURIComponent, entre comillas DOBLES.
     function htmlResultadoAcreditar(res, cheques, cobranzas, cuentasPorId, nombres) {
-      const lineas = (Array.isArray(res) ? res : []).map(r => {
-        const entro = r?.bruto ?? r?.acreditado
-        return `<div>Entró ${esc(formatearImporte(entro))} en ${esc(r?.cuenta ?? 'la cuenta')}</div>`
-      })
+      const filas = Array.isArray(res) ? res : []
+      const porCuenta = new Map()
+      for (const r of filas) {
+        const k = String(r?.cuenta ?? 'la cuenta')
+        porCuenta.set(k, (porCuenta.get(k) ?? 0) + aCentavos(r?.bruto ?? r?.acreditado))
+      }
+      const lineas = [...porCuenta].map(([cuenta, c]) => `<div>Entró ${esc(formatearImporte(c / 100))} en ${esc(cuenta)}</div>`)
+      const gastos = filas.filter(r => aCentavos(r?.gastos) > 0)
+      for (const r of gastos) {
+        const gid = r.gasto_id
+        const linkGasto = gid ? ` <a class="chq-link-gasto" href="gastos.html?gasto=${encodeURIComponent(gid)}">Ver el gasto</a>` : ''
+        const texto = 'Gasto del banco ' + formatearImporte(aCentavos(r.gastos) / 100) + ' · ' + (r.cuenta ?? 'la cuenta') + ' · ' + textoModoGasto(r.modo)
+        lineas.push(`<div>${esc(texto)}${linkGasto}</div>`)
+      }
+      if (filas.length && !gastos.length) lineas.push('<div>No se cargó ningún gasto del banco.</div>')
       // Un cheque de una fábrica que entró en el banco de OTRA queda como
       // movimiento entre empresas.
       const otras = new Map()
@@ -18656,7 +18837,6 @@
       for (const o of otras.values()) {
         lineas.push(`<div>Los cheques de ${esc(o.nombre)} (${esc(formatearImporte(o.centavos / 100))}) entraron en un banco de otra fábrica: quedan en «Entre empresas».</div>`)
       }
-      if (lineas.length) lineas.push(htmlGastosBanco([], unidadUnicaDe(entradasPorCuenta(cheques, cuentasPorId))))
       return lineas.join('')
     }
 
@@ -18668,7 +18848,7 @@
       const lista = document.getElementById('chq-banco-lista')
       if (estado.error) lista.innerHTML = ''
       else if (!filas.length) lista.innerHTML = '<div class="chq-vacio">No hay cheques esperando en el banco.</div>'
-      else lista.innerHTML = htmlGruposEnBanco(gruposEnBanco(filas, estado.cuentasBanco?.porId), bancoUI.ids, puedeProcesar(), estado.cobranzas, hoyArgentina())
+      else lista.innerHTML = htmlBloquesEnBanco(bloquesEnBanco(filas, estado.cuentasBanco?.porId), bancoUI.ids, puedeProcesar(), estado.cobranzas, hoyArgentina())
       const res = document.getElementById('chq-banco-resultado')
       document.getElementById('chq-banco-resultado-texto').innerHTML = bancoUI.resultado
       res.hidden = !bancoUI.resultado
@@ -18715,12 +18895,13 @@
     }
 
     // ── Cargar lo acreditado ─────────────────────────────────────────────
-    // IMPORTE COMPLETO (24/10/2026): solo se elige el día; entra el valor
-    // completo de cada cheque y los gastos del banco se cargan aparte.
+    // El día y, por cheque, lo que acreditó (venta) o los gastos (depósito):
+    // el gasto del banco se crea SOLO al acreditar (28/10/2026).
     function abrirAcreditar() {
       if (!chequesBancoElegidos().length) return
       bancoUI.panel = 'acreditar'
       bancoUI.resultado = ''
+      bancoUI.valores = new Map()
       const fecha = document.getElementById('chq-acr-fecha')
       fecha.value = hoyArgentina()
       fecha.max = hoyArgentina()
@@ -18730,27 +18911,88 @@
       document.getElementById('chq-acreditar').scrollIntoView?.({ block: 'nearest' })
     }
 
-    // Los cheques elegidos, uno por renglón (sin campos: entra su importe).
+    // UN renglón: el cheque, su campo ("Monto acreditado" en una venta,
+    // "Gastos del banco" en un depósito) y lo que se dice en vivo. HTML: todo
+    // escapado (el valor del campo también: es lo que se escribió).
+    function htmlFilaAcreditar(ch, texto) {
+      const venta = esVentaEnBanco(ch)
+      const campo = `chq-acr-monto-${ch.id}`
+      const vivo = vivoAcreditar(ch, texto)
+      return `
+        <div class="chq-acr-fila">
+          <div class="chq-acr-fila__cheque">Nº ${esc(ch.numero ?? '—')} · ${esc(nombreBanco(ch.banco_codigo))} · ${esc(formatearImporte(ch.importe))} <span class="chq-banco-modo chq-banco-modo--${esc(modoEnBanco(ch))}">${esc(textoModoEnvio(ch.salida_modo))}</span></div>
+          <div class="chq-campo">
+            <label for="${esc(campo)}">${esc(venta ? 'Monto acreditado' : 'Gastos del banco')}</label>
+            <input type="text" id="${esc(campo)}" class="chq-acr-monto" data-acr-monto="${esc(ch.id)}" data-acr-modo="${esc(modoEnBanco(ch))}" inputmode="decimal" autocomplete="off" placeholder="$ 0" value="${esc(texto ?? '')}">
+            <div class="${esc(vivo.error ? 'chq-acr-fila__vivo chq-acr-fila__vivo--error' : 'chq-acr-fila__vivo')}" data-acr-vivo="${esc(ch.id)}" aria-live="polite">${esc(vivo.texto)}</div>
+          </div>
+        </div>`
+    }
+
+    // Los cheques elegidos, uno por renglón con su campo. Lo ya escrito se
+    // conserva al elegir o soltar otro; uno nuevo viene con el importe
+    // (venta) o 0 (depósito).
     function armarFilasAcreditar() {
       const cheques = chequesBancoElegidos()
       const min = cheques.map(ch => ch.envio_fecha).filter(esFechaIso).sort().pop()
       document.getElementById('chq-acr-fecha').min = min ?? ''
-      document.getElementById('chq-acr-lista').innerHTML = cheques.map(ch => `
-        <div class="chq-acr-fila">
-          <div class="chq-acr-fila__cheque">Nº ${esc(ch.numero ?? '—')} · ${esc(nombreBanco(ch.banco_codigo))} · ${esc(formatearImporte(ch.importe))} <span class="chq-banco-modo chq-banco-modo--${esc(ch.salida_modo === 'venta' ? 'venta' : 'deposito')}">${esc(textoModoEnvio(ch.salida_modo))}</span></div>
-        </div>`).join('')
+      for (const ch of cheques) if (!bancoUI.valores.has(ch.id)) bancoUI.valores.set(ch.id, textoInicialAcreditar(ch))
+      const lista = document.getElementById('chq-acr-lista')
+      lista.innerHTML = cheques.map(ch => htmlFilaAcreditar(ch, bancoUI.valores.get(ch.id))).join('')
+      // Campos de número argentino (puntos de miles mientras se escribe). Si
+      // el formato cambió lo escrito, se anota lo que quedó a la vista.
+      for (const ch of cheques) {
+        const input = lista.querySelector?.(`[data-acr-monto="${CSS.escape(String(ch.id))}"]`)
+        if (!input) continue
+        enlazarCampoNumero(input, { decimales: 2 })
+        if (input.value !== bancoUI.valores.get(ch.id)) {
+          bancoUI.valores.set(ch.id, input.value)
+          pintarVivoAcreditar(ch)
+        }
+      }
       pintarResumenAcreditar()
     }
 
-    // El total y "Entran $ X a <cuenta>. Los gastos o intereses del banco se
-    // cargan aparte…", con el botón (en otra pestaña: no se pierde la
-    // elección).
+    // Lo de abajo del campo de UN cheque (sin volver a dibujar el renglón:
+    // no se pierde el foco ni el cursor).
+    function pintarVivoAcreditar(ch) {
+      const el = document.getElementById('chq-acr-lista').querySelector?.(`[data-acr-vivo="${CSS.escape(String(ch.id))}"]`)
+      if (!el) return
+      const vivo = vivoAcreditar(ch, bancoUI.valores.get(ch.id))
+      el.textContent = vivo.texto
+      el.classList.toggle('chq-acr-fila__vivo--error', vivo.error)
+    }
+
+    // Al escribir en un campo: se anota, se dice en vivo y se rehace el
+    // resumen. El error de antes se va (era sobre otro monto).
+    function alEscribirAcreditar(id, texto) {
+      const ch = chequesBancoElegidos().find(x => x.id === id)
+      if (!ch) return
+      bancoUI.valores.set(id, String(texto ?? ''))
+      pintarVivoAcreditar(ch)
+      document.getElementById('chq-acr-error').hidden = true
+      pintarResumenAcreditar()
+    }
+
+    // El total, el gasto del banco que se va a cargar, lo que queda en las
+    // cuentas y "Entran $ X a <cuenta>." (uno por cuenta). HTML: todo con
+    // esc().
     function pintarResumenAcreditar() {
       const cheques = chequesBancoElegidos()
       const entradas = entradasPorCuenta(cheques, estado.cuentasBanco?.porId)
+      const t = totalesAcreditar(cheques, bancoUI.valores)
       const fila = (k, v, clase = '') => `<div class="${esc(clase)}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`
-      let html = fila(cheques.length === 1 ? 'Total del cheque' : `Total de los ${cheques.length} cheques`, formatearImporte(centavosDe(cheques) / 100), 'chq-venta-resumen__total')
-      html += htmlGastosBanco(entradas.map(e => ({ cuenta: e.cuenta, centavos: e.centavos })), unidadUnicaDe(entradas), { nuevaPestana: true })
+      let html = fila(cheques.length === 1 ? 'Total del cheque' : `Total de los ${cheques.length} cheques`, formatearImporte(t.brutoCent / 100), 'chq-venta-resumen__total')
+      html += fila('Gasto del banco', formatearImporte(t.gastoCent / 100))
+      html += fila(entradas.length > 1 ? 'Queda en las cuentas' : 'Queda en la cuenta', formatearImporte((t.brutoCent - t.gastoCent) / 100))
+      const entran = entradas.map(e => `Entran ${formatearImporte(e.centavos / 100)} a ${e.cuenta}.`).join(' ')
+      const gasto = t.gastoCent > 0
+        ? "El gasto se carga solo en Gastos, categoría 'Gastos bancarios y comisiones'."
+        : 'No se carga ningún gasto.'
+      const aviso = (entran + ' ' + gasto).trim()
+      html += `<div><span>${esc(aviso)}</span></div>`
+      const corregir = t.conError === 1 ? 'Hay un monto para corregir.' : 'Hay ' + t.conError + ' montos para corregir.'
+      if (t.conError) html += `<div><span>${esc(corregir)}</span></div>`
       document.getElementById('chq-acr-resumen').innerHTML = html
     }
 
@@ -18759,7 +19001,7 @@
       const cheques = chequesBancoElegidos()
       const fecha = document.getElementById('chq-acr-fecha').value
       const err = document.getElementById('chq-acr-error')
-      const errores = erroresAcreditar(cheques, fecha, hoyArgentina())
+      const errores = erroresAcreditar(cheques, fecha, hoyArgentina(), bancoUI.valores)
       if (errores.length) {
         err.textContent = errores.join(' ')
         err.hidden = false
@@ -18769,12 +19011,15 @@
       bancoUI.enviando = true
       btn.disabled = true
       try {
-        const { data, error } = await supabase.rpc('acreditar_cheques', parametrosAcreditar(cheques, fecha))
+        const { data, error } = await supabase.rpc('acreditar_cheques', parametrosAcreditar(cheques, fecha, bancoUI.valores))
         if (error) throw error
         bancoUI.resultado = htmlResultadoAcreditar(data, cheques, estado.cobranzas, estado.cuentasBanco?.porId, estado.nombresUnidades)
         bancoUI.ids = new Set()
         bancoUI.panel = null
-        mostrarExito(cheques.length === 1 ? 'Se acreditó 1 cheque.' : `Se acreditaron ${cheques.length} cheques.`)
+        bancoUI.valores = new Map()
+        // El aviso dice también qué gastos creó la base (o que ninguno).
+        const acreditados = cheques.length === 1 ? 'Se acreditó 1 cheque.' : `Se acreditaron ${cheques.length} cheques.`
+        mostrarExito(`${acreditados} ${textoGastosAcreditar(data)}`.trim())
         await refrescarTodo()
       } catch (e) {
         console.error('Falló acreditar_cheques:', e)
@@ -18844,6 +19089,11 @@
       document.getElementById('chq-banco-no-tomo').addEventListener('click', abrirNoTomo)
       document.getElementById('chq-acr-cancelar').addEventListener('click', () => { bancoUI.panel = null; pintarEnBanco() })
       document.getElementById('chq-acr-confirmar').addEventListener('click', confirmarAcreditar)
+      // Lo acreditado (venta) o los gastos (depósito) de cada cheque.
+      document.getElementById('chq-acr-lista').addEventListener('input', (ev) => {
+        const t = ev.target?.closest?.('[data-acr-monto]')
+        if (t) alEscribirAcreditar(t.dataset.acrMonto, t.value)
+      })
       document.getElementById('chq-no-tomo-cancelar').addEventListener('click', () => { bancoUI.panel = null; pintarEnBanco() })
       document.getElementById('chq-no-tomo-confirmar').addEventListener('click', confirmarNoTomo)
       // Escribir el motivo saca el error de antes (era sobre otro texto).

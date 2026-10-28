@@ -12,9 +12,10 @@
 //    importe completo (24/10/2026: ya no se escribe lo acreditado);
 //  - un cheque de Dolce Pasta en un banco de Nuss avisa "entre empresas";
 //  - «En el banco» (con su contador): agrupados por cuenta y fecha; elegir
-//    los tres → "Cargar lo acreditado" (sin campos: entra el importe
-//    completo, 24/10/2026) → acreditar_cheques; el resultado dice
-//    "Entró $ …" (sin gasto de intereses) y "Entre empresas";
+//    los tres → "Cargar lo acreditado" (desde el 28/10/2026 con un campo por
+//    cheque: lo acreditado de una venta, los gastos de un depósito) →
+//    acreditar_cheques; el resultado dice "Entró $ …", los gastos que creó
+//    la base con "Ver el gasto" y "Entre empresas";
 //  - "No lo tomó el banco" con motivo → cancelar_envio_cheques;
 //  - los botones a la vista; sin scroll de costado y sin errores de JS.
 const { test, expect } = require('@playwright/test');
@@ -187,9 +188,11 @@ for (const ancho of [1280, 390, 360]) {
     await page.locator('#chq-banco-acreditar').click();
     await expect(page.locator('#chq-acreditar')).toBeVisible();
     await expect(page.locator('#chq-acr-fecha')).toHaveValue('2026-10-13');
-    // IMPORTE COMPLETO (24/10/2026): sin total, tasa ni "Acreditó $" por cheque.
+    // Sin el reparto de antes (total / tasa); desde el 28/10/2026, un campo
+    // por cheque: "Monto acreditado" (venta) o "Gastos del banco" (depósito).
     await expect(page.locator('#chq-acr-reparto, [data-acr-cheque]')).toHaveCount(0);
     await expect(page.locator('#chq-acr-lista .chq-acr-fila')).toHaveCount(3);
+    await expect(page.locator('#chq-acr-lista [data-acr-monto]')).toHaveCount(3);
     await expect(page.locator('#chq-acr-resumen')).toContainText(/Entran \$\s?550\.000,00 a Banco Macro · Nuss\./);
     await sinCostado(page, ancho);
     await aLaVista(page, '#chq-acr-confirmar');
@@ -197,13 +200,14 @@ for (const ancho of [1280, 390, 360]) {
     const acr = llamadas.filter(l => l.nombre === 'acreditar_cheques');
     expect(acr).toHaveLength(1);
     const items = [...acr[0].params.p_items].sort((a, b) => a.cheque_id.localeCompare(b.cheque_id));
-    expect(items).toEqual([{ cheque_id: 'chq-b1' }, { cheque_id: 'chq-b2' }, { cheque_id: 'chq-b3' }]);
+    expect(items).toEqual([{ cheque_id: 'chq-b1', acreditado: 300000 }, { cheque_id: 'chq-b2', acreditado: 200000 }, { cheque_id: 'chq-b3', gastos: 0 }]);
     expect(acr[0].params.p_fecha).toBe('2026-10-13');
     const res = page.locator('#chq-banco-resultado');
     await expect(res).toBeVisible();
     await expect(res).toContainText(/Entró \$\s?550\.000,00 en Banco Macro · Nuss/);
     await expect(res).not.toContainText('gasto de intereses');
-    await expect(res.locator('a.chq-link-gasto')).toHaveCount(0);
+    // La maqueta responde con un gasto por modo (los crea la base).
+    await expect(res.locator('a.chq-link-gasto')).toHaveCount(2);
     await expect(res).toContainText('Los cheques de Dolce Pasta');
     await expect(res).toContainText('Entre empresas');
     await sinCostado(page, ancho);
