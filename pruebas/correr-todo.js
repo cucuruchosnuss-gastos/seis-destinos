@@ -32,6 +32,8 @@ if (modoMut) {
 if (filtro) trabajos = trabajos.filter(f => f.includes(filtro));
 // SOLO=a.js,b.js: exactamente esa lista (la arma correr-rama.js).
 if (process.env.SOLO) { const solo = new Set(process.env.SOLO.split(',')); trabajos = trabajos.filter(f => solo.has(f)); }
+// SALVO=a.js,b.js: todo menos esa lista (correr-rama.js, después de correr lo de la rama).
+if (process.env.SALVO) { const salvo = new Set(process.env.SALVO.split(',')); trabajos = trabajos.filter(f => !salvo.has(f)); }
 
 const resultados = [];
 const inicio = Date.now();
@@ -57,6 +59,10 @@ const total = ((Date.now() - inicio) / 1000).toFixed(0);
 const linea = `${resultados.length - fallas.length}/${resultados.length} en verde` +
   (fallas.length ? ` — FALLARON: ${fallas.map(r => r.f).join(', ')}` : '') + ` (${total}s)`;
 console.log('\n' + linea);
+// CORRER_RESUMEN=<archivo>: deja ahí cuántas corrieron y cuáles fallaron (lo lee correr-rama.js).
+if (process.env.CORRER_RESUMEN) {
+  fs.writeFileSync(process.env.CORRER_RESUMEN, JSON.stringify({ total: resultados.length, fallas: fallas.map(r => r.f), segundos: Number(total) }));
+}
 
 if (process.env.GITHUB_STEP_SUMMARY) {
   const md = [

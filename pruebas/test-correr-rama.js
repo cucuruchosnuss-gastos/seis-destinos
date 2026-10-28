@@ -12,7 +12,7 @@ const PARECIDO = process.env.ARCHIVO_PARECIDO || path.join(__dirname, 'parecido.
 console.log(`ARCHIVO ${ARCHIVO} (${fs.readFileSync(ARCHIVO, 'utf8').length} bytes)`)
 console.log(`COMUN ${PARECIDO} (${fs.readFileSync(PARECIDO, 'utf8').length} bytes)`)
 // Node carga como JavaScript un archivo de extensión desconocida (el mut-tmp-*.html).
-const { nombra, alcanzados } = require(ARCHIVO)
+const { nombra, alcanzados, sumar, correrEnDos } = require(ARCHIVO)
 const { parecido, lineaMasParecida, parteQueFalta, lineasDondeEsta, pistaDeAncla } = require(PARECIDO)
 
 let ok = 0
@@ -110,6 +110,31 @@ chk('repetido: dice dónde está', /está en las líneas 2, 4/.test(pistaDeAncla
   chk('mutar.js: un ancla que no existe aborta (no da verde)', r.status === 2, `status ${r.status}`)
   chk('… y dice lo que no está y la línea más parecida del archivo', /NO EXISTE en pantalla\.html/.test(salida) && /lo más parecido \(línea 3, \d+ %\)/.test(salida), salida.slice(0, 400))
   fs.rmSync(dir, { recursive: true, force: true })
+}
+
+// ── Primero la rama, después el resto (28/10/2026) ───────────────────────
+{
+  const pedidos = []
+  const falso = (respuestas) => (env) => { pedidos.push(env); return respuestas.shift() }
+  let r = correrEnDos(['a.js', 'b.js'], falso([{ status: 0, total: 2, fallas: [] }, { status: 0, total: 313, fallas: [] }]))
+  chk('primero corre SOLO lo de la rama', JSON.stringify(pedidos[0]) === JSON.stringify({ SOLO: 'a.js,b.js' }), JSON.stringify(pedidos[0]))
+  chk('… y con verde, todo lo demás (SALVO lo ya corrido)', JSON.stringify(pedidos[1]) === JSON.stringify({ SALVO: 'a.js,b.js' }) && pedidos.length === 2, JSON.stringify(pedidos))
+  chk('… y da verde si las dos tandas dieron verde', r.ok === true)
+  chk('la línea final suma las dos tandas', sumar(r.rama, r.resto) === '315/315 en verde (primero las 2 de la rama, después las otras 313)', sumar(r.rama, r.resto))
+  pedidos.length = 0
+  r = correrEnDos(['a.js'], falso([{ status: 1, total: 1, fallas: ['a.js'] }, { status: 0, total: 314, fallas: [] }]))
+  chk('si lo de la rama da rojo, FRENA: no corre las demás', pedidos.length === 1 && r.resto === null && r.ok === false, JSON.stringify(pedidos))
+  chk('… y la línea lo dice', sumar(r.rama, r.resto) === '0/1 en verde — FALLARON: a.js — FRENÉ ANTES DE LAS DEMÁS: lo de la rama dio rojo', sumar(r.rama, r.resto))
+  pedidos.length = 0
+  r = correrEnDos(['a.js'], falso([{ status: 1, total: 1, fallas: [] }]))
+  chk('un sub-proceso que sale mal sin decir qué falló también frena', r.ok === false && r.resto === null && pedidos.length === 1)
+  r = correrEnDos(['a.js'], falso([{ status: 0, total: 1, fallas: [] }, { status: 1, total: 314, fallas: ['z.js'] }]))
+  chk('una falla en las demás da rojo', r.ok === false && sumar(r.rama, r.resto) === '314/315 en verde — FALLARON: z.js (primero las 1 de la rama, después las otras 314)', sumar(r.rama, r.resto))
+  const todo = fs.readFileSync(path.join(__dirname, 'correr-todo.js'), 'utf8')
+  chk('correr-todo entiende SALVO (todo menos esa lista)', todo.includes("if (process.env.SALVO) { const salvo = new Set(process.env.SALVO.split(',')); trabajos = trabajos.filter(f => !salvo.has(f)); }"))
+  chk('… y deja su resumen en CORRER_RESUMEN', todo.includes('fs.writeFileSync(process.env.CORRER_RESUMEN, JSON.stringify({ total: resultados.length, fallas: fallas.map(r => r.f)'))
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
+  chk('npm run pruebas:rama corre correr-rama (lo de la rama y después lo demás)', pkg.scripts['pruebas:rama'] === 'node pruebas/check-bytes.js && node pruebas/correr-rama.js', pkg.scripts['pruebas:rama'])
 }
 
 console.log(`\n${ok}/${ok + fallas.length}  ${fallas.length ? 'ROJO' : 'verde'}`)

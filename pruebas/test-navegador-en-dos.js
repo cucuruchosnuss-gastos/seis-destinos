@@ -20,9 +20,11 @@ const E2E = path.join(RAIZ, 'e2e')
 const ARCHIVO_MITADES = process.env.ARCHIVO_MITADES || path.join(E2E, 'mitades.js')
 const ARCHIVO_WORKFLOW = process.env.ARCHIVO_WORKFLOW || path.join(RAIZ, '.github', 'workflows', 'navegador.yml')
 const ARCHIVO_CONFIG = process.env.ARCHIVO_CONFIG || path.join(E2E, 'playwright.config.js')
+const ARCHIVO_REPORTER = process.env.ARCHIVO_REPORTER || path.join(E2E, 'reporter-tiempos.js')
+const ARCHIVO_TIEMPOS = process.env.ARCHIVO_TIEMPOS || path.join(__dirname, 'tiempos-navegador.js')
 
 const leer = (f) => fs.readFileSync(f, 'utf8')
-for (const f of [ARCHIVO_MITADES, ARCHIVO_WORKFLOW, ARCHIVO_CONFIG]) console.log(`ARCHIVO ${f} (${leer(f).length} bytes)`)
+for (const f of [ARCHIVO_MITADES, ARCHIVO_WORKFLOW, ARCHIVO_CONFIG, ARCHIVO_REPORTER, ARCHIVO_TIEMPOS]) console.log(`ARCHIVO ${f} (${leer(f).length} bytes)`)
 
 let ok = 0
 const fallas = []
@@ -104,6 +106,44 @@ const viejos = Object.keys(TIEMPOS).filter(s => !specs.includes(s))
 chk('TIEMPOS no nombra specs que ya no existen', viejos.length === 0, viejos)
 chk('los largos que lanzan varios navegadores están medidos', ['detalles-dispositivos.spec.js', 'filtros-dispositivos.spec.js', '5-maqueta.spec.js', '0-humo.spec.js'].every(s => TIEMPOS[s] > 30))
 
+// ── El reparto automático (28/10/2026): repartir() con datos armados ──────
+const { repartir } = M
+const tArmado = { a: 100, b: 60, c: 50, d: 40, e: 10, r1: 30, r2: 30 }
+const txArmado = (s) => (s.startsWith('r') ? 'await entrarComo(page)' : 'nada')
+const rep = repartir(Object.keys(tArmado), { tiempoDe: (s) => tArmado[s], textoDe: txArmado })
+chk('repartir da dos mitades', rep.length === 2)
+chk('… con todos los specs, una vez cada uno', [...rep[0].specs, ...rep[1].specs].sort().join() === Object.keys(tArmado).sort().join(), JSON.stringify(rep))
+// a→1 (100), b→2 (60), el robot (r1+r2, 60)→2 (120), c→1 (150), d→2 (160), e→1 (160).
+// Sin el bloque del robot, r1 y r2 caerían en mitades distintas.
+chk('… parejas (el más largo primero, a la más liviana)', rep[0].segundos === 160 && rep[1].segundos === 160, `${rep[0].segundos} / ${rep[1].segundos}`)
+chk('… en el orden de ese cálculo', rep[0].specs.join() === 'a,c,e' && rep[1].specs.join() === 'b,d,r1,r2', JSON.stringify(rep))
+chk('… y suma bien los segundos', rep[0].segundos === rep[0].specs.reduce((a, s) => a + tArmado[s], 0))
+chk('los del robot van juntos', rep.some(m => m.specs.includes('r1') && m.specs.includes('r2')))
+chk('el más largo va a la mitad 1 (con empate, la 1)', rep[0].specs.includes('a'))
+const rep2 = repartir(Object.keys(tArmado).reverse(), { tiempoDe: (s) => tArmado[s], textoDe: txArmado })
+chk('el mismo reparto venga en el orden que venga (las dos mitades de GitHub calculan igual)', JSON.stringify(rep2) === JSON.stringify(rep), JSON.stringify(rep2))
+const empate = repartir(['y', 'x'], { tiempoDe: () => 10, textoDe: () => '' })
+chk('los empates se ordenan por nombre', empate[0].specs[0] === 'x', JSON.stringify(empate))
+chk('un spec sin medir cuenta TIEMPO_SIN_MEDIR', tiempoDe('99-sin-medir.spec.js') === M.TIEMPO_SIN_MEDIR && M.TIEMPO_SIN_MEDIR >= 10)
+chk('un spec en una subcarpeta toma el tiempo por su nombre', tiempoDe('sub/0-humo.spec.js') === TIEMPOS['0-humo.spec.js'])
+chk('la mitad 1 de verdad es la que calcula repartir()', JSON.stringify(MITAD_1) === JSON.stringify(repartir(specs, { textoDe: (s) => leer(path.join(E2E, s)) })[0].specs))
+chk('los tiempos salen de e2e/tiempos-navegador.json', JSON.stringify(TIEMPOS) === JSON.stringify(JSON.parse(leer(path.join(E2E, 'tiempos-navegador.json'))).segundos))
+chk('… con números enteros positivos', Object.values(TIEMPOS).every(v => Number.isInteger(v) && v > 0))
+chk('el ensayo trata tiempos-navegador.json como algo que usan todos', require('./ensayo').DE_TODOS.test('e2e/tiempos-navegador.json'))
+
+// ── Los tiempos de GitHub: el aviso que deja la corrida y quien lo lee ────
+const R = require(ARCHIVO_REPORTER)
+const { leerAvisos, combinar } = require(ARCHIVO_TIEMPOS)
+const muchos = new Map(Array.from({ length: 300 }, (_, i) => [`${i}-un-spec-con-nombre-largo.spec.js`, i + 0.4]))
+const lineas = R.avisos(muchos, '2')
+chk('el aviso va de a pedazos cortos', lineas.length > 1 && lineas.every(l => l.split('::')[2].length <= R.LARGO), lineas.map(l => l.length))
+chk('… con el formato de GitHub y la mitad', lineas.every((l, i) => l.startsWith(`::notice title=tiempos-navegador mitad 2 ${i + 1}/${lineas.length}::`)), lineas[0].slice(0, 60))
+const deVuelta = leerAvisos(lineas.map(l => { const [, titulo, msg] = l.match(/^::notice title=([^:]*)::(.*)$/); return { title: titulo, message: msg } }))
+chk('lo que escribe el aviso se lee igual (redondeado, nunca 0)', deVuelta.size === 300 && deVuelta.get('0-un-spec-con-nombre-largo.spec.js') === 1 && deVuelta.get('7-un-spec-con-nombre-largo.spec.js') === 7, [...deVuelta].slice(0, 3))
+chk('leerAvisos no toma los avisos de otra cosa', leerAvisos([{ title: '🎭 Playwright Run Summary', message: 'x=3' }]).size === 0)
+const comb = combinar({ 'a.spec.js': 5, 'b.spec.js': 9, 'viejo.spec.js': 3 }, new Map([['a.spec.js', 7], ['c.spec.js', 2], ['otro.spec.js', 1]]), ['a.spec.js', 'b.spec.js', 'c.spec.js'])
+chk('combinar: lo medido pisa, lo no medido se conserva, lo que no existe se va', JSON.stringify(comb) === JSON.stringify({ 'b.spec.js': 9, 'a.spec.js': 7, 'c.spec.js': 2 }), JSON.stringify(comb))
+
 // ── Los del robot, juntos ─────────────────────────────────────────────────
 const robot = specs.filter(s => /entrarComo|sesionDelRobot|limpiarFabrica/.test(leer(path.join(E2E, s))))
 chk('se encuentran los specs del robot (planta, gestión, retiros)', ['1-planta.spec.js', '2-gestion.spec.js', '4-retiros.spec.js'].every(s => robot.includes(s)), robot)
@@ -118,6 +158,8 @@ chk('la config suma las opciones de E2E_MITAD', iMitad !== -1)
 chk('… DESPUÉS de testMatch (si no, la mitad 1 correría todo)', iMatch !== -1 && iMitad > iMatch)
 chk('el ensayo de integración trata mitades.js como algo que usan todos', require('./ensayo').DE_TODOS.test('e2e/mitades.js'))
 chk('la config sigue con testMatch *.spec.js', /testMatch: \/\.\*\\\.spec\\\.js\$\//.test(cfg))
+chk('en CI la config suma reporter-tiempos.js (los tiempos de cada spec)', /process\.env\.CI \? \[\['github'\], \[`\$\{__dirname\}\/reporter-tiempos\.js`\]\]/.test(cfg))
+chk('cada mitad del ensayo con su carpeta (E2E_SALIDA)', /outputDir: `\$\{__dirname\}\/resultados\$\{SALIDA\}`/.test(cfg) && /outputFolder: `\$\{__dirname\}\/informe\$\{SALIDA\}`/.test(cfg) && /const SALIDA = process\.env\.E2E_SALIDA \?/.test(cfg))
 
 // ── El workflow ───────────────────────────────────────────────────────────
 const wf = leer(ARCHIVO_WORKFLOW)

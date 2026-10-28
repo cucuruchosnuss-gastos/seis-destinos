@@ -5,7 +5,7 @@
 // Parte de administracion.js SIN cambiarlo (lo usan muchas pruebas) y le suma
 // la comisión habitual de Distribuidora Anatolia (c1) en 5 %: así la orden
 // N-0012 (o12), valorizada y sin comisión, abre "Cargar comisión" con el
-// porcentaje puesto, sin el truco de 'maqueta.cambios' de 27-comisiones.
+// porcentaje puesto, sin el truco de 'maqueta.cambios' de 76-comisiones.
 //
 //   http://localhost:4180/modulos/administracion.html?maqueta=celular-administracion
 'use strict';

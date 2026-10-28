@@ -10,13 +10,17 @@ const PUERTO_MAQUETA = Number(process.env.E2E_PUERTO_MAQUETA || 4180);
 // En GitHub el trabajo "Navegador" corre en dos mitades a la vez (E2E_MITAD=1
 // o 2, ver mitades.js). Sin E2E_MITAD corre todo, como siempre.
 const { opcionesDeMitad } = require('./mitades');
+// El ensayo de integración corre las dos mitades A LA VEZ en la compu: cada
+// una con su carpeta (E2E_SALIDA=1 → resultados-1 e informe-1), porque
+// Playwright vacía la suya al arrancar y borraría la de la otra.
+const SALIDA = process.env.E2E_SALIDA ? `-${process.env.E2E_SALIDA}` : '';
 
 module.exports = defineConfig({
   testDir: __dirname,
   testMatch: /.*\.spec\.js$/,
   // DESPUÉS de testMatch: la mitad 1 lo reemplaza por su lista.
   ...opcionesDeMitad(process.env.E2E_MITAD),
-  outputDir: `${__dirname}/resultados`,
+  outputDir: `${__dirname}/resultados${SALIDA}`,
   // Los recorridos comparten la fábrica de pruebas: nunca en paralelo.
   workers: 1,
   fullyParallel: false,
@@ -29,7 +33,10 @@ module.exports = defineConfig({
   expect: { timeout: 15000 },
   // En CI, además, el reporter 'github': cada falla queda como ANOTACIÓN de la
   // corrida, que se lee sin credenciales (el log del job y los artefactos no).
-  reporter: [['list'], ['html', { outputFolder: `${__dirname}/informe`, open: 'never' }], ...(process.env.CI ? [['github']] : [])],
+  // Y reporter-tiempos.js: los segundos de cada spec, también como aviso, para
+  // repartir las mitades (npm run tiempos:navegador).
+  reporter: [['list'], ['html', { outputFolder: `${__dirname}/informe${SALIDA}`, open: 'never' }],
+    ...(process.env.CI ? [['github'], [`${__dirname}/reporter-tiempos.js`]] : [])],
   use: {
     baseURL: `http://localhost:${PUERTO}`,
     browserName: 'chromium',
