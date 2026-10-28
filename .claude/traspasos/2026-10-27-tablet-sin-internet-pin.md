@@ -23,6 +23,7 @@ Pedido: `.claude/pedidos/2026-10-27-tablet-sin-internet-pin.md`. Rama `ci-prueba
 - El primer ensayo (`main` 7750ac8 + la rama) dio tres rojos:
   1. **Un error de verdad**, en el navegador: después de registrar una masa la tablet lee la siguiente de la base. Si en ese rato volvía la red, se pedía el PIN y al terminar la lectura la receta se pintaba encima del PIN. Arreglado: `revalidarSiVolvioLaRed` espera mientras se registra una masa o se lee la siguiente (`leyendoMasa`). Suite 99/99, mutaciones 55/55 (+4), e2e de la tablet 3 veces seguidas en verde.
   2. `test-navegador-en-dos.js`: con el spec 70 la mitad 2 pasaba del 55 % (912 de 1653 s). El spec 70 pasa a la mitad 1 (`e2e/mitades.js`, 50 s estimados).
+  4. (Segundo ensayo, con 6469efb) A veces el cartel de la cola no decía "Todo enviado ✓" al volver la red: si las masas las mandaba `reintentarPendientes` (las que esperaban en la tablet) y no la vuelta de la cola, el cartel pasaba de "Enviando…" a nada. `marcarTodoEnviado` ahora lo llaman los dos caminos. Suite 103/103, mutaciones 57/57. En ese ensayo `test-ensayo.js` dio rojo solo porque exige que el tope por defecto sea 45 y la variable de 90 le llegaba también a ella: no es una falla.
   3. El navegador del ensayo llegó al tope de 45 minutos sin terminar (la rama toca `js/supabase.js` y la maqueta, así que corren los 94 specs: en la compu tarda más de 42 minutos). Fue tiempo, no una falla: el segundo ensayo se corrió con `ENSAYO_TOPE_NAVEGADOR_MIN=90`.
 
 ## Lo que no se pudo probar

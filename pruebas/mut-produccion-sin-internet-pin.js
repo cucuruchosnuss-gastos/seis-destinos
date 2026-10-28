@@ -52,6 +52,8 @@ correrMutacionesEnVarios([
       { nombre: 'pide el PIN leyendo la masa siguiente', de: '      if (estado.enviandoMasa || estado.leyendoMasa > 0) return false', a: '      if (estado.enviandoMasa) return false' },
       { nombre: 'una lectura que falla deja la marca puesta', de: '      try { return await fn() } finally { estado.leyendoMasa-- }', a: '      const r = await fn(); estado.leyendoMasa--; return r' },
       { nombre: 'la masa siguiente se lee sin la marca', de: '      try { await leyendoMasa(cargarDatosMasa); leida = !sinRed }', a: '      try { await cargarDatosMasa(); leida = !sinRed }' },
+      { nombre: 'las masas que esperaban salen sin "Todo enviado"', de: '        if (enviadas) { marcarTodoEnviado(resumenDeCola(estado.colaLista ?? [])); pintarCartelCola() }\n', a: '' },
+      { nombre: '"Todo enviado" con cargas esperando', de: '      if (res.esperando || res.errores) return\n', a: '' },
       { nombre: 'no dice por qué pide el PIN', de: "      if (estado.pin) { estado.pin.mensaje = { texto: 'Volvió internet: poné tu PIN de nuevo para seguir.' }; pintarPin() }", a: '      void 0' },
     ],
   },

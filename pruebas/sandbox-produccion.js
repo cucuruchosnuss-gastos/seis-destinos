@@ -431,7 +431,7 @@ const NUEVAS_PLANTA = [
   'esErrorDeRedCarga', 'almacenMemoria', 'structuredCloneSeguro', 'promesaDe', 'abrirAlmacenIdb', 'almacenPlanta',
   'resolverReferencias', 'crearCola', 'resumenDeCola', 'textoCartelCola', 'horaDeCopia', 'sesionGuardada',
   'colaPlanta', 'sinInternet', 'enviarCargaCola', 'mandarCarga', 'textoGuardadaEnTablet', 'paradaRef', 'alCambiarCola',
-  'refrescarListaCola', 'procesarColaPlanta', 'textoColaFila', 'htmlEstadoColaFila', 'planillaConCola', 'repintarConCola',
+  'refrescarListaCola', 'marcarTodoEnviado', 'procesarColaPlanta', 'textoColaFila', 'htmlEstadoColaFila', 'planillaConCola', 'repintarConCola',
   'recargarOConCola', 'turnosConCierreEnCola', 'htmlErroresCola', 'pintarCartelCola', 'reintentarCarga', 'descartarCarga',
   'precargarCopias', 'registrarServiceWorker', 'pedirRevisionVersion', 'alMensajeSW', 'mostrarAvisoVersion', 'actualizarVersion',
   'etiquetaMasa',

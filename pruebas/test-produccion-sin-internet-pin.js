@@ -446,4 +446,24 @@ esperas.push((async () => {
   chk('… una sola vez', S.__llamadas.rpc.filter(([n]) => n === 'registrar_masa').length === 1)
 })())
 
+// Las masas que esperaban en la tablet salen por reintentarPendientes (no
+// por la vuelta de la cola): el cartel igual dice "Todo enviado ✓" (28/10,
+// el ensayo: pasaba de "Enviando…" a nada).
+esperas.push((async () => {
+  const { S, base } = armar()
+  S.estado.sinRedChequeo = true
+  S.__red.hay = false
+  const b = { client_uuid: 'masa-2', turnoId: 't1', nro: 4, maquinaNombre: 'Máquina 1', lote: 7023, payload: { p_turno_id: 't1', p_tipo_masa: 'Común', p_doble: false, p_masero_id: 'e-juan', p_items: [], p_client_uuid: 'masa-2', p_motivo: null } }
+  chk('sin red, la masa queda esperando en la tablet', (await S.enviarMasa(b)).resultado === 'red' && S.borradoresPendientes().length === 1)
+  S.__red.hay = true
+  S.estado.sinRedChequeo = false
+  await S.reintentarPendientes()
+  chk('vuelve la red: la masa que esperaba sale', base.masas.length === 1 && base.masas[0].p_client_uuid === 'masa-2')
+  chk('… y el cartel dice "Todo enviado ✓"', S.pintarCartelCola()?.texto === 'Todo enviado ✓', S.pintarCartelCola()?.texto)
+  S.estado.recienEnviado = null
+  S.marcarTodoEnviado({ esperando: 1, errores: 0 })
+  S.marcarTodoEnviado({ esperando: 0, errores: 1 })
+  chk('… pero con algo esperando o con error, no', S.estado.recienEnviado === null)
+})())
+
 fin()

@@ -11413,9 +11413,11 @@
         // Sin masas esperando, la vuelta es la de la cola entera.
         const pendientes = borradoresPendientes()
         if (!pendientes.length) await procesarColaPlanta()
+        let enviadas = 0
         for (const b of pendientes) {
           const r = await enviarMasa(b)
           if (r.resultado === 'ok') {
+            enviadas++
             mostrarExito(`Se envió la masa pendiente de la ${b.maquinaNombre ?? 'máquina'}.`)
             if (estado.vista === 'pr-masas') pintarMasasTurno()
           } else if (r.resultado === 'rechazo') {
@@ -11423,6 +11425,7 @@
           }
         }
         await refrescarListaCola()
+        if (enviadas) { marcarTodoEnviado(resumenDeCola(estado.colaLista ?? [])); pintarCartelCola() }
       } finally {
         reintentando = false
         pintarPendientes()
@@ -13624,6 +13627,16 @@
       return estado.colaLista
     }
 
+    // "Todo enviado ✓" unos segundos, si la cola quedó vacía. Lo llaman los
+    // DOS caminos que mandan: la vuelta de la cola y las masas que esperaban
+    // en la tablet (28/10/2026: si las mandaba el segundo, el cartel pasaba
+    // de "Enviando…" a nada).
+    function marcarTodoEnviado(res) {
+      if (res.esperando || res.errores) return
+      estado.recienEnviado = Date.now()
+      setTimeout(() => { if (Date.now() - (estado.recienEnviado ?? 0) >= MS_TODO_ENVIADO) { estado.recienEnviado = null; pintarCartelCola() } }, MS_TODO_ENVIADO)
+    }
+
     // Una vuelta de la cola (al volver la red, cada 30 s, al abrir). Si se
     // mandó algo, la pantalla se lee de nuevo (el sublote aparece).
     async function procesarColaPlanta() {
@@ -13632,10 +13645,7 @@
       await refrescarListaCola()
       const res = resumenDeCola(estado.colaLista ?? [])
       if (r?.enviados > 0) {
-        if (!res.esperando && !res.errores) {
-          estado.recienEnviado = Date.now()
-          setTimeout(() => { if (Date.now() - (estado.recienEnviado ?? 0) >= MS_TODO_ENVIADO) { estado.recienEnviado = null; pintarCartelCola() } }, MS_TODO_ENVIADO)
-        }
+        marcarTodoEnviado(res)
         if (estado.vista === 'pr-sala' || estado.vista === 'pr-receta' || estado.vista === 'pr-masas') pintarPendientes()
         refrescarVivo({ forzar: true }).catch(err => console.error('cola (redibujar):', err))
         precargarCopias()
