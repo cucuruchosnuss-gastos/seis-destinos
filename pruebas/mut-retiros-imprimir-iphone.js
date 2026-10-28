@@ -67,8 +67,7 @@ correrMutacionesEnVarios([
       { nombre: 'Administración: la hoja armada sin precios', de: "      prepararHoja(impresionHoja(), document.getElementById('ad-impresion'), ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })", a: "      prepararHoja(impresionHoja(), document.getElementById('ad-impresion'), ordenParaHoja(d), { conPrecios: false, copias: COPIAS_IMPRESION })" },
       { nombre: 'Administración: la nota de débito no olvida la hoja de la orden', de: "      olvidarHoja(impresionHoja())\n      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 8mm; } }</style>' +", a: "      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 8mm; } }</style>' +" },
       { nombre: 'Administración: la división no olvida la hoja de la orden', de: "      olvidarHoja(impresionHoja())\n      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +", a: "      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +" },
-      { nombre: 'Administración: la división en el iPhone imprime después del await', de: '      if (despuesDeGuardar && esIos()) {', a: '      if (false) {' },
-      { nombre: 'Administración: guardar la división no avisa que viene de un await', de: '        imprimirDivision(data, { despuesDeGuardar: true })', a: '        imprimirDivision(data)' },
+      { nombre: 'Administración: un punto de la división imprime después de un await', de: '    function imprimirPunto(parte) {\n      const fc = estado.facturar', a: '    async function imprimirPunto(parte) {\n      const fc = estado.facturar\n      await null' },
     ],
   },
 ])

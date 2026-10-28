@@ -279,9 +279,10 @@ esperas.push((async () => {
   chk('Administración: imprimirOrden imprime con imprimirHoja (con precios)', /imprimirHoja\(impresionHoja\(\), document\.getElementById\('ad-impresion'\), ordenParaHoja\(d\), \{ conPrecios: true, copias: COPIAS_IMPRESION \}\)/.test(fn('imprimirOrden')))
   chk('Administración: pintarOrden deja armada la hoja', /prepararHojaOrden\(\)/.test(fn('pintarOrden')) && /prepararHoja\(impresionHoja\(\), document\.getElementById\('ad-impresion'\), ordenParaHoja\(d\), \{ conPrecios: true, copias: COPIAS_IMPRESION \}\)/.test(fn('prepararHojaOrden')))
   chk('Administración: la nota de débito imprime sin await y olvida la hoja de la orden', !/\bawait\b/.test(fn('imprimirNotaDebito')) && /olvidarHoja\(impresionHoja\(\)\)/.test(fn('imprimirNotaDebito')))
-  chk('Administración: la división olvida la hoja de la orden', /olvidarHoja\(impresionHoja\(\)\)/.test(fn('imprimirDivision')))
-  chk('Administración: después de guardar la división, en el iPhone, "Listo, imprimir"',
-    /if \(despuesDeGuardar && esIos\(\)\) \{ mostrarListoParaImprimir\(/.test(fn('imprimirDivision')) && /imprimirDivision\(data, \{ despuesDeGuardar: true \}\)/.test(fn('guardarEImprimirDivision')))
+  // Desde el 28/10/2026 cada punto (N1 / N2) se imprime en el toque, con lo
+  // que ya está guardado: sin await, como la nota de débito.
+  chk('Administración: un punto de la división imprime sin await y olvida la hoja de la orden',
+    !/^async /.test(fn('imprimirPunto')) && !/\bawait\b/.test(fn('imprimirPunto')) && /olvidarHoja\(impresionHoja\(\)\)/.test(fn('imprimirPunto')))
 })())
 
 // ═══ 3. El PDF: las dos copias ═══════════════════════════════════════════════

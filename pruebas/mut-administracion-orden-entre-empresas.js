@@ -56,7 +56,7 @@ const r = correrMutaciones({
     { nombre: 'el detalle sin el sello', de: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}</div><div class="ad-datos">', a: '${htmlSelloOrden(o)}</div><div class="ad-datos">' },
     { nombre: 'el detalle con la comisión', de: '${htmlDeudaEntre(o)}` : htmlComisionOrden(d)', a: '` : htmlComisionOrden(d)' },
     { nombre: 'el detalle trata la orden como común', de: '          : entre ? `<p class="ad-total">', a: '          : false ? `<p class="ad-total">' },
-    { nombre: 'con "Facturas de ARCA"', de: "(d.valorizar || entre ? '' : htmlFacturasOrden(d))", a: "(d.valorizar ? '' : htmlFacturasOrden(d))" },
+    { nombre: 'con "Facturas de ARCA"', de: "(d.valorizar || entre || puedeFacturar(o) ? '' : htmlFacturasOrden(d))", a: "(d.valorizar || puedeFacturar(o) ? '' : htmlFacturasOrden(d))" },
     { nombre: 'se puede dividir', de: "o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) && puedeEn('retiros', 'precios', o.unidad_negocio_id)", a: "o.estado_valorizacion === 'valorizada' && puedeEn('retiros', 'precios', o.unidad_negocio_id)" },
     { nombre: 'se puede cargar la comisión', de: "o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) &&\n", a: "o.estado_valorizacion === 'valorizada' &&\n" },
     // Valorizar

@@ -317,6 +317,13 @@ const CAMBIADOS_A_PROPOSITO = {
     'control:button#btn-enviar-transferencia[type=button]': 'reemplazado por #btn-mandar-grupo',
   },
   'administracion.html': {
+    // Rama valorizar-con-division (28/10/2026): la comisión común salió del
+    // flujo (las comisiones van por vendedor en el N1); lo mira
+    // test-administracion-comisiones.js.
+    'id:ad-filtro-comision': 'el filtro "Con comisión sin cargar": la comisión común salió del flujo',
+    'control:input#ad-filtro-comision[type=checkbox]': 'el filtro "Con comisión sin cargar": la comisión común salió del flujo',
+    'id:ad-btn-comision': '"Cargar / Cambiar comisión": la comisión común salió del flujo',
+    'control:button#ad-btn-comision[type=button]': '"Cargar / Cambiar comisión": la comisión común salió del flujo',
     // Rama cheques-importe-completo (24/10/2026): la base mete SIEMPRE el
     // importe completo al vender, depositar y acreditar cheques y ya no carga
     // el gasto de intereses, así que se fueron los campos de lo acreditado

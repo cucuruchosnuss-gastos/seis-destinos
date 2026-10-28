@@ -489,27 +489,52 @@
       body > *:not(#ad-impresion) { display: none !important; }
       .ad-impresion { display: block !important; }
     }
-    /* ── Dividir para facturar (21/10/2026) ───────────────────────────────
-       La ventana: abajo y casi a pantalla completa en el celular, centrada
-       desde 640 px. La hoja (.ad-dvh) se ve igual en la vista previa y en el
-       papel; en la ventana angosta cada renglón de la tabla va apilado. */
-    .ad-dv { position: fixed; inset: 0; z-index: 85; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
-    .ad-dv[hidden] { display: none; }
-    .ad-dv__caja { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 760px; max-height: 94vh; overflow-y: auto; min-width: 0; }
-    .ad-dv__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
-    .ad-dv__titulo { font-size: 1.125rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; min-width: 0; }
-    .ad-dv__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--color-texto); }
-    .ad-dv__vista { min-width: 0; margin: 0.5rem 0; }
-    .ad-dv-factura { border: 1px solid var(--borde-tarjeta); border-radius: 12px; padding: 0.75rem; margin: 0 0 0.5rem; min-width: 0; }
+    /* ── LAS ÓRDENES DE PEDIDO N1 / N2 (28/10/2026) ───────────────────────
+       En el detalle de la orden (#ad-orden-facturar): la condición, los
+       vendedores y un recuadro por punto. La hoja (.opv) es la orden de
+       pedido valorizada de UN punto: A4 vertical, en blanco y negro. */
+    .ad-fc { min-width: 0; }
+    .ad-fc__condicion { font-weight: 800; font-size: 1.0625rem; margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+    .ad-fc__rapidas { margin: 0 0 0.5rem; flex-wrap: wrap; }
+    .ad-fc__rapidas .ad-segmento__opcion { flex: 1 1 4.5rem; min-width: 0; }
+    .ad-fc__otro .ad-input { max-width: 10rem; }
+    .ad-fc__estado { margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--color-texto-suave); min-height: 1.25rem; overflow-wrap: anywhere; }
+    .ad-fc__puntos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 0.75rem; margin-top: 0.75rem; min-width: 0; }
+    .ad-fc-punto { border: 1px solid var(--borde-tarjeta); border-radius: 12px; padding: 0.75rem; min-width: 0; }
+    .ad-fc-punto[hidden] { display: none; }
+    .ad-fc-punto__codigo { font-size: 1.25rem; font-weight: 800; margin: 0 0 0.375rem; overflow-wrap: anywhere; }
+    .ad-fc-punto__totales p { margin: 0.125rem 0; overflow-wrap: anywhere; }
+    .ad-fc-punto__totales .opv__total { font-size: 1.0625rem; }
+    .ad-fc-punto__totales--viejo { opacity: 0.55; }
+    .ad-fc-punto__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
+    .ad-fc-punto__acciones .ad-btn { flex: 1 1 8rem; min-width: 0; }
+    .ad-fc-factura { border-top: 1px solid var(--color-borde); padding-top: 0.5rem; margin-top: 0.5rem; min-width: 0; }
+    /* Copia de "Orden de pedido N1-0036 - ICARDI.pdf" (el que aprobó Facu): un
+       recuadro redondeado, Arial, el título centrado, el cliente sin negrita,
+       los títulos de la tabla en gris y una línea arriba del TOTAL. */
+    .opv { box-sizing: border-box; background: #fff; color: #1c1917; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.35;
+      padding: 7mm 6mm 5.5mm; border: 1px solid #a8a29e; border-radius: 2.5mm; }
+    .opv__cab { text-align: center; border-bottom: 1.5px solid #111; padding-bottom: 3mm; margin-bottom: 4mm; }
+    .opv__titulo { margin: 0; font-size: 22pt; font-weight: 700; letter-spacing: 0.05em; line-height: 1.15; }
+    .opv__codigo { margin: 0; font-size: 28pt; font-weight: 700; line-height: 1.15; }
+    .opv__cliente { margin: 0; overflow-wrap: anywhere; }
+    .opv__fecha { margin: 0.6mm 0 3mm; }
+    .opv__tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .opv__c-prod { width: 54%; }
+    .opv__tabla th, .opv__tabla td { border-bottom: 1px solid #d6d3d1; padding: 1.8mm 2mm; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+    .opv__tabla th { border-bottom-color: #a8a29e; color: #57534e; font-size: 9pt; font-weight: 700; }
+    .opv__tabla .opv__num { text-align: right; }
+    .opv__totales { margin-top: 2.5mm; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+    .opv__totales p { margin: 0.4mm 0; }
+    .opv__total { font-weight: 700; font-size: 13pt; }
+    .opv .opv__total { border-top: 1.5px solid #111; margin-top: 2mm; padding-top: 1.6mm; }
     .ad-dv-factura__cab { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; align-items: baseline; margin: 0 0 0.5rem; min-width: 0; }
-    .ad-dv-factura__rotulo { font-weight: 800; overflow-wrap: anywhere; }
     .ad-dv-factura__archivo { max-width: 100%; min-height: 44px; }
     /* ── LA NOTA DE DÉBITO (24/10/2026) ───────────────────────────────────
        La ventana (por encima de la cartera de cheques, z 80) y la hoja: A4
        vertical, blanco y negro, el mismo estilo que la orden de pago de
        Cuentas corrientes. En la pantalla se ve solo el ORIGINAL; al imprimir
        (#ad-impresion) y en el PDF, las dos copias, cada una en su hoja. */
-    /* La ventana copia la de "Dividir para facturar" (.ad-dv) con clases propias. */
     .ad-nd { position: fixed; inset: 0; z-index: 90; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
     .ad-nd[hidden] { display: none; }
     @media (min-width: 640px) { .ad-nd { align-items: center; padding: 1rem; } }
@@ -575,28 +600,6 @@
     .ad-cv .ad-btn { margin-bottom: 0.5rem; }
     .ad-cv .ad-error-pegado { flex-basis: 100%; }
     .ad-facturas-orden__numero { font-weight: 700; color: var(--verde-oscuro); overflow-wrap: anywhere; min-width: 0; }
-    @media (min-width: 640px) { .ad-dv { align-items: center; padding: 1rem; } }
-    .ad-dvh { color: #1c1917; font-size: 0.9375rem; min-width: 0; }
-    .ad-dvh__bloque { background: #fff; border: 1px solid #a8a29e; border-radius: 8px; padding: 0.75rem; margin: 0 0 0.75rem; break-inside: avoid; min-width: 0; }
-    .ad-dvh__titulo { font-size: 1.125rem; font-weight: 800; margin: 0 0 0.25rem; overflow-wrap: anywhere; }
-    .ad-dvh__factura { font-weight: 600; font-size: 0.9375rem; }
-    .ad-dvh__datos { margin: 0 0 0.5rem; font-size: 0.875rem; overflow-wrap: anywhere; }
-    .ad-dvh__tabla { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.875rem; }
-    .ad-dvh__c-prod { width: 40%; }
-    .ad-dvh__tabla th, .ad-dvh__tabla td { border-bottom: 1px solid #d6d3d1; padding: 0.25rem 0.375rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-    .ad-dvh__tabla .ad-dvh__num { text-align: right; }
-    .ad-dvh__totales { margin: 0.5rem 0 0; text-align: right; }
-    .ad-dvh__totales p { margin: 0.125rem 0; }
-    .ad-dvh__total { font-weight: 800; font-size: 1.0625rem; }
-    .ad-dvh__pie { font-size: 0.75rem; color: #57534e; margin: 0.25rem 0 0; }
-    @media (max-width: 559px) {
-      .ad-dv .ad-dvh__tabla, .ad-dv .ad-dvh__tabla tbody, .ad-dv .ad-dvh__tabla tr, .ad-dv .ad-dvh__tabla td { display: block; width: auto; }
-      .ad-dv .ad-dvh__tabla thead, .ad-dv .ad-dvh__tabla colgroup { display: none; }
-      .ad-dv .ad-dvh__tabla tr { border-bottom: 1px solid #d6d3d1; padding: 0.375rem 0; }
-      .ad-dv .ad-dvh__tabla td { border: 0; padding: 0.0625rem 0; text-align: left; }
-      .ad-dv .ad-dvh__tabla td:first-child { font-weight: 700; }
-      .ad-dv .ad-dvh__tabla td[data-rotulo]::before { content: attr(data-rotulo) ": "; color: #57534e; font-weight: 400; }
-    }
     /* ── Importar ─────────────────────────────────────────────────────────
        Cada fila de la vista previa: verde bien, bordó con errores, neutra la
        que se ignora. El color acompaña al texto del sello, nunca va solo. */
@@ -871,7 +874,6 @@
             </select></div>
         </div>
         <label class="ad-check"><input type="checkbox" id="ad-filtro-sin-valorizar"> Solo las que falta valorizar</label>
-        <label class="ad-check"><input type="checkbox" id="ad-filtro-comision"> Con comisión sin cargar</label>
       </div>
       <!-- Sin control de stock: Oficial / Acopio, por N° de remito. -->
       <div id="ad-ordenes-talonario"></div>
@@ -891,7 +893,6 @@
       <div class="ad-barra-acciones" id="ad-orden-acciones">
         <button type="button" class="ad-btn" id="ad-btn-valorizar" hidden>Valorizar</button>
         <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-corregir-valor" hidden>Corregir valorización</button>
-        <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-dividir" hidden>Dividir para facturar</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-imprimir" hidden>Imprimir</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-enviar" hidden>Enviar</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-anular" hidden>Anular</button>
@@ -911,6 +912,10 @@
         </div>
       </div>
       <div id="ad-orden-cuerpo"></div>
+      <!-- LAS ÓRDENES DE PEDIDO N1 / N2 (28/10/2026): la condición, los
+           vendedores y los dos puntos de una orden valorizada. Fuera de
+           #ad-orden-cuerpo: pintarOrden no la redibuja (ver pintarFacturar). -->
+      <div id="ad-orden-facturar" hidden></div>
     </section>
     </div>
 
@@ -1115,21 +1120,21 @@
           <div class="ad-campo"><label for="ad-f-plazo_pago_dias">Plazo de pago (días)</label><input type="text" class="ad-input" id="ad-f-plazo_pago_dias" data-ficha="plazo_pago_dias" autocomplete="off"></div>
           <div class="ad-campo"><label for="ad-f-comision_habitual">Comisión habitual (%)</label><input type="text" class="ad-input" id="ad-f-comision_habitual" data-ficha="comision_habitual" autocomplete="off"><span class="ad-campo__ayuda">Se propone al cargar la comisión de sus órdenes.</span></div>
         </div>
-        <!-- LA CONDICIÓN DE VENTA (21/10/2026): qué % de cada orden se factura
-             como parte A (con su comisión aparte) y qué % como parte B. Se
+        <!-- LA CONDICIÓN DE VENTA (21/10/2026): qué % de cada orden va al
+             punto de venta 1 (N1, con las comisiones aparte) y qué % al 2. Se
              guarda con su propio botón (guardar_condicion_venta_cliente), NO
              con "Guardar la ficha". Ver guardarCondicionVenta() en el script. -->
         <h2 class="ad-subtitulo">Condición de venta</h2>
-        <p class="ad-texto-suave">Al facturar, cada orden se divide en dos partes. Vacío: sus órdenes no se dividen (factura única).</p>
+        <p class="ad-texto-suave">Al valorizar, cada orden se separa en dos órdenes de pedido: la del punto de venta 1 (N1-…) y la del 2 (N2-…). Vacío: todo al punto 1 (100/0).</p>
         <div class="ad-fila-campos">
-          <div class="ad-campo"><label for="ad-f-pct-a">Parte A %</label><input type="text" class="ad-input" id="ad-f-pct-a" autocomplete="off"></div>
-          <div class="ad-campo"><label for="ad-f-pct-b">Parte B %</label><input type="text" class="ad-input" id="ad-f-pct-b" autocomplete="off"><span class="ad-campo__ayuda">Se completa sola con lo que falta para 100.</span></div>
+          <div class="ad-campo"><label for="ad-f-pct-a">Punto de venta 1 %</label><input type="text" class="ad-input" id="ad-f-pct-a" autocomplete="off"></div>
+          <div class="ad-campo"><label for="ad-f-pct-b">Punto de venta 2 %</label><input type="text" class="ad-input" id="ad-f-pct-b" autocomplete="off"><span class="ad-campo__ayuda">Se completa sola con lo que falta para 100.</span></div>
         </div>
         <!-- Los 3 vendedores (21/10/2026, tarde): el % de la configuración, o
              uno propio de este cliente (cliente_comisiones). Los arma
              pintarVendedoresFicha(). -->
-        <span class="ad-campo__rotulo">Comisiones de la parte A</span>
-        <span class="ad-campo__ayuda">Se suman aparte a la parte A. Cambiar un % lo deja propio de este cliente.</span>
+        <span class="ad-campo__rotulo">Comisiones de los vendedores (van en el punto 1)</span>
+        <span class="ad-campo__ayuda">Se suman aparte al punto 1. Cambiar un % lo deja propio de este cliente.</span>
         <div id="ad-f-vendedores"></div>
         <p class="ad-error-pegado" id="ad-f-condicion-error" hidden></p>
         <button type="button" class="ad-btn ad-btn--secundario" id="ad-f-condicion-guardar">Guardar la condición de venta</button>
@@ -1456,15 +1461,15 @@
     </section>
 
     <!-- ══ CONFIGURACIÓN DE COMISIONES (21/10/2026, con retiros:precios) ═══
-         Los 3 vendedores (vendedores_comision) y su % sobre la parte A de las
-         órdenes que se dividen para facturar. Cada uno se guarda con
+         Los 3 vendedores (vendedores_comision) y su % sobre el punto de venta
+         1 (N1) de las órdenes. Cada uno se guarda con
          guardar_comision_vendedor. Lo arma pintarComisiones(). -->
     <section id="ad-vista-comisiones" hidden>
       <div class="ad-cabecera-vista">
         <button type="button" class="ad-link" id="ad-comisiones-volver">&lsaquo; Portada</button>
         <h1 class="ad-titulo">Configuración de comisiones</h1>
       </div>
-      <p class="ad-texto-suave">El % de cada vendedor sobre la parte A de las órdenes que se dividen para facturar. Un cliente puede tener los suyos (en su ficha) y una orden, los suyos (al dividirla).</p>
+      <p class="ad-texto-suave">El % de cada vendedor sobre el punto de venta 1 (N1-…) de las órdenes. Un cliente puede tener los suyos (en su ficha) y una orden, los suyos (al valorizarla).</p>
       <div class="ad-tarjeta" id="ad-comisiones-cuerpo"></div>
     </section>
 
@@ -1515,35 +1520,6 @@
       <button type="button" class="ad-visor__cerrar" id="ad-visor-cerrar" aria-label="Cerrar">&times;</button>
     </div>
     <div class="ad-visor__lienzo"><img class="ad-visor__img" id="ad-visor-img" alt="Foto de los cheques"></div>
-  </div>
-
-  <!-- DIVIDIR PARA FACTURAR (21/10/2026): la ventana de una orden valorizada.
-       Los porcentajes se escriben acá (el otro % se completa solo); la vista
-       previa, las facturas de ARCA y la hoja las arma el script
-       (pintarDivision, htmlHojaDivision). -->
-  <div class="ad-dv" id="ad-dv" hidden role="dialog" aria-modal="true" aria-labelledby="ad-dv-titulo">
-    <div class="ad-dv__caja">
-      <div class="ad-dv__barra">
-        <h2 class="ad-dv__titulo" id="ad-dv-titulo">Dividir para facturar</h2>
-        <button type="button" class="ad-dv__cerrar" id="ad-dv-cerrar" aria-label="Cerrar">&times;</button>
-      </div>
-      <p class="ad-texto-suave">La orden no cambia: esto arma los dos montos para facturar en ARCA.</p>
-      <div class="ad-fila-campos">
-        <div class="ad-campo"><label for="ad-dv-pct-a">Parte A %</label><input type="text" class="ad-input" id="ad-dv-pct-a" autocomplete="off"></div>
-        <div class="ad-campo"><label for="ad-dv-pct-b">Parte B %</label><input type="text" class="ad-input" id="ad-dv-pct-b" autocomplete="off"></div>
-      </div>
-      <span class="ad-campo__rotulo">Comisiones de la parte A</span>
-      <div id="ad-dv-vendedores"></div>
-      <div id="ad-dv-aviso"></div>
-      <div class="ad-dv__vista" id="ad-dv-vista"></div>
-      <p class="ad-error-pegado" id="ad-dv-error" hidden></p>
-      <div class="ad-panel__acciones">
-        <button type="button" class="ad-btn" id="ad-dv-guardar">Guardar e imprimir</button>
-        <button type="button" class="ad-btn ad-btn--suave" id="ad-dv-cancelar">Cerrar</button>
-      </div>
-      <h3 class="ad-subtitulo">Facturas de ARCA</h3>
-      <div id="ad-dv-facturas"></div>
-    </div>
   </div>
 
   <!-- LA NOTA DE DÉBITO (24/10/2026): la hoja de datos_nota_debito, A4
@@ -1950,8 +1926,8 @@
       if (PILA_NAV.length && PILA_NAV[PILA_NAV.length - 1].destino !== id) PILA_NAV.length = 0
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       if (id !== 'ad-sin-acceso') document.getElementById('ad-sin-acceso').hidden = true
-      // La ventana "Dividir para facturar" es de la orden abierta.
-      if (id !== 'ad-vista-orden' && estado.division) cerrarDivision()
+      // Las órdenes de pedido N1 / N2 son de la orden abierta.
+      if (id !== 'ad-vista-orden' && estado.facturar) cerrarFacturar()
       estado.vista = id
       pintarEmpresas()
       pintarPestanas()
@@ -3053,8 +3029,12 @@
       return `<div class="ad-panel ad-comision__panel" id="ad-comision-panel">${partes.join('')}</div>`
     }
 
-    // Debajo del total de una orden valorizada: Subtotal, Comisión y Total, o
-    // "Comisión: sin cargar". Con el botón y el panel para cargarla.
+    // Debajo del total de una orden valorizada. LA COMISIÓN COMÚN SALIÓ DEL
+    // FLUJO (28/10/2026): ni "Comisión: sin cargar" ni el botón ni el panel;
+    // las comisiones van por vendedor en el N1 (ver "LOS PUNTOS DE VENTA").
+    // Una orden que YA tenía una cargada la sigue mostrando (Subtotal,
+    // Comisión y Total: es plata en la cuenta del cliente). Las funciones de
+    // cargarla quedan, sin uso.
     function htmlComisionOrden(d) {
       const o = d.orden
       const moneda = o.moneda || 'ARS'
@@ -3066,18 +3046,9 @@
         partes.push(`<p class="ad-comision__linea"><span>Subtotal</span><span>${esc(importeHoja(o.total, moneda))}</span></p>`)
         partes.push(`<p class="ad-comision__linea"><span>${esc(rotuloComision(o))}</span><span>${esc(importeHoja(imp, moneda))}</span></p>`)
         partes.push(`<p class="ad-total">Total ${esc(importeHoja(totalConComision(o.total, imp), moneda) + textoAFavor(totalConComision(o.total, imp)))}</p>`)
-        if (comisionDesactualizada(o)) partes.push('<div class="ad-aviso">La valorización cambió después de cargar la comisión: volvé a cargarla para que el porcentaje se calcule sobre el total nuevo.</div>')
       } else {
         partes.push(`<p class="ad-total">Total ${esc(importeHoja(o.total, moneda) + textoAFavor(o.total))}</p>`)
-        const habitual = comisionHabitualDe(clienteDe(o.cliente_id))
-        const texto = modo === 'ninguna' ? 'Comisión: sin comisión'
-          : 'Comisión: sin cargar' + (habitual !== null ? ' (la habitual de este cliente es ' + textoPorcentaje(habitual) + ')' : '')
-        partes.push(`<p class="ad-comision__linea ad-comision__linea--falta"><span>${esc(texto)}</span></p>`)
       }
-      if (puedeCargarComision(o) && !d.comision) {
-        partes.push(`<div class="ad-comision__acciones"><button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-comision">${modo === null ? 'Cargar comisión' : 'Cambiar comisión'}</button></div>`)
-      }
-      partes.push(htmlPanelComision(d))
       return `<div class="ad-comision" id="ad-comision">${partes.join('')}</div>`
     }
 
@@ -3216,9 +3187,8 @@
       const valor = o.estado_valorizacion === 'valorizada'
         ? importeHoja(totalFila, o.moneda) + textoAFavor(totalFila) : 'sin valorizar'
       const pendiente = o.estado === 'confirmada' && o.estado_valorizacion !== 'valorizada'
-      const selloComision = faltaComision(o, cli) ? '<span class="ad-sello">Comisión sin cargar</span>' : ''
       return `<button type="button" class="ad-fila${o.estado === 'anulada' ? ' ad-fila--anulada' : ''}${pendiente ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
-        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}${htmlSelloEntre(o)}${selloComision}</span>` +
+        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}${htmlSelloEntre(o)}</span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta)}</span>` +
         `<span class="ad-fila__importe${pendiente ? ' ad-fila__importe--pendiente' : ''}">${esc(valor)}</span></span></button>`
     }
@@ -3276,7 +3246,6 @@
       document.getElementById('ad-filtro-hasta').value = estado.filtros.hasta
       document.getElementById('ad-filtro-estado').value = estado.filtros.estado
       document.getElementById('ad-filtro-sin-valorizar').checked = estado.filtros.sinValorizar
-      document.getElementById('ad-filtro-comision').checked = estado.filtros.sinComision
       // Los remitos precargados (27/10/2026): solo en una fábrica sin control
       // de stock. Se leen al costado de las órdenes (no las frenan).
       await leerSinControl(estado.empresaId)
@@ -3290,14 +3259,11 @@
       estado.filtros.hasta = document.getElementById('ad-filtro-hasta').value
       estado.filtros.clienteId = document.getElementById('ad-filtro-cliente').value
       estado.filtros.estado = document.getElementById('ad-filtro-estado').value
-      // "Sin valorizar" y "Con comisión sin cargar" se excluyen: una pide las
-      // que faltan valorizar y la otra las ya valorizadas. Tildar una saca la otra.
+      // "Con comisión sin cargar" dejó de aparecer (28/10/2026: la comisión
+      // común salió del flujo); el filtro queda siempre apagado.
       const sinValorizar = document.getElementById('ad-filtro-sin-valorizar')
-      const sinComision = document.getElementById('ad-filtro-comision')
-      if (origen === 'ad-filtro-comision' && sinComision.checked) sinValorizar.checked = false
-      if (origen === 'ad-filtro-sin-valorizar' && sinValorizar.checked) sinComision.checked = false
       estado.filtros.sinValorizar = !!sinValorizar.checked
-      estado.filtros.sinComision = !!sinComision.checked
+      estado.filtros.sinComision = false
       cargarOrdenes()
     }
 
@@ -4612,7 +4578,7 @@
       return `<div class="ad-tarjeta">${remito ? `<p class="ad-orden-remito" data-orden-remito>${esc(remito)}</p>` : ''}<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
         `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>` +
         // Entre empresas no se divide para facturar (24/10/2026).
-        (d.valorizar || entre ? '' : htmlFacturasOrden(d))
+        (d.valorizar || entre || puedeFacturar(o) ? '' : htmlFacturasOrden(d))
     }
 
     function pintarOrden() {
@@ -4632,14 +4598,9 @@
             ponerNumero(input, d.valorizar.modos?.[id]?.porBulto ? (d.valorizar.escritos?.[id] ?? null) : (d.valorizar.precios[id] ?? null))
           }
         }
-        // El campo de la comisión se dibuja SIN value: se enlaza y se escribe
-        // con ponerNumero (porcentaje hasta 100, los dos con 2 decimales).
-        const valorComision = d.comision ? cuerpo.querySelector('#ad-comision-valor') : null
-        if (valorComision) {
-          enlazarCampoNumero(valorComision, { decimales: 2, max: d.comision.modo === 'porcentaje' ? 100 : null })
-          ponerNumero(valorComision, d.comision.valor ?? null)
-        }
       }
+      // Las órdenes de pedido N1 / N2 (28/10/2026), fuera del cuerpo.
+      sincronizarFacturar()
       pintarAccionesOrden()
       // La hoja, armada antes del toque de Imprimir (el iPhone).
       prepararHojaOrden()
@@ -4653,7 +4614,6 @@
       const precios = activa && puedeEn('retiros', 'precios', u)
       document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar && !d.faltaLista)
       document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar)
-      document.getElementById('ad-btn-dividir').hidden = !(puedeDividir(o) && !d.valorizar)
       document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))
       document.getElementById('ad-btn-imprimir').hidden = !o
       document.getElementById('ad-btn-enviar').hidden = !o
@@ -4729,7 +4689,7 @@
 
     async function abrirOrden(id) {
       const turno = ++turnoOrden
-      if (estado.division) cerrarDivision()
+      if (estado.facturar) cerrarFacturar()
       estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, comision: null, anular: null, aviso: null, errorHoja: null }
       mostrarVista('ad-vista-orden')
       pintarOrden()
@@ -5148,8 +5108,13 @@
         const aviso = !entre && data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null
         mostrarExito(`Orden ${d.orden.codigo} valorizada: ${importeHoja(data?.total, data?.moneda)}.` + (entre ? ' ' + textoDeudaEntre(d.orden) + '.' : ''))
         estado.trabajando = false
-        estado.ordenes = null
+        // En la misma pantalla (28/10/2026): la condición del cliente se
+        // guarda sola en la orden (guardar_division_orden) y quedan el N1 y
+        // el N2 para imprimir. Y la fila del listado se entera YA.
+        if (!entre) estado.facturarAlValorizar = d.orden.id
+        actualizarFilaOrden(d.orden.id, { estado_valorizacion: 'valorizada', total: data?.total ?? d.orden.total, moneda: data?.moneda ?? d.orden.moneda })
         await abrirOrden(d.orden.id)
+        if (estado.orden?.orden?.id === d.orden.id) actualizarFilaOrden(d.orden.id, estado.orden.orden)
         if (aviso && estado.orden) { estado.orden.aviso = aviso; pintarAccionesOrden() }
       } catch (err) {
         console.error('No se pudo valorizar:', err)
@@ -5194,8 +5159,9 @@
         if (error) throw error
         mostrarExito(`Orden ${d.orden.codigo} anulada.`)
         estado.trabajando = false
-        estado.ordenes = null
+        actualizarFilaOrden(d.orden.id, { estado: 'anulada' })
         await abrirOrden(d.orden.id)
+        if (estado.orden?.orden?.id === d.orden.id) actualizarFilaOrden(d.orden.id, estado.orden.orden)
       } catch (err) {
         console.error('No se pudo anular:', err)
         d.anular.error = err?.message || 'No se pudo anular. Probá de nuevo.'
@@ -5296,6 +5262,9 @@
     }
 
     // ── DIVIDIR PARA FACTURAR (21/10/2026) ────────────────────────────────
+    // Desde el 28/10/2026 la "parte A" y la "parte B" son los puntos de venta
+    // N1 y N2, y se eligen en la misma pantalla de la orden valorizada (ver
+    // "LOS PUNTOS DE VENTA N1 / N2", más abajo). Lo de acá sigue valiendo:
     //
     // Cada cliente puede tener una CONDICIÓN DE VENTA (clientes.pct_parte_a):
     // un % de cada orden va a la PARTE A y el resto a la PARTE B, y a la A se
@@ -5312,8 +5281,9 @@
 
     const PARTES_DIVISION = ['A', 'B']
     const PARTE_UNICA = 'UNICA'
-    // Lo que se espera después de la última tecla para pedir la vista previa.
-    const ESPERA_VISTA_DIVISION = 400
+    // Lo que se espera después de la última tecla para guardar la condición
+    // o una comisión (guardar_division_orden): no va una llamada por tecla.
+    const ESPERA_GUARDAR_DIVISION = 400
 
     // El otro % de la condición: lo que falta para 100, con 2 decimales.
     // Vacío o fuera de 0 a 100 → null (el otro campo queda vacío).
@@ -5408,14 +5378,8 @@
     // Las reglas de guardar_condicion_venta_cliente, con sus textos: el % de
     // la A puede quedar vacío (la orden no se divide).
     function validarCondicionVenta(pctA, comisiones) {
-      if (pctA !== null && pctA !== undefined && !(Number(pctA) >= 0 && Number(pctA) <= 100)) return 'El % de la parte A va de 0 a 100.'
+      if (pctA !== null && pctA !== undefined && !(Number(pctA) >= 0 && Number(pctA) <= 100)) return 'El % del punto de venta 1 va de 0 a 100.'
       return validarComisiones(comisiones, { vacioSirve: true })
-    }
-
-    // Las de guardar_division_orden: ahí el % de la A es obligatorio.
-    function validarDivision(pctA, comisiones) {
-      if (pctA === null || pctA === undefined || !(Number(pctA) >= 0 && Number(pctA) <= 100)) return 'El % de la parte A va de 0 a 100.'
-      return validarComisiones(comisiones)
     }
 
     // Sin vendedores leídos, p_comisiones va en null: decide la base.
@@ -5423,9 +5387,37 @@
       return { p_orden_id: ordenId, p_pct_a: pctA ?? null, p_comisiones: comisiones?.length ? parametrosComisiones(comisiones) : null }
     }
 
-    // "N-0015-A", "N-0015-B" o "Factura única".
-    function rotuloParte(codigo, parte) {
-      return parte === PARTE_UNICA ? 'Factura única' : `${codigo ?? ''}-${parte}`
+    // ── LOS PUNTOS DE VENTA N1 / N2 (28/10/2026) ──────────────────────────
+    // La "parte A" y la "parte B" son los PUNTOS DE VENTA 1 y 2 de ARCA: cada
+    // uno es una ORDEN DE PEDIDO VALORIZADA aparte, que sale de la orden
+    // general, con el código de la orden y el punto pegado a la letra
+    // (N-0036 → N1-0036 y N2-0036; D-0045 → D1-0045 y D2-0045). En la base
+    // siguen siendo 'A' y 'B'. A algunos clientes se les manda SOLO el N2:
+    // en el papel de un punto no va NADA del otro (ni el total de la orden).
+    // Desde el 28/10/2026 no hay ventana "Dividir para facturar": al valorizar,
+    // en la misma pantalla de la orden quedan la condición, los vendedores,
+    // los dos puntos (con Imprimir, Compartir PDF y su factura de ARCA), y
+    // cada cambio se guarda solo (guardar_division_orden).
+    const NUMERO_PUNTO = { A: 1, B: 2 }
+    // Los botones rápidos de la condición: el % del N1 (el N2 lleva el resto).
+    const CONDICIONES_RAPIDAS = [100, 80, 50, 40]
+
+    // "N1-0036", "D2-0045" o "Factura única" (una de antes del 28/10/2026).
+    // LA ÚNICA función que arma el código de un punto.
+    function codigoPunto(codigo, parte) {
+      if (parte === PARTE_UNICA) return 'Factura única'
+      const c = String(codigo ?? '').trim()
+      const n = NUMERO_PUNTO[parte]
+      if (!n) return c
+      if (/^[^-]+-/.test(c)) return c.replace(/^([^-]+)-/, (_, letra) => letra + n + '-')
+      return c ? c + '-' + n : 'Punto ' + n
+    }
+
+    // "N1-0036: 40 % · N2-0036: 60 %".
+    function textoCondicion(codigo, pctA) {
+      const a = numeroONulo(pctA)
+      if (a === null) return ''
+      return `${codigoPunto(codigo, 'A')}: ${textoPct(a)} % · ${codigoPunto(codigo, 'B')}: ${textoPct(complementoPct(a))} %`
     }
 
     // { A: { numero, archivo_url }, … } desde la lista que manda la base.
@@ -5437,18 +5429,18 @@
       return r
     }
 
-    // Si la orden se divide: con la división ya guardada en la orden, o con
-    // la condición de venta del cliente. Si no, va en una factura única.
-    function seDivideOrden(o, cli) {
-      const hay = (v) => v !== null && v !== undefined && v !== ''
-      return hay(o?.division_pct_a) || hay(cli?.pct_parte_a)
+    // Los puntos que lleva la orden con ese % del N1: con 100/0 solo el N1,
+    // con 0/100 solo el N2. Sin % todavía, los dos.
+    function puntosDePct(pctA) {
+      const n = numeroONulo(pctA)
+      if (n === null) return [...PARTES_DIVISION]
+      return PARTES_DIVISION.filter(p => p === 'A' ? n > 0 : n < 100)
     }
 
-    // Las partes que se facturan (A y B, o la única), y además la que ya
-    // tenga un número guardado: una factura única de antes de dividir no se
-    // esconde.
-    function partesFacturaOrden(seDivide, facturas) {
-      const base = seDivide ? PARTES_DIVISION : [PARTE_UNICA]
+    // Los que se facturan, y además el que ya tenga un número guardado (una
+    // factura única de antes, o un punto que quedó en 0 después): no se esconde.
+    function partesFacturaOrden(pctA, facturas) {
+      const base = puntosDePct(pctA)
       return [...PARTES_DIVISION, PARTE_UNICA].filter(p => base.includes(p) || !!facturas?.[p]?.numero)
     }
 
@@ -5470,8 +5462,7 @@
       return cantidadInsumoHoja(n, unidad)
     }
 
-    // Los renglones de una parte: SOLO los que llevan algo en esa parte (un
-    // renglón con 0 en la A no se imprime en la A, y lo mismo en la B). Una
+    // Los renglones de un punto: SOLO los que llevan algo en ese punto. Una
     // DEVOLUCIÓN viene en negativo (22/10/2026) y sale igual, restando; una
     // reposición sale en $ 0 (la descripción de la base ya dice cuál es).
     function renglonesParte(datos, parte) {
@@ -5481,326 +5472,532 @@
         .map(it => ({ descripcion: it.descripcion, cantidad: Number(it['cant_' + k]), unidad: it.unidad, precio: it.precio, subtotal: it['subtotal_' + k] }))
     }
 
-    // Un bloque de la hoja: "N-0015-A" (con el número de ARCA si ya está),
-    // el cliente, la fecha y el % de la parte, la tabla de productos y,
-    // DEBAJO de la tabla (no como un renglón), los totales: en la A, Total
-    // productos, una línea por vendedor ("Vendedor 1 (2%): $ X"), el Total
-    // comisiones y el TOTAL PARTE A; en la B, el TOTAL PARTE B.
-    function htmlBloqueParte(datos, parte, factura, moneda = 'ARS') {
-      const esA = parte === 'A'
-      const filas = renglonesParte(datos, parte)
+    // Los totales de un punto (en la pantalla y en el papel): en el N1, Total
+    // productos, una línea por vendedor CON MONTO (solo su nombre: sin el %),
+    // Total comisiones y TOTAL; en el N2, solo el TOTAL.
+    function htmlTotalesPunto(datos, parte, moneda = 'ARS') {
       const plata = (n) => importeHoja(n, moneda)
+      if (parte !== 'A') return `<p class="opv__total" data-total-punto>${esc('TOTAL: ' + plata(datos?.total_b) + textoAFavor(datos?.total_b))}</p>`
+      const vendedores = (Array.isArray(datos?.comisiones) ? datos.comisiones : [])
+        .filter(c => Number(c?.monto) > 0)
+        .map(c => `<p data-comision-vendedor>${esc(limpio(c.nombre) + ': ' + plata(c.monto))}</p>`).join('')
+      return `<p>${esc('Total productos: ' + plata(datos?.subtotal_a))}</p>${vendedores}` +
+        `<p class="opv__comisiones">${esc('Total comisiones: ' + plata(datos?.comision_total))}</p>` +
+        `<p class="opv__total" data-total-punto>${esc('TOTAL: ' + plata(datos?.total_a) + textoAFavor(datos?.total_a))}</p>`
+    }
+
+    // LA ORDEN DE PEDIDO VALORIZADA de UN punto (el formato que aprobó Facu el
+    // 28/10/2026): arriba, centrado y grande, "ORDEN DE PEDIDO" y el código
+    // ("N1-0036"), una línea; el cliente y el CUIT, "Fecha dd/mm/aaaa"; la
+    // tabla; y los totales DEBAJO de la tabla. SIN el número de factura de
+    // ARCA, sin el % y sin pie: en el N2 nada dice cuánto fue el N1.
+    function htmlHojaPunto(datos, parte, moneda = 'ARS') {
+      const plata = (n) => importeHoja(n, moneda)
+      const filas = renglonesParte(datos, parte)
       const cuerpo = filas.length
         ? filas.map(r => `<tr><td>${esc(r.descripcion)}</td>` +
-            `<td class="ad-dvh__num" data-rotulo="Cantidad">${esc(cantidadDivision(r.cantidad, r.unidad))}</td>` +
-            `<td class="ad-dvh__num" data-rotulo="Precio">${esc(plata(r.precio))}</td>` +
-            `<td class="ad-dvh__num" data-rotulo="Subtotal">${esc(plata(r.subtotal))}</td></tr>`).join('')
-        : '<tr><td colspan="4">Sin productos en esta parte.</td></tr>'
-      const vendedores = (Array.isArray(datos.comisiones) ? datos.comisiones : [])
-        .map(c => `<p data-comision-vendedor>${esc(c.nombre + ' (' + textoPct(c.pct) + '%): ' + plata(c.monto))}</p>`).join('')
-      const totales = esA
-        ? `<p>${esc('Total productos: ' + plata(datos.subtotal_a))}</p>${vendedores}` +
-          `<p class="ad-dvh__comisiones">${esc('Total comisiones (' + textoPct(datos.comision_pct_total) + '%): ' + plata(datos.comision_total))}</p>` +
-          `<p class="ad-dvh__total">${esc('TOTAL PARTE A: ' + plata(datos.total_a))}</p>`
-        : `<p class="ad-dvh__total">${esc('TOTAL PARTE B: ' + plata(datos.total_b))}</p>`
-      const cliente = [limpio(datos.cliente) || 'Cliente', limpio(datos.cliente_cuit) ? 'CUIT ' + limpio(datos.cliente_cuit) : null].filter(Boolean).join(' · ')
-      const pct = esA ? datos.pct_a : datos.pct_b
-      return `<section class="ad-dvh__bloque" data-parte="${esc(parte)}">` +
-        `<h2 class="ad-dvh__titulo">${esc(rotuloParte(datos.codigo, parte))}` +
-        (factura?.numero ? ` <span class="ad-dvh__factura">${esc('· Factura ' + factura.numero)}</span>` : '') + '</h2>' +
-        `<p class="ad-dvh__datos">${esc(cliente)}<br>${esc('Fecha ' + fechaCorta(datos.fecha) + ' · Parte ' + parte + ': ' + textoPct(pct) + ' %')}</p>` +
-        '<table class="ad-dvh__tabla"><colgroup><col class="ad-dvh__c-prod"><col><col><col></colgroup>' +
-        '<thead><tr><th>Producto</th><th class="ad-dvh__num">Cantidad</th><th class="ad-dvh__num">Precio</th><th class="ad-dvh__num">Subtotal</th></tr></thead>' +
-        `<tbody>${cuerpo}</tbody></table><div class="ad-dvh__totales">${totales}</div></section>`
+            `<td class="opv__num">${esc(cantidadDivision(r.cantidad, r.unidad))}</td>` +
+            `<td class="opv__num">${esc(plata(r.precio))}</td>` +
+            `<td class="opv__num">${esc(plata(r.subtotal))}</td></tr>`).join('')
+        : '<tr><td colspan="4">Sin productos.</td></tr>'
+      const cliente = [limpio(datos?.cliente) || 'Cliente', limpio(datos?.cliente_cuit) ? 'CUIT ' + limpio(datos.cliente_cuit) : null].filter(Boolean).join(' · ')
+      return `<article class="opv" data-punto="${esc(parte)}">` +
+        `<header class="opv__cab"><p class="opv__titulo">ORDEN DE PEDIDO</p><p class="opv__codigo">${esc(codigoPunto(datos?.codigo, parte))}</p></header>` +
+        `<p class="opv__cliente">${esc(cliente)}</p><p class="opv__fecha">${esc('Fecha ' + fechaCorta(datos?.fecha))}</p>` +
+        '<table class="opv__tabla"><colgroup><col class="opv__c-prod"><col><col><col></colgroup>' +
+        '<thead><tr><th>Producto</th><th class="opv__num">Cantidad</th><th class="opv__num">Precio</th><th class="opv__num">Subtotal</th></tr></thead>' +
+        `<tbody>${cuerpo}</tbody></table><div class="opv__totales">${htmlTotalesPunto(datos, parte, moneda)}</div></article>`
     }
 
-    // La hoja entera: el bloque A, el B y un pie chico con la orden. Se ve
-    // igual en la vista previa de la ventana y en el papel.
-    function htmlHojaDivision(datos, facturas, moneda = 'ARS') {
-      const f = facturas ?? facturasPorParte(datos?.facturas)
-      return '<div class="ad-dvh">' + htmlBloqueParte(datos, 'A', f.A, moneda) + htmlBloqueParte(datos, 'B', f.B, moneda) +
-        `<p class="ad-dvh__pie">${esc('Orden ' + (datos.codigo ?? '') + ' · total de la orden ' + importeHoja(datos.total_orden, moneda) + textoAFavor(datos.total_orden))}</p></div>`
+    // "Orden de pedido N1-0036 - ICARDI REPRESENTACIONES S.A.pdf": sin las
+    // letras que un archivo no admite ni puntos sueltos al final.
+    function nombrePdfPunto(datos, parte) {
+      const cli = limpio(datos?.cliente).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '')
+      return `Orden de pedido ${codigoPunto(datos?.codigo, parte)}${cli ? ' - ' + cli : ''}.pdf`
     }
 
-    // A4 vertical: la regla va DENTRO de la hoja (en el body, después de la
-    // de js/retiros-comun.js), así gana solo mientras está esta hoja.
-    // Se imprime DESPUÉS de guardar (un await): en el iPhone el toque ya se
-    // venció, así que ahí aparece "Listo, imprimir" (26/10/2026).
-    function imprimirDivision(datos, { despuesDeGuardar = false } = {}) {
-      const dv = estado.division
-      olvidarHoja(impresionHoja())
-      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +
-        htmlHojaDivision(datos, dv?.facturas, dv?.moneda)
-      if (despuesDeGuardar && esIos()) { mostrarListoParaImprimir({ imprimir: () => window.print(), texto: 'La división quedó guardada.' }); return }
-      window.print()
-    }
-
-    // En el detalle de una orden valorizada: cómo se factura y los números
-    // de ARCA ya cargados (la carga va en la ventana).
+    // En el detalle de una orden valorizada, para quien NO puede facturar
+    // (ve las órdenes pero no tiene retiros:precios): cómo se factura y los
+    // números de ARCA ya cargados, de solo lectura.
     function htmlFacturasOrden(d) {
       const o = d?.orden
       if (!o || o.estado === 'anulada' || o.estado_valorizacion !== 'valorizada') return ''
       const cli = clienteDe(o.cliente_id)
-      const divide = seDivideOrden(o, cli)
-      let como
-      if (o.division_pct_a !== null && o.division_pct_a !== undefined) {
-        como = `Dividida para facturar: parte A ${textoPct(o.division_pct_a)} % · parte B ${textoPct(complementoPct(o.division_pct_a))} %.`
-      } else if (divide) {
-        como = `Su condición de venta: parte A ${textoPct(cli.pct_parte_a)} % · parte B ${textoPct(complementoPct(cli.pct_parte_a))} %. Todavía no se guardó en esta orden.`
-      } else como = 'No se divide: va en una factura única.'
+      const pct = numeroONulo(o.division_pct_a) ?? numeroONulo(cli?.pct_parte_a)
+      const como = pct === null ? 'Todavía no se guardó la condición de esta orden.'
+        : textoCondicion(o.codigo, pct) + (numeroONulo(o.division_pct_a) === null ? '. Todavía no se guardó en esta orden.' : '.')
       const f = facturasPorParte(d.facturas)
       const lineas = d.facturas === null
         ? '<p class="ad-texto-suave">No se pudieron leer las facturas de esta orden.</p>'
-        : partesFacturaOrden(divide, f).map(p => `<div class="ad-fila__linea" data-factura-parte="${esc(p)}">` +
-            `<span class="ad-renglon__desc">${esc(rotuloParte(o.codigo, p))}</span>` +
+        : partesFacturaOrden(pct, f).map(p => `<div class="ad-fila__linea" data-factura-parte="${esc(p)}">` +
+            `<span class="ad-renglon__desc">${esc(codigoPunto(o.codigo, p))}</span>` +
             `<span class="${f[p]?.numero ? 'ad-facturas-orden__numero' : 'ad-texto-suave'}">${esc(f[p]?.numero ? 'Factura ' + f[p].numero : 'sin factura cargada')}</span></div>`).join('')
       return `<div class="ad-tarjeta ad-facturas-orden" id="ad-facturas-orden"><h2 class="ad-subtitulo">Facturas de ARCA</h2>` +
         `<p class="ad-texto-suave">${esc(como)}</p>${lineas}</div>`
     }
 
     // Con retiros:precios en la empresa de la orden (la regla de las cuatro
-    // funciones), y la orden valorizada y no anulada.
-    function puedeDividir(o) {
+    // funciones), la orden valorizada y no anulada, y no a otra empresa del
+    // grupo (esa no se divide: datos_division_orden la rechaza).
+    function puedeFacturar(o) {
       return !!o && o.estado !== 'anulada' && o.estado_valorizacion === 'valorizada' && !ordenEntreEmpresas(o) && puedeEn('retiros', 'precios', o.unidad_negocio_id)
     }
 
-    function camposDivision() {
-      return { a: document.getElementById('ad-dv-pct-a'), b: document.getElementById('ad-dv-pct-b') }
-    }
-
-    // Los vendedores de la ventana, desde lo que devolvió la base.
+    // Los vendedores, desde lo que devolvió la base.
     function comisionesDeDatos(datos) {
       return (Array.isArray(datos?.comisiones) ? datos.comisiones : [])
         .map(c => ({ vendedor_id: c.vendedor_id, nombre: c.nombre, orden: c.orden, pct: numeroONulo(c.pct) }))
     }
 
-    // Sin lo de la base (el cliente no tiene condición de venta): los % que
-    // valdrían, el propio del cliente o el de la configuración.
+    // Sin lo de la base (falló la lectura): los % que valdrían, el propio del
+    // cliente o el de la configuración.
     async function comisionesSinDatos(clienteId) {
       const [vend, propias] = await Promise.all([leerVendedores(), leerComisionesCliente(clienteId)])
       return vend.map(v => ({ vendedor_id: v.id, nombre: v.nombre, orden: v.orden,
         pct: propias[v.id] !== undefined && propias[v.id] !== null ? propias[v.id] : numeroONulo(v.pct_defecto) }))
     }
 
-    function pintarVendedoresDivision() {
-      const dv = estado.division
-      if (!dv) return
-      document.getElementById('ad-dv-vendedores').innerHTML = dv.comisiones === null
-        ? '<div class="ad-vacio">Cargando las comisiones…</div>' : htmlVendedoresPct('ad-dv', dv.comisiones)
-      llenarVendedoresPct('ad-dv', dv.comisiones)
+    // La condición con que se abre: la guardada en la orden; si no, la del
+    // cliente (clientes.pct_parte_a); si no tiene, 100/0 (todo al N1).
+    function pctInicialFacturar(o, cli) {
+      return numeroONulo(o?.division_pct_a) ?? numeroONulo(cli?.pct_parte_a) ?? 100
     }
 
-    // Abre la ventana con lo que diga datos_division_orden (los % de la orden
-    // si ya se guardó, si no los del cliente, si no la configuración). Sin
-    // condición de venta la base lo dice ("poné el % de la parte A"): los %
-    // quedan vacíos para completarlos, y mientras tanto se puede cargar la
-    // factura única.
-    async function abrirDivision() {
+    // Lo que importa del listado de una orden abierta: así su fila queda al
+    // día sin releer la lista (28/10/2026: después de valorizar decía
+    // "sin valorizar" hasta recargar la página).
+    const CAMPOS_FILA_ORDEN = ['estado', 'estado_valorizacion', 'total', 'moneda', 'cliente_id', 'valorizada_en', 'anulada_motivo', 'anulada_en',
+      'comision_modo', 'comision_importe', 'division_pct_a', 'numero_remito', 'talonario']
+
+    function actualizarFilaOrden(id, cambios) {
+      if (!Array.isArray(estado.ordenes)) return
+      const i = estado.ordenes.findIndex(o => o.id === id)
+      if (i < 0) return
+      const nuevos = {}
+      for (const k of CAMPOS_FILA_ORDEN) if (cambios && Object.prototype.hasOwnProperty.call(cambios, k)) nuevos[k] = cambios[k]
+      estado.ordenes[i] = { ...estado.ordenes[i], ...nuevos }
+      pintarOrdenes()
+    }
+
+    // ── La pantalla de facturar (en el detalle de la orden) ──────────────
+    // estado.facturar = { ordenId, codigo, unidad, fecha, moneda, clienteId,
+    //   datos (lo último de la base), pctA, comisiones, guardada, cargando,
+    //   aviso (no se pudo leer), reloj (el retardo), guardando, enCamino,
+    //   otraVez, turno, errorGuardar, facturas, cargas, puntos }.
+    // Vive en #ad-orden-facturar, FUERA de #ad-orden-cuerpo: pintarOrden no
+    // la redibuja, así lo que se está escribiendo no se pierde. El esqueleto
+    // se arma una vez por orden y después solo se actualizan sus partes.
+
+    function contenedorFacturar() {
+      return document.getElementById('ad-orden-facturar')
+    }
+
+    // Lo llama pintarOrden: arranca, sigue o saca la pantalla de facturar
+    // según la orden abierta.
+    function sincronizarFacturar() {
       const d = estado.orden
       const o = d?.orden
-      if (!puedeDividir(o) || d.valorizar) return
-      const cli = clienteDe(o.cliente_id)
-      const dv = estado.division = {
-        ordenId: o.id, codigo: o.codigo, unidad: o.unidad_negocio_id, fecha: o.fecha, moneda: o.moneda || 'ARS',
-        datos: null, aviso: null, cargando: true, errorGuardar: null, guardando: false, turno: 0, reloj: null,
-        seDivide: seDivideOrden(o, cli), facturas: facturasPorParte(d.facturas), cargas: {}, comisiones: null,
+      const va = !!o && !d.error && !d.valorizar && puedeFacturar(o)
+      const fc = estado.facturar
+      if (!va) {
+        if (fc && fc.ordenId !== o?.id) cerrarFacturar()
+        const c = contenedorFacturar()
+        if (c) { c.hidden = true }
+        return
       }
-      const { a, b } = camposDivision()
-      for (const c of [a, b]) { enlazarCampoNumero(c, { decimales: 2, max: 100 }); ponerNumero(c, null) }
-      document.getElementById('ad-dv').hidden = false
-      pintarDivision()
-      pintarVendedoresDivision()
-      pintarFacturasDivision()
-      const turno = ++dv.turno
+      if (!fc || fc.ordenId !== o.id) { iniciarFacturar(d); return }
+      contenedorFacturar().hidden = false
+      if (!fc.armado) pintarFacturar()
+    }
+
+    // Al dejar la orden: si quedó un cambio esperando el retardo, se guarda
+    // igual (no se pierde por apurarse a volver).
+    function cerrarFacturar() {
+      const fc = estado.facturar
+      estado.facturar = null
+      const c = contenedorFacturar()
+      if (c) { c.innerHTML = ''; c.hidden = true }
+      if (fc?.reloj) { clearTimeout(fc.reloj); guardarFacturar(fc) }
+    }
+
+    async function iniciarFacturar(d) {
+      const o = d.orden
+      const cli = clienteDe(o.cliente_id)
+      // Recién valorizada: la condición se guarda sola (no hace falta tocar nada).
+      const guardar = estado.facturarAlValorizar === o.id
+      estado.facturarAlValorizar = null
+      if (estado.facturar) cerrarFacturar()
+      const fc = estado.facturar = {
+        ordenId: o.id, codigo: o.codigo, unidad: o.unidad_negocio_id, fecha: o.fecha, moneda: o.moneda || 'ARS', clienteId: o.cliente_id,
+        datos: null, pctA: pctInicialFacturar(o, cli), comisiones: null, guardada: numeroONulo(o.division_pct_a) !== null,
+        cargando: true, aviso: null, reloj: null, guardando: false, enCamino: null, otraVez: false, turno: 0, errorGuardar: null,
+        facturas: facturasPorParte(d.facturas), cargas: {}, puntos: {}, armado: false,
+      }
+      const c = contenedorFacturar()
+      if (c) c.hidden = false
+      pintarFacturar()
+      // Si mientras tanto se tocó la condición (sube el turno), lo que llega
+      // no pisa lo que se ve; igual trae los vendedores, si todavía no estaban.
+      const turno = fc.turno
+      let viaje = null
+      if (guardar) {
+        fc.guardando = true
+        viaje = fc.enCamino = supabase.rpc('guardar_division_orden', parametrosDivision(o.id, fc.pctA, null))
+      }
       try {
-        const { data, error } = await supabase.rpc('datos_division_orden', parametrosDivision(o.id, null, null))
+        const { data, error } = await (viaje ?? supabase.rpc('datos_division_orden', parametrosDivision(o.id, fc.pctA, null)))
         if (error) throw error
-        if (estado.division !== dv || turno !== dv.turno) return
-        dv.datos = data
-        if (Array.isArray(data?.facturas)) dv.facturas = facturasPorParte(data.facturas)
-        dv.comisiones = comisionesDeDatos(data)
-        ponerNumero(a, data?.pct_a ?? null)
-        ponerNumero(b, data?.pct_b ?? complementoPct(data?.pct_a))
+        if (guardar) {
+          fc.guardada = true
+          anotarDivisionGuardada(fc.ordenId, data?.pct_a ?? fc.pctA)
+        }
+        if (fc.comisiones === null) fc.comisiones = comisionesDeDatos(data)
+        if (turno === fc.turno) {
+          aplicarDatosFacturar(fc, data)
+          const otro = document.getElementById('ad-fc-otro')
+          if (estado.facturar === fc && otro && document.activeElement !== otro) ponerNumero(otro, fc.pctA)
+        }
       } catch (err) {
-        if (estado.division !== dv || turno !== dv.turno) return
         console.error('No se pudo leer la división de la orden:', err)
-        dv.aviso = err?.message || 'No se pudo leer la división de la orden. Probá de nuevo.'
-        try {
-          const com = await comisionesSinDatos(o.cliente_id)
-          if (estado.division !== dv) return
-          dv.comisiones = com
-        } catch (e2) {
-          console.error('No se pudieron leer las comisiones de los vendedores:', e2)
-          if (estado.division === dv) dv.comisiones = []
+        if (turno === fc.turno) {
+          if (guardar) fc.errorGuardar = err?.message || 'No se pudo guardar la condición. Probá de nuevo.'
+          else fc.aviso = err?.message || 'No se pudieron calcular los importes de cada punto. Probá de nuevo.'
+        }
+        if (fc.comisiones === null) {
+          try {
+            fc.comisiones = await comisionesSinDatos(o.cliente_id)
+          } catch (e2) {
+            console.error('No se pudieron leer las comisiones de los vendedores:', e2)
+            if (fc.comisiones === null) fc.comisiones = []
+          }
         }
       }
-      dv.cargando = false
-      pintarDivision()
-      pintarVendedoresDivision()
-      pintarFacturasDivision()
+      fc.cargando = false
+      if (guardar) {
+        fc.enCamino = null
+        fc.guardando = false
+        if (fc.otraVez) { fc.otraVez = false; if (!fc.reloj) guardarFacturar(fc) }
+      }
+      if (estado.facturar === fc) actualizarFacturar()
     }
 
-    function cerrarDivision() {
-      const dv = estado.division
-      if (dv?.reloj) clearTimeout(dv.reloj)
-      estado.division = null
-      document.getElementById('ad-dv').hidden = true
+    function aplicarDatosFacturar(fc, data) {
+      fc.datos = data
+      fc.aviso = null
+      if (numeroONulo(data?.pct_a) !== null) fc.pctA = numeroONulo(data.pct_a)
+      if (Array.isArray(data?.facturas)) fc.facturas = facturasPorParte(data.facturas)
     }
 
-    // Escribir uno de los dos % completa el otro con la diferencia a 100, y
-    // la vista previa se pide un rato después de la última tecla.
-    function cambiarPctDivision(cual) {
-      const dv = estado.division
-      if (!dv) return
-      const { a, b } = camposDivision()
-      if (cual === 'a') ponerNumero(b, complementoPct(leerCampoNumero(a)))
-      else if (cual === 'b') ponerNumero(a, complementoPct(leerCampoNumero(b)))
-      programarVistaDivision(dv)
+    // La orden abierta y su fila del listado se enteran de la condición guardada.
+    function anotarDivisionGuardada(ordenId, pctA) {
+      const o = estado.orden?.orden
+      if (o?.id === ordenId) o.division_pct_a = pctA
+      actualizarFilaOrden(ordenId, { division_pct_a: pctA })
     }
 
-    // El % de un vendedor, solo para esta orden: se manda en la vista previa
-    // y al guardar.
-    function cambiarVendedorDivision(vendedorId, valor) {
-      const dv = estado.division
-      const v = dv?.comisiones?.find(x => x.vendedor_id === vendedorId)
+    // El esqueleto: la condición (con los botones rápidos y "Otro %"), los
+    // vendedores, el estado del guardado y un recuadro por punto (sus
+    // totales, Imprimir, Compartir PDF y su factura de ARCA).
+    function pintarFacturar() {
+      const fc = estado.facturar
+      const c = contenedorFacturar()
+      if (!fc || !c) return
+      const a = codigoPunto(fc.codigo, 'A')
+      const rapidas = CONDICIONES_RAPIDAS.map(n => `<button type="button" class="ad-segmento__opcion" id="ad-fc-rapida-${esc(n)}" data-fc-pct="${esc(n)}" aria-pressed="false">${esc(n + '/' + (100 - n))}</button>`).join('')
+      const puntos = [...PARTES_DIVISION, PARTE_UNICA].map(p => htmlPuntoFacturar(fc, p)).join('')
+      c.innerHTML = `<div class="ad-tarjeta ad-fc" id="ad-fc">` +
+        '<h2 class="ad-subtitulo">Órdenes de pedido para facturar en ARCA</h2>' +
+        `<p class="ad-fc__condicion" id="ad-fc-condicion" data-fc-condicion></p>` +
+        `<div class="ad-segmento ad-fc__rapidas" role="group" aria-label="Condición de venta">${rapidas}</div>` +
+        `<div class="ad-campo ad-fc__otro"><label for="ad-fc-otro">${esc('Otro % del ' + a)}</label>` +
+        `<input type="text" class="ad-input" id="ad-fc-otro" inputmode="decimal" autocomplete="off">` +
+        `<span class="ad-campo__ayuda">${esc('El ' + codigoPunto(fc.codigo, 'B') + ' lleva lo que falta para 100.')}</span></div>` +
+        `<span class="ad-campo__rotulo">${esc('Comisiones de los vendedores (van en el ' + a + ')')}</span>` +
+        '<div id="ad-fc-vendedores"></div>' +
+        '<p class="ad-fc__estado" id="ad-fc-estado" aria-live="polite"></p>' +
+        '<p class="ad-error-pegado" id="ad-fc-error" hidden></p>' +
+        '<div id="ad-fc-aviso"></div>' +
+        `<div class="ad-fc__puntos" id="ad-fc-puntos">${puntos}</div></div>`
+      fc.armado = true
+      const otro = document.getElementById('ad-fc-otro')
+      enlazarCampoNumero(otro, { decimales: 2, max: 100 })
+      ponerNumero(otro, fc.pctA)
+      pintarVendedoresFacturar()
+      actualizarFacturar()
+    }
+
+    // Cada parte de un punto lleva su id (ad-fc-<qué>-a / -b / -unica): se
+    // ubica con getElementById, sin selectores.
+    function idFc(que, parte) {
+      return `ad-fc-${que}-${String(parte).toLowerCase()}`
+    }
+
+    function htmlPuntoFacturar(fc, parte) {
+      const id = parte.toLowerCase()
+      const factura = `<div class="ad-fc-factura" data-fc-factura-de="${esc(parte)}">` +
+        `<div class="ad-dv-factura__cab"><span class="ad-texto-suave">Factura de ARCA:</span> <span id="${esc(idFc('guardada', parte))}"></span>` +
+        `<button type="button" class="ad-link" id="${esc(idFc('ver-pdf', parte))}" data-fc-ver-pdf="${esc(parte)}" hidden>Ver el PDF</button></div>` +
+        `<div class="ad-campo"><label for="ad-fc-numero-${esc(id)}">N° de factura ARCA</label>` +
+        `<input type="text" class="ad-input" id="ad-fc-numero-${esc(id)}" maxlength="40" autocomplete="off" placeholder="Pegá el número que dio ARCA" value="${esc(fc.facturas?.[parte]?.numero ?? '')}"></div>` +
+        `<div class="ad-campo"><label for="ad-fc-pdf-${esc(id)}" id="${esc(idFc('pdf-rotulo', parte))}">Subir PDF (opcional)</label>` +
+        `<input type="file" class="ad-dv-factura__archivo" id="ad-fc-pdf-${esc(id)}" accept="application/pdf,.pdf"></div>` +
+        `<p class="ad-error-pegado" id="${esc(idFc('factura-error', parte))}" hidden></p>` +
+        `<button type="button" class="ad-btn ad-btn--secundario" id="${esc(idFc('factura', parte))}" data-fc-factura="${esc(parte)}">Guardar la factura</button></div>`
+      const cab = `<section class="ad-fc-punto" id="${esc(idFc('punto', parte))}" data-fc-punto="${esc(parte)}" hidden>` +
+        `<h3 class="ad-fc-punto__codigo">${esc(codigoPunto(fc.codigo, parte))}</h3>`
+      if (parte === PARTE_UNICA) return cab + factura + '</section>'
+      return cab + `<div class="ad-fc-punto__totales" id="${esc(idFc('totales', parte))}"></div>` +
+        `<div class="ad-fc-punto__acciones"><button type="button" class="ad-btn" id="${esc(idFc('imprimir', parte))}" data-fc-imprimir="${esc(parte)}">Imprimir</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="${esc(idFc('compartir', parte))}" data-fc-compartir="${esc(parte)}">Compartir PDF</button></div>` +
+        `<p class="ad-error-pegado" id="${esc(idFc('punto-error', parte))}" hidden></p>${factura}</section>`
+    }
+
+    function pintarVendedoresFacturar() {
+      const fc = estado.facturar
+      const caja = document.getElementById('ad-fc-vendedores')
+      if (!fc || !caja) return
+      caja.innerHTML = fc.comisiones === null ? '<div class="ad-vacio">Cargando las comisiones…</div>' : htmlVendedoresPct('ad-fc', fc.comisiones)
+      if (fc.comisiones !== null) { llenarVendedoresPct('ad-fc', fc.comisiones); fc.vendedoresPintados = true }
+    }
+
+    // Hay un cambio sin guardar (esperando el retardo o en camino): lo que se
+    // ve de los importes todavía no es lo último.
+    function facturarPendiente(fc) {
+      return !!fc && (!!fc.reloj || fc.guardando || fc.cargando)
+    }
+
+    function puntoListo(fc, parte) {
+      return !!fc?.datos && !facturarPendiente(fc) && !fc.errorGuardar && puntosDePct(fc.datos.pct_a).includes(parte)
+    }
+
+    // Actualiza las partes del esqueleto SIN redibujarlo: los campos que se
+    // están escribiendo (el % y los números de factura) quedan como están.
+    function actualizarFacturar() {
+      const fc = estado.facturar
+      if (!fc || !fc.armado) return
+      if (!fc.vendedoresPintados && fc.comisiones !== null) pintarVendedoresFacturar()
+      const cond = document.getElementById('ad-fc-condicion')
+      if (cond) cond.textContent = textoCondicion(fc.codigo, fc.pctA) || 'Elegí la condición o escribí el % del ' + codigoPunto(fc.codigo, 'A') + '.'
+      for (const n of CONDICIONES_RAPIDAS) {
+        document.getElementById('ad-fc-rapida-' + n)?.setAttribute('aria-pressed', numeroONulo(fc.pctA) === n ? 'true' : 'false')
+      }
+      const est = document.getElementById('ad-fc-estado')
+      if (est) {
+        est.textContent = fc.cargando && !fc.guardando ? 'Calculando…'
+          : facturarPendiente(fc) ? 'Guardando…'
+          : fc.errorGuardar ? ''
+          : !fc.guardada ? 'Todavía no se guardó en esta orden: tocá la condición para guardarla.'
+          : 'Guardado.'
+      }
+      const err = document.getElementById('ad-fc-error')
+      if (err) { err.textContent = fc.errorGuardar ?? ''; err.hidden = !fc.errorGuardar }
+      const aviso = document.getElementById('ad-fc-aviso')
+      if (aviso) aviso.innerHTML = fc.aviso ? `<div class="ad-aviso">${esc(fc.aviso)}</div>` : ''
+      // Con lo que ya devolvió la base: los puntos que lleva y sus totales.
+      const partes = partesFacturaOrden(fc.datos ? fc.datos.pct_a : fc.pctA, fc.facturas)
+      for (const p of [...PARTES_DIVISION, PARTE_UNICA]) {
+        const caja = document.getElementById(idFc('punto', p))
+        if (!caja) continue
+        caja.hidden = !partes.includes(p)
+        actualizarFacturaPunto(p)
+        if (p === PARTE_UNICA) continue
+        const tot = document.getElementById(idFc('totales', p))
+        if (tot) {
+          tot.innerHTML = fc.datos ? htmlTotalesPunto(fc.datos, p, fc.moneda) : (fc.cargando ? '<div class="ad-vacio">Calculando…</div>' : '')
+          tot.classList.toggle('ad-fc-punto__totales--viejo', facturarPendiente(fc))
+        }
+        const listo = puntoListo(fc, p)
+        const pp = fc.puntos[p] ?? {}
+        const imp = document.getElementById(idFc('imprimir', p))
+        if (imp) imp.disabled = !listo
+        const com = document.getElementById(idFc('compartir', p))
+        if (com) { com.disabled = !listo || !!pp.compartiendo; com.textContent = pp.compartiendo ? 'Armando el PDF…' : 'Compartir PDF' }
+        const pe = document.getElementById(idFc('punto-error', p))
+        if (pe) { pe.textContent = pp.error ?? ''; pe.hidden = !pp.error }
+      }
+    }
+
+    // La factura de un punto: lo guardado, "Ver el PDF", el error y el botón.
+    function actualizarFacturaPunto(parte) {
+      const fc = estado.facturar
+      if (!fc || !fc.armado) return
+      const f = fc.facturas?.[parte]
+      const c = fc.cargas?.[parte] ?? {}
+      const g = document.getElementById(idFc('guardada', parte))
+      if (g) { g.textContent = f?.numero ? 'Factura ' + f.numero : 'sin cargar'; g.className = f?.numero ? 'ad-facturas-orden__numero' : 'ad-texto-suave' }
+      const ver = document.getElementById(idFc('ver-pdf', parte))
+      if (ver) ver.hidden = !f?.archivo_url
+      const rot = document.getElementById(idFc('pdf-rotulo', parte))
+      if (rot) rot.textContent = f?.archivo_url ? 'Cambiar el PDF (opcional)' : 'Subir PDF (opcional)'
+      const e = document.getElementById(idFc('factura-error', parte))
+      if (e) { e.textContent = c.error ?? ''; e.hidden = !c.error }
+      const b = document.getElementById(idFc('factura', parte))
+      if (b) { b.disabled = !!c.enviando; b.textContent = c.enviando ? 'Guardando…' : 'Guardar la factura' }
+    }
+
+    // ── Cambiar la condición o una comisión: se guarda solo ──────────────
+    // Un rato después de la última tecla (ESPERA_GUARDAR_DIVISION) va
+    // guardar_division_orden con lo que hay en pantalla. Cada cambio sube el
+    // turno: una respuesta de antes no pisa lo que se ve. Y nunca hay dos
+    // guardados en camino: si llega un cambio mientras uno viaja, al volver
+    // se manda otra vez con lo último (así la base termina con lo de la pantalla).
+
+    function elegirPctFacturar(n) {
+      const fc = estado.facturar
+      if (!fc) return
+      fc.pctA = numeroONulo(n)
+      ponerNumero(document.getElementById('ad-fc-otro'), fc.pctA)
+      programarGuardarFacturar(fc)
+    }
+
+    function escribirPctFacturar(valor) {
+      const fc = estado.facturar
+      if (!fc) return
+      fc.pctA = numeroONulo(valor)
+      programarGuardarFacturar(fc)
+    }
+
+    function cambiarVendedorFacturar(vendedorId, valor) {
+      const fc = estado.facturar
+      const v = fc?.comisiones?.find(x => x.vendedor_id === vendedorId)
       if (!v) return
       v.pct = valor
-      programarVistaDivision(dv)
+      programarGuardarFacturar(fc)
     }
 
-    function programarVistaDivision(dv) {
-      if (dv.reloj) clearTimeout(dv.reloj)
-      dv.reloj = setTimeout(() => pedirVistaDivision(), ESPERA_VISTA_DIVISION)
+    function programarGuardarFacturar(fc) {
+      fc.turno++
+      fc.errorGuardar = null
+      if (fc.reloj) clearTimeout(fc.reloj)
+      fc.reloj = setTimeout(() => guardarFacturar(fc), ESPERA_GUARDAR_DIVISION)
+      actualizarFacturar()
     }
 
-    // La vista previa con los % de la ventana, SIN guardar
-    // (datos_division_orden con p_pct_a y p_comisiones). Una respuesta
-    // vieja no pisa a una más nueva (dv.turno).
-    async function pedirVistaDivision() {
-      const dv = estado.division
-      if (!dv) return
-      dv.reloj = null
-      const { a } = camposDivision()
-      const pctA = leerCampoNumero(a)
-      const turno = ++dv.turno
-      const invalido = pctA === null ? 'Poné el % de la parte A para ver cómo queda.' : validarDivision(pctA, dv.comisiones)
-      if (invalido) { dv.datos = null; dv.aviso = invalido; dv.cargando = false; pintarDivision(); return }
-      dv.cargando = true
-      pintarDivision()
+    // Las reglas de guardar_division_orden, con el código del punto.
+    function validarDivision(pctA, comisiones, codigo) {
+      if (pctA === null || pctA === undefined || !(Number(pctA) >= 0 && Number(pctA) <= 100)) return `El % del ${codigoPunto(codigo, 'A')} va de 0 a 100.`
+      return validarComisiones(comisiones)
+    }
+
+    async function guardarFacturar(fc) {
+      fc.reloj = null
+      const invalido = validarDivision(fc.pctA, fc.comisiones, fc.codigo)
+      if (invalido) { fc.errorGuardar = invalido; if (estado.facturar === fc) actualizarFacturar(); return }
+      if (fc.enCamino) { fc.otraVez = true; return }
+      const turno = fc.turno
+      fc.guardando = true
+      if (estado.facturar === fc) actualizarFacturar()
+      const viaje = supabase.rpc('guardar_division_orden', parametrosDivision(fc.ordenId, fc.pctA, fc.comisiones))
+      fc.enCamino = viaje
       try {
-        const { data, error } = await supabase.rpc('datos_division_orden', parametrosDivision(dv.ordenId, pctA, dv.comisiones))
+        const { data, error } = await viaje
         if (error) throw error
-        if (estado.division !== dv || turno !== dv.turno) return
-        dv.datos = data
-        dv.aviso = null
-      } catch (err) {
-        if (estado.division !== dv || turno !== dv.turno) return
-        console.error('No se pudo calcular la vista previa:', err)
-        dv.datos = null
-        dv.aviso = err?.message || 'No se pudo calcular la división. Probá de nuevo.'
-      }
-      dv.cargando = false
-      pintarDivision()
-    }
-
-    function pintarDivision() {
-      const dv = estado.division
-      if (!dv) return
-      document.getElementById('ad-dv-titulo').textContent = ('Dividir para facturar · ' + (dv.codigo ?? '')).trim()
-      document.getElementById('ad-dv-aviso').innerHTML = dv.aviso ? `<div class="ad-aviso">${esc(dv.aviso)}</div>` : ''
-      document.getElementById('ad-dv-vista').innerHTML = dv.datos
-        ? htmlHojaDivision(dv.datos, dv.facturas, dv.moneda)
-        : (dv.cargando ? '<div class="ad-vacio">Calculando…</div>' : '')
-      const e = document.getElementById('ad-dv-error')
-      e.textContent = dv.errorGuardar ?? ''
-      e.hidden = !dv.errorGuardar
-      const g = document.getElementById('ad-dv-guardar')
-      g.disabled = dv.guardando
-      g.textContent = dv.guardando ? 'Guardando…' : 'Guardar e imprimir'
-    }
-
-    // Guarda la división en la orden (guardar_division_orden devuelve lo
-    // mismo que datos_division_orden) y después imprime la hoja. El error de
-    // la base va tal cual, pegado al botón; un doble toque manda una vez.
-    async function guardarEImprimirDivision() {
-      const dv = estado.division
-      if (!dv || dv.guardando) return
-      const { a } = camposDivision()
-      const pctA = leerCampoNumero(a)
-      dv.errorGuardar = validarDivision(pctA, dv.comisiones)
-      if (dv.errorGuardar) { pintarDivision(); return }
-      if (dv.reloj) { clearTimeout(dv.reloj); dv.reloj = null }
-      dv.guardando = true
-      dv.turno++  // una vista previa en camino ya no pisa lo guardado
-      pintarDivision()
-      try {
-        const { data, error } = await supabase.rpc('guardar_division_orden', parametrosDivision(dv.ordenId, pctA, dv.comisiones))
-        if (error) throw error
-        if (estado.division !== dv) return
-        dv.datos = data
-        dv.aviso = null
-        dv.cargando = false
-        if (Array.isArray(data?.facturas)) dv.facturas = facturasPorParte(data.facturas)
-        const cambianLasPartes = !dv.seDivide
-        dv.seDivide = true
-        // La orden abierta se entera sin releerla: su bloque de facturas lo dice.
-        const o = estado.orden?.orden
-        if (o?.id === dv.ordenId) {
-          o.division_pct_a = data?.pct_a ?? pctA
-          if (Array.isArray(data?.facturas)) estado.orden.facturas = data.facturas
-          pintarOrden()
+        fc.guardada = true
+        anotarDivisionGuardada(fc.ordenId, data?.pct_a ?? fc.pctA)
+        if (turno === fc.turno) {
+          fc.datos = data
+          fc.errorGuardar = null
+          if (Array.isArray(data?.facturas)) fc.facturas = facturasPorParte(data.facturas)
         }
-        if (cambianLasPartes) pintarFacturasDivision()
-        dv.guardando = false
-        pintarDivision()
-        imprimirDivision(data, { despuesDeGuardar: true })
       } catch (err) {
         console.error('No se pudo guardar la división:', err)
-        if (estado.division === dv) dv.errorGuardar = err?.message || 'No se pudo guardar la división. Probá de nuevo.'
+        // Los mensajes de guardar_division_orden vienen escritos para una persona: tal cual.
+        if (turno === fc.turno) fc.errorGuardar = err?.message || 'No se pudo guardar. Probá de nuevo.'
       } finally {
-        dv.guardando = false
-        if (estado.division === dv) pintarDivision()
+        fc.enCamino = null
+        fc.guardando = false
+        if (fc.otraVez) { fc.otraVez = false; if (!fc.reloj) guardarFacturar(fc) }
+        if (estado.facturar === fc) actualizarFacturar()
       }
+    }
+
+    // ── Imprimir y compartir UN punto ────────────────────────────────────
+    // Cada punto es un documento aparte: imprimir el N1 saca SOLO el N1 (A4
+    // vertical) y su PDF es propio. Se imprime en el toque (sin await: el
+    // iPhone), con lo último que devolvió la base; mientras se guarda un
+    // cambio, los botones esperan.
+    function imprimirPunto(parte) {
+      const fc = estado.facturar
+      if (!puntoListo(fc, parte)) return
+      olvidarHoja(impresionHoja())
+      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +
+        `<div class="opv-papel">${htmlHojaPunto(fc.datos, parte, fc.moneda)}</div>`
+      window.print()
+    }
+
+    // El PDF en el navegador (html2canvas + jsPDF, de cdnjs, recién cuando
+    // hacen falta), como el de la nota de débito: UNA hoja (si no entra, sigue
+    // en otra página del mismo PDF), con 8 mm de margen.
+    async function pdfPunto(datos, parte, moneda) {
+      for (const url of LIBRERIAS_PDF) await cargarScript(url)
+      const cont = document.createElement('div')
+      cont.className = 'opv-papel'
+      cont.style.cssText = 'position:fixed;left:-10000px;top:0;width:194mm;background:#fff'
+      cont.innerHTML = htmlHojaPunto(datos, parte, moneda)
+      document.body.appendChild(cont)
+      try {
+        if (document.fonts?.ready) await document.fonts.ready
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
+        const canvas = await window.html2canvas(cont.querySelector('.opv') ?? cont, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+        const alto = canvas.height * 194 / canvas.width
+        const img = canvas.toDataURL('image/jpeg', 0.92)
+        const porPagina = 281
+        const paginas = Math.max(1, Math.ceil(alto / porPagina))
+        for (let k = 0; k < paginas; k++) {
+          if (k > 0) pdf.addPage()
+          pdf.addImage(img, 'JPEG', 8, 8 - k * porPagina, 194, alto)
+        }
+        return pdf.output('blob')
+      } finally {
+        cont.remove()
+      }
+    }
+
+    // Compartir (WhatsApp, mail…) con navigator.share; si el dispositivo no
+    // comparte archivos, se descarga.
+    async function compartirPunto(parte) {
+      const fc = estado.facturar
+      if (!puntoListo(fc, parte)) return
+      const pp = fc.puntos[parte] ??= { compartiendo: false, error: null }
+      if (pp.compartiendo) return
+      pp.compartiendo = true
+      pp.error = null
+      actualizarFacturar()
+      const datos = fc.datos
+      try {
+        const blob = await pdfPunto(datos, parte, fc.moneda)
+        const nombre = nombrePdfPunto(datos, parte)
+        const archivo = typeof File === 'function' ? new File([blob], nombre, { type: 'application/pdf' }) : null
+        let compartido = false
+        if (archivo && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+          try {
+            await navigator.share({ files: [archivo], title: nombre.replace(/\.pdf$/, ''), text: nombre.replace(/\.pdf$/, '') })
+            compartido = true
+          } catch (err) {
+            if (err?.name === 'AbortError') compartido = true
+          }
+        }
+        if (!compartido) {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = nombre
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          setTimeout(() => URL.revokeObjectURL(url), 60000)
+          mostrarExito('Se descargó el PDF: ' + nombre)
+        }
+      } catch (err) {
+        console.error('No se pudo armar el PDF del punto:', err)
+        pp.error = err?.message ? 'No se pudo armar el PDF: ' + err.message : 'No se pudo armar el PDF. Probá de nuevo.'
+      }
+      pp.compartiendo = false
+      if (estado.facturar === fc) actualizarFacturar()
     }
 
     // ── Los números de factura de ARCA ──────────────────────────────────
-
-    // Una parte en la ventana: su número guardado, el campo para pegar el
-    // de ARCA (3 a 40 letras), el PDF opcional y "Guardar la factura".
-    function htmlFacturaDivision(dv, parte) {
-      const f = dv.facturas?.[parte]
-      const c = dv.cargas?.[parte] ?? {}
-      const id = parte.toLowerCase()
-      return `<div class="ad-dv-factura" data-dv-parte="${esc(parte)}">` +
-        `<div class="ad-dv-factura__cab"><span class="ad-dv-factura__rotulo">${esc(rotuloParte(dv.codigo, parte))}</span>` +
-        `<span class="${f?.numero ? 'ad-facturas-orden__numero' : 'ad-texto-suave'}" data-dv-guardada="${esc(parte)}">${esc(f?.numero ? 'Factura ' + f.numero : 'Sin factura cargada')}</span>` +
-        (f?.archivo_url ? `<button type="button" class="ad-link" data-dv-ver-pdf="${esc(parte)}">Ver el PDF</button>` : '') + '</div>' +
-        `<div class="ad-campo"><label for="ad-dv-numero-${esc(id)}">N° de factura ARCA</label>` +
-        `<input type="text" class="ad-input" id="ad-dv-numero-${esc(id)}" maxlength="40" autocomplete="off" placeholder="Pegá el número que dio ARCA" value="${esc(f?.numero ?? '')}"></div>` +
-        `<div class="ad-campo"><label for="ad-dv-pdf-${esc(id)}">${f?.archivo_url ? 'Cambiar el PDF (opcional)' : 'Subir PDF (opcional)'}</label>` +
-        `<input type="file" class="ad-dv-factura__archivo" id="ad-dv-pdf-${esc(id)}" accept="application/pdf,.pdf"></div>` +
-        `<p class="ad-error-pegado" data-dv-factura-error="${esc(parte)}"${c.error ? '' : ' hidden'}>${esc(c.error ?? '')}</p>` +
-        `<button type="button" class="ad-btn ad-btn--secundario" data-dv-factura="${esc(parte)}"${c.enviando ? ' disabled' : ''}>${c.enviando ? 'Guardando…' : 'Guardar la factura'}</button></div>`
-    }
-
-    function pintarFacturasDivision() {
-      const dv = estado.division
-      if (!dv) return
-      const aviso = dv.seDivide ? '' : '<p class="ad-texto-suave">Esta orden no se divide: va en una factura única. Para dividirla, completá los % de arriba y tocá «Guardar e imprimir».</p>'
-      document.getElementById('ad-dv-facturas').innerHTML = aviso + partesFacturaOrden(dv.seDivide, dv.facturas).map(p => htmlFacturaDivision(dv, p)).join('')
-    }
-
-    // Repinta SOLO el error y el botón de una parte: repintar todo borraría
-    // lo que se pegó en las otras.
-    function pintarFacturaParte(parte) {
-      const c = estado.division?.cargas?.[parte]
-      const caja = document.querySelector(`#ad-dv-facturas [data-dv-parte="${parte}"]`)
-      if (!c || !caja) return
-      const e = caja.querySelector('[data-dv-factura-error]')
-      if (e) { e.textContent = c.error ?? ''; e.hidden = !c.error }
-      const b = caja.querySelector('[data-dv-factura]')
-      if (b) { b.disabled = !!c.enviando; b.textContent = c.enviando ? 'Guardando…' : 'Guardar la factura' }
-    }
 
     // La ruta del PDF en el bucket 'comprobantes'. La policy de Storage deja
     // subir SOLO adentro de la carpeta del usuario (<uid>/…), así que
@@ -5811,10 +6008,10 @@
       return `${uid}/facturas-venta/${unidadId}/${anio}/${codigo}-${parte}.pdf`
     }
 
-    async function subirPdfFactura(dv, parte, archivo) {
+    async function subirPdfFactura(fc, parte, archivo) {
       const uid = estado.sesion?.user?.id
       if (!uid) throw new Error('No se pudo identificar tu usuario para subir el PDF.')
-      const ruta = rutaPdfFactura(uid, dv.unidad, dv.fecha, dv.codigo, parte)
+      const ruta = rutaPdfFactura(uid, fc.unidad, fc.fecha, fc.codigo, parte)
       const subir = (r) => supabase.storage.from('comprobantes').upload(r, archivo, { contentType: 'application/pdf', upsert: false })
       let { error } = await subir(ruta)
       if (!error) return ruta
@@ -5828,40 +6025,38 @@
       throw new Error('No se pudo subir el PDF: ' + (error.message || 'probá de nuevo.'))
     }
 
-    async function guardarFacturaDivision(parte) {
-      const dv = estado.division
-      if (!dv || !partesFacturaOrden(dv.seDivide, dv.facturas).includes(parte)) return
-      const c = dv.cargas[parte] ??= { error: null, enviando: false }
+    async function guardarFacturaPunto(parte) {
+      const fc = estado.facturar
+      if (!fc || ![...PARTES_DIVISION, PARTE_UNICA].includes(parte)) return
+      const c = fc.cargas[parte] ??= { error: null, enviando: false }
       if (c.enviando) return
       const id = parte.toLowerCase()
-      const numero = String(document.getElementById(`ad-dv-numero-${id}`).value ?? '').trim()
-      const archivo = document.getElementById(`ad-dv-pdf-${id}`).files?.[0] ?? null
+      const numero = String(document.getElementById(`ad-fc-numero-${id}`)?.value ?? '').trim()
+      const archivo = document.getElementById(`ad-fc-pdf-${id}`)?.files?.[0] ?? null
       c.error = validarNumeroFactura(numero) ?? validarPdfFactura(archivo)
-      if (c.error) { pintarFacturaParte(parte); return }
+      if (c.error) { actualizarFacturaPunto(parte); return }
       c.enviando = true
-      pintarFacturaParte(parte)
+      actualizarFacturaPunto(parte)
       try {
-        const ruta = archivo ? await subirPdfFactura(dv, parte, archivo) : null
-        const { error } = await supabase.rpc('guardar_factura_orden', { p_orden_id: dv.ordenId, p_parte: parte, p_numero: numero, p_archivo_url: ruta })
+        const ruta = archivo ? await subirPdfFactura(fc, parte, archivo) : null
+        const { error } = await supabase.rpc('guardar_factura_orden', { p_orden_id: fc.ordenId, p_parte: parte, p_numero: numero, p_archivo_url: ruta })
         if (error) throw error
         // La base deja el PDF de antes si no vino uno nuevo (coalesce).
-        const nueva = { numero, archivo_url: ruta ?? dv.facturas[parte]?.archivo_url ?? null }
-        dv.facturas[parte] = nueva
+        const nueva = { numero, archivo_url: ruta ?? fc.facturas[parte]?.archivo_url ?? null }
+        fc.facturas[parte] = nueva
         c.enviando = false
         c.error = null
         const d = estado.orden
-        if (d?.orden?.id === dv.ordenId && Array.isArray(d.facturas)) {
-          d.facturas = [...d.facturas.filter(f => f.parte !== parte), { parte, ...nueva }]
-          pintarOrden()
-        }
-        mostrarExito(`${rotuloParte(dv.codigo, parte)}: se guardó la factura ${numero}.`)
-        if (estado.division === dv) { pintarFacturasDivision(); pintarDivision() }
+        if (d?.orden?.id === fc.ordenId && Array.isArray(d.facturas)) d.facturas = [...d.facturas.filter(f => f.parte !== parte), { parte, ...nueva }]
+        actualizarFilaOrden(fc.ordenId, {})
+        mostrarExito(`${codigoPunto(fc.codigo, parte)}: se guardó la factura ${numero}.`)
+        if (estado.facturar === fc) actualizarFacturar()
       } catch (err) {
         console.error('No se pudo guardar la factura:', err)
         // Los mensajes de guardar_factura_orden vienen escritos para una persona: tal cual.
         c.error = err?.message || 'No se pudo guardar la factura. Probá de nuevo.'
         c.enviando = false
-        if (estado.division === dv) pintarFacturaParte(parte)
+        if (estado.facturar === fc) actualizarFacturaPunto(parte)
       }
     }
 
@@ -5869,10 +6064,10 @@
     // bucket). La pestaña se abre ANTES de esperar a la base: si no, el
     // navegador la toma por una ventana emergente y la frena.
     async function verPdfFactura(parte) {
-      const dv = estado.division
-      const ruta = dv?.facturas?.[parte]?.archivo_url
+      const fc = estado.facturar
+      const ruta = fc?.facturas?.[parte]?.archivo_url
       if (!ruta) return
-      const c = dv.cargas[parte] ??= { error: null, enviando: false }
+      const c = fc.cargas[parte] ??= { error: null, enviando: false }
       const pestana = window.open ? window.open('', '_blank') : null
       try {
         const { data, error } = await supabase.storage.from('comprobantes').createSignedUrl(ruta, 300)
@@ -5884,7 +6079,39 @@
         if (pestana) pestana.close()
         c.error = 'No se pudo abrir el PDF con tu usuario.'
       }
-      if (estado.division === dv) pintarFacturaParte(parte)
+      if (estado.facturar === fc) actualizarFacturaPunto(parte)
+    }
+
+    // ── EL LISTADO SIEMPRE AL DÍA (28/10/2026) ───────────────────────────
+    // Se relee solo al volver a la pestaña (visibilitychange / focus) y cada
+    // RELEER_ORDENES_CADA mientras se ve, SIN "Cargando…": la lista vieja
+    // queda hasta que llega la nueva, el scroll no se mueve y la orden abierta
+    // (y lo que se esté escribiendo en ella) no se toca.
+    const RELEER_ORDENES_CADA = 60000
+
+    function listaOrdenesALaVista() {
+      const v = document.getElementById('ad-vista-ordenes')
+      return !!v && !v.hidden && Array.isArray(estado.ordenes) && !document.hidden
+    }
+
+    async function releerOrdenesEnSilencio() {
+      if (!listaOrdenesALaVista() || estado.releyendoOrdenes || !estado.empresaId) return
+      const turno = turnoOrdenes
+      const empresa = estado.empresaId
+      estado.releyendoOrdenes = true
+      try {
+        const lista = await leerOrdenes(empresa, estado.filtros)
+        if (turno !== turnoOrdenes || empresa !== estado.empresaId || !Array.isArray(estado.ordenes)) return
+        const caja = document.getElementById('ad-ordenes-lista')
+        const scroll = caja?.scrollTop ?? 0
+        estado.ordenes = lista
+        pintarOrdenes()
+        if (caja) caja.scrollTop = scroll
+      } catch (err) {
+        console.error('No se pudo releer la lista de órdenes:', err)
+      } finally {
+        estado.releyendoOrdenes = false
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -9228,8 +9455,8 @@
         // Las órdenes leen la condición de la lista de clientes: que la relea.
         estado.clientes = null
         mostrarExito(pctA === null
-          ? 'Condición de venta guardada: sus órdenes no se dividen.'
-          : `Condición de venta guardada: parte A ${textoPct(pctA)} % · parte B ${textoPct(complementoPct(pctA))} %.`)
+          ? 'Condición de venta guardada: sus órdenes van todas al punto de venta 1.'
+          : `Condición de venta guardada: punto 1 ${textoPct(pctA)} % · punto 2 ${textoPct(complementoPct(pctA))} %.`)
       } catch (err) {
         console.error('No se pudo guardar la condición de venta:', err)
         // Los mensajes de guardar_condicion_venta_cliente vienen escritos para una persona: tal cual.
@@ -14630,7 +14857,7 @@
       window.addEventListener('popstate', (e) => alVolverNavegador(e))
       // Lista | detalle: al girar la tablet o achicar la ventana, se rearma.
       window.matchMedia?.(MQ_LISTA_DETALLE)?.addEventListener?.('change', () => aplicarListaDetalle())
-      for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar', 'ad-filtro-comision']) {
+      for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar']) {
         document.getElementById(id).addEventListener('change', () => leerFiltros(id))
       }
       // El "Período" (js/periodo.js) envuelve estos dos campos: les pone la fecha y
@@ -14668,37 +14895,36 @@
       document.getElementById('ad-btn-anular').addEventListener('click', () => pedirAnular())
       document.getElementById('ad-anular-si').addEventListener('click', () => confirmarAnular())
       document.getElementById('ad-anular-no').addEventListener('click', () => cancelarAnular())
-      // Dividir para facturar (21/10/2026): la ventana, sus % y las facturas.
-      document.getElementById('ad-btn-dividir').addEventListener('click', () => abrirDivision())
-      document.getElementById('ad-dv-cerrar').addEventListener('click', () => cerrarDivision())
-      document.getElementById('ad-dv-cancelar').addEventListener('click', () => cerrarDivision())
-      document.getElementById('ad-dv-guardar').addEventListener('click', () => guardarEImprimirDivision())
-      document.getElementById('ad-dv-pct-a').addEventListener('input', () => cambiarPctDivision('a'))
-      document.getElementById('ad-dv-pct-b').addEventListener('input', () => cambiarPctDivision('b'))
-      document.getElementById('ad-dv-vendedores').addEventListener('input', (e) => {
-        const id = e.target.dataset?.vendedorPct
-        if (id) cambiarVendedorDivision(id, leerCampoNumero(e.target))
-      })
-      document.getElementById('ad-dv-facturas').addEventListener('click', (e) => {
+      // Las órdenes de pedido N1 / N2 (28/10/2026): la condición, los
+      // vendedores, imprimir / compartir cada punto y sus facturas.
+      const facturar = document.getElementById('ad-orden-facturar')
+      facturar.addEventListener('click', (e) => {
         let b
-        if ((b = e.target.closest('[data-dv-factura]'))) guardarFacturaDivision(b.dataset.dvFactura)
-        else if ((b = e.target.closest('[data-dv-ver-pdf]'))) verPdfFactura(b.dataset.dvVerPdf)
+        if ((b = e.target.closest('[data-fc-pct]'))) elegirPctFacturar(Number(b.dataset.fcPct))
+        else if ((b = e.target.closest('[data-fc-imprimir]'))) imprimirPunto(b.dataset.fcImprimir)
+        else if ((b = e.target.closest('[data-fc-compartir]'))) compartirPunto(b.dataset.fcCompartir)
+        else if ((b = e.target.closest('[data-fc-factura]'))) guardarFacturaPunto(b.dataset.fcFactura)
+        else if ((b = e.target.closest('[data-fc-ver-pdf]'))) verPdfFactura(b.dataset.fcVerPdf)
       })
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('ad-dv').hidden) cerrarDivision() })
+      facturar.addEventListener('input', (e) => {
+        const t = e.target
+        if (t.id === 'ad-fc-otro') escribirPctFacturar(leerCampoNumero(t))
+        else if (t.dataset?.vendedorPct) cambiarVendedorFacturar(t.dataset.vendedorPct, leerCampoNumero(t))
+      })
+      // El listado se relee solo (28/10/2026): al volver a la pestaña y cada
+      // minuto mientras se ve.
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) releerOrdenesEnSilencio() })
+      window.addEventListener('focus', () => releerOrdenesEnSilencio())
+      setInterval(() => releerOrdenesEnSilencio(), RELEER_ORDENES_CADA)
       const cuerpo = document.getElementById('ad-orden-cuerpo')
       cuerpo.addEventListener('input', (e) => {
         const t = e.target
         if (t.dataset?.precio !== undefined) cambiarPrecio(t.dataset.precio, leerCampoNumero(t))
-        else if (t.id === 'ad-comision-valor') cambiarValorComision(leerCampoNumero(t))
       })
       cuerpo.addEventListener('click', (e) => {
         let b
         if (e.target.closest('#ad-valorizar-guardar')) guardarValorizacion()
         else if (e.target.closest('#ad-valorizar-cancelar')) cancelarValorizar()
-        else if (e.target.closest('#ad-btn-comision')) abrirComision()
-        else if ((b = e.target.closest('[data-comision-modo]'))) elegirModoComision(b.dataset.comisionModo)
-        else if (e.target.closest('#ad-comision-guardar')) guardarComision()
-        else if (e.target.closest('#ad-comision-cancelar')) cancelarComision()
         else if (e.target.closest('#ad-falta-lista-cerrar')) cerrarFaltaLista()
         else if (e.target.closest('#ad-falta-lista-ficha')) irAFichaDesdeOrden()
       })

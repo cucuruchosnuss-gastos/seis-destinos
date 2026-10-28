@@ -132,7 +132,7 @@ for (const [v, rel] of Object.entries(ARCHIVOS)) {
   // "‹ Órdenes" / "‹ Listas" siguen a la vista en la compu (vuelven a la lista sola).
   chk('CSS: el "‹ Órdenes" / "‹ Listas" del detalle no se esconde', !/#ad-orden-volver[^{]*\{[^}]*display: none/.test(css) && !/#ad-lista-volver[^{]*\{[^}]*display: none/.test(css))
   chk('CSS: en la columna angosta los filtros de las órdenes van de a dos', /\.ad-md--lado \.ad-filtros \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/.test(css))
-  chk('HTML: órdenes y una orden en el mismo contenedor', /<div class="ad-md" id="ad-md-ordenes">\s*(<!--[\s\S]*?-->\s*)?<section id="ad-vista-ordenes"/.test(adm) && /<div id="ad-orden-cuerpo"><\/div>\s*<\/section>\s*<\/div>/.test(adm))
+  chk('HTML: órdenes y una orden en el mismo contenedor', /<div class="ad-md" id="ad-md-ordenes">\s*(<!--[\s\S]*?-->\s*)?<section id="ad-vista-ordenes"/.test(adm) && /<div id="ad-orden-cuerpo"><\/div>\s*(<!--[\s\S]*?-->\s*)?(<div id="ad-orden-facturar" hidden><\/div>\s*)?<\/section>\s*<\/div>/.test(adm))
   chk('HTML: las listas y una lista en el mismo contenedor', /<div class="ad-md ad-md--listas" id="ad-md-listas">\s*(<!--[\s\S]*?-->\s*)?<section id="ad-vista-listas"/.test(adm) && /id="ad-lista-descartar">Descartar los cambios<\/button>\s*<\/div>\s*<\/div>\s*<\/section>\s*<\/div>/.test(adm))
 
   const nuevo = (compu) => {
