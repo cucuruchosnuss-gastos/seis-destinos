@@ -3,23 +3,19 @@
 // tablet (768) y 1280 px:
 //  - "Configuración de comisiones": los 3 vendedores en orden con su %, el
 //    total, guardar_comision_vendedor y el error de la base tal cual.
-//  - La ficha del cliente: "Parte A %" completa sola la "Parte B %"; cada
-//    vendedor con el % de la configuración (marcado) o propio; cambiar uno lo
-//    deja propio; "volver al de la configuración" manda null; se guarda con
-//    guardar_condicion_venta_cliente; el error de la base tal cual.
-//  - Una orden valorizada: "Dividir para facturar" abre la ventana prellenada
-//    con datos_division_orden (A, B y los 3 vendedores); cambiar los % pide la
-//    vista previa SIN guardar con p_comisiones; un cambio puntual de un
-//    vendedor; "Guardar e imprimir" llama a guardar_division_orden y después
-//    imprime la hoja (A4, una línea por vendedor y los totales debajo de la
-//    tabla, los renglones en 0 afuera).
-//  - Los números de factura de ARCA: A con número solo, B con PDF, el error
-//    de la base tal cual; sin condición de venta, la factura única.
+//  - La ficha del cliente: "Punto de venta 1 %" completa solo el "Punto de
+//    venta 2 %"; cada vendedor con el % de la configuración (marcado) o
+//    propio; cambiar uno lo deja propio; "volver al de la configuración" manda
+//    null; se guarda con guardar_condicion_venta_cliente; el error de la base
+//    tal cual.
+// Desde el 28/10/2026 la orden valorizada (los puntos N1 / N2 en la misma
+// pantalla, sin la ventana "Dividir para facturar") la recorre
+// e2e/95-valorizar-con-division.spec.js.
 // La base responde con 'maqueta.cambios' (no se tocan los datos de otras pruebas).
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || `http://localhost:${process.env.E2E_PUERTO_MAQUETA || 4180}`;
 
 function anotarRpc(page) {
   const rpc = [];
@@ -90,176 +86,9 @@ async function abrirAdministracion(page, { conCondicion = true, propias = [] } =
   await page.evaluate(() => { window.__impresiones = 0; window.print = () => { window.__impresiones++; }; });
 }
 
-async function abrirOrden(page) {
-  await page.locator('[data-pestana="ordenes"]').first().click();
-  await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
-  await page.locator('#ad-ordenes-lista [data-orden="o12"]').click();
-  await expect(page.locator('#ad-facturas-orden')).toBeVisible();
-}
-
-// La ventana entra en la pantalla y no hay scroll de costado.
-async function ventanaEntra(page, nombre) {
-  const caja = await page.locator('.ad-dv__caja').boundingBox();
-  const vp = page.viewportSize();
-  expect(caja.x >= 0 && caja.x + caja.width <= vp.width + 1, `${nombre}: la ventana entra a lo ancho`).toBe(true);
-  expect(await sinScrollHorizontal(page), `${nombre}: sin scroll horizontal`).toBe(true);
-  const desborde = await page.locator('.ad-dv__caja').evaluate(el => el.scrollWidth > el.clientWidth + 1);
-  expect(desborde, `${nombre}: nada se sale de la ventana`).toBe(false);
-}
-
 const TAMANOS = [['390', 390, 844], ['360', 360, 740], ['tablet', 768, 1024], ['1280', 1280, 900]];
 
 for (const [nombre, ancho, alto] of TAMANOS) {
-  test(`${nombre}: dividir una orden para facturar, imprimir y cargar las facturas`, async ({ page }, info) => {
-    const errores = vigilarErrores(page);
-    const rpc = anotarRpc(page);
-    await page.setViewportSize({ width: ancho, height: alto });
-    await abrirAdministracion(page);
-    await abrirOrden(page);
-    await expect(page.locator('#ad-facturas-orden')).toContainText('Su condición de venta: parte A 30 % · parte B 70 %');
-    await expect(page.locator('#ad-facturas-orden [data-factura-parte="A"]')).toContainText('sin factura cargada');
-
-    // La ventana, prellenada con lo de la base: A, B y los 3 vendedores.
-    await page.locator('#ad-btn-dividir').click();
-    await expect(page.locator('#ad-dv')).toBeVisible();
-    await expect(page.locator('#ad-dv-pct-a')).toHaveValue('30');
-    await expect(page.locator('#ad-dv-pct-b')).toHaveValue('70');
-    await expect(page.locator('#ad-dv-v1')).toHaveValue('2');
-    await expect(page.locator('#ad-dv-v2')).toHaveValue('3');
-    await expect(page.locator('#ad-dv-v3')).toHaveValue('4');
-    await expect(page.locator('label[for="ad-dv-v1"]')).toHaveText('Vendedor 1 %');
-    await expect(page.locator('#ad-dv-vista [data-parte="A"]')).toContainText('N-0013-A');
-    expect(rpc.find(r => r.nombre === 'datos_division_orden').params).toEqual({ p_orden_id: 'o12', p_pct_a: null, p_comisiones: null });
-    await ventanaEntra(page, 'al abrir');
-    await captura(page, `division-ventana-${nombre}`, info);
-
-    // B se completa sola; la vista previa con 40 % SIN guardar, con los 3 vendedores.
-    await page.locator('#ad-dv-pct-a').fill('40');
-    await expect(page.locator('#ad-dv-pct-b')).toHaveValue('60');
-    await expect(page.locator('#ad-dv-vista [data-parte="A"]')).toContainText('Parte A: 40 %');
-    const config = [{ vendedor_id: 'v1', pct: 2 }, { vendedor_id: 'v2', pct: 3 }, { vendedor_id: 'v3', pct: 4 }];
-    expect(rpc.filter(r => r.nombre === 'datos_division_orden').pop().params).toEqual({ p_orden_id: 'o12', p_pct_a: 40, p_comisiones: config });
-    expect(rpc.some(r => r.nombre === 'guardar_division_orden')).toBe(false);
-    await page.locator('#ad-dv-pct-b').fill('70');
-    await expect(page.locator('#ad-dv-pct-a')).toHaveValue('30');
-    await page.locator('#ad-dv-pct-a').fill('40');
-    await expect(page.locator('#ad-dv-pct-b')).toHaveValue('60');
-
-    // Un cambio puntual: el Vendedor 2 al 5 % solo en esta orden.
-    const d40con5 = datosDivision(40, [2, 5, 4]);
-    await page.evaluate((d) => { globalThis.__maqueta = { rpc: { datos_division_orden: d } }; }, d40con5);
-    const antes = rpc.filter(r => r.nombre === 'datos_division_orden').length;
-    await page.locator('#ad-dv-v2').fill('5');
-    await expect.poll(() => rpc.filter(r => r.nombre === 'datos_division_orden').length).toBe(antes + 1);
-    expect(rpc.filter(r => r.nombre === 'datos_division_orden').pop().params)
-      .toEqual({ p_orden_id: 'o12', p_pct_a: 40, p_comisiones: [{ vendedor_id: 'v1', pct: 2 }, { vendedor_id: 'v2', pct: 5 }, { vendedor_id: 'v3', pct: 4 }] });
-    await expect(page.locator('#ad-dv-vista [data-parte="A"] .ad-dvh__totales')).toContainText('Vendedor 2 (5%): $ 625,00');
-    await page.evaluate(() => { globalThis.__maqueta = null; });
-    await page.locator('#ad-dv-v2').fill('3');
-    await expect.poll(() => rpc.filter(r => r.nombre === 'datos_division_orden').pop().params.p_comisiones[1].pct).toBe(3);
-
-    // La factura A, solo el número.
-    await page.locator('#ad-dv-numero-a').fill('0003-00001234');
-    await page.locator('[data-dv-factura="A"]').click();
-    await expect.poll(() => rpc.filter(r => r.nombre === 'guardar_factura_orden').length).toBe(1);
-    expect(rpc.find(r => r.nombre === 'guardar_factura_orden').params).toEqual({ p_orden_id: 'o12', p_parte: 'A', p_numero: '0003-00001234', p_archivo_url: null });
-    await expect(page.locator('#ad-dv-facturas [data-dv-guardada="A"]')).toHaveText('Factura 0003-00001234');
-    await expect(page.locator('#ad-facturas-orden [data-factura-parte="A"]')).toContainText('Factura 0003-00001234');
-
-    // La B, con su PDF.
-    await page.locator('#ad-dv-numero-b').fill('0003-00001235');
-    await page.locator('#ad-dv-pdf-b').setInputFiles({ name: 'factura-b.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 prueba') });
-    await page.locator('[data-dv-factura="B"]').click();
-    await expect.poll(() => rpc.filter(r => r.nombre === 'guardar_factura_orden').length).toBe(2);
-    expect(rpc.filter(r => r.nombre === 'guardar_factura_orden')[1].params)
-      .toEqual({ p_orden_id: 'o12', p_parte: 'B', p_numero: '0003-00001235', p_archivo_url: 'uid-maqueta/facturas-venta/u-n/2026/N-0013-B.pdf' });
-    await expect(page.locator('#ad-dv-facturas [data-dv-ver-pdf="B"]')).toBeVisible();
-
-    // La base frena: el mensaje TAL CUAL, pegado a la parte.
-    await page.evaluate(() => { globalThis.__maqueta = { rpc: { guardar_factura_orden: 'ERROR:No tenés permiso sobre esta orden.' } }; });
-    await page.locator('#ad-dv-numero-a').fill('0003-00009999');
-    await page.locator('[data-dv-factura="A"]').click();
-    await expect(page.locator('[data-dv-factura-error="A"]')).toHaveText('No tenés permiso sobre esta orden.');
-    await expect(page.locator('[data-dv-factura="A"]')).toBeEnabled();
-    await page.evaluate(() => { globalThis.__maqueta = null; });
-    await ventanaEntra(page, 'con las facturas');
-    await captura(page, `division-facturas-${nombre}`, info);
-
-    // Guardar e imprimir: primero guarda, después la hoja.
-    await page.locator('#ad-dv-guardar').scrollIntoViewIfNeeded();
-    await page.locator('#ad-dv-guardar').click();
-    await expect.poll(() => page.evaluate(() => window.__impresiones)).toBe(1);
-    expect(rpc.filter(r => r.nombre === 'guardar_division_orden').map(r => r.params)).toEqual([{ p_orden_id: 'o12', p_pct_a: 40, p_comisiones: config }]);
-    await expect(page.locator('#ad-facturas-orden')).toContainText('Dividida para facturar: parte A 40 % · parte B 60 %');
-
-    // La hoja, como sale en el papel.
-    await page.emulateMedia({ media: 'print' });
-    const hoja = page.locator('#ad-impresion');
-    await expect(hoja).toBeVisible();
-    await expect(page.locator('#ad-dv')).toBeHidden();
-    const a = hoja.locator('[data-parte="A"]');
-    const b = hoja.locator('[data-parte="B"]');
-    await expect(a.locator('h2')).toContainText('N-0013-A');
-    await expect(a.locator('h2')).toContainText('Factura 0003-00001234');
-    await expect(b.locator('h2')).toContainText('N-0013-B');
-    await expect(a.locator('table')).not.toContainText('Vendedor');
-    await expect(a.locator('table')).not.toContainText('comisiones');
-    // 40 %: 2 de 5 cajas a $ 3.000 y 2 de 6 a $ 3.250 = $ 12.500.
-    const tot = a.locator('.ad-dvh__totales');
-    await expect(tot).toContainText('Total productos: $ 12.500,00');
-    await expect(tot.locator('[data-comision-vendedor]')).toHaveText(['Vendedor 1 (2%): $ 250,00', 'Vendedor 2 (3%): $ 375,00', 'Vendedor 3 (4%): $ 500,00']);
-    await expect(tot).toContainText('Total comisiones (9%): $ 1.125,00');
-    await expect(tot).toContainText('TOTAL PARTE A: $ 13.625,00');
-    // 40 % de 2 kg de harina es 0: no sale en la A, sí en la B.
-    await expect(a.locator('tbody tr')).toHaveCount(2);
-    await expect(a).not.toContainText('Harina');
-    await expect(b).toContainText('Harina 000');
-    await expect(b.locator('.ad-dvh__totales')).toHaveText('TOTAL PARTE B: $ 23.640,00');
-    await expect(hoja.locator('.ad-dvh__pie')).toContainText('Orden N-0013 · total de la orden $ 642.410,00');
-    await captura(page, `division-hoja-${nombre}`, info);
-    await page.emulateMedia({ media: 'screen' });
-
-    await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
-    expect(errores, errores.join('\n')).toEqual([]);
-  });
-
-  test(`${nombre}: sin condición de venta, la factura única`, async ({ page }, info) => {
-    const errores = vigilarErrores(page);
-    const rpc = anotarRpc(page);
-    await page.setViewportSize({ width: ancho, height: alto });
-    await abrirAdministracion(page, { conCondicion: false, propias: [{ cliente_id: 'c1', vendedor_id: 'v2', pct: 6 }] });
-    await abrirOrden(page);
-    await expect(page.locator('#ad-facturas-orden')).toContainText('No se divide: va en una factura única.');
-    await page.locator('#ad-btn-dividir').click();
-    await expect(page.locator('#ad-dv-aviso')).toHaveText('Este cliente no tiene condición de venta: poné el % de la parte A.');
-    await expect(page.locator('#ad-dv-pct-a')).toHaveValue('');
-    await expect(page.locator('#ad-dv-pct-b')).toHaveValue('');
-    // Los vendedores: el propio del cliente (6) o la configuración.
-    await expect(page.locator('#ad-dv-v1')).toHaveValue('2');
-    await expect(page.locator('#ad-dv-v2')).toHaveValue('6');
-    await expect(page.locator('#ad-dv-v3')).toHaveValue('4');
-    await expect(page.locator('#ad-dv-facturas [data-dv-parte="UNICA"]')).toContainText('Factura única');
-    await expect(page.locator('#ad-dv-facturas [data-dv-parte="A"]')).toHaveCount(0);
-    await page.locator('#ad-dv-numero-unica').fill('0003-00000077');
-    await page.locator('[data-dv-factura="UNICA"]').click();
-    await expect.poll(() => rpc.filter(r => r.nombre === 'guardar_factura_orden').length).toBe(1);
-    expect(rpc.find(r => r.nombre === 'guardar_factura_orden').params).toEqual({ p_orden_id: 'o12', p_parte: 'UNICA', p_numero: '0003-00000077', p_archivo_url: null });
-    await expect(page.locator('#ad-facturas-orden [data-factura-parte="UNICA"]')).toContainText('Factura 0003-00000077');
-    // Completar el % acá también sirve: la vista previa aparece.
-    await page.locator('#ad-dv-pct-a').fill('40');
-    await expect(page.locator('#ad-dv-pct-b')).toHaveValue('60');
-    await expect(page.locator('#ad-dv-vista [data-parte="B"]')).toContainText('Parte B: 60 %');
-    await expect(page.locator('#ad-dv-aviso')).toHaveText('');
-    expect(rpc.filter(r => r.nombre === 'datos_division_orden').pop().params.p_comisiones)
-      .toEqual([{ vendedor_id: 'v1', pct: 2 }, { vendedor_id: 'v2', pct: 6 }, { vendedor_id: 'v3', pct: 4 }]);
-    await ventanaEntra(page, 'sin condición');
-    await captura(page, `division-unica-${nombre}`, info);
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#ad-dv')).toBeHidden();
-    await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
-    expect(errores, errores.join('\n')).toEqual([]);
-  });
-
   test(`${nombre}: la condición de venta en la ficha del cliente`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
@@ -273,6 +102,9 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     const b = page.locator('#ad-f-pct-b');
     await expect(a).toHaveValue('30');
     await expect(b).toHaveValue('70');
+    await expect(page.locator('label[for="ad-f-pct-a"]')).toHaveText('Punto de venta 1 %');
+    await expect(page.locator('label[for="ad-f-pct-b"]')).toHaveText('Punto de venta 2 %');
+    await expect(page.locator('#ad-vista-ficha')).not.toContainText('Parte A');
     await expect(a).toHaveAttribute('type', 'text');
     await expect(page.locator('#ad-f-comision-a')).toHaveCount(0);
     await a.fill('45,5');
@@ -302,7 +134,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     expect(rpc.find(r => r.nombre === 'guardar_condicion_venta_cliente').params).toEqual({ p_cliente_id: 'c1', p_pct_a: 40,
       p_comisiones: [{ vendedor_id: 'v1', pct: 2.5 }, { vendedor_id: 'v2', pct: null }, { vendedor_id: 'v3', pct: null }] });
     expect(rpc.some(r => r.nombre === 'guardar_ficha_cliente')).toBe(false);
-    await expect(page.locator('#toast-global')).toContainText('Condición de venta guardada: parte A 40 % · parte B 60 %');
+    await expect(page.locator('#toast-global')).toContainText('Condición de venta guardada: punto 1 40 % · punto 2 60 %');
 
     // Vacío = no se divide; y el error de la base tal cual.
     await a.fill('');

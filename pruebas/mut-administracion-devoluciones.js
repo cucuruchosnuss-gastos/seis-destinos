@@ -54,6 +54,6 @@ correrMutaciones({
     // Dividir para facturar
     { nombre: 'la división vuelve a filtrar cant > 0', de: 'return Number.isFinite(n) && n !== 0 })', a: 'return n > 0 })' },
     { nombre: 'la división deja pasar lo que no es número', de: 'return Number.isFinite(n) && n !== 0 })', a: 'return n !== 0 })' },
-    { nombre: 'el pie de la división sin "a favor"', de: " + importeHoja(datos.total_orden, moneda) + textoAFavor(datos.total_orden))}</p></div>`", a: " + importeHoja(datos.total_orden, moneda))}</p></div>`" },
+    { nombre: 'el TOTAL del N2 sin "a favor"', de: "esc('TOTAL: ' + plata(datos?.total_b) + textoAFavor(datos?.total_b))", a: "esc('TOTAL: ' + plata(datos?.total_b))" },
   ],
 })

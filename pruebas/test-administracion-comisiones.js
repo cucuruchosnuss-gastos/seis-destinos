@@ -16,6 +16,12 @@
 //    (guardar_ficha_cliente ignora la clave) se DICE, nunca "Ficha guardada".
 //  - LA HOJA impresa NO la muestra (dato interno).
 //  - XSS de lo nuevo.
+// DESDE EL 28/10/2026 LA COMISIÓN COMÚN SALIÓ DEL FLUJO (las comisiones van
+// por vendedor en el N1, ver test-administracion-valorizar-con-division.js):
+// ni "Comisión: sin cargar", ni "Cargar / Cambiar comisión", ni el panel, ni
+// el filtro ni el sello del listado. Una orden que YA tenía una cargada la
+// sigue mostrando (Subtotal, Comisión y Total). El cálculo y las reglas
+// (las funciones quedan, sin uso) se siguen fijando.
 //
 //   node pruebas/test-administracion-comisiones.js
 
@@ -136,7 +142,7 @@ const ORDENES_FILTRO = [
     chk('y las que no tienen comisión (is null)', f.some(x => x[0] === 'is' && x[1] === 'comision_modo' && x[2] === null))
     chk('el select trae la comisión', f.some(x => x[0] === 'select' && /comision_modo/.test(x[1]) && /comision_importe/.test(x[1])))
     chk('la lista queda con las que corresponden', JSON.stringify(S.estado.ordenes.map(o => o.id)) === '["a"]', JSON.stringify(S.estado.ordenes.map(o => o.id)))
-    chk('la fila dice "Comisión sin cargar"', /Comisión sin cargar/.test(S.__els.get('ad-ordenes-lista').innerHTML))
+    chk('la fila ya NO dice "Comisión sin cargar" (28/10/2026)', !/Comisión sin cargar/.test(S.__els.get('ad-ordenes-lista').innerHTML))
   }))
 }
 {
@@ -151,13 +157,11 @@ const ORDENES_FILTRO = [
   preparar(S)
   S.__tablas.ordenes_retiro = ORDENES_FILTRO
   const el = (id) => S.__doc.getElementById(id)
-  el('ad-filtro-sin-valorizar').checked = true
-  el('ad-filtro-comision').checked = true
-  S.leerFiltros('ad-filtro-comision')
-  chk('tildar "Con comisión sin cargar" saca "sin valorizar"', S.estado.filtros.sinComision === true && S.estado.filtros.sinValorizar === false && el('ad-filtro-sin-valorizar').checked === false)
+  chk('el filtro "Con comisión sin cargar" ya no está en la pantalla (28/10/2026)', !/id="ad-filtro-comision"/.test(src) && !/> Con comisión sin cargar</.test(src))
+  S.estado.filtros.sinComision = true
   el('ad-filtro-sin-valorizar').checked = true
   S.leerFiltros('ad-filtro-sin-valorizar')
-  chk('y al revés', S.estado.filtros.sinValorizar === true && S.estado.filtros.sinComision === false)
+  chk('leerFiltros lo deja siempre apagado', S.estado.filtros.sinComision === false && S.estado.filtros.sinValorizar === true)
 }
 {
   const S = nuevo()
@@ -175,8 +179,8 @@ const ORDENES_FILTRO = [
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
     chk('el select de la orden trae la comisión', S.__llamadas.consultas.some(c => c[0] === 'ordenes_retiro' && c[1].some(x => x[0] === 'select' && /comision_valor/.test(x[1]) && /comision_factura_id/.test(x[1]))))
-    chk('sin cargar: el total y "Comisión: sin cargar" con la habitual', /Total \$\s642\.410,00/.test(h) && /Comisión: sin cargar \(la habitual de este cliente es 5 %\)/.test(h))
-    chk('con retiros:precios: "Cargar comisión"', /id="ad-btn-comision">Cargar comisión</.test(h))
+    chk('sin cargar: el total, SIN "Comisión: sin cargar" (28/10/2026)', /Total \$\s642\.410,00/.test(h) && !/sin cargar/.test(h) && !/Comisión/.test(h))
+    chk('con retiros:precios: SIN "Cargar comisión" (salió del flujo)', !/ad-btn-comision/.test(h) && !/Cargar comisión/.test(h))
   }))
 }
 {
@@ -184,14 +188,14 @@ const ORDENES_FILTRO = [
   preparar(S)
   S.estado.misTareas = new Map([['retiros:ver', { unidades: ['u-n'] }]])
   esperas.push(S.abrirOrden('o1').then(() => {
-    chk('solo con ver: se ve la comisión pero no el botón', /Comisión: sin cargar/.test(cuerpo(S)) && !/ad-btn-comision/.test(cuerpo(S)))
+    chk('solo con ver: el total, sin "Comisión" ni el botón', /Total \$\s642\.410,00/.test(cuerpo(S)) && !/Comisión/.test(cuerpo(S)) && !/ad-btn-comision/.test(cuerpo(S)))
   }))
 }
 {
   const S = nuevo()
   preparar(S)
   S.estado.misTareas = new Map([['retiros:ver', { unidades: ['u-n'] }], ['cobranzas:procesar', null]])
-  esperas.push(S.abrirOrden('o1').then(() => chk('con cobranzas:procesar también se carga (la regla de la base)', /ad-btn-comision/.test(cuerpo(S)))))
+  esperas.push(S.abrirOrden('o1').then(() => chk('con cobranzas:procesar tampoco aparece el botón (28/10/2026)', !/ad-btn-comision/.test(cuerpo(S)))))
 }
 {
   const S = nuevo()
@@ -215,7 +219,7 @@ const ORDENES_FILTRO = [
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
     chk('cargada: Subtotal, Comisión 5 % y Total', /Subtotal<\/span><span>\$\s642\.410,00/.test(h) && /Comisión 5 %<\/span><span>\$\s32\.120,50/.test(h) && /Total \$\s674\.530,50/.test(h))
-    chk('y el botón dice "Cambiar comisión"', /id="ad-btn-comision">Cambiar comisión</.test(h))
+    chk('una ya cargada se sigue viendo, pero sin "Cambiar comisión"', !/ad-btn-comision/.test(h) && !/Cambiar comisión/.test(h))
     chk('al día: sin aviso de recalcular', !/La valorización cambió/.test(h))
   }))
 }
@@ -227,114 +231,27 @@ const ORDENES_FILTRO = [
 {
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, comision_modo: 'ninguna', comision_valor: null, comision_importe: 0 } })
-  esperas.push(S.abrirOrden('o1').then(() => chk('"sin comisión" ya decidido lo dice', /Comisión: sin comisión/.test(cuerpo(S)) && /Cambiar comisión/.test(cuerpo(S)))))
+  esperas.push(S.abrirOrden('o1').then(() => chk('"sin comisión" ya decidido: solo el total', /Total \$\s642\.410,00/.test(cuerpo(S)) && !/Comisión/.test(cuerpo(S)))))
 }
 {
   const S = nuevo()
   // Se corrigió la valorización después: el 5 % ya no da lo guardado.
   preparar(S, { orden: { ...ORDEN, total: 700000, comision_modo: 'porcentaje', comision_valor: 5, comision_importe: 32120.5 } })
-  esperas.push(S.abrirOrden('o1').then(() => chk('un porcentaje que ya no cierra con el total avisa', /La valorización cambió después de cargar la comisión/.test(cuerpo(S)))))
+  esperas.push(S.abrirOrden('o1').then(() => chk('un porcentaje que ya no cierra con el total: sin el aviso de volver a cargarla (ya no se carga)', !/La valorización cambió después de cargar la comisión/.test(cuerpo(S)) && /Subtotal/.test(cuerpo(S)))))
   chk('comisionDesactualizada: monto fijo nunca', S.comisionDesactualizada({ total: 1, comision_modo: 'monto', comision_valor: 5, comision_importe: 5 }) === false)
 }
 
-// ── El panel: abrir, elegir, guardar ───────────────────────────────────────
+// ── El panel ya no aparece (28/10/2026) ────────────────────────────────────
 {
   const S = nuevo()
   preparar(S)
   esperas.push(S.abrirOrden('o1').then(() => {
-    S.abrirComision()
-    const c = S.estado.orden.comision
-    chk('abre con el porcentaje habitual del cliente', c.modo === 'porcentaje' && c.valor === 5)
+    // Aunque algo deje el panel "abierto", la orden no lo dibuja.
+    S.estado.orden.comision = { modo: 'porcentaje', valor: 5, habitual: 5, error: null, enviando: false }
+    S.pintarOrden()
     const h = cuerpo(S)
-    chk('el panel muestra el cálculo antes de guardar', /5 % de \$\s642\.410,00 = \$\s32\.120,50 · Total con comisión \$\s674\.530,50/.test(h))
-    chk('el segmento con el modo elegido', /data-comision-modo="porcentaje" aria-pressed="true"/.test(h) && /data-comision-modo="monto" aria-pressed="false"/.test(h))
-    chk('mientras está abierto, el botón de abrir no está', !/id="ad-btn-comision"/.test(h))
-    S.elegirModoComision('monto')
-    chk('cambiar a monto VACÍA el valor (un 5 % no pasa a ser $\u00a05)', c.modo === 'monto' && c.valor === null)
-    S.elegirModoComision('porcentaje')
-    chk('volver a porcentaje propone la habitual', c.valor === 5)
-    S.cambiarValorComision(10)
-    chk('tipear recalcula la línea sin redibujar', S.__els.get('ad-comision-calculo').textContent === '10 % de $\u00a0642.410,00 = $\u00a064.241,00 · Total con comisión $\u00a0706.651,00')
-    S.cancelarComision()
-    chk('cancelar cierra el panel', S.estado.orden.comision === null)
-  }))
-}
-{
-  const S = nuevo()
-  preparar(S, { orden: { ...ORDEN, cliente_id: 'c2' } })
-  esperas.push(S.abrirOrden('o1').then(() => {
-    S.abrirComision()
-    chk('sin habitual NO se elige nada solo', S.estado.orden.comision.modo === null && S.estado.orden.comision.valor === null)
-  }))
-}
-{
-  const S = nuevo()
-  preparar(S, { orden: { ...ORDEN, comision_modo: 'monto', comision_valor: 1500, comision_importe: 1500 } })
-  esperas.push(S.abrirOrden('o1').then(() => {
-    S.abrirComision()
-    chk('cambiar arranca de lo que tenía la orden', S.estado.orden.comision.modo === 'monto' && S.estado.orden.comision.valor === 1500)
-  }))
-}
-{
-  // Guardar: una sola llamada aunque se toque dos veces.
-  const S = nuevo()
-  preparar(S)
-  // TODOS los que esperan se sueltan (con uno solo, una segunda llamada dejaría
-  // la primera colgada y la suite terminaría sin decir nada).
-  const esperando = []
-  S.__setRpc((n) => n === 'cargar_comision_orden'
-    ? new Promise(r => { esperando.push(() => r({ data: { comision_importe: 32120.5, total_con_comision: 674530.5, factura_pendiente_id: 'f1' }, error: null })) })
-    : { data: null, error: null })
-  esperas.push(S.abrirOrden('o1').then(async () => {
-    S.abrirComision()
-    const p1 = S.guardarComision()
-    const p2 = S.guardarComision()
-    chk('mientras manda: "Guardando…" y el botón trabado', /id="ad-comision-guardar" disabled>Guardando…/.test(cuerpo(S)))
-    for (const s of esperando) s()
-    await Promise.race([Promise.all([p1, p2]), new Promise((_, no) => setTimeout(() => no(new Error('guardarComision quedó colgada')), 3000))])
-    const llamadas = S.__llamadas.rpc.filter(r => r[0] === 'cargar_comision_orden')
-    chk('doble toque: UNA sola llamada', llamadas.length === 1, llamadas.length)
-    chk('con los parámetros de la base', JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_orden_id: 'o1', p_modo: 'porcentaje', p_valor: 5 }))
-    chk('el aviso dice la comisión y el total', S.__llamadas.exitos.includes('Comisión de la orden N-0013: $\u00a032.120,50. Total $\u00a0674.530,50.'), JSON.stringify(S.__llamadas.exitos))
-    chk('y la orden se vuelve a leer', S.__llamadas.consultas.filter(c => c[0] === 'ordenes_retiro').length >= 2 && S.estado.orden.comision === null)
-  }))
-}
-{
-  const S = nuevo()
-  preparar(S)
-  esperas.push(S.abrirOrden('o1').then(async () => {
-    S.abrirComision()
-    S.elegirModoComision('ninguna')
-    await S.guardarComision()
-    const r = S.__llamadas.rpc.find(x => x[0] === 'cargar_comision_orden')
-    chk('"Sin comisión" manda ninguna y null', r && r[1].p_modo === 'ninguna' && r[1].p_valor === null)
-    chk('y lo dice', S.__llamadas.exitos.includes('Orden N-0013: sin comisión.'))
-  }))
-}
-{
-  const S = nuevo()
-  preparar(S, { orden: { ...ORDEN, cliente_id: 'c2' } })
-  esperas.push(S.abrirOrden('o1').then(async () => {
-    S.abrirComision()
-    await S.guardarComision()
-    chk('sin modo no se manda nada y se dice', !S.__llamadas.rpc.some(x => x[0] === 'cargar_comision_orden') && /Elegí porcentaje, monto o sin comisión\./.test(cuerpo(S)))
-    S.elegirModoComision('porcentaje')
-    S.cambiarValorComision(150)
-    await S.guardarComision()
-    chk('un porcentaje de más no se manda', !S.__llamadas.rpc.some(x => x[0] === 'cargar_comision_orden') && /El porcentaje va de 0 a 100\./.test(cuerpo(S)))
-  }))
-}
-{
-  const S = nuevo()
-  preparar(S, { orden: { ...ORDEN, comision_modo: 'porcentaje', comision_valor: 5, comision_importe: 32120.5, comision_factura_id: 'f1' } })
-  S.__setRpc((n) => n === 'cargar_comision_orden' ? { data: null, error: { message: 'La comisión de esta orden ya tiene pagos: no se puede cambiar.' } } : { data: null, error: null })
-  esperas.push(S.abrirOrden('o1').then(async () => {
-    S.abrirComision()
-    S.cambiarValorComision(7)
-    await S.guardarComision()
-    const h = cuerpo(S)
-    chk('el error de la base va TAL CUAL, pegado al botón', /<p class="ad-error-pegado" id="ad-comision-error">La comisión de esta orden ya tiene pagos: no se puede cambiar\.<\/p>/.test(h))
-    chk('y el panel sigue abierto, el botón se puede volver a tocar', S.estado.orden.comision && !S.estado.orden.comision.enviando && S.estado.trabajando === false)
+    chk('el panel de la comisión no se dibuja', !/ad-comision-panel/.test(h) && !/data-comision-modo/.test(h) && !/ad-comision-guardar/.test(h))
+    chk('ni se escucha el botón en el detalle', !/'#ad-btn-comision'/.test(src) && !/'#ad-comision-guardar'/.test(src))
   }))
 }
 
@@ -449,8 +366,6 @@ function prepararFicha(S, guardada) {
 {
   const S = nuevo()
   S.estado.clientes = CLIENTES
-  const d = { orden: { ...ORDEN, moneda: marca('moneda') }, items: [], comision: { modo: 'porcentaje', valor: 5, habitual: 5, error: marca('error-comision'), enviando: false } }
-  chequearMarcas(chk, 'panel de la comisión', S.htmlComisionOrden(d), ['error-comision'])
   const S2 = nuevo()
   S2.estado.clientes = [{ ...CLIENTES[0], comision_habitual: marca('habitual') }]
   const h2 = S2.htmlComisionOrden({ orden: ORDEN, items: [], comision: null })

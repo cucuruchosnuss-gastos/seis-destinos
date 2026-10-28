@@ -48,6 +48,8 @@ const RETIRADOS = [
   ['control:input#chq-emi-desde[type=date]', `la fecha de pago desde de los cheques emitidos: ${SIN_PROPIO}`],
   ['control:input#chq-emi-hasta[type=date]', `la fecha de pago hasta de los cheques emitidos: ${SIN_PROPIO}`],
   ['control:select#chq-emi-cuenta', `la cuenta de los cheques emitidos: ${SIN_PROPIO}`],
+  ['control:input#ad-filtro-comision[type=checkbox]', 'el filtro "Con comisión sin cargar" de las órdenes: la comisión común salió del flujo (28/10/2026); las comisiones van por vendedor en el N1'],
+  ['control:button#ad-btn-comision[type=button]', '"Cargar comisión" / "Cambiar comisión" de una orden: la comisión común salió del flujo (28/10/2026); las comisiones van por vendedor en el N1'],
   ['control:input#chq-salida-destino[type=text]', 'el texto "¿En qué banco o cuenta?" del depósito de un cheque: depositar (13/10/2026) elige una cuenta de banco de la Empresa y mete la plata (depositar_cheques)'],
 ]
 

@@ -134,7 +134,8 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await expect(cuerpo).toContainText('Es Dolce Pasta, otra empresa del grupo: lo que salió entró a su stock.');
     await expect(cuerpo).not.toContainText('Comisión');
     await expect(cuerpo).not.toContainText('Facturas de ARCA');
-    await expect(page.locator('#ad-btn-dividir')).toBeHidden();
+    // Ni los puntos N1 / N2 (28/10/2026: van en la misma pantalla).
+    await expect(page.locator('#ad-orden-facturar')).toBeHidden();
     await expect(page.locator('#ad-btn-corregir-valor')).toBeVisible();
     expect(await sinCostado(page), 'sin scroll de costado en el detalle').toBe(true);
     await captura(page, `entre-empresas-detalle-${nombre}`, info);

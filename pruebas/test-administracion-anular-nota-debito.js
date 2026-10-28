@@ -178,7 +178,17 @@ esperas.push((async () => {
   if (antes) {
     const marcas = t => new Set([...t.matchAll(/\b(id="[a-z][\w-]*"|data-[a-z][\w-]*)/g)].map(m => m[1]))
     const ahora = marcas(src)
-    const faltan = [...marcas(antes)].filter(m => !ahora.has(m))
+    // Lo que se fue A PROPÓSITO después del baseline, con su razón.
+    const RETIRADOS = new Map([
+      // 28/10/2026: "Dividir para facturar" ya no es una ventana; los puntos
+      // N1 / N2 van en la misma pantalla de la orden (#ad-orden-facturar).
+      ...['id="ad-btn-dividir"', 'id="ad-dv"', 'id="ad-dv-titulo"', 'id="ad-dv-cerrar"', 'id="ad-dv-pct-a"', 'id="ad-dv-pct-b"', 'id="ad-dv-vendedores"',
+        'id="ad-dv-aviso"', 'id="ad-dv-vista"', 'id="ad-dv-error"', 'id="ad-dv-guardar"', 'id="ad-dv-cancelar"', 'id="ad-dv-facturas"', 'data-rotulo',
+        'data-parte', 'data-dv-parte', 'data-dv-guardada', 'data-dv-ver-pdf', 'data-dv-factura-error', 'data-dv-factura'].map(m => [m, 'la ventana de la división (28/10/2026)']),
+      // 28/10/2026: la comisión común salió del flujo.
+      ['id="ad-filtro-comision"', 'la comisión común (28/10/2026)'], ['id="ad-btn-comision"', 'la comisión común (28/10/2026)'],
+    ])
+    const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !RETIRADOS.has(m))
     chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
     chk(`en ${BASE_COMMIT} Anular miraba retiros:precios de cualquier fábrica (lo que este cambio arregla)`, /estado\.misTareas\.has\('retiros:precios'\)/.test(antes))
   }

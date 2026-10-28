@@ -6,8 +6,9 @@
 //    resumen, lo que viaja en registrar_orden_retiro y la hoja impresa.
 //  - ADMINISTRACIÓN: el detalle con cada tipo, la valorización (la devolución
 //    con su precio editable y el subtotal negativo, la reposición en $ 0 sin
-//    campo, el total "a favor del cliente"), la hoja con precios y la hoja
-//    "Dividir para facturar" con la devolución en negativo.
+//    campo, el total "a favor del cliente"), la hoja con precios y las
+//    órdenes de pedido N1 / N2 (28/10/2026, en la misma pantalla) con la
+//    devolución en negativo.
 //  - RETIROS POR REVISAR (24/10/2026): la reposición que salió sin stock
 //    lleva el sello "Reposición" (retiros_por_revisar devuelve 'tipo').
 // Las dos hojas (Carga y Administración) siguen en MEDIA HOJA con la letra y
@@ -280,26 +281,29 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await captura(page, `devolucion-admin-hoja-${nombre}`, info);
     await page.emulateMedia({ media: 'screen' });
 
-    // Dividir para facturar: la devolución en negativo, la reposición en $ 0.
-    await page.locator('#ad-btn-dividir').click();
-    await expect(page.locator('#ad-dv')).toBeVisible();
-    const b = page.locator('#ad-dv-vista [data-parte="B"]');
-    await expect(b).toContainText('Devolución: Cucurucho grande · Caja x 100');
-    await expect(b).toContainText('-1 caja');
-    await expect(b).toContainText('Reposición: Cucurucho chico · Caja x 320');
-    await expect(page.locator('#ad-dv-vista [data-parte="A"] tbody tr')).toHaveCount(1);
-    await expect(page.locator('#ad-dv-vista .ad-dvh__pie')).toContainText('a favor del cliente');
-    expect(await sinScrollHorizontal(page), 'la ventana sin scroll horizontal').toBe(true);
+    // Los puntos N1 / N2 en la misma pantalla (28/10/2026): la devolución en
+    // negativo, la reposición en $ 0, y el TOTAL "a favor del cliente".
+    await expect(page.locator('#ad-fc-condicion')).toHaveText('N1-0040: 50 % · N2-0040: 50 %');
+    await expect(page.locator('#ad-fc-totales-a')).toContainText('TOTAL: $ -3.270,00 · a favor del cliente');
+    expect(await sinScrollHorizontal(page), 'los puntos sin scroll horizontal').toBe(true);
+    await page.locator('#ad-fc').scrollIntoViewIfNeeded();
     await captura(page, `devolucion-admin-division-${nombre}`, info);
-    await page.locator('#ad-dv-guardar').click();
+    await page.locator('#ad-fc-imprimir-b').click();
     await expect.poll(() => page.evaluate(() => window.__impresiones)).toBe(2);
     await page.emulateMedia({ media: 'print' });
-    await expect(page.locator('#ad-impresion [data-parte="B"]')).toContainText('$ -3.000,00');
+    const n2 = page.locator('#ad-impresion [data-punto="B"]');
+    await expect(n2).toContainText('Devolución: Cucurucho grande · Caja x 100');
+    await expect(n2).toContainText('-1 caja');
+    await expect(n2).toContainText('$ -3.000,00');
+    await expect(n2).toContainText('Reposición: Cucurucho chico · Caja x 320');
+    await expect(page.locator('#ad-impresion [data-punto="A"]')).toHaveCount(0);
+    await page.emulateMedia({ media: 'screen' });
+    await page.locator('#ad-fc-imprimir-a').click();
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('#ad-impresion [data-punto="A"] tbody tr')).toHaveCount(1);
     await page.emulateMedia({ media: 'screen' });
 
     // Valorizar la pendiente: la reposición sin campo de precio.
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#ad-dv')).toBeHidden();
     await page.locator('[data-pestana="ordenes"]').first().click();
     await page.locator('#ad-ordenes-lista [data-orden="o41"]').click();
     await page.locator('#ad-btn-valorizar').click();

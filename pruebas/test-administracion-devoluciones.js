@@ -179,12 +179,12 @@ const DATOS = {
   chk('la A: el retiro y la devolución en negativo (la reposición tiene 0 en la A)', ra.length === 2 && ra[1].cantidad === -1 && ra[1].subtotal === -1500)
   chk('la B: los tres, la reposición en $ 0', rb.length === 3 && rb[1].cantidad === -2 && rb[2].subtotal === 0)
   chk('un renglón sin cantidad no sale', S.renglonesParte({ items: [{ cant_a: null }, { cant_a: 'x' }, { cant_a: 0 }] }, 'A').length === 0)
-  const h = S.htmlHojaDivision(DATOS, {})
-  const b = h.slice(h.indexOf('data-parte="B"'))
-  chk('la hoja dividida: la devolución en negativo', /Devolución: Cucurucho grande · Caja x 100<\/td><td[^>]*>-2 cajas<\/td><td[^>]*>\$\s1\.500,00<\/td><td[^>]*>\$\s-3\.000,00/.test(b))
+  // Cada punto es su propia orden de pedido (28/10/2026): la del N2.
+  const b = S.htmlHojaPunto(DATOS, 'B')
+  chk('la hoja del N2: la devolución en negativo', /Devolución: Cucurucho grande · Caja x 100<\/td><td[^>]*>-2 cajas<\/td><td[^>]*>\$\s1\.500,00<\/td><td[^>]*>\$\s-3\.000,00/.test(b))
   chk('y la reposición en $ 0', /Reposición: Cucurucho grande · Caja x 100<\/td><td[^>]*>1 caja<\/td><td[^>]*>\$\s0,00<\/td><td[^>]*>\$\s0,00/.test(b))
-  chk('el total de la orden negativo: "a favor del cliente"', /total de la orden \$\s-100,00 · a favor del cliente/.test(h))
-  chk('la descripción de la base se escapa', !/<b>/.test(S.htmlHojaDivision({ ...DATOS, items: [{ ...DATOS.items[1], descripcion: 'Devolución: <b>x</b>' }] }, {})))
+  chk('un TOTAL negativo: "a favor del cliente"', /TOTAL: \$\s-100,00 · a favor del cliente/.test(S.htmlHojaPunto({ ...DATOS, total_b: -100 }, 'B')))
+  chk('la descripción de la base se escapa', !/<b>/.test(S.htmlHojaPunto({ ...DATOS, items: [{ ...DATOS.items[1], descripcion: 'Devolución: <b>x</b>' }] }, 'B')))
 }
 
 fin()

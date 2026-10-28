@@ -16,18 +16,15 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-administracion-comisiones.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/administracion.html'),
   escape: 'esc',
-  funciones: ['htmlComisionOrden', 'htmlPanelComision'],
+  // Desde el 28/10/2026 la comisión común salió del flujo: el panel, el botón
+  // y el filtro no aparecen (sus funciones quedan sin uso y no se mutan).
+  funciones: ['htmlComisionOrden'],
   equivalentes: [
-    { expr: 'esc(m)', motivo: "constante del código: 'porcentaje', 'monto' o 'ninguna'" },
-    { expr: 'esc(t)', motivo: 'constante del código: el texto del botón del segmento' },
-    { expr: "esc('La comisión habitual de este cliente es ' + textoPorcentaje(c.habitual) + '.')", motivo: 'un número formateado (comisionHabitualDe() solo deja pasar números)' },
-    { expr: 'esc(textoCalculoComision(o.total, c.modo, c.valor, o.moneda))', motivo: FORMATEADO },
     { expr: 'esc(importeHoja(o.total, moneda))', motivo: FORMATEADO },
     { expr: 'esc(rotuloComision(o))', motivo: FORMATEADO },
     { expr: 'esc(importeHoja(imp, moneda))', motivo: FORMATEADO },
     { expr: 'esc(importeHoja(totalConComision(o.total, imp), moneda) + textoAFavor(totalConComision(o.total, imp)))', motivo: FORMATEADO + ' ("a favor del cliente" es texto fijo)' },
     { expr: 'esc(importeHoja(o.total, moneda) + textoAFavor(o.total))', motivo: FORMATEADO + ' ("a favor del cliente" es texto fijo)' },
-    { expr: 'esc(texto)', motivo: 'texto constante del código con un número formateado' },
   ],
   manuales: [
     // El cálculo
@@ -46,22 +43,11 @@ correrMutaciones({
     { nombre: 'la consulta no pide "sin comisión"', de: ".eq('estado_valorizacion', 'valorizada').is('comision_modo', null)", a: ".eq('estado_valorizacion', 'valorizada')" },
     { nombre: 'la lista no se filtra por cliente', de: '      const ordenes = filtros.sinComision ? ordenesComisionSinCargar(data ?? [], clientes) : (data ?? [])', a: '      const ordenes = data ?? []' },
     { nombre: 'sin clientes el filtro inventa', de: "      if (filtros.sinComision && !Array.isArray(clientes)) throw new Error('Sin la lista de clientes no se sabe quién tiene comisión.')\n", a: '' },
-    { nombre: 'los dos filtros conviven', de: "      if (origen === 'ad-filtro-comision' && sinComision.checked) sinValorizar.checked = false\n", a: '' },
     { nombre: 'la fila no suma la comisión', de: '      const totalFila = conComision ? totalConComision(o.total, o.comision_importe) : o.total', a: '      const totalFila = o.total' },
     { nombre: 'la fila de una anulada suma la comisión', de: "      const conComision = o.estado !== 'anulada' && Number(o.comision_importe) > 0", a: '      const conComision = Number(o.comision_importe) > 0' },
     // El detalle
     { nombre: 'sin Subtotal / Comisión / Total', de: '      if (conImporte) {\n        partes.push', a: '      if (false) {\n        partes.push' },
-    { nombre: 'sin aviso de recalcular', de: "        if (comisionDesactualizada(o)) partes.push(", a: "        if (false) partes.push(" },
     { nombre: 'una anulada muestra la comisión', de: "        total = o.estado === 'anulada' ? `<p class=\"ad-total\">Total ${esc(importeHoja(o.total, o.moneda))}</p>`\n", a: '        total = false ? ``\n' },
-    { nombre: 'sin cobranzas:procesar', de: "        (puedeEn('retiros', 'precios', o.unidad_negocio_id) || tieneTarea('cobranzas', 'procesar'))", a: "        puedeEn('retiros', 'precios', o.unidad_negocio_id)" },
-    { nombre: 'precios en cualquier empresa', de: "        (puedeEn('retiros', 'precios', o.unidad_negocio_id) || tieneTarea('cobranzas', 'procesar'))", a: "        (tieneTarea('retiros', 'precios') || tieneTarea('cobranzas', 'procesar'))" },
-    // El panel
-    { nombre: 'sin habitual elige porcentaje solo', de: '      } else if (habitual !== null) {\n        modo = \'porcentaje\'', a: '      } else {\n        modo = \'porcentaje\'' },
-    { nombre: 'cambiar de modo conserva el valor', de: "      c.valor = modo === 'porcentaje' ? c.habitual : null\n", a: '' },
-    { nombre: 'doble toque manda dos veces', de: '      if (!c || c.enviando || estado.trabajando) return\n      const err = validarComision', a: '      if (!c) return\n      const err = validarComision' },
-    { nombre: 'se manda sin validar', de: '      if (err) { c.error = err; pintarOrden(); return }\n', a: '' },
-    { nombre: 'el error de la base se tapa', de: "        c.error = e?.message || 'No se pudo cargar la comisión. Probá de nuevo.'", a: "        c.error = 'No se pudo cargar la comisión. Probá de nuevo.'" },
-    { nombre: 'después de un error el botón queda trabado', de: '        c.enviando = false\n        estado.trabajando = false\n        pintarOrden()', a: '        estado.trabajando = false\n        pintarOrden()' },
     // La hoja: la comisión es interna
     { nombre: 'la hoja suma la comisión', de: "        total: o.estado_valorizacion === 'valorizada' ? o.total : null,", a: "        total: o.estado_valorizacion === 'valorizada' ? (totalConComision(o.total, o.comision_importe) ?? o.total) : null," },
     // La cuenta del cliente

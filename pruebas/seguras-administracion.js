@@ -107,8 +107,14 @@ const SEGURAS_ADMINISTRACION = [
   ['valorHtmlEntre', 'HTML ya escapado: htmlFilaEntre() lo arma con esc() del importe valorizado, la lista y el motivo, o un texto constante'],
   // Dividir para facturar (21/10/2026): lo ejecuta con texto malicioso
   // test-administracion-division-orden.js.
-  ['totales', 'HTML ya escapado: htmlBloqueParte() arma cada línea de totales con esc() de los importes y del %'],
-  ['vendedores', 'HTML ya escapado: htmlBloqueParte() arma una línea por vendedor con esc() del nombre, el % y el monto'],
+  // Los puntos N1 / N2 (28/10/2026): lo ejecuta con texto malicioso
+  // test-administracion-valorizar-con-division.js.
+  ['rapidas', 'HTML ya escapado: pintarFacturar() arma los botones rápidos de la condición con esc() del % (una constante)'],
+  ['htmlHojaPunto(fc.datos, parte, fc.moneda)', 'HTML armado por htmlHojaPunto(): cada dato de la base con esc() (la orden de pedido de un punto)'],
+  ['factura', 'HTML ya escapado: htmlPuntoFacturar() arma la carga de la factura con esc() de la parte, su id y el número guardado'],
+  ['puntos', 'HTML armado por htmlPuntoFacturar(), que escapa el código de cada punto, la parte y el número de factura'],
+  ['vendedores', 'HTML ya escapado: htmlTotalesPunto() arma una línea por vendedor con esc() del nombre y del monto'],
+  ['htmlTotalesPunto(datos, parte, moneda)', 'HTML armado por htmlTotalesPunto(): cada línea con esc() de los importes y del nombre del vendedor'],
   ['origen', 'HTML ya escapado: htmlVendedoresPct() arma los rótulos con esc() del id del vendedor y del % de la configuración, o vacío'],
   // La nota de débito (24/10/2026): la ejecuta con texto malicioso
   // test-administracion-nota-debito.js.

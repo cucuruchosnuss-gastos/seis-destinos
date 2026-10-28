@@ -87,7 +87,7 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   chk('el título del sello nombra a la que recibe', /title="Otra empresa del grupo: Dolce Pasta"/.test(h))
   chk('sin "Comisión sin cargar" aunque el cliente tenga comisión habitual', !/Comisión sin cargar/.test(h))
   const h2 = S.htmlFilaOrden({ ...ORDEN, cliente_id: 'c1', cajas: 10, insumos: 0, devueltas: 0 })
-  chk('un cliente común: sin el sello y con "Comisión sin cargar"', !/Orden interna/.test(h2) && /Comisión sin cargar/.test(h2))
+  chk('un cliente común: sin el sello (y sin "Comisión sin cargar": salió del flujo el 28/10/2026)', !/Orden interna/.test(h2) && !/Comisión sin cargar/.test(h2))
   chk('faltaComision: nunca para otra empresa del grupo', S.faltaComision(ORDEN, CLIENTES[0]) === false && S.faltaComision({ ...ORDEN, cliente_id: 'c1' }, CLIENTES[1]) === true)
   const lista = S.ordenesComisionSinCargar([ORDEN, { ...ORDEN, id: 'o2', cliente_id: 'c1' }], CLIENTES)
   chk('el filtro "Con comisión sin cargar" no cuenta las órdenes entre empresas', lista.length === 1 && lista[0].id === 'o2')
@@ -105,10 +105,11 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
     chk('la deuda entre empresas, no la cuenta corriente', /Queda como deuda de Dolce Pasta con Cucuruchos Nuss \(Entre empresas\): no va a la cuenta corriente/.test(h))
     chk('sin comisión (ni el botón ni la línea)', !/Comisión/.test(h) && !/ad-btn-comision/.test(h))
     chk('sin "Facturas de ARCA" (no se divide para facturar)', !/Facturas de ARCA/.test(h))
-    chk('sin "Dividir para facturar"', el(S, 'ad-btn-dividir').hidden === true)
+    chk('sin las órdenes de pedido N1 / N2 (no se divide para facturar)', el(S, 'ad-orden-facturar').hidden === true && !/ad-fc/.test(el(S, 'ad-orden-facturar').innerHTML) &&
+      !S.__llamadas.rpc.some(([n]) => n === 'datos_division_orden' || n === 'guardar_division_orden'))
     chk('se puede corregir la valorización', el(S, 'ad-btn-corregir-valor').hidden === false)
     chk('se puede anular', el(S, 'ad-btn-anular').hidden === false)
-    chk('puedeDividir: no', S.puedeDividir(S.estado.orden.orden) === false)
+    chk('puedeFacturar: no', S.puedeFacturar(S.estado.orden.orden) === false)
     chk('puedeCargarComision: no', S.puedeCargarComision(S.estado.orden.orden) === false)
   }))
 }
@@ -119,8 +120,9 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
     chk('cliente común: sin sello ni deuda entre empresas', !/Orden interna/.test(h) && !/Entre empresas/.test(h) && !/data-entre-deuda/.test(h))
-    chk('cliente común: la comisión y las facturas', /Comisión: sin cargar/.test(h) && /ad-btn-comision/.test(h) && /Facturas de ARCA/.test(h))
-    chk('cliente común: "Dividir para facturar"', el(S, 'ad-btn-dividir').hidden === false)
+    chk('cliente común: el total, sin la comisión común (28/10/2026)', /Total \$/.test(h) && !/Comisión: sin cargar/.test(h) && !/ad-btn-comision/.test(h))
+    chk('cliente común: las órdenes de pedido N1 / N2 en la misma pantalla', el(S, 'ad-orden-facturar').hidden === false && /id="ad-fc"/.test(el(S, 'ad-orden-facturar').innerHTML) &&
+      S.__llamadas.rpc.some(([n]) => n === 'datos_division_orden'))
   }))
 }
 {

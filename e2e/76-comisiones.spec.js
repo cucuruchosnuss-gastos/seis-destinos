@@ -1,9 +1,9 @@
 // LA COMISIÓN DE UNA ORDEN DE RETIRO (06/10/2026), en la maqueta, sin
 // credenciales, a 390 y 1280 px:
-//  - Administración → Órdenes: el filtro "Con comisión sin cargar", el
-//    renglón "Comisión: sin cargar" debajo del total, "Cargar comisión" con el
-//    porcentaje habitual del cliente y el cálculo ANTES de guardar; se llama a
-//    cargar_comision_orden; el error de la base va TAL CUAL pegado al botón.
+//  - Administración → Órdenes: DESDE EL 28/10/2026 LA COMISIÓN COMÚN SALIÓ
+//    DEL FLUJO (las comisiones van por vendedor en el N1, e2e/73): ni el
+//    filtro "Con comisión sin cargar", ni el sello, ni "Comisión: sin cargar",
+//    ni "Cargar comisión".
 //  - La ficha del cliente: "Comisión habitual (%)", que se guarda con
 //    guardar_comision_habitual (no viaja en guardar_ficha_cliente).
 //  - Cuentas corrientes → la ficha del proveedor COMISIONES: "Pagar" abre el
@@ -12,7 +12,7 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || `http://localhost:${process.env.E2E_PUERTO_MAQUETA || 4180}`;
 
 function anotarRpc(page) {
   const rpc = [];
@@ -41,63 +41,26 @@ async function abrirAdministracion(page) {
 }
 
 for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
-  test(`${ancho} px: cargar la comisión de una orden`, async ({ page }, info) => {
+  test(`${ancho} px: la comisión común ya no aparece en las órdenes`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrirAdministracion(page);
     await page.locator('[data-pestana="ordenes"]').first().click();
     await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
-
-    // El filtro: solo las valorizadas, sin comisión, de clientes con habitual.
-    await page.locator('#ad-filtro-comision').check();
-    const filas = page.locator('#ad-ordenes-lista [data-orden]');
-    await expect(filas.first()).toBeVisible();
-    const n = await filas.count();
-    for (let i = 0; i < n; i++) await expect(filas.nth(i)).toContainText('Comisión sin cargar');
+    // Ni el filtro ni el sello del listado (Anatolia tiene habitual 5 %).
+    await expect(page.locator('#ad-filtro-comision')).toHaveCount(0);
     await expect(page.locator('#ad-ordenes-lista [data-orden="o12"]')).toBeVisible();
-    await expect(page.locator('#ad-ordenes-lista [data-orden="o2"]')).toHaveCount(0);
-    // "Sin valorizar" no convive con él.
-    await page.locator('#ad-filtro-sin-valorizar').check();
-    await expect(page.locator('#ad-filtro-comision')).not.toBeChecked();
-    await page.locator('#ad-filtro-comision').check();
-    await expect(page.locator('#ad-filtro-sin-valorizar')).not.toBeChecked();
+    await expect(page.locator('#ad-vista-ordenes')).not.toContainText('Comisión sin cargar');
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal en la lista').toBe(true);
-    await captura(page, `comision-filtro-${ancho}`, info);
-
+    // El detalle: el total, sin "Comisión: sin cargar" ni el botón.
     await page.locator('#ad-ordenes-lista [data-orden="o12"]').click();
     const cuerpo = page.locator('#ad-orden-cuerpo');
-    await expect(cuerpo).toContainText('Comisión: sin cargar (la habitual de este cliente es 5 %)');
-    await page.locator('#ad-btn-comision').click();
-    await expect(page.locator('[data-comision-modo="porcentaje"]')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#ad-comision-valor')).toHaveValue('5');
-    await expect(page.locator('#ad-comision-calculo')).toHaveText(/^5 % de \$\s642\.410,00 = \$\s32\.120,50 · Total con comisión \$\s674\.530,50$/);
-    const guardar = page.locator('#ad-comision-guardar');
-    await guardar.scrollIntoViewIfNeeded();
-    await expect(guardar).toBeInViewport();
-    expect(await sinScrollHorizontal(page), 'sin scroll horizontal en el panel').toBe(true);
-    await captura(page, `comision-panel-${ancho}`, info);
-    await guardar.click();
-    await expect.poll(() => rpc.filter(r => r.nombre === 'cargar_comision_orden').length).toBe(1);
-    expect(rpc.find(r => r.nombre === 'cargar_comision_orden').params).toEqual({ p_orden_id: 'o12', p_modo: 'porcentaje', p_valor: 5 });
-
-    // Monto fijo, y la base frena (ya tiene pagos): el mensaje TAL CUAL.
-    await page.evaluate(() => { globalThis.__maqueta = { rpc: { cargar_comision_orden: 'ERROR:La comisión de esta orden ya tiene pagos: no se puede cambiar.' } } });
-    await page.locator('#ad-btn-comision').click();
-    await page.locator('[data-comision-modo="monto"]').click();
-    await expect(page.locator('#ad-comision-valor')).toHaveValue('');
-    await page.locator('#ad-comision-valor').fill('1500');
-    await expect(page.locator('#ad-comision-calculo')).toHaveText(/^Comisión \$\s1\.500,00 · Total con comisión \$\s643\.910,00$/);
-    await page.locator('#ad-comision-guardar').click();
-    await expect(page.locator('#ad-comision-error')).toHaveText('La comisión de esta orden ya tiene pagos: no se puede cambiar.');
-    expect(rpc.filter(r => r.nombre === 'cargar_comision_orden').pop().params).toEqual({ p_orden_id: 'o12', p_modo: 'monto', p_valor: 1500 });
-    // Sin comisión manda null.
-    await page.locator('[data-comision-modo="ninguna"]').click();
-    await expect(page.locator('#ad-comision-calculo')).toHaveText(/^Sin comisión: el total queda en \$\s642\.410,00\.$/);
-    await page.locator('#ad-comision-guardar').click();
-    await expect.poll(() => rpc.filter(r => r.nombre === 'cargar_comision_orden').length).toBe(3);
-    expect(rpc.filter(r => r.nombre === 'cargar_comision_orden').pop().params).toEqual({ p_orden_id: 'o12', p_modo: 'ninguna', p_valor: null });
-    await captura(page, `comision-error-${ancho}`, info);
+    await expect(cuerpo).toContainText('Total $');
+    await expect(cuerpo).not.toContainText('Comisión');
+    await expect(page.locator('#ad-btn-comision')).toHaveCount(0);
+    await captura(page, `comision-sin-flujo-${ancho}`, info);
+    expect(rpc.some(r => r.nombre === 'cargar_comision_orden')).toBe(false);
     await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
     expect(errores, errores.join('\n')).toEqual([]);
   });

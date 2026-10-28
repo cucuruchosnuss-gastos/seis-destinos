@@ -234,7 +234,8 @@ esperas.push((async () => {
   const rpcAntes = S.__llamadas.rpc.length
   await ctx.abrirOrden('o1')
   chk('pila: abre la orden', S.estado.vista === 'ad-vista-orden' && S.estado.orden?.id === 'o1' && S.estado.orden?.orden?.codigo === 'N-0012')
-  chk('pila: sin recargar la cuenta (ninguna rpc nueva al abrir la orden)', S.__llamadas.rpc.length === rpcAntes)
+  // datos_division_orden es de la orden (sus puntos N1 / N2, 28/10/2026), no de la cuenta.
+  chk('pila: sin recargar la cuenta (ninguna rpc nueva al abrir la orden)', S.__llamadas.rpc.slice(rpcAntes).filter(([n]) => n !== 'datos_division_orden').length === 0)
   chk('pila: apiló de dónde se vino (la cuenta, su scroll y el cliente)', S.PILA_NAV.length === 1 && S.PILA_NAV[0].vista === 'ad-vista-cliente' && S.PILA_NAV[0].scroll === 640 && S.PILA_NAV[0].clienteId === 'c1' && S.PILA_NAV[0].destino === 'ad-vista-orden', JSON.stringify(S.PILA_NAV))
   chk('pila: empujó una entrada al historial', JSON.stringify(nav(S).entradas()) === JSON.stringify([null, { adPila: 1 }]), JSON.stringify(nav(S).entradas()))
   chk('pila: la flecha se ve', el(S, 'ad-volver').hidden === false)

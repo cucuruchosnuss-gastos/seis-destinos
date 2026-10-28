@@ -3,7 +3,8 @@
 // datos nuevos (pruebas/datos-maqueta/celular-*.js, más config-produccion y
 // stock-costos, que ya estaban) se abren y se miden a 360 y 390 px:
 //  - el detalle de un gasto (celular-gastos, ?gasto=),
-//  - la comisión de una orden (celular-administracion, la orden N-0012),
+//  - los puntos de venta de una orden (celular-administracion, la orden
+//    N-0012; hasta el 28/10/2026 era su comisión común, que salió),
 //  - "Dar salida" de un cheque (celular-administracion → Cheques),
 //  - el panel de un costo en Stock (stock-costos),
 //  - "Mis retiros" y una orden abierta (celular-retiros),
@@ -28,8 +29,8 @@ const VISTAS = {
   comision: {
     url: 'modulos/administracion.html?maqueta=celular-administracion',
     pasos: [async (p) => { await p.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n')); await p.reload() },
-      '[data-pestana="ordenes"]', '#ad-ordenes-lista [data-orden="o12"]', '#ad-btn-comision'],
-    ver: '#ad-comision-guardar',
+      '[data-pestana="ordenes"]', '#ad-ordenes-lista [data-orden="o12"]'],
+    ver: '#ad-fc-punto-b',
   },
   salida: { url: 'modulos/administracion.html?maqueta=celular-administracion', pasos: ['[data-pestana="cheques"]', '[data-dar-salida]:visible'], ver: '#chq-salida-confirmar' },
   costo: { url: 'modulos/stock.html?vista=insumos&maqueta=stock-costos', pasos: ['.barra-unidad__chip[data-unidad="u-n"]', '#btn-ver-costos', '[data-costo="i-harina"]'], ver: '#modal-costo #costo-precio' },
@@ -83,12 +84,13 @@ for (const ancho of [360, 390]) {
       });
     }
 
-    test('la comisión: "Sin comisión" se ve entero, sin scroll adentro del segmento', async ({ page }) => {
+    test('los puntos de venta: 100/0 … 40/60 se ven enteros, sin scroll adentro del segmento', async ({ page }) => {
       await abrir(page, ancho, VISTAS.comision);
-      const seg = page.locator('#ad-comision-panel .ad-segmento');
+      const seg = page.locator('#ad-fc .ad-segmento');
       const s = await caja(seg);
       expect(await seg.evaluate(e => e.scrollWidth <= e.clientWidth + 1), 'el segmento no scrollea de costado').toBe(true);
-      for (const b of await seg.locator('[data-comision-modo]').all()) {
+      expect(await seg.locator('[data-fc-pct]').count()).toBe(4);
+      for (const b of await seg.locator('[data-fc-pct]').all()) {
         const r = await caja(b);
         expect(r.left, `${await b.textContent()} adentro del segmento`).toBeGreaterThanOrEqual(s.left - 0.5);
         expect(r.right, `${await b.textContent()} adentro del segmento`).toBeLessThanOrEqual(s.right + 0.5);
