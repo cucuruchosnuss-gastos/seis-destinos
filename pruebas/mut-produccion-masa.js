@@ -154,7 +154,7 @@ correrMutacionesProduccion({
 
     // ── Registrar, el botón que dice "registrada" y 6d ─────────────────────
     { nombre: 'un rechazo de la base se muestra genérico', de: "        estado.errorReceta = r.error?.message || 'La base no aceptó la masa.'", a: "        estado.errorReceta = 'La base no aceptó la masa.'" },
-    { nombre: "la masa siguiente no relee los datos (la anterior queda vieja)", de: "      try { await cargarDatosMasa(); leida = !sinRed } catch", a: "      try { leida = !sinRed } catch" },
+    { nombre: "la masa siguiente no relee los datos (la anterior queda vieja)", de: "      try { await leyendoMasa(cargarDatosMasa); leida = !sinRed } catch", a: "      try { leida = !sinRed } catch" },
     { nombre: "la masa siguiente no suma el número", de: "      t.nro = (Number(res?.nro ?? prev.nro) || 0) + 1", a: "      t.nro = Number(res?.nro ?? prev.nro) || 0" },
     { nombre: "después de una modificada la siguiente vuelve a Modificar", de: "      const como = prev.como === 'modificar' ? 'anterior' : (prev.como ?? 'original')", a: "      const como = prev.como ?? 'original'" },
     { nombre: "sin señal la anterior no se arma desde la tablet", de: "      if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)\n", a: "" },

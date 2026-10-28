@@ -36,7 +36,7 @@ correrMutacionesProduccion({
     { nombre: 'el cartel no se muestra', de: '      el.hidden = !c\n', a: '      el.hidden = true\n' },
     { nombre: 'sin la clase que esconde el aviso viejo', de: "      document.body?.classList?.toggle('pr-con-cartel', !!c)\n", a: '' },
     { nombre: 'los errores de la cola no se dibujan', de: "      document.getElementById('pr-cola-errores').innerHTML = htmlErroresCola(lista)", a: "      document.getElementById('pr-cola-errores').innerHTML = ''" },
-    { nombre: 'sin "Todo enviado"', de: '          estado.recienEnviado = Date.now()\n', a: '' },
+    { nombre: 'sin "Todo enviado"', de: '      estado.recienEnviado = Date.now()\n', a: '' },
     // ── Lo que no anda sin red ──
     { nombre: 'abrir sin red no avisa', de: "      if (sinInternet()) { mostrarError(MENSAJE_ABRIR_SIN_RED); return }\n", a: '' },
     { nombre: 'confirmar abrir sin red manda igual', de: "      if (sinInternet()) { err.textContent = MENSAJE_ABRIR_SIN_RED; err.hidden = false; return }\n", a: '' },

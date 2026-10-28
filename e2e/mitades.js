@@ -67,6 +67,9 @@ const TIEMPOS = {
   // Sin medir en GitHub: 44 s en la compu (20 pruebas, 24/10/2026); se estima
   // como el 37 (mismas pantallas) con algo más.
   '61-cheques-importe-completo.spec.js': 20,
+  // Sin medir en GitHub: 57 s en la compu dentro del ensayo (tres pruebas,
+  // 28/10/2026); en GitHub va más rápido.
+  '70-tablet-sin-internet-pin.spec.js': 50,
   '34-faltante-retiro.spec.js': 19,
   '7-barra-unidad.spec.js': 18,
   '27-planta-sin-internet.spec.js': 16,

@@ -182,6 +182,7 @@ function armar({ modo = 'masa', persona = JUAN } = {}) {
       if (base.pin[params.p_empleado_id] !== params.p_pin) return { data: { ok: false, motivo: 'pin_incorrecto', intentos_restantes: 4 }, error: null }
       return { data: { ok: true, debe_cambiar: base.debeCambiar.has(params.p_empleado_id) }, error: null }
     }
+    if (op === 'datos_para_masa' && base.datosParaMasa) return base.datosParaMasa()
     if (op === 'registrar_masa') {
       if (S.__red.hay === false) return { data: null, error: RED }
       if (!base.masas.some(m => m.p_client_uuid === params.p_client_uuid)) base.masas.push(params)
@@ -256,8 +257,33 @@ esperas.push((async () => {
   chk('… con una masa a medio cargar (ya eligió el tamaño), espera', S.revalidarSiVolvioLaRed() === false && S.estado.persona?.id === 'e-juan')
   S.estado.masa = { tipo: 'Común', doble: null, cambiada: true, como: 'anterior', motivo: '' }
   chk('… (o le cambió algo), espera', S.revalidarSiVolvioLaRed() === false && S.estado.persona?.id === 'e-juan')
-  S.estado.vista = 'pr-sala'
   S.estado.masa = null
+  // Registrando una masa, o leyendo la siguiente de la base, tampoco es una
+  // pausa: al terminar, la receta se pintaba encima del PIN (28/10, el ensayo).
+  S.estado.enviandoMasa = true
+  chk('… registrando una masa, espera', S.revalidarSiVolvioLaRed() === false && S.estado.persona?.id === 'e-juan')
+  S.estado.enviandoMasa = false
+  let soltar
+  const lectura = S.leyendoMasa(() => new Promise(r => { soltar = r }))
+  chk('… leyendo la masa siguiente, espera', S.revalidarSiVolvioLaRed() === false && S.estado.persona?.id === 'e-juan')
+  soltar()
+  await lectura
+  chk('… y al terminar de leer ya no cuenta', S.estado.leyendoMasa === 0)
+  let fallo = null
+  await S.leyendoMasa(async () => { throw new Error('sin red') }).catch(e => { fallo = e })
+  chk('… aunque la lectura falle', fallo?.message === 'sin red' && S.estado.leyendoMasa === 0)
+  // El caso del ensayo: registrada la masa, la siguiente se lee de la base.
+  let soltarDatos
+  base.datosParaMasa = () => { base.datosParaMasa = null; return new Promise(r => { soltarDatos = r }) }
+  S.estado.vista = 'pr-receta'
+  S.estado.salaTurno = { id: 't1', lote: 7023, maquinaId: 'm1', maquinaNombre: 'Máquina 1', nro: 3 }
+  S.estado.tipoMasa = 'Común'
+  const siguiente = S.siguienteMasa({ turnoId: 't1', nro: 3, como: 'original' }, { nro: 3 })
+  chk('… registrada la masa, mientras se lee la siguiente no pide el PIN', S.estado.leyendoMasa === 1 && S.revalidarSiVolvioLaRed() === false && S.estado.persona?.id === 'e-juan')
+  soltarDatos({ data: null, error: RED })
+  await siguiente
+  chk('… y leída, sí', S.estado.leyendoMasa === 0)
+  S.estado.vista = 'pr-sala'
   // La masa que se abre sola después de registrar, sin tocar: no frena.
   chk('una masa sin tocar no cuenta como empezada', S.masaEmpezada({ tipo: 'Común', doble: null, cambiada: false, como: 'anterior', motivo: '' }) === false)
   chk('… con motivo escrito sí', S.masaEmpezada({ doble: null, cambiada: false, como: 'anterior', motivo: 'más agua' }) === true)
@@ -418,6 +444,26 @@ esperas.push((async () => {
   chk('vuelve la red: se manda sola, con su p_client_uuid', base.masas.length === 1 && base.masas[0].p_client_uuid === 'masa-1' && base.masas[0].p_items[0].lote === 'L-55')
   await S.procesarColaPlanta()
   chk('… una sola vez', S.__llamadas.rpc.filter(([n]) => n === 'registrar_masa').length === 1)
+})())
+
+// Las masas que esperaban en la tablet salen por reintentarPendientes (no
+// por la vuelta de la cola): el cartel igual dice "Todo enviado ✓" (28/10,
+// el ensayo: pasaba de "Enviando…" a nada).
+esperas.push((async () => {
+  const { S, base } = armar()
+  S.estado.sinRedChequeo = true
+  S.__red.hay = false
+  const b = { client_uuid: 'masa-2', turnoId: 't1', nro: 4, maquinaNombre: 'Máquina 1', lote: 7023, payload: { p_turno_id: 't1', p_tipo_masa: 'Común', p_doble: false, p_masero_id: 'e-juan', p_items: [], p_client_uuid: 'masa-2', p_motivo: null } }
+  chk('sin red, la masa queda esperando en la tablet', (await S.enviarMasa(b)).resultado === 'red' && S.borradoresPendientes().length === 1)
+  S.__red.hay = true
+  S.estado.sinRedChequeo = false
+  await S.reintentarPendientes()
+  chk('vuelve la red: la masa que esperaba sale', base.masas.length === 1 && base.masas[0].p_client_uuid === 'masa-2')
+  chk('… y el cartel dice "Todo enviado ✓"', S.pintarCartelCola()?.texto === 'Todo enviado ✓', S.pintarCartelCola()?.texto)
+  S.estado.recienEnviado = null
+  S.marcarTodoEnviado({ esperando: 1, errores: 0 })
+  S.marcarTodoEnviado({ esperando: 0, errores: 1 })
+  chk('… pero con algo esperando o con error, no', S.estado.recienEnviado === null)
 })())
 
 fin()
