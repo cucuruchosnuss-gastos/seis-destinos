@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Buscar — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#FFFFFF">
+
+  <!-- BUSCAR (28/10/2026, rama ci-prueba/modulo-buscar). El acceso rápido:
+       el primer paso del buscador general de toda la app. Dos pestañas:
+
+       - LOTE: el lote de una caja ("6262-1") o de un turno ("6262") y TODA la
+         información de su fabricación, con trazabilidad_lote(p_lote,
+         p_unidad_negocio_id) (del chat de la base; leída con
+         pg_get_functiondef el 28/10/2026): un arreglo, uno por turno
+         encontrado, con el turno, lo producido, las masas con el lote y el
+         ingreso de cada insumo, las paradas, el stock que queda y las salidas.
+         La base deja ver cada turno con produccion:ver o stock:ver en SU
+         fábrica (tiene_tarea_alcance). El lote mal escrito lo dice la base, y
+         su mensaje va tal cual. "Imprimir / PDF" saca todo en una A4.
+       - PRECIOS: el último precio de compra de cada insumo, con
+         precios_compra(p_unidad_negocio_id, p_hasta) — la misma de Stock →
+         "Precios de compra" (pide stock:ver_costos o retiros:precios en la
+         fábrica). Las funciones de formato son COPIA IGUAL a las de
+         stock.html (cada módulo duplica sus helpers):
+         pruebas/test-buscar-precios.js da rojo si una se aparta. Tocando un
+         insumo, su historial (las compras de la fábrica y los cargados a mano,
+         como el modal de Stock, sin Anular).
+
+       La tarjeta del menú (js/modulos.js, clave 'buscar') no tiene fila en la
+       tabla modulos: se ve con alguna de esas cuatro tareas (sinFilaModulo). -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    body {
+      --bu-borde: rgba(28, 26, 23, 0.08);
+      --bu-sombra: 0 1px 2px rgba(28, 26, 23, 0.05);
+    }
+
+    .bu-app { max-width: 960px; margin: 0 auto; padding: 0 1rem 6rem; }
+
+    /* El encabezado de todos los módulos (.cab-modulo de main.css), con el
+       color de Buscar (PALETA_MODULO de js/modulos.js). */
+    .cab-modulo { --cab-modulo: oklch(0.42 0.1 30); --cab-modulo-suave: oklch(0.955 0.028 30); }
+
+    .bu-tabs { display: flex; gap: 0.375rem; overflow-x: auto; padding: 0.25rem 0 0.75rem; }
+    .bu-tab {
+      flex: 0 0 auto; min-height: 44px; padding: 0 1.125rem; border-radius: 999px;
+      border: 1px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto);
+      font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .bu-tab[aria-pressed="true"] { background: var(--color-acento); border-color: var(--color-acento); color: #fff; }
+
+    .bu-tarjeta { background: var(--color-fondo); border: 1px solid var(--bu-borde); box-shadow: var(--bu-sombra); border-radius: 16px; padding: 1rem; margin-bottom: 0.75rem; min-width: 0; }
+    .bu-tarjeta h2, .bu-tarjeta h3 { margin: 0 0 0.625rem; font-family: var(--fuente-titulo); letter-spacing: -0.02em; }
+    .bu-tarjeta h2 { font-size: 1.25rem; }
+    .bu-tarjeta h3 { font-size: 1.0625rem; }
+
+    .bu-buscador { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; }
+    .bu-campo { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 14rem; min-width: 0; }
+    .bu-campo label { font-size: 0.875rem; font-weight: 700; color: var(--color-texto-menu, #3D3831); }
+    .bu-campo input {
+      min-height: 52px; padding: 0.5rem 0.875rem; border: 1px solid var(--color-borde-fuerte);
+      border-radius: 12px; font: inherit; font-size: 16px; background: #fff; color: var(--color-texto); width: 100%; box-sizing: border-box;
+    }
+    #bu-lote-campo { font-family: var(--fuente-titulo); font-size: 1.5rem; font-weight: 700; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+    .bu-ayuda { margin: 0.375rem 0 0; font-size: 0.8125rem; color: var(--color-texto-2, #6B645A); }
+
+    .bu-btn {
+      min-height: 52px; padding: 0 1.25rem; border-radius: 12px; border: 1px solid var(--color-acento);
+      background: var(--color-acento); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .bu-btn:disabled { opacity: 0.55; cursor: default; }
+    .bu-btn--suave { min-height: 44px; background: #fff; color: var(--color-texto); border-color: var(--color-borde-boton); font-weight: 600; }
+
+    .bu-error { background: var(--bordo-suave); color: var(--bordo-oscuro); border-left: 3px solid var(--bordo); padding: 0.625rem 0.75rem; border-radius: 8px; margin: 0.75rem 0; font-weight: 600; overflow-wrap: anywhere; }
+    .bu-aviso { background: var(--color-superficie); border-left: 3px solid var(--color-borde-fuerte); padding: 0.625rem 0.75rem; border-radius: 8px; margin: 0.75rem 0; color: var(--color-texto-menu, #3D3831); }
+    .bu-vacio { padding: 1.25rem 0.5rem; color: var(--color-texto-2, #6B645A); text-align: center; }
+
+    .bu-chips { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0 0 0.75rem; }
+    .bu-chip-unidad { min-height: 44px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--color-borde-boton); background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    .bu-chip-unidad[aria-pressed="true"] { background: var(--color-acento-suave); border-color: var(--color-acento); color: var(--naranja-oscuro, #8F2F08); }
+
+    /* ── El resultado de un lote ─────────────────────────────────────────── */
+    .bu-res-barra { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; margin: 0.75rem 0; }
+    .bu-res-barra p { margin: 0; color: var(--color-texto-2, #6B645A); font-weight: 600; }
+    .bu-hoja-titulo { display: none; }
+
+    .bu-turno-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; margin-bottom: 0.5rem; }
+    .bu-turno-cab h2 { margin: 0; font-size: 1.5rem; }
+    .bu-turno-cab span { color: var(--color-texto-2, #6B645A); font-weight: 600; }
+
+    .bu-datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.625rem 1rem; margin: 0; }
+    .bu-datos div { min-width: 0; }
+    .bu-datos dt { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave, #9A9287); text-transform: uppercase; letter-spacing: 0.04em; }
+    .bu-datos dd { margin: 0.125rem 0 0; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .bu-datos .bu-ancho { grid-column: 1 / -1; }
+    .bu-ops { list-style: none; margin: 0; padding: 0; }
+    .bu-ops li { padding: 0.0625rem 0; }
+    .bu-tarde { margin: 0.75rem 0 0; padding: 0.5rem 0.75rem; border-radius: 8px; background: var(--amarillo-suave, #FBF3D9); color: var(--amarillo-oscuro, #5C4A0E); font-weight: 600; overflow-wrap: anywhere; }
+
+    .bu-lista { list-style: none; margin: 0; padding: 0; }
+    .bu-lista > li { padding: 0.625rem 0; border-top: 1px solid var(--color-divisor); min-width: 0; }
+    .bu-lista > li:first-child { border-top: 0; padding-top: 0; }
+    .bu-renglon { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 0.75rem; align-items: baseline; }
+    .bu-renglon__nombre { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+    .bu-renglon__num { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bu-meta { margin-top: 0.125rem; font-size: 0.875rem; color: var(--color-texto-2, #6B645A); overflow-wrap: anywhere; }
+    .bu-total { margin-top: 0.625rem; padding-top: 0.625rem; border-top: 1px solid var(--color-borde); font-weight: 700; display: flex; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+
+    .bu-masa { padding: 0.75rem 0; border-top: 1px solid var(--color-divisor); }
+    .bu-masa:first-of-type { border-top: 0; padding-top: 0; }
+    .bu-masa__cab { font-weight: 700; overflow-wrap: anywhere; }
+    .bu-masa__cab small { font-weight: 600; color: var(--color-texto-2, #6B645A); font-size: 0.875rem; }
+    .bu-insumos { list-style: none; margin: 0.375rem 0 0; padding: 0 0 0 0.75rem; border-left: 2px solid var(--color-pista); }
+    .bu-insumos li { padding: 0.375rem 0; }
+    .bu-sin-ingreso { color: var(--bordo); font-weight: 600; }
+
+    .bu-cat { display: inline-block; padding: 0.0625rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--color-pista); color: var(--color-texto-menu, #3D3831); }
+
+    .bu-sub { margin: 1rem 0 0.375rem; font-size: 0.8125rem; font-weight: 700; color: var(--color-texto-suave, #9A9287); text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* ── Precios ─────────────────────────────────────────────────────────── */
+    .bu-precios-cuenta { margin: 0.5rem 0; font-size: 0.875rem; color: var(--color-texto-2, #6B645A); }
+    .bu-precio { border-top: 1px solid var(--color-divisor); }
+    .bu-precio:first-child { border-top: 0; }
+    .bu-precio__boton {
+      display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; width: 100%; text-align: left;
+      padding: 0.75rem 0.25rem; background: none; border: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px;
+    }
+    .bu-precio__boton:hover { background: var(--color-fila-hover); }
+    .bu-precio__nombre { font-weight: 700; overflow-wrap: anywhere; }
+    .bu-precio__marca { font-weight: 600; color: var(--color-texto-2, #6B645A); }
+    .bu-precio__origen { display: block; margin-top: 0.125rem; font-size: 0.8125rem; color: var(--color-texto-2, #6B645A); overflow-wrap: anywhere; }
+    .bu-precio__celdas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+    .bu-precio__rot { display: block; font-size: 0.6875rem; font-weight: 700; color: var(--color-texto-suave, #9A9287); text-transform: uppercase; letter-spacing: 0.04em; }
+    .bu-precio__val { display: block; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .bu-precio__bulto { display: block; margin-top: 0.125rem; font-size: 0.8125rem; color: var(--color-texto-2, #6B645A); overflow-wrap: anywhere; }
+    .bu-historial { padding: 0 0.25rem 0.875rem; }
+    .bu-hist { padding: 0.5rem 0.75rem; border-radius: 10px; background: var(--color-superficie); margin-top: 0.375rem; }
+    .bu-hist--anulado { opacity: 0.6; text-decoration: line-through; }
+    .bu-hist__tipo { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave, #9A9287); text-transform: uppercase; letter-spacing: 0.04em; }
+    .bu-hist__valor { font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .bu-hist__meta { font-size: 0.8125rem; color: var(--color-texto-2, #6B645A); overflow-wrap: anywhere; }
+
+    @media (min-width: 720px) {
+      .bu-precio__boton { grid-template-columns: minmax(0, 1.6fr) minmax(0, 2fr); align-items: center; }
+    }
+
+    /* La hoja para imprimir o guardar en PDF: una A4 con todo lo del lote. */
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff !important; }
+      .bu-no-imprimir, .cab-modulo, .bu-tabs, #version-banner { display: none !important; }
+      .bu-app { max-width: none; padding: 0; }
+      .bu-hoja-titulo { display: block; margin: 0 0 4mm; font-family: var(--fuente-titulo); }
+      .bu-hoja-titulo h1 { margin: 0; font-size: 18pt; }
+      .bu-hoja-titulo p { margin: 1mm 0 0; font-size: 9pt; color: #444; }
+      .bu-tarjeta { box-shadow: none; border: 1px solid #bbb; border-radius: 6px; break-inside: avoid; padding: 3mm 4mm; margin-bottom: 3mm; }
+      .bu-masa { break-inside: avoid; }
+      .bu-sin-ingreso { color: #000; text-decoration: underline; }
+    }
+  </style>
+  <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. -->
+  <script type="module" src="../js/barra-lateral.js"></script>
+  <!-- La barra de arriba (js/barra-unidad.js): decide la fábrica. -->
+  <script type="module" src="../js/barra-unidad.js"></script>
+</head>
+<body class="pagina-modulo">
+  <div class="bu-app" id="bu-app">
+
+    <header class="cab-modulo">
+      <a href="../dashboard.html" class="cab-modulo__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"/></svg></span>
+      <div class="cab-modulo__col">
+        <span class="cab-modulo__titulo">Buscar</span>
+        <span class="cab-modulo__sub" id="bu-cab-sub"></span>
+      </div>
+    </header>
+
+    <div class="bu-vacio" id="bu-cargando">Cargando…</div>
+    <div class="bu-vacio" id="bu-sin-acceso" hidden></div>
+
+    <nav class="bu-tabs" id="bu-tabs" aria-label="Qué buscar" hidden></nav>
+
+    <!-- ══ LOTE ══════════════════════════════════════════════════════════════ -->
+    <section id="bu-vista-lote" hidden>
+      <form class="bu-tarjeta bu-no-imprimir" id="bu-lote-form" autocomplete="off">
+        <div class="bu-buscador">
+          <div class="bu-campo">
+            <label for="bu-lote-campo">Lote de la caja</label>
+            <input type="text" id="bu-lote-campo" inputmode="text" placeholder="6262-1" maxlength="20" enterkeyhint="search" spellcheck="false">
+          </div>
+          <button type="submit" class="bu-btn" id="bu-lote-buscar">Buscar</button>
+        </div>
+        <p class="bu-ayuda">Como está en la caja (6262-1). Con el número solo (6262), todo el turno.</p>
+      </form>
+      <div id="bu-lote-aviso"></div>
+      <div id="bu-lote-resultado"></div>
+    </section>
+
+    <!-- ══ PRECIOS ═══════════════════════════════════════════════════════════ -->
+    <section id="bu-vista-precios" hidden>
+      <div id="bu-precios-aviso"></div>
+      <div class="bu-chips" id="bu-precios-unidades" hidden></div>
+      <div class="bu-tarjeta" id="bu-precios-caja" hidden>
+        <div class="bu-campo">
+          <label for="bu-precios-campo">Insumo</label>
+          <input type="search" id="bu-precios-campo" placeholder="Nombre o marca del insumo…" autocomplete="off" spellcheck="false">
+        </div>
+        <p class="bu-precios-cuenta" id="bu-precios-cuenta" aria-live="polite"></p>
+        <div id="bu-precios-lista"></div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { formatearFecha, formatearNumeroAr, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
+    import { formatearCantidadStock, unidadCorta } from '../js/cantidades.js'
+    import { supabase } from '../js/supabase.js'
+    import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTANTES Y FUNCIONES PURAS (las ejecutan pruebas/test-buscar-*.js)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+    // Qué tareas abren cada pestaña (las mismas que miran trazabilidad_lote y
+    // precios_compra en la base, con su alcance).
+    const TAREAS_LOTE = ['produccion:ver', 'stock:ver']
+    const TAREAS_PRECIOS = ['stock:ver_costos', 'retiros:precios']
+    const VISTAS = [
+      { clave: 'lote', texto: 'Lote' },
+      { clave: 'precios', texto: 'Precios' },
+    ]
+    const CATEGORIA_PARADA = { programada: 'Programada', falla: 'Falla', organizativa: 'Organizativa', otro: 'Otro' }
+
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ))
+    }
+
+    // Sin acentos y en minúsculas — mismo criterio que el buscador de
+    // proveedores de gastos.html: los nombres se tipean sin tildes.
+    function normalizar(v) {
+      return (v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    }
+
+    // La MISMA regla que tiene_tarea_alcance(): super_admin, o la tarea con
+    // alcance {"todas": true} o con la unidad en {"unidades": [...]}. Un
+    // alcance null no da ninguna unidad (como en la base).
+    function puedeEn(permisos, clave, unidadId) {
+      if (!unidadId) return false
+      if (permisos?.rol === 'super_admin') return true
+      if (!permisos?.alcances?.has(clave)) return false
+      const alcance = permisos.alcances.get(clave)
+      if (alcance && alcance.todas === true) return true
+      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
+
+    // Las fábricas donde la persona tiene alguna de esas tareas.
+    function unidadesCon(unidades, permisos, claves) {
+      return (unidades ?? []).filter(u => claves.some(c => puedeEn(permisos, c, u.id)))
+    }
+
+    // Las pestañas que ve: Lote y/o Precios, según en cuántas fábricas tiene
+    // con qué. Ninguna: no entra.
+    function vistasDe(unidades, permisos) {
+      return VISTAS.filter(v => unidadesCon(unidades, permisos, v.clave === 'lote' ? TAREAS_LOTE : TAREAS_PRECIOS).length > 0)
+    }
+
+    // Un número de la base o null: null, '' o un texto no son un número
+    // (Number(null) es 0, que diría "no alcanza ni para un día").
+    function numeroCobertura(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    function fechaCorta(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''))
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'
+    }
+
+    // Una hora de la base sin zona ('14:05:00') → '14:05'.
+    function horaCorta(t) {
+      const m = /^(\d{1,2}):(\d{2})/.exec(String(t ?? ''))
+      return m ? `${m[1].padStart(2, '0')}:${m[2]}` : '—'
+    }
+
+    // Un momento con zona (timestamptz) → la hora en Argentina, '14:05'.
+    function horaDe(ts) {
+      if (!ts) return '—'
+      const d = new Date(ts)
+      if (Number.isNaN(d.getTime())) return '—'
+      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+    }
+
+    function minutosEntre(desde, hasta) {
+      const a = new Date(desde), b = new Date(hasta)
+      if (!desde || !hasta || Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null
+      return Math.max(0, Math.round((b - a) / 60000))
+    }
+
+    function textoMinutos(min) {
+      if (min === null) return ''
+      if (min < 60) return `${min} min`
+      const h = Math.floor(min / 60), r = min % 60
+      return r ? `${h} h ${r} min` : `${h} h`
+    }
+
+    // Kilos: "25", "12,5", "0,125". Ausente: "—".
+    function textoKg(v) {
+      const n = numeroCobertura(v)
+      return n === null ? '—' : `${formatearNumeroAr(n, { decimales: 3, minimos: 0 })} kg`
+    }
+
+    function entero(v) {
+      const n = numeroCobertura(v)
+      return n === null ? '—' : formatearNumeroAr(n, { decimales: 0 })
+    }
+
+    function plural(n, uno, varios) {
+      return `${entero(n)} ${Number(n) === 1 ? uno : varios}`
+    }
+
+    // Común o chocolate, simple o doble (los booleanos de la masa mandan; el
+    // texto tipo_masa por si algún día dice "Chocolate").
+    function textoTipoMasa(m) {
+      const choco = m?.chocolate === true || /choco/i.test(String(m?.tipo ?? ''))
+      return `${choco ? 'Chocolate' : 'Común'} · ${m?.doble === true ? 'Doble' : 'Simple'}`
+    }
+
+    // Los insumos que se muestran de una masa: los de 0 kg, no (son los
+    // renglones de la receta que esa masa no llevó). Un kg sin dato se muestra.
+    function insumosVisibles(insumos) {
+      return (Array.isArray(insumos) ? insumos : []).filter(i => numeroCobertura(i?.kg) !== 0)
+    }
+
+    // De dónde vino un insumo: los ingresos de ese lote (proveedor, fecha y
+    // comprobante), o null si no se encontró ninguno.
+    function textosOrigen(origen) {
+      const lista = (Array.isArray(origen) ? origen : []).map(o => [
+        o?.proveedor || 'Proveedor sin nombre',
+        o?.fecha ? fechaCorta(o.fecha) : '',
+        o?.comprobante ? `comprobante ${o.comprobante}` : '',
+      ].filter(Boolean).join(' · '))
+      return lista.length ? lista : null
+    }
+
+    // ── El armado de la trazabilidad ────────────────────────────────────────
+    // Un elemento de lo que devuelve trazabilidad_lote → lo que se dibuja, ya
+    // armado (las suites lo ejecutan sobre los datos de la maqueta).
+    function armarTrazabilidad(r, nombresUnidad) {
+      const t = r?.turno ?? {}
+      const buscado = String(r?.lote_buscado ?? '')
+      const producido = (Array.isArray(r?.produccion) ? r.produccion : []).map(p => ({
+        sublote: p?.sublote ?? null, producto: p?.producto ?? '', presentacion: p?.presentacion ?? '',
+        cono: p?.cono ?? null, cajas: numeroCobertura(p?.cajas), unidades: numeroCobertura(p?.unidades),
+      }))
+      const masas = (Array.isArray(r?.masas) ? r.masas : []).map(m => ({
+        nro: m?.nro ?? null, hora: horaDe(m?.hora), tipo: textoTipoMasa(m), masero: m?.masero || null,
+        insumos: insumosVisibles(m?.insumos).map(i => ({
+          nombre: i?.insumo || 'Insumo sin nombre', marca: i?.marca || null, kg: textoKg(i?.kg),
+          lote: i?.lote ? String(i.lote) : null, origen: textosOrigen(i?.origen),
+        })),
+      }))
+      const paradas = (Array.isArray(r?.paradas) ? r.paradas : []).map(p => ({
+        motivo: p?.motivo || 'Sin motivo', detalle: p?.detalle || null,
+        categoria: CATEGORIA_PARADA[p?.categoria] ?? (p?.categoria || ''),
+        desde: horaDe(p?.inicio), hasta: p?.fin ? horaDe(p.fin) : null,
+        duracion: textoMinutos(minutosEntre(p?.inicio, p?.fin)),
+      }))
+      const stock = (Array.isArray(r?.stock_por_lote) ? r.stock_por_lote : [])
+        .map(s => ({ lote: s?.lote ?? '', presentacion: s?.presentacion ?? '', cajas: numeroCobertura(s?.cajas) }))
+        .filter(s => s.cajas !== null && s.cajas !== 0)
+      const salidas = (Array.isArray(r?.salidas) ? r.salidas : []).map(s => ({
+        fecha: fechaCorta(s?.fecha), lote: s?.lote ?? '', orden: s?.orden || null,
+        cliente: s?.cliente || (String(s?.tipo ?? '').startsWith('traspaso') ? 'Traspaso a otra fábrica' : 'Sin cliente'),
+        cajas: numeroCobertura(s?.cajas),
+      }))
+      const suma = (l, k) => l.reduce((a, x) => a + (x[k] ?? 0), 0)
+      return {
+        buscado, esCaja: buscado.includes('-'), lote: t.lote ?? null,
+        unidadId: t.unidad_negocio_id ?? null, fabrica: nombresUnidad?.get?.(t.unidad_negocio_id) ?? '',
+        turno: {
+          fecha: fechaCorta(t.fecha), turno: t.turno || '—', maquina: t.maquina || '—', encargado: t.encargado || '—',
+          inicio: horaCorta(t.hora_inicio), largada: horaCorta(t.hora_largada), apagado: horaCorta(t.hora_apagado), fin: horaCorta(t.hora_fin),
+          inicioTarde: String(t.largada_motivo ?? '').trim() || null,
+          scrap: textoKg(t.scrap_kg), observaciones: String(t.observaciones ?? '').trim() || null,
+        },
+        operarios: (Array.isArray(r?.operarios) ? r.operarios : []).map(o => ({
+          nombre: o?.nombre || 'Sin nombre', desde: horaDe(o?.desde), hasta: o?.hasta ? horaDe(o.hasta) : null,
+        })),
+        producido, totalCajas: suma(producido, 'cajas'), totalUnidades: suma(producido, 'unidades'),
+        masas, paradas, stock, salidas, totalSalidas: suma(salidas, 'cajas'), totalStock: suma(stock, 'cajas'),
+      }
+    }
+
+    // Lo que dice la pantalla cuando la base no encontró nada.
+    function textoSinResultados(nombreFabrica) {
+      return nombreFabrica ? `No se encontró ese lote en ${nombreFabrica}.` : 'No se encontró ese lote en ninguna de tus fábricas.'
+    }
+
+    // ── El HTML del resultado (todo texto de la base con esc) ──────────────
+    function htmlDato(rotulo, valor, ancho = false) {
+      return `<div${ancho ? ' class="bu-ancho"' : ''}><dt>${esc(rotulo)}</dt><dd>${esc(valor)}</dd></div>`
+    }
+
+    function htmlTurno(a) {
+      const t = a.turno
+      const operarios = a.operarios.length
+        ? `<ul class="bu-ops">${a.operarios.map(o => `<li>${esc(`${o.nombre} · ${o.hasta ? `${o.desde} a ${o.hasta}` : `desde ${o.desde}`}`)}</li>`).join('')}</ul>`
+        : '—'
+      return `
+        <article class="bu-tarjeta" data-seccion="turno">
+          <div class="bu-turno-cab">
+            <h2>Lote ${esc(a.esCaja ? a.buscado : a.lote)}</h2>
+            <span>${esc([a.esCaja ? `del turno ${a.lote}` : 'todo el turno', a.fabrica].filter(Boolean).join(' · '))}</span>
+          </div>
+          <dl class="bu-datos">
+            ${htmlDato('Fecha', t.fecha)}${htmlDato('Turno', t.turno)}${htmlDato('Máquina', t.maquina)}${htmlDato('Encargado', t.encargado)}
+            ${htmlDato('Inicio', t.inicio)}${htmlDato('Empezó a producir', t.largada)}${htmlDato('Apagado', t.apagado)}${htmlDato('Fin', t.fin)}
+            ${htmlDato('Scrap', t.scrap)}
+            <div class="bu-ancho"><dt>Operarios</dt><dd data-operarios>${operarios}</dd></div>
+            ${t.observaciones ? htmlDato('Observaciones', t.observaciones, true) : ''}
+          </dl>
+          ${t.inicioTarde ? `<p class="bu-tarde" data-inicio-tarde>${esc(`Inicio tarde: ${t.inicioTarde}`)}</p>` : ''}
+        </article>`
+    }
+
+    function htmlProducido(a) {
+      const filas = a.producido.map(p => `
+            <li>
+              <div class="bu-renglon"><span class="bu-renglon__nombre">${esc([p.producto, p.presentacion].filter(Boolean).join(' · '))}</span><span class="bu-renglon__num">${esc(plural(p.cajas, 'caja', 'cajas'))}</span></div>
+              <div class="bu-meta">${esc([p.sublote ? `Sublote ${p.sublote}` : 'Sin sublote', p.cono ? `cono ${p.cono}` : 'sin cono', p.unidades !== null ? plural(p.unidades, 'unidad', 'unidades') : ''].filter(Boolean).join(' · '))}</div>
+            </li>`).join('')
+      return `
+        <article class="bu-tarjeta" data-seccion="producido">
+          <h3>Lo producido</h3>
+          ${filas ? `<ul class="bu-lista">${filas}</ul>
+          <div class="bu-total"><span>Total</span><span>${esc(`${plural(a.totalCajas, 'caja', 'cajas')} · ${plural(a.totalUnidades, 'unidad', 'unidades')}`)}</span></div>` : '<p class="bu-vacio">No hay nada producido con ese lote.</p>'}
+        </article>`
+    }
+
+    function htmlInsumo(i) {
+      const origen = i.origen
+        ? `<div class="bu-meta">${esc(`De: ${i.origen.join(' / ')}`)}</div>`
+        : '<div class="bu-meta bu-sin-ingreso" data-sin-ingreso>sin ingreso encontrado</div>'
+      return `
+                <li>
+                  <div class="bu-renglon"><span class="bu-renglon__nombre">${esc(i.nombre)}${i.marca ? ` <span class="bu-precio__marca">· ${esc(i.marca)}</span>` : ''}</span><span class="bu-renglon__num">${esc(i.kg)}</span></div>
+                  <div class="bu-meta">${esc(i.lote ? `Lote ${i.lote}` : 'Sin lote anotado')}</div>
+                  ${origen}
+                </li>`
+    }
+
+    function htmlMasas(a) {
+      const masas = a.masas.map(m => `
+          <div class="bu-masa" data-masa="${esc(m.nro)}">
+            <div class="bu-masa__cab">${esc(`Masa ${m.nro ?? '—'} · ${m.hora}`)} <small>${esc([m.tipo, m.masero ? `masero ${m.masero}` : 'sin masero anotado'].join(' · '))}</small></div>
+            ${m.insumos.length ? `<ul class="bu-insumos">${m.insumos.map(htmlInsumo).join('')}</ul>` : '<div class="bu-meta">Sin insumos anotados.</div>'}
+          </div>`).join('')
+      return `
+        <article class="bu-tarjeta" data-seccion="masas">
+          <h3>Masas${a.masas.length ? ` (${esc(a.masas.length)})` : ''}</h3>
+          ${masas || '<p class="bu-vacio">El turno no tiene masas anotadas.</p>'}
+        </article>`
+    }
+
+    function htmlParadas(a) {
+      const filas = a.paradas.map(p => `
+            <li>
+              <div class="bu-renglon"><span class="bu-renglon__nombre">${esc(p.motivo)}${p.categoria ? ` <span class="bu-cat">${esc(p.categoria)}</span>` : ''}</span><span class="bu-renglon__num">${esc(p.hasta ? `${p.desde} a ${p.hasta}` : `desde ${p.desde}`)}</span></div>
+              ${p.detalle || p.duracion ? `<div class="bu-meta">${esc([p.detalle, p.duracion].filter(Boolean).join(' · '))}</div>` : ''}
+            </li>`).join('')
+      return `
+        <article class="bu-tarjeta" data-seccion="paradas">
+          <h3>Paradas</h3>
+          ${filas ? `<ul class="bu-lista">${filas}</ul>` : '<p class="bu-vacio">Sin paradas.</p>'}
+        </article>`
+    }
+
+    function htmlAdelante(a) {
+      const stock = a.stock.map(s => `
+            <li><div class="bu-renglon"><span class="bu-renglon__nombre">${esc(`${s.lote} · ${s.presentacion}`)}</span><span class="bu-renglon__num">${esc(plural(s.cajas, 'caja', 'cajas'))}</span></div></li>`).join('')
+      const salidas = a.salidas.map(s => `
+            <li>
+              <div class="bu-renglon"><span class="bu-renglon__nombre">${esc(s.cliente)}</span><span class="bu-renglon__num">${esc(plural(s.cajas, 'caja', 'cajas'))}</span></div>
+              <div class="bu-meta">${esc([s.fecha, s.orden ? `orden ${s.orden}` : '', s.lote ? `lote ${s.lote}` : ''].filter(Boolean).join(' · '))}</div>
+            </li>`).join('')
+      return `
+        <article class="bu-tarjeta" data-seccion="adelante">
+          <h3>Hacia adelante</h3>
+          <div class="bu-sub">Stock que queda</div>
+          ${stock ? `<ul class="bu-lista" data-stock>${stock}</ul>` : '<p class="bu-meta" data-stock>No queda stock de este lote.</p>'}
+          <div class="bu-sub">Salidas</div>
+          ${salidas ? `<ul class="bu-lista" data-salidas>${salidas}</ul>
+          <div class="bu-total"><span>Total salido</span><span>${esc(plural(a.totalSalidas, 'caja', 'cajas'))}</span></div>` : '<p class="bu-meta" data-salidas>Todavía no salió ninguna caja de este lote.</p>'}
+        </article>`
+    }
+
+    function htmlUnTurno(a) {
+      return `<div class="bu-turno-res" data-turno-lote="${esc(a.lote)}">${htmlTurno(a)}${htmlProducido(a)}${htmlMasas(a)}${htmlParadas(a)}${htmlAdelante(a)}</div>`
+    }
+
+    // El resultado entero: la barra con "Imprimir / PDF", el título de la hoja
+    // (solo se ve impreso) y un bloque por turno encontrado.
+    function htmlResultado(armados, buscado, ahora = new Date()) {
+      const cuantos = armados.length > 1 ? `${armados.length} turnos con ese lote` : ''
+      const impreso = new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(ahora).replace(',', '')
+      return `
+        <div class="bu-res-barra bu-no-imprimir">
+          <p>${esc(cuantos)}</p>
+          <button type="button" class="bu-btn bu-btn--suave" id="bu-imprimir">Imprimir / PDF</button>
+        </div>
+        <div class="bu-hoja-titulo"><h1>${esc(`Trazabilidad del lote ${buscado}`)}</h1><p>${esc(`Seis Destinos · impreso el ${impreso}`)}</p></div>
+        ${armados.map(htmlUnTurno).join('')}`
+    }
+
+    // ── Precios: COPIA IGUAL de modulos/stock.html ("Precios de compra") ───
+    // test-buscar-precios.js compara el texto de cada una con la de Stock.
+
+    // Un numeric de la base (puede llegar como texto) o null. null, '' y un
+    // texto ilegible NO son un cero.
+    function numeroCosto(v) {
+      return numeroCobertura(v)
+    }
+
+    function plataCosto(n, decimales = 2) {
+      const v = numeroCosto(n)
+      return v === null ? '—' : `$ ${formatearNumeroAr(v, { decimales, minimos: 2 })}`
+    }
+
+    // "por kg", "por L", "por unidad".
+    function porUnidadDeMedida(unidad) {
+      const u = unidadCorta(unidad)
+      return `por ${u === 'u' || u === 'unidades' ? 'unidad' : u}`
+    }
+
+    // La plata de un precio: dos decimales, y cuatro para los chicos (una
+    // bolsita a $ 0,3456).
+    function plataPrecioCompra(n) {
+      const v = numeroCosto(n)
+      return v === null ? '—' : plataCosto(v, Math.abs(v) < 10 ? 4 : 2)
+    }
+
+    function textoIvaPrecio(iva) {
+      const n = numeroCosto(iva)
+      return n === null ? '—' : `${formatearNumeroAr(n, { decimales: 2, minimos: 0 })} %`
+    }
+
+    const NOMBRES_COMPROBANTE = { factura_a: 'Factura A', factura_x: 'Factura X', remito: 'Remito', sin_comprobante: 'Sin comprobante' }
+
+    // precios_compra arma el comprobante con concat_ws(' ', tipo_doc,
+    // numero_doc): "factura_a 0001-00001234" → "Factura A 0001-00001234".
+    function textoComprobante(c) {
+      const t = String(c ?? '').trim()
+      if (!t) return ''
+      const [tipo, ...resto] = t.split(/\s+/)
+      return NOMBRES_COMPROBANTE[tipo] ? [NOMBRES_COMPROBANTE[tipo], ...resto].join(' ') : t
+    }
+
+    // De dónde salió: "Compra · Molino Pepe · Factura A 0001-00001234 ·
+    // 27/10/2026", o "Cargado a mano · <nota> · 27/10/2026" (en los manuales
+    // el comprobante es la nota).
+    function textoOrigenPrecio(f) {
+      const fecha = f.fecha ? formatearFecha(String(f.fecha)) : ''
+      if (f.origen === 'compra') return ['Compra', f.proveedor, textoComprobante(f.comprobante), fecha].filter(Boolean).join(' · ')
+      if (f.origen === 'manual') return ['Cargado a mano', f.comprobante, fecha].filter(Boolean).join(' · ')
+      return 'Todavía no tiene precio de compra en esta fábrica'
+    }
+
+    // Lo que trae un bulto: el del catálogo que manda precios_compra (Stock
+    // además mira la presentación de la fábrica; acá alcanza con el catálogo).
+    function contenidoBultoPrecio(f) {
+      const c = numeroCosto(f.contenido_bulto)
+      return c && c > 0 ? c : null
+    }
+
+    // "bolsa de 25 kg con IVA: $ 21.175,00".
+    function textoBultoConIva(f) {
+      const c = contenidoBultoPrecio(f), fin = numeroCosto(f.precio_final)
+      if (!c || c === 1 || fin === null) return ''
+      const nombre = String(f.nombre_bulto ?? '').trim() || 'bulto'
+      return `${nombre} de ${formatearCantidadStock(c, f.unidad_medida)} con IVA: ${plataCosto(Math.round(fin * c * 100) / 100)}`
+    }
+
+    // Las compras de esta fábrica, de la más nueva a la más vieja, con el
+    // precio SIN IVA por unidad y su IVA.
+    function comprasDelHistorial(filas, unidad) {
+      return (Array.isArray(filas) ? filas : [])
+        .filter(c => c?.materia_prima_ingresos?.unidad_negocio_id === unidad && numeroCosto(c.precio_unitario) !== null && numeroCosto(c.precio_unitario) > 0)
+        .map(c => ({
+          id: c.id, precio: numeroCosto(c.precio_unitario), iva: numeroCosto(c.alicuota_iva) ?? 0,
+          fecha: c.materia_prima_ingresos.fecha ?? null, proveedor: c.materia_prima_ingresos.razon_social ?? null,
+          comprobante: [c.materia_prima_ingresos.tipo_doc, c.materia_prima_ingresos.numero_doc].filter(Boolean).join(' '),
+          orden: String(c.created_at ?? ''),
+        }))
+        .sort((a, b) => String(b.fecha ?? '').localeCompare(String(a.fecha ?? '')) || b.orden.localeCompare(a.orden))
+    }
+
+    // "$ 700,0000 por kg + IVA 21 %".
+    function textoPrecioConIva(precio, iva, unidad) {
+      return `${plataPrecioCompra(precio)} ${porUnidadDeMedida(unidad)} + IVA ${textoIvaPrecio(iva ?? 0)}`
+    }
+
+    // ── Precios: lo propio de esta pantalla ─────────────────────────────────
+
+    // El buscador filtra mientras se escribe, por nombre y marca, sin acentos
+    // ni mayúsculas (como Stock). Cada palabra tiene que estar.
+    function filasPreciosVisibles(filas, busqueda) {
+      const palabras = normalizar(busqueda).split(/\s+/).filter(Boolean)
+      return (Array.isArray(filas) ? filas : []).filter(f => {
+        if (!f?.insumo_id) return false
+        const texto = normalizar(`${f.insumo} ${f.marca || ''}`)
+        return palabras.every(p => texto.includes(p))
+      })
+    }
+
+    function textoCuentaPrecios(visibles, total) {
+      if (!total) return ''
+      return visibles === total ? plural(total, 'insumo con precio', 'insumos con precio') : `${entero(visibles)} de ${plural(total, 'insumo', 'insumos')}`
+    }
+
+    function htmlFilaPrecio(f, abierto, historialHtml) {
+      const unidad = porUnidadDeMedida(f.unidad_medida)
+      const bulto = textoBultoConIva(f)
+      return `
+        <div class="bu-precio" data-precio-fila="${esc(f.insumo_id)}">
+          <button type="button" class="bu-precio__boton" data-precio="${esc(f.insumo_id)}" aria-expanded="${abierto ? 'true' : 'false'}">
+            <span><span class="bu-precio__nombre">${esc(f.insumo)}</span>${f.marca ? ` <span class="bu-precio__marca">· ${esc(f.marca)}</span>` : ''}<span class="bu-precio__origen">${esc(textoOrigenPrecio(f))}</span></span>
+            <span>
+              <span class="bu-precio__celdas">
+                <span><span class="bu-precio__rot">Sin IVA</span><span class="bu-precio__val" data-col="unitario">${esc(`${plataPrecioCompra(f.precio_unitario)} ${unidad}`)}</span></span>
+                <span><span class="bu-precio__rot">IVA %</span><span class="bu-precio__val" data-col="iva">${esc(textoIvaPrecio(f.alicuota_iva))}</span></span>
+                <span><span class="bu-precio__rot">Final</span><span class="bu-precio__val" data-col="final">${esc(`${plataPrecioCompra(f.precio_final)} ${unidad}`)}</span></span>
+              </span>
+              ${bulto ? `<span class="bu-precio__bulto" data-col="bulto">${esc(`Por ${bulto}`)}</span>` : ''}
+            </span>
+          </button>
+          ${abierto ? `<div class="bu-historial" data-historial="${esc(f.insumo_id)}">${historialHtml}</div>` : ''}
+        </div>`
+    }
+
+    // El historial de un insumo (solo para mirar): las compras de la fábrica y
+    // los precios cargados a mano (los anulados, tachados).
+    function htmlHistorialPrecios(h, unidadMedida) {
+      if (!h || h.cargando) return '<div class="bu-meta">Cargando el historial…</div>'
+      const avisoCompras = h.errorCompras ? `<div class="bu-error">${esc('No se pudieron leer las compras: ' + h.errorCompras)}</div>` : ''
+      const avisoManual = h.errorManual ? `<div class="bu-error">${esc('No se pudieron leer los precios cargados a mano: ' + h.errorManual)}</div>` : ''
+      const compras = (h.compras ?? []).map(c => `
+            <div class="bu-hist" data-hist="compra">
+              <div class="bu-hist__tipo">Compra</div>
+              <div class="bu-hist__valor">${esc(textoPrecioConIva(c.precio, c.iva, unidadMedida))}</div>
+              <div class="bu-hist__meta">${esc([c.proveedor, textoComprobante(c.comprobante), c.fecha ? formatearFecha(String(c.fecha)) : ''].filter(Boolean).join(' · '))}</div>
+            </div>`).join('')
+      const manuales = (h.manuales ?? []).map(m => `
+            <div class="bu-hist${m.anulado ? ' bu-hist--anulado' : ''}" data-hist="manual">
+              <div class="bu-hist__tipo">${m.anulado ? 'Cargado a mano · anulado' : 'Cargado a mano'}</div>
+              <div class="bu-hist__valor">${esc(textoPrecioConIva(m.costo_unitario, m.alicuota_iva, unidadMedida))}</div>
+              <div class="bu-hist__meta">${esc([m.vigente_desde ? `desde ${formatearFecha(String(m.vigente_desde))}` : '', m.nota].filter(Boolean).join(' · '))}</div>
+            </div>`).join('')
+      if (!compras && !manuales && !avisoCompras && !avisoManual) return '<div class="bu-meta">Todavía no hay ningún precio de este insumo en esta fábrica.</div>'
+      return `<div class="bu-sub">Historial</div>${avisoCompras}${avisoManual}${compras}${manuales}`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO Y PANTALLA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      permisos: { rol: null, alcances: new Map() },
+      unidades: [],              // [{ id, nombre }] activas, sin la de pruebas para una cuenta real
+      nombres: new Map(),        // id → nombre
+      fabrica: FABRICA_SIN_DATOS,
+      unidadBarra: null,         // la de la barra de arriba (null = Todas)
+      vistas: [],
+      vista: null,
+      lote: { buscado: '', buscando: false, armados: null, error: null, unidad: null, turnoBusqueda: 0 },
+      precios: { unidad: null, elegida: null, filas: null, error: null, busqueda: '', abierto: null, historiales: new Map(), turno: 0 },
+    }
+
+    function mensajeDe(e) {
+      return String(e?.message || e || 'Error desconocido')
+    }
+
+    function pintarAviso(id, texto, grave = false) {
+      const el = document.getElementById(id)
+      el.innerHTML = texto ? `<div class="${grave ? 'bu-error' : 'bu-aviso'}">${esc(texto)}</div>` : ''
+    }
+
+    function nombreUnidad(id) {
+      return estado.nombres.get(id) ?? 'esta fábrica'
+    }
+
+    // ── Pestañas ───────────────────────────────────────────────────────────
+    function pintarPestanas() {
+      const nav = document.getElementById('bu-tabs')
+      nav.hidden = estado.vistas.length < 2
+      nav.innerHTML = estado.vistas.map(v =>
+        `<button type="button" class="bu-tab" data-vista="${esc(v.clave)}" aria-pressed="${estado.vista === v.clave ? 'true' : 'false'}">${esc(v.texto)}</button>`).join('')
+    }
+
+    function mostrarVista(clave) {
+      if (!estado.vistas.some(v => v.clave === clave)) clave = estado.vistas[0]?.clave
+      estado.vista = clave
+      document.getElementById('bu-vista-lote').hidden = clave !== 'lote'
+      document.getElementById('bu-vista-precios').hidden = clave !== 'precios'
+      document.getElementById('bu-cab-sub').textContent = estado.vistas.find(v => v.clave === clave)?.texto ?? ''
+      pintarPestanas()
+      try {
+        const url = new URL(window.location.href)
+        url.searchParams.set('vista', clave)
+        window.history.replaceState(null, '', url)
+      } catch { /* sin history: no importa */ }
+      if (clave === 'lote') pintarLote()
+      if (clave === 'precios') abrirPrecios()
+    }
+
+    // ── Lote ───────────────────────────────────────────────────────────────
+    function unidadesLote() {
+      return unidadesCon(estado.unidades, estado.permisos, TAREAS_LOTE)
+    }
+
+    // Con una fábrica en la barra donde no puede: lo dice y no busca.
+    function sinPermisoLote() {
+      return !!estado.unidadBarra && !unidadesLote().some(u => u.id === estado.unidadBarra)
+    }
+
+    function pintarLote() {
+      const boton = document.getElementById('bu-lote-buscar')
+      boton.disabled = estado.lote.buscando
+      boton.textContent = estado.lote.buscando ? 'Buscando…' : 'Buscar'
+      if (sinPermisoLote()) {
+        pintarAviso('bu-lote-aviso', `No tenés permiso para buscar lotes en ${nombreUnidad(estado.unidadBarra)}.`)
+        document.getElementById('bu-lote-resultado').innerHTML = ''
+        return
+      }
+      const l = estado.lote
+      if (l.error) pintarAviso('bu-lote-aviso', l.error, true)
+      else if (l.armados && !l.armados.length) pintarAviso('bu-lote-aviso', textoSinResultados(l.unidad ? nombreUnidad(l.unidad) : null))
+      else pintarAviso('bu-lote-aviso', '')
+      const res = document.getElementById('bu-lote-resultado')
+      if (!l.armados?.length) { res.innerHTML = ''; return }
+      res.innerHTML = htmlResultado(l.armados, l.buscado)
+      // Imprimir EN el toque (Safari del iPhone ignora un print() que llega
+      // después de un await): la hoja ya está dibujada.
+      document.getElementById('bu-imprimir').addEventListener('click', () => window.print())
+    }
+
+    async function buscarLote(texto) {
+      const lote = String(texto ?? '').trim()
+      const l = estado.lote
+      if (!lote) {
+        l.error = 'Escribí el lote de la caja (por ejemplo 6262-1).'
+        l.armados = null
+        pintarLote()
+        return
+      }
+      if (sinPermisoLote()) { pintarLote(); return }
+      const turno = ++l.turnoBusqueda
+      l.buscando = true
+      l.error = null
+      pintarLote()
+      // Con "Todas" la base busca en todas las fábricas donde puede ver.
+      const unidad = estado.unidadBarra || null
+      const { data, error } = await supabase.rpc('trazabilidad_lote', { p_lote: lote, p_unidad_negocio_id: unidad })
+      if (turno !== l.turnoBusqueda) return
+      l.buscando = false
+      l.buscado = lote.toUpperCase()
+      l.unidad = unidad
+      if (error) {
+        console.error('trazabilidad_lote:', error)
+        l.error = mensajeDe(error)
+        l.armados = null
+      } else {
+        const lista = sinUnidadesDePrueba(Array.isArray(data) ? data : [], estado.fabrica, r => r?.turno?.unidad_negocio_id)
+        l.armados = lista.map(r => armarTrazabilidad(r, estado.nombres))
+      }
+      pintarLote()
+    }
+
+    // ── Precios ────────────────────────────────────────────────────────────
+    function unidadesPrecios() {
+      return unidadesCon(estado.unidades, estado.permisos, TAREAS_PRECIOS)
+    }
+
+    // De qué fábrica se ven los precios: la de la barra (si ahí se puede); con
+    // "Todas", la única posible o la elegida acá con los chips (regla f de la
+    // barra: se pide ahí mismo, sin cambiar la barra).
+    function unidadPrecios() {
+      const lista = unidadesPrecios()
+      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : null
+      if (lista.length === 1) return lista[0].id
+      return lista.some(u => u.id === estado.precios.elegida) ? estado.precios.elegida : null
+    }
+
+    function abrirPrecios() {
+      const unidad = unidadPrecios()
+      if (unidad && (unidad !== estado.precios.unidad || estado.precios.error)) cargarPrecios(unidad)
+      else pintarPrecios()
+    }
+
+    async function cargarPrecios(unidad) {
+      const p = estado.precios
+      const turno = ++p.turno
+      p.unidad = unidad
+      p.filas = null
+      p.error = null
+      p.abierto = null
+      p.historiales = new Map()
+      pintarPrecios()
+      const { data, error } = await supabase.rpc('precios_compra', { p_unidad_negocio_id: unidad })
+      if (turno !== p.turno) return
+      if (error) {
+        console.error('precios_compra:', error)
+        p.error = mensajeDe(error)
+      } else {
+        p.filas = Array.isArray(data) ? data : []
+      }
+      pintarPrecios()
+    }
+
+    function pintarChipsPrecios() {
+      const cont = document.getElementById('bu-precios-unidades')
+      const lista = unidadesPrecios()
+      cont.hidden = !!estado.unidadBarra || lista.length < 2
+      cont.innerHTML = cont.hidden ? '' : lista.map(u =>
+        `<button type="button" class="bu-chip-unidad" data-unidad-precios="${esc(u.id)}" aria-pressed="${estado.precios.elegida === u.id ? 'true' : 'false'}">${esc(u.nombre)}</button>`).join('')
+    }
+
+    function pintarPrecios() {
+      pintarChipsPrecios()
+      const caja = document.getElementById('bu-precios-caja')
+      const lista = unidadesPrecios()
+      if (estado.unidadBarra && !lista.some(u => u.id === estado.unidadBarra)) {
+        pintarAviso('bu-precios-aviso', `No tenés permiso para ver los precios de compra en ${nombreUnidad(estado.unidadBarra)}.`)
+        caja.hidden = true
+        return
+      }
+      const unidad = unidadPrecios()
+      if (!unidad) {
+        pintarAviso('bu-precios-aviso', 'Elegí de qué fábrica ver los precios: cada fábrica tiene los suyos.')
+        caja.hidden = true
+        return
+      }
+      const p = estado.precios
+      caja.hidden = false
+      if (p.error) {
+        pintarAviso('bu-precios-aviso', `No se pudieron leer los precios: ${p.error}`, true)
+        caja.hidden = true
+        return
+      }
+      pintarAviso('bu-precios-aviso', '')
+      pintarListaPrecios()
+    }
+
+    function pintarListaPrecios() {
+      const p = estado.precios
+      const cont = document.getElementById('bu-precios-lista')
+      const cuenta = document.getElementById('bu-precios-cuenta')
+      if (p.filas === null) {
+        cont.innerHTML = '<div class="bu-vacio">Cargando los precios…</div>'
+        cuenta.textContent = ''
+        return
+      }
+      const visibles = filasPreciosVisibles(p.filas, p.busqueda)
+      cuenta.textContent = textoCuentaPrecios(visibles.length, p.filas.length)
+      if (!visibles.length) {
+        cont.innerHTML = `<div class="bu-vacio">${esc(p.filas.length ? 'No se encontró ningún insumo con ese nombre o marca.' : `${nombreUnidad(p.unidad)} todavía no tiene precios de compra.`)}</div>`
+        return
+      }
+      cont.innerHTML = visibles.map(f => htmlFilaPrecio(f, p.abierto === f.insumo_id,
+        p.abierto === f.insumo_id ? htmlHistorialPrecios(p.historiales.get(f.insumo_id), f.unidad_medida) : '')).join('')
+    }
+
+    async function abrirHistorial(insumoId) {
+      const p = estado.precios
+      if (p.abierto === insumoId) { p.abierto = null; pintarListaPrecios(); return }
+      p.abierto = insumoId
+      const unidad = p.unidad
+      if (!p.historiales.has(insumoId)) {
+        p.historiales.set(insumoId, { cargando: true })
+        pintarListaPrecios()
+        // Lo mismo que lee el historial del modal de Stock: las compras (la
+        // policy de materia_prima_items deja verlas con materia_prima:ver_todo
+        // o las propias; si no se pueden leer se dice) y los cargados a mano.
+        const [compras, manuales] = await Promise.all([
+          supabase.from('materia_prima_items')
+            .select('id, precio_unitario, alicuota_iva, created_at, materia_prima_ingresos(fecha, tipo_doc, numero_doc, razon_social, unidad_negocio_id)')
+            .eq('insumo_id', insumoId).not('precio_unitario', 'is', null),
+          supabase.from('insumo_costos')
+            .select('id, costo_unitario, alicuota_iva, vigente_desde, nota, anulado')
+            .eq('unidad_negocio_id', unidad).eq('insumo_id', insumoId)
+            .order('vigente_desde', { ascending: false }).order('cargado_en', { ascending: false }),
+        ])
+        if (p.unidad !== unidad) return
+        if (compras.error) console.error('materia_prima_items (compras):', compras.error)
+        if (manuales.error) console.error('insumo_costos:', manuales.error)
+        p.historiales.set(insumoId, {
+          cargando: false,
+          compras: compras.error ? [] : comprasDelHistorial(compras.data, unidad),
+          errorCompras: compras.error ? mensajeDe(compras.error) : null,
+          manuales: manuales.error ? [] : (Array.isArray(manuales.data) ? manuales.data : []),
+          errorManual: manuales.error ? mensajeDe(manuales.error) : null,
+        })
+      }
+      pintarListaPrecios()
+    }
+
+    // ── La barra de arriba ─────────────────────────────────────────────────
+    function aplicarUnidadDeLaBarra(elegida) {
+      const nueva = elegida || null
+      if (nueva === estado.unidadBarra) return
+      estado.unidadBarra = nueva
+      // Lo buscado era de otra fábrica: se vuelve a buscar en la nueva.
+      if (estado.lote.armados || estado.lote.error) {
+        estado.lote.armados = null
+        estado.lote.error = null
+        if (estado.vista === 'lote' && estado.lote.buscado) buscarLote(estado.lote.buscado)
+      }
+      if (estado.vista === 'lote') pintarLote()
+      if (estado.vista === 'precios') abrirPrecios()
+    }
+
+    function conectar() {
+      document.getElementById('bu-tabs').addEventListener('click', e => {
+        const b = e.target.closest('[data-vista]')
+        if (b) mostrarVista(b.dataset.vista)
+      })
+      document.getElementById('bu-lote-form').addEventListener('submit', e => {
+        e.preventDefault()
+        buscarLote(document.getElementById('bu-lote-campo').value)
+      })
+      document.getElementById('bu-precios-campo').addEventListener('input', e => {
+        estado.precios.busqueda = e.target.value
+        pintarListaPrecios()
+      })
+      document.getElementById('bu-precios-lista').addEventListener('click', e => {
+        const b = e.target.closest('[data-precio]')
+        if (b) abrirHistorial(b.dataset.precio)
+      })
+      document.getElementById('bu-precios-unidades').addEventListener('click', e => {
+        const b = e.target.closest('[data-unidad-precios]')
+        if (!b) return
+        estado.precios.elegida = b.dataset.unidadPrecios
+        abrirPrecios()
+      })
+    }
+
+    // ── Arranque ───────────────────────────────────────────────────────────
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase
+        .from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      const { data: tareas, error: e2 } = await supabase
+        .from('empleado_tareas').select('modulo, tarea, alcance')
+        .eq('empleado_id', emp.id).in('modulo', ['produccion', 'stock', 'retiros']).eq('habilitado', true)
+      if (e2) throw e2
+      estado.permisos = { rol: emp.rol_app, alcances: new Map((tareas ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? null])) }
+      const { data: unidades, error: e3 } = await supabase
+        .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
+      if (e3) throw e3
+      estado.nombres = new Map((unidades ?? []).map(u => [u.id, u.nombre]))
+      return unidades ?? []
+    }
+
+    function sinAcceso(texto) {
+      document.getElementById('bu-cargando').hidden = true
+      const el = document.getElementById('bu-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      const fabrica = cargarFabricaDePruebas(supabase)
+      const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
+      let unidades
+      try {
+        const [u, f] = await Promise.all([cargarPermisos(), fabrica])
+        estado.fabrica = f
+        unidades = u
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+      estado.unidades = sinUnidadesDePrueba(unidades, estado.fabrica).map(u => ({ id: u.id, nombre: u.nombre }))
+      estado.vistas = vistasDe(estado.unidades, estado.permisos)
+      if (!estado.vistas.length) {
+        sinAcceso('No tenés acceso a Buscar. Te llevamos al inicio…')
+        return
+      }
+      const { elegida } = (await barra) ?? {}
+      estado.unidadBarra = elegida || null
+      document.getElementById('bu-cargando').hidden = true
+      conectar()
+      alCambiarUnidad(e => aplicarUnidadDeLaBarra(e?.elegida))
+      const params = new URLSearchParams(window.location.search)
+      const lote = params.get('lote')
+      mostrarVista(lote ? 'lote' : params.get('vista'))
+      // ?lote=6262-1 busca derecho (para el buscador general que viene).
+      if (lote && estado.vista === 'lote') {
+        document.getElementById('bu-lote-campo').value = lote
+        buscarLote(lote)
+      } else if (estado.vista === 'lote') {
+        document.getElementById('bu-lote-campo').focus()
+      }
+    }
+
+    init()
+  </script>
+</body>
+</html>
