@@ -47,13 +47,12 @@ const r = correrMutaciones({
     { nombre: '"no va a la cuenta corriente" se va', de: "' (Entre empresas): no va a la cuenta corriente.'", a: "' (Entre empresas).'" },
     { nombre: '"Al valorizar, Queda" en mayúscula', de: 'antes + t.charAt(0).toLowerCase() + t.slice(1)', a: 'antes + t' },
     // La lista de órdenes y de clientes
-    { nombre: 'la fila de la orden sin el sello', de: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}${selloComision}', a: '${htmlSelloOrden(o)}${selloComision}' },
+    { nombre: 'la fila de la orden sin el sello', de: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}</span>` +', a: '${htmlSelloOrden(o)}</span>` +' },
     { nombre: 'el sello sin el título', de: "title=\"${esc(recibe ? 'Otra empresa del grupo: ' + recibe : 'Otra empresa del grupo')}\"", a: '' },
-    { nombre: '"Comisión sin cargar" también entre empresas', de: ' && comisionHabitualDe(cli) !== null && !empresaGrupoDe(cli)', a: ' && comisionHabitualDe(cli) !== null' },
     { nombre: 'la lista de clientes sin "Empresa del grupo"', de: "        `${empresaGrupoDe(fichaCliente(c.cliente_id)) ? '<span class=\"ad-sello ad-sello--entre\" data-sello-entre>Empresa del grupo</span>' : ''}` +\n", a: '' },
     // El detalle
     { nombre: 'el detalle sin el dato "Entre empresas"', de: "        datos.push(htmlDatoAd('Orden interna', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))\n", a: '' },
-    { nombre: 'el detalle sin el sello', de: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}</div><div class="ad-datos">', a: '${htmlSelloOrden(o)}</div><div class="ad-datos">' },
+    { nombre: 'el detalle sin el sello', de: '<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div>', a: '<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloAcopio(o)}</div>' },
     { nombre: 'el detalle con la comisión', de: '${htmlDeudaEntre(o)}` : htmlComisionOrden(d)', a: '` : htmlComisionOrden(d)' },
     { nombre: 'el detalle trata la orden como común', de: '          : entre ? `<p class="ad-total">', a: '          : false ? `<p class="ad-total">' },
     { nombre: 'con "Facturas de ARCA"', de: "(d.valorizar || entre || puedeFacturar(o) ? '' : htmlFacturasOrden(d))", a: "(d.valorizar || puedeFacturar(o) ? '' : htmlFacturasOrden(d))" },
