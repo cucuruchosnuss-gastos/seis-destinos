@@ -18,7 +18,7 @@ correrMutacionesEnVarios([
       { nombre: 'renovar sin padre (haría falta --force)', de: "  if (mio) args.push('-p', mio.sha)\n", a: '' },
       { nombre: 'renovar se olvida desde cuándo', de: 'const desde = mio ? mio.desde : ahora', a: 'const desde = ahora' },
       { nombre: 'no espera: lo toma igual', de: 'if (d && d.nombre !== nombre) {', a: 'if (false) {' },
-      { nombre: 'esperar no espera', de: '      await dormir(PAUSA_SEG)\n      continue', a: '      return 1' },
+      { nombre: 'esperar no espera', de: '    await dormir(PAUSA_SEG)\n    return true', a: '    return false' },
       { nombre: 'no vuelve a mirar después de subir el suyo', de: 'const ganador = dueno(traer(), Date.now())', a: 'const ganador = { nombre }' },
       { nombre: 'pierde y no borra el suyo', de: "    console.log(`Lo tomó a la vez integrando/${ganador ? ganador.nombre : '?'}, desde antes: suelto el mío y espero.`)\n    borrar(nombre)\n", a: "    console.log(`Lo tomó a la vez integrando/${ganador ? ganador.nombre : '?'}, desde antes: suelto el mío y espero.`)\n" },
       { nombre: 'soltar no borra la rama', de: "  git(['push', '--quiet', REMOTO, '--delete', `${PREFIJO}${nombre}`], { puedeFallar: true })\n", a: '' },

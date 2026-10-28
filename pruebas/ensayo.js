@@ -177,12 +177,21 @@ function estadoDe({ marca, mtimeMs, ahora, vivo = pidVivo, compu = os.hostname()
   return 'abandonado'
 }
 
+// → true si la carpeta ya no está.
 function borrarEnsayo(dir) {
   const r = gitOk(['worktree', 'remove', '--force', dir])
-  if (r.status !== 0 && fs.existsSync(dir)) console.log(`  (no se pudo borrar ${dir}: ${r.stderr.trim()})`)
+  if (r.status !== 0 && fs.existsSync(dir)) {
+    // En Windows git no borra los nombres largos de e2e/resultados-* ("Filename
+    // too long", 28/10/2026): la borra node, y git se olvida de esa copia.
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }) } catch {}
+    gitOk(['worktree', 'prune'])
+  }
+  const borrada = !fs.existsSync(dir)
+  if (!borrada) console.log(`  (no se pudo borrar ${dir}: ${r.stderr.trim()})`)
   const rama = `ensayo/${path.basename(dir)}`
   if (gitOk(['rev-parse', '--verify', '--quiet', `refs/heads/${rama}`]).status === 0) gitOk(['branch', '-D', rama])
-  try { fs.unlinkSync(marcaDe(dir)) } catch {}
+  if (borrada) try { fs.unlinkSync(marcaDe(dir)) } catch {}
+  return borrada
 }
 
 // Las carpetas de ensayo: las de .ensayo/ de esta copia y las de cualquier
@@ -522,7 +531,10 @@ async function main() {
   console.log(`  npm run pruebas: ${pruebasOk ? `VERDE (${Math.round(suites.segundos / 60)} min)` : pruebasColgadas ? `ROJO: SE COLGÓ (cortado a los ${topePruebas} min)` : 'ROJO'}`)
   console.log(`  navegador: ${lineaNavegador}`)
   const ok = pruebasOk && navegadorOk !== false
-  if (ok && !dejar) { borrarEnsayo(dir); console.log('  Todo en verde: la carpeta de descarte se borró.') }
+  if (ok && !dejar) {
+    console.log(borrarEnsayo(dir) ? '  Todo en verde: la carpeta de descarte se borró.'
+      : `  Todo en verde, pero la carpeta de descarte no se pudo borrar: npm run ensayo -- --limpiar ${sello}`)
+  }
   else console.log(`  La carpeta queda en ${rel} (mirá e2e/resultados-1/ y -2/). Para borrarla: npm run ensayo -- --limpiar ${sello}`)
   process.exit(ok ? 0 : 1)
 }

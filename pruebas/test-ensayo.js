@@ -196,6 +196,9 @@ chk('… un PID inválido no', M.pidVivo(0) === false && M.pidVivo(-3) === false
     armar('20261028-000002', { pid: muerto, inicio: h(2), fin: h(1) })    // terminó hace 1 h
     armar('20261028-000003', { pid: muerto, inicio: h(7) })              // abandonado
     g('worktree', 'add', '-q', '--detach', '.ensayo/a-mano')            // sin marca, recién hecha
+    // Abandonado y que git no puede borrar (como con los nombres largos de Windows): sin su .git, `worktree remove` falla.
+    armar('20261028-000004', { pid: muerto, inicio: h(8) })
+    fs.rmSync(path.join(E, '20261028-000004', '.git'))
     fs.writeFileSync(path.join(E, 'duraciones.json'), '{}')
     fs.writeFileSync(path.join(E, '20261028-000009.json'), JSON.stringify({ pid: muerto, compu: os.hostname(), inicio: h(1) })) // marca sin carpeta
     fs.writeFileSync(path.join(E, '20261028-000008.json'), JSON.stringify({ pid: process.pid, compu: os.hostname(), inicio: h(0) })) // armando su carpeta
@@ -207,6 +210,7 @@ chk('… un PID inválido no', M.pidVivo(0) === false && M.pidVivo(-3) === false
     chk('… y la carpeta sin marca recién hecha', hay('a-mano'))
     chk('… y borra el abandonado: carpeta, marca y rama', !hay('20261028-000003') && !hay('20261028-000003.json') && !g('branch', '--list', 'ensayo/20261028-000003').stdout.trim(), r.stdout)
     chk('… no toca duraciones.json', hay('duraciones.json'))
+    chk('… y si git no puede borrar una, la borra igual (y git se olvida de ella)', !hay('20261028-000004') && !hay('20261028-000004.json') && !/20261028-000004/.test(g('worktree', 'list').stdout), r.stdout + r.stderr)
     chk('… y borra la marca que quedó sin carpeta', !hay('20261028-000009.json'))
     chk('… salvo la de un ensayo vivo que todavía está armando su carpeta', hay('20261028-000008.json'))
     r = limpiar('20261028-000002')

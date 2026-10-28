@@ -91,6 +91,15 @@ function borrar(nombre) {
 
 async function tomar(nombre, esperarMin) {
   const t0 = Date.now()
+  // Esperar una vuelta, si queda tiempo. → false si ya no queda.
+  const esperarOtraVuelta = async () => {
+    if ((Date.now() - t0) / 60000 + PAUSA_SEG / 60 > esperarMin) {
+      console.log(`No lo suelta dentro de los ${esperarMin} min de espera: no tomé el candado. No integres todavía.`)
+      return false
+    }
+    await dormir(PAUSA_SEG)
+    return true
+  }
   for (;;) {
     const ahora = Date.now()
     const candados = traer()
@@ -102,11 +111,7 @@ async function tomar(nombre, esperarMin) {
     if (d && d.nombre !== nombre) {
       const vence = d.fecha + VIGENCIA_MIN * 60000
       console.log(`ESPERO: está integrando integrando/${d.nombre} (desde las ${hhmm(d.desde)}; si no lo renueva, vence a las ${hhmm(vence)}).`)
-      if ((Date.now() - t0) / 60000 + PAUSA_SEG / 60 > esperarMin) {
-        console.log(`No lo suelta dentro de los ${esperarMin} min de espera: no tomé el candado. No integres todavía.`)
-        return 1
-      }
-      await dormir(PAUSA_SEG)
+      if (!await esperarOtraVuelta()) return 1
       continue
     }
     const renovar = Boolean(mio && d && d.nombre === nombre)
@@ -121,6 +126,8 @@ async function tomar(nombre, esperarMin) {
     }
     console.log(`Lo tomó a la vez integrando/${ganador ? ganador.nombre : '?'}, desde antes: suelto el mío y espero.`)
     borrar(nombre)
+    // También acá se espera y se respeta el tiempo: nunca un ciclo sin pausa.
+    if (!await esperarOtraVuelta()) return 1
   }
 }
 

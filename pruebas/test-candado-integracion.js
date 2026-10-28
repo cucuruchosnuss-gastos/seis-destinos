@@ -54,7 +54,20 @@ for (const s of ['a', 'b']) {
 }
 const A = path.join(tmp, 'a'), B = path.join(tmp, 'b')
 const ENV = { ...process.env, CANDADO_PAUSA_SEG: '1', CANDADO_ASIENTO_SEG: '0' }
-const candado = (cwd, ...a) => spawnSync(process.execPath, [script, ...a], { cwd, encoding: 'utf8', env: ENV })
+// Con tope: un candado que no termina (un ciclo sin fin) es una falla, no una suite colgada.
+const TOPE_MS = 90000
+const candado = (cwd, ...a) => spawnSync(process.execPath, [script, ...a], { cwd, encoding: 'utf8', env: ENV, timeout: TOPE_MS })
+// Lo mismo, sin esperar a que termine. → promesa de { code, out }
+function enParalelo(cwd, args, env = ENV) {
+  return new Promise((resolve) => {
+    const p = spawn(process.execPath, [script, ...args], { cwd, env })
+    const reloj = setTimeout(() => p.kill(), TOPE_MS)
+    let out = ''
+    p.stdout.on('data', d => { out += d })
+    p.stderr.on('data', d => { out += d })
+    p.on('exit', (code) => { clearTimeout(reloj); resolve({ code, out }) })
+  })
+}
 const enGithub = () => g(tmp, '--git-dir', remoto, 'for-each-ref', '--format=%(refname:short) %(objectname)', 'refs/heads/integrando/').stdout.trim()
 const salida = (r) => (r.stdout || '') + (r.stderr || '')
 
@@ -79,13 +92,7 @@ const salida = (r) => (r.stdout || '') + (r.stderr || '')
     chk('… que sigue diciendo desde cuándo lo tiene', g(tmp, '--git-dir', remoto, 'log', '-1', '--format=%s', sha2).stdout.trim() === g(tmp, '--git-dir', remoto, 'log', '-1', '--format=%s', sha1).stdout.trim())
 
     // B espera; A lo suelta al rato; B lo toma solo.
-    const esperaB = new Promise((resolve) => {
-      const p = spawn(process.execPath, [script, 'tomar', 'tema-b', '--esperar', '1'], { cwd: B, env: ENV })
-      let out = ''
-      p.stdout.on('data', d => { out += d })
-      p.stderr.on('data', d => { out += d })
-      p.on('exit', (code) => resolve({ code, out }))
-    })
+    const esperaB = enParalelo(B, ['tomar', 'tema-b', '--esperar', '1'])
     await new Promise(res => setTimeout(res, 2500))
     r = candado(A, 'soltar', 'tema-a')
     chk('A lo suelta', r.status === 0 && /Candado suelto/.test(r.stdout), salida(r))
@@ -110,19 +117,13 @@ const salida = (r) => (r.stdout || '') + (r.stderr || '')
     const desdeAntes = spawnSync('git', ['commit-tree', '4b825dc642cb6eb9a060e54bf8d69288fbee4904', '-m', `candado integrando/rapido desde ${new Date(Date.now() - 1000).toISOString()}`], { cwd: A, encoding: 'utf8' }).stdout.trim()
     g(B, 'push', '-q', 'origin', '--delete', 'integrando/tema-b')
     g(A, 'push', '-q', 'origin', `${desdeAntes}:refs/heads/integrando/rapido`)
-    const conAsiento = spawnSync(process.execPath, [script, 'tomar', 'tema-a', '--esperar', '0'], { cwd: A, encoding: 'utf8', env: { ...ENV, CANDADO_PAUSA_SEG: '0' } })
+    const conAsiento = spawnSync(process.execPath, [script, 'tomar', 'tema-a', '--esperar', '0'], { cwd: A, encoding: 'utf8', env: { ...ENV, CANDADO_PAUSA_SEG: '0' }, timeout: TOPE_MS })
     chk('si otro ya lo tiene, A ni siquiera sube el suyo', conAsiento.status === 1 && !/tema-a/.test(enGithub()), salida(conAsiento))
     g(A, 'push', '-q', 'origin', '--delete', 'integrando/rapido')
 
     // Y si el otro llega MIENTRAS A espera que se asiente lo suyo: A vuelve a
     // mirar, ve que el otro lo tiene desde antes, borra el suyo y espera.
-    const carrera = new Promise((resolve) => {
-      const p = spawn(process.execPath, [script, 'tomar', 'tema-a', '--esperar', '0'], { cwd: A, env: { ...ENV, CANDADO_ASIENTO_SEG: '8' } })
-      let out = ''
-      p.stdout.on('data', d => { out += d })
-      p.stderr.on('data', d => { out += d })
-      p.on('exit', (code) => resolve({ code, out }))
-    })
+    const carrera = enParalelo(A, ['tomar', 'tema-a', '--esperar', '0'], { ...ENV, CANDADO_ASIENTO_SEG: '8' })
     const t0 = Date.now()
     while (!/tema-a/.test(enGithub()) && Date.now() - t0 < 20000) await new Promise(res => setTimeout(res, 100))
     const otro = spawnSync('git', ['commit-tree', '4b825dc642cb6eb9a060e54bf8d69288fbee4904', '-m', `candado integrando/otro desde ${new Date(Date.now() - 60000).toISOString()}`], { cwd: B, encoding: 'utf8' }).stdout.trim()
