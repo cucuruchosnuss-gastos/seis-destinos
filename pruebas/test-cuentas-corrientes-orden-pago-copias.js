@@ -21,7 +21,7 @@
 // por factura, de la más vieja a la más nueva) → la hoja (abrirOrdenPago).
 // Las dos funciones de la base se leyeron con pg_get_functiondef el
 // 23/10/2026; el modelo de acá las copia y está anotado línea por línea.
-// La impresión real (dos páginas, la letra) la mide e2e/53-orden-pago-copias.spec.js.
+// La impresión real (dos páginas, la letra) la mide e2e/88-orden-pago-copias.spec.js.
 //
 //   node pruebas/test-cuentas-corrientes-orden-pago-copias.js
 'use strict'
@@ -275,7 +275,7 @@ async function main() {
   }
 
   // ══ 5. LA HOJA DE IMPRESIÓN (el CSS que la arma) ═══════════════════════════
-  // Lo que pasa de verdad al imprimir lo mide e2e/53-orden-pago-copias.spec.js
+  // Lo que pasa de verdad al imprimir lo mide e2e/88-orden-pago-copias.spec.js
   // (un PDF de Chromium de DOS páginas); acá, que las reglas estén.
   {
     const css = FUENTE.slice(FUENTE.indexOf('/* ── La orden de pago'), FUENTE.indexOf('/* Las órdenes de pago del proveedor, en la ficha. */'))

@@ -1,8 +1,9 @@
-// Corre SOLO lo que toca lo que cambió la rama contra main (08/10/2026): las
+// Corre PRIMERO lo que toca lo que cambió la rama contra main (08/10/2026): las
 // suites test-*.js y controles-*.js (o las mut-*.js con "mut") que nombran,
 // directa o indirectamente, un archivo cambiado.
 //
-//   node pruebas/correr-rama.js            → check-scripts + las suites alcanzadas
+//   node pruebas/correr-rama.js            → lo de la rama y, si dio verde, TODO lo demás
+//   node pruebas/correr-rama.js solo       → solo lo de la rama (para ir rápido)
 //   node pruebas/correr-rama.js mut        → las mut-*.js alcanzadas, de a una
 //   node pruebas/correr-rama.js lista      → solo dice qué correría y por qué
 //   node pruebas/correr-rama.js mut lista  → lo mismo, para las mutaciones
@@ -20,8 +21,13 @@
 // suite que la usa; uno en js/utils.js alcanza a casi todo (es lo que es).
 // Nombrar de más hace correr de más, que es el lado seguro: nunca de menos.
 //
-// NO REEMPLAZA a `npm run pruebas` antes de integrar: es para ir rápido
-// mientras se trabaja. Las suites que no nombran nada (leen todo el repo, como
+// PRIMERO LA RAMA, DESPUÉS EL RESTO (28/10/2026, ensayo-confiable): sin "solo",
+// después de lo de la rama corre todas las demás (correr-todo con SALVO), así
+// al final son las mismas que `npm run pruebas` y la línea final dice el total
+// (N/N en verde). Si lo de la rama da rojo, FRENA ahí: no gasta 20 minutos en
+// las otras para enterarse al final de lo que se rompió en los primeros dos.
+// Con "solo" corre únicamente lo de la rama: eso NO reemplaza a
+// `npm run pruebas` antes de integrar. Las suites que no nombran nada (leen todo el repo, como
 // test-ids-unicos.js o test-embeds-ambiguos.js) entran por SIEMPRE_SUITES.
 'use strict'
 const { execFileSync, spawnSync } = require('child_process')
@@ -32,6 +38,7 @@ const RAIZ = path.join(__dirname, '..')
 const args = process.argv.slice(2)
 const modo = args.includes('mut') ? 'mut' : ''
 const soloLista = args.includes('lista')
+const soloRama = args.includes('solo')
 const BASE = process.env.BASE || 'origin/main'
 
 // Las que recorren el repo entero sin nombrar archivos: corren siempre.
@@ -133,6 +140,33 @@ function plan() {
   return { lista, porque, trabajos: trabajos.sort() }
 }
 
+// El total de las dos tandas ({ total, fallas } de correr-todo), en una línea.
+function sumar(rama, resto) {
+  const total = rama.total + (resto ? resto.total : 0)
+  const fallas = [...rama.fallas, ...(resto ? resto.fallas : [])]
+  return `${total - fallas.length}/${total} en verde` + (fallas.length ? ` — FALLARON: ${fallas.join(', ')}` : '') +
+    (resto ? ` (primero las ${rama.total} de la rama, después las otras ${resto.total})` : ' — FRENÉ ANTES DE LAS DEMÁS: lo de la rama dio rojo')
+}
+
+// Corre lo de la rama y, si dio verde, lo demás. correr(env) → { status, total, fallas }.
+function correrEnDos(trabajos, correr) {
+  const rama = correr({ SOLO: trabajos.join(',') })
+  if (rama.status !== 0 || rama.fallas.length) return { ok: false, rama, resto: null }
+  const resto = correr({ SALVO: trabajos.join(',') })
+  return { ok: resto.status === 0 && !resto.fallas.length, rama, resto }
+}
+
+// correr-todo en un sub-proceso, con su resumen.
+function correrTodo(env) {
+  const archivo = path.join(require('os').tmpdir(), `correr-rama-${process.pid}-${Date.now()}.json`)
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'correr-todo.js'), ...(modo === 'mut' ? ['mut'] : [])], {
+    cwd: RAIZ, stdio: 'inherit', env: { ...process.env, ...env, CORRER_RESUMEN: archivo },
+  })
+  let resumen = { total: 0, fallas: ['(correr-todo no dejó su resumen)'] }
+  try { resumen = JSON.parse(fs.readFileSync(archivo, 'utf8')); fs.unlinkSync(archivo) } catch {}
+  return { status: r.status ?? 1, ...resumen }
+}
+
 if (require.main === module) {
   const { lista, porque, trabajos } = plan()
   console.log(`Contra ${BASE}: ${lista.length} ${lista.length === 1 ? 'archivo cambiado' : 'archivos cambiados'}.`)
@@ -143,11 +177,18 @@ if (require.main === module) {
     process.exit(0)
   }
   if (!trabajos.length) { console.log('\nNada que correr: ningún archivo de pruebas/ nombra lo que cambió.'); process.exit(0) }
-  console.log(`\nCorro ${trabajos.length} (de lo que alcanza el cambio).\n`)
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'correr-todo.js'), ...(modo === 'mut' ? ['mut'] : [])], {
-    cwd: RAIZ, stdio: 'inherit', env: { ...process.env, SOLO: trabajos.join(',') },
+  if (modo === 'mut' || soloRama) {
+    console.log(`\nCorro ${trabajos.length} (de lo que alcanza el cambio).\n`)
+    process.exit(correrTodo({ SOLO: trabajos.join(',') }).status)
+  }
+  console.log(`\nPrimero las ${trabajos.length} que alcanza el cambio; si dan verde, todas las demás.\n`)
+  const { ok, rama, resto } = correrEnDos(trabajos, (env) => {
+    if (env.SALVO !== undefined) console.log('\nLo de la rama dio verde: ahora todas las demás.\n')
+    return correrTodo(env)
   })
-  process.exit(r.status ?? 1)
+  if (!resto) console.log('\nFRENÉ: lo de la rama dio rojo. Las demás suites no se corrieron: arreglá esto primero.')
+  console.log('\n' + sumar(rama, resto))
+  process.exit(ok ? 0 : 1)
 }
 
-module.exports = { nombra, alcanzados, plan, SIEMPRE_SUITES }
+module.exports = { nombra, alcanzados, plan, sumar, correrEnDos, SIEMPRE_SUITES }

@@ -20,6 +20,13 @@ correrMutacionesEnVarios([
       { nombre: 'una pantalla depende de otra pantalla', de: "  if (archivo.endsWith('.css')) return new RegExp(`href=${ruta}`).test(texto)\n  return false", a: "  if (archivo.endsWith('.css')) return new RegExp(`href=${ruta}`).test(texto)\n  return texto.includes(base)" },
       { nombre: 'el cierre se queda en un paso', de: '    nuevos = siguiente\n', a: '    nuevos = []\n' },
       { nombre: 'el motivo no dice quién', de: "porque.set(f, `nombra a ${quien}`)", a: "porque.set(f, 'alcanzado')" },
+      // Primero la rama, después el resto (28/10/2026).
+      { nombre: 'no frena si lo de la rama da rojo', de: '  if (rama.status !== 0 || rama.fallas.length) return { ok: false, rama, resto: null }\n', a: '' },
+      { nombre: 'frena solo por las fallas anotadas (no por el código de salida)', de: 'if (rama.status !== 0 || rama.fallas.length)', a: 'if (rama.fallas.length)' },
+      { nombre: 'después de la rama corre todo de nuevo', de: 'correr({ SALVO: trabajos.join(\',\') })', a: 'correr({})' },
+      { nombre: 'una falla en las demás da verde', de: 'return { ok: resto.status === 0 && !resto.fallas.length, rama, resto }', a: 'return { ok: true, rama, resto }' },
+      { nombre: 'la suma sin la tanda de la rama', de: 'const total = rama.total + (resto ? resto.total : 0)', a: 'const total = resto ? resto.total : rama.total' },
+      { nombre: 'la línea no dice que frenó', de: " : ' — FRENÉ ANTES DE LAS DEMÁS: lo de la rama dio rojo')", a: " : '')" },
     ],
   },
   {

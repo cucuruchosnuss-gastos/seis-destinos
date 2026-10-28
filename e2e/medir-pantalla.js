@@ -146,7 +146,7 @@ function medirCortesPlanta(piezas) {
 }
 
 // LA PÁGINA Y EL MARCO DE LA PLANTA NO SE SALEN DE COSTADO (09/10/2026; se
-// mudó acá desde e2e/29-planta-390.spec.js el 10/10/2026 para usarla también
+// mudó acá desde e2e/83-planta-390.spec.js el 10/10/2026 para usarla también
 // a 360 px). Lo que tiene que entrar en el ancho de la pantalla: la página y el marco.
 function medirCostado() {
   const ancho = document.documentElement.clientWidth

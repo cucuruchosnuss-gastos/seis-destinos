@@ -14,7 +14,7 @@
 // el corte es el del panel (1100 px, el mismo de la lista | detalle).
 // Y el CSS de main.css: la ventana arriba de los modales de los módulos, el
 // fondo oscuro, la grilla y el botón.
-// Lo que hace en un navegador lo mira e2e/27-ampliar.spec.js.
+// Lo que hace en un navegador lo mira e2e/78-ampliar.spec.js.
 //
 //   ARCHIVO_COBRANZAS / ARCHIVO_GASTOS / ARCHIVO_ADMINISTRACION / ARCHIVO_CC / ARCHIVO_CSS
 'use strict'

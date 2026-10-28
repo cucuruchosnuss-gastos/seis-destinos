@@ -31,7 +31,8 @@ Los módulos son enormes (`modulos/administracion.html` ~850 KB, `produccion-ges
 2. **Los pedidos de Facu viven en `.claude/pedidos/<fecha>.md`**; los traspasos al cerrar, en `.claude/traspasos/`.
 3. **Cada tarea en su rama `ci-prueba/<tema>`**, creada desde el `origin/main` más reciente. Se pushea solo la rama.
 4. **Integración**: de noche (después de las 23:36 y antes de las 05:30, hora de Argentina) o cuando Facu escribe "INTEGRÁ" / lo autoriza en el pedido. Requisitos: `npm run pruebas` en verde y Pruebas + Navegador de GitHub en verde en la rama. Procedimiento:
-   - `npm run ensayo -- <ramas, en el orden en que se integran>` en verde (une todo en una rama de descarte y corre suites + navegador de lo alcanzado; **cada paso tiene tope**: 20 min suites, 45 min navegador, y un paso colgado se corta entero).
+   - `npm run ensayo -- <ramas, en el orden en que se integran>` en verde (une todo en una rama de descarte y corre suites + navegador de lo alcanzado, en dos mitades a la vez; **cada paso tiene tope**, sacado de la última corrida en verde + 30 %, y un paso colgado se corta entero). `--limpiar` solo borra ensayos abandonados.
+   - **Candado**: `npm run candado -- tomar <tema>` antes del primer respaldo (si otra sesión está integrando, espera y avisa; no se integra sin él), `tomar` de nuevo después de cada rama para renovarlo, y `npm run candado -- soltar <tema>` al terminar, también si algo falló.
    - Rama `respaldo/antes-de-<paso>` en el `main` de ese momento, pusheada y confirmada con `git ls-remote`.
    - `git merge --no-ff` de la rama, `npm run pruebas`, push, y esperar Pruebas, Navegador y Pages en `completed success`.
    - Si algo falla: un commit nuevo con contenido idéntico al respaldo. **Nunca `push --force`**, nunca `git stash`, nunca `reset` sobre trabajo ajeno. Si dos ramas chocan, se queda lo de todos los lados.
@@ -43,7 +44,8 @@ Los módulos son enormes (`modulos/administracion.html` ~850 KB, `produccion-ges
 
 ## Cómo correr las pruebas (detalle: docs/memoria/pruebas-y-ensayo.md)
 - `npm run pruebas` — check-bytes (sin CR ni NUL) + todas las suites `pruebas/test-*.js` y `controles-*.js`. Tiene que terminar en `N/N en verde`.
-- `npm run pruebas:rama` / `npm run mutaciones:rama` — solo lo que alcanza el cambio de la rama contra `origin/main` (`... lista` dice qué correría). No reemplaza a `npm run pruebas` antes de integrar.
+- `npm run pruebas:rama` — primero lo que alcanza el cambio de la rama contra `origin/main` y, si da verde, todo lo demás (frena si lo de la rama da rojo); `-- solo` corre únicamente lo de la rama. `npm run mutaciones:rama` — las mutaciones alcanzadas (`... lista` dice qué correría).
+- `npm run spec:numero` — el número de un spec nuevo de `e2e/` (dos specs con el mismo número dan rojo).
 - `node pruebas/check-scripts.js` — cada `<script>` como lo ve el navegador; en el cierre de todo commit que toque un módulo.
 - `npm run ensayo -- <ramas>` — el ensayo de integración (ver arriba).
 - Mutaciones de a una por vez (`node pruebas/mut-<x>.js`); el baseline de una suite se ancla a un commit fijo, nunca a `HEAD`. Para ver solo si sus anclas siguen en pie (segundos): `MUT_SOLO_ANCLAS=1 node pruebas/mut-<x>.js`; `test-anclas-mutaciones.js` lo hace con todas en `npm run pruebas`.

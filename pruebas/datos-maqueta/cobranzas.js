@@ -92,7 +92,7 @@ module.exports = {
   ]
   t.cuentas_caja = [
     // (27/10/2026) Con el CBU de PAZ MIRTA: un comprobante que lo trae la
-    // preselecciona (e2e/72-cobranzas-ocr-tickets.spec.js).
+    // preselecciona (e2e/94-cobranzas-ocr-tickets.spec.js).
     { id: 'cta-banco-nuss', nombre: 'Banco Macro · Nuss', unidad_negocio_id: 'u-n', medio: 'banco', moneda: 'ARS', empleado_id: 'emp-empresa', activa: true, cbu: '2850324830094103159311' },
     // (02/10/2026) Una cuenta de banco de Dolce Pasta: una transferencia de
     // una cobranza de Dolce ofrece SOLO esta.
