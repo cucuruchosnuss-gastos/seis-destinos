@@ -1,10 +1,12 @@
-// REVISAR LOS REMITOS PRECARGADOS DE ROSARIO (27/10/2026, rama
-// ci-prueba/remitos-rosario-revisar), en la maqueta "administracion-remitos"
-// (Dolce Pasta con controla_stock_terminado = false; Nuss con control), a 390
-// y 1280 px, sin scroll horizontal ni errores de JS:
-//  - Órdenes de Dolce: "Remitos precargados · por revisar" (4: leyendo, error,
-//    precargada y la de acopio; la confirmada no), el más nuevo arriba; abajo
-//    las órdenes por N° de remito en solapas Oficial / Acopio;
+// REMITOS DOLCE → REVISAR (28/10/2026, rama ci-prueba/modulo-remitos-dolce;
+// antes en Administración → Órdenes, 27/10/2026), en la maqueta
+// "remitos-dolce-revisar" (Dolce Pasta con controla_stock_terminado = false;
+// los remitos los subió Manuel), a 390 y 1280 px, sin scroll horizontal ni
+// errores de JS:
+//  - la pestaña Revisar: "Remitos precargados · por revisar" (4: leyendo,
+//    error, precargada y la de acopio; la confirmada no), el más nuevo arriba;
+//    abajo las órdenes por N° de remito en solapas Oficial / Acopio (solo
+//    lectura: "Valorizar en Administración →");
 //  - abrir uno: la foto firmada (con zoom), los renglones en AMARILLO con lo
 //    leído y la nota; Aceptar sugerencia; elegir el producto saca el amarillo;
 //    los lotes "Asignado X de Y · faltan Z"; "No va en la orden"; el cliente;
@@ -12,8 +14,9 @@
 //  - Confirmar: el error de la base TAL CUAL con "Descartar (ya ingresado)", y
 //    después OK: sale de la lista;
 //  - Descartar con motivo; Volver a leer (ocr-remito);
-//  - la ficha y la hoja de impresión: "Remito N° X" / "Acopio N° X";
-//  - Nuss: Órdenes como siempre, sin la sección.
+//  - Administración (maqueta "administracion-remitos"): en Dolce, Órdenes
+//    como siempre con el link chico "Remitos Dolce →"; la ficha y la hoja de
+//    impresión dicen "Remito N° X" / "Acopio N° X"; en Nuss, sin el link.
 // Corre SIEMPRE, sin credenciales.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
@@ -41,6 +44,18 @@ const FOTO = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
   '<text x="380" y="50" font-size="22" fill="#222">0001-00003100</text><text x="30" y="120" font-size="20">Señor/es: Almacen Rosario</text>' +
   '<text x="30" y="200" font-size="20">10  Cono dulce 48 con cono Lelona</text><text x="30" y="240" font-size="20">84  Capelinas grandes</text></svg>');
 
+// La pestaña Revisar del módulo.
+async function abrirRevisar(page) {
+  page.setDefaultTimeout(15000);
+  await page.goto(`${MAQUETA}/modulos/remitos-dolce.html?maqueta=remitos-dolce-revisar&pestana=revisar`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate((foto) => {
+    globalThis.__maqueta = { rpc: {}, funciones: {}, firmar: (bucket, ruta) => ({ data: { signedUrl: bucket === 'comprobantes' && /remitos/.test(ruta) ? foto : null }, error: null }) };
+  }, FOTO);
+  await expect(page.locator('#rd-vista-revisar')).toBeVisible();
+  await expect(page.locator('#ad-remitos [data-remitos-cuenta]')).toBeVisible();
+}
+
+// Órdenes de Administración (lo que quedó ahí).
 async function abrirOrdenes(page, unidad) {
   page.setDefaultTimeout(15000);
   await page.goto(`${MAQUETA}/modulos/administracion.html?maqueta=administracion-remitos`, { waitUntil: 'domcontentloaded' });
@@ -57,10 +72,12 @@ async function abrirOrdenes(page, unidad) {
 const renglon = (page, i) => page.locator(`#ad-remito-cuerpo [data-rm-renglon="${i}"]`);
 
 for (const [ancho, alto] of TAMANOS) {
-  test(`Dolce: la lista de remitos, las órdenes por N° de remito y la hoja, a ${ancho} px`, async ({ page }, info) => {
+  test(`Revisar: la lista de remitos y las órdenes por N° de remito, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
-    await abrirOrdenes(page, 'u-d');
+    await abrirRevisar(page);
+    await expect(page.locator('#rd-sub')).toHaveText('Revisar');
+    await expect(page.locator('#rd-tab-revisar')).toHaveAttribute('aria-pressed', 'true');
     const seccion = page.locator('#ad-remitos');
     await expect(seccion).toContainText('Remitos precargados · por revisar');
     await expect(seccion.locator('[data-remitos-cuenta]')).toHaveText('4');
@@ -70,11 +87,11 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(seccion.locator('[data-remito="rm-4"]')).toContainText('Acopio N° 977492');
 
     // Abajo: las órdenes oficiales por N° de remito (las sin número al final).
-    const lista = page.locator('#ad-ordenes-lista');
+    const lista = page.locator('#rd-ordenes-lista');
     await expect(lista.locator('[data-orden]').first()).toBeVisible();
     expect(await lista.locator('[data-orden]').evaluateAll(bs => bs.map(b => b.dataset.orden))).toEqual(['od3', 'od1', 'od2', 'od5']);
     await expect(lista.locator('[data-orden="od3"]')).toContainText('Remito N° 0001-00003099');
-    await expect(lista.locator('[data-orden="od3"]')).toContainText('Sin valorizar');
+    await expect(lista.locator('[data-orden="od3"]')).toContainText('Por valorizar');
     await expect(lista.locator('[data-orden="od1"]')).toContainText('Valorizada');
     await expect(lista.locator('[data-orden="od2"]')).toContainText('Sin N° de remito');
     await sinScrollHorizontal(page);
@@ -84,13 +101,32 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(lista.locator('[data-orden="od4"]')).toContainText('Acopio N° 977490');
     await expect(lista.locator('[data-orden="od4"] .ad-sello--acopio')).toBeVisible();
 
+    // Se valorizan en Administración (el link de abajo, con retiros:precios).
+    await expect(page.locator('#rd-link-admin')).toBeVisible();
+    await expect(page.locator('#rd-link-admin')).toHaveAttribute('href', 'administracion.html?seccion=ordenes');
+    await sinScrollHorizontal(page);
+    await captura(page, `remitos-ordenes-${ancho}`, info);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
+  test(`Administración: Órdenes de Dolce con el link y la ficha con "Remito N°", a ${ancho} px`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await abrirOrdenes(page, 'u-d');
+    const link = page.locator('#ad-remitos a');
+    await expect(link).toHaveText('Remitos Dolce →');
+    await expect(link).toHaveAttribute('href', 'remitos-dolce.html?pestana=revisar');
+    await expect(page.locator('#ad-remitos [data-remito]')).toHaveCount(0);
+    await expect(page.locator('#ad-ordenes-talonario')).toHaveCount(0);
+    const lista = page.locator('#ad-ordenes-lista');
+    await expect(lista.locator('[data-orden="od4"]')).toBeVisible();
+    await expect(lista.locator('.ad-rm-numero')).toHaveCount(0);
     // La ficha y la hoja de impresión de la de acopio.
     await lista.locator('[data-orden="od4"]').click();
     await expect(page.locator('#ad-orden-cuerpo [data-orden-remito]')).toHaveText('Acopio N° 977490');
     await expect.poll(() => page.locator('#ad-impresion').innerHTML()).toContain('<span class="rh-orden__remito">Acopio N° 977490</span>');
     // Y una oficial.
     await page.locator('#ad-orden-volver').click();
-    await page.locator('[data-talonario-ordenes="oficial"]').click();
     await page.locator('#ad-ordenes-lista [data-orden="od3"]').click();
     await expect(page.locator('#ad-orden-cuerpo [data-orden-remito]')).toHaveText('Remito N° 0001-00003099');
     await expect.poll(() => page.locator('#ad-impresion').innerHTML()).toContain('<span class="rh-orden__remito">Remito N° 0001-00003099</span>');
@@ -113,7 +149,7 @@ for (const [ancho, alto] of TAMANOS) {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
-    await abrirOrdenes(page, 'u-d');
+    await abrirRevisar(page);
     await page.locator('#ad-remitos [data-remito="rm-1"]').click();
     await expect(page.locator('#ad-vista-remito')).toBeVisible();
     await expect(page.locator('#ad-remito-titulo')).toHaveText('Remito N° 0001-00003100');
@@ -206,8 +242,8 @@ for (const [ancho, alto] of TAMANOS) {
     // Y luego OK: avisa la orden y sale de la lista.
     await page.evaluate(() => { globalThis.__maqueta.rpc.confirmar_remito_precarga = { orden_id: 'od9', codigo: 'D-0009', numero_remito: '0001-00003100', talonario: 'oficial' }; });
     await page.locator('[data-rm-accion="confirmar"]').click();
-    await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
-    await expect(page.locator('body')).toContainText('Remito N° 0001-00003100 confirmado: es la orden D-0009');
+    await expect(page.locator('#rd-vista-revisar')).toBeVisible();
+    await expect(page.locator('body')).toContainText('Remito N° 0001-00003100 confirmado: es la orden D-0009. Ya se puede valorizar en Administración.');
     await expect(page.locator('#ad-remitos [data-remito="rm-1"]')).toHaveCount(0);
     await expect(page.locator('#ad-remitos [data-remitos-cuenta]')).toHaveText('3');
     expect(rpc.filter(r => r.nombre === 'confirmar_remito_precarga').every(r => r.params.p_id === 'rm-1')).toBe(true);
@@ -218,7 +254,7 @@ for (const [ancho, alto] of TAMANOS) {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
-    await abrirOrdenes(page, 'u-d');
+    await abrirRevisar(page);
     // La que no se pudo leer: se descarta con motivo.
     await page.locator('#ad-remitos [data-remito="rm-2"]').click();
     await expect(page.locator('#ad-remito-cuerpo')).toContainText('La IA no pudo leerlo: La foto está muy oscura');
@@ -230,7 +266,7 @@ for (const [ancho, alto] of TAMANOS) {
     await page.locator('#ad-rm-motivo').fill('foto repetida');
     await sinScrollHorizontal(page);
     await page.locator('[data-rm-accion="descartar-si"]').click();
-    await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
+    await expect(page.locator('#rd-vista-revisar')).toBeVisible();
     expect(rpc.find(r => r.nombre === 'descartar_remito_precarga').params).toEqual({ p_id: 'rm-2', p_motivo: 'foto repetida' });
     await expect(page.locator('#ad-remitos [data-remito="rm-2"]')).toHaveCount(0);
 
@@ -240,7 +276,7 @@ for (const [ancho, alto] of TAMANOS) {
     await page.evaluate(() => { globalThis.__maqueta.rpc.confirmar_remito_precarga = 'ERROR:El remito 977492 ya entró como ingreso en la otra empresa. No lo confirmes: descartalo con el motivo "ya ingresado".'; });
     await page.locator('[data-rm-accion="confirmar"]').click();
     await page.locator('[data-rm-accion="ya-ingresado"]').click();
-    await expect(page.locator('#ad-vista-ordenes')).toBeVisible();
+    await expect(page.locator('#rd-vista-revisar')).toBeVisible();
     expect(rpc.filter(r => r.nombre === 'descartar_remito_precarga').pop().params).toEqual({ p_id: 'rm-4', p_motivo: 'ya ingresado' });
 
     // La que se está leyendo: Volver a leer (avisa que pisa lo no guardado).
@@ -264,13 +300,12 @@ for (const [ancho, alto] of TAMANOS) {
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`Cucuruchos Nuss (con control): Órdenes como siempre, a ${ancho} px`, async ({ page }) => {
+  test(`Cucuruchos Nuss (con control): Órdenes como siempre, sin el link, a ${ancho} px`, async ({ page }) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrirOrdenes(page, 'u-n');
     await expect(page.locator('#ad-ordenes-lista [data-orden]').first()).toBeVisible();
     await expect(page.locator('#ad-remitos')).toBeEmpty();
-    await expect(page.locator('#ad-ordenes-talonario')).toBeEmpty();
     await expect(page.locator('#ad-ordenes-lista .ad-rm-numero')).toHaveCount(0);
     await expect(page.locator('#ad-ordenes-lista .ad-fila__codigo').first()).toBeVisible();
     await sinScrollHorizontal(page);

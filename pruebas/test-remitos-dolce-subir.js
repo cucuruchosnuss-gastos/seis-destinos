@@ -1,10 +1,13 @@
-// SUBIR REMITOS ROSARIO (27/10/2026, rama ci-prueba/remitos-rosario-subir).
-// En Rosario (Dolce Pasta) el remito se hace a mano y se le saca una foto en
-// la Carga; la IA (ocr-remito) lo lee y Administración revisa la precarga. Lo
-// que se prueba, con las funciones REALES de modulos/retiros.html:
-//  - quién ve el botón: retiros:cargar (con alcance) en una fábrica con
-//    controla_stock_terminado = false; sin eso (o en Nuss/Mengui) no aparece;
-//    con varias, se elige cuál; la fábrica de pruebas no cuenta;
+// REMITOS DOLCE → SUBIR (28/10/2026, rama ci-prueba/modulo-remitos-dolce; antes
+// "Subir remitos Rosario" en la Carga, 27/10/2026, y esta suite era
+// test-retiros-subir-remitos.js). En Rosario (Dolce Pasta) el remito se hace a
+// mano y se le saca una foto; la IA (ocr-remito) lo lee y se revisa en la
+// pestaña Revisar. Lo que se prueba, con las funciones REALES de
+// modulos/remitos-dolce.html:
+//  - quién sube: retiros:cargar (con alcance) en una fábrica con
+//    controla_stock_terminado = false (cargarFabricas); sin eso (o en
+//    Nuss/Mengui) no hay pestaña Subir; con varias, se elige cuál; la fábrica
+//    de pruebas no cuenta; las pestañas Subir / Revisar;
 //  - la foto: achicada a 1600 px en JPEG 0,82 y subida a
 //    comprobantes/<auth.uid>/remitos/<uuid>.jpg;
 //  - crear_remito_precarga con un client_uuid por foto que se REUSA en cada
@@ -12,22 +15,23 @@
 //  - ocr-remito sin esperar: la cola sigue con la próxima foto, de a dos
 //    lecturas a la vez;
 //  - "Mis remitos subidos": lo que se lee, el orden, cada estado (y el sello
-//    "Acopio"), Reintentar, el sondeo y el escape de lo que viene de la base.
+//    "Acopio"; "Confirmado: Orden D-0012" con remitos_precarga.orden_codigo),
+//    Reintentar, el sondeo y el escape de lo que viene de la base.
 //
-//   node pruebas/test-retiros-subir-remitos.js
-//   ARCHIVO_TEST=<copia de modulos/retiros.html> node pruebas/test-retiros-subir-remitos.js
+//   node pruebas/test-remitos-dolce-subir.js
+//   ARCHIVO_TEST=<copia de modulos/remitos-dolce.html> node pruebas/test-remitos-dolce-subir.js
 'use strict'
 
 const path = require('path')
-const { construirRetiros } = require('./sandbox-retiros')
+const { construirRemitosDolce } = require('./sandbox-remitos-dolce')
 const { arnes, leer, marca, escapada } = require('./circuito-comun')
 
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/retiros.html')
+const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/remitos-dolce.html')
 const FUENTE = leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
 
 const FUNCIONES = [
-  'datosRemitos', 'fabricaRemitos', 'elegirFabricaRemitos', 'abrirSubirRemitos', 'volverDeRemitos',
+  'datosRemitos', 'fabricaRemitos', 'elegirFabricaRemitos', 'abrirSubirRemitos',
   'rutaFotoRemito', 'medidasAchicadas', 'cargarImagenRemito', 'achicarFoto', 'urlLocalDeFoto',
   'itemColaRemito', 'guardarColaRemitos', 'leerColaRemitos', 'fotosElegidas', 'encolarFotos', 'procesarCola',
   'yaEstabaSubida', 'textoErrorRemito', 'procesarRemito', 'lanzarLectura', 'seguirLecturas', 'leerRemitoConIa',
@@ -72,11 +76,16 @@ const EXTRA = `
   }
 `
 
+const DOLCE = { id: 'u-d', nombre: 'Dolce Pasta' }
+const NUSS = { id: 'u-n', nombre: 'Cucuruchos Nuss' }
+const DOLCE2 = { id: 'u-d2', nombre: 'Dolce Pasta Centro' }
+const PRUEBA = { id: 'u-p', nombre: 'Fábrica de pruebas' }
+
 function armar({ tareas, sinControl = ['u-d'], empresas = null, rol = 'usuario', ls = null } = {}) {
-  const S = construirRetiros(ARCHIVO, { funciones: FUNCIONES, constantes: CONSTANTES, preludioExtra: EXTRA })
+  const S = construirRemitosDolce(ARCHIVO, { funciones: FUNCIONES, constantes: CONSTANTES, preludioExtra: EXTRA })
   S.estado.miRolApp = rol
   S.estado.misTareas = new Map(tareas ?? [['retiros:cargar', { todas: true }]])
-  if (empresas) S.estado.empresas = empresas
+  S.estado.empresas = empresas ?? [DOLCE]
   S.estado.sinControlIds = new Set(sinControl)
   if (ls) for (const [k, v] of ls) S.__ls.set(k, v)
   return S
@@ -89,86 +98,92 @@ const hace = (min) => new Date(Date.now() - min * 60000).toISOString()
 const crearLlamadas = (S) => S.__llamadas.rpc.filter(r => r[0] === 'crear_remito_precarga')
 const nunca = () => new Promise(() => {})
 
-const DOLCE = { id: 'u-d', nombre: 'Dolce Pasta', prefijo: 'D' }
-const NUSS = { id: 'u-n', nombre: 'Cucuruchos Nuss', prefijo: 'N' }
-const DOLCE2 = { id: 'u-d2', nombre: 'Dolce Pasta Centro', prefijo: 'E' }
-const PRUEBA = { id: 'u-p', nombre: 'Fábrica de pruebas', prefijo: 'P' }
 
-// ═══ Quién ve el botón ═════════════════════════════════════════════════════
+// ═══ Quién sube (la pestaña Subir) ═════════════════════════════════════════════════════
 {
   const S = armar()
-  chk('con retiros:cargar en todas y Dolce sin control: el botón es de Dolce', S.fabricasRemitos().map(e => e.id).join() === 'u-d' && S.puedeSubirRemitos())
+  chk('con retiros:cargar en todas y Dolce sin control: sube a Dolce', S.fabricasRemitos().map(e => e.id).join() === 'u-d' && S.puedeSubirRemitos())
 }
 {
   const S = armar({ tareas: [['retiros:cargar', { unidades: ['u-n'] }]] })
-  chk('cargar solo en Nuss (Dolce sin control, pero no carga ahí): no hay botón', !S.puedeSubirRemitos())
+  chk('cargar solo en Nuss (Dolce sin control, pero no carga ahí): no sube', !S.puedeSubirRemitos())
 }
 {
   const S = armar({ tareas: [['retiros:cargar', { unidades: ['u-d'] }]] })
-  chk('cargar con alcance en Dolce: hay botón', S.puedeSubirRemitos())
+  chk('cargar con alcance en Dolce: sube', S.puedeSubirRemitos())
 }
 {
   const S = armar({ tareas: [['retiros:ver', { todas: true }]] })
-  chk('solo retiros:ver: no hay botón', !S.puedeSubirRemitos())
+  chk('solo retiros:ver: no sube', !S.puedeSubirRemitos())
 }
 {
   const S = armar({ tareas: [], rol: 'super_admin' })
-  chk('super_admin (como tiene_tarea_alcance): hay botón', S.puedeSubirRemitos())
+  chk('super_admin (como tiene_tarea_alcance): sube', S.puedeSubirRemitos())
 }
 {
   const S = armar({ sinControl: [] })
-  chk('todas con control (Nuss, Mengui): no hay botón', !S.puedeSubirRemitos())
+  chk('todas con control (Nuss, Mengui): no sube', !S.puedeSubirRemitos())
   S.estado.sinControlIds = null
-  chk('sin saber todavía qué fábricas controlan: no hay botón', !S.puedeSubirRemitos())
+  chk('sin saber todavía qué fábricas controlan: no sube', !S.puedeSubirRemitos())
 }
-{
-  const S = armar({ sinControl: ['u-p'], empresas: [NUSS, PRUEBA] })
-  S.estado.fabrica = { ok: true, unidades: new Set(['u-p']), personas: new Set(), soyDePrueba: false }
-  chk('la fábrica de pruebas no cuenta para una cuenta real', !S.puedeSubirRemitos())
-}
-
-// leerFabricasSinControl: controla_stock_terminado de las fábricas donde carga.
-for (const [filas, error, esperado, nombre] of [
-  [[{ id: 'u-n', controla_stock_terminado: true }, { id: 'u-d', controla_stock_terminado: false }], null, 'u-d', 'false → sin control'],
-  [[{ id: 'u-d', controla_stock_terminado: null }], null, '', 'null → con control'],
-  [[{ id: 'u-x', controla_stock_terminado: false }], null, '', 'una fábrica donde no carga no cuenta'],
-  [null, { message: 'x' }, '', 'si no se puede leer → ninguna'],
-  [[{ id: 'u-d', controla_stock_terminado: false }], { message: 'x' }, '', 'con error, aunque vengan filas → ninguna'],
+// cargarFabricas: las fábricas sin control de stock donde carga o ve
+// retiros, sin la de pruebas para una cuenta real.
+for (const [filas, error, tareas, esperado, sinCtl, nombre] of [
+  [[{ id: 'u-n', nombre: 'Nuss', controla_stock_terminado: true }, { id: 'u-d', nombre: 'Dolce Pasta', controla_stock_terminado: false }], null,
+    [['retiros:cargar', { todas: true }]], 'u-d', 'u-d', 'false → sin control'],
+  [[{ id: 'u-d', nombre: 'Dolce', controla_stock_terminado: null }], null, [['retiros:cargar', { todas: true }]], '', '', 'null → con control'],
+  [[{ id: 'u-d', nombre: 'Dolce', controla_stock_terminado: false }], null, [['retiros:cargar', { unidades: ['u-n'] }]], '', 'u-d', 'sin permiso en esa fábrica → no es suya'],
+  [[{ id: 'u-d', nombre: 'Dolce', controla_stock_terminado: false }], null, [['retiros:ver', { unidades: ['u-d'] }]], 'u-d', 'u-d', 'con retiros:ver ahí también (para Revisar)'],
+  [[{ id: 'u-d', nombre: 'Dolce', controla_stock_terminado: false, activo: false }], null, [['retiros:cargar', { todas: true }]], '', '', 'una fábrica apagada no cuenta'],
 ]) {
   esperas.push((async () => {
-    const S = armar({ sinControl: [] })
+    const S = armar({ sinControl: [], tareas })
     S.__tablas.unidades_negocio = () => ({ data: filas, error })
-    await S.leerFabricasSinControl()
-    chk(`leerFabricasSinControl: ${nombre}`, [...S.estado.sinControlIds].join() === esperado, [...S.estado.sinControlIds].join())
-    const q = S.__llamadas.consultas.find(c => c[0] === 'unidades_negocio')
-    chk(`leerFabricasSinControl (${nombre}): pide controla_stock_terminado de las fábricas donde carga`,
-      !!q && q[1].some(f => f[0] === 'select' && /controla_stock_terminado/.test(f[1])) && q[1].some(f => f[0] === 'in' && f[1] === 'id' && f[2].join() === 'u-n,u-d'))
+    await S.cargarFabricas()
+    chk(`cargarFabricas: ${nombre}`, S.estado.empresas.map(e => e.id).join() === esperado && [...S.estado.sinControlIds].join() === sinCtl,
+      JSON.stringify([S.estado.empresas.map(e => e.id), [...S.estado.sinControlIds]]))
   })())
 }
+esperas.push((async () => {
+  const S = armar({ sinControl: [] })
+  S.__tablas.unidades_negocio = () => ({ data: null, error: { message: 'x' } })
+  let tiro = false
+  try { await S.cargarFabricas() } catch { tiro = true }
+  chk('cargarFabricas: si no se puede leer, tira (el arranque dice que no pudo)', tiro)
+  const S2 = armar({ sinControl: [] })
+  S2.estado.fabrica = { ok: true, unidades: new Set(['u-p']), personas: new Set(), soyDePrueba: false }
+  S2.__tablas.unidades_negocio = () => ({ data: [{ id: 'u-p', nombre: 'Pruebas', controla_stock_terminado: false }, { id: 'u-d', nombre: 'Dolce Pasta', controla_stock_terminado: false }], error: null })
+  await S2.cargarFabricas()
+  chk('la fábrica de pruebas no cuenta para una cuenta real', S2.estado.empresas.map(e => e.id).join() === 'u-d' && !S2.estado.unidades.some(u => u.id === 'u-p'))
+  chk('…y nombra todas las fábricas (para "también en Nuss")', S2.estado.unidades.map(u => u.nombre).join() === 'Dolce Pasta')
+})())
 
-// El botón de entrada, con la llamada real de pintarEncabezado().
+// Las pestañas: Subir con retiros:cargar, Revisar con retiros:ver.
 {
-  const S = armar()
-  const entrada = () => S.__els.get('rt-remitos-entrada')
-  for (const [vista, paso, visible] of [
-    ['rt-vista-empresa', null, true], ['rt-vista-mis', null, true], ['rt-vista-form', 'cliente', true],
-    ['rt-vista-form', 'orden', false], ['rt-vista-form', 'productos', false], ['rt-vista-resumen', null, false],
-    ['rt-vista-hecho', null, false], ['rt-vista-remitos', null, false],
-  ]) {
-    S.pintarEntradaRemitos(vista, paso)
-    chk(`la entrada en ${vista}${paso ? ' · ' + paso : ''}: ${visible ? 'se ve' : 'no se ve'}`, entrada().hidden === !visible)
+  const casos = [
+    [[['retiros:cargar', { unidades: ['u-d'] }]], 'subir'],
+    [[['retiros:ver', { unidades: ['u-d'] }]], 'revisar'],
+    [[['retiros:cargar', { todas: true }], ['retiros:ver', { todas: true }]], 'subir,revisar'],
+    [[['retiros:cargar', { unidades: ['u-n'] }], ['retiros:ver', { unidades: ['u-n'] }]], ''],
+  ]
+  for (const [tareas, esperado] of casos) {
+    const S = armar({ tareas })
+    chk(`las pestañas con ${tareas.map(x => x[0]).join(' + ')}: ${esperado || 'ninguna'}`, S.pestanasVisibles().join() === esperado, S.pestanasVisibles().join())
   }
-  S.estado.vista = 'rt-vista-mis'
-  S.pintarEncabezado()
-  chk('pintarEncabezado() prende la entrada', entrada().hidden === false)
-  S.estado.sinControlIds = new Set()
-  S.pintarEncabezado()
-  chk('pintarEncabezado() sin fábrica sin control la apaga', entrada().hidden === true)
-  S.estado.vista = 'rt-vista-remitos'
-  S.estado.sinControlIds = new Set(['u-d'])
-  S.pintarEncabezado()
-  chk('en la pantalla de remitos, la flecha vuelve a la carga (no al inicio)', S.__els.get('rt-remitos-volver').hidden === false && S.__els.get('rt-atras-inicio').hidden === true)
-  chk('el título de la pantalla', S.__els.get('rt-subtitulo').textContent === 'Subir remitos')
+  const S = armar({ tareas: [['retiros:cargar', { todas: true }], ['retiros:ver', { todas: true }]] })
+  S.estado.pestana = 'revisar'
+  S.pintarPestanas()
+  chk('la pestaña elegida queda marcada', S.__els.get('rd-tab-revisar').atributos['aria-pressed'] === 'true' && S.__els.get('rd-tab-subir').atributos['aria-pressed'] === 'false')
+  S.mostrarVista('rt-vista-remitos')
+  chk('Subir: el encabezado dice "Subir" y se ven las pestañas', S.__els.get('rd-sub').textContent === 'Subir' && S.__els.get('rd-tabs').hidden === false &&
+    S.__els.get('rt-vista-remitos').hidden === false && S.__els.get('rd-vista-revisar').hidden === true)
+  S.mostrarVista('ad-vista-remito')
+  chk('adentro de un remito no hay pestañas', S.__els.get('rd-tabs').hidden === true && S.__els.get('rd-sub').textContent === 'Revisar')
+  const S1 = armar({ tareas: [['retiros:cargar', { todas: true }]] })
+  S1.mostrarVista('rt-vista-remitos')
+  chk('con una sola pestaña, la barra de pestañas no se ve', S1.__els.get('rd-tabs').hidden === true)
+  S1.elegirPestana('revisar')
+  chk('una pestaña que no puede ver no se elige', S1.estado.pestana !== 'revisar' && S1.estado.vista === 'rt-vista-remitos')
 }
 esperas.push((async () => {
   // abrirSubirRemitos: solo con una fábrica sin control.
@@ -179,8 +194,10 @@ esperas.push((async () => {
   S.__tablas.remitos_precarga = []
   S.abrirSubirRemitos()
   await asentar()
-  chk('con Dolce sin control, abre la pantalla y lee mis remitos', S.estado.vista === 'rt-vista-remitos' && S.__llamadas.consultas.some(c => c[0] === 'remitos_precarga'))
+  chk('con Dolce sin control, abre la pestaña Subir y lee mis remitos', S.estado.vista === 'rt-vista-remitos' && S.estado.pestana === 'subir' && S.__llamadas.consultas.some(c => c[0] === 'remitos_precarga'))
   chk('una sola fábrica: lo dice, sin preguntar', /Los remitos van a <strong>Dolce Pasta<\/strong>/.test(S.__els.get('rt-remitos-fabrica').innerHTML) && S.__els.get('rt-remitos-camara').disabled === false)
+  S.elegirPestana('subir')
+  chk('elegir la pestaña la recuerda', S.__ls.get(S.CLAVE_PESTANA) === 'subir')
 })())
 
 // Varias fábricas sin control: se elige.
@@ -200,11 +217,6 @@ esperas.push((async () => {
   chk('elegida Dolce Centro: queda esa y se recuerda', S.fabricaRemitos()?.id === 'u-d2' && S.__ls.get(S.CLAVE_REMITOS_FABRICA) === 'u-d2')
   chk('la elegida queda marcada', S.htmlFabricaRemitos().includes('data-remito-fabrica="u-d2" aria-pressed="true"'))
   chk('elegida, la cámara se prende', S.__els.get('rt-remitos-camara').disabled === false)
-}
-{
-  const S = armar({ sinControl: ['u-d', 'u-d2'], empresas: [NUSS, DOLCE, DOLCE2] })
-  S.estado.unidadBarra = 'u-d2'
-  chk('con dos, la de la barra de arriba', S.fabricaRemitos()?.id === 'u-d2')
 }
 {
   const S = armar({ sinControl: ['u-d', 'u-d2'], empresas: [NUSS, DOLCE, DOLCE2], ls: [['retiros.remitos.fabrica', 'u-d']] })
@@ -411,7 +423,7 @@ esperas.push((async () => {
   S.__tablas.remitos_precarga = () => ({ data: [
     { id: 'r-viejo', estado: 'precargada', subido_en: hace(300), numero_remito: '0001-00003100', talonario: 'oficial', foto_path: 'uid-1/remitos/v.jpg' },
     { id: 'r-nuevo', estado: 'leyendo', subido_en: hace(1), foto_path: 'uid-1/remitos/n.jpg' },
-    { id: 'r-medio', estado: 'confirmada', subido_en: hace(60), numero_remito: '977492', talonario: 'acopio', orden_id: 'o-1', orden: { codigo: 'D-0012' }, foto_path: 'uid-1/remitos/m.jpg' },
+    { id: 'r-medio', estado: 'confirmada', subido_en: hace(60), numero_remito: '977492', talonario: 'acopio', orden_id: 'o-1', orden_codigo: 'D-0012', foto_path: 'uid-1/remitos/m.jpg' },
   ], error: null })
   await S.leerMisRemitos()
   const q = S.__llamadas.consultas.find(c => c[0] === 'remitos_precarga')[1]
@@ -421,7 +433,7 @@ esperas.push((async () => {
   chk('de los últimos 7 días', dias !== null && Math.abs(dias - 7) < 0.01, String(dias))
   const sel = q.find(f => f[0] === 'select')?.[1] ?? ''
   chk('trae el estado, el N° leído, el talonario, el error y el motivo', ['estado', 'numero_remito', 'talonario', 'error', 'descartado_motivo', 'foto_path', 'subido_en'].every(c => new RegExp(`\\b${c}\\b`).test(sel)))
-  chk('el código de la orden, embebido por la FK orden_id (nombrada: hay dos caminos)', /ordenes_retiro!remitos_precarga_orden_id_fkey\(codigo\)/.test(sel))
+  chk('el código de la orden: remitos_precarga.orden_codigo (sin leer ordenes_retiro)', /\borden_codigo\b/.test(sel) && !/ordenes_retiro/.test(sel))
   chk('más nuevo primero', S.datosRemitos().filas.map(f => f.id).join() === 'r-nuevo,r-medio,r-viejo')
   const html = S.__els.get('rt-remitos-lista').innerHTML
   chk('la lista en ese orden', html.indexOf('data-remito="r-nuevo"') < html.indexOf('data-remito="r-medio"') && html.indexOf('data-remito="r-medio"') < html.indexOf('data-remito="r-viejo"'))
@@ -498,10 +510,11 @@ esperas.push((async () => {
   const aco = e({ id: 'b', estado: 'precargada', numero_remito: '977492', talonario: 'acopio' })
   chk('precargada de acopio: el sello', aco.acopio === true && S.htmlRemitoSubido({ clave: 'b', cuando: hace(1), estado: aco }).includes('<span class="rt-remito__sello">Acopio</span>'))
   chk('oficial: sin sello', !S.htmlRemitoSubido({ clave: 'b', cuando: hace(1), estado: pre }).includes('rt-remito__sello'))
-  const conf = e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden: { codigo: 'D-0012' }, numero_remito: '977492', talonario: 'acopio' })
-  chk('confirmada: "Confirmado como orden D-0012"', conf.texto === 'Confirmado como orden D-0012' && conf.detalle === 'Remito N° 977492' && conf.acopio === true)
+  const conf = e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden_codigo: ' D-0012 ', numero_remito: '977492', talonario: 'acopio' })
+  chk('confirmada: "Confirmado: Orden D-0012"', conf.texto === 'Confirmado: Orden D-0012' && conf.detalle === 'Remito N° 977492' && conf.acopio === true, conf.texto)
   chk('confirmada de acopio: el sello', S.htmlRemitoSubido({ clave: 'c', cuando: hace(1), estado: conf }).includes('rt-remito__sello'))
-  chk('confirmada sin poder leer la orden (sin retiros:ver)', e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden: null }).texto === 'Confirmado: ya es una orden')
+  chk('confirmada sin el código (una fila vieja): "ya es una orden"', e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden_codigo: null }).texto === 'Confirmado: ya es una orden')
+  chk('…el código de un embebido viejo ya no se usa', e({ id: 'c', estado: 'confirmada', orden: { codigo: 'D-9' } }).texto === 'Confirmado: ya es una orden')
   chk('descartada: "Descartado: motivo"', e({ id: 'd', estado: 'descartada', descartado_motivo: 'Foto repetida' }).texto === 'Descartado: Foto repetida')
   chk('descartada de acopio: SIN sello (solo precargado o confirmado)', !e({ id: 'd', estado: 'descartada', numero_remito: '9', talonario: 'acopio' }).acopio)
   const err = e({ id: 'e', estado: 'error', error: 'No se ve la fecha' })
@@ -528,7 +541,7 @@ esperas.push((async () => {
     { id: 'x1', estado: 'precargada', numero_remito: marca('numero'), unidad_negocio_id: FID, subido_en: hace(1) },
     { id: 'x2', estado: 'descartada', descartado_motivo: marca('motivo'), subido_en: hace(2) },
     { id: marca('iderr'), estado: 'error', error: marca('error'), subido_en: hace(3) },
-    { id: marca('id'), estado: 'confirmada', orden: { codigo: marca('codigo') }, subido_en: hace(4), foto_path: 'f-id' },
+    { id: marca('id'), estado: 'confirmada', orden_codigo: marca('codigo'), subido_en: hace(4), foto_path: 'f-id' },
   ]
   d.miniaturas.set('f-id', 'https://xtor.supabase.co/firmado')
   d.lecturaFallida.set('x4', marca('fallo'))
@@ -554,8 +567,11 @@ esperas.push((async () => {
   const html = FUENTE
   chk('el campo de la cámara: image/*, la de atrás', /<input type="file" id="rt-remitos-camara"[^>]*accept="image\/\*"[^>]*capture="environment"/.test(html))
   chk('el de la galería: varias fotos', /<input type="file" id="rt-remitos-galeria"[^>]*accept="image\/\*"[^>]*multiple/.test(html))
-  chk('el botón grande "Subir remitos Rosario", escondido de entrada', /<div class="rt-remitos-entrada" id="rt-remitos-entrada" hidden>[\s\S]{0,400}Subir remitos Rosario/.test(html))
-  chk('al arrancar se lee qué fábricas no controlan el stock, sin esperar', /\n\s+leerFabricasSinControl\(\)\.then\(/.test(html))
+  chk('Subir es su propia pestaña, escondida de entrada', /<section id="rt-vista-remitos" class="rt-contenido" hidden>/.test(html) && /<button type="button" class="rd-tab" id="rd-tab-subir" data-pestana="subir"/.test(html))
+  chk('la cámara y la galería están conectadas', /getElementById\('rt-remitos-camara'\)\.addEventListener\('change', \(e\) => fotosElegidas\(e\.target\)\)/.test(html) &&
+    /getElementById\('rt-remitos-galeria'\)\.addEventListener\('change', \(e\) => fotosElegidas\(e\.target\)\)/.test(html))
+  chk('Reintentar, Quitar y la fábrica, conectados', /data-remito-fabrica[\s\S]{0,200}elegirFabricaRemitos[\s\S]{0,200}reintentarRemito[\s\S]{0,200}quitarRemitoDeCola/.test(html))
+  chk('ya no dice que lo revisa Administración', !/Administración lo revisa|lo revisa Administración/.test(html))
 }
 
 fin()
