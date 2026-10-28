@@ -8,7 +8,7 @@
 //  - una planilla de la Máquina 5 pendiente de completar con Sosa Marcela SIN
 //    hora de salida (un dato viejo): tampoco la ocupa.
 // Ramón Díaz sigue sin salida en la Máquina 1 (abierta): ese sí está ocupado.
-// Los usa e2e/28-planta-operarios-fin.spec.js.
+// Los usa e2e/80-planta-operarios-fin.spec.js.
 'use strict';
 const base = require('./produccion');
 

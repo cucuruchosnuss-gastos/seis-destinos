@@ -20,7 +20,7 @@
 //  - el botón no se vuelve a poner `hidden` si no cambió (un bucle con el
 //    observador: el botón vive adentro del panel observado);
 //  - el título y los rótulos van escapados.
-// Lo que hace en un navegador de verdad lo mira e2e/27-ampliar.spec.js.
+// Lo que hace en un navegador de verdad lo mira e2e/78-ampliar.spec.js.
 //
 //   ARCHIVO_TEST=<copia de js/ampliar.js>
 'use strict'

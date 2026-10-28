@@ -22,7 +22,7 @@
 //  - (10/10/2026) una pieza de la planta se corta por dentro
 //    (medirCortesPlanta: el encargado, el lote, el chip de estado, "Andando",
 //    la tarjeta de la Sala de masa, las pestañas). A 360 px lo mide
-//    e2e/30-planta-360.spec.js.
+//    e2e/84-planta-360.spec.js.
 // Corre en cada push, sin credenciales.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
