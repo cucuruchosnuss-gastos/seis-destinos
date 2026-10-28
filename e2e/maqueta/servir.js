@@ -37,6 +37,8 @@ function responder(res, archivo) {
 http.createServer((req, res) => {
   let ruta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (ruta === '/js/supabase.js') return responder(res, path.join(AQUI, 'supabase-falso.js'));
+  // El chequeo de red de la planta (27/10/2026): en la maqueta siempre hay red.
+  if (ruta === '/maqueta-supabase/auth/v1/health') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end('{}'); }
   if (ruta.startsWith('/maqueta/datos/')) {
     const nombre = path.basename(ruta);
     if (!/^[a-z0-9-]+\.json$/.test(nombre)) { res.writeHead(403); return res.end('prohibido'); }

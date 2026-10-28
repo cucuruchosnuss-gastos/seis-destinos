@@ -200,7 +200,9 @@ esperas.push((async () => {
   S.estado.pin = { personaId: 'e-fede', personaNombre: 'Federico', puesto: 'encargado', digitos: '1234', largo: 4, fase: 'pin', modo: 'produccion' }
   S.__setRpc(async () => ({ data: null, error: RED }))
   await S.enviarPin()
-  chk('cambiar de usuario con PIN sin red: el mensaje', /^Sin internet no se puede cambiar de usuario con el PIN/.test(S.estado.pin.mensaje?.texto ?? ''), S.estado.pin.mensaje?.texto)
+  // (27/10/2026) Sin hash guardado en la tablet: el mensaje de los 7 días
+  // (lo demás del PIN sin red: test-produccion-sin-internet-pin.js).
+  chk('cambiar de usuario con PIN sin red y sin PIN guardado: el mensaje', /^Sin internet\. Esta persona tiene que haber entrado con internet en los últimos 7 días/.test(S.estado.pin.mensaje?.texto ?? ''), S.estado.pin.mensaje?.texto)
   // La persona NO sale por inactividad sin red.
   S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva' }
   S.estado.ultimoToque = Date.now() - 60 * 60000

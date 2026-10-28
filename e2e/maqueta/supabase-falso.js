@@ -78,6 +78,11 @@ function consulta(tabla) {
   return q
 }
 
+// Lo que js/supabase.js exporta para el chequeo de red de la planta
+// (27/10/2026): servir.js contesta /maqueta-supabase/auth/v1/health.
+export const SUPABASE_URL = location.origin + '/maqueta-supabase'
+export const SUPABASE_KEY = 'maqueta'
+
 export const supabase = {
   from: consulta,
   // Una rpc responde lo que diga "rpc" en los datos. Un texto "ERROR:…" se
