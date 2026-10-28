@@ -39,9 +39,6 @@ const MITAD_1 = [
   // 24/10/2026 (cheque-rechazado): con él, 741 s en la 1 y 792 s en la 2.
   // Va antes de los de abajo: mut-navegador-en-dos.js se ancla en el último.
   '60-cheque-rechazado.spec.js',
-  // 28/10/2026 (tablet-sin-internet-pin): con él en la 2, 741 s en la 1 y
-  // 912 s en la 2 (55,2 %); en la 1 quedan 791 y 904.
-  '70-tablet-sin-internet-pin.spec.js',
   // 24/10/2026 (cheques-importe-completo): con el spec 61 la mitad 2 pasaba
   // del 55 % (819 de 1486 s); los dos de cheques al banco vienen a la 1.
   '37-cheques-banco.spec.js',
