@@ -110,7 +110,7 @@ const FUNCIONES_BASE = [
   'ingredientesConLote', 'pideLote', 'insumosDe', 'lotesIniciales', 'opcionesLote', 'indiceLote', 'estadoLote',
   'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate', 'pasaAChocolate',
   'parametrosRegistrarMasa', 'esErrorDeRed', 'enviarMasa', 'reintentarPendientes', 'textoPendientes', 'pintarPendientes',
-  'elegirMaquinaSala', 'cargarTiposMasa', 'cargarDatosMasa', 'elegirTipoMasa', 'elegirTamano', 'elegirComo',
+  'elegirMaquinaSala', 'leyendoMasa', 'cargarTiposMasa', 'cargarDatosMasa', 'elegirTipoMasa', 'elegirTamano', 'elegirComo',
   'mostrarReceta', 'etiquetaBorrador', 'htmlCabeceraReceta', 'htmlCeldaLote', 'htmlCeldaQueda',
   'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilasReceta', 'pintarReceta', 'pintarPieReceta',
   'cambiarCantidad', 'sumarPaso', 'elegirOpcionLote', 'escribirLoteManual',

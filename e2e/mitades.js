@@ -34,6 +34,9 @@ const MITAD_1 = [
   // 24/10/2026 (cheque-rechazado): con él, 741 s en la 1 y 792 s en la 2.
   // Va antes de los de abajo: mut-navegador-en-dos.js se ancla en el último.
   '60-cheque-rechazado.spec.js',
+  // 28/10/2026 (tablet-sin-internet-pin): con él en la 2, 741 s en la 1 y
+  // 912 s en la 2 (55,2 %); en la 1 quedan 791 y 904.
+  '70-tablet-sin-internet-pin.spec.js',
   // 24/10/2026 (cheques-importe-completo): con el spec 61 la mitad 2 pasaba
   // del 55 % (819 de 1486 s); los dos de cheques al banco vienen a la 1.
   '37-cheques-banco.spec.js',
@@ -62,6 +65,9 @@ const TIEMPOS = {
   // Sin medir en GitHub: 44 s en la compu (20 pruebas, 24/10/2026); se estima
   // como el 37 (mismas pantallas) con algo más.
   '61-cheques-importe-completo.spec.js': 20,
+  // Sin medir en GitHub: 57 s en la compu dentro del ensayo (tres pruebas,
+  // 28/10/2026); en GitHub va más rápido.
+  '70-tablet-sin-internet-pin.spec.js': 50,
   '34-faltante-retiro.spec.js': 19,
   '7-barra-unidad.spec.js': 18,
   '27-planta-sin-internet.spec.js': 16,

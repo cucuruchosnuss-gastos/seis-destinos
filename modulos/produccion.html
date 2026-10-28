@@ -2739,6 +2739,7 @@
       exitoMasa: null,     // el botón Registrar en verde "Masa N registrada ✓" (o "guardada en la tablet")
       masasTurno: null,
       enviandoMasa: false,
+      leyendoMasa: 0,
       anulando: null,
       // Configuración
       config: null,        // { unidadId, tab, busqueda, datos, … }
@@ -11468,12 +11469,12 @@
       estado.errorSala = null
       pintarSala()
       try {
-        estado.tiposMasa = await cargarTiposMasa(e.maquina.id)
+        estado.tiposMasa = await leyendoMasa(() => cargarTiposMasa(e.maquina.id))
         if (!estado.tipoMasa || !estado.tiposMasa.includes(estado.tipoMasa)) estado.tipoMasa = estado.tiposMasa[0] ?? null
         if (!estado.tipoMasa) {
           estado.errorSala = 'Esta máquina no tiene recetas cargadas. Se cargan en la gestión de Producción → Recetas.'
         } else {
-          await cargarDatosMasa()
+          await leyendoMasa(cargarDatosMasa)
         }
       } catch (err) {
         console.error('sala:', err)
@@ -11490,6 +11491,13 @@
     // cacao incluido, sin volver a modificar); si no, la ORIGINAL.
     function comoInicial(d) {
       return d?.anterior && d.anterior.es_de_hoy !== false ? 'anterior' : 'original'
+    }
+
+    // Mientras la masa se lee de la base (y hasta que se pinta, que sigue sin
+    // esperar nada) no es una pausa: revalidarSiVolvioLaRed no pide el PIN.
+    async function leyendoMasa(fn) {
+      estado.leyendoMasa = (estado.leyendoMasa || 0) + 1
+      try { return await fn() } finally { estado.leyendoMasa-- }
     }
 
     async function cargarTiposMasa(maquinaId) {
@@ -11580,7 +11588,7 @@
       estado.tipoMasa = tipo
       estado.errorSala = null
       try {
-        await cargarDatosMasa()
+        await leyendoMasa(cargarDatosMasa)
       } catch (err) {
         console.error('tipo de masa:', err)
         estado.errorSala = 'No se pudieron leer la receta y los lotes. Revisá la conexión y tocá "Actualizar".'
@@ -12548,7 +12556,7 @@
       // Sin internet, datos_para_masa sale de la copia (la anterior de antes
       // del corte): la anterior es la que se acaba de cargar en la tablet.
       const sinRed = sinInternet()
-      try { await cargarDatosMasa(); leida = !sinRed } catch (err) { console.error('masa siguiente:', err) }
+      try { await leyendoMasa(cargarDatosMasa); leida = !sinRed } catch (err) { console.error('masa siguiente:', err) }
       if (!estado.datosMasa) { soltarMaquinaSala(); return mostrarSala() }
       if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)
       // El tamaño NO se copia de la anterior (16/10/2026): cada masa nueva
@@ -13557,6 +13565,9 @@
       if (!per?.sinRed || sinInternet() || estado.maestro) return false
       if (estado.vista === 'pr-quien' || aMedioCargar() || estado.confirma || estado.panelLote) return false
       if (estado.vista === 'pr-receta' && masaEmpezada(estado.masa)) return false
+      // Registrando una masa o leyendo la siguiente no es una pausa: al
+      // terminar, la receta se pintaba ENCIMA del PIN (28/10/2026, el ensayo).
+      if (estado.enviandoMasa || estado.leyendoMasa > 0) return false
       estado.persona = null
       estado.pin = null
       estado.quienOtra = false

@@ -19,6 +19,12 @@ Pedido: `.claude/pedidos/2026-10-27-tablet-sin-internet-pin.md`. Rama `ci-prueba
 7. El acceso maestro y cambiar un PIN siguen necesitando red (mensaje claro).
 8. "Lote nuevo" en la masa: no hay RPC que cree un lote; el lote escrito a mano viaja en la masa, así que anda sin red (probado en e2e). El lote nuevo de la PLANILLA (`relanzar_con_lote_nuevo`) sigue con su mensaje de siempre.
 
+## La integración (28/10/2026, de noche, Facu escribió "integra")
+- El primer ensayo (`main` 7750ac8 + la rama) dio tres rojos:
+  1. **Un error de verdad**, en el navegador: después de registrar una masa la tablet lee la siguiente de la base. Si en ese rato volvía la red, se pedía el PIN y al terminar la lectura la receta se pintaba encima del PIN. Arreglado: `revalidarSiVolvioLaRed` espera mientras se registra una masa o se lee la siguiente (`leyendoMasa`). Suite 99/99, mutaciones 55/55 (+4), e2e de la tablet 3 veces seguidas en verde.
+  2. `test-navegador-en-dos.js`: con el spec 70 la mitad 2 pasaba del 55 % (912 de 1653 s). El spec 70 pasa a la mitad 1 (`e2e/mitades.js`, 50 s estimados).
+  3. El navegador del ensayo llegó al tope de 45 minutos sin terminar (la rama toca `js/supabase.js` y la maqueta, así que corren los 94 specs: en la compu tarda más de 42 minutos). Fue tiempo, no una falla: el segundo ensayo se corrió con `ENSAYO_TOPE_NAVEGADOR_MIN=90`.
+
 ## Lo que no se pudo probar
 - En la tablet Samsung real: cuánto tarda PBKDF2 de 600.000 vueltas y el corte real del wifi de la fábrica.
 - Los 10 minutos de inactividad de verdad en el navegador (está probado en la suite con el reloj a mano, no en e2e).
