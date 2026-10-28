@@ -10,7 +10,7 @@
 //    tal cual.
 // Desde el 28/10/2026 la orden valorizada (los puntos N1 / N2 en la misma
 // pantalla, sin la ventana "Dividir para facturar") la recorre
-// e2e/73-valorizar-con-division.spec.js.
+// e2e/95-valorizar-con-division.spec.js.
 // La base responde con 'maqueta.cambios' (no se tocan los datos de otras pruebas).
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
