@@ -91,7 +91,7 @@ esperas.push((async () => {
   chk('historial: una relanzada dice "Falta completar (productos y scrap)"', /Falta completar \(productos y scrap\)/.test(S.htmlEstadoTurno('pendiente_completar', rel)))
   chk('… una forzada, "Pendiente de completar"', /Pendiente de completar/.test(S.htmlEstadoTurno('pendiente_completar', { ...rel, forzado_por: 'x' })))
   chk('… sin la fila (sin forzado_por en la consulta), no se adivina', /Pendiente de completar/.test(S.htmlEstadoTurno('pendiente_completar', { estado: 'pendiente_completar' })))
-  chk('la lista del historial trae hora_fin y forzado_por', /select\('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, forzado_por, forzado_motivo'\)/.test(FUENTE_G))
+  chk('la lista del historial trae hora_fin y forzado_por', /select\('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, (hora_largada, largada_motivo, )?forzado_por, forzado_motivo'\)/.test(FUENTE_G))
   chk('el horario del detalle usa la hora de fin del turno', /06:00 a 15:00/.test(S.horarioTurno({ fecha: '2026-10-01', hora_inicio: '06:00:00', hora_fin: '15:00:00', estado: 'cerrado', cerrado_en: '2026-10-01T18:30:00Z' })))
   const p = S.htmlParadas([PARADA], null, '15:00')
   chk('historial: la parada en curso dice hasta cuándo se cuenta', /se cuenta hasta las 15:00 si no vuelve/.test(p))

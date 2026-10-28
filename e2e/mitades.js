@@ -31,6 +31,11 @@ const MITAD_1 = [
   '9-comparar-planta.spec.js',
   '6-planta-reanudar.spec.js',
   '30-revision-celular.spec.js',
+  // 28/10/2026 (tablet-largada-tarde): con los specs 70 y 71 de la tablet la
+  // mitad 2 pasaba del 55 % (920 de 1661 s); dos de la planta, solo maqueta,
+  // vienen a la 1 y quedan 833 / 828.
+  '8-planta-tamanos.spec.js',
+  '25-planta-paradas.spec.js',
   // 24/10/2026 (cheque-rechazado): con él, 741 s en la 1 y 792 s en la 2.
   // Va antes de los de abajo: mut-navegador-en-dos.js se ancla en el último.
   '60-cheque-rechazado.spec.js',

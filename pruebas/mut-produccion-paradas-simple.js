@@ -44,7 +44,7 @@ correrMutacionesProduccion({
     { nombre: 'la ventana no sugiere la hora de ahora', de: "      return turno?.estado === 'abierto' || !turno?.estado ? horaArgentina(ahora) : horaDeReferencia(turno, ahora)", a: "      return ''" },
     { nombre: '"Ahora" también en una pendiente', de: "      return p?.turno?.estado === 'abierto'\n    }\n\n    function htmlHoraVentana", a: "      return true\n    }\n\n    function htmlHoraVentana" },
     { nombre: 'una hora a medio escribir se toma', de: "      if (f.buffer && !(f.buffer.length >= 3 && normalizarHora(f.buffer))) return { error: 'Esa hora no existe. Escribila con 4 números, por ejemplo 0640.' }", a: '' },
-    { nombre: 'el error de la ventana se tapa', de: "        f.errorBase = r.error?.message || 'No se pudo guardar. Revisá la conexión y probá de nuevo.'", a: "        f.errorBase = 'No se pudo guardar. Revisá la conexión y probá de nuevo.'" },
+    { nombre: 'el error de la ventana se tapa', de: "        f.errorBase = r.error?.message || 'No se pudo guardar. Revisá la conexión y probá de nuevo.'\n        return pintarHoraVentana()", a: "        f.errorBase = 'No se pudo guardar. Revisá la conexión y probá de nuevo.'\n        return pintarHoraVentana()" },
     // Los motivos agrupados.
     { nombre: 'los grupos en otro orden', de: "    const GRUPOS_MOTIVO = [['falla', 'Fallas'], ['organizativa', 'Organización'], ['programada', 'Limpiezas'], ['otro', 'Otro']]", a: "    const GRUPOS_MOTIVO = [['organizativa', 'Organización'], ['falla', 'Fallas'], ['programada', 'Limpiezas'], ['otro', 'Otro']]" },
     { nombre: 'una categoría desconocida se pierde', de: "      return GRUPOS_MOTIVO.some(([k]) => k === m?.categoria) ? m.categoria : 'otro'", a: '      return m?.categoria' },

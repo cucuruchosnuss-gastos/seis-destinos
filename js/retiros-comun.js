@@ -186,8 +186,14 @@ export function detalleDevolucionHoja(r) {
 }
 
 // Las cajas que SE LLEVA (retiros y reposiciones): una devolución no sale.
+// Lo que se vende POR UNIDAD (los conos sueltos) no son cajas: va aparte.
 export function totalCajasOrden(orden) {
-  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo || r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0)), 0)
+  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo || r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || 0)), 0)
+}
+
+// Las unidades sueltas que se lleva (lo que se vende por unidad).
+export function totalUnidadesSueltasOrden(orden) {
+  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.movimiento !== 'devolucion' && esPorUnidadHoja(r) ? unidadesDeRenglonHoja(r) : 0), 0)
 }
 
 // Las cajas que TRAJO el cliente (devoluciones y reposiciones).
@@ -342,6 +348,38 @@ export function porCajaHoja(r) {
   return c > 0 && u > 0 && Number.isInteger(u / c) ? u / c : null
 }
 
+// ── LA VENTA POR UNIDAD (27/10/2026) ───────────────────────────────────────
+// Una presentación con producto_presentaciones.sin_stock = true o con 1
+// unidad por caja ("Conos de papel sueltos · Por cono", en Nuss y en Dolce;
+// leído con information_schema el 27/10/2026) se cuenta en UNIDADES, nunca en
+// cajas: "720 conos". En la hoja: CANT. = los conos, DESCRIPCIÓN sin "×1",
+// TOTAL "720 un.", y en la fila TOTAL va con las unidades ("TOTAL · 3 cajas de
+// producto + 720 un."), no con las cajas. El renglón lo marca `sinStock`
+// (si se sabe) o sus 1 unidad por caja (porCaja, o unidades ÷ cajas).
+export function esPorUnidadHoja(r) {
+  if (!r || r.esInsumo || r.insumo_id || r.insumoId || r.tipo === 'insumo') return false
+  return r.sinStock === true || r.sin_stock === true || porCajaHoja(r) === 1
+}
+
+// La palabra del producto: "conos" para los conos, si no "unidades".
+export function palabraUnidadesHoja(producto, n) {
+  const conos = /^\s*conos?\b/i.test(String(producto ?? ''))
+  return Number(n) === 1 ? (conos ? 'cono' : 'unidad') : (conos ? 'conos' : 'unidades')
+}
+
+// "720 conos", "1 cono", "12 unidades".
+export function cantidadUnidadesHoja(producto, n) {
+  return `${enteroHoja(n)} ${palabraUnidadesHoja(producto, n)}`
+}
+
+// Las unidades de un renglón de producto: las que trae, o cajas × por caja.
+function unidadesDeRenglonHoja(r) {
+  const u = Number(r?.unidades)
+  if (u > 0) return u
+  const n = porCajaHoja(r), c = Number(r?.cajas)
+  return n && c > 0 ? n * c : 0
+}
+
 export function nombreConoHoja(r) {
   const c = String(r?.conoNombre ?? r?.cono ?? '').trim()
   return SIN_NOMBRE_DE_CONO.has(c.toLowerCase()) ? '' : c
@@ -369,7 +407,7 @@ export function descripcionCortaHoja(r) {
     const marca = String(r?.marca ?? '').trim()
     return conMayuscula([marca, bultoInsumoHoja(r)].filter(Boolean).join(' · '))
   }
-  const n = porCajaHoja(r)
+  const n = esPorUnidadHoja(r) ? null : porCajaHoja(r)
   const cono = nombreConoHoja(r)
   return [n ? `×${enteroHoja(n)}` : '', cono ? `con cono ${cono}` : ''].filter(Boolean).join(' · ')
 }
@@ -377,7 +415,7 @@ export function descripcionCortaHoja(r) {
 // La misma, en HTML: el cono en negrita.
 function htmlDescripcionHoja(r) {
   if (r?.esInsumo) return escHoja(descripcionCortaHoja(r))
-  const n = porCajaHoja(r)
+  const n = esPorUnidadHoja(r) ? null : porCajaHoja(r)
   const cono = nombreConoHoja(r)
   return [n ? escHoja(`×${enteroHoja(n)}`) : '', cono ? `con cono <strong class="rh-cono">${escHoja(cono)}</strong>` : ''].filter(Boolean).join(' · ')
 }
@@ -475,7 +513,12 @@ export function rotuloTotalHoja(orden) {
   let cajas = 0, bultos = 0, unidades = 0
   for (const r of orden?.renglones ?? []) {
     if (!r || r.movimiento === 'devolucion') continue
-    if (!r.esInsumo) { cajas += Number(r.cajas) || 0; continue }
+    if (!r.esInsumo) {
+      // Lo que se vende por unidad (los conos sueltos) va con las unidades.
+      if (esPorUnidadHoja(r)) unidades += unidadesDeRenglonHoja(r)
+      else cajas += Number(r.cajas) || 0
+      continue
+    }
     const b = bultosHoja(r)
     if (b !== null) bultos += b
     else if (String(r.unidad ?? '') === 'un') unidades += Number(r.cantidad) || 0
@@ -524,7 +567,8 @@ function htmlNotasHoja(orden) {
   const faltantes = (orden?.renglones ?? []).map(r => {
     const f = faltanteDeRenglon(r)
     if (f === null) return null
-    const cuanto = r.esInsumo ? cantidadInsumoHoja(f, r.unidad) : `${enteroHoja(f)} ${f === 1 ? 'caja' : 'cajas'}`
+    const cuanto = r.esInsumo ? cantidadInsumoHoja(f, r.unidad)
+      : esPorUnidadHoja(r) ? cantidadUnidadesHoja(r.producto, f) : `${enteroHoja(f)} ${f === 1 ? 'caja' : 'cajas'}`
     return `${cuanto} de ${descripcionHoja(r)}`
   }).filter(Boolean)
   if (!obs && !faltantes.length) return ''
@@ -545,6 +589,16 @@ function htmlSelloAnulada(orden) {
     (detalle ? `<span class="rh-anulada__detalle">${escHoja(detalle)}</span>` : '') + `</div></div>`
 }
 
+// EL REMITO DE PAPEL (27/10/2026, los remitos de Rosario): una orden que
+// salió de un remito precargado lleva su número (ordenes_retiro.numero_remito)
+// y su talonario ('acopio' o el oficial, null = oficial). La hoja, el PDF y el
+// texto dicen "Remito N° 0001-00003100" o "Acopio N° 977492". Sin número, nada.
+export function textoRemitoHoja(orden) {
+  const n = String(orden?.numeroRemito ?? '').trim()
+  if (!n) return ''
+  return `${orden?.talonario === 'acopio' ? 'Acopio' : 'Remito'} N° ${n}`
+}
+
 // "ORIGINAL", o "ORIGINAL · HOJA 1 DE 3" en hojas enteras.
 export function rotuloCopiaHoja(copia, pagina = 1, paginas = 1, entera = false) {
   return entera ? `${copia} · HOJA ${pagina} DE ${paginas}` : copia
@@ -556,6 +610,7 @@ function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, pagina
   const anulada = orden?.estado === 'anulada'
   const ultima = pagina === paginas
   const fecha = orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)
+  const remito = textoRemitoHoja(orden)
   return `<section class="rh-copia${anulada ? ' rh-copia--anulada' : ''}" data-copia="${escHoja(copia)}">` +
     `<header class="rh-cab">${htmlEmpresaHoja(orden?.empresa)}` +
     `<div class="rh-titulo"><span class="rh-titulo__grande">ORDEN DE PEDIDO</span>` +
@@ -563,7 +618,8 @@ function htmlCopiaHoja(orden, copia, { conPrecios, renglones, pagina = 1, pagina
     (anulada ? '<span class="rh-titulo__anulada">ANULADA</span>' : '') + '</div>' +
     `<div class="rh-orden"><span class="rh-orden__rotulo">ORDEN N°</span>` +
     `<span class="rh-codigo">${escHoja(orden?.codigo || '—')}</span>` +
-    `<span class="rh-orden__fecha">${escHoja(fecha)}</span></div></header>` +
+    `<span class="rh-orden__fecha">${escHoja(fecha)}</span>` +
+    (remito ? `<span class="rh-orden__remito">${escHoja(remito)}</span>` : '') + `</div></header>` +
     htmlClienteHoja(orden?.cliente, orden?.transporte) +
     htmlTablaHoja(renglones, conPrecios, orden?.moneda || 'ARS', { conTotal: ultima, orden }) +
     (ultima ? htmlNotasHoja(orden) + htmlPieHoja(orden) : `<p class="rh-sigue">Sigue en la hoja ${escHoja(pagina + 1)}.</p>`) +
@@ -910,6 +966,7 @@ export const ESTILOS_HOJA = `
 .rh-orden__rotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
 .rh-codigo { font-size: 28px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rh-orden__fecha { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.rh-orden__remito { font-size: 11px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; border-top: 1px solid #000; padding-top: 1px; margin-top: 1px; max-width: 100%; }
 .rh-cliente { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 3px; }
 .rh-cliente__izq { display: flex; flex-direction: column; min-width: 0; }
 .rh-rotulo { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
@@ -981,6 +1038,7 @@ export function textoOrden(orden) {
     `Fecha: ${orden?.cargadaEn ? fechaHoraHoja(orden.cargadaEn) : fechaHoja(orden?.fecha)}`,
     `Cliente: ${cli}`,
   ]
+  if (textoRemitoHoja(orden)) lineas.splice(1, 0, textoRemitoHoja(orden))
   if (String(orden?.transporte ?? '').trim()) lineas.push(`Transporte: ${String(orden.transporte).trim()}`)
   if (orden?.estado === 'anulada') lineas.push('ANULADA')
   lineas.push('')
@@ -996,16 +1054,20 @@ export function textoOrden(orden) {
     }
     const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
     const lotes = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes)})` : ''
-    lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)
+    lineas.push(`- ${esPorUnidadHoja(r) ? cantidadUnidadesHoja(r.producto, r.cajas) : `${enteroHoja(r.cajas)} cajas`} · ${desc}${lotes}`)
   }
   if (devoluciones.length) {
     lineas.push('', 'Devoluciones:')
     for (const r of devoluciones) {
       const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
-      lineas.push(`- ${r.movimiento === 'devolucion' ? '−' : ''}${enteroHoja(r.cajas)} cajas · ${desc} (${detalleDevolucionHoja(r)})`)
+      lineas.push(`- ${r.movimiento === 'devolucion' ? '−' : ''}${esPorUnidadHoja(r) ? cantidadUnidadesHoja(r.producto, r.cajas) : `${enteroHoja(r.cajas)} cajas`} · ${desc} (${detalleDevolucionHoja(r)})`)
     }
   }
-  lineas.push('', `Total: ${enteroHoja(totalCajasOrden(orden))} cajas` +
+  // Las unidades sueltas (los conos) aparte de las cajas: "3 cajas + 720 un.".
+  const sueltas = totalUnidadesSueltasOrden(orden)
+  const cajasTotal = totalCajasOrden(orden)
+  const totalProductos = [cajasTotal || !sueltas ? `${enteroHoja(cajasTotal)} cajas` : '', sueltas ? `${enteroHoja(sueltas)} un.` : ''].filter(Boolean).join(' + ')
+  lineas.push('', `Total: ${totalProductos}` +
     (insumos ? ` y ${insumos} ${insumos === 1 ? 'renglón' : 'renglones'} de materia prima e insumos` : '') +
     (devoluciones.length ? ` · devueltas ${enteroHoja(totalCajasDevueltas(orden))}` : ''))
   if (String(orden?.observaciones ?? '').trim()) lineas.push(`Observaciones: ${String(orden.observaciones).trim()}`)

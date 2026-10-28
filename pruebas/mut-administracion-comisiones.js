@@ -67,7 +67,8 @@ correrMutaciones({
     // La cuenta del cliente
     { nombre: 'sin la etiqueta Comisión', de: "      comision: 'Comisión', retencion: 'Retención',\n", a: "      retencion: 'Retención',\n" },
     { nombre: 'el número de la orden en la comisión', de: ".replace(/ · Comisión orden N°\\s*\\d+/, ' · Comisión')", a: '' },
-    { nombre: 'el código sale dos veces', de: "base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-\\d+)/, '')", a: "base.replace(/^Orden de retiro N°\\s*\\d+/, '')" },
+    { nombre: 'el código sale dos veces', de: "base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-(?:I-)?\\d+)/, '')", a: "base.replace(/^Orden de retiro N°\\s*\\d+/, '')" },
+    { nombre: 'el código de la orden interna sale dos veces', de: "base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-(?:I-)?\\d+)/, '')", a: "base.replace(/^Orden de retiro (?:N°\\s*\\d+|[A-Z]+-\\d+)/, '')" },
     // La ficha
     { nombre: 'la habitual no está en la ficha', de: "['plazo_pago_dias', 'dias'], ['comision_habitual', 'porcentaje'],", a: "['plazo_pago_dias', 'dias']," },
     { nombre: 'la comisión habitual viaja en la ficha', de: "          const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: resto })", a: "          const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: f.id, p_datos: datos })" },

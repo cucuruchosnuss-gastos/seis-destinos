@@ -122,7 +122,13 @@ export const supabase = {
       const viva = globalThis.__maqueta?.firmar
       return typeof viva === 'function' ? viva(bucket, ruta, segundos) : { data: null, error: null }
     },
-    upload: async () => ({ data: null, error: null }),
+    // SUBIR EN VIVO (27/10/2026, los remitos de Rosario): una prueba puede
+    // poner globalThis.__maqueta.subir = (bucket, ruta, archivo, op) =>
+    // { data, error } para mirar lo subido o hacerlo fallar. Sin eso, como antes.
+    upload: async (ruta, archivo, op) => {
+      const viva = globalThis.__maqueta?.subir
+      return typeof viva === 'function' ? viva(bucket, ruta, archivo, op) : { data: null, error: null }
+    },
   } } },
   // Una Edge Function responde lo que diga "funciones" en los datos
   // (02/10/2026: el lector de comprobantes de Cobranzas). Sin datos, falla

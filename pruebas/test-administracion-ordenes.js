@@ -95,7 +95,8 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   S.estado.misTareas = new Map([['retiros:ver', { unidades: ['u-d'] }]])
   chk('el alcance manda: ver en Dolce Pasta no abre Cucuruchos', !S.puedeEn('retiros', 'ver', 'u-n') && S.puedeEn('retiros', 'ver', 'u-d'))
   S.estado.miRolApp = 'super_admin'
-  chk('super_admin ve todo', S.seccionesVisibles('u-n').length === S.SECCIONES.length)
+  // (27/10/2026: menos las que van solo en algunas fábricas, como Acopios.)
+  chk('super_admin ve todo', S.seccionesVisibles('u-n').length === S.SECCIONES.filter(s => typeof s.solo !== 'function').length)
 }
 {
   const S = nuevo()

@@ -479,6 +479,9 @@ const SEGURAS = {
     datos: 'HTML armado arriba con .map(esc)', 'filas.length': 'número', html: HTML_PROPIO,
   },
   htmlCategoriaNueva: { opciones: HTML_PROPIO },
+  htmlPrecioItem: {
+    a: 'número de la constante ALICUOTAS_IVA', iva: HTML_PROPIO, modo: HTML_PROPIO,
+  },
   htmlItemCerrado: {
     'item.uid': 'nuevoUid(): "it" + contador', CHIP_NO_SUMA: 'HTML constante', chipLote: HTML_PROPIO,
   },
@@ -495,7 +498,7 @@ const SEGURAS = {
     'conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="bultosPapel" placeholder="0">`, \'bultos\')':
       'HTML de conSufijo: un <input> literal y el literal "bultos"',
     n: 'número: índice del .map()', rotuloSuma: 'literal "bultos" o esc(item.unidadMedida)',
-    resultadoHtml: HTML_PROPIO,
+    resultadoHtml: HTML_PROPIO, 'htmlPrecioItem(item)': 'HTML de htmlPrecioItem, que escapa adentro',
     "chipsPresentacion(usadas, 'Ya usadas con este proveedor')": 'HTML de chipsPresentacion, que escapa adentro',
     "chipsPresentacion(dividen, 'Presentaciones que reparten exacto')": 'HTML de chipsPresentacion, que escapa adentro',
     avisoFavorita: HTML_PROPIO, 'htmlCategoriaNueva(item)': 'HTML de htmlCategoriaNueva(), que escapa adentro',

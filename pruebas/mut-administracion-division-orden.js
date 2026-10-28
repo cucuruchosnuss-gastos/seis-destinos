@@ -66,7 +66,7 @@ correrMutaciones({
     { nombre: 'la condición: el error de la base se tapa', de: "c.error = err?.message || 'No se pudo guardar la condición de venta. Probá de nuevo.'", a: "c.error = 'No se pudo guardar la condición de venta. Probá de nuevo.'" },
     { nombre: 'la condición: las órdenes no se enteran', de: '        // Las órdenes leen la condición de la lista de clientes: que la relea.\n        estado.clientes = null\n', a: '' },
     // La orden
-    { nombre: 'la orden no lee la división', de: "comision_cargada_en, division_pct_a')", a: "comision_cargada_en')" },
+    { nombre: 'la orden no lee la división', de: "comision_cargada_en, division_pct_a, numero_remito, talonario')", a: "comision_cargada_en, numero_remito, talonario')" },
     { nombre: 'la orden no lee las facturas', de: '      const facturas = await leerFacturasDeOrden(o)', a: '      const facturas = []' },
     { nombre: 'facturas ilegibles = sin facturas', de: "        console.error('No se pudieron leer las facturas de la orden:', err)\n        return null", a: "        console.error('No se pudieron leer las facturas de la orden:', err)\n        return []" },
     { nombre: 'la condición del cliente no divide', de: '      return hay(o?.division_pct_a) || hay(cli?.pct_parte_a)', a: '      return hay(o?.division_pct_a)' },

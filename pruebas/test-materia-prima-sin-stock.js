@@ -12,6 +12,7 @@
 
 const path = require('path')
 const { construirCon } = require('./sandbox')
+const { conPrecioMp, CONSTANTES_PRECIO_MP } = require('./precio-mp-comun')
 const { extraerFn } = require('./extraer')
 const { leer } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
@@ -76,7 +77,7 @@ const FUNCIONES = [
 const CONSTANTES = ['TOLERANCIA_CANTIDAD']
 
 const S = construirCon(ARCHIVO, {
-  preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
+  preludio: PRELUDIO, funciones: conPrecioMp(FUNCIONES), constantes: [...CONSTANTES, ...CONSTANTES_PRECIO_MP],
   retorno: 'estado, __els, __errores, __pasos',
 })
 
@@ -163,7 +164,8 @@ function validar(tipoDoc, sinStock, it) {
   chk('abierta, casilla marcada: "Lote ilegible" sigue disponible y sin marcar',
     abierta.includes('data-accion="lote-ilegible"') && !abierta.includes('btn-item-secundario--activo" data-accion="lote-ilegible"'))
   S.estado.wizard = wizard('factura_a', false, item())
-  const obligatoria = S.htmlItemAbierto(item())
+  // Sin el bloque del precio, que es OPCIONAL siempre (27/10/2026).
+  const obligatoria = S.htmlItemAbierto(item()).replace(S.htmlPrecioItem(item()), '')
   chk('abierta, casilla desmarcada: el lote dice OBLIGATORIO', obligatoria.includes('OBLIGATORIO') && !obligatoria.includes('OPCIONAL'))
   S.estado.wizard = wizard('remito', true, item())
   chk('abierta, remito con sinStock en true: OBLIGATORIO', S.htmlItemAbierto(item()).includes('OBLIGATORIO'))

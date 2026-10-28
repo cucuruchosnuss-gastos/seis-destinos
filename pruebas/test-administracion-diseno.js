@@ -88,7 +88,8 @@ async function pruebas() {
   {
     const S = nuevo({ rol: 'super_admin' })
     const orden = S.enOrdenDePestanas(S.SECCIONES).map(s => s.id).join(',')
-    chk('la portada va en el orden del diseño', orden === 'cobranzas,ordenes,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores,entre,comisiones', orden)
+    // (27/10/2026: Acopios, después de Órdenes; solo se ve donde hay acopios.)
+    chk('la portada va en el orden del diseño', orden === 'cobranzas,ordenes,acopios,revisar,clientes,listas,importar,cheques,retenciones,prestamos,seguridad,errores,entre,comisiones', orden)
   }
   {
     const S = nuevo({ rol: 'super_admin' })

@@ -357,6 +357,9 @@ const ORDENES_FILTRO = [
   chk('el detalle de la comisión dice el código y no el número', d === 'Orden de retiro N-0013 · Comisión (5%)', d)
   const r = S.detalleMovimiento({ orden_retiro_id: 'o1', detalle: 'Orden de retiro N-0013' }, new Map([['o1', 'N-0013']]))
   chk('con el código que ya manda la base, el código sale UNA vez', r === 'Orden de retiro N-0013', r)
+  // La orden interna (27/10/2026): código N-I-0007.
+  const ri = S.detalleMovimiento({ orden_retiro_id: 'o1', detalle: 'Orden de retiro N-I-0007' }, new Map([['o1', 'N-I-0007']]))
+  chk('con el código de una orden interna, el código sale UNA vez', ri === 'Orden de retiro N-I-0007', ri)
 }
 
 // ── La ficha: "Comisión habitual (%)" ──────────────────────────────────────

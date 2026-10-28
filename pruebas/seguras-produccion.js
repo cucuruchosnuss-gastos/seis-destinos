@@ -250,6 +250,7 @@ const SEGURAS_PRODUCCION = [
   ['caja', 'HTML constante del código: la casilla con el tilde (htmlHorasParadaNueva)'],
   ['ahora', 'HTML constante del código: el botón "Ahora" de la ventana de la hora, o vacío'],
   ['htmlEstadoTurno(t.estado, t)', 'HTML armado por htmlEstadoTurno(), que escapa el texto del estado; la clase sale de ESTADO_TURNO o es la literal "pendiente" (relanzada)'],
+  ['htmlChipTarde(t)', 'HTML armado por htmlChipTarde() (inicio tarde, 27/10/2026), que escapa el title con el motivo y la demora'],
   ['htmlParadas(d.paradas, accionesParadaHistorial(t), finTurnoAbierto(d))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas, el id y la hora de fin adentro'],
   // La lista de masas compacta (08/10/2026)
   ['textoOrigenMasa(m)', "texto constante del código: 'Original' o 'Modificada' según masas.origen, nunca el dato"],

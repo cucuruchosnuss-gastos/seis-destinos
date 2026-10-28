@@ -12,6 +12,26 @@ const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
 const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
+// Los acopios, la cuenta en el grupo, "(también en Nuss)" y valorizar con la
+// lista de otra empresa (27/10/2026). Van todas a la base: las llaman la
+// portada, la cuenta del cliente, valorizar y la revisión de un remito.
+const FUNCIONES_ACOPIOS = [
+  'leerPrincipales', 'textoTambienEn', 'unidadListaDeOtraEmpresa', 'presentacionEnUnidad', 'leerPrecioVentaEn',
+  'acopiosVacio', 'acopiosEnEmpresa', 'asegurarAcopiosEmpresa', 'leerAcopios', 'estadoAcopio', 'cajasAcopio', 'textoQuedanAcopio', 'porcentajeAcopio',
+  'nombreProductoAcopio', 'papelesAcopio', 'htmlBarraAcopio', 'htmlSelloEstadoAcopio', 'htmlTarjetaAcopio', 'acopiosFiltrados', 'htmlFiltroAcopios',
+  'htmlListaAcopios', 'puedeCargarAcopio', 'pintarAcopios', 'mostrarAcopios', 'cargarAcopios', 'contarAcopiosPortada', 'contenidoSeccionAcopios',
+  'nuevoAcopioVacio', 'abrirNuevoAcopio', 'htmlClientesAcopio', 'htmlClienteAcopio', 'htmlOpcionesAcopio', 'htmlMarcasAcopio', 'htmlProductoAcopio',
+  'importeAcopio', 'textoTotalAcopio', 'htmlNuevoAcopio', 'enlazarNuevoAcopio', 'errorNuevoAcopio', 'parametrosCrearAcopio', 'guardarNuevoAcopio',
+  'accionAcopios', 'elegirClienteAcopio', 'elegirProductoAcopio', 'elegirMarcaAcopio', 'alTocarAcopios', 'alEscribirAcopios', 'alCambiarAcopios',
+  'acopioDe', 'leerMovimientosAcopio', 'leerAnulacionAcopio', 'abrirAcopio', 'htmlMovimientoAcopio', 'puedeAnularAcopio', 'htmlAnularAcopio',
+  'htmlDetalleAcopio', 'pintarAcopio', 'confirmarAnularAcopio', 'alTocarAcopio', 'alEscribirAcopio', 'volverDeAcopio',
+  'cargarAcopiosCliente', 'htmlAcopiosCliente', 'cargarCuentaGrupo', 'nombreEmpresaGrupo', 'htmlCuentaGrupo',
+  'claveAcopio', 'cargarAcopiosRemito', 'saldoAcopioRemito', 'htmlSaldoAcopioRemito', 'pintarAcopiosRemito',
+  // Lo de la Carga que usan "Nuevo acopio" y el saldo en el remito.
+  'presentacionRemito', 'productoDePresentacionRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
+  'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
+]
+
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
   'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles', 'moduloVisible',
@@ -33,7 +53,7 @@ const FUNCIONES_BASE = [
   'clavePrecio', 'preciosInsumosDeLista', 'leerSaldoCliente', 'abrirValorizar',
   'precioFijoDeVersion', 'textoPrecioInsumoGrilla',
   // Valorizar con precio_venta() (30/09/2026)
-  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
+  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
   // La comisión de una orden (06/10/2026)
   'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
@@ -99,11 +119,13 @@ const FUNCIONES_BASE = [
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
-  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
+  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja', 'textoRemitoHoja',
   'faltanteDeRenglon', 'descripcionHoja', 'htmlNotasHoja', 'htmlSelloAnulada', 'paginasHoja',
   // La hoja nueva (26/10/2026): CANT. | PRODUCTO | DESCRIPCIÓN | TOTAL | LOTE.
   'porCajaHoja', 'nombreConoHoja', 'conMayuscula', 'bultoInsumoHoja', 'descripcionCortaHoja', 'htmlDescripcionHoja', 'bultosHoja',
   'cantidadColHoja', 'totalColHoja', 'htmlLotesHoja', 'rotuloTotalHoja', 'totalPesoHoja',
+  // La venta por unidad (27/10/2026): los conos de papel sueltos.
+  'esPorUnidadHoja', 'palabraUnidadesHoja', 'cantidadUnidadesHoja', 'unidadesDeRenglonHoja', 'totalUnidadesSueltasOrden',
   // La impresión nueva (07/10/2026): medida, media hoja u hojas enteras.
   'htmlLogoHoja', 'textoTransporteHoja', 'htmlPieHoja', 'rotuloCopiaHoja', 'planHoja', 'medirHoja', 'armarHoja',
   // Imprimir pegado al toque, por el iPhone (26/10/2026): del común y de la pantalla.
@@ -201,6 +223,13 @@ const FUNCIONES_BASE = [
   // La orden a otra empresa del grupo (24/10/2026)
   'empresaGrupoDe', 'ordenEntreEmpresas', 'textoDeudaEntre', 'htmlDeudaEntre', 'htmlSelloEntre', 'htmlFichaEntre', 'ponerEmpresa',
   'codigoOrdenEntre', 'puedeAbrirOrdenEntre', 'htmlOrdenEntre', 'vincularOrdenesEntre', 'abrirOrdenEntre',
+  // Los remitos precargados de Rosario (27/10/2026): lo que usan Órdenes y la
+  // ficha (el resto lo pide test-administracion-remitos-precarga.js).
+  'sinControlStockEmpresa', 'leerSinControl', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio', 'numeroRemitoN', 'ordenarPorRemito',
+  'ordenesVisibles', 'htmlTalonariosOrdenes', 'elegirTalonarioOrdenes', 'htmlFilaOrdenRemito', 'remitosPorRevisar', 'leerRemitosPrecarga',
+  'cargarRemitosPrecarga', 'amarillosDe', 'nombreClienteRemito', 'htmlTarjetaRemito', 'htmlRemitosPrecarga', 'pintarRemitosPrecarga',
+  // Los acopios, la cuenta en el grupo y la lista de otra empresa (27/10/2026)
+  ...FUNCIONES_ACOPIOS,
 ]
 
 const CONSTANTES_BASE = [
@@ -242,6 +271,10 @@ const CONSTANTES_BASE = [
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
   // Dividir para facturar (21/10/2026)
   'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_VISTA_DIVISION',
+  // Los remitos precargados de Rosario (27/10/2026)
+  'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO',
+  // Los acopios (27/10/2026)
+  'ESTADOS_ACOPIO', 'LARGO_NUMERO_ACOPIO', 'GRUPOS_REMITO',
 ]
 
 const PRELUDIO = `
@@ -297,6 +330,7 @@ const PRELUDIO = `
   var turnoPrestamos = 0
   var turnoPrestamo = 0
   var turnoVolver = 0
+  var turnoAcopios = 0, turnoAcopio = 0
   // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
   var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }
@@ -368,8 +402,48 @@ const OPCIONALES_FN = {
   htmlSoloProvisorios: "function htmlSoloProvisorios() { return '' }",
   // La fábrica de la nota para Anular (24/10/2026): una copia de antes no la lee.
   leerUnidadNotaDebito: 'async function leerUnidadNotaDebito() { return null }',
+  // Los remitos precargados (27/10/2026): una copia de antes no los tiene
+  // (todas sus fábricas son "con control": nada cambia).
+  sinControlStockEmpresa: 'function sinControlStockEmpresa() { return false }',
+  leerSinControl: 'async function leerSinControl() {}',
+  talonarioDe: "function talonarioDe() { return 'oficial' }",
+  textoNumeroRemito: "function textoNumeroRemito() { return '' }",
+  htmlSelloAcopio: "function htmlSelloAcopio() { return '' }",
+  numeroRemitoN: 'function numeroRemitoN() { return null }',
+  ordenarPorRemito: 'function ordenarPorRemito(l) { return Array.isArray(l) ? l : [] }',
+  ordenesVisibles: 'function ordenesVisibles(l = estado.ordenes) { return Array.isArray(l) ? l : [] }',
+  htmlTalonariosOrdenes: "function htmlTalonariosOrdenes() { return '' }",
+  elegirTalonarioOrdenes: 'function elegirTalonarioOrdenes() {}',
+  htmlFilaOrdenRemito: "function htmlFilaOrdenRemito() { return '' }",
+  remitosPorRevisar: 'function remitosPorRevisar() { return [] }',
+  leerRemitosPrecarga: 'async function leerRemitosPrecarga() { return [] }',
+  cargarRemitosPrecarga: 'async function cargarRemitosPrecarga() {}',
+  amarillosDe: 'function amarillosDe() { return 0 }',
+  nombreClienteRemito: "function nombreClienteRemito() { return '' }",
+  htmlTarjetaRemito: "function htmlTarjetaRemito() { return '' }",
+  htmlRemitosPrecarga: "function htmlRemitosPrecarga() { return '' }",
+  pintarRemitosPrecarga: 'function pintarRemitosPrecarga() {}',
 }
-const OPCIONALES_CONST = { TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'" }
+const OPCIONALES_CONST = {
+  TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'",
+  ESTADOS_REMITO_POR_REVISAR: 'var ESTADOS_REMITO_POR_REVISAR = []', ETIQUETA_ESTADO_REMITO: 'var ETIQUETA_ESTADO_REMITO = {}', TALONARIOS: 'var TALONARIOS = []', CAMPOS_REMITO: "var CAMPOS_REMITO = ''",
+  ESTADOS_ACOPIO: "var ESTADOS_ACOPIO = ['activo', 'terminado', 'anulado']", LARGO_NUMERO_ACOPIO: 'var LARGO_NUMERO_ACOPIO = 30',
+  GRUPOS_REMITO: 'var GRUPOS_REMITO = []',
+}
+// Los acopios (27/10/2026): una copia de antes no tiene ninguna de estas.
+// Las que llaman las funciones de siempre tienen su reemplazo que no hace
+// nada (sin acopios, sin cuenta en el grupo, la lista de la misma empresa);
+// las demás, uno que devuelve '' (un pedazo de HTML o un texto) o null.
+const REEMPLAZOS_ACOPIOS = {
+  acopiosEnEmpresa: 'function acopiosEnEmpresa() { return false }',
+  leerPrecioVentaEn: 'function leerPrecioVentaEn(l, it, f) { return leerPrecioVenta(l, it, f) }',
+  presentacionEnUnidad: 'async function presentacionEnUnidad(p) { return p }',
+  contenidoSeccionAcopios: "function contenidoSeccionAcopios() { return { numero: null, unidad: '', lineas: [] } }",
+  leerAcopios: 'async function leerAcopios() { return [] }',
+}
+for (const n of FUNCIONES_ACOPIOS) {
+  OPCIONALES_FN[n] = REEMPLAZOS_ACOPIOS[n] ?? (/^(html|texto|nombre|papeles)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
+}
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
   const texto = require('fs').readFileSync(ruta, 'utf8')
@@ -377,10 +451,12 @@ function construirAdministracion(ruta, { funciones = [], constantes = [], prelud
   const fnFaltan = Object.keys(OPCIONALES_FN).filter(n => falta(n, new RegExp('function ' + n + '\\(')))
   const constFaltan = Object.keys(OPCIONALES_CONST).filter(n => falta(n, new RegExp('const ' + n + ' =')))
   const stubs = [...fnFaltan.map(n => OPCIONALES_FN[n]), ...constFaltan.map(n => OPCIONALES_CONST[n])].join('\n')
-  const todasConst = [...CONSTANTES_BASE, ...constantes].filter(c => !constFaltan.includes(c))
+  // Sin repetidos (27/10/2026): una suite puede pedir algo que ya está en la
+  // base (un const repetido no compila).
+  const todasConst = [...new Set([...CONSTANTES_BASE, ...constantes])].filter(c => !constFaltan.includes(c))
   return construirCon(ruta, {
     preludio: PRELUDIO + preludioEstado + preludioExtra + (stubs ? '\n' + stubs + '\n' : ''),
-    funciones: [...FUNCIONES_BASE, ...funciones].filter(f => !fnFaltan.includes(f)),
+    funciones: [...new Set([...FUNCIONES_BASE, ...funciones])].filter(f => !fnFaltan.includes(f)),
     constantes: todasConst,
     retorno: `${[...todasConst, ...constFaltan].join(', ')}, ${fnFaltan.map(f => f + ', ').join('')}estado, __els, __doc: document, __llamadas, __ls, __tablas, __win: window,
       __setRpc(f){ __rpc = f }, __impresiones(){ return __impresiones }, __setNav(n){ navigator = n }, __urlsFirmadas(){ return __urlsFirmadas },

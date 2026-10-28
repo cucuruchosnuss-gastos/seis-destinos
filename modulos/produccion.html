@@ -346,6 +346,33 @@
     .pr-hv__tecla--texto { font-family: inherit; font-size: 15px; }
     .pr-hv .pr-pa-casilla { min-height: 48px; }
     .pr-hv .pr-acciones .pr-btn { flex: 1; min-height: 52px; font-size: 17px; }
+    /* La ventana del inicio tarde (27/10/2026): en la tablet acostada, a la
+       izquierda las dos horas con el teclado y a la derecha la demora, el
+       motivo y Guardar; parada o en un celular, una abajo de la otra. */
+    .pr-it { width: min(780px, 100%); gap: 8px; overflow-y: auto; }
+    .pr-it__cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+    .pr-it__horas { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .pr-it__campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .pr-it__campo {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 6px 10px; border-radius: 12px;
+      border: 1.5px solid var(--p-borde-boton); background: #fff; font: inherit; color: var(--p-tinta); text-align: left;
+    }
+    .pr-it__campo[aria-pressed="true"] { border: 2px solid var(--p-acento); background: var(--p-acento-suave); }
+    .pr-it__campo-rotulo { font-size: 13px; font-weight: 700; line-height: 1.15; color: var(--p-tinta-2); }
+    .pr-it__campo-hora { font-family: var(--p-titulo); font-size: 30px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .pr-it__ahora { height: 40px; }
+    .pr-it__lado { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .pr-it__demora { margin: 0; min-height: 30px; font-family: var(--p-titulo); font-size: 21px; font-weight: 800; color: var(--p-acento-osc); }
+    .pr-it__demora--mal { font-family: inherit; font-size: 15px; color: var(--p-mal); }
+    .pr-it__motivo { display: flex; flex-direction: column; gap: 6px; }
+    .pr-it__motivos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(44px, auto); gap: 6px; }
+    .pr-it__mot { padding: 4px 8px; border-radius: 12px; border: 1.5px solid var(--p-borde); background: var(--p-tarjeta); font: inherit; font-size: 15px; font-weight: 700; color: var(--p-tinta-2); }
+    .pr-it__mot[aria-pressed="true"] { background: var(--p-tinta); border-color: var(--p-tinta); color: #fff; }
+    .pr-it .pr-acciones { margin-top: auto; }
+    .pr-it .pr-acciones .pr-btn { flex: 1; min-height: 52px; font-size: 17px; }
+    @media (orientation: portrait), (max-width: 599px) {
+      .pr-it__cuerpo { grid-template-columns: minmax(0, 1fr); }
+    }
     .pr-aviso--relanzado { background: var(--p-acento-suave); border-color: var(--p-acento); color: var(--p-acento-osc); font-weight: 700; }
     /* "Anular, se abrió por error" (14/10/2026): solo en la primera hora de
        una planilla sin cajas ni masas. */
@@ -763,25 +790,38 @@
     @media (orientation: portrait) { .pr-res3 { height: 128px; } }
     /* Las tres acciones (05/10/2026): Empezó a producir, Paró y Terminó de
        producir. Grandes, del mismo alto, y abajo operarios y masas. */
-    .pr-acc3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex-shrink: 0; }
+    /* Con la cuarta (Inicio tarde, 27/10/2026): esa más angosta y Paró más
+       ancha, así "1 parada · 20 min" sigue entrando en la tablet de 1000 px. */
+    .pr-acc3 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .78fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 8px; flex-shrink: 0; }
     .pr-acc {
-      min-height: 76px; border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+      min-height: 76px; border-radius: 14px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; gap: 2px;
       text-align: left; font: inherit; color: var(--p-tinta); background: var(--p-tarjeta); border: 1.5px solid var(--p-borde-boton);
       min-width: 0; overflow: hidden; box-sizing: border-box;
     }
     .pr-acc__rotulo { font-size: 13px; font-weight: 800; letter-spacing: 0.05em; line-height: 1.1; }
-    .pr-acc__dato { font-family: var(--p-titulo); font-size: 26px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pr-acc__dato { font-family: var(--p-titulo); font-size: 24px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pr-acc__sub { font-size: 13.5px; font-weight: 600; color: var(--p-gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pr-acc--largada .pr-acc__rotulo { color: var(--p-bien-txt); }
     .pr-acc--falta { border-color: var(--p-acento); background: var(--p-acento-suave); }
-    .pr-acc--falta .pr-acc__dato { color: var(--p-acento-osc); font-size: 20px; }
+    .pr-acc--falta .pr-acc__dato { color: var(--p-acento-osc); font-size: 19px; }
     .pr-acc--paro { background: var(--p-mal-zona); border-color: var(--p-mal-borde); color: var(--p-mal-txt); }
     .pr-acc--paro .pr-acc__rotulo { color: var(--p-mal); }
     .pr-acc--paro .pr-acc__sub { color: var(--p-mal-txt); }
     .pr-acc--curso { border: 2px solid var(--p-mal); }
     .pr-acc--termino { background: var(--p-tinta); border-color: var(--p-tinta); color: #fff; }
     .pr-acc--termino .pr-acc__sub { color: rgba(255, 255, 255, 0.78); }
-    .pr-acc--termino .pr-acc__dato { font-size: 20px; }
+    .pr-acc--termino .pr-acc__dato { font-size: 19px; }
+    /* Inicio tarde de producción (27/10/2026): la cuarta, en el color del
+       aviso. Cargado, la línea entera va arriba (.pr-aviso-tarde), en el
+       lugar del aviso de la largada: con inicio tarde ya hay largada. */
+    .pr-acc--tarde .pr-acc__rotulo { color: var(--p-acento-osc); }
+    .pr-acc--tarde .pr-acc__dato { font-size: 19px; }
+    .pr-aviso-tarde {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-height: 44px; padding: 4px 12px; border-radius: 12px;
+      border: 1.5px solid var(--p-acento); background: var(--p-tarjeta); color: var(--p-tinta); font: inherit; font-size: 16px; font-weight: 700; text-align: left;
+    }
+    .pr-aviso-tarde__texto { min-width: 0; }
+    .pr-aviso-tarde__accion { margin-left: auto; flex-shrink: 0; font-weight: 800; color: var(--p-acento-osc); text-decoration: underline; }
     .pr-aviso-largada {
       display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-height: 44px; padding: 4px 12px; border-radius: 12px;
       border: 1.5px dashed var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); font: inherit; font-size: 16px; font-weight: 700; text-align: left;
@@ -795,7 +835,7 @@
       .pr-acc__rotulo { grid-area: rot; }
       .pr-acc__dato { grid-area: dato; font-size: 20px; text-align: right; }
       .pr-acc__sub { grid-area: sub; }
-      .pr-acc--falta .pr-acc__dato, .pr-acc--termino .pr-acc__dato { font-size: 17px; }
+      .pr-acc--falta .pr-acc__dato, .pr-acc--termino .pr-acc__dato, .pr-acc--tarde .pr-acc__dato { font-size: 17px; }
     }
     .pr-res2 { grid-template-columns: repeat(2, minmax(0, 1fr)); height: 80px; }
     /* Los operarios uno al lado del otro: en 80 px no entran tres renglones. */
@@ -2070,8 +2110,13 @@
              limpieza e inicio/fin. Mientras no se cargó a qué hora empezó a
              producir, un aviso suave arriba lo pregunta. -->
         <button type="button" class="pr-aviso-largada" id="pr-aviso-largada" hidden>¿A qué hora empezó a producir? <span class="pr-aviso-largada__accion">Cargar la hora</span></button>
+        <button type="button" class="pr-aviso-tarde" id="pr-aviso-tarde" hidden aria-haspopup="dialog"><span class="pr-aviso-tarde__texto" id="pr-aviso-tarde-texto"></span> <span class="pr-aviso-tarde__accion">Corregir</span></button>
         <div class="pr-acc3">
           <button type="button" class="pr-acc pr-acc--largada" id="pr-btn-largada" aria-haspopup="dialog"></button>
+          <!-- INICIO TARDE DE PRODUCCIÓN (27/10/2026): el turno era de 15:00
+               y se empezó a producir 17:53 (faltó un operario). No es una
+               parada: va con registrar_inicio_tarde. -->
+          <button type="button" class="pr-acc pr-acc--tarde" id="pr-btn-tarde" aria-haspopup="dialog"></button>
           <button type="button" class="pr-acc pr-acc--paro" id="pr-planilla-paradas-resumen"></button>
           <button type="button" class="pr-acc pr-acc--termino" id="pr-btn-termino"></button>
         </div>
@@ -2462,6 +2507,34 @@
           <div class="pr-acciones">
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-hora-ventana-cancelar">Cancelar</button>
             <button type="button" class="pr-btn pr-btn--accion" id="pr-hora-ventana-guardar">Listo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- INICIO TARDE DE PRODUCCIÓN (27/10/2026): a qué hora empezaba el
+           turno, a qué hora se empezó a producir (las dos con el teclado de la
+           planta, nunca un input type=time), cuánto tarde y por qué. -->
+      <div class="pr-lp" id="pr-tarde-ventana" hidden role="dialog" aria-modal="true" aria-labelledby="pr-tarde-ventana-titulo">
+        <div class="pr-lp__caja pr-it">
+          <h2 class="pr-lp__titulo" id="pr-tarde-ventana-titulo" tabindex="-1">Inicio tarde de producción</h2>
+          <div class="pr-it__cuerpo">
+            <div class="pr-it__horas" id="pr-tarde-ventana-horas"></div>
+            <div class="pr-it__lado">
+              <p class="pr-it__demora" id="pr-tarde-ventana-demora" aria-live="polite"></p>
+              <div class="pr-it__motivo">
+                <span class="pr-campo__rotulo">¿Por qué?</span>
+                <div class="pr-it__motivos" id="pr-tarde-ventana-motivos" role="group" aria-label="Por qué se empezó tarde"></div>
+                <label class="pr-campo" id="pr-tarde-ventana-campo-otro" hidden>
+                  <span class="pr-campo__rotulo">Contá qué pasó</span>
+                  <input type="text" id="pr-tarde-ventana-otro" class="pr-input" maxlength="200" autocomplete="off" enterkeyhint="done">
+                </label>
+              </div>
+              <p class="pr-error-pegado" id="pr-tarde-ventana-error" hidden></p>
+              <div class="pr-acciones">
+                <button type="button" class="pr-btn pr-btn--secundario" id="pr-tarde-ventana-cancelar">Cancelar</button>
+                <button type="button" class="pr-btn pr-btn--accion" id="pr-tarde-ventana-guardar">Guardar</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -6280,7 +6353,7 @@
 
     async function leerPlanilla(turnoId) {
       const { data: turno, error: e1 } = await supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado, forzado_por, forzado_en, forzado_motivo, hora_inicio, hora_fin, hora_largada')
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado, forzado_por, forzado_en, forzado_motivo, hora_inicio, hora_fin, hora_largada, largada_motivo')
         .eq('id', turnoId).maybeSingle()
       if (e1) throw e1
       if (!turno) throw new Error('El turno no existe.')
@@ -7118,9 +7191,10 @@
         document.getElementById(id).innerHTML = ''
       }
       document.getElementById('pr-planilla-producido').innerHTML = '<p class="pr-texto-suave pr-prod__cargando">Cargando la planilla…</p>'
-      for (const id of ['pr-planilla-error', 'pr-forzar-form', 'pr-corregir', 'pr-ops-ventana', 'pr-parada-activa', 'pr-parada-error', 'pr-aviso-largada', 'pr-hora-ventana']) {
+      for (const id of ['pr-planilla-error', 'pr-forzar-form', 'pr-corregir', 'pr-ops-ventana', 'pr-parada-activa', 'pr-parada-error', 'pr-aviso-largada', 'pr-aviso-tarde', 'pr-hora-ventana', 'pr-tarde-ventana']) {
         document.getElementById(id).hidden = true
       }
+      estado.tardeForm = null
       estado.anularPlanilla = null
       document.getElementById('pr-anular-planilla').hidden = true
       mostrarVista(vista)
@@ -7164,6 +7238,11 @@
       largada.innerHTML = htmlAccionLargada(p.turno)
       largada.classList.toggle('pr-acc--falta', faltaLargada(p.turno))
       document.getElementById('pr-aviso-largada').hidden = !faltaLargada(p.turno)
+      const tarde = document.getElementById('pr-btn-tarde'), it = inicioTardeDe(p.turno)
+      tarde.innerHTML = htmlAccionTarde(p.turno)
+      tarde.setAttribute('aria-label', it ? textoInicioTarde(it) : 'Inicio tarde de producción: cargar')
+      document.getElementById('pr-aviso-tarde-texto').textContent = textoInicioTarde(it)
+      document.getElementById('pr-aviso-tarde').hidden = !it
       const resParadas = document.getElementById('pr-planilla-paradas-resumen')
       resParadas.innerHTML = htmlAccionParo(p.paradas)
       resParadas.classList.toggle('pr-acc--curso', !!paradaEnCurso(p.paradas))
@@ -8016,6 +8095,233 @@
       else if (!ev.shiftKey && i === focos.length - 1) { ev.preventDefault(); focos[0].focus() }
     }
 
+    // ── INICIO TARDE DE PRODUCCIÓN (27/10/2026) ────────────────────────────
+    //
+    // Caso real (lote 6270, Máquina 2, tarde): el turno era de 15:00, faltó un
+    // operario y se empezó a producir a las 17:53. No es una parada: es un
+    // inicio tarde. registrar_inicio_tarde(p_turno_id, p_hora_inicio,
+    // p_hora_largada, p_motivo) → { minutos_tarde } (pg_get_functiondef,
+    // 27/10/2026) corrige hora_inicio (corregir_horario_turno), guarda
+    // hora_largada y largada_motivo (registrar_hora_largada) y rechaza una
+    // demora de 0 o de más de 12 horas; si la largada es menor que el inicio,
+    // cruzó la medianoche (turno noche: 22:00 → 00:30 son 2 h 30 min). Sin
+    // internet va por la cola (ejecutar_tablet ya la acepta).
+    // El motivo es obligatorio: uno de los tres fijos u «Otro» con el texto.
+    const MOTIVOS_TARDE = ['Falta de operario', 'Falta de masa', 'Mantenimiento / arreglo']
+    const MAX_TARDE_MIN = 720
+
+    // Los minutos de demora entre dos horas "HH:MM", con el cruce de
+    // medianoche; null si falta una.
+    function minutosTarde(inicio, largada) {
+      const a = normalizarHora(inicio), b = normalizarHora(largada)
+      if (!a || !b) return null
+      const min = h => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))
+      return ((min(b) - min(a)) % 1440 + 1440) % 1440
+    }
+
+    // El inicio tarde ya cargado: con su motivo (largada_motivo), la hora de
+    // inicio y la de largada. null si no hay.
+    function inicioTardeDe(turno) {
+      const motivo = String(turno?.largada_motivo ?? '').trim()
+      const inicio = horaCorta(turno?.hora_inicio), largada = horaCorta(turno?.hora_largada)
+      const min = minutosTarde(inicio, largada)
+      return motivo && min ? { inicio, largada, min, motivo } : null
+    }
+
+    // "Inicio tarde: 15:00 → 17:53 (2 h 53 min) · Falta de operario".
+    function textoInicioTarde(it) {
+      return it ? `Inicio tarde: ${it.inicio} → ${it.largada} (${textoMinutos(it.min)}) · ${it.motivo}` : ''
+    }
+
+    // El botón es la cuarta acción, más angosta: "INICIO TARDE" y la demora;
+    // la línea entera va en el aviso de arriba (pr-aviso-tarde).
+    function htmlAccionTarde(turno) {
+      const it = inicioTardeDe(turno)
+      return '<span class="pr-acc__rotulo">INICIO TARDE</span>' + (it
+        ? `<span class="pr-acc__dato">${esc(textoMinutos(it.min))}</span><span class="pr-acc__sub">${esc(it.inicio)} → ${esc(it.largada)}</span>`
+        : '<span class="pr-acc__dato">Cargar</span><span class="pr-acc__sub">De producción</span>')
+    }
+
+    function abrirTardeVentana() {
+      const p = estado.planilla
+      if (!p?.turno) return
+      tocar()
+      const it = inicioTardeDe(p.turno)
+      const inicio = it?.inicio || horarioDePlanilla(p).inicio || ''
+      const largada = it?.largada || horaCorta(p.turno.hora_largada) || ''
+      const motivo = !it ? '' : (MOTIVOS_TARDE.includes(it.motivo) ? it.motivo : 'Otro')
+      estado.tardeForm = {
+        turnoId: p.turno.id, inicio, largada, campo: inicio ? 'largada' : 'inicio', buffer: '',
+        motivo, otro: motivo === 'Otro' ? it.motivo : '', enviando: false, errorBase: '',
+      }
+      document.getElementById('pr-tarde-ventana-otro').value = estado.tardeForm.otro
+      pintarTardeVentana()
+      document.getElementById('pr-tarde-ventana').hidden = false
+      document.getElementById('pr-tarde-ventana-titulo').focus?.()
+    }
+
+    function cerrarTardeVentana() {
+      estado.tardeForm = null
+      document.getElementById('pr-tarde-ventana').hidden = true
+    }
+
+    // Lo que se ve en un campo: lo que se está escribiendo o la hora.
+    function muestraHoraTarde(f, campo) {
+      if (f.campo === campo && f.buffer) return f.buffer.padEnd(4, '·').replace(/^(..)(..)$/, '$1:$2')
+      return normalizarHora(f[campo]) || '··:··'
+    }
+
+    function htmlHorasTarde(f, p = estado.planilla) {
+      const campo = (c, rotulo) => `<button type="button" class="pr-it__campo" data-it-campo="${esc(c)}" aria-pressed="${f.campo === c ? 'true' : 'false'}">` +
+        `<span class="pr-it__campo-rotulo">${esc(rotulo)}</span><span class="pr-it__campo-hora">${esc(muestraHoraTarde(f, c))}</span></button>`
+      let teclado = '<div class="pr-hv__teclado" role="group" aria-label="Teclado de la hora">'
+      for (let d = 1; d <= 9; d++) teclado += `<button type="button" class="pr-hv__tecla" data-it-tecla="${d}">${d}</button>`
+      teclado += '<button type="button" class="pr-hv__tecla pr-hv__tecla--texto" data-it-tecla="limpiar">Borrar</button>'
+      teclado += '<button type="button" class="pr-hv__tecla" data-it-tecla="0">0</button>'
+      teclado += '<button type="button" class="pr-hv__tecla" data-it-tecla="borrar" aria-label="Borrar el último número">⌫</button></div>'
+      const ahora = conAhoraVentana(p) ? '<button type="button" class="pr-hv__ahora pr-it__ahora" data-it-ahora="1">Empezó ahora</button>' : ''
+      return '<div class="pr-it__campos">' + campo('inicio', '¿A qué hora empezaba el turno?') + campo('largada', '¿A qué hora se empezó a producir?') + '</div>' + ahora + teclado
+    }
+
+    // "Empezó 2 h 53 min tarde", en vivo. { texto, mal }.
+    function demoraTarde(f) {
+      const min = minutosTarde(f.inicio, f.largada)
+      if (min == null) return { texto: '', mal: false }
+      if (min === 0) return { texto: 'Empezó a la hora del turno: no es un inicio tarde.', mal: true }
+      if (min > MAX_TARDE_MIN) return { texto: `Serían ${textoMinutos(min)}: más de 12 horas, revisá las horas.`, mal: true }
+      return { texto: `Empezó ${textoMinutos(min)} tarde`, mal: false }
+    }
+
+    function pintarTardeVentana() {
+      const f = estado.tardeForm
+      if (!f) return
+      document.getElementById('pr-tarde-ventana-horas').innerHTML = htmlHorasTarde(f)
+      const d = demoraTarde(f)
+      const dem = document.getElementById('pr-tarde-ventana-demora')
+      dem.textContent = d.texto
+      dem.classList.toggle('pr-it__demora--mal', d.mal)
+      document.getElementById('pr-tarde-ventana-motivos').innerHTML = [...MOTIVOS_TARDE, 'Otro'].map(m =>
+        `<button type="button" class="pr-it__mot" data-it-motivo="${esc(m)}" aria-pressed="${f.motivo === m ? 'true' : 'false'}">${esc(m)}</button>`).join('')
+      document.getElementById('pr-tarde-ventana-campo-otro').hidden = f.motivo !== 'Otro'
+      const err = document.getElementById('pr-tarde-ventana-error')
+      err.textContent = f.errorBase
+      err.hidden = !f.errorBase
+      const g = document.getElementById('pr-tarde-ventana-guardar')
+      g.textContent = f.enviando ? 'Guardando…' : 'Guardar'
+      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
+      g.disabled = !!f.enviando
+    }
+
+    // 3 o 4 números en el campo elegido (la regla de normalizarHora). Con los
+    // 4 de la hora del turno, pasa solo a la hora en que se empezó a producir.
+    function teclaTardeVentana(t) {
+      const f = estado.tardeForm
+      if (!f || f.enviando) return
+      tocar()
+      if (t === 'limpiar') f.buffer = ''
+      else if (t === 'borrar') f.buffer = f.buffer.slice(0, -1)
+      else if (/^[0-9]$/.test(t) && f.buffer.length < 4) f.buffer += t
+      const h = f.buffer.length >= 3 ? normalizarHora(f.buffer) : ''
+      if (h) f[f.campo] = h
+      if (h && f.buffer.length === 4 && f.campo === 'inicio') { f.campo = 'largada'; f.buffer = '' }
+      f.errorBase = ''
+      pintarTardeVentana()
+    }
+
+    function campoTardeVentana(campo) {
+      const f = estado.tardeForm
+      if (!f || f.enviando || !['inicio', 'largada'].includes(campo)) return
+      tocar()
+      f.campo = campo
+      f.buffer = ''
+      f.errorBase = ''
+      pintarTardeVentana()
+    }
+
+    function ahoraTardeVentana(ahora = new Date()) {
+      const f = estado.tardeForm
+      if (!f || f.enviando || !conAhoraVentana()) return
+      tocar()
+      f.largada = horaArgentina(ahora)
+      f.campo = 'largada'
+      f.buffer = ''
+      f.errorBase = ''
+      pintarTardeVentana()
+    }
+
+    function motivoTardeVentana(m) {
+      const f = estado.tardeForm
+      if (!f || f.enviando || ![...MOTIVOS_TARDE, 'Otro'].includes(m)) return
+      tocar()
+      f.motivo = m
+      f.errorBase = ''
+      pintarTardeVentana()
+      if (m === 'Otro') document.getElementById('pr-tarde-ventana-otro').focus?.()
+    }
+
+    // { rpc, params, min } para mandar, o { error } en palabras. Los mismos
+    // controles que registrar_inicio_tarde y registrar_hora_largada.
+    function pedidoInicioTarde(f, p = estado.planilla, ahora = new Date()) {
+      if (f.buffer && !(f.buffer.length >= 3 && normalizarHora(f.buffer))) return { error: 'Esa hora no existe. Escribila con 4 números, por ejemplo 1753.' }
+      const hi = normalizarHora(f.inicio), hl = normalizarHora(f.largada)
+      if (!hi) return { error: 'Poné a qué hora empezaba el turno.' }
+      if (!hl) return { error: 'Poné a qué hora se empezó a producir.' }
+      const min = minutosTarde(hi, hl)
+      if (min === 0) return { error: 'Si empezó a producir a la hora del turno, no es un inicio tarde.' }
+      if (min > MAX_TARDE_MIN) return { error: 'La demora no puede ser de más de 12 horas: revisá las horas.' }
+      if (hi === horaCorta(p?.turno?.hora_fin)) return { error: 'El turno no puede empezar y terminar a la misma hora.' }
+      // El día de la largada con la hora de inicio NUEVA (registrar_inicio_tarde
+      // corrige el inicio antes de guardar la largada).
+      const ms = instanteLargada({ ...p?.turno, hora_inicio: hi }, hl)
+      if (p?.turno?.estado !== 'cerrado' && ms != null && ms > new Date(ahora).getTime() + TOLERANCIA_FUTURO_MS) {
+        return { error: `Las ${hl} todavía no pasaron: la hora en que se empezó a producir no puede ser futura.` }
+      }
+      if (!f.motivo) return { error: 'Elegí por qué se empezó tarde.' }
+      const motivo = f.motivo === 'Otro' ? String(f.otro ?? '').trim() : f.motivo
+      if (motivo.length < 2) return { error: 'Contá por qué se empezó tarde (en «Otro»).' }
+      return { rpc: 'registrar_inicio_tarde', params: { p_turno_id: f.turnoId, p_hora_inicio: hi, p_hora_largada: hl, p_motivo: motivo }, min }
+    }
+
+    async function confirmarTardeVentana(ahora = new Date()) {
+      const f = estado.tardeForm, p = estado.planilla
+      if (!f || f.enviando || !p) return
+      f.otro = document.getElementById('pr-tarde-ventana-otro').value
+      const pedido = pedidoInicioTarde(f, p, ahora)
+      if (pedido.error) { f.errorBase = pedido.error; return pintarTardeVentana() }
+      f.enviando = true
+      f.errorBase = ''
+      pintarTardeVentana()
+      const { p_hora_inicio: hi, p_hora_largada: hl } = pedido.params
+      const r = await mandarCarga({ operacion: pedido.rpc, params: pedido.params, grupo: p.turno.id, etiqueta: `Inicio tarde: ${hi} → ${hl} (lote ${p.turno.lote})` })
+      if (r.resultado === 'rechazo') {
+        console.error(pedido.rpc + ':', r.error)
+        f.enviando = false
+        // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
+        f.errorBase = r.error?.message || 'No se pudo guardar. Revisá la conexión y probá de nuevo.'
+        return pintarTardeVentana()
+      }
+      cerrarTardeVentana()
+      if (r.resultado !== 'ok') {
+        mostrarExito(textoGuardadaEnTablet(r))
+        return recargarOConCola()
+      }
+      const min = Number(r.data?.minutos_tarde)
+      mostrarExito(`Inicio tarde: ${hi} → ${hl} (${textoMinutos(Number.isFinite(min) ? min : pedido.min)}).`)
+      return recargarPlanilla()
+    }
+
+    function teclaVentanaTarde(ev) {
+      if (!estado.tardeForm || estado.confirma) return
+      if (ev.key === 'Escape') { ev.preventDefault(); cerrarTardeVentana(); return }
+      if (ev.key !== 'Tab') return
+      const panel = document.getElementById('pr-tarde-ventana')
+      const focos = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled])')].filter(x => !x.closest('[hidden]'))
+      if (!focos.length) return
+      const i = focos.indexOf(document.activeElement)
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }
+      else if (!ev.shiftKey && i === focos.length - 1) { ev.preventDefault(); focos[0].focus() }
+    }
+
     // ── Anotar, corregir y borrar una parada (terminar la tablet, parte 4)
     //
     // El editor de una parada ya guardada ("Corregir la parada", desde la lista
@@ -8033,8 +8339,8 @@
     // A QUÉ DÍA VA CADA HORA. La fecha es la del turno. El huso de Argentina es
     // fijo (−03:00, sin horario de verano), así que el ISO se arma a mano y da
     // lo mismo la zona del dispositivo. La hora de PARADA va a la PRIMERA vez
-    // que esa hora cae desde la apertura menos 1 hora (el mismo piso de la
-    // base): en un turno de noche, 23:50 es el día del turno y 02:10 el
+    // que esa hora cae desde la apertura (o la hora de inicio del turno, la que
+    // sea antes) menos 1 hora (el mismo piso de la base): en un turno de noche, 23:50 es el día del turno y 02:10 el
     // siguiente. Si así queda después del tope ("ahora" más los 5 minutos de
     // la base, o el cierre si la planilla está cerrada) se dice antes de
     // mandar. La de VUELTA va a la primera vez que esa hora cae DESPUÉS de la
@@ -8059,9 +8365,15 @@
       return `${hoyArgentina(d)}T${horaArgentina(d)}:00-03:00`
     }
 
-    // Piso y tope del turno, en milisegundos.
+    // Piso y tope del turno, en milisegundos. El piso es el de registrar_parada
+    // (27/10/2026): least(abierto_en, fecha + hora_inicio) − 1 hora. Con solo
+    // abierto_en, un turno de 15:00 abierto a las 17:40 no dejaba anotar nada
+    // antes de las 16:40 (lote 6270).
     function limitesParada(turno, ahora = new Date()) {
-      const piso = turno?.abierto_en ? new Date(turno.abierto_en).getTime() - PISO_APERTURA_MS
+      const hi = horaCorta(turno?.hora_inicio)
+      const inicios = [turno?.abierto_en ? new Date(turno.abierto_en).getTime() : NaN,
+        hi && /^\d{4}-\d{2}-\d{2}$/.test(String(turno?.fecha ?? '')) ? instanteAr(turno.fecha, hi) : NaN].filter(Number.isFinite)
+      const piso = inicios.length ? Math.min(...inicios) - PISO_APERTURA_MS
         : instanteAr(turno?.fecha ?? hoyArgentina(ahora), '00:00')
       const cerrado = turno?.estado === 'cerrado' && !!turno?.cerrado_en
       const tope = Math.min(new Date(ahora).getTime(), cerrado ? new Date(turno.cerrado_en).getTime() : Infinity) + TOLERANCIA_FUTURO_MS
@@ -10304,6 +10616,8 @@
       // Las tres acciones de la planilla y el aviso de la hora de largada.
       document.getElementById('pr-btn-largada').addEventListener('click', () => abrirHoraVentana('largada'))
       document.getElementById('pr-aviso-largada').addEventListener('click', () => abrirHoraVentana('largada'))
+      document.getElementById('pr-btn-tarde').addEventListener('click', () => abrirTardeVentana())
+      document.getElementById('pr-aviso-tarde').addEventListener('click', () => abrirTardeVentana())
       document.getElementById('pr-btn-termino').addEventListener('click', () => irASeccion('cierre'))
       // La ventana de la hora.
       const ventanaHora = document.getElementById('pr-hora-ventana')
@@ -10316,6 +10630,22 @@
         if (ev.target.closest('[data-hv-cerrar-planilla]')) return confirmarHoraVentana(new Date(), { luegoCerrar: true })
       })
       ventanaHora.addEventListener('keydown', teclaVentanaHora)
+      // La ventana del inicio tarde.
+      const ventanaTarde = document.getElementById('pr-tarde-ventana')
+      ventanaTarde.addEventListener('click', ev => {
+        if (ev.target === ventanaTarde || ev.target.closest('#pr-tarde-ventana-cancelar')) return cerrarTardeVentana()
+        if (ev.target.closest('#pr-tarde-ventana-guardar')) return confirmarTardeVentana()
+        const t = ev.target.closest('[data-it-tecla]'); if (t) return teclaTardeVentana(t.dataset.itTecla)
+        const c = ev.target.closest('[data-it-campo]'); if (c) return campoTardeVentana(c.dataset.itCampo)
+        const m = ev.target.closest('[data-it-motivo]'); if (m) return motivoTardeVentana(m.dataset.itMotivo)
+        if (ev.target.closest('[data-it-ahora]')) return ahoraTardeVentana()
+      })
+      ventanaTarde.addEventListener('keydown', teclaVentanaTarde)
+      document.getElementById('pr-tarde-ventana-otro').addEventListener('input', ev => {
+        if (!estado.tardeForm) return
+        estado.tardeForm.otro = ev.target.value
+        if (estado.tardeForm.errorBase) { estado.tardeForm.errorBase = ''; pintarTardeVentana() }
+      })
       document.getElementById('pr-btn-guardar-parada').addEventListener('click', () => guardarParadaNueva())
       document.getElementById('pr-btn-ver-paradas').addEventListener('click', abrirVentanaParadas)
       const ventanaParadas = document.getElementById('pr-paradas-ventana')
@@ -13718,6 +14048,9 @@
           if (par) Object.assign(par, { inicio: p.p_inicio ?? par.inicio, fin: p.p_fin ?? null, motivo: p.p_motivo ?? par.motivo, cola: estadoCola(x) })
         } else if (x.operacion === 'registrar_hora_largada' && enCola(x)) {
           turno.hora_largada = p.p_hora
+          turno.largadaCola = estadoCola(x)
+        } else if (x.operacion === 'registrar_inicio_tarde' && enCola(x)) {
+          Object.assign(turno, { hora_inicio: p.p_hora_inicio, hora_largada: p.p_hora_largada, largada_motivo: p.p_motivo })
           turno.largadaCola = estadoCola(x)
         } else if ((x.operacion === 'cerrar_turno' || x.operacion === 'relanzar_con_lote_nuevo') && enCola(x)) {
           turno.cierreCola = estadoCola(x)

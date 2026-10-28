@@ -67,14 +67,20 @@ for (const [nombre, ancho, alto] of TAMANOS) {
         // La lecitina sin stock en Nuss.
         v_stock_insumos: datos.tablas.v_stock_insumos.filter(f => !(f.insumo_id === 'i-lecitina' && f.unidad_negocio_id === 'u-n')),
       },
+      // precios_compra trae el contenido del catálogo: el mismo de arriba.
+      rpc: {
+        precios_compra: { __segun: [{ si: { p_unidad_negocio_id: 'u-n' }, r: datos.rpc.precios_compra.__segun[0].r.map(p =>
+          p.insumo_id === 'i-harina' ? { ...p, contenido_bulto: '50' } : p.insumo_id === 'i-lecitina' ? { ...p, contenido_bulto: '20' } : p) }], __defecto: [] },
+      },
     });
     await page.goto(`${MAQUETA}/modulos/stock.html?vista=insumos&maqueta=stock-costos`);
     await page.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n'));
     await page.reload();
     await page.locator('#btn-ver-costos').click();
     const costos = page.locator('#lista-costos');
-    await expect(costos.locator('[data-costo="i-harina"]')).toContainText(/\$ 55\.000,00 el bulto de 50\skg · \$ 1\.100,00 por kg/);
-    await expect(costos.locator('[data-costo="i-lecitina"]')).toContainText(/el bulto de 20\skg · \$ 5\.432,1234 por kg/);
+    // Precios de compra (27/10/2026): la bolsa con IVA, del contenido del catálogo.
+    await expect(costos.locator('[data-costo="i-harina"] .fila-precio__bulto')).toHaveText(/bolsa de 50\skg con IVA: \$ 66\.550,00/);
+    await expect(costos.locator('[data-costo="i-lecitina"] .fila-precio__bulto')).toHaveText(/bulto de 20\skg con IVA: \$ 120\.051,93/);
     await sinScroll(page, 'los costos');
     await captura(page, `ajustes-costos-${nombre}`, info);
     // Cargar por bulto: $ 55.000 el bulto de 50 kg → 1.100 el kg.
@@ -83,12 +89,14 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await expect(page.locator('#costo-precio-rotulo')).toHaveText(/Precio por bulto de 50\skg/);
     await page.locator('#costo-precio').fill('55000');
     await expect(page.locator('#costo-equivale')).toHaveText(/→ \$ 1\.100,00 por kg/);
+    await page.locator('#costo-iva').selectOption('21');
     await sinScroll(page, 'el modal del costo');
     await captura(page, `ajustes-costo-modal-${nombre}`, info);
     await page.locator('#btn-guardar-costo').click();
     await expect.poll(() => rpc.filter(r => r.nombre === 'guardar_costo_insumo').length).toBe(1);
     const g = rpc.find(r => r.nombre === 'guardar_costo_insumo');
     expect(g.params.p_costo_unitario).toBe(1100);
+    expect(g.params.p_alicuota_iva).toBe(21);
     expect(g.params.p_insumo_id).toBe('i-harina');
     expect(errores, errores.join('\n')).toEqual([]);
   });

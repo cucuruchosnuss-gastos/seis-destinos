@@ -22,7 +22,7 @@ correrMutaciones({
     { nombre: 'el título impreso sin texto', de: '<span class="rh-titulo__grande">ORDEN DE PEDIDO</span>', a: '<span class="rh-titulo__grande"></span>' },
     // Los insumos
     // (22/10/2026: el total tampoco cuenta las devoluciones; eso lo muta mut-retiros-devoluciones.js.)
-    { nombre: 'los insumos suman al total de cajas', de: "(r?.esInsumo || r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || 0))", a: "(r?.movimiento === 'devolucion' ? 0 : (Number(r.cajas) || Number(r.cantidad) || 0))" },
+    { nombre: 'los insumos suman al total de cajas', de: "(r?.esInsumo || r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || 0))", a: "(r?.movimiento === 'devolucion' || esPorUnidadHoja(r) ? 0 : (Number(r.cajas) || Number(r.cantidad) || 0))" },
     { nombre: 'el total de unidades con insumos queda en —', de: "  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo && r?.movimiento !== 'devolucion')", a: "  const rs = (orden?.renglones ?? []).filter(r => r?.movimiento !== 'devolucion')" },
     { nombre: 'las unidades con decimales', de: "  return unidad === 'un' ? 0 : 3", a: '  return 3' },
     { nombre: 'la cantidad ausente dice 0', de: "  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'\n  const texto = formatearNumeroAr", a: "  if (!Number.isFinite(Number(n))) return '—'\n  const texto = formatearNumeroAr" },
@@ -96,7 +96,7 @@ correrMutaciones({
     // Lo que falta de la empresa
     { nombre: 'no avisa del CUIT que falta', de: "  if (!String(emp?.cuit ?? '').trim()) faltan.push('CUIT')\n", a: '' },
     // Texto, PDF y mail
-    { nombre: 'el texto con precios', de: "    lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)", a: "    lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes} · precio ${r.precio}`)" },
+    { nombre: 'el texto con precios', de: "${enteroHoja(r.cajas)} cajas`} · ${desc}${lotes}`)", a: "${enteroHoja(r.cajas)} cajas`} · ${desc}${lotes} · precio ${r.precio}`)" },
     { nombre: 'el nombre del PDF sin el código', de: '  const nombre = `Orden ${orden?.codigo || \'sin código\'} - ${cli}`', a: '  const nombre = `Orden - ${cli}`' },
     { nombre: 'el nombre del PDF con caracteres prohibidos', de: "  return nombre.replace(/[\\\\/:*?\"<>|\\u0000-\\u001f]/g, ' ')", a: '  return nombre' },
     { nombre: 'el mailto sin codificar el mail', de: "  const para = emailValido(email) ? encodeURIComponent(String(email).trim()) : ''", a: "  const para = String(email ?? '').trim()" },

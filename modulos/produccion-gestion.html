@@ -1330,6 +1330,9 @@
     .pr-of-chip--cerrado { background: var(--verde-suave); color: var(--verde-oscuro); }
     .pr-of-chip--abierto { background: var(--naranja-suave); color: var(--naranja-oscuro); }
     .pr-of-chip--pendiente { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    /* Inicio tarde de producción (27/10/2026): abajo del estado. */
+    .pg-fila-estado { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+    .pr-of-chip--tarde { background: var(--naranja-suave); color: var(--naranja-oscuro); }
     .pr-of-grupo { margin-bottom: 0.875rem; }
     .pr-of-grupo__cab {
       display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
@@ -1805,6 +1808,7 @@
     .pg-turno__datos { flex: 1 1 18rem; min-width: 0; }
     .pg-turno__maq { font-size: 16px; }
     .pg-turno__enc { margin-top: 4px; }
+    .pg-turno__tarde { margin-top: 4px; font-weight: 700; color: var(--naranja-oscuro); }
     .pg-turno__grilla { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
     @media (max-width: 1099px) { .pg-turno__grilla { grid-template-columns: minmax(0, 1fr); } }
     .pg-caja { border: 1px solid var(--color-borde); border-radius: 16px; padding: 12px 16px; min-width: 0; }
@@ -8945,7 +8949,7 @@
         if (!h.maquinas.some(m => m.id === h.maquina)) h.maquina = ''
         sel.value = h.maquina
         let q = supabase.from('turnos_produccion')
-          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, forzado_por, forzado_motivo')
+          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, hora_largada, largada_motivo, forzado_por, forzado_motivo')
           .eq('unidad_negocio_id', h.unidadId).gte('fecha', h.desde).lte('fecha', h.hasta)
         if (h.maquina) q = q.eq('maquina_id', h.maquina)
         if (h.estado) q = q.eq('estado', h.estado)
@@ -8981,13 +8985,20 @@
         `<span>${esc(t.turno)}</span>` +
         `<span>${esc(maquina)}</span>` +
         `<span>${esc(encargado)}</span>` +
-        `<span>${htmlEstadoTurno(t.estado, t)}</span></button>`
+        `<span class="pg-fila-estado">${htmlEstadoTurno(t.estado, t)}${htmlChipTarde(t)}</span></button>`
+    }
+
+    // En la lista de planillas, el inicio tarde como un chip ("Inicio tarde
+    // 2 h 53 min"); el motivo, en el detalle y al pasar por encima.
+    function htmlChipTarde(t) {
+      const it = inicioTardeDe(t)
+      return it ? `<span class="pr-of-chip pr-of-chip--tarde" title="${esc(textoInicioTarde(it))}">Inicio tarde ${esc(textoMinutos(it.min))}</span>` : ''
     }
 
     async function leerDetalleTurno(turnoId) {
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       const [turno] = await leer(supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, hora_apagado, hora_largada, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
+        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_fin, hora_apagado, hora_largada, largada_motivo, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
       if (!turno) throw new Error('El turno no existe.')
       // Con el turno abierto y sin hora de fin en la planilla, la del horario
       // de la unidad (si no se puede leer, ninguna: nunca se inventa).
@@ -9469,6 +9480,24 @@
       return { cajas, unidades }
     }
 
+    // INICIO TARDE DE PRODUCCIÓN (27/10/2026): lo carga la tablet con
+    // registrar_inicio_tarde, que corrige hora_inicio, guarda hora_largada y
+    // el motivo en largada_motivo. La demora es largada − inicio; si la
+    // largada es menor, cruzó la medianoche (turno noche). null si no hay.
+    function inicioTardeDe(t) {
+      const motivo = String(t?.largada_motivo ?? '').trim()
+      const inicio = normalizarHora(String(t?.hora_inicio ?? '').slice(0, 5)), largada = normalizarHora(String(t?.hora_largada ?? '').slice(0, 5))
+      if (!motivo || !inicio || !largada) return null
+      const min = h => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))
+      const demora = ((min(largada) - min(inicio)) % 1440 + 1440) % 1440
+      return demora ? { inicio, largada, min: demora, motivo } : null
+    }
+
+    // "Inicio tarde: 15:00 → 17:53 (2 h 53 min) · Falta de operario".
+    function textoInicioTarde(it) {
+      return it ? `Inicio tarde: ${it.inicio} → ${it.largada} (${textoMinutos(it.min)}) · ${it.motivo}` : ''
+    }
+
     // "Miércoles 24/09 · 06:00 a 15:00 · empezó a producir 06:40 · terminó de
     // producir 13:55". Desde el 05/10/2026 hora_apagado es "terminó de
     // producir" y hora_largada "empezó a producir" (la tablet las pregunta).
@@ -9504,6 +9533,7 @@
         `<div class="pg-turno__lote"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
         `<div class="pg-turno__datos"><div class="pg-turno__maq"><strong>${esc(d.maquina?.nombre ?? 'Máquina')}</strong> · turno ${esc(t.turno)}</div>` +
         `<div class="pr-texto-suave">${esc(horarioTurno(t))}</div>` +
+        (inicioTardeDe(t) ? `<div class="pg-turno__tarde">${esc(textoInicioTarde(inicioTardeDe(t)))}</div>` : '') +
         `<div class="pg-turno__enc"><span class="pr-dato__rotulo">Encargado</span> <strong>${esc(nom(t.encargado_id))}</strong></div></div>` +
         `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado, t)}</div></div>`
       const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
