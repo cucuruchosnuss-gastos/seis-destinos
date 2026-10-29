@@ -12,7 +12,8 @@
 // entorno, para mutarlo:
 //   ARCHIVO_JS_<NOMBRE>  (js/cobranzas-comun.js → ARCHIVO_JS_COBRANZAS_COMUN)
 // y los nombres viejos siguen valiendo: ARCHIVO_COMUN (cobranzas-comun.js),
-// ARCHIVO_COMUN_RETIROS (retiros-comun.js) y ARCHIVO_MODULOS (modulos.js).
+// ARCHIVO_COMUN_RETIROS (retiros-comun.js), ARCHIVO_MODULOS (modulos.js) y
+// ARCHIVO_COMUN_REMITOS (remitos-comun.js).
 //
 // Cada archivo que se lee se informa UNA vez por proceso con
 // "ARCHIVO <ruta> (N bytes)": el runner de mutaciones lo usa para confirmar
@@ -30,6 +31,10 @@ const ALIAS = {
   'cobranzas-comun.js': 'ARCHIVO_COMUN',
   'retiros-comun.js': 'ARCHIVO_COMUN_RETIROS',
   'modulos.js': 'ARCHIVO_MODULOS',
+  // 29/10/2026: fuente-cobranzas.js y sandbox-administracion.js leen
+  // remitos-comun.js por ARCHIVO_COMUN_REMITOS; sin el alias el runner
+  // mandaba la copia mutada por ARCHIVO_JS_REMITOS_COMUN y nadie la leía.
+  'remitos-comun.js': 'ARCHIVO_COMUN_REMITOS',
 }
 
 function variableDe(nombre) {

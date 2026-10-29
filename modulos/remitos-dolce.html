@@ -191,6 +191,8 @@
     .ad-rm-renglon__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0; }
     .ad-rm-acciones { min-width: 0; }
     .ad-rm-acciones > .ad-btn { margin: 0.375rem 0 0.5rem; }
+    .ad-rm-guardado { font-size: 0.8125rem; color: var(--ad-texto-secundario); min-width: 0; overflow-wrap: anywhere; }
+    .ad-rm-guardado--error { color: var(--bordo-oscuro); font-weight: 600; }
     /* El saldo del acopio al lado de cada renglón (de los Acopios). */
     .ad-rm-acopio { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 700; color: #0B4F7A; overflow-wrap: anywhere; }
     .ad-rm-acopio--falta { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border: 2px solid var(--amarillo); border-radius: 8px; padding: 0.375rem 0.5rem; }
@@ -699,8 +701,9 @@
 
     function elegirPestana(p) {
       if (!pestanasVisibles().includes(p)) return
-      // Con un remito abierto y cambios sin guardar, se avisa (volverDeRemito).
-      if (estado.vista === 'ad-vista-remito' && estado.remito?.sucio) { volverDeRemito(); return }
+      // Con un remito abierto y algo sin mandar, se manda y vuelve a Revisar
+      // (volverDeRemito).
+      if (estado.vista === 'ad-vista-remito' && pendienteRemito(estado.remito)) { volverDeRemito(); return }
       estado.pestana = p
       guardarPreferencia(CLAVE_PESTANA, p)
       pintarPestanas()
@@ -1270,6 +1273,13 @@
     // El error de confirmar que pide descartar: el remito a una empresa del
     // grupo que ya entró como ingreso allá.
     const RE_YA_INGRESADO = /ya entró como ingreso/i
+    // AUTOGUARDADO (29/10/2026, pedido de Facu: "Guardar" y "Confirmar"
+    // confundían). Cada cambio se manda solo a actualizar_remito_precarga;
+    // lo que se escribe, después de este rato sin tocar nada (no una llamada
+    // por tecla). Una sola llamada a la vez: la que vuelve, si quedó algo
+    // nuevo, manda eso; así una respuesta vieja nunca pisa a una nueva, ni
+    // en la pantalla ni en la base.
+    const RETARDO_AUTOGUARDADO_REMITO = 800
 
 
 
@@ -1688,7 +1698,7 @@
         (rm.yaIngresado ? `<button type="button" class="ad-btn ad-btn--peligro" data-rm-accion="ya-ingresado"${rmDis}>Descartar (ya ingresado)</button>` : '') : ''
       const rmAviso = rm.aviso ? `<p class="ad-aviso" id="ad-rm-aviso">${esc(rm.aviso)}</p>` : ''
       const rmLeer = rm.confirmarLeer ? '<div class="ad-panel" id="ad-rm-panel-leer">' +
-        `<p>${esc('Volver a leer la foto con la IA pisa todo lo de este remito' + (rm.sucio ? ', también lo que corregiste y todavía no guardaste.' : '.'))}</p>` +
+        `<p>${esc('Volver a leer la foto con la IA pisa todo lo de este remito, también lo que ya corregiste.')}</p>` +
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-rm-accion="leer-si"${rmDis}>Sí, volver a leer</button>` +
         `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="leer-no"${rmDis}>Cancelar</button></div></div>` : ''
       const rmDescartar = rm.descartar ? '<div class="ad-panel ad-panel--peligro" id="ad-rm-panel-descartar"><div class="ad-campo">' +
@@ -1698,8 +1708,8 @@
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--peligro" data-rm-accion="descartar-si"${rmDis}>Descartar el remito</button>` +
         `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="descartar-no"${rmDis}>Cancelar</button></div></div>` : ''
       return `<div class="ad-rm-acciones">${rmError}${rmAviso}${rmLeer}${rmDescartar}<div class="ad-barra-acciones">` +
-        `<button type="button" class="ad-btn" data-rm-accion="guardar"${rmDis}>Guardar</button>` +
         `<button type="button" class="ad-btn" data-rm-accion="confirmar"${rmDis}>Confirmar</button>` +
+        htmlGuardadoRemito(rm) +
         `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="leer"${rmDis}>Volver a leer</button>` +
         `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="descartar"${rmDis}>Descartar</button></div></div>`
     }
@@ -1760,12 +1770,22 @@
       return estado.remito?.form?.renglones?.[Number(i)] ?? null
     }
 
-    function marcarSucioRemito() {
+    // Cada cambio se guarda solo: lo que se escribe, con retardo (conRetardo);
+    // lo que se toca, ya. La versión dice si lo que volvió de la base es lo
+    // último que se cambió.
+    function marcarSucioRemito(conRetardo = false) {
       const rm = estado.remito
       if (!rm) return
       rm.sucio = true
       rm.aviso = null
       rm.saliendo = false
+      rm.version = (Number(rm.version) || 0) + 1
+      if (rm.temporizador !== null && rm.temporizador !== undefined) clearTimeout(rm.temporizador)
+      rm.temporizador = null
+      if (conRetardo) {
+        rm.temporizador = setTimeout(() => { rm.temporizador = null; autoguardarRemito(rm) }, RETARDO_AUTOGUARDADO_REMITO)
+        pintarGuardadoRemito(rm)
+      } else autoguardarRemito(rm)
     }
 
     // Elegir el producto saca el amarillo (revisar = false).
@@ -1926,7 +1946,7 @@
       if (d.rmCampo !== undefined) {
         if (!['numero', 'fecha', 'transporte', 'observaciones'].includes(d.rmCampo)) return
         rm.form[d.rmCampo] = t.value
-        marcarSucioRemito()
+        marcarSucioRemito(true)
         if (d.rmCampo === 'numero') pintarTituloRemito()
       } else if (d.rmClienteBuscar !== undefined) {
         rm.form.clienteBusqueda = t.value
@@ -1948,7 +1968,7 @@
         const r = renglonRemito(d.rmCantidad)
         if (!r) return
         r.cantidad = leerCampoNumero(t)
-        marcarSucioRemito()
+        marcarSucioRemito(true)
         pintarPieLotesRemito(d.rmCantidad)
         pintarAcopiosRemito()
       } else if (d.rmLote !== undefined || d.rmLoteCajas !== undefined) {
@@ -1967,7 +1987,7 @@
           }
           l.lote = t.value
         } else l.cajas = leerCampoNumero(t)
-        marcarSucioRemito()
+        marcarSucioRemito(true)
         pintarPieLotesRemito(i)
       } else if (d.rmMotivo !== undefined && rm.descartar) {
         rm.descartar.motivo = t.value
@@ -2000,8 +2020,7 @@
     function accionRemito(a) {
       const rm = estado.remito
       if (!rm?.form || rm.trabajando) return
-      if (a === 'guardar') guardarRemito()
-      else if (a === 'confirmar') confirmarRemito()
+      if (a === 'confirmar') confirmarRemito()
       else if (a === 'leer') { rm.confirmarLeer = true; rm.descartar = null; pintarRemito() }
       else if (a === 'leer-no') { rm.confirmarLeer = false; pintarRemito() }
       else if (a === 'leer-si') volverALeerRemito()
@@ -2022,6 +2041,7 @@
       const rm = {
         id, fila, form: fila ? formDesdeRemito(fila) : null, error: null, sucio: false, saliendo: false,
         foto: { cargando: true }, zoom: 0, trabajando: false, mensaje: null, aviso: null, yaIngresado: false, confirmarLeer: false, descartar: null,
+        version: 0, temporizador: null, guardando: null, errorGuardado: null, ultimoGuardado: null, filaAlDia: false,
       }
       estado.remito = rm
       mostrarVista('ad-vista-remito')
@@ -2060,43 +2080,135 @@
       if (estado.remito === rm) pintarFotoRemito()
     }
 
-    // Lo guardado vuelve de la base normalizado: el formulario se rearma con
-    // eso (así el amarillo es el de la base) y la lista de arriba queda al día.
-    function aplicarFilaRemito(rm, fila) {
+    // Lo que vuelve de la base (normalizado) deja al día la fila y la lista de
+    // arriba. El formulario se rearma con eso solo si se pide (Volver a leer,
+    // Confirmar): el autoguardado NO lo rearma, porque pisaría lo que se está
+    // escribiendo, un renglón recién agregado o un lote a medio cargar.
+    function aplicarFilaRemito(rm, fila, rearmar = true) {
       rm.fila = { ...(rm.fila ?? {}), ...fila }
-      rm.form = formDesdeRemito(rm.fila)
-      rm.sucio = false
+      if (rearmar) {
+        rm.form = formDesdeRemito(rm.fila)
+        rm.sucio = false
+      }
       const rr = estado.remitos
       if (Array.isArray(rr?.filas)) rr.filas = remitosPorRevisar(rr.filas.map(x => x.id === rm.id ? { ...x, ...fila } : x))
     }
 
-    async function guardarRemitoEnBase(rm) {
-      const { data, error } = await supabase.rpc('actualizar_remito_precarga', parametrosActualizarRemito(rm))
-      if (error) throw error
-      if (data && typeof data === 'object' && !Array.isArray(data)) aplicarFilaRemito(rm, data)
-      else rm.sucio = false
+    // El estado chico al lado de Confirmar: "Guardando…", "Guardado" o el
+    // error de la base TAL CUAL. Se pinta solo (pintarGuardadoRemito) para no
+    // redibujar lo que se está escribiendo.
+    function estadoGuardadoRemito(rm) {
+      if (!rm) return { clase: '', texto: '' }
+      const esperando = rm.temporizador !== null && rm.temporizador !== undefined
+      if (esperando || rm.guardando) return { clase: '', texto: 'Guardando…' }
+      if (rm.sucio && rm.errorGuardado) return { clase: ' ad-rm-guardado--error', texto: rm.errorGuardado }
+      if (rm.ultimoGuardado !== null && rm.ultimoGuardado !== undefined && !rm.sucio) return { clase: '', texto: 'Guardado' }
+      return { clase: '', texto: 'Los cambios se guardan solos.' }
     }
 
-    async function guardarRemito() {
-      const rm = estado.remito
-      if (!rm?.form || rm.trabajando) return
-      rm.trabajando = true
-      rm.mensaje = null
-      rm.yaIngresado = false
-      rm.aviso = null
-      pintarRemito()
-      try {
-        await guardarRemitoEnBase(rm)
-        rm.aviso = 'Guardado. Todavía no es una orden: falta Confirmar.'
-      } catch (err) {
-        console.error('No se pudo guardar el remito:', err)
-        rm.mensaje = err?.message || 'No se pudo guardar el remito. Probá de nuevo.'
-      }
-      rm.trabajando = false
-      if (estado.remito === rm) pintarRemito()
+    function htmlGuardadoRemito(rm) {
+      const g = estadoGuardadoRemito(rm)
+      return `<span class="ad-rm-guardado${g.clase}" id="ad-rm-guardado" role="status" aria-live="polite">${esc(g.texto)}</span>`
     }
 
-    // Confirmar GUARDA primero si hay cambios. El error de la base va TAL
+    function pintarGuardadoRemito(rm) {
+      if (estado.remito !== rm) return
+      const el = document.getElementById('ad-rm-guardado')
+      if (!el) return
+      const g = estadoGuardadoRemito(rm)
+      el.className = 'ad-rm-guardado' + g.clase
+      el.textContent = g.texto
+    }
+
+    // Manda lo último a actualizar_remito_precarga. Si ya hay una llamada en
+    // curso, no manda otra: cuando esa vuelve, si quedó algo nuevo (y no se
+    // está escribiendo), lo manda. Lo que no cambió desde lo último guardado
+    // no se vuelve a mandar. Sin Retiros · cargar no se guarda nada.
+    function autoguardarRemito(rm) {
+      if (!rm?.form) return Promise.resolve()
+      if (rm.guardando) return rm.guardando
+      // En pausa mientras se confirma, se vuelve a leer o se descarta: lo
+      // que se cambie queda pendiente y se manda al terminar (si sigue).
+      if (rm.pausado || !rm.sucio || !puedeGuardarRemito(rm)) return Promise.resolve()
+      rm.guardando = (async () => {
+        // Primero se suelta el hilo: si no hay nada que mandar, la vuelta
+        // terminaría ANTES de que rm.guardando quede asignado, y quedaría
+        // para siempre una promesa vieja ahí.
+        await null
+        while (rm.sucio && !rm.pausado && (rm.temporizador === null || rm.temporizador === undefined)) {
+          const version = rm.version
+          const params = parametrosActualizarRemito(rm)
+          const clave = JSON.stringify(params)
+          try {
+            if (clave !== rm.ultimoGuardado) {
+              const { data, error } = await supabase.rpc('actualizar_remito_precarga', params)
+              if (error) throw error
+              // filaAlDia: la fila es la que dejó la base con lo último (si no
+              // vino, Confirmar no rearma con una fila vieja).
+              rm.filaAlDia = !!(data && typeof data === 'object' && !Array.isArray(data))
+              if (rm.filaAlDia) aplicarFilaRemito(rm, data, false)
+            }
+            rm.ultimoGuardado = clave
+            rm.errorGuardado = null
+            if (rm.version === version) rm.sucio = false
+          } catch (err) {
+            console.error('No se pudo guardar el remito:', err)
+            // Si mientras tanto se cambió algo, se manda eso (puede arreglarlo);
+            // si no, queda el error a la vista hasta el próximo cambio.
+            if (rm.version !== version) continue
+            rm.errorGuardado = err?.message || 'No se pudo guardar el remito. Revisá la conexión.'
+            break
+          }
+        }
+        rm.guardando = null
+        pintarGuardadoRemito(rm)
+      })()
+      pintarGuardadoRemito(rm)
+      return rm.guardando
+    }
+
+    // Lo que se escribió y todavía espera el retardo, se manda ya (al salir
+    // del campo, al salir del remito, al esconder la página).
+    function guardarYaRemito(rm = estado.remito) {
+      if (!rm || rm.temporizador === null || rm.temporizador === undefined) return rm?.guardando ?? Promise.resolve()
+      clearTimeout(rm.temporizador)
+      rm.temporizador = null
+      return autoguardarRemito(rm)
+    }
+
+    // Espera que termine el guardado en curso y manda lo que quedó sin
+    // mandar. true si todo quedó guardado.
+    async function esperarGuardadoRemito(rm) {
+      const enCamino = !!rm.guardando || (rm.temporizador !== null && rm.temporizador !== undefined)
+      // guardarYaRemito devuelve la vuelta en curso (que también manda lo
+      // que cambió mientras tanto) o la que arranca.
+      await guardarYaRemito(rm)
+      // Si no había nada en camino (quedó el error de un guardado anterior),
+      // se reintenta UNA vez; si recién falló, no se insiste.
+      if (rm.sucio && !enCamino) await autoguardarRemito(rm)
+      return !rm.sucio
+    }
+
+    // Antes de Volver a leer o Descartar: lo que espera el retardo ya no se
+    // manda (se pisa o se tira), pero la llamada en curso se espera, para
+    // que no caiga en la base DESPUÉS.
+    async function frenarAutoguardadoRemito(rm) {
+      rm.pausado = true
+      if (rm.temporizador !== null && rm.temporizador !== undefined) clearTimeout(rm.temporizador)
+      rm.temporizador = null
+      while (rm.guardando) await rm.guardando
+    }
+
+    // Sale de la pausa y, si quedó algo sin mandar (y el remito sigue
+    // abierto), lo manda.
+    function seguirAutoguardadoRemito(rm) {
+      rm.pausado = false
+      if (rm.sucio && estado.remito === rm) autoguardarRemito(rm)
+      else pintarGuardadoRemito(rm)
+    }
+
+    // Confirmar primero espera el guardado (y manda lo que quedó); recién
+    // después llama a confirmar_remito_precarga. El error de la base va TAL
     // CUAL; si dice que ya entró como ingreso en la otra empresa, aparece
     // "Descartar (ya ingresado)".
     async function confirmarRemito() {
@@ -2111,7 +2223,11 @@
       pintarRemito()
       let res = null
       try {
-        if (rm.sucio) await guardarRemitoEnBase(rm)
+        if (!(await esperarGuardadoRemito(rm))) throw new Error(rm.errorGuardado || 'No se pudo guardar el remito. Revisá la conexión.')
+        // Con lo guardado a la vista (el amarillo es el de la base): si
+        // confirmar dice "el renglón 2 está en amarillo", se ve cuál.
+        if (rm.ultimoGuardado !== null && rm.filaAlDia) aplicarFilaRemito(rm, {}, true)
+        rm.pausado = true
         const { data, error } = await supabase.rpc('confirmar_remito_precarga', { p_id: rm.id })
         if (error) throw error
         res = data ?? {}
@@ -2121,9 +2237,12 @@
         rm.yaIngresado = RE_YA_INGRESADO.test(rm.mensaje)
         rm.trabajando = false
         if (estado.remito === rm) pintarRemito()
+        if (rm.pausado) seguirAutoguardadoRemito(rm)
         return
       }
       rm.trabajando = false
+      if (rm.temporizador !== null && rm.temporizador !== undefined) clearTimeout(rm.temporizador)
+      rm.temporizador = null
       quitarRemitoDeLaLista(rm.id)
       const numero = textoNumeroRemito({ numero_remito: res.numero_remito ?? rm.form.numero, talonario: res.talonario ?? rm.form.talonario }) || 'El remito'
       mostrarExito(`${numero} confirmado: ${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}. Ya se puede valorizar en Administración.`)
@@ -2151,6 +2270,7 @@
       rm.yaIngresado = false
       rm.aviso = 'Leyendo la foto de nuevo…'
       pintarRemito()
+      await frenarAutoguardadoRemito(rm)
       try {
         const { data, error } = await supabase.functions.invoke('ocr-remito', { body: { remito_id: rm.id } })
         if (error) throw new Error(await mensajeDeFuncion(error))
@@ -2159,7 +2279,10 @@
         if (!fila) fila = await leerRemito(rm.id)
         if (!fila) throw new Error('No se encontró el remito.')
         if (estado.remito === rm) {
+          // Lo leído pisa todo, también lo que se cambió mientras leía.
           aplicarFilaRemito(rm, fila)
+          rm.ultimoGuardado = null
+          rm.errorGuardado = null
           rm.aviso = fila.estado === 'error' ? null : 'Listo: se volvió a leer la foto.'
         }
       } catch (err) {
@@ -2169,6 +2292,7 @@
       }
       rm.trabajando = false
       if (estado.remito === rm) pintarRemito()
+      seguirAutoguardadoRemito(rm)
     }
 
     async function descartarRemito(motivo) {
@@ -2184,6 +2308,7 @@
       if (rm.descartar) rm.descartar.error = null
       rm.mensaje = null
       pintarRemito()
+      await frenarAutoguardadoRemito(rm)
       try {
         const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: m })
         if (error) throw error
@@ -2194,6 +2319,7 @@
         else rm.mensaje = texto
         rm.trabajando = false
         if (estado.remito === rm) pintarRemito()
+        seguirAutoguardadoRemito(rm)
         return
       }
       rm.trabajando = false
@@ -2203,16 +2329,32 @@
       if (estado.vista === 'ad-vista-remito') await mostrarRevisar()
     }
 
-    // "‹ Revisar": con cambios sin guardar avisa una vez; el segundo toque sale.
-    function volverDeRemito() {
+    function puedeGuardarRemito(rm) {
+      return !!rm && puedeEn('retiros', 'cargar', rm.fila?.unidad_negocio_id ?? estado.empresaId)
+    }
+
+    // Algo sin mandar o mandándose (sin permiso para guardar, nada).
+    function pendienteRemito(rm) {
+      if (!puedeGuardarRemito(rm)) return false
+      return !!(rm.sucio || rm.guardando || (rm.temporizador !== null && rm.temporizador !== undefined))
+    }
+
+    // "‹ Revisar": lo que quedó sin mandar se manda igual, y se sale cuando la
+    // base respondió. Si lo rechaza, se queda con el error a la vista; el
+    // segundo toque sale igual.
+    async function volverDeRemito() {
       const rm = estado.remito
-      if (rm?.sucio && !rm.saliendo && !rm.trabajando) {
-        rm.saliendo = true
-        rm.aviso = 'Tenés cambios sin guardar: tocá Guardar, o volvé a tocar «‹ Revisar» para salir sin guardarlos.'
-        pintarRemito()
-        return
-      }
       if (rm?.trabajando) return
+      if (rm && !rm.saliendo && pendienteRemito(rm)) {
+        rm.saliendo = true
+        const ok = await esperarGuardadoRemito(rm)
+        if (estado.remito !== rm || !rm.saliendo) return
+        if (!ok) {
+          rm.aviso = 'No se pudo guardar el último cambio (el error está al lado de Confirmar). Volvé a tocar «‹ Revisar» para salir igual.'
+          pintarRemito()
+          return
+        }
+      }
       estado.remito = null
       mostrarRevisar()
     }
@@ -2425,6 +2567,18 @@
       document.getElementById('ad-remito-volver').addEventListener('click', () => volverDeRemito())
       document.getElementById('ad-remito-cuerpo').addEventListener('click', (e) => alTocarRemito(e))
       document.getElementById('ad-remito-cuerpo').addEventListener('input', (e) => alEscribirRemito(e))
+      // Al salir de un campo, lo escrito se manda sin esperar el retardo.
+      document.getElementById('ad-remito-cuerpo').addEventListener('change', () => guardarYaRemito())
+      // Al esconder o cerrar la página, lo que quedó sin mandar se manda ya;
+      // si todavía no llegó, el navegador pregunta antes de cerrar.
+      document.addEventListener('visibilitychange', () => { if (document.hidden) guardarYaRemito() })
+      window.addEventListener('pagehide', () => guardarYaRemito())
+      window.addEventListener('beforeunload', (e) => {
+        if (!pendienteRemito(estado.remito)) return
+        guardarYaRemito()
+        e.preventDefault()
+        e.returnValue = ''
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -87,7 +87,7 @@ correrMutaciones({
     { expr: 'esc(c.id)', motivo: 'el id de un cliente (uuid de la base) en un data- entre comillas' },
     { expr: 'esc(g.titulo)', motivo: 'constante del código: un título de GRUPOS_REMITO' },
     { expr: "esc(importeHoja(totalRemito, o.moneda) + textoAFavor(totalRemito))", motivo: 'un importe formateado por importeHoja() y un texto constante' },
-    { expr: "esc('Volver a leer la foto con la IA pisa todo lo de este remito' + (rm.sucio ? ', también lo que corregiste y todavía no guardaste.' : '.'))", motivo: 'texto constante del código' },
+    { expr: "esc('Volver a leer la foto con la IA pisa todo lo de este remito, también lo que ya corregiste.')", motivo: 'texto constante del código' },
     { expr: "esc('Nada coincide con «' + q + '».')", motivo: 'lo cubre la búsqueda con marca; el texto buscado lo escribe la persona en su propia pantalla' },
     { expr: "esc('Ningún cono coincide con «' + limpio(r.marcaBusqueda) + '».')", motivo: 'el texto buscado lo escribe la persona en su propia pantalla (nunca viene de la base)' },
   ],
@@ -157,8 +157,11 @@ correrMutaciones({
     { nombre: 'vacíos como texto vacío', de: 'p_transporte: limpio(f.transporte) || null,', a: 'p_transporte: limpio(f.transporte),' },
     { nombre: 'lo faltante al revés', de: '      return { pedido, asignado, falta: pedido === null ? null : pedido - asignado }', a: '      return { pedido, asignado, falta: pedido === null ? null : asignado - pedido }' },
     // Confirmar, descartar, volver a leer
-    { nombre: 'Confirmar no guarda primero', de: '        if (rm.sucio) await guardarRemitoEnBase(rm)\n', a: '' },
-    { nombre: 'Confirmar guarda siempre', de: '        if (rm.sucio) await guardarRemitoEnBase(rm)\n', a: '        await guardarRemitoEnBase(rm)\n' },
+    // Confirmar y el guardado (29/10/2026; el detalle, en mut-remitos-dolce-autoguardado.js)
+    { nombre: 'Confirmar no espera el guardado', de: "        if (!(await esperarGuardadoRemito(rm))) throw new Error(rm.errorGuardado || 'No se pudo guardar el remito. Revisá la conexión.')\n", a: '' },
+    { nombre: 'sin el botón Confirmar', de: '        `<button type="button" class="ad-btn" data-rm-accion="confirmar"${rmDis}>Confirmar</button>` +\n', a: '' },
+    { nombre: 'vuelve el botón Guardar', de: '        `<button type="button" class="ad-btn" data-rm-accion="confirmar"${rmDis}>Confirmar</button>` +\n', a: '        `<button type="button" class="ad-btn" data-rm-accion="guardar"${rmDis}>Guardar</button>` +\n        `<button type="button" class="ad-btn" data-rm-accion="confirmar"${rmDis}>Confirmar</button>` +\n' },
+    { nombre: 'sin el estado chico', de: '        htmlGuardadoRemito(rm) +\n', a: '' },
     { nombre: 'el error de confirmar genérico', de: "        rm.mensaje = err?.message || 'No se pudo confirmar el remito. Probá de nuevo.'", a: "        rm.mensaje = 'No se pudo confirmar el remito. Probá de nuevo.'" },
     { nombre: 'sin "Descartar (ya ingresado)"', de: '        rm.yaIngresado = RE_YA_INGRESADO.test(rm.mensaje)\n', a: '' },
     { nombre: '"ya ingresado" con otro motivo', de: "      else if (a === 'ya-ingresado') descartarRemito('ya ingresado')", a: "      else if (a === 'ya-ingresado') descartarRemito('repetido')" },
@@ -168,11 +171,11 @@ correrMutaciones({
     { nombre: 'el motivo sin limpiar', de: "        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: m })", a: "        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: motivo })" },
     { nombre: 'el error de descartar genérico', de: "        const texto = err?.message || 'No se pudo descartar el remito. Probá de nuevo.'", a: "        const texto = 'No se pudo descartar el remito. Probá de nuevo.'" },
     { nombre: 'volver a leer con otra clave', de: "supabase.functions.invoke('ocr-remito', { body: { remito_id: rm.id } })", a: "supabase.functions.invoke('ocr-remito', { body: { id: rm.id } })" },
-    { nombre: 'volver a leer no pisa el formulario', de: '          aplicarFilaRemito(rm, fila)\n          rm.aviso = fila.estado', a: '          rm.aviso = fila.estado' },
+    { nombre: 'volver a leer no pisa el formulario', de: '          aplicarFilaRemito(rm, fila)\n          rm.ultimoGuardado = null', a: '          rm.ultimoGuardado = null' },
     { nombre: 'el error de la lectura se ignora', de: '        if (error) throw new Error(await mensajeDeFuncion(error))\n        if (data?.error) throw new Error(String(data.error))\n', a: '        if (error) throw new Error(await mensajeDeFuncion(error))\n' },
     { nombre: 'el error del cuerpo de la función se pierde', de: "        const cuerpo = await error?.context?.json?.()\n        if (cuerpo?.error) return String(cuerpo.error)", a: '        await error?.context?.json?.()' },
-    { nombre: 'volver a leer sin avisar lo no guardado', de: "(rm.sucio ? ', también lo que corregiste y todavía no guardaste.' : '.')", a: "'.'" },
-    { nombre: 'Órdenes sale sin avisar', de: '      if (rm?.sucio && !rm.saliendo && !rm.trabajando) {', a: '      if (false) {' },
+    { nombre: 'volver a leer sin avisar que pisa lo corregido', de: "pisa todo lo de este remito, también lo que ya corregiste.'", a: "pisa todo lo de este remito.'" },
+    { nombre: '‹ Revisar sale sin mandar lo pendiente', de: '      if (rm && !rm.saliendo && pendienteRemito(rm)) {', a: '      if (false) {' },
     // La ficha y la hoja
   ],
 })

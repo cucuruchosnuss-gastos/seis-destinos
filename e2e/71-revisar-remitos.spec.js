@@ -10,7 +10,12 @@
 //  - abrir uno: la foto firmada (con zoom), los renglones en AMARILLO con lo
 //    leído y la nota; Aceptar sugerencia; elegir el producto saca el amarillo;
 //    los lotes "Asignado X de Y · faltan Z"; "No va en la orden"; el cliente;
-//    Guardar manda los renglones bien a actualizar_remito_precarga;
+//    se guarda SOLO (29/10/2026: sin botón Guardar; al lado de Confirmar
+//    "Guardando…" / "Guardado" / el error de la base tal cual) y manda los
+//    renglones bien a actualizar_remito_precarga; lo que se escribe, una
+//    sola vez después del retardo;
+//  - Confirmar espera el guardado en curso; "‹ Revisar" con algo sin mandar
+//    lo manda igual;
 //  - Confirmar: el error de la base TAL CUAL con "Descartar (ya ingresado)", y
 //    después OK: sale de la lista;
 //  - Descartar con motivo; Volver a leer (ocr-remito);
@@ -145,7 +150,7 @@ for (const [ancho, alto] of TAMANOS) {
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`Dolce: revisar un remito con amarillos, guardar y confirmar, a ${ancho} px`, async ({ page }, info) => {
+  test(`Dolce: revisar un remito con amarillos (se guarda solo) y confirmar, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
@@ -175,7 +180,15 @@ for (const [ancho, alto] of TAMANOS) {
     await sinScrollHorizontal(page);
     await captura(page, `remito-amarillos-${ancho}`, info);
     // El cono que leyó la IA se corrige: LEROMA. Y se acepta.
+    // Sin botón Guardar: al lado de Confirmar, el estado chico.
+    await expect(page.locator('[data-rm-accion="guardar"]')).toHaveCount(0);
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('Los cambios se guardan solos.');
+    const guardados = () => rpc.filter(r => r.nombre === 'actualizar_remito_precarga').map(r => r.params);
     await renglon(page, 0).locator('[data-rm-marca="0"][data-id="m-ler"]').click();
+    // Lo que se toca se guarda solo, en seguida.
+    await expect.poll(() => guardados().length).toBeGreaterThan(0);
+    expect(guardados()[0].p_items[0].marca_id).toBe('m-ler');
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('Guardado');
     await renglon(page, 0).locator('[data-rm-aceptar="0"]').click();
     await expect(renglon(page, 0)).not.toHaveClass(/ad-rm-renglon--revisar/);
     // Sin producto: se elige en el selector de la Carga → deja de ser amarillo.
@@ -207,14 +220,17 @@ for (const [ancho, alto] of TAMANOS) {
     await page.locator('[data-rm-cliente-leido]').click();
     await page.locator('[data-rm-cliente="c-d-ros"]').click();
     await expect(page.locator('#ad-remito-cuerpo .ad-ret-elegido')).toContainText('Almacén Rosario');
-    await page.locator('#ad-rm-transporte').fill('Expreso Rosario');
+    // Lo que se escribe, letra por letra: UNA llamada, con todo, después del retardo.
+    await page.locator('#ad-rm-transporte').pressSequentially('Expreso Rosario');
+    await expect.poll(() => guardados().pop()?.p_transporte).toBe('Expreso Rosario');
+    expect(guardados().every(x => x.p_transporte === null || x.p_transporte === 'Expreso Rosario'), JSON.stringify(guardados().map(x => x.p_transporte))).toBe(true);
+    expect(guardados().filter(x => x.p_transporte === 'Expreso Rosario')).toHaveLength(1);
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('Guardado');
     await sinScrollHorizontal(page);
     await captura(page, `remito-corregido-${ancho}`, info);
 
-    // Guardar: lo que va a actualizar_remito_precarga.
-    await page.locator('[data-rm-accion="guardar"]').click();
-    await expect(page.locator('#ad-rm-aviso')).toContainText('Guardado');
-    const g = rpc.find(r => r.nombre === 'actualizar_remito_precarga').params;
+    // Lo último que se guardó: lo que va a actualizar_remito_precarga.
+    const g = guardados().pop();
     expect({ ...g, p_items: undefined }).toEqual({ p_id: 'rm-1', p_numero_remito: '0001-00003100', p_fecha: '2026-10-26', p_cliente_id: 'c-d-ros',
       p_transporte: 'Expreso Rosario', p_observaciones: null, p_talonario: 'oficial', p_items: undefined });
     expect(g.p_items).toEqual([
@@ -225,6 +241,18 @@ for (const [ancho, alto] of TAMANOS) {
       { texto_leido: 'Envases térmicos', cantidad: 5, presentacion_id: null, marca_id: null, insumo_id: null, lotes: [], revisar: false, omitir: true, nota: '¿mercadería de terceros?' },
       { texto_leido: 'Capelina reposición', cantidad: 2, presentacion_id: 'pr-d-cap', marca_id: null, insumo_id: null, lotes: [], revisar: false, omitir: false, nota: 'reposición' },
     ]);
+
+    // Si la base rechaza el guardado: su error TAL CUAL, en rojo, al lado de Confirmar.
+    await page.evaluate(() => { globalThis.__maqueta.rpc.actualizar_remito_precarga = 'ERROR:La fecha no puede ser futura.'; });
+    await page.locator('#ad-rm-fecha').fill('2026-10-25');
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('La fecha no puede ser futura.');
+    await expect(page.locator('#ad-rm-guardado')).toHaveClass(/ad-rm-guardado--error/);
+    await sinScrollHorizontal(page);
+    await captura(page, `remito-error-guardado-${ancho}`, info);
+    await page.evaluate(() => { globalThis.__maqueta.rpc.actualizar_remito_precarga = null; });
+    await page.locator('#ad-rm-fecha').fill('2026-10-26');
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('Guardado');
+    await expect(page.locator('#ad-rm-guardado')).not.toHaveClass(/ad-rm-guardado--error/);
 
     // Confirmar con el error de la base: TAL CUAL, con "Descartar (ya ingresado)".
     const ERROR = 'El remito 0001-00003100 ya entró como ingreso en la otra empresa. No lo confirmes: descartalo con el motivo "ya ingresado".';
@@ -279,7 +307,7 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(page.locator('#rd-vista-revisar')).toBeVisible();
     expect(rpc.filter(r => r.nombre === 'descartar_remito_precarga').pop().params).toEqual({ p_id: 'rm-4', p_motivo: 'ya ingresado' });
 
-    // La que se está leyendo: Volver a leer (avisa que pisa lo no guardado).
+    // La que se está leyendo: Volver a leer (avisa que pisa lo corregido).
     await page.evaluate(() => {
       globalThis.__maqueta.funciones['ocr-remito'] = (op) => ({ id: op.body.remito_id, unidad_negocio_id: 'u-d', foto_path: 'u-d/remitos/rm-3.jpg', estado: 'precargada', talonario: 'oficial',
         numero_remito: '0001-00003105', numero_remito_n: 100003105, fecha: '2026-10-27', cliente_id: null, cliente_leido: 'Kiosco Pepe', transporte: null, observaciones: null,
@@ -289,7 +317,7 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(page.locator('#ad-remito-cuerpo')).toContainText('La IA todavía lo está leyendo');
     await page.locator('#ad-rm-transporte').fill('algo sin guardar');
     await page.locator('[data-rm-accion="leer"]').click();
-    await expect(page.locator('#ad-rm-panel-leer')).toContainText('también lo que corregiste y todavía no guardaste');
+    await expect(page.locator('#ad-rm-panel-leer')).toContainText('también lo que ya corregiste');
     await page.locator('[data-rm-accion="leer-si"]').click();
     await expect(page.locator('#ad-rm-numero')).toHaveValue('0001-00003105');
     await expect(page.locator('#ad-rm-transporte')).toHaveValue('');
@@ -297,6 +325,33 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(renglon(page, 0)).toContainText('Capelina Grande · Caja x 12');
     await sinScrollHorizontal(page);
     await captura(page, `remito-releido-${ancho}`, info);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
+  test(`Dolce: salir con algo sin mandar lo manda; Confirmar espera el guardado, a ${ancho} px`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    const rpc = anotarRpc(page);
+    const guardados = () => rpc.filter(r => r.nombre === 'actualizar_remito_precarga').map(r => r.params);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await abrirRevisar(page);
+    // Escribir y salir en seguida (antes del retardo): se manda igual.
+    await page.locator('#ad-remitos [data-remito="rm-1"]').click();
+    await page.locator('#ad-rm-observaciones').pressSequentially('Frágil');
+    await page.locator('#ad-remito-volver').click();
+    await expect(page.locator('#rd-vista-revisar')).toBeVisible();
+    await expect.poll(() => guardados().map(x => x.p_observaciones)).toEqual(['Frágil']);
+    // Con el guardado en curso (la base no responde), Confirmar espera.
+    await page.locator('#ad-remitos [data-remito="rm-1"]').click();
+    await page.evaluate(() => { globalThis.__maqueta.rpc.actualizar_remito_precarga = 'ESPERAR'; });
+    await renglon(page, 0).locator('[data-rm-aceptar="0"]').click();
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('Guardando…');
+    await page.locator('[data-rm-accion="confirmar"]').click();
+    await expect(page.locator('[data-rm-accion="confirmar"]')).toBeDisabled();
+    await page.waitForTimeout(1500);
+    expect(rpc.some(r => r.nombre === 'confirmar_remito_precarga'), 'confirmó sin esperar el guardado').toBe(false);
+    await expect(page.locator('#ad-rm-guardado')).toHaveText('Guardando…');
+    await sinScrollHorizontal(page);
+    await captura(page, `remito-guardando-${ancho}`, info);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
