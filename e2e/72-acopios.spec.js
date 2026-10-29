@@ -9,8 +9,9 @@
 //    motivo (solo sin retiros);
 //  - Nuevo acopio: el buscador ("FERNANDEZ RICARDO (también en Nuss)"), el
 //    catálogo de la Carga y el cono, cajas, precio → lo que va a crear_acopio;
-//  - la revisión del remito de acopio rm-4: el saldo al lado de cada renglón,
-//    en amarillo si no hay o no alcanza;
+//  - la revisión del remito de acopio rm-4 (en Remitos Dolce → Revisar desde
+//    el 28/10/2026): el saldo al lado de cada renglón, en amarillo si no hay o
+//    no alcanza;
 //  - la cuenta del cliente: sus acopios activos, "Acopio …" / "Anulación de
 //    acopio" y la "Cuenta en el grupo";
 //  - valorizar la orden de FERNANDEZ con la lista de Nuss (la equivalente).
@@ -143,9 +144,10 @@ for (const [ancho, alto] of TAMANOS) {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
-    await abrir(page, 'u-d');
-    // El remito de acopio: el saldo al lado de cada renglón.
-    await page.locator('[data-pestana="ordenes"]').first().click();
+    // El remito de acopio (Remitos Dolce → Revisar, 28/10/2026): el saldo al
+    // lado de cada renglón.
+    page.setDefaultTimeout(15000);
+    await page.goto(`${MAQUETA}/modulos/remitos-dolce.html?maqueta=administracion-acopios&pestana=revisar`, { waitUntil: 'domcontentloaded' });
     await page.locator('#ad-remitos [data-remito="rm-4"]').click();
     await expect(page.locator('#ad-vista-remito')).toBeVisible();
     const saldo = (i) => page.locator(`#ad-remito-cuerpo [data-rm-acopio="${i}"]`);
@@ -160,7 +162,10 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(saldo(1)).toHaveText('Acopio: quedan 20 cajas; después de este remito, 0.');
     await expect(page.locator('#ad-rm-cantidad-1')).toBeFocused();
     expect(rpc.some(r => r.nombre === 'acopios_lista' && r.params.p_cliente_id === 'c-d-ros')).toBe(true);
+    // Con las cajas cambiadas (sin guardar), "‹ Revisar" avisa una vez.
     await page.locator('#ad-remito-volver').click();
+    await expect(page.locator('#ad-remito-cuerpo')).toContainText('cambios sin guardar');
+    await abrir(page, 'u-d');
 
     // La cuenta de Almacén Rosario: sus acopios activos y los movimientos.
     await page.locator('[data-pestana="clientes"]').first().click();
