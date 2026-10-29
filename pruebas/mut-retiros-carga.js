@@ -19,7 +19,7 @@ correrMutaciones({
     // La orden a otra empresa del grupo (24/10/2026): el nombre de la empresa
     // lo prueba con marcas test-retiros-entre-empresas.js (mut-retiros-entre-empresas.js).
     { expr: 'esc(textoEntreEmpresas(c))', motivo: 'lo prueba con marcas test-retiros-entre-empresas.js (el nombre de la empresa del grupo)' },
-    { expr: "esc('Entre empresas: lo que salió entra al stock de ' + h.entre + '.')", motivo: 'lo prueba con marcas test-retiros-entre-empresas.js (la orden confirmada)' },
+    { expr: "esc('Orden interna: va en tránsito hasta que ' + h.entre + ' la reciba.')", motivo: 'lo prueba con marcas test-retiros-entre-empresas.js (la orden confirmada)' },
     { expr: 'esc(ayuda)', motivo: 'texto constante del código: el placeholder del buscador (devolución o retiro)' },
     { expr: 'esc(titulo)', motivo: 'texto constante del código: el título de los lotes (retiro o reposición)' },
     { expr: 'esc(devs.length)', motivo: 'un conteo (número) de devoluciones' },

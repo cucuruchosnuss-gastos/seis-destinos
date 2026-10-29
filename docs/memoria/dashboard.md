@@ -27,6 +27,13 @@
 - **"Mis sesiones abiertas"** en el menú de perfil (`f0bcbf9`), y **`dashboard.html?cuenta=sesiones`** lo abre derecho (se limpia con `replaceState`): el panel de `js/sesiones.js` con las propias.
 - Suites `pruebas/test-dashboard-pendientes.js` y `pruebas/test-dashboard-produccion.js`, las dos con su `mut-*`.
 
+- **Mercadería en camino (29/10/2026)**: `RESOLVER_PENDIENTES['stock:mercaderia_en_camino']` → la tarjeta de Stock, "N envíos de
+  mercadería en camino", a `modulos/stock.html#st-en-camino`. **Al 29/10/2026 `mis_pendientes()` NO la devuelve**
+  (pg_get_functiondef: no menciona orden_grupo_recepciones): el tablero queda listo y la burbuja aparece cuando la base
+  agregue la fila `('stock', 'mercaderia_en_camino', count(*), 'Mercadería en camino')` de `orden_grupo_recepciones` en
+  'en_transito' cuyo `unidad_destino_id` cumpla `tiene_tarea_alcance('stock','recibir_transferencia', unidad_destino_id)`
+  (pedido para el chat de la base). La barra lateral ya la suma (`MODULO_DE_PENDIENTE.stock`). Suite `test-tablero.js`.
+
 ## Dashboard — el tablero de resúmenes (29/09/2026, Parte 2 de la tanda del sistema visual)
 
 La grilla vieja "Módulos · Abrir →" se reemplazó por el **tablero** del handoff "Esqueleto" (`e2e/disenos/esqueleto/`, pantallas 1a, 1b, 2a, 3a, 5a, 6a, 7a). Lo arma **`js/tablero.js`** (`crearTablero()`, llamado al final del script de `dashboard.html`); el CSS va en el `<style>` del dashboard, con los valores copiados de los `style=""` del `.dc.html`. Lo anterior de esta sección (las burbujas de `mis_pendientes()` en cada tarjeta) quedó como **el pie de cada tarjeta**; la agrupación por tarjeta de `js/modulos.js` la sigue usando la barra lateral.

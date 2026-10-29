@@ -224,6 +224,10 @@ export const RESOLVER_PENDIENTES = {
   'stock:transferencias_por_aceptar': { tarjetas: ['stock', 'materia-prima'], uno: 'transferencia por recibir', varios: 'transferencias por recibir', url: 'modulos/materia-prima.html' },
   'stock:recuento_abierto': { tarjetas: ['stock'], uno: 'recuento abierto', varios: 'recuentos abiertos', url: 'modulos/stock.html?vista=insumos' },
   'stock:lotes_sin_ingreso': { tarjetas: ['stock'], uno: 'lote usado sin ingreso cargado', varios: 'lotes usados sin ingreso cargado', url: 'modulos/stock.html?vista=insumos' },
+  // 29/10/2026: lo que mandó otra empresa del grupo y todavía no se recibió
+  // (recepciones_grupo en tránsito). LISTA PARA CUANDO mis_pendientes() la
+  // devuelva: al 29/10 la base todavía no la cuenta (ver docs/memoria/dashboard.md).
+  'stock:mercaderia_en_camino': { tarjetas: ['stock'], uno: 'envío de mercadería en camino', varios: 'envíos de mercadería en camino', url: 'modulos/stock.html#st-en-camino' },
   'administracion:ordenes_sin_valorizar': { tarjetas: ['retiros', 'administracion'], uno: 'orden sin valorizar', varios: 'órdenes sin valorizar', url: 'modulos/administracion.html' },
   'administracion:retiros_por_revisar': { tarjetas: ['administracion'], uno: 'retiro por revisar', varios: 'retiros por revisar', url: 'modulos/administracion.html' },
   'administracion:clientes_sobre_limite': { tarjetas: ['administracion'], uno: 'cliente pasado de su límite', varios: 'clientes pasados de su límite', url: 'modulos/administracion.html', urgente: true, franja: 'clientes pasados de su límite' },

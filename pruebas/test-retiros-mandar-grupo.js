@@ -183,8 +183,8 @@ esperas.push((async () => {
 {
   const S = armar()
   S.estado.empresasGrupo.set('u-d', 'Dolce Pasta')
-  chk('el aviso dice adónde va y con los mismos lotes', S.textoEntreEmpresas(DOLCE_EN_NUSS) === 'Va al stock de Dolce Pasta con los mismos lotes')
-  chk('sin el nombre: "otra empresa del grupo"', S.textoEntreEmpresas({ unidad_grupo_id: 'u-zz' }) === 'Va al stock de otra empresa del grupo con los mismos lotes')
+  chk('el aviso dice adónde va y con los mismos lotes', S.textoEntreEmpresas(DOLCE_EN_NUSS) === 'Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba (con los mismos lotes)')
+  chk('sin el nombre: "otra empresa del grupo"', S.textoEntreEmpresas({ unidad_grupo_id: 'u-zz' }) === 'Es una orden interna: la mercadería va en tránsito hasta que otra empresa del grupo la reciba (con los mismos lotes)')
   chk('un cliente común: sin aviso', S.textoEntreEmpresas(COMUN) === '')
   chk('el texto viejo ya no está', !HTML.includes('lo que sale entra al stock de'))
 }

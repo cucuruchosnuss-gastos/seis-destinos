@@ -203,7 +203,7 @@ const FUNCIONES_BASE = [
   'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'leerListasEntre', 'valorizarEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
   'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
   // La condición de venta (21/10/2026) y las órdenes de pedido N1 / N2 (28/10/2026)
-  'leerFacturasDeOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'parametrosDivision',
+  'leerFacturasDeOrden', 'leerRecepcionDeOrden', 'cantidadRecepcion', 'textoRecepcionOrden', 'diferenciasRecepcion', 'htmlRecepcionOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'parametrosDivision',
   'codigoPunto', 'textoCondicion', 'facturasPorParte', 'puntosDePct', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura',
   'cantidadDivision', 'renglonesParte', 'htmlTotalesPunto', 'htmlHojaPunto', 'nombrePdfPunto', 'htmlFacturasOrden', 'puedeFacturar',
   'pctInicialFacturar', 'actualizarFilaOrden', 'contenedorFacturar', 'sincronizarFacturar', 'cerrarFacturar', 'iniciarFacturar',

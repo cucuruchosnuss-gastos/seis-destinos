@@ -294,7 +294,7 @@ esperas.push((async () => {
     // Los lotes del renglón 1: 84 cajas.
     const r = S.estado.remito.form.renglones[1]
     r.lotes = [{ lote: '10430', cajas: 30 }, { lote: ' 10433 ', cajas: 39 }]
-    chk('"Asignado 69 de 84 · faltan 15 cajas"', sinEtiquetas(S.htmlResumenLotesRemito(r)) === 'Asignado 69 de 84 · faltan 15 cajas', sinEtiquetas(S.htmlResumenLotesRemito(r)))
+    chk('"Lotes: 69 de 84 cajas · faltan 15 cajas"', sinEtiquetas(S.htmlResumenLotesRemito(r)) === 'Lotes: 69 de 84 cajas · faltan 15 cajas', sinEtiquetas(S.htmlResumenLotesRemito(r)))
     r.lotes.push({ lote: '10440', cajas: 15 })
     chk('completo: "✓ Asignado completo"', /✓ Asignado completo/.test(S.htmlResumenLotesRemito(r)))
     r.lotes.push({ lote: 'X', cajas: 1 })

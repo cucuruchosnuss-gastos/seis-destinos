@@ -409,6 +409,12 @@
     /* ── El detalle de una orden ──────────────────────────────────────── */
     .ad-datos { display: grid; gap: 0.25rem 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin: 0 0 0.5rem; }
     .ad-dato { display: flex; flex-direction: column; min-width: 0; }
+    /* La orden interna en tránsito / recibida (29/10/2026). */
+    .ad-recepcion { display: flex; flex-direction: column; gap: 0.125rem; margin: 0 0 0.5rem; padding: 0.5rem 0.75rem; border-radius: var(--radio-input); border: 1px solid var(--color-borde); min-width: 0; overflow-wrap: anywhere; }
+    .ad-recepcion--transito { background: var(--amarillo-suave); border-color: var(--amarillo); }
+    .ad-recepcion--recibida { background: var(--verde-suave); border-color: var(--verde); }
+    .ad-recepcion__texto { font-weight: 700; }
+    .ad-recepcion__difs { margin: 0.25rem 0 0; padding-left: 1.25rem; font-size: 0.875rem; }
     .ad-dato__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--ad-texto-secundario); }
     .ad-dato__valor { font-weight: 600; overflow-wrap: anywhere; white-space: pre-wrap; }
     .ad-renglon { display: grid; gap: 0.25rem 0.75rem; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
@@ -3264,7 +3270,64 @@
       }
       const planillas = await leerPlanillasDeOrden(o, items)
       const facturas = await leerFacturasDeOrden(o)
-      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas, facturas }
+      const recepcion = await leerRecepcionDeOrden(o)
+      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas, facturas, recepcion }
+    }
+
+    // ── MERCADERÍA EN TRÁNSITO ENTRE EMPRESAS (29/10/2026) ─────────────────
+    // Una orden interna (cliente con unidad_grupo_id) ya no hace entrar la
+    // mercadería al stock de la otra empresa: _orden_grupo_espejar arma una
+    // recepción EN TRÁNSITO (orden_grupo_recepciones) que esa empresa acepta
+    // en Stock (recibir_orden_grupo). recepciones_grupo(p_unidad_negocio_id,
+    // p_estado) (leída con pg_get_functiondef el 29/10/2026) devuelve los
+    // envíos a esa empresa (p_estado null = todos) con estado, recibida_en,
+    // recibida_por (nombre) e items con lo enviado, lo recibido y el motivo;
+    // SOLO a quien tiene stock:ver o stock:recibir_transferencia en la que
+    // recibe. Devuelve: null (no es interna), { error: true }, { sinDato:
+    // true } (no aparece: sin ese permiso, o una orden de antes del 29/10) o
+    // el envío.
+    async function leerRecepcionDeOrden(o) {
+      const destino = ordenEntreEmpresas(o) ? empresaGrupoDe(clienteDe(o.cliente_id)) : null
+      if (!destino) return null
+      try {
+        const { data, error } = await supabase.rpc('recepciones_grupo', { p_unidad_negocio_id: destino, p_estado: null })
+        if (error) throw error
+        return (Array.isArray(data) ? data : []).find(r => r?.orden_id === o.id) ?? { sinDato: true }
+      } catch (err) {
+        console.error('No se pudo leer la recepción de la orden interna:', err)
+        return { error: true }
+      }
+    }
+
+    function cantidadRecepcion(n, unidad) {
+      return unidad && unidad !== 'cajas' ? cantidadInsumoHoja(n, unidad) : `${enteroHoja(n)} ${Number(n) === 1 ? 'caja' : 'cajas'}`
+    }
+
+    // "En tránsito a Dolce Pasta" / "Recibida por Emma el 29/10".
+    function textoRecepcionOrden(rec, recibe) {
+      if (!rec || rec.error) return `Es ${recibe}, otra empresa del grupo. No se pudo saber si ya la recibieron.`
+      if (rec.sinDato) return `Es ${recibe}, otra empresa del grupo. Con tu usuario no se ve si ya la recibieron (o la orden es de antes del 29/10/2026, cuando entraba directo a su stock).`
+      const destino = limpio(rec.destino) || recibe
+      if (rec.estado === 'en_transito') return `En tránsito a ${destino}: entra a su stock cuando la reciban.`
+      if (rec.estado === 'recibida') return `Recibida por ${limpio(rec.recibida_por) || 'alguien de ' + destino} el ${fechaHoraHoja(rec.recibida_en).slice(0, 5)}.`
+      return `La recepción en ${destino} se anuló: no entró nada a su stock.`
+    }
+
+    // Las diferencias de lo recibido: "Barquillo · Lote A: se mandaron 10 cajas, llegaron 8 (rotas)".
+    function diferenciasRecepcion(rec) {
+      if (rec?.estado !== 'recibida' || !Array.isArray(rec.items)) return []
+      return rec.items.filter(i => i?.cantidad_recibida !== null && i?.cantidad_recibida !== undefined && Number(i.cantidad_recibida) !== Number(i.cantidad_enviada))
+        .map(i => `${limpio(i.descripcion)}${limpio(i.lote) ? ' · Lote ' + limpio(i.lote) : ''}: se mandaron ${cantidadRecepcion(i.cantidad_enviada, i.unidad)}, llegaron ${cantidadRecepcion(i.cantidad_recibida, i.unidad)}` +
+          (limpio(i.motivo_diferencia) ? ` (${limpio(i.motivo_diferencia)})` : ''))
+    }
+
+    function htmlRecepcionOrden(d, recibe) {
+      const rec = d.recepcion
+      const dif = diferenciasRecepcion(rec)
+      const clase = rec?.estado === 'en_transito' ? ' ad-recepcion--transito' : rec?.estado === 'recibida' ? ' ad-recepcion--recibida' : ''
+      return `<div class="ad-recepcion${clase}" id="ad-recepcion-orden" data-recepcion-estado="${esc(rec?.estado ?? '')}">` +
+        `<span class="ad-dato__rotulo">Orden interna</span><span class="ad-recepcion__texto">${esc(textoRecepcionOrden(rec, recibe))}</span>` +
+        (dif.length ? `<ul class="ad-recepcion__difs" aria-label="Diferencias al recibir">${dif.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '') + '</div>'
     }
 
     // Los lotes de un renglón: los movimientos 'despacho' de esa presentación
@@ -3439,10 +3502,8 @@
       ]
       if (limpio(o.observaciones)) datos.push(htmlDatoAd('Observaciones', o.observaciones))
       const entre = ordenEntreEmpresas(o)
-      if (entre) {
-        const recibe = nombreEmpresa(empresaGrupoDe(cli)) || 'otra empresa del grupo'
-        datos.push(htmlDatoAd('Orden interna', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))
-      }
+      // La orden interna (29/10/2026): en tránsito o recibida, de recepciones_grupo.
+      const recepcion = entre ? htmlRecepcionOrden(d, nombreEmpresa(empresaGrupoDe(cli)) || 'otra empresa del grupo') : ''
       const anulada = o.estado === 'anulada' ? `<div class="ad-aviso ad-aviso--grave">${esc('Anulada. Motivo: ' + (o.anulada_motivo || '—'))}</div>` : ''
       const hayProductos = d.items.some(it => !it.insumo_id)
       const hayInsumos = d.items.some(it => it.insumo_id)
@@ -3461,7 +3522,7 @@
       }
       // El remito de papel (27/10/2026): "Remito N° X" grande y el sello "Acopio".
       const remito = textoNumeroRemito(o)
-      return `<div class="ad-tarjeta">${remito ? `<p class="ad-orden-remito" data-orden-remito>${esc(remito)}</p>` : ''}<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
+      return `<div class="ad-tarjeta">${remito ? `<p class="ad-orden-remito" data-orden-remito>${esc(remito)}</p>` : ''}<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div><div class="ad-datos">${datos.join('')}</div>${recepcion}${anulada}</div>` +
         `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>` +
         // Entre empresas no se divide para facturar (24/10/2026).
         (d.valorizar || entre || puedeFacturar(o) ? '' : htmlFacturasOrden(d))

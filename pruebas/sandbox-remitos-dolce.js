@@ -47,6 +47,7 @@ const FUNCIONES_BASE = [
   'lotesRemitoParaBase', 'itemRemitoParaBase', 'parametrosActualizarRemito', 'asignacionRemito', 'htmlResumenLotesRemito', 'puedeAceptarSugerencia',
   'textoResumenRemito', 'htmlOpcionesRemito', 'htmlSelectorRemito', 'htmlMarcasRemito', 'htmlConoRemito', 'filasLotesRemito', 'htmlLotesRemito',
   'htmlRenglonRemito', 'htmlClientesRemito', 'htmlClienteRemito', 'htmlEncabezadoRemito', 'urlFotoSegura', 'htmlFotoRemito', 'htmlAccionesRemito',
+  'empresaGrupoRemito', 'textoOrdenInterna',
   'pintarTituloRemito', 'pintarFotoRemito', 'ponerSrcFotoRemito', 'pintarRemito', 'renglonRemito', 'marcarSucioRemito', 'elegirProductoRemito',
   'elegirInsumoRemito', 'elegirMarcaRemito', 'cambiarProductoRemito', 'aceptarSugerenciaRemito', 'omitirRenglonRemito', 'quitarRenglonRemito',
   'agregarRenglonRemito', 'agregarLoteRemito', 'quitarLoteRemito', 'pintarPieLotesRemito', 'elegirTalonarioRemito', 'elegirClienteRemito',

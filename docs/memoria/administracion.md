@@ -140,3 +140,18 @@ Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedi
 - **En la revisión de un remito con talonario Acopio** (`htmlRenglonRemito` recibe `rm`): al lado de cada renglón con producto, `htmlSaldoAcopioRemito` suma los acopios ACTIVOS del cliente con el mismo `presentacion_id` y `marca_id` (`saldoAcopioRemito`) contra lo que piden todos los renglones de ese producto. Alcanza: "Acopio: quedan N cajas; después de este remito, M." (celeste). No hay o no alcanza: en AMARILLO "No hay acopio de esto para el cliente" (con cuánto queda si hay algo). Es un aviso: el error definitivo lo da `confirmar_remito_precarga` tal cual. Se lee al abrir el remito, al elegir el cliente o pasar a Acopio (`cargarAcopiosRemito`); cambiar las cajas lo actualiza sin redibujar (`pintarAcopiosRemito`).
 - **Valorizar con la lista de otra empresa** (`abrirValorizar`): `unidadListaDeOtraEmpresa` lee `listas_precios.unidad_negocio_id` (o sabe que es de la empresa si ya está en `estado.listas`). `leerPrecioVentaEn` pide `precio_venta` como siempre enseguida y, si la lista es de otra empresa, `_presentacion_en_unidad` con la unidad de la lista y `precio_venta` de la equivalente; el origen dice "· de Nuss". Sin equivalente (vuelve la misma) no se pide dos veces; sin precio, el renglón queda vacío para escribirlo. Una lista de la misma empresa no cambia nada.
 - **Pruebas:** `test-administracion-acopios.js` (199) y `mut-` (baseline `5e6ca2b`); `test-administracion-lista-otra-empresa.js` (19) y `mut-`. `sandbox-administracion.js` suma `FUNCIONES_ACOPIOS` (con reemplazos para copias viejas) y ya no repite funciones ni constantes que una suite pida dos veces. Maqueta `administracion-acopios` (sale de `administracion-remitos`). `e2e/72-acopios.spec.js` (8, a 390 y 1280). Se tocaron anclas viejas: `mut-administracion-ordenes.js` (la llamada a `leerPrecioVentaEn`) y `mut-administracion-cliente-grupo.js` (más contexto: el link de la cuenta en el grupo es parecido); `test-administracion-diseno.js` y `test-administracion-ordenes.js` cuentan la sección nueva.
+
+## La orden interna en tránsito / recibida (29/10/2026, rama `ci-prueba/recibir-entre-empresas`)
+- El detalle de una orden interna ya no dice "lo que salió entró a su stock": `leerOrden` suma `recepcion`
+  (`leerRecepcionDeOrden`: `recepciones_grupo(<la empresa que recibe>, null)` y busca la de esa orden) y
+  `htmlRecepcionOrden` dibuja `#ad-recepcion-orden` (rótulo "Orden interna", reemplazó al dato de antes):
+  **"En tránsito a <empresa>: entra a su stock cuando la reciban."** (amarillo), **"Recibida por <nombre> el dd/mm."**
+  (verde, hora de Argentina) con la lista de diferencias ("<producto> · Lote X: se mandaron 10 cajas, llegaron 8 cajas
+  (motivo)"; insumos con su unidad y decimales), anulada, "No se pudo saber si ya la recibieron." (error) o, si no aparece,
+  "Es <empresa>, otra empresa del grupo. Con tu usuario no se ve si ya la recibieron (o la orden es de antes del
+  29/10/2026…)": **recepciones_grupo solo devuelve a quien tiene stock:ver o stock:recibir_transferencia en la que
+  recibe** (verificado con pg_get_functiondef el 29/10/2026), así que quien solo administra puede no verla.
+- Lee TODAS las recepciones de esa empresa y filtra por orden: con los meses va a crecer; una `p_orden_id` en la base
+  lo resolvería (pedido para el chat de la base).
+- Suites `test-/mut-administracion-orden-recepcion.js` (36; baseline 497c393), `test-administracion-orden-entre-empresas.js`
+  ajustada, e2e 98.

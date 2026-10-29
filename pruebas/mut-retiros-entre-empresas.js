@@ -51,7 +51,7 @@ const r = correrMutaciones({
     { nombre: 'un unidad_grupo_id vacío cuenta', de: "      return typeof id === 'string' && id ? id : null", a: '      return id ?? null' },
     { nombre: 'nunca es entre empresas', de: '      return !!empresaGrupoDe(clienteDe(f?.clienteId))', a: '      return false' },
     { nombre: 'sin nombre no dice "otra empresa del grupo"', de: "      return limpio(estado.empresasGrupo?.get(id)) || 'otra empresa del grupo'", a: "      return limpio(estado.empresasGrupo?.get(id)) || ''" },
-    { nombre: 'el aviso con otro texto', de: '`Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes`', a: '`Va al stock: ${nombreEmpresaGrupo(id)}`' },
+    { nombre: 'el aviso con otro texto', de: '`Es una orden interna: la mercadería va en tránsito hasta que ${nombreEmpresaGrupo(id)} la reciba (con los mismos lotes)`', a: '`Va al stock: ${nombreEmpresaGrupo(id)}`' },
     // El cliente elegido
     { nombre: 'sin el sello en el cliente elegido', de: `\`\${empresaGrupoDe(c) ? '<span class="rt-sello rt-sello--entre">Orden interna</span>' : ''}</span>\``, a: "`</span>`" },
     { nombre: 'sin el aviso en el cliente elegido', de: '        (empresaGrupoDe(c) ? `<p class="rt-aviso-entre" id="rt-aviso-entre" role="note">${esc(textoEntreEmpresas(c))}</p>` : \'\')', a: "        ''" },
@@ -69,7 +69,7 @@ const r = correrMutaciones({
     { nombre: 'la orden confirmada no sabe que fue entre empresas', de: 'entre: data?.entre_empresas === true || esEntreEmpresas(f) ?', a: 'entre: false ?' },
     { nombre: 'solo la base dice entre empresas (sin el cliente)', de: 'nombreEmpresaGrupo(empresaGrupoDe(clienteDe(f.clienteId))) : null,', a: "'' : null," },
     { nombre: 'la orden confirmada sin el aviso', de: "${entre}${aviso}${htmlEstadoFaltantes(h)}", a: '${aviso}${htmlEstadoFaltantes(h)}' },
-    { nombre: 'el aviso de la orden confirmada sin esc', de: "${esc('Orden interna: lo que salió entra al stock de ' + h.entre + '.')}", a: "${'Orden interna: lo que salió entra al stock de ' + h.entre + '.'}" },
+    { nombre: 'el aviso de la orden confirmada sin esc', de: "${esc('Orden interna: va en tránsito hasta que ' + h.entre + ' la reciba.')}", a: "${'Orden interna: va en tránsito hasta que ' + h.entre + ' la reciba.'}" },
     // La orden interna (27/10/2026)
     { nombre: 'la interna se numera como una común', de: "      if (!empresaGrupoDe(c)) return 'Se numera al confirmar'\n      const pref", a: "      return 'Se numera al confirmar'\n      const pref" },
     { nombre: 'la interna sin la I', de: "Se numera al confirmar: ${pref}-I-…", a: "Se numera al confirmar: ${pref}-…" },

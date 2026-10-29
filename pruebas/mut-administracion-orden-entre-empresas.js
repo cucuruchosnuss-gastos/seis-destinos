@@ -51,7 +51,7 @@ const r = correrMutaciones({
     { nombre: 'el sello sin el título', de: "title=\"${esc(recibe ? 'Otra empresa del grupo: ' + recibe : 'Otra empresa del grupo')}\"", a: '' },
     { nombre: 'la lista de clientes sin "Empresa del grupo"', de: "        `${empresaGrupoDe(fichaCliente(c.cliente_id)) ? '<span class=\"ad-sello ad-sello--entre\" data-sello-entre>Empresa del grupo</span>' : ''}` +\n", a: '' },
     // El detalle
-    { nombre: 'el detalle sin el dato "Entre empresas"', de: "        datos.push(htmlDatoAd('Orden interna', `Es ${recibe}, otra empresa del grupo: lo que salió entró a su stock.`))\n", a: '' },
+    { nombre: 'el detalle sin el dato "Orden interna"', de: '${recepcion}${anulada}</div>`', a: '${anulada}</div>`' },
     { nombre: 'el detalle sin el sello', de: '<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div>', a: '<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloAcopio(o)}</div>' },
     { nombre: 'el detalle con la comisión', de: '${htmlDeudaEntre(o)}` : htmlComisionOrden(d)', a: '` : htmlComisionOrden(d)' },
     { nombre: 'el detalle trata la orden como común', de: '          : entre ? `<p class="ad-total">', a: '          : false ? `<p class="ad-total">' },

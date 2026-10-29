@@ -2579,10 +2579,11 @@
     }
 
     // 26/10/2026 ("Mandar a otra empresa del grupo"): dice adónde va y que van
-    // los mismos lotes (_orden_grupo_espejar los copia).
+    // los mismos lotes (_orden_grupo_espejar los copia). Desde el 29/10/2026 la
+    // mercadería queda EN TRÁNSITO hasta que esa empresa la recibe (en Stock).
     function textoEntreEmpresas(c) {
       const id = empresaGrupoDe(c)
-      return id ? `Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes` : ''
+      return id ? `Es una orden interna: la mercadería va en tránsito hasta que ${nombreEmpresaGrupo(id)} la reciba (con los mismos lotes)` : ''
     }
 
     // ── el cliente ─────────────────────────────────────────────────────────
@@ -4593,7 +4594,7 @@
         ? '<div class="rt-aviso">Esta orden ya había entrado antes de que se cortara la conexión: no se cargó dos veces.</div>' : ''
       const cuando = h.orden?.cargada_en ? fechaHoraHoja(h.orden.cargada_en) : ''
       const detalle = [[h.cliente?.nombre, h.total].filter(Boolean).join(' · '), cuando].filter(Boolean)
-      const entre = h.entre ? `<p class="rt-aviso-entre" role="note">${esc('Orden interna: lo que salió entra al stock de ' + h.entre + '.')}</p>` : ''
+      const entre = h.entre ? `<p class="rt-aviso-entre" role="note">${esc('Orden interna: va en tránsito hasta que ' + h.entre + ' la reciba.')}</p>` : ''
       return `<span class="rt-hecho__ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>` +
         `<span class="rt-hecho__rotulo">${h.entre ? 'Orden interna confirmada' : 'Retiro confirmado'}</span>` +
         `<div class="rt-codigo-grande">${esc(h.codigo || '—')}</div>` +
@@ -5286,8 +5287,8 @@
     // Stock → "Mandar a otra empresa del grupo" trae ?cliente=<id>: el cliente
     // que ES esa empresa (clientes.unidad_grupo_id). La orden arranca en la
     // fábrica de ese cliente y con él ya elegido; se carga producto terminado
-    // e insumos como en cualquier orden, y arriba dice "Va al stock de <empresa>
-    // con los mismos lotes". Si quedó una orden a medio cargar, NO se pisa:
+    // e insumos como en cualquier orden, y arriba dice "Es una orden interna: la
+    // mercadería va en tránsito hasta que <empresa> la reciba". Si quedó una orden a medio cargar, NO se pisa:
     // sigue esa y se avisa. Un cliente que no es otra empresa del grupo, que no
     // es de una fábrica donde se puede cargar o que no se encuentra se avisa,
     // y la Carga sigue como siempre.

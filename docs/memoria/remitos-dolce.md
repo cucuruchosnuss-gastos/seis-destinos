@@ -74,6 +74,21 @@ Pedido de Facu: "Guardar" y "Confirmar" confundían (tocó Guardar, salió "guar
 - **Volver a leer y Descartar** (`frenarAutoguardadoRemito`): esperan la llamada en curso (que no caiga en la base
   DESPUÉS) y no mandan lo que esperaba el retardo (se pisa o se tira); si fallan, lo pendiente se manda.
 
+### La orden interna y los lotes (29/10/2026, rama `ci-prueba/recibir-entre-empresas`)
+- **Orden interna**: si el cliente ES otra empresa del grupo (`clientes.unidad_grupo_id`, que `leerClientes` ya traía;
+  ej. "Paz Mirta" = Cucuruchos Nuss), arriba de la barra de Confirmar va `#ad-rm-interna`: "Es una orden interna: la
+  mercadería va en tránsito hasta que <empresa> la reciba." (`empresaGrupoRemito`, `textoOrdenInterna`; la misma
+  fábrica no cuenta; una empresa que no se conoce, "la otra empresa del grupo"). El aviso de confirmada suma "Va en
+  tránsito hasta que <empresa> la reciba.". La base (`_orden_grupo_espejar`, 29/10) arma la recepción en tránsito; se
+  recibe en Stock (stock.md).
+- **Varios lotes por renglón**: ya existían (lote + cajas, "+ Agregar lote", quitar, lo leído por la IA precargado,
+  mayúsculas y 40 letras al guardar). El pie ahora dice **"Lotes: 25 de 31 cajas · faltan 6 cajas"**, con "Lotes: …" en
+  amarillo (`.ad-rm-lotes__asignado--falta`) mientras no suman; la base lo rechaza al confirmar ("los lotes suman X y
+  el renglón dice Y"). Formato de `p_items[].lotes`: [{lote, cajas}] en producto (verificado con pg_get_functiondef de
+  `_remito_items_normalizar` el 29/10/2026; en insumo la base ya acepta {lote, cantidad}, la pantalla todavía no).
+- Suites `test-/mut-remitos-dolce-interna-lotes.js` (33; 15/15, baseline 497c393) y `e2e/98-recibir-entre-empresas.spec.js`
+  (la maqueta `remitos-dolce-revisar` tiene el cliente `c-d-paz` del grupo).
+
 ## Lo que quedó afuera
 - **La Carga** (retiros.html): un link chico **"Remitos Dolce →"** (`#rt-link-remitos`, a `?pestana=subir`), con la
   misma regla de antes (retiros:cargar en una fábrica sin control; `pintarEntradaRemitos`).
