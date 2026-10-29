@@ -124,7 +124,7 @@ Pedido de Facu: "que Manuel suba la foto y cargue los lotes en el mismo lugar, s
   opciones también, y el número se busca ("180" → la Caja N°2). En el renglón elegido, en negrita (`htmlNombreRenglonRemito`,
   `.ad-rm-unidades` sin cortarse). Administración ("Nuevo acopio") usa el mismo `nombreRenglonRemito`/`gruposRemito`: también
   lo muestra. La Carga y la hoja no lo usan.
-- Suites `test-/mut-remitos-dolce-mas-simple.js` (111; 74/74, baseline 2003aa3), `e2e/99-remitos-mas-simple.spec.js` (maqueta
+- Suites `test-/mut-remitos-dolce-mas-simple.js` (112; 77/77, baseline 2003aa3; también `test-remitos-dolce-subir` 156 / 125/125 y `-revisar` 188 / 98/98), `e2e/99-remitos-mas-simple.spec.js` (maqueta
   nueva `remitos-dolce-mas-simple`: el catálogo de Dolce de la base y 30 conos). La maqueta `remitos-dolce-revisar` tenía el
   cliente `c-d-paz` solo en el `.json`: ahora sale del generador.
 
