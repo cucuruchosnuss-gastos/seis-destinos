@@ -175,9 +175,12 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
   chk('… viene elegida la cuenta de Nuss (los dos son de Nuss)', S.estado.salida.cuentaId === 'k-macro')
   chk('… el título con la cantidad y el total', N(doc.getElementById('chq-salida-titulo').textContent) === 'Dar salida a 2 cheques · $ 1.000.000,00')
   const r = N(doc.getElementById('chq-salida-resumen').innerHTML)
-  chk('… el resumen: el total y que entra completo, los gastos del banco aparte', /Total de los 2 cheques/.test(r) &&
-    /Entran \$ 1\.000\.000,00 a Macro Paz Mirta\. Los gastos o intereses del banco se cargan aparte en Gastos, categoría &#39;Gastos bancarios y comisiones&#39;\./.test(r), r)
-  chk('… sin "Escribí cuánto acreditó" ni un gasto automático', !/acreditó/.test(r) && !/se carga un gasto/.test(r))
+  // 28/10/2026: por este camino (un solo paso) no se carga gasto; se dice, y
+  // cómo cargarlo (mandarlo al banco y acreditarlo). Sin botón a Gastos.
+  chk('… el resumen: el total, que entra completo y que así no se carga gasto', /Total de los 2 cheques/.test(r) &&
+    r.includes('Entran $ 1.000.000,00 a Macro Paz Mirta. Así no se carga ningún gasto del banco: si cobró gastos, sacá el tilde de «Ya se acreditó» y cargalos al acreditar.') &&
+    !/data-gastos-banco/.test(r), r)
+  chk('… sin "Escribí cuánto acreditó" ni un gasto automático', !/cuánto acreditó|<input/.test(r) && !/se carga un gasto/.test(r))
   const llamadas = []
   esperas.push((async () => {
     doc.getElementById('chq-venta-detalle').value = '  operación ' + marca('detalle') + ' '
@@ -193,7 +196,7 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
     chk('vender: vender_cheques con el payload exacto (p_neto = el total, en pesos; el detalle limpio)', llamadas[0] && llamadas[0][0] === 'vender_cheques' &&
       JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_cheque_ids: ['n1', 'n2'], p_cuenta_id: 'k-macro', p_fecha: S.hoyArgentina(), p_neto: 1000000, p_detalle: 'operación ' + marca('detalle') }),
       JSON.stringify(llamadas[0]))
-    chk('… dice que entró el total y que los gastos del banco van aparte', N(S.__llamadas.exitos.at(-1)) === 'Se vendieron 2 cheques: entraron $ 1.000.000,00 en Macro Paz Mirta. Los gastos del banco se cargan aparte en Gastos.', S.__llamadas.exitos.at(-1))
+    chk('… dice que entró el total (sin mandar a cargar el gasto aparte)', N(S.__llamadas.exitos.at(-1)) === 'Se vendieron 2 cheques: entraron $ 1.000.000,00 en Macro Paz Mirta.', S.__llamadas.exitos.at(-1))
     chk('… y limpia la selección', S.estado.seleccion.activa === false)
   })())
 }
@@ -525,22 +528,22 @@ function armarBanco() {
   chk('la etiqueta: "En el banco"', S.ETIQUETA_ESTADO_CHEQUE.en_banco === 'En el banco')
 }
 
-// ── Acreditar: lo que entra (IMPORTE COMPLETO, 24/10/2026) ───────────────
-// Ya no se reparte ni se escribe lo acreditado: acreditar_cheques mete el
-// valor completo de cada cheque (pg_get_functiondef del 24/10/2026).
+// ── Acreditar: lo que entra por cuenta y la fecha ────────────────────────
+// Lo acreditado (venta) y los gastos (depósito) de cada cheque, desde el
+// 28/10/2026: test-cheques-acreditar.js.
 {
   const S = armarBanco()
   const [b1, b2, b3, b4] = S.estado.filas
   const ent = S.entradasPorCuenta([b1, b2, b3, b4], S.estado.cuentasBanco.porId)
   chk('lo que entra, por cuenta: Macro Paz Mirta $ 1.250.000,50 (3) y Macro Dolce $ 1.000 (1)',
     ent.length === 2 && ent[0].cuenta === 'Macro Paz Mirta' && ent[0].centavos === 125000050 && ent[0].cheques === 3 && ent[1].cuenta === 'Macro Dolce' && ent[1].centavos === 100000, JSON.stringify(ent))
-  chk('… con la fábrica de cada cuenta; una sola fábrica: esa; dos: ninguna', ent[0].unidadId === U_NUSS && S.unidadUnicaDe([ent[0]]) === U_NUSS && S.unidadUnicaDe(ent) === null)
+  chk('… el botón "Cargar el gasto del banco" se fue (28/10/2026)', typeof S.unidadUnicaDe === 'undefined' && typeof S.htmlGastosBanco === 'undefined' && !/data-gastos-banco/.test(JS))
   const e = S.erroresAcreditar([b1, b2], '2026-10-09', '2026-10-13')
   chk('errores: antes del envío', e.some(x => /anterior al envío al banco \(10\/10\/2026\)/.test(x)), e.join(' | '))
-  chk('… lo acreditado ya no se pide', S.erroresAcreditar([b1, b2], '2026-10-13', '2026-10-13').length === 0)
+  chk('… sin nada escrito no frena (la base usa lo de siempre)', S.erroresAcreditar([b1, b2], '2026-10-13', '2026-10-13').length === 0)
   chk('… una fecha futura', S.erroresAcreditar([b1], '2026-10-14', '2026-10-13').some(x => /posterior a hoy/.test(x)))
   chk('… sin cheques', S.erroresAcreditar([], '2026-10-13', '2026-10-13')[0] === 'Elegí al menos un cheque.')
-  chk('parametrosAcreditar: solo los cheques (sin "acreditado") y la fecha', JSON.stringify(S.parametrosAcreditar([b1, b2], '2026-10-13')) ===
+  chk('parametrosAcreditar sin nada escrito: solo los cheques y la fecha', JSON.stringify(S.parametrosAcreditar([b1, b2], '2026-10-13')) ===
     JSON.stringify({ p_items: [{ cheque_id: 'b1' }, { cheque_id: 'b2' }], p_fecha: '2026-10-13' }))
 }
 
@@ -556,12 +559,12 @@ function armarBanco() {
   chk('"Cargar lo acreditado": el panel a la vista, con la fecha de hoy', doc.getElementById('chq-acreditar').hidden === false && doc.getElementById('chq-acr-fecha').value === S.hoyArgentina())
   chk('… la fecha no puede ser antes del envío más nuevo', doc.getElementById('chq-acr-fecha').min === '2026-10-12')
   const lista = doc.getElementById('chq-acr-lista').innerHTML
-  chk('… los tres cheques, SIN un campo "Acreditó $"', (lista.match(/chq-acr-fila"/g) || []).length === 3 && !/data-acr-cheque|Acreditó \$|<input/.test(lista), lista)
+  chk('… los tres cheques, cada uno con su campo (28/10/2026: "Monto acreditado" o "Gastos del banco")', (lista.match(/chq-acr-fila"/g) || []).length === 3 &&
+    (lista.match(/data-acr-monto=/g) || []).length === 3 && (lista.match(/>Monto acreditado</g) || []).length === 2 && (lista.match(/>Gastos del banco</g) || []).length === 1, lista)
   const res = N(doc.getElementById('chq-acr-resumen').innerHTML)
-  chk('… el resumen: el total y "Entran $ X a <cuenta>. Los gastos o intereses del banco se cargan aparte…"', /Total de los 3 cheques/.test(res) && /\$ 1\.250\.000,50/.test(res) &&
-    /Entran \$ 1\.250\.000,50 a Macro Paz Mirta\. Los gastos o intereses del banco se cargan aparte en Gastos, categoría &#39;Gastos bancarios y comisiones&#39;\./.test(res), res)
-  chk('… con el botón a Gastos (categoría y fábrica), en otra pestaña', /<a class="chq-btn chq-btn--chico chq-gastos-banco__ir" data-gastos-banco href="gastos\.html\?nuevo=1&amp;categoria=7041825a-5a0c-484b-be07-17f9978a0d97&amp;unidad=u-nuss" target="_blank" rel="noopener">Cargar el gasto del banco<\/a>/.test(res), res)
-  chk('… sin interés ni "Acreditado" que escribir', !/Interés|Falta escribir/.test(res))
+  chk('… el resumen: el total, "Entran $ X a <cuenta>." y que no se carga gasto (todo como viene)', /Total de los 3 cheques/.test(res) && /\$ 1\.250\.000,50/.test(res) &&
+    /Entran \$ 1\.250\.000,50 a Macro Paz Mirta\. No se carga ningún gasto\./.test(res), res)
+  chk('… sin el botón a Gastos', !/data-gastos-banco|Cargar el gasto del banco/.test(res))
   const llamadas = []
   esperas.push((async () => {
     const soltar = []
@@ -575,15 +578,16 @@ function armarBanco() {
     await Promise.all([p1, p2])
     chk('acreditar: un doble toque manda UNA sola vez', llamadas.length === 1, llamadas.length)
     const p = llamadas[0]?.[1]
-    chk('acreditar: llama a acreditar_cheques con el payload exacto (solo los cheques, sin "acreditado")', llamadas[0]?.[0] === 'acreditar_cheques' &&
+    chk('acreditar: llama a acreditar_cheques con el payload exacto (las ventas con lo acreditado, el depósito con sus gastos)', llamadas[0]?.[0] === 'acreditar_cheques' &&
       JSON.stringify(Object.keys(p ?? {})) === JSON.stringify(['p_items', 'p_fecha']) && p.p_fecha === S.hoyArgentina() &&
-      JSON.stringify([...p.p_items].sort((a, b) => a.cheque_id.localeCompare(b.cheque_id))) === JSON.stringify([{ cheque_id: 'b1' }, { cheque_id: 'b2' }, { cheque_id: 'b3' }]), JSON.stringify(llamadas[0]))
+      JSON.stringify([...p.p_items].sort((a, b) => a.cheque_id.localeCompare(b.cheque_id))) ===
+        JSON.stringify([{ cheque_id: 'b1', acreditado: 600000 }, { cheque_id: 'b2', acreditado: 400000 }, { cheque_id: 'b3', gastos: 0 }]), JSON.stringify(llamadas[0]))
     const html = N(doc.getElementById('chq-banco-resultado-texto').innerHTML)
-    chk('el resultado: "Entró $ X en la cuenta", sin gasto de intereses', /Entró \$ 1\.250\.000,50 en Macro Paz Mirta/.test(html) && !/gasto de intereses|Ver el gasto/.test(html), html)
+    chk('el resultado: "Entró $ X en la cuenta" y que no se cargó ningún gasto', /Entró \$ 1\.250\.000,50 en Macro Paz Mirta/.test(html) && /No se cargó ningún gasto del banco\./.test(html) && !/Ver el gasto/.test(html), html)
     chk('… el cheque de Dolce en un banco de Nuss: "queda en Entre empresas"', /Los cheques de Dolce Pasta \(\$ 250\.000,50\) entraron en un banco de otra fábrica: quedan en «Entre empresas»\./.test(html), html)
-    chk('… y el botón para cargar los gastos del banco (en la misma pestaña)', /Los gastos o intereses del banco se cargan aparte/.test(html) && /data-gastos-banco href="gastos\.html\?nuevo=1&amp;categoria=7041825a-5a0c-484b-be07-17f9978a0d97&amp;unidad=u-nuss">/.test(html), html)
+    chk('… sin el botón para cargar los gastos del banco', !/data-gastos-banco|Cargar el gasto del banco/.test(html), html)
     chk('… el resultado a la vista, y se cierran el panel y la elección', doc.getElementById('chq-banco-resultado').hidden === false && S.bancoUI.ids.size === 0 && S.bancoUI.panel === null)
-    chk('… avisa y recarga', N(S.__llamadas.exitos.at(-1)) === 'Se acreditaron 3 cheques.' && S.__llamadas.refrescar === 1)
+    chk('… avisa (sin gastos, corto) y recarga', N(S.__llamadas.exitos.at(-1)) === 'Se acreditaron 3 cheques. No se cargó ningún gasto del banco.' && S.__llamadas.refrescar === 1, S.__llamadas.exitos.at(-1))
   })())
 }
 {

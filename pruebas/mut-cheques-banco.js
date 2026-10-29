@@ -17,7 +17,9 @@ correrMutacionesEnVarios([
     suite: SUITE,
     original: process.env.ARCHIVO_BASE || ARCHIVO_CHEQUES,
     escape: 'esc',
-    funciones: ['htmlOpcionesCuentas', 'htmlGruposEnBanco', 'htmlChequeEnBanco', 'htmlResultadoAcreditar'],
+    // htmlResultadoAcreditar pasó a mut-cheques-acreditar.js (28/10/2026):
+    // ahora dice los gastos que creó la base, y esa suite los mira.
+    funciones: ['htmlOpcionesCuentas', 'htmlGruposEnBanco', 'htmlChequeEnBanco'],
     equivalentes: [
       { expr: 'esc(formatearFechaCob(g.fecha))', motivo: 'una fecha dd/mm/aaaa o "—" (formatearFechaCob no devuelve otra cosa): sin ningún carácter que escapar' },
       { expr: 'esc(String(n))', motivo: 'un número (la cantidad de cheques del grupo)' },
@@ -26,16 +28,15 @@ correrMutacionesEnVarios([
       { expr: 'esc(modo)', motivo: "solo puede ser 'venta' o 'deposito' (se decide arriba en la misma función)" },
       { expr: "esc(textoModoEnvio(modo === 'venta' ? 'venta' : 'deposito'))", motivo: 'texto fijo del código: "Venta" o "Depósito"' },
       { expr: 'esc(textoEsperando(diasEsperando(ch.envio_fecha, hoy)))', motivo: 'texto fijo con un número ("hace 3 días")' },
-      { expr: 'esc(formatearImporte(entro))', motivo: 'un importe formateado (o "—"): formatearImporte siempre devuelve "$ número" o "—"' },
-      { expr: 'esc(formatearImporte(o.centavos / 100))', motivo: 'un importe formateado: sin ningún carácter que escapar' },
     ],
     manuales: [
       { nombre: 'sin el filtro "Vendidos"', de: "      { id: 'vendidos', nombre: 'Vendidos' },\n", a: '' },
       // IMPORTE COMPLETO (24/10/2026)
       { nombre: 'vender: el importe completo viaja en centavos', de: 'p.p_neto = (Number(brutoCent) || 0) / 100', a: 'p.p_neto = (Number(brutoCent) || 0)' },
-      { nombre: 'acreditar vuelve a mandar lo acreditado', de: 'p_items: cheques.map(ch => ({ cheque_id: ch.id }))', a: 'p_items: cheques.map(ch => ({ cheque_id: ch.id, acreditado: ch.importe }))' },
+      // ACREDITAR VENTA Y DEPÓSITO (28/10/2026)
+      { nombre: 'acreditar manda solo los ids (sin lo acreditado ni los gastos)', de: '          if (!valores?.has?.(ch.id)) return item\n', a: '          return item\n' },
       { nombre: 'la cuenta del selector no queda elegida', de: "      sel.value = s.cuentaId ?? ''\n", a: '' },
-      { nombre: 'el resultado de acreditar sin el botón de los gastos del banco', de: '      if (lineas.length) lineas.push(htmlGastosBanco(', a: '      if (false) lineas.push(htmlGastosBanco(' },
+      { nombre: 'el resultado de acreditar no dice que no se cargó ningún gasto', de: '      if (filas.length && !gastos.length) lineas.push(', a: '      if (false) lineas.push(' },
       { nombre: 'la cuenta por defecto no es la primera', de: '[0]?.cuentas[0]?.id ?? null', a: '[0]?.cuentas[1]?.id ?? null' },
       { nombre: 'avisa "entre empresas" también en el banco de la misma fábrica', de: '        if (!u || u === destino) continue', a: '        if (!u) continue' },
       { nombre: 'depositar sin cuenta sigue', de: "      if (TIPOS_BANCO.includes(tipo) && !cuentaId) e.push('Elegí la cuenta del banco.')\n", a: '' },
@@ -103,7 +104,7 @@ correrMutacionesEnVarios([
     original: path.join(RAIZ, 'js', 'cobranzas-comun.js'),
     funciones: [],
     manuales: [
-      { nombre: 'el común: en el banco no está fuera de la cartera', de: "export const ESTADOS_FUERA_DE_CARTERA = ['en_banco', ...ESTADOS_SALIDOS]", a: 'export const ESTADOS_FUERA_DE_CARTERA = [...ESTADOS_SALIDOS]' },
+      { nombre: 'el común: en el banco no está fuera de la cartera', de: "export const ESTADOS_FUERA_DE_CARTERA = ['en_banco', ...ESTADOS_SALIDOS, 'rechazado']", a: "export const ESTADOS_FUERA_DE_CARTERA = [...ESTADOS_SALIDOS, 'rechazado']" },
       { nombre: 'el común: en el banco sin etiqueta', de: " en_banco: 'En el banco',", a: '' },
       { nombre: 'el común no sabe decir "Vendido el …"', de: "  if (estadoCheque === 'vendido') return `Vendido${cuando}${d ? ` en ${d}` : ''}`\n", a: '' },
     ],

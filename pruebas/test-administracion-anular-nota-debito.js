@@ -187,6 +187,9 @@ esperas.push((async () => {
         'data-parte', 'data-dv-parte', 'data-dv-guardada', 'data-dv-ver-pdf', 'data-dv-factura-error', 'data-dv-factura'].map(m => [m, 'la ventana de la división (28/10/2026)']),
       // 28/10/2026: la comisión común salió del flujo.
       ['id="ad-filtro-comision"', 'la comisión común (28/10/2026)'], ['id="ad-btn-comision"', 'la comisión común (28/10/2026)'],
+      // 28/10/2026 (región Cheques): se fue el botón "Cargar el gasto del
+      // banco"; el gasto lo crea acreditar_cheques al acreditar.
+      ['data-gastos-banco', 'el botón "Cargar el gasto del banco" de la cartera (28/10/2026)'],
     ])
     const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !RETIRADOS.has(m))
     chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
