@@ -206,7 +206,8 @@ for (const [ancho, alto] of TAMANOS) {
     await page.locator('[data-rm-lote="1"][data-k="1"]').pressSequentially('l-10433');
     await expect(page.locator('[data-rm-lote="1"][data-k="1"]')).toHaveValue('L-10433');
     await page.locator('[data-rm-lote-cajas="1"][data-k="1"]').fill('39');
-    await expect(page.locator('[data-rm-lotes-pie="1"]')).toHaveText('Asignado 69 de 84 · faltan 15 cajas');
+    await expect(page.locator('[data-rm-lotes-pie="1"]')).toHaveText('Lotes: 69 de 84 cajas · faltan 15 cajas');
+    await expect(page.locator('[data-rm-lotes-pie="1"] .ad-rm-lotes__asignado')).toHaveClass(/ad-rm-lotes__asignado--falta/);
     await page.locator('[data-rm-lote-agregar="1"]').click();
     await page.locator('[data-rm-lote="1"][data-k="2"]').fill('10440');
     await page.locator('[data-rm-lote-cajas="1"][data-k="2"]').fill('15');

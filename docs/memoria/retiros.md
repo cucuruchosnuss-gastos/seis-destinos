@@ -126,3 +126,17 @@ Rama `ci-prueba/remitos-rosario-subir` (desde `ci-prueba/remitos-rosario`, pedid
 - **El sondeo**: mientras haya algo leyéndose y la pantalla esté a la vista, la lista se vuelve a pedir cada 6 segundos (`programarSondeo`; con la pestaña escondida espera).
 - **Hueco de base (27/10/2026):** `ordenes_retiro` se lee con `retiros:ver`; quien solo tiene `retiros:cargar` (el caso de Rosario) recibe el embed en null y ve **"Confirmado: ya es una orden"** sin el código. Para el código haría falta que la base lo dé (una columna en `remitos_precarga` o una rpc `mis_remitos_subidos`).
 - Suites `test-/mut-retiros-subir-remitos.js` (154; mut 116/116 + 2 equivalentes, baseline `f364914`); `sandbox-retiros.js` suma `pintarEntradaRemitos`, `puedeSubirRemitos`, `fabricasRemitos` y `leerFabricasSinControl` (los llama `pintarEncabezado` / `init`); `seguras-retiros.js` suma `ICONO_REMITO`, `tipoRemito`, `fotoRemito` y `selloAcopio`. Maqueta **`retiros-remitos`** (de `pruebas/datos-maqueta/retiros-remitos.js`, sobre `retiros-sin-control`; Dolce sin control; un remito en cada estado, uno de acopio y uno de otra persona; fechas del 27/10/2026: para mirarla a mano después del 03/11 hay que correrlas, el e2e lo hace solo). `e2e/maqueta/supabase-falso.js`: `upload` acepta `globalThis.__maqueta.subir`. **`e2e/70-subir-remitos.spec.js`** (390 y 1280).
+
+## La orden interna va EN TRÁNSITO (29/10/2026, rama `ci-prueba/recibir-entre-empresas`)
+- Desde el 29/10 `_orden_grupo_espejar` ya no hace entrar la mercadería al stock de la otra empresa: arma una recepción
+  en tránsito que esa empresa acepta en Stock (`recibir_orden_grupo`). Los textos de la Carga cambiaron: el aviso antes
+  de confirmar (`textoEntreEmpresas`, también arriba del catálogo) dice "Es una orden interna: la mercadería va en
+  tránsito hasta que <empresa> la reciba (con los mismos lotes)" y el de la orden confirmada "Orden interna: va en
+  tránsito hasta que <empresa> la reciba.". Ajustados test-/mut-retiros-entre-empresas, -mandar-grupo, mut-retiros-carga
+  y los e2e 62 y 68.
+- **Varios lotes por renglón en las fábricas sin control** (Dolce): verificado el 29/10/2026 que ya funciona igual que en
+  Remitos Dolce (lote + cajas a mano, "+ Agregar lote", la suma tiene que dar el total: `faltaLotesMano` frena el
+  renglón con "faltan asignar X a los lotes" / "asignaste X de más"). No hizo falta una pieza en js/: cada pantalla tiene
+  la suya (la Carga frena antes de confirmar; en Remitos Dolce frena la base).
+- La hoja y el PDF ya muestran cada lote con sus cajas cuando hay más de uno (`htmlLotesHoja` de js/retiros-comun.js,
+  "10430 (12) · L-10433 (5)"; con uno solo, solo el lote): las órdenes sin control guardan sus lotes como cualquier otra.

@@ -100,7 +100,9 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = cuerpo(S)
     chk('el detalle tiene el sello "Orden interna"', /ad-sello--entre[^>]*>Orden interna</.test(h))
-    chk('el dato "Orden interna" dice quién es y que entró a su stock', /Orden interna<\/span><span class="ad-dato__valor">Es Dolce Pasta, otra empresa del grupo: lo que salió entró a su stock\./.test(h))
+    // 29/10/2026: ya no "entró a su stock": en tránsito o recibida (test-administracion-orden-recepcion.js);
+    // sin la recepción a la vista, dice quién es sin inventar.
+    chk('el dato "Orden interna" dice quién es (sin la recepción a la vista, no inventa)', /id="ad-recepcion-orden"[^>]*><span class="ad-dato__rotulo">Orden interna<\/span><span class="ad-recepcion__texto">Es Dolce Pasta, otra empresa del grupo\. Con tu usuario no se ve si ya la recibieron/.test(h) && !/entró a su stock/.test(h))
     chk('el total', /Total \$\s500\.000,00/.test(h))
     chk('la deuda entre empresas, no la cuenta corriente', /Queda como deuda de Dolce Pasta con Cucuruchos Nuss \(Entre empresas\): no va a la cuenta corriente/.test(h))
     chk('sin comisión (ni el botón ni la línea)', !/Comisión/.test(h) && !/ad-btn-comision/.test(h))

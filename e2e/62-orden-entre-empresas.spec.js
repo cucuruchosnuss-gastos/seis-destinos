@@ -53,7 +53,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     // (en el celular la tarjeta del cliente no se ve en ese paso) y sin devolución.
     await page.locator('#rt-cliente-buscar').fill('dolce');
     await page.locator('[data-cliente="c-dp"]').first().click();
-    const TEXTO = 'Va al stock de Dolce Pasta con los mismos lotes';
+    const TEXTO = 'Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba (con los mismos lotes)';
     const avisoPaso = page.locator(ancho < 1024 ? '#rt-aviso-entre-catalogo' : '#rt-aviso-entre');
     await expect(avisoPaso).toBeVisible();
     await expect(avisoPaso).toHaveText(TEXTO);
@@ -79,12 +79,12 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await captura(page, `entre-empresas-orden-${nombre}`, info);
     await page.locator('#rt-revisar').click();
     await expect(page.locator('#rt-vista-resumen')).toBeVisible();
-    await expect(page.locator('#rt-resumen .rt-aviso-entre')).toHaveText('Va al stock de Dolce Pasta con los mismos lotes');
+    await expect(page.locator('#rt-resumen .rt-aviso-entre')).toHaveText('Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba (con los mismos lotes)');
     expect(await sinCostado(page), 'sin scroll de costado en el resumen').toBe(true);
     await page.locator('#rt-confirmar').click();
     await expect(page.locator('#rt-hecho')).toContainText('N-I-0042');
     await expect(page.locator('#rt-hecho .rt-hecho__rotulo')).toHaveText('Orden interna confirmada');
-    await expect(page.locator('#rt-hecho .rt-aviso-entre')).toHaveText('Orden interna: lo que salió entra al stock de Dolce Pasta.');
+    await expect(page.locator('#rt-hecho .rt-aviso-entre')).toHaveText('Orden interna: va en tránsito hasta que Dolce Pasta la reciba.');
     const reg = rpc.find(r => r.nombre === 'registrar_orden_retiro')
     expect(reg?.params?.p_cliente_id).toBe('c-dp');
     expect(reg.params.p_items.every(i => !i.tipo || i.tipo === 'retiro'), 'sin devoluciones').toBe(true);
@@ -131,7 +131,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await fila.click();
     const cuerpo = page.locator('#ad-orden-cuerpo');
     await expect(cuerpo.locator('[data-entre-deuda]')).toHaveText('Queda como deuda de Dolce Pasta con Cucuruchos Nuss (Entre empresas): no va a la cuenta corriente.');
-    await expect(cuerpo).toContainText('Es Dolce Pasta, otra empresa del grupo: lo que salió entró a su stock.');
+    await expect(cuerpo).toContainText('Es Dolce Pasta, otra empresa del grupo.');
     await expect(cuerpo).not.toContainText('Comisión');
     await expect(cuerpo).not.toContainText('Facturas de ARCA');
     // Ni los puntos N1 / N2 (28/10/2026: van en la misma pantalla).

@@ -28,6 +28,9 @@ correrMutaciones({
     { nombre: 'la plata con decimales', de: "return pre + formatearNumeroAr(Math.round(Number(n)), { decimales: 0 })", a: "return pre + formatearNumeroAr(Number(n), { decimales: 2 })" },
     // Qué tarjetas
     { nombre: 'Seguridad para cualquiera', de: "if (c === 'seguridad') { if (ctx?.esSuperAdmin) out.push({ ...SEGURIDAD_TABLERO }); continue }", a: "if (c === 'seguridad') { out.push({ ...SEGURIDAD_TABLERO }); continue }" },
+    // 29/10/2026: la mercadería en camino
+    { nombre: 'la mercadería en camino sin la clave', de: "  'stock:mercaderia_en_camino': {", a: "  'stock:mercaderia_en_camino_x': {" },
+    { nombre: 'la mercadería en camino a otra sección', de: "url: 'modulos/stock.html#st-en-camino' }", a: "url: 'modulos/stock.html' }" },
     { nombre: 'Empleados repetida al lado de Accesos', de: "    if (c === 'empleados' && claves.has('accesos')) continue\n", a: '' },
     { nombre: 'una tablet va a la gestión', de: 'url: (esDispositivo && m.urlDispositivo) || urlDeModulo(m, ctx ?? {})', a: 'url: urlDeModulo(m, ctx ?? {})' },
     { nombre: 'Producción mediana por defecto', de: "  produccion: 'ancha', cobranzas: 'mediana',", a: "  produccion: 'mediana', cobranzas: 'mediana'," },

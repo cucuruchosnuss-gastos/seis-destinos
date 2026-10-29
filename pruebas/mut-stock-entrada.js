@@ -34,7 +34,7 @@ correrMutacionesEnVarios([
       { nombre: '"Insumos" después del terminado se queda en el terminado', de: "      if (estado.vista === 'terminado') mostrarVista(estado.vistaInsumos || 'stock')\n", a: '' },
       { nombre: 'el botón del terminado sin conectar', de: "    document.getElementById('btn-entrada-terminado').addEventListener('click', () => abrirTerminado())\n", a: '' },
       { nombre: 'nunca con desde=stock', de: "      return 'produccion-gestion.html?vista=stock' + (conVolver ? '&desde=stock' : '')", a: "      return 'produccion-gestion.html?vista=stock'" },
-      { nombre: 'sin acceso no frena', de: "      if (entrada === 'sin') {\n        document.getElementById('sin-acceso').hidden = false\n        return\n      }\n", a: '' },
+      { nombre: 'sin acceso no frena', de: "        document.getElementById('sin-acceso').hidden = false\n        return\n      }\n", a: '      }\n' },
       { nombre: 'la elección no saca el body', de: "      document.body?.classList.remove('stock-en-eleccion')", a: '' },
       { nombre: 'volver no vuelve a la elección', de: '      if (estado.hayEleccion && !estado.enEleccion) {\n        e.preventDefault()', a: '      if (false) {\n        e.preventDefault()' },
       { nombre: 'volver se traba en la elección', de: '      if (estado.hayEleccion && !estado.enEleccion) {\n        e.preventDefault()', a: '      if (estado.hayEleccion) {\n        e.preventDefault()' },

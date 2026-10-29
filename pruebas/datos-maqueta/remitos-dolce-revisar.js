@@ -13,5 +13,8 @@ for (const f of base.tablas.remitos_precarga) {
   f.subido_por = 'emp-2'
   f.orden_codigo = f.orden_codigo ?? null
 }
+// 29/10/2026: un cliente de Dolce que ES Cucuruchos Nuss (orden interna, en tránsito): e2e 98.
+base.tablas.clientes.push({ id: 'c-d-paz', unidad_negocio_id: 'u-d', nombre: 'Paz Mirta', razon_social: 'PAZ MIRTA', apodos: [], cuit: null, localidad: 'Córdoba',
+  activo: true, codigo_anterior: null, limite_credito: null, proveedor_id: null, unidad_grupo_id: 'u-n' })
 
 module.exports = base

@@ -67,7 +67,7 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(page.locator('#rt-vista-form')).toBeVisible();
     expect(page.url(), 'el parámetro sale de la dirección').not.toContain('cliente=');
     await expect(page.locator('#rt-cliente-elegido')).toContainText('DOLCE PASTA SRL');
-    const TEXTO = 'Va al stock de Dolce Pasta con los mismos lotes';
+    const TEXTO = 'Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba (con los mismos lotes)';
     const aviso = page.locator(ancho < 1024 ? '#rt-aviso-entre-catalogo' : '#rt-aviso-entre');
     await expect(aviso).toBeVisible();
     await expect(aviso).toHaveText(TEXTO);

@@ -8,7 +8,7 @@
 // NO acepta renglones de devolución ni reposición ("Las devoluciones entre
 // empresas del grupo se cargan como otra orden, desde la empresa que devuelve
 // (renglón N)."). Esta suite EJECUTA la carga y fija:
-//  - EL AVISO "Va al stock de <empresa> con los mismos lotes" en el
+//  - EL AVISO "Es una orden interna: la mercadería va en tránsito hasta que <empresa> la reciba" en el
 //    cliente elegido, en el resumen y en la orden confirmada;
 //  - que para ese cliente NO se ofrece "Devolución de mercadería" (ni la
 //    reposición, que sale de ese mismo botón), y que una devolución que quedó
@@ -62,11 +62,11 @@ const el = (S, id) => S.__doc.getElementById(id)
   chk('sin cliente elegido no es entre empresas', S.esEntreEmpresas(f) === false)
   f.clienteId = 'c-dp'
   chk('con Dolce Pasta elegido, sí', S.esEntreEmpresas(f) === true)
-  chk('el aviso con el nombre', S.textoEntreEmpresas(CLIENTES[0]) === 'Va al stock de Dolce Pasta con los mismos lotes')
+  chk('el aviso con el nombre', S.textoEntreEmpresas(CLIENTES[0]) === 'Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba (con los mismos lotes)')
   chk('un cliente común: sin aviso', S.textoEntreEmpresas(CLIENTES[1]) === '')
   const S2 = nuevo()
   conEmpresa(S2, { nombres: false })
-  chk('sin el nombre (no se pudo leer): "otra empresa del grupo"', S2.textoEntreEmpresas(CLIENTES[0]) === 'Va al stock de otra empresa del grupo con los mismos lotes')
+  chk('sin el nombre (no se pudo leer): "otra empresa del grupo"', S2.textoEntreEmpresas(CLIENTES[0]) === 'Es una orden interna: la mercadería va en tránsito hasta que otra empresa del grupo la reciba (con los mismos lotes)')
 }
 
 // ── Elegir el cliente: el aviso y sin devoluciones ─────────────────────────
@@ -77,10 +77,10 @@ const el = (S, id) => S.__doc.getElementById(id)
   const h = el(S, 'rt-cliente-elegido').innerHTML
   chk('el cliente elegido dice "Orden interna" (27/10/2026)', /rt-sello--entre">Orden interna</.test(h))
   chk('… y que se numera aparte: N-I-…', /rt-numerar">Se numera al confirmar: N-I-…</.test(h), h)
-  chk('el aviso visible, con la empresa que recibe', /id="rt-aviso-entre" role="note">Va al stock de Dolce Pasta con los mismos lotes</.test(h), h)
+  chk('el aviso visible, con la empresa que recibe', /id="rt-aviso-entre" role="note">Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba \(con los mismos lotes\)</.test(h), h)
   chk('sin "Devolución de mercadería"', el(S, 'rt-agregar-devolucion').hidden === true)
   const cat = el(S, 'rt-aviso-entre-catalogo')
-  chk('el aviso también arriba del catálogo (en el celular la tarjeta no se ve)', cat.hidden === false && cat.textContent === 'Va al stock de Dolce Pasta con los mismos lotes')
+  chk('el aviso también arriba del catálogo (en el celular la tarjeta no se ve)', cat.hidden === false && cat.textContent === 'Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba (con los mismos lotes)')
   chk('la carga tiene el lugar del aviso del catálogo, escondido de entrada', /<p class="rt-aviso-entre rt-aviso-entre--catalogo" id="rt-aviso-entre-catalogo" role="note" hidden><\/p>/.test(src))
   S.agregarDevolucion()
   chk('y tocarla igual no abre una devolución', !f.renglones.some(S.esRenglonDev))
@@ -131,7 +131,7 @@ const el = (S, id) => S.__doc.getElementById(id)
   f.renglones[0].cajas = 10
   f.editando = null
   const h = S.htmlResumen(f, CAT)
-  chk('el resumen repite el aviso', /rt-aviso-entre" role="note">Va al stock de Dolce Pasta con los mismos lotes</.test(h))
+  chk('el resumen repite el aviso', /rt-aviso-entre" role="note">Es una orden interna: la mercadería va en tránsito hasta que Dolce Pasta la reciba \(con los mismos lotes\)</.test(h))
   const p = S.parametrosRegistrar(f)
   chk('a la base va el cliente de siempre (la base sabe que es otra empresa)', p.p_cliente_id === 'c-dp' && Object.keys(p).sort().join() === 'p_client_uuid,p_cliente_id,p_fecha,p_items,p_observaciones,p_transporte')
   chk('sin claves nuevas en el renglón', !JSON.stringify(p.p_items).includes('grupo') && !JSON.stringify(p.p_items).includes('entre'))
@@ -152,7 +152,7 @@ const el = (S, id) => S.__doc.getElementById(id)
   esperas.push(S.confirmar().then(() => {
     chk('la orden confirmada sabe que fue entre empresas', S.estado.hecho?.entre === 'Dolce Pasta')
     const h = S.htmlHecho(S.estado.hecho)
-    chk('la orden confirmada lo dice', /rt-aviso-entre" role="note">Orden interna: lo que salió entra al stock de Dolce Pasta\.</.test(h), h)
+    chk('la orden confirmada lo dice', /rt-aviso-entre" role="note">Orden interna: va en tránsito hasta que Dolce Pasta la reciba\.</.test(h), h)
     chk('… y arriba "Orden interna confirmada"', /rt-hecho__rotulo">Orden interna confirmada</.test(h))
   }))
 }

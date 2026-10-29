@@ -34,8 +34,8 @@ correrMutacionesEnVarios([
       { nombre: 'elige sin esperar la lista', de: '      await aplicarEmpresa(c.unidad_negocio_id)', a: '      aplicarEmpresa(c.unidad_negocio_id)' },
       { nombre: 'aplicarEmpresa no devuelve la promesa', de: '      return abrirFormulario()\n    }\n', a: '      abrirFormulario()\n    }\n' },
       { nombre: 'no elige el cliente', de: '      if (estado.empresaId === c.unidad_negocio_id && estado.form) elegirCliente(id)\n', a: '' },
-      { nombre: 'el aviso con el texto viejo', de: '`Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes`', a: '`Entre empresas: lo que sale entra al stock de ${nombreEmpresaGrupo(id)}`' },
-      { nombre: 'el aviso sin "los mismos lotes"', de: '`Va al stock de ${nombreEmpresaGrupo(id)} con los mismos lotes`', a: '`Va al stock de ${nombreEmpresaGrupo(id)}`' },
+      { nombre: 'el aviso con el texto viejo', de: '`Es una orden interna: la mercadería va en tránsito hasta que ${nombreEmpresaGrupo(id)} la reciba (con los mismos lotes)`', a: '`Entre empresas: lo que sale entra al stock de ${nombreEmpresaGrupo(id)}`' },
+      { nombre: 'el aviso sin "los mismos lotes"', de: '`Es una orden interna: la mercadería va en tránsito hasta que ${nombreEmpresaGrupo(id)} la reciba (con los mismos lotes)`', a: '`Es una orden interna: la mercadería va en tránsito hasta que ${nombreEmpresaGrupo(id)} la reciba`' },
     ],
   },
 ])

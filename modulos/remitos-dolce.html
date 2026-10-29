@@ -188,6 +188,8 @@
     .ad-rm-lotes__pie { margin: 0.25rem 0 0; font-size: 0.875rem; overflow-wrap: anywhere; }
     .ad-rm-estado-lotes--falta { color: var(--bordo-oscuro); font-weight: 700; }
     .ad-rm-estado-lotes--ok { color: var(--verde-oscuro); font-weight: 700; }
+    .ad-rm-lotes__asignado { font-weight: 700; }
+    .ad-rm-lotes__asignado--falta { background: var(--amarillo-suave); border: 1px solid var(--amarillo); border-radius: 6px; padding: 0 0.375rem; color: var(--amarillo-oscuro); }
     .ad-rm-renglon__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0; }
     .ad-rm-acciones { min-width: 0; }
     .ad-rm-acciones > .ad-btn { margin: 0.375rem 0 0.5rem; }
@@ -1505,7 +1507,9 @@
       const rmEstadoLotes = a.falta > 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">faltan ${esc(enteroHoja(a.falta))} cajas</span>`
         : a.falta < 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">${esc(enteroHoja(-a.falta))} de más</span>`
         : '<span class="ad-rm-estado-lotes ad-rm-estado-lotes--ok">✓ Asignado completo</span>'
-      return `<span class="ad-rm-lotes__asignado">Asignado ${esc(enteroHoja(a.asignado))} de ${esc(enteroHoja(a.pedido))}</span> · ${rmEstadoLotes}`
+      // "Lotes: 25 de 31 cajas" (29/10/2026), en amarillo mientras no suman:
+      // confirmar_remito_precarga lo rechaza ("los lotes suman X y el renglón dice Y").
+      return `<span class="ad-rm-lotes__asignado${a.falta === 0 ? '' : ' ad-rm-lotes__asignado--falta'}">Lotes: ${esc(enteroHoja(a.asignado))} de ${esc(enteroHoja(a.pedido))} cajas</span> · ${rmEstadoLotes}`
     }
 
     // "Aceptar sugerencia": la IA reconoció el producto (o el insumo) y la
@@ -1689,6 +1693,22 @@
       return `<div class="ad-tarjeta ad-rm-foto">${rmZoom}${rmLienzo}</div>`
     }
 
+    // ORDEN INTERNA (29/10/2026): el cliente ES otra empresa del grupo
+    // (clientes.unidad_grupo_id). Al confirmar, la base (_orden_grupo_espejar)
+    // arma la recepción EN TRÁNSITO: la mercadería entra al stock de esa
+    // empresa recién cuando la reciben (recibir_orden_grupo, en Stock).
+    // Devuelve el nombre de esa empresa, o null.
+    function empresaGrupoRemito(rm) {
+      const c = clienteDe(rm?.form?.clienteId)
+      const u = c?.unidad_grupo_id
+      if (!u || u === (rm?.fila?.unidad_negocio_id ?? estado.empresaId)) return null
+      return limpio((estado.unidades ?? []).find(x => x.id === u)?.nombre) || 'la otra empresa del grupo'
+    }
+
+    function textoOrdenInterna(empresa) {
+      return `Es una orden interna: la mercadería va en tránsito hasta que ${empresa} la reciba.`
+    }
+
     function htmlAccionesRemito(rm) {
       if (!puedeEn('retiros', 'cargar', rm.fila?.unidad_negocio_id ?? estado.empresaId)) {
         return '<div class="ad-aviso">Con tu usuario podés mirar el remito, pero no corregirlo ni confirmarlo (hace falta Retiros · cargar en esta fábrica).</div>'
@@ -1707,7 +1727,9 @@
         (rm.descartar.error ? `<p class="ad-error-pegado" id="ad-rm-descartar-error">${esc(rm.descartar.error)}</p>` : '') +
         `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--peligro" data-rm-accion="descartar-si"${rmDis}>Descartar el remito</button>` +
         `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="descartar-no"${rmDis}>Cancelar</button></div></div>` : ''
-      return `<div class="ad-rm-acciones">${rmError}${rmAviso}${rmLeer}${rmDescartar}<div class="ad-barra-acciones">` +
+      const grupo = empresaGrupoRemito(rm)
+      const rmInterna = grupo ? `<p class="ad-aviso ad-rm-interna" id="ad-rm-interna" role="note">${esc(textoOrdenInterna(grupo))}</p>` : ''
+      return `<div class="ad-rm-acciones">${rmError}${rmAviso}${rmLeer}${rmDescartar}${rmInterna}<div class="ad-barra-acciones">` +
         `<button type="button" class="ad-btn" data-rm-accion="confirmar"${rmDis}>Confirmar</button>` +
         htmlGuardadoRemito(rm) +
         `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="leer"${rmDis}>Volver a leer</button>` +
@@ -2245,7 +2267,9 @@
       rm.temporizador = null
       quitarRemitoDeLaLista(rm.id)
       const numero = textoNumeroRemito({ numero_remito: res.numero_remito ?? rm.form.numero, talonario: res.talonario ?? rm.form.talonario }) || 'El remito'
-      mostrarExito(`${numero} confirmado: ${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}. Ya se puede valorizar en Administración.`)
+      const grupo = empresaGrupoRemito(rm)
+      mostrarExito(`${numero} confirmado: ${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}. ` +
+        (grupo ? `Va en tránsito hasta que ${grupo} la reciba. ` : '') + 'Ya se puede valorizar en Administración.')
       if (estado.remito === rm) estado.remito = null
       estado.ordenes = null
       if (estado.vista === 'ad-vista-remito') await mostrarRevisar()

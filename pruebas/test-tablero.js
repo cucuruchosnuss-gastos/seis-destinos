@@ -129,6 +129,13 @@ const usuario = (misModulos, tareas = []) => ({ esAdmin: false, esSuperAdmin: fa
   chk('…y en Administración si no ve Órdenes de retiro', S.resolverDePendientes('administracion', pend, new Set(['administracion'])).some(r => r.n === 4))
   chk('sin mis_pendientes (null), ningún renglón', S.resolverDePendientes('caja', null, vis).length === 0)
   chk('usaPendientes: Caja sí, Pedidos no', S.usaPendientes('caja', vis) && !S.usaPendientes('pedidos', new Set(['pedidos'])))
+  // 29/10/2026: la mercadería en camino desde otra empresa (cuando mis_pendientes la traiga).
+  const camino = S.resolverDePendientes('stock', S.mapaPendientes([{ modulo: 'stock', clave: 'mercaderia_en_camino', cantidad: 2 }]), new Set(['stock']))
+  chk('mercadería en camino: en Stock, "2 envíos de mercadería en camino", a la sección', camino.length === 1 && camino[0].n === 2 &&
+    camino[0].t === 'envíos de mercadería en camino' && camino[0].url === 'modulos/stock.html#st-en-camino', JSON.stringify(camino))
+  const uno = S.resolverDePendientes('stock', S.mapaPendientes([{ modulo: 'stock', clave: 'mercaderia_en_camino', cantidad: 1 }]), new Set(['stock']))
+  chk('…en singular con uno', uno[0]?.t === 'envío de mercadería en camino')
+  chk('…sin la tarjeta de Stock no aparece en otra', !S.resolverDePendientes('materia-prima', S.mapaPendientes([{ modulo: 'stock', clave: 'mercaderia_en_camino', cantidad: 2 }]), new Set(['materia-prima'])).length)
 }
 
 // ── La franja "Para resolver ya" ──────────────────────────────────────────
