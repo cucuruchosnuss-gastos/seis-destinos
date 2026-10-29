@@ -4451,8 +4451,8 @@
       if (t.diferencia === 0) return 'Sin diferencia de plata.'
       const signo = (t.diferencia > 0 ? '+ ' : '− ') + importeHoja(Math.abs(t.diferencia), m)
       if (d.entre_empresas) {
-        const recibe = nombreEmpresa(empresaGrupoDe(clienteDe(d.cliente_id))) || 'la empresa que recibe'
-        const entrega = nombreEmpresa(d.unidad_negocio_id) || 'la empresa que entrega'
+        const recibe = nombreEmpresa(empresaGrupoDe(clienteDe(d.cliente_id))) || 'la otra empresa del grupo'
+        const entrega = nombreEmpresa(d.unidad_negocio_id) || 'esta empresa'
         return `Diferencia ${signo}: va a la deuda entre empresas (de ${recibe} con ${entrega}), no a la cuenta corriente.`
       }
       return `Diferencia ${signo}: va a la cuenta corriente de ${limpio(d.cliente) || 'el cliente'}.`
@@ -5409,7 +5409,8 @@
     function sincronizarFacturar() {
       const d = estado.orden
       const o = d?.orden
-      const va = !!o && !d.error && !d.valorizar && puedeFacturar(o)
+      // Mientras se corrige la orden (29/10/2026), tampoco: es otro formulario.
+      const va = !!o && !d.error && !d.valorizar && !d.corregir && puedeFacturar(o)
       const fc = estado.facturar
       if (!va) {
         if (fc && fc.ordenId !== o?.id) cerrarFacturar()

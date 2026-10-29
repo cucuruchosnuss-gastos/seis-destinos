@@ -76,6 +76,7 @@ correrMutaciones({
     { nombre: 'el botón no se oculta mientras se corrige', de: "(puedeCorregirOrden(o) && !d.valorizar && !d.anular && !corrigiendo)", a: "(puedeCorregirOrden(o) && !d.valorizar && !d.anular)" },
     { nombre: 'el botón se ve mientras se valoriza', de: "(puedeCorregirOrden(o) && !d.valorizar && !d.anular && !corrigiendo)", a: "(puedeCorregirOrden(o) && !d.anular && !corrigiendo)" },
     { nombre: 'Anular se ve mientras se corrige', de: "(activa && puedeEn('retiros', 'anular', u) && !corrigiendo)", a: "(activa && puedeEn('retiros', 'anular', u))" },
+    { nombre: 'la pantalla de facturar a la vista mientras se corrige', de: '!d.valorizar && !d.corregir && puedeFacturar(o)', a: '!d.valorizar && puedeFacturar(o)' },
     { nombre: 'Corregir valorización se ve mientras se corrige', de: "o.estado_valorizacion === 'valorizada' && !d.valorizar && !corrigiendo)", a: "o.estado_valorizacion === 'valorizada' && !d.valorizar)" },
     // Abrir
     { nombre: 'abre aunque se esté valorizando', de: 'if (!puedeCorregirOrden(o) || d.valorizar || d.anular || d.corregir || estado.trabajando) return', a: 'if (!puedeCorregirOrden(o)) return' },

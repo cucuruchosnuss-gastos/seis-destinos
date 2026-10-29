@@ -157,6 +157,7 @@ const llamadas = (S, n) => S.__llamadas.rpc.filter(([x]) => x === n)
     chk('el insumo dice su unidad', /Cantidad \(kg\)/.test(h) && /Precio x kg/.test(h))
     chk('la devolución, "Cajas que trae" y sus datos', /Cajas que trae/.test(h) && /data-co-motivo-dev="/.test(h) && /data-co-destino="/.test(h))
     chk('el total antes → después en pantalla', /Total: \$ 42\.250,00 → \$ 42\.250,00/.test(h), (h.match(/id="ad-co-total">[^<]*/) || [''])[0])
+    chk('mientras se corrige, la pantalla de facturar (N1 / N2) no se ve', S.__els.get('ad-orden-facturar').hidden === true)
     chk('el cono del renglón con cono: LOLO elegido', /data-co-marca="[^"]+" data-marca="m1" aria-pressed="true"/.test(h))
   }))
 }

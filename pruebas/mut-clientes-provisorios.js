@@ -81,7 +81,7 @@ correrMutaciones({
     { nombre: 'el aviso también para un cliente común', de: '      if (!d || cli?.provisorio !== true || listaId) return false', a: '      if (!d || listaId) return false' },
     { nombre: 'el aviso también con lista', de: '      if (!d || cli?.provisorio !== true || listaId) return false', a: '      if (!d || cli?.provisorio !== true) return false' },
     { nombre: 'el aviso no se dibuja', de: '${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>`', a: '${total}${htmlValorizar(d)}</div>`' },
-    { nombre: 'Valorizar queda visible con el aviso', de: " && !d.valorizar && !d.faltaLista)", a: ' && !d.valorizar)' },
+    { nombre: 'Valorizar queda visible con el aviso', de: " && !d.valorizar && !d.faltaLista && !corrigiendo)", a: ' && !d.valorizar && !corrigiendo)' },
     { nombre: 'Ir a su ficha no abre en modo confirmar', de: '      if (id) abrirCompletar(id)', a: '      if (id) abrirFicha(id)' },
   ],
 })
