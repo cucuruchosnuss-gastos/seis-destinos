@@ -152,11 +152,13 @@
     .ad-rm-numero { font-weight: 900; font-size: 1.125rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
     .ad-rm-numero--sin { color: var(--ad-texto-secundario); font-weight: 700; font-size: 1rem; }
     .ad-fila__sellos { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; min-width: 0; }
-    .ad-sello--acopio { background: #E4F2FB; color: #0B4F7A; border-color: #5AA9DA; }
-    .ad-sello--amarillo { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border-color: var(--amarillo); }
-    .ad-sello--omitido { background: var(--color-superficie); color: var(--ad-texto-secundario); border-color: var(--color-borde); }
-    .ad-sello--rm-error { background: var(--bordo-suave); color: var(--bordo-oscuro); border-color: var(--bordo); }
-    .ad-sello--rm-precargada { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); white-space: normal; }
+    /* .ad-sello.ad-sello--x (29/10/2026): la regla base .ad-sello va más abajo
+       y pisaba el color; con las dos clases, cada sello tiene el suyo. */
+    .ad-sello.ad-sello--acopio { background: #E4F2FB; color: #0B4F7A; border-color: #5AA9DA; }
+    .ad-sello.ad-sello--amarillo { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border-color: var(--amarillo); }
+    .ad-sello.ad-sello--omitido { background: var(--color-superficie); color: var(--ad-texto-secundario); border-color: var(--color-borde); }
+    .ad-sello.ad-sello--rm-error { background: var(--bordo-suave); color: var(--bordo-oscuro); border-color: var(--bordo); }
+    .ad-sello.ad-sello--rm-precargada { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); white-space: normal; }
     .ad-rm-tarjeta__error { color: var(--bordo-oscuro); font-weight: 600; }
     .ad-orden-remito { margin: 0 0 0.375rem; font-size: 1.25rem; font-weight: 900; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
     .ad-rm { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); min-width: 0; }
@@ -1257,17 +1259,18 @@
       const selloAcopio = e.acopio ? '<span class="rt-remito__sello">Acopio</span>' : ''
       // "Listo para cargar lotes": la tarjeta entera es un botón que abre el
       // remito (con Retiros · cargar en esa fábrica; sin eso, se ve igual).
-      if (e.abrir && puedeEn('retiros', 'cargar', x.unidadId)) {
-        return `<button type="button" class="rt-remito rt-remito--${tipoRemito}" data-remito="${esc(x.clave)}" data-remito-estado="${tipoRemito}" data-remito-abrir="${esc(x.clave)}">${fotoRemito}` +
-          `<span class="rt-remito__texto"><span class="rt-remito__estado">${esc(e.texto)}</span>` +
-          (e.detalle || selloAcopio ? `<span class="rt-remito__detalle">${esc(e.detalle)}${selloAcopio}</span>` : '') +
-          (meta ? `<span class="rt-fila__meta">${esc(meta)}</span>` : '') + '</span>' +
+      // Adentro de un botón va un <span> (un <div> no se puede).
+      const boton = !!e.abrir && puedeEn('retiros', 'cargar', x.unidadId)
+      const caja = boton ? 'span' : 'div'
+      const rmInterior = `${fotoRemito}<${caja} class="rt-remito__texto"><span class="rt-remito__estado">${esc(e.texto)}</span>` +
+        (e.detalle || selloAcopio ? `<span class="rt-remito__detalle">${esc(e.detalle)}${selloAcopio}</span>` : '') +
+        (meta ? `<span class="rt-fila__meta">${esc(meta)}</span>` : '') + `</${caja}>`
+      const rmAtributos = `class="rt-remito rt-remito--${tipoRemito}" data-remito="${esc(x.clave)}" data-remito-estado="${tipoRemito}"`
+      if (boton) {
+        return `<button type="button" ${rmAtributos} data-remito-abrir="${esc(x.clave)}">${rmInterior}` +
           '<span class="rt-remito__ir" aria-hidden="true">Cargar ›</span></button>'
       }
-      return `<div class="rt-remito rt-remito--${tipoRemito}" data-remito="${esc(x.clave)}" data-remito-estado="${tipoRemito}">${fotoRemito}` +
-        `<div class="rt-remito__texto"><span class="rt-remito__estado">${esc(e.texto)}</span>` +
-        (e.detalle || selloAcopio ? `<span class="rt-remito__detalle">${esc(e.detalle)}${selloAcopio}</span>` : '') +
-        (meta ? `<span class="rt-fila__meta">${esc(meta)}</span>` : '') + '</div>' +
+      return `<div ${rmAtributos}>${rmInterior}` +
         (e.reintentar ? `<button type="button" class="rt-btn rt-btn--secundario rt-remito__accion" data-remito-reintentar="${esc(x.reintentarCon)}">Reintentar</button>` : '') +
         (e.quitar ? `<button type="button" class="rt-btn rt-btn--suave rt-remito__accion" data-remito-quitar="${esc(x.clave)}">Quitar</button>` : '') +
         '</div>'

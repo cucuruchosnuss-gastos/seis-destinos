@@ -566,4 +566,14 @@ esperas.push((async () => {
   }))
 }
 
+// El aviso de orden interna (29/10/2026, ci-prueba/recibir-entre-empresas):
+// el nombre de la empresa, escapado (el detalle, en test-remitos-dolce-interna-lotes.js).
+{
+  const S = nuevo()
+  S.estado.misTareas = new Map([['retiros:cargar', { todas: true }]])
+  S.estado.clientes = [{ id: 'c-g', nombre: 'Del grupo', activo: true, unidad_grupo_id: 'u-n' }]
+  S.estado.unidades = [{ id: 'u-n', nombre: marca('empresaGrupo') }, { id: 'u-d', nombre: 'Dolce Pasta' }]
+  chequearMarcas(chk, 'el aviso de orden interna', S.htmlAccionesRemito({ fila: { unidad_negocio_id: 'u-d' }, form: { clienteId: 'c-g' } }), ['empresaGrupo'])
+}
+
 fin()

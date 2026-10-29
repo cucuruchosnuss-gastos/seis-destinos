@@ -549,6 +549,8 @@ esperas.push((async () => {
   const d = S.datosRemitos()
   d.filas = [
     { id: 'x1', estado: 'precargada', numero_remito: marca('numero'), unidad_negocio_id: FID, subido_en: hace(1) },
+    // La tarjeta naranja, que es un botón (29/10/2026): su id y lo leído.
+    { id: marca('idlisto'), estado: 'precargada', numero_remito: '9', cliente_leido: marca('clienteListo'), items: [], unidad_negocio_id: FID, subido_en: hace(1) },
     { id: 'x2', estado: 'descartada', descartado_motivo: marca('motivo'), subido_en: hace(2) },
     { id: marca('iderr'), estado: 'error', error: marca('error'), subido_en: hace(3) },
     { id: marca('id'), estado: 'confirmada', orden_codigo: marca('codigo'), subido_en: hace(4), foto_path: 'f-id' },
@@ -562,7 +564,10 @@ esperas.push((async () => {
   const lista = S.__els.get('rt-remitos-lista').innerHTML
   const html = lista + S.__els.get('rt-remitos-fabrica').innerHTML
   chk('ninguna marca cruda en Mis remitos subidos', !/<b data-xss=/.test(html), (html.match(/.{0,60}<b data-xss=[^>]*>/) || [''])[0])
-  for (const c of ['numero', 'motivo', 'error', 'id', 'iderr', 'codigo', 'fallo', 'fabrica', 'fid', 'cu']) chk(`«${c}» escapado`, html.includes(escapada(c)))
+  for (const c of ['numero', 'motivo', 'error', 'id', 'iderr', 'codigo', 'fallo', 'fabrica', 'fid', 'cu', 'idlisto', 'clienteListo']) chk(`«${c}» escapado`, html.includes(escapada(c)))
+  chk('la tarjeta naranja (botón): su clave escapada en data-remito y data-remito-abrir', lista.includes(`data-remito="${S.esc(marca('idlisto'))}" data-remito-estado="precargada" data-remito-abrir="${S.esc(marca('idlisto'))}"`))
+  const boton = (lista.match(/<button type="button" class="rt-remito [^]*?<\/button>/g) || []).find(b => b.includes(S.esc(marca('idlisto')))) || ''
+  chk('…y adentro, la fábrica escapada (con varias)', boton.includes(escapada('fabrica')) && !/<b data-xss=/.test(boton), boton.slice(0, 200))
   chk('la miniatura de la fila con id raro: su clave escapada', lista.includes(`data-remito-miniatura="${S.esc(marca('id'))}"`))
   chk('Reintentar y Quitar con la clave escapada', lista.includes(`data-remito-reintentar="${S.esc(marca('iderr'))}"`) && lista.includes(`data-remito-quitar="${S.esc(marca('cu'))}"`))
   chk('una miniatura javascript: no se dibuja', !lista.includes('data-remito-miniatura="x4"'))

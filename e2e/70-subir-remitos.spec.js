@@ -5,7 +5,8 @@
 // 1280 px, sin scroll horizontal ni errores de JS:
 //  - el módulo abre en Subir (la única pestaña que tiene: sin la barra de
 //    pestañas); "Mis remitos subidos" muestra cada estado (el sello "Acopio",
-//    "Confirmado: Orden D-0005" con orden_codigo), solo los míos;
+//    "Orden cargada · D-0005" con orden_codigo; la precargada en naranja
+//    "Listo para cargar lotes", 29/10/2026: e2e/99), solo los míos;
 //  - una foto de prueba (un PNG de 2400×1200 armado en la página) se achica a
 //    1600×800 en JPEG, se sube a <uid>/remitos/<uuid>.jpg, va a
 //    crear_remito_precarga con su client_uuid y a ocr-remito, sin esperarla:
@@ -98,12 +99,12 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(lista.locator('.rt-remito')).toHaveCount(6);
     await expect(fila('rp-otro')).toHaveCount(0);
     await expect(fila('rp-leyendo')).toContainText('Leyendo…');
-    await expect(fila('rp-pre')).toContainText('Precargado');
+    await expect(fila('rp-pre')).toContainText('Listo para cargar lotes');
     await expect(fila('rp-pre')).toContainText('Remito N° 0001-00003100');
     await expect(fila('rp-pre').locator('.rt-remito__sello')).toHaveCount(0);
     await expect(fila('rp-aco')).toContainText('Remito N° 977492');
     await expect(fila('rp-aco').locator('.rt-remito__sello')).toHaveText('Acopio');
-    await expect(fila('rp-conf')).toContainText('Confirmado: Orden D-0005');
+    await expect(fila('rp-conf')).toContainText('Orden cargada · D-0005');
     await expect(fila('rp-err')).toContainText('No se pudo leer');
     await expect(fila('rp-err')).toContainText('la foto está movida');
     await expect(fila('rp-err').locator('[data-remito-reintentar="rp-err"]')).toBeVisible();
