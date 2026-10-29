@@ -25,6 +25,10 @@ Pedido: `.claude/pedidos/2026-10-29-remitos-autoguardado.md`. Rama `ci-prueba/re
   y la línea `COMUN` en la suite; ahora 6/6.
 - `mut-remitos-dolce-acopio.js` 13/13. `e2e/71-revisar-remitos.spec.js` 12/12 y `70-subir-remitos` 4/4 (390 y
   1280 px), con un test nuevo: salir con algo sin mandar, y Confirmar con la base que no responde.
+- `e2e/72-acopios.spec.js` miraba el aviso viejo "cambios sin guardar" al salir del remito: lo encontró el ensayo; ahora
+  comprueba que sale guardando las cajas.
+- En el ensayo local, `0-humo` "la planta sin sesión" da rojo: falla IGUAL sobre main 2d04d3e en este contenedor (la
+  planta no llega a la base real desde acá); en GitHub pasa. No es de esta rama.
 
 ## Decidido sin consultar
 - El retardo: 800 ms. Al salir de un campo se manda sin esperar.
