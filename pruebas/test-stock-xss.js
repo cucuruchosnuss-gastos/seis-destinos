@@ -603,6 +603,10 @@ const SEGURAS = {
   pintarPanelGrupo: {
     'htmlPanelGrupo(g)': 'HTML de htmlPanelGrupo(), que escapa adentro empresa, cliente, fábrica e id (ejecutado con texto malicioso en test-stock-mandar-grupo.js)',
   },
+  // "En camino desde otra empresa" (29/10/2026).
+  pintarEnCamino: {
+    'htmlEnCamino(c, conDestino)': 'HTML de htmlEnCamino() y sus html*Camino, que escapan adentro todo lo de la base (ejecutados con una marca por campo en test-stock-en-camino.js)',
+  },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo
 // no tiene sentido copiar: el callback que recibe htmlAgrupado().

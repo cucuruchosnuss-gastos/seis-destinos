@@ -73,6 +73,8 @@ const PRELUDIO = `
   var cargarUnidadesRecuento = async () => { __llamadas.push(['cargarUnidadesRecuento']) }
   var cargarUnidadesBaja = anotar('cargarUnidadesBaja'), cargarUnidadesEnvio = anotar('cargarUnidadesEnvio'), cargarDestinos = anotar('cargarDestinos')
   var cargarCostos = anotar('cargarCostos'), cargarPendientesStock = () => {}, iniciarActualizacionSola = () => {}
+  // "En camino desde otra empresa" (29/10/2026): lo prueba test-stock-en-camino.js.
+  var cargarEnCamino = anotar('cargarEnCamino')
   function aplicarFiltroDesdeUrl() {}
   function puedeTraspasar() { return false }
   function puedeVerCostosAlgo() { return true }
@@ -86,7 +88,7 @@ const PRELUDIO = `
     barraLista: Promise.resolve(), fabrica: null, cargados: new Set(),
   }
 `
-const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'puedeVerTerminado', 'decidirEntrada', 'entradaPedida', 'urlTerminado',
+const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'puedeVerTerminado', 'decidirEntrada', 'entradaPedida', 'urlTerminado', 'camino', 'recibeEnAlgunaFabrica',
   'mostrarEleccion', 'salirDeEleccion', 'elegirInsumos', 'alVolverDelEncabezado', 'init']
 const CONSTANTES = ['puedeVerStock', 'puedeAjustar', 'puedeEnviar', 'puedeGestionar', 'VISTAS_DESDE_URL', 'PESTANA_DE_VISTA', 'SUBTITULO_VISTA', 'VISTAS_DE_INSUMOS']
 

@@ -65,6 +65,9 @@ const PRELUDIO = `
   var cargarUnidadesRecuento = async () => { __llamadas.push(['cargarUnidadesRecuento']) }
   var cargarUnidadesBaja = anotar('cargarUnidadesBaja'), cargarUnidadesEnvio = anotar('cargarUnidadesEnvio'), cargarDestinos = anotar('cargarDestinos')
   var cargarCostos = anotar('cargarCostos'), cargarPendientesStock = () => {}, iniciarActualizacionSola = () => {}
+  // "En camino desde otra empresa" (29/10/2026): la de verdad la prueba
+  // test-stock-en-camino.js; acá alcanza con saber si se lee.
+  var cargarEnCamino = anotar('cargarEnCamino')
   function aplicarFiltroDesdeUrl() {}
   function puedeTraspasar() { return false }
   function puedeVerCostosAlgo() { return true }
@@ -75,7 +78,8 @@ const PRELUDIO = `
   }
 `
 // 14/10/2026: init() decide además la entrada (las dos entradas de Stock).
-const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'puedeVerTerminado', 'decidirEntrada', 'entradaPedida', 'urlTerminado', 'mostrarEleccion', 'init']
+const FUNCIONES = ['tieneTarea', 'vistaDesdeUrl', 'mostrarVista', 'puedeVerTerminado', 'decidirEntrada', 'entradaPedida', 'urlTerminado', 'mostrarEleccion', 'init',
+  'camino', 'recibeEnAlgunaFabrica']
 const CONSTANTES = ['puedeVerStock', 'puedeAjustar', 'puedeEnviar', 'puedeGestionar', 'VISTAS_DESDE_URL', 'PESTANA_DE_VISTA', 'SUBTITULO_VISTA', 'VISTAS_DE_INSUMOS']
 
 function sandboxInit() {
@@ -162,6 +166,31 @@ const esperar = () => new Promise(r => setTimeout(r, 0))
     S.__setTareas([{ modulo: 'stock', tarea: 'ver', alcance: { todas: true } }, { modulo: 'stock', tarea: 'ver_costos', alcance: { todas: true } }])
     await S.init()
     chk('M8: stock.html?vista=costos (el link de la tarjeta) abre en Costos', S.estado.vista === 'costos', S.estado.vista)
+  }
+
+  // ── En camino desde otra empresa (29/10/2026) ───────────────────────────
+  {
+    const S = sandboxInit()
+    S.__setTareas([{ modulo: 'stock', tarea: 'recibir_transferencia', alcance: { unidades: ['u-d'] } }])
+    await S.init()
+    chk('en camino: con SOLO recibir_transferencia NO dice "sin acceso"', S.__els.get('sin-acceso')?.hidden !== false)
+    chk('en camino: … lee lo que viene en camino', S.__llamadas.some(l => l[0] === 'cargarEnCamino'))
+    chk('en camino: … la sección sola (sin envíos lo dice)', S.estado.enCamino?.soloEsto === true)
+    chk('en camino: … sin pestañas ni lista de stock', S.__els.get('pestanas-stock')?.hidden === true && !S.__llamadas.some(l => l[0] === 'cargarStock'))
+    chk('en camino: … y el subtítulo lo dice', S.__els.get('stock-subtitulo')?.textContent === 'En camino desde otra empresa')
+  }
+  {
+    const S = sandboxInit()
+    S.__setTareas([{ modulo: 'stock', tarea: 'ver', alcance: { todas: true } }])
+    await S.init()
+    chk('en camino: con stock:ver se lee con la pantalla de siempre', S.__llamadas.some(l => l[0] === 'cargarEnCamino') && S.estado.vista === 'stock')
+    chk('en camino: … y no es la sección sola', S.estado.enCamino?.soloEsto !== true)
+  }
+  {
+    const S = sandboxInit()
+    S.__setTareas([{ modulo: 'stock', tarea: 'cargar_costos', alcance: { todas: true } }])
+    await S.init()
+    chk('en camino: sin ver ni recibir, ni se lee (y dice "sin acceso")', !S.__llamadas.some(l => l[0] === 'cargarEnCamino') && S.__els.get('sin-acceso')?.hidden === false)
   }
 
   // ── B8 ────────────────────────────────────────────────────────────────
