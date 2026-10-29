@@ -71,9 +71,11 @@ Los módulos son enormes (`modulos/administracion.html` ~850 KB, `produccion-ges
 - `produccion.md` — Producción: tablas, la planta (tablet) y la gestión.
 - `pedidos.md` — Pedidos.
 - `retiros.md` — Órdenes de retiro: tablas (compartidas con Administración) y la Carga.
+- `remitos-dolce.md` — Remitos Dolce: subir y revisar los remitos hechos a mano de Rosario.
 - `administracion.md` — Administración (clientes, órdenes, listas, retenciones, préstamos, entre empresas, errores).
 - `taller.md` — Proyectos Taller.
 - `conos.md` — Conos de papel.
+- `buscar.md` — Buscar (el lote de una caja con toda su fabricación y los precios de compra; el primer paso del buscador general).
 - `planificados.md` — módulos planificados.
 - `estilo-visual.md` — el sistema visual, colores por módulo, barras, celular.
 - `seguridad.md` — RLS, grants, Storage, XSS, registro de errores.

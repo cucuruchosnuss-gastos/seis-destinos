@@ -153,6 +153,24 @@ export const MODULOS = [
     requiereTareas: ['retiros:cargar'],
   },
   {
+    // Remitos Dolce (28/10/2026): los remitos hechos a mano de Rosario en su
+    // propio módulo (subir y revisar), aparte de la Carga y de
+    // Administración. No hay fila 'remitos-dolce' en la tabla modulos: cuelga
+    // de 'retiros' y se ve con retiros:cargar o retiros:ver EN Dolce Pasta
+    // (alcanceEn: la regla de tiene_tarea_alcance, con el id de
+    // unidades_negocio verificado el 28/10/2026).
+    clave: 'remitos-dolce',
+    nombre: 'Remitos Dolce',
+    icono: 'file-text',
+    descripcion: 'Subir y revisar los remitos de Rosario',
+    url: 'modulos/remitos-dolce.html',
+    color: 'azul',
+    proximamente: false,
+    requiereModulo: 'retiros',
+    requiereTareas: ['retiros:cargar', 'retiros:ver'],
+    alcanceEn: '118b348c-43ec-4f6c-8bc2-27ab6f24b761',
+  },
+  {
     // Administración (26/09/2026): la casa de todo lo que es plata y
     // cuentas. Todavía no hay un módulo 'administracion' en la base: sus
     // secciones de hoy usan las tareas de 'retiros' (ver / precios), así
@@ -203,6 +221,22 @@ export const MODULOS = [
     color: 'marron',
     sinFilaModulo: true,
     requiereTareas: ['conos:ver', 'conos:pedir', 'conos:precios', 'conos:recibir'],
+  },
+  {
+    // Buscar (28/10/2026): el acceso rápido al lote de una caja (toda su
+    // fabricación) y al precio de compra de un insumo. Sin fila en la tabla
+    // modulos: se ve con alguna de las tareas que miran trazabilidad_lote
+    // (produccion:ver, stock:ver) o precios_compra (stock:ver_costos,
+    // retiros:precios).
+    clave: 'buscar',
+    nombre: 'Buscar',
+    icono: 'search',
+    descripcion: 'Lote de una caja y precio de un insumo',
+    url: 'modulos/buscar.html',
+    proximamente: false,
+    color: 'grafito',
+    sinFilaModulo: true,
+    requiereTareas: ['produccion:ver', 'stock:ver', 'stock:ver_costos', 'retiros:precios'],
   }
 ]
 
@@ -219,7 +253,12 @@ export const MODULOS = [
 //  - tambienConTareas (11/10/2026): alcanza con una de esas tareas aunque
 //    no tenga el módulo (Administración para quien asienta cobranzas o
 //    gestiona clientes; Stock para quien solo ve costos).
-export function moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTareas }) {
+//  - alcanceEn (28/10/2026, Remitos Dolce): la tarea de requiereTareas tiene
+//    que alcanzar ESA fábrica (la regla de tiene_tarea_alcance).
+//    misAlcances: 'modulo:tarea' → alcance. Sin
+//    misAlcances (no se pudo leer) la tarjeta no se ve: nunca una tarjeta que
+//    después rebota.
+export function moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTareas, misAlcances }) {
   if (modulo.soloSuperAdmin) return esSuperAdmin
   if (modulo.soloAdmin) return esAdmin
   const tareas = misTareas ?? new Set()
@@ -227,7 +266,14 @@ export function moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTa
   const habilitado = esAdmin || modulo.sinFilaModulo === true || (misModulos ?? []).includes(modulo.requiereModulo ?? modulo.clave)
   if (!habilitado) return porTarea
   if (!modulo.requiereTareas) return true
-  return esSuperAdmin || porTarea || modulo.requiereTareas.some(t => tareas.has(t))
+  if (esSuperAdmin || porTarea) return true
+  if (!modulo.alcanceEn) return modulo.requiereTareas.some(t => tareas.has(t))
+  // La MISMA regla que tiene_tarea_alcance(): {"todas": true}, o la fábrica
+  // en {"unidades": [...]}; null o cualquier otra cosa, no.
+  return modulo.requiereTareas.some(t => {
+    const a = tareas.has(t) ? misAlcances?.get?.(t) : null
+    return !!a && typeof a === 'object' && (a.todas === true || (Array.isArray(a.unidades) && a.unidades.map(String).includes(String(modulo.alcanceEn))))
+  })
 }
 
 // La dirección de la tarjeta o del ítem de la barra para esta persona
@@ -369,11 +415,16 @@ export const PALETA_MODULO = {
   produccion: [0.52, 0.10, 180],
   pedidos: [0.58, 0.17, 20],
   retiros: [0.55, 0.11, 108],
+  // Remitos Dolce (28/10/2026): el azul de Rosario.
+  'remitos-dolce': [0.50, 0.13, 250],
   administracion: [0.45, 0.14, 305],
   taller: [0.42, 0.07, 150],
   conos: [0.55, 0.12, 45],
   accesos: [0.50, 0.07, 205],
   empleados: [0.60, 0.13, 340],
+  // Buscar (28/10/2026): óxido oscuro, entre Pedidos (20) y Conos (45) pero
+  // mucho más oscuro que los dos.
+  buscar: [0.42, 0.10, 30],
   seguridad: [0.40, 0.012, 60],
   personalizar: [0.35, 0.012, 60],
 }
@@ -389,7 +440,7 @@ export function colorDeModulo(clave) {
 // El orden de la barra por defecto (el del diseño, 1a): lo que más se mira
 // arriba. Un módulo que no está acá va al final, en el orden del catálogo.
 export const ORDEN_BARRA = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'cuentas-corrientes', 'materia-prima',
-  'stock', 'conos', 'pedidos', 'retiros', 'administracion', 'taller', 'accesos', 'empleados']
+  'stock', 'conos', 'pedidos', 'retiros', 'remitos-dolce', 'administracion', 'taller', 'accesos', 'empleados']
 
 export function enOrdenDeBarra(modulos) {
   const pos = c => { const i = ORDEN_BARRA.indexOf(c); return i === -1 ? 100 : i }

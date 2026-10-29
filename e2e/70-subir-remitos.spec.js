@@ -1,16 +1,19 @@
-// SUBIR REMITOS ROSARIO (27/10/2026, rama ci-prueba/remitos-rosario-subir),
-// en la maqueta "retiros-remitos" (Dolce Pasta con controla_stock_terminado
-// = false, el usuario con retiros:cargar y remitos subidos en cada estado).
-// A 390 y 1280 px, sin scroll horizontal ni errores de JS:
-//  - el botón "Subir remitos Rosario" aparece; "Mis remitos subidos" muestra
-//    cada estado (y el sello "Acopio"), solo los míos;
+// REMITOS DOLCE → SUBIR (28/10/2026, rama ci-prueba/modulo-remitos-dolce;
+// antes "Subir remitos Rosario" en la Carga, 27/10/2026), en la maqueta
+// "remitos-dolce-subir" (Dolce Pasta con controla_stock_terminado = false, el
+// usuario con retiros:cargar solo, y remitos subidos en cada estado). A 390 y
+// 1280 px, sin scroll horizontal ni errores de JS:
+//  - el módulo abre en Subir (la única pestaña que tiene: sin la barra de
+//    pestañas); "Mis remitos subidos" muestra cada estado (el sello "Acopio",
+//    "Confirmado: Orden D-0005" con orden_codigo), solo los míos;
 //  - una foto de prueba (un PNG de 2400×1200 armado en la página) se achica a
 //    1600×800 en JPEG, se sube a <uid>/remitos/<uuid>.jpg, va a
 //    crear_remito_precarga con su client_uuid y a ocr-remito, sin esperarla:
 //    con la IA sin responder, otra foto igual se sube;
 //  - si crear_remito_precarga falla, "Reintentar" usa el MISMO client_uuid y
 //    no vuelve a subir la foto; el sondeo trae el remito leído;
-//  - en una maqueta de Nuss (todas con control) el botón no aparece.
+//  - en la Carga queda el link chico "Remitos Dolce →" (y en Nuss, todas
+//    con control, ni el link ni el módulo).
 // Corre SIEMPRE, sin credenciales.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
@@ -52,7 +55,7 @@ async function pngDePrueba(page, ancho, alto) {
 
 async function abrir(page) {
   page.setDefaultTimeout(15000);
-  await page.goto(`${MAQUETA}/modulos/retiros.html?maqueta=retiros-remitos`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${MAQUETA}/modulos/remitos-dolce.html?maqueta=remitos-dolce-subir`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Array.isArray(globalThis.__maquetaTablas?.remitos_precarga));
   await page.evaluate(() => {
     localStorage.removeItem('retiros.borrador');
@@ -76,20 +79,17 @@ async function abrir(page) {
 }
 
 for (const [ancho, alto] of TAMANOS) {
-  test(`Subir remitos Rosario en Dolce Pasta, a ${ancho} px`, async ({ page }, info) => {
+  test(`Remitos Dolce → Subir, a ${ancho} px`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const { rpc, funciones } = anotar(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrir(page);
 
-    // El botón, en la elección de fábrica.
-    const boton = page.locator('#rt-btn-remitos');
-    await expect(boton).toBeVisible();
-    await expect(boton).toContainText('Subir remitos Rosario');
-    await sinScrollHorizontal(page);
-    await captura(page, `remitos-boton-${ancho}`, info);
-    await boton.click();
-    await expect(page.locator('#rt-subtitulo')).toHaveText('Subir remitos');
+    // Abre en Subir: solo tiene retiros:cargar, así que no hay barra de pestañas.
+    await expect(page.locator('#rt-vista-remitos')).toBeVisible();
+    await expect(page.locator('#rd-sub')).toHaveText('Subir');
+    await expect(page.locator('#rd-tabs')).toBeHidden();
+    await expect(page.locator('.cab-modulo__titulo')).toHaveText('Remitos Dolce');
     await expect(page.locator('#rt-remitos-fabrica')).toContainText('Los remitos van a Dolce Pasta.');
 
     // Mis remitos subidos: cada estado, solo los míos.
@@ -103,7 +103,7 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(fila('rp-pre').locator('.rt-remito__sello')).toHaveCount(0);
     await expect(fila('rp-aco')).toContainText('Remito N° 977492');
     await expect(fila('rp-aco').locator('.rt-remito__sello')).toHaveText('Acopio');
-    await expect(fila('rp-conf')).toContainText('Confirmado como orden D-0005');
+    await expect(fila('rp-conf')).toContainText('Confirmado: Orden D-0005');
     await expect(fila('rp-err')).toContainText('No se pudo leer');
     await expect(fila('rp-err')).toContainText('la foto está movida');
     await expect(fila('rp-err').locator('[data-remito-reintentar="rp-err"]')).toBeVisible();
@@ -162,7 +162,7 @@ for (const [ancho, alto] of TAMANOS) {
     await page.evaluate(([ruta]) => {
       globalThis.__maquetaTablas.remitos_precarga.push({
         id: 'rp-nuevo', unidad_negocio_id: 'u-d', foto_path: ruta, subido_por: 'emp-1', subido_en: new Date().toISOString(),
-        estado: 'precargada', numero_remito: '0001-00003101', talonario: 'oficial', error: null, orden_id: null, descartado_motivo: null, orden: null,
+        estado: 'precargada', numero_remito: '0001-00003101', talonario: 'oficial', error: null, orden_id: null, descartado_motivo: null, orden_codigo: null,
       });
     }, [crear1.p_foto_path]);
     await expect(fila('rp-nuevo')).toContainText('Remito N° 0001-00003101', { timeout: 15000 });
@@ -173,14 +173,24 @@ for (const [ancho, alto] of TAMANOS) {
     await expect.poll(() => funciones.some(f => f.nombre === 'ocr-remito' && f.body?.remito_id === 'rp-err')).toBe(true);
     await expect(fila('rp-err')).toContainText('Leyendo…');
 
-    // Volver a la carga.
-    await page.locator('#rt-remitos-volver').click();
-    await expect(page.locator('#rt-vista-remitos')).toBeHidden();
     await sinScrollHorizontal(page);
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`En Nuss y Mengui (todas con control) no hay botón, a ${ancho} px`, async ({ page }) => {
+  test(`La Carga: el link chico "Remitos Dolce →"; en Nuss y Mengui (todas con control), ni el link ni el módulo, a ${ancho} px`, async ({ page }) => {
+    {
+      const errores = vigilarErrores(page);
+      await page.setViewportSize({ width: ancho, height: alto });
+      await page.goto(`${MAQUETA}/modulos/retiros.html?maqueta=retiros-remitos`, { waitUntil: 'domcontentloaded' });
+      const link = page.locator('#rt-link-remitos');
+      await expect(link).toBeVisible();
+      await expect(link).toHaveText('Remitos Dolce →');
+      await expect(link).toHaveAttribute('href', 'remitos-dolce.html?pestana=subir');
+      await expect(page.locator('#rt-btn-remitos')).toHaveCount(0);
+      await expect(page.locator('#rt-vista-remitos')).toHaveCount(0);
+      await sinScrollHorizontal(page);
+      expect(errores, errores.join('\n')).toEqual([]);
+    }
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await page.addInitScript(() => {
@@ -200,5 +210,9 @@ for (const [ancho, alto] of TAMANOS) {
     expect(rpc.some(r => r.nombre === 'crear_remito_precarga')).toBe(false);
     await sinScrollHorizontal(page);
     expect(errores, errores.join('\n')).toEqual([]);
+    // Y el módulo, sin ninguna fábrica sin control: dice que no tiene permiso.
+    await page.goto(`${MAQUETA}/modulos/remitos-dolce.html?maqueta=remitos-dolce-subir`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#rd-sin-acceso')).toContainText('No tenés permiso para subir ni revisar remitos de Dolce Pasta', { timeout: 2000 });
+    await expect(page.locator('#rt-vista-remitos')).toBeHidden();
   });
 }

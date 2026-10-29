@@ -1,13 +1,20 @@
-// Mutaciones de test-administracion-remitos-precarga.js (los remitos
-// precargados de Rosario en Administración, 27/10/2026): mutan
-// modulos/administracion.html, que la suite recibe por ARCHIVO_TEST. Ver
+// Mutaciones de test-remitos-dolce-revisar.js (Remitos Dolce → Revisar,
+// 28/10/2026; antes mut-administracion-remitos-precarga.js, cuando la
+// revisión estaba en Administración → Órdenes): mutan
+// modulos/remitos-dolce.html, que la suite recibe por ARCHIVO_TEST. Ver
 // mutar.js.
 //
-// BASELINE FIJO: antes de mutar, la suite tiene que dar ROJO sobre la
-// Administración de ANTES del cambio (BASE = f364914, el pedido del que salió
-// la rama ci-prueba/remitos-rosario-revisar). Nunca HEAD.
+// Estaba ROTA desde el 27/10/2026: "el buscador con apagados" tenía un ancla
+// que aparecía dos veces en administracion.html (los Acopios copiaron el
+// buscador de clientes), y el runner aborta sin correr ninguna. En el módulo
+// nuevo el buscador está una sola vez.
 //
-//   node pruebas/mut-administracion-remitos-precarga.js
+// BASELINE FIJO: antes de mutar, la suite tiene que dar ROJO sobre la
+// Administración de 133555d (el main del que salió la rama
+// ci-prueba/modulo-remitos-dolce: la revisión vivía ahí y el módulo no
+// existía). Nunca HEAD.
+//
+//   node pruebas/mut-remitos-dolce-revisar.js
 //
 // UN RUNNER POR VEZ.
 'use strict'
@@ -18,8 +25,8 @@ const { execFileSync } = require('child_process')
 const { correrMutaciones } = require('./mutar')
 
 const RAIZ = path.join(__dirname, '..')
-const SUITE = path.join(__dirname, 'test-administracion-remitos-precarga.js')
-const BASE = 'f364914'
+const SUITE = path.join(__dirname, 'test-remitos-dolce-revisar.js')
+const BASE = '133555d'
 
 {
   let viejo = null
@@ -29,7 +36,7 @@ const BASE = 'f364914'
     console.log(`(sin el historial de git: no se corre el baseline ${BASE})`)
   }
   if (viejo !== null) {
-    const tmp = path.join(__dirname, 'mut-tmp-base-administracion-remitos-precarga.html')
+    const tmp = path.join(__dirname, 'mut-tmp-base-remitos-dolce-revisar.html')
     fs.writeFileSync(tmp, viejo)
     let rojo = false
     try {
@@ -42,11 +49,13 @@ const BASE = 'f364914'
 
 correrMutaciones({
   suite: SUITE,
-  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/administracion.html'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/remitos-dolce.html'),
   escape: 'esc',
   funciones: ['htmlTarjetaRemito', 'htmlRenglonRemito', 'htmlEncabezadoRemito', 'htmlAccionesRemito', 'htmlFilaOrdenRemito', 'htmlClientesRemito',
     'htmlClienteRemito', 'htmlOpcionesRemito', 'htmlLotesRemito', 'htmlMarcasRemito', 'htmlRemitosPrecarga', 'htmlTalonariosOrdenes', 'htmlFotoRemito'],
   equivalentes: [
+    { expr: 'esc(est)', motivo: 'est es uno de tres textos del código (estadoOrdenRemito: anulada, pendiente, valorizada), nunca de la base' },
+    { expr: 'esc(ETIQUETA_ESTADO_ORDEN[est])', motivo: 'una etiqueta constante del código (Anulada, Por valorizar, Valorizada)' },
     { expr: 'esc(r.id)', motivo: 'el id de un remito (uuid de la base) en un data-remito entre comillas' },
     { expr: 'esc(r.estado)', motivo: 'un estado de remitos_precarga (CHECK de la base: leyendo, precargada, error…) como clase y fuera de la lista no llega' },
     { expr: 'esc(estadoR)', motivo: 'una etiqueta constante de ETIQUETA_ESTADO_REMITO (o el estado del CHECK)' },
@@ -86,7 +95,7 @@ correrMutaciones({
     // La lista de arriba
     { nombre: 'la lista sin los que se están leyendo', de: "const ESTADOS_REMITO_POR_REVISAR = ['precargada', 'error', 'leyendo']", a: "const ESTADOS_REMITO_POR_REVISAR = ['precargada', 'error']" },
     { nombre: 'la lista con los confirmados', de: "const ESTADOS_REMITO_POR_REVISAR = ['precargada', 'error', 'leyendo']", a: "const ESTADOS_REMITO_POR_REVISAR = ['precargada', 'error', 'leyendo', 'confirmada']" },
-    { nombre: 'la lista al revés', de: ".sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))", a: ".sort((a, b) => String(a.subido_en ?? '').localeCompare(String(b.subido_en ?? '')))" },
+    { nombre: 'la lista al revés', de: ".filter(r => r && ESTADOS_REMITO_POR_REVISAR.includes(r.estado) && !(resueltos instanceof Set && resueltos.has(r.id)))\n        .sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))", a: ".filter(r => r && ESTADOS_REMITO_POR_REVISAR.includes(r.estado) && !(resueltos instanceof Set && resueltos.has(r.id)))\n        .sort((a, b) => String(a.subido_en ?? '').localeCompare(String(b.subido_en ?? '')))" },
     { nombre: 'lo resuelto vuelve', de: ' && !(resueltos instanceof Set && resueltos.has(r.id)))', a: ')' },
     { nombre: 'confirmar no lo marca resuelto', de: '      estado.remitosResueltos.add(id)\n', a: '' },
     { nombre: 'la consulta sin la fábrica', de: ".eq('unidad_negocio_id', unidadId).in('estado', ESTADOS_REMITO_POR_REVISAR)", a: ".in('estado', ESTADOS_REMITO_POR_REVISAR)" },
@@ -94,9 +103,6 @@ correrMutaciones({
     { nombre: 'la tarjeta sin el error de la IA', de: "        (r.estado === 'error' && limpio(r.error) ? `<span class=\"ad-fila__meta ad-rm-tarjeta__error\">${esc(limpio(r.error))}</span>` : '') +\n", a: '' },
     // Con control / sin control
     { nombre: 'toda fábrica es sin control', de: "      return !!unidadId && estado.sinControl?.get?.(unidadId) === true", a: '      return !!unidadId' },
-    { nombre: 'null cuenta como sin control', de: "estado.sinControl.set(unidadId, data?.controla_stock_terminado === false)", a: "estado.sinControl.set(unidadId, data?.controla_stock_terminado !== true)" },
-    { nombre: 'Nuss también lee los remitos', de: '      if (sinControlStockEmpresa()) cargarRemitosPrecarga()\n      else pintarRemitosPrecarga()', a: '      cargarRemitosPrecarga()' },
-    { nombre: 'la lista de Dolce con la fila de siempre', de: '      return lista.map(sinControlStockEmpresa() ? htmlFilaOrdenRemito : htmlFilaOrden).join(\'\')', a: "      return lista.map(htmlFilaOrden).join('')" },
     { nombre: 'la lista de Nuss ordenada por remito', de: "      if (!sinControlStockEmpresa()) return lista\n      const tal = estado.talonarioOrdenes", a: "      if (!sinControlStockEmpresa()) return ordenarPorRemito(lista)\n      const tal = estado.talonarioOrdenes" },
     { nombre: 'la sección se ve en Nuss', de: "      if (!sinControlStockEmpresa() || !rr || rr.empresaId !== estado.empresaId) return ''", a: "      if (!rr || rr.empresaId !== estado.empresaId) return ''" },
     // El listado de abajo
@@ -106,9 +112,18 @@ correrMutaciones({
     { nombre: 'null es acopio', de: "      return x?.talonario === 'acopio' ? 'acopio' : 'oficial'", a: "      return x?.talonario === 'oficial' ? 'oficial' : 'acopio'" },
     { nombre: 'el acopio dice Remito', de: "      return `${talonarioDe(o) === 'acopio' ? 'Acopio' : 'Remito'} N° ${n}`", a: '      return `Remito N° ${n}`' },
     { nombre: 'sin el sello Acopio', de: "      return o?.talonario === 'acopio' ? '<span class=\"ad-sello ad-sello--acopio\">Acopio</span>' : ''", a: "      return ''" },
-    { nombre: 'la fila sin "Valorizada / Sin valorizar"', de: '`<span class="ad-fila__sellos">${htmlSelloOrden(o)}${htmlSelloAcopio(o)}${htmlSelloEntre(o)}</span></span>`', a: '`<span class="ad-fila__sellos">${htmlSelloAcopio(o)}${htmlSelloEntre(o)}</span></span>`' },
-    { nombre: 'la fila sin el total', de: "        (valorizada ? `<span class=\"ad-fila__importe\">${esc(importeHoja(totalRemito, o.moneda) + textoAFavor(totalRemito))}</span>` : '') + '</span></button>'", a: "        '</span></button>'" },
-    { nombre: 'la cuenta cuenta todas', de: "      const n = Array.isArray(estado.ordenes) ? ordenesVisibles().length : 0", a: '      const n = estado.ordenes?.length ?? 0' },
+    { nombre: 'la fila sin "Valorizada / Por valorizar"', de: '<span class="ad-sello ad-sello--orden-${esc(est)}">${esc(ETIQUETA_ESTADO_ORDEN[est])}</span>${htmlSelloAcopio(o)}', a: '${htmlSelloAcopio(o)}' },
+    { nombre: 'la anulada como valorizada', de: "      if (o?.estado === 'anulada') return 'anulada'\n", a: '' },
+    { nombre: 'la que falta valorizar sin marcar', de: "${est === 'pendiente' ? ' ad-fila--atencion' : ''}", a: '' },
+    { nombre: 'la fila es un botón', de: '      return `<div class="ad-fila ad-fila--remito rd-fila-orden', a: '      return `<button type="button" class="ad-fila ad-fila--remito rd-fila-orden' },
+    { nombre: 'el link a Administración sin retiros:precios', de: "      if (link) link.hidden = !puedeEn('retiros', 'precios')", a: '      if (link) link.hidden = false' },
+    { nombre: 'las órdenes de todas las fábricas', de: ".eq('unidad_negocio_id', empresaId).gte('fecha', desde)", a: ".gte('fecha', desde)" },
+    { nombre: 'las órdenes sin tope de días', de: ".eq('unidad_negocio_id', empresaId).gte('fecha', desde)", a: ".eq('unidad_negocio_id', empresaId)" },
+    { nombre: 'las órdenes sin tope', de: "          .order('fecha', { ascending: false }).limit(TOPE_ORDENES_REMITO)", a: "          .order('fecha', { ascending: false })" },
+    { nombre: 'un error de las órdenes pasa de largo', de: "          .order('fecha', { ascending: false }).limit(TOPE_ORDENES_REMITO)\n        if (error) throw error", a: "          .order('fecha', { ascending: false }).limit(TOPE_ORDENES_REMITO)" },
+    { nombre: 'las órdenes sin el talonario', de: 'numero_remito, numero_remito_n, talonario\')\n          .eq(\'unidad_negocio_id\', empresaId)', a: 'numero_remito, numero_remito_n\')\n          .eq(\'unidad_negocio_id\', empresaId)' },
+    { nombre: 'sin el error de las órdenes', de: "      if (estado.errorOrdenes) return `<div class=\"ad-aviso ad-aviso--grave\">${esc(estado.errorOrdenes)}</div>`\n", a: '' },
+    { nombre: 'Revisar sin las órdenes de abajo', de: '      cargarRemitosPrecarga()\n      await cargarOrdenesRemito()', a: '      cargarRemitosPrecarga()' },
     // El remito abierto
     { nombre: 'la foto de otro bucket', de: "await supabase.storage.from('comprobantes').createSignedUrl(ruta, 600)", a: "await supabase.storage.from('cobranzas').createSignedUrl(ruta, 600)" },
     { nombre: 'cualquier link es una foto', de: "      return /^https?:\\/\\//i.test(t) || /^blob:/i.test(t) || /^data:image\\//i.test(t) ? t : null", a: '      return t || null' },
@@ -147,23 +162,17 @@ correrMutaciones({
     { nombre: 'el error de confirmar genérico', de: "        rm.mensaje = err?.message || 'No se pudo confirmar el remito. Probá de nuevo.'", a: "        rm.mensaje = 'No se pudo confirmar el remito. Probá de nuevo.'" },
     { nombre: 'sin "Descartar (ya ingresado)"', de: '        rm.yaIngresado = RE_YA_INGRESADO.test(rm.mensaje)\n', a: '' },
     { nombre: '"ya ingresado" con otro motivo', de: "      else if (a === 'ya-ingresado') descartarRemito('ya ingresado')", a: "      else if (a === 'ya-ingresado') descartarRemito('repetido')" },
-    { nombre: 'confirmado no vuelve a Órdenes', de: "      estado.ordenes = null\n      if (estado.vista === 'ad-vista-remito') await mostrarOrdenes()", a: '      estado.ordenes = null' },
+    { nombre: 'confirmado no vuelve a Revisar', de: "      estado.ordenes = null\n      if (estado.vista === 'ad-vista-remito') await mostrarRevisar()", a: '      estado.ordenes = null' },
     { nombre: 'el aviso de confirmar sin la orden', de: "${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}", a: 'ya es una orden' },
     { nombre: 'el motivo sin mínimo', de: '      if (m.length < LARGO_MINIMO_MOTIVO_REMITO) {', a: '      if (m.length < 1) {' },
     { nombre: 'el motivo sin limpiar', de: "        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: m })", a: "        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: motivo })" },
     { nombre: 'el error de descartar genérico', de: "        const texto = err?.message || 'No se pudo descartar el remito. Probá de nuevo.'", a: "        const texto = 'No se pudo descartar el remito. Probá de nuevo.'" },
     { nombre: 'volver a leer con otra clave', de: "supabase.functions.invoke('ocr-remito', { body: { remito_id: rm.id } })", a: "supabase.functions.invoke('ocr-remito', { body: { id: rm.id } })" },
     { nombre: 'volver a leer no pisa el formulario', de: '          aplicarFilaRemito(rm, fila)\n          rm.aviso = fila.estado', a: '          rm.aviso = fila.estado' },
-    { nombre: 'el error de la lectura se ignora', de: '        if (data?.error) throw new Error(String(data.error))\n', a: '' },
+    { nombre: 'el error de la lectura se ignora', de: '        if (error) throw new Error(await mensajeDeFuncion(error))\n        if (data?.error) throw new Error(String(data.error))\n', a: '        if (error) throw new Error(await mensajeDeFuncion(error))\n' },
     { nombre: 'el error del cuerpo de la función se pierde', de: "        const cuerpo = await error?.context?.json?.()\n        if (cuerpo?.error) return String(cuerpo.error)", a: '        await error?.context?.json?.()' },
     { nombre: 'volver a leer sin avisar lo no guardado', de: "(rm.sucio ? ', también lo que corregiste y todavía no guardaste.' : '.')", a: "'.'" },
     { nombre: 'Órdenes sale sin avisar', de: '      if (rm?.sucio && !rm.saliendo && !rm.trabajando) {', a: '      if (false) {' },
     // La ficha y la hoja
-    { nombre: 'la ficha sin el remito', de: "${remito ? `<p class=\"ad-orden-remito\" data-orden-remito>${esc(remito)}</p>` : ''}", a: '' },
-    { nombre: 'la ficha sin el sello Acopio', de: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div><div class="ad-datos">', a: '${htmlSelloOrden(o)}${htmlSelloEntre(o)}</div><div class="ad-datos">' },
-    { nombre: 'la hoja sin el N° de remito', de: "numeroRemito: limpio(o.numero_remito) || null, talonario: o.talonario === 'acopio' ? 'acopio' : null,", a: "numeroRemito: null, talonario: o.talonario === 'acopio' ? 'acopio' : null," },
-    { nombre: 'la hoja sin el talonario', de: "numeroRemito: limpio(o.numero_remito) || null, talonario: o.talonario === 'acopio' ? 'acopio' : null,", a: 'numeroRemito: limpio(o.numero_remito) || null, talonario: null,' },
-    { nombre: 'la orden se lee sin numero_remito', de: 'division_pct_a, numero_remito, talonario\')', a: 'division_pct_a\')' },
-    { nombre: 'la lista se lee sin numero_remito', de: 'comision_modo, comision_importe, numero_remito, numero_remito_n, talonario\')', a: 'comision_modo, comision_importe\')' },
   ],
 })

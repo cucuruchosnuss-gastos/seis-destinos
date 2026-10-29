@@ -1,26 +1,28 @@
-// LOS REMITOS PRECARGADOS DE ROSARIO (27/10/2026, rama
-// ci-prueba/remitos-rosario-revisar). En Administración → Órdenes de una
-// fábrica SIN control de stock (Dolce Pasta): "Remitos precargados · por
-// revisar" (precargada, error, leyendo; el más nuevo arriba), el remito
-// abierto con la foto firmada, el encabezado con el talonario Oficial /
-// Acopio, los renglones en AMARILLO con lo leído y la nota, "Aceptar
-// sugerencia", elegir el producto saca el amarillo, "No va en la orden"
-// (omitir), los lotes ("Asignado X de Y · faltan Z"), lo que se manda a
-// actualizar_remito_precarga, Confirmar (guarda antes; el error de la base TAL
-// CUAL; "Descartar (ya ingresado)"), Descartar con motivo y Volver a leer.
-// Abajo, las órdenes por N° de remito (las sin número al final) en solapas
-// Oficial / Acopio. La ficha dice "Remito N° X". En una fábrica CON control
-// (Nuss) Órdenes no cambia. Se EJECUTAN las funciones reales, con texto
-// malicioso donde va algo de la base.
+// REMITOS DOLCE → REVISAR (28/10/2026, rama ci-prueba/modulo-remitos-dolce;
+// antes en Administración → Órdenes, 27/10/2026, y esta suite era
+// test-administracion-remitos-precarga.js). En modulos/remitos-dolce.html,
+// pestaña Revisar: "Remitos precargados · por revisar" (precargada, error,
+// leyendo; el más nuevo arriba), el remito abierto con la foto firmada, el
+// encabezado con el talonario Oficial / Acopio, los renglones en AMARILLO con
+// lo leído y la nota, "Aceptar sugerencia", elegir el producto saca el
+// amarillo, "No va en la orden" (omitir), los lotes ("Asignado X de Y · faltan
+// Z"), lo que se manda a actualizar_remito_precarga, Confirmar (guarda antes;
+// el error de la base TAL CUAL; "Descartar (ya ingresado)"), Descartar con
+// motivo y Volver a leer. Abajo, las órdenes por N° de remito (las sin número
+// al final) en solapas Oficial / Acopio, de solo lectura (se valorizan en
+// Administración). Se EJECUTAN las funciones reales, con texto malicioso
+// donde va algo de la base. Lo que quedó en Administración (la ficha con
+// "Remito N° X", Órdenes sin cambios) lo prueba
+// test-administracion-link-remitos.js.
 //
-//   node pruebas/test-administracion-remitos-precarga.js
+//   node pruebas/test-remitos-dolce-revisar.js
 'use strict'
 
 const path = require('path')
-const { construirAdministracion } = require('./sandbox-administracion')
+const { construirRemitosDolce } = require('./sandbox-remitos-dolce')
 const { arnes, leer, marca, chequearMarcas, escapada } = require('./circuito-comun')
 
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/administracion.html')
+const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/remitos-dolce.html')
 leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
 
@@ -42,7 +44,7 @@ const CONSTANTES = ['ZOOM_FOTO_REMITO', 'LARGO_LOTE_REMITO', 'LARGO_MINIMO_MOTIV
 const PRELUDIO = `
   supabase.functions = { invoke(n, op) { __llamadas.rpc.push(['fn:' + n, JSON.parse(JSON.stringify(op ?? null))]); return Promise.resolve(window.__fn ? window.__fn(n, op) : { data: null, error: null }) } }
 `
-const nuevo = () => construirAdministracion(ARCHIVO, { funciones: FUNCIONES, constantes: CONSTANTES, preludioExtra: PRELUDIO })
+const nuevo = () => construirRemitosDolce(ARCHIVO, { funciones: FUNCIONES, constantes: CONSTANTES, preludioExtra: PRELUDIO })
 
 const CAT = {
   productos: [
@@ -139,69 +141,69 @@ const renglonHtml = (h, i) => {
   S.elegirTalonarioOrdenes('raro')
   chk('un talonario que no existe no cambia nada', S.estado.talonarioOrdenes === 'acopio')
   S.estado.talonarioOrdenes = 'oficial'
-  S.pintarOrdenes()
-  const lista = S.__els.get('ad-ordenes-lista').innerHTML
-  const sol = S.__els.get('ad-ordenes-talonario').innerHTML
+  S.pintarOrdenesRemito()
+  const lista = S.__els.get('rd-ordenes-lista').innerHTML
+  const sol = S.__els.get('rd-ordenes-talonario').innerHTML
   chk('las solapas dicen cuántas hay en cada talonario', /Oficial · 4/.test(sol) && /Acopio · 1/.test(sol) && /data-talonario-ordenes="oficial" aria-pressed="true"/.test(sol))
   chk('la fila: "Remito N° X" grande', /<span class="ad-rm-numero">Remito N° 0001-00003099<\/span>/.test(lista))
   chk('la fila sin número: "Sin N° de remito"', /ad-rm-numero--sin">Sin N° de remito</.test(lista))
-  chk('la fila dice Valorizada / Sin valorizar', /ad-sello--valorizada">Valorizada/.test(lista) && /ad-sello--pendiente">Sin valorizar/.test(lista))
-  chk('la valorizada muestra su total', /\$\s50\.000,00/.test(lista))
+  chk('la fila dice Valorizada / Por valorizar', /ad-sello--orden-valorizada">Valorizada/.test(lista) && /ad-sello--orden-pendiente">Por valorizar/.test(lista))
+  chk('la que falta valorizar, marcada', /ad-fila--atencion" data-orden="o3"/.test(lista) && !/ad-fila--atencion" data-orden="o1"/.test(lista))
+  chk('sin plata en esta pantalla (se valoriza en Administración)', !/\$/.test(lista))
   chk('la fila lleva cliente, fecha y la orden', /Almacén Rosario · 20\/10\/2026 · Orden D-0001/.test(lista))
   chk('el orden en la pantalla es el del número', lista.indexOf('data-orden="o3"') < lista.indexOf('data-orden="o1"') && lista.indexOf('data-orden="o1"') < lista.indexOf('data-orden="o2"'))
-  chk('tocar una abre la ficha de siempre (data-orden)', (lista.match(/data-orden="/g) || []).length === 4)
-  chk('la cuenta es la de la solapa', S.__els.get('ad-ordenes-cuenta').textContent === '4 órdenes')
+  chk('las filas son de solo lectura (no son botones)', (lista.match(/data-orden="/g) || []).length === 4 && !/<button/.test(lista))
+  chk('sin retiros:precios no se ofrece "Valorizar en Administración"', S.__els.get('rd-link-admin').hidden === true)
+  S.estado.misTareas.set('retiros:precios', { unidades: ['u-d'] })
+  S.pintarOrdenesRemito()
+  chk('con retiros:precios, el link a Administración', S.__els.get('rd-link-admin').hidden === false)
   S.estado.talonarioOrdenes = 'acopio'
-  S.pintarOrdenes()
-  chk('la de acopio: "Acopio N° …" y el sello Acopio', /Acopio N° 977490/.test(S.__els.get('ad-ordenes-lista').innerHTML) && /ad-sello--acopio">Acopio/.test(S.__els.get('ad-ordenes-lista').innerHTML))
+  S.pintarOrdenesRemito()
+  chk('la de acopio: "Acopio N° …" y el sello Acopio', /Acopio N° 977490/.test(S.__els.get('rd-ordenes-lista').innerHTML) && /ad-sello--acopio">Acopio/.test(S.__els.get('rd-ordenes-lista').innerHTML))
+  S.estado.ordenes = [{ id: 'o-an', estado: 'anulada', estado_valorizacion: 'valorizada', numero_remito: '977400', talonario: 'acopio', cliente_id: 'c-alm', fecha: '2026-10-01' }]
+  S.pintarOrdenesRemito()
+  chk('una anulada dice "Anulada" (aunque estuviera valorizada)', /ad-fila--anulada/.test(S.__els.get('rd-ordenes-lista').innerHTML) && /ad-sello--orden-anulada">Anulada/.test(S.__els.get('rd-ordenes-lista').innerHTML))
+  S.estado.ordenes = null
+  S.estado.errorOrdenes = 'No se pudieron leer las órdenes. Revisá la conexión y volvé a entrar.'
+  S.pintarOrdenesRemito()
+  chk('si no se pudieron leer, lo dice', /ad-aviso--grave">No se pudieron leer las órdenes/.test(S.__els.get('rd-ordenes-lista').innerHTML))
 }
-
-// ═══ Nuss (con control): Órdenes SIN CAMBIOS ═════════════════════════════
+// La red: una fábrica CON control (no debería llegar acá: cargarFabricas solo
+// trae las sin control) no muestra precargados ni solapas, y no ordena.
 {
   const S = nuevo()
+  enDolce(S)
   S.estado.empresaId = 'u-n'
-  S.estado.clientes = CLIENTES
-  S.estado.catalogo = CAT
-  S.estado.catalogoEmpresa = 'u-n'
-  S.__tablas.unidades_negocio = [{ id: 'u-n', controla_stock_terminado: true }]
-  S.__tablas.ordenes_retiro = JSON.parse(JSON.stringify(ORDENES))
-  S.__tablas.orden_retiro_items = []
-  S.__tablas.remitos_precarga = [R1]
-  esperas.push(S.mostrarOrdenes().then(() => {
-    chk('Nuss: se lee si controla el stock', S.__llamadas.consultas.some(c => c[0] === 'unidades_negocio' && c[1].some(f => f[0] === 'select' && f[1] === 'controla_stock_terminado')))
-    chk('Nuss: NO se consultan los remitos precargados', !S.__llamadas.consultas.some(c => c[0] === 'remitos_precarga'))
-    chk('Nuss: sin la sección de remitos', S.__els.get('ad-remitos').innerHTML === '')
-    chk('Nuss: sin solapas de talonario', S.__els.get('ad-ordenes-talonario').innerHTML === '')
-    const esperado = S.estado.ordenes.map(S.htmlFilaOrden).join('')
-    chk('Nuss: la lista es la de siempre (htmlFilaOrden, en el orden de la base)', S.__els.get('ad-ordenes-lista').innerHTML === esperado && !/ad-rm-numero/.test(esperado))
-    chk('Nuss: la cuenta, todas', S.__els.get('ad-ordenes-cuenta').textContent === '5 órdenes')
-    // Aunque haya una lista leída de esa fábrica, en una con control no se dibuja.
-    S.estado.remitos = { empresaId: 'u-n', filas: [R1], error: null }
-    chk('Nuss: con una lista a mano, la sección igual no se dibuja', S.htmlRemitosPrecarga() === '')
-  }))
+  S.estado.ordenes = JSON.parse(JSON.stringify(ORDENES))
+  S.estado.remitos = { empresaId: 'u-n', filas: [R1], error: null }
+  chk('con control: no es "sin control"', S.sinControlStockEmpresa('u-n') === false && S.sinControlStockEmpresa('u-d') === true && S.sinControlStockEmpresa('u-x') === false)
+  chk('con control: sin la sección de precargados', S.htmlRemitosPrecarga() === '')
+  chk('con control: sin solapas', S.htmlTalonariosOrdenes() === '')
+  chk('con control: la lista como vino (sin ordenar por remito)', S.ordenesVisibles().map(o => o.id).join() === 'o1,o2,o3,o4,o5')
 }
-{
-  // Sin poder leer el dato: como una fábrica con control.
+esperas.push((async () => {
   const S = nuevo()
-  S.estado.empresaId = 'u-d'
-  S.__tablas.unidades_negocio = () => ({ data: null, error: { message: 'sin red' } })
-  esperas.push(S.leerSinControl('u-d').then(() => {
-    chk('si no se pudo leer si controla el stock, es una fábrica de siempre', S.sinControlStockEmpresa('u-d') === false && S.htmlRemitosPrecarga() === '')
-  }))
+  enDolce(S)
+  await S.cargarOrdenesRemito()
+  const q = S.__llamadas.consultas.find(c => c[0] === 'ordenes_retiro')[1]
+  chk('las órdenes: de la fábrica, con N° de remito y talonario', q.some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === 'u-d') &&
+    q.some(f => f[0] === 'select' && /numero_remito, numero_remito_n, talonario/.test(f[1]) && /estado_valorizacion/.test(f[1])))
+  const desde = q.find(f => f[0] === 'gte' && f[1] === 'fecha')?.[2]
+  const dias = desde ? Math.round((Date.now() - Date.parse(desde + 'T12:00:00Z')) / 86400000) : null
+  chk('…de los últimos 120 días, con tope', dias !== null && Math.abs(dias - 120) <= 1 && q.some(f => f[0] === 'limit' && f[1] === 400), String(dias))
+  chk('…quedan en el estado', Array.isArray(S.estado.ordenes) && S.estado.ordenes.length === 5)
   const T = nuevo()
-  T.__tablas.unidades_negocio = [{ id: 'u-d', controla_stock_terminado: false }]
-  esperas.push(T.leerSinControl('u-d').then(() => chk('controla_stock_terminado = false → sin control', T.sinControlStockEmpresa('u-d') === true)))
-  const U = nuevo()
-  U.__tablas.unidades_negocio = [{ id: 'u-m', controla_stock_terminado: null }]
-  esperas.push(U.leerSinControl('u-m').then(() => chk('null no es "sin control"', U.sinControlStockEmpresa('u-m') === false)))
-}
+  enDolce(T)
+  T.__tablas.ordenes_retiro = () => ({ data: null, error: { message: 'sin red' } })
+  await T.cargarOrdenesRemito()
+  chk('si falla, el error y ninguna orden', T.estado.ordenes === null && /No se pudieron leer las órdenes/.test(T.estado.errorOrdenes))
+})())
 
 // ═══ Dolce: la sección de arriba ═════════════════════════════════════════
 {
   const S = nuevo()
   enDolce(S)
-  S.__tablas.unidades_negocio = [{ id: 'u-d', controla_stock_terminado: false }]
-  esperas.push(S.mostrarOrdenes().then(() => {
+  esperas.push(S.mostrarRevisar().then(() => {
     const c = S.__llamadas.consultas.find(x => x[0] === 'remitos_precarga')
     chk('Dolce: se leen los remitos de la fábrica, por revisar', c && c[1].some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === 'u-d') &&
       c[1].some(f => f[0] === 'in' && f[1] === 'estado' && JSON.stringify(f[2]) === '["precargada","error","leyendo"]'))
@@ -213,7 +215,8 @@ const renglonHtml = (h, i) => {
     chk('cuántos en amarillo', /3 en amarillo/.test(h))
     chk('la de acopio con su sello y "Acopio N°"', /Acopio N° 977492/.test(h) && /ad-sello--acopio/.test(h))
     chk('el cliente leído como ayuda si no se eligió', /«Almacen Rosar» \(leído\)/.test(h))
-    chk('abajo, las solapas de talonario', /Oficial · 4/.test(S.__els.get('ad-ordenes-talonario').innerHTML))
+    chk('abajo, las solapas de talonario', /Oficial · 4/.test(S.__els.get('rd-ordenes-talonario').innerHTML))
+    chk('se abre la pestaña Revisar', S.estado.vista === 'rd-vista-revisar' && S.estado.pestana === 'revisar')
   }))
 }
 
@@ -412,8 +415,8 @@ const renglonHtml = (h, i) => {
     chk('otro error: tal cual, sin "Descartar (ya ingresado)"', /El renglón 1 está en amarillo: revisalo antes de confirmar\./.test(cuerpo(S)) && !/ya-ingresado/.test(cuerpo(S)))
     S.__setRpc(async (n) => n === 'confirmar_remito_precarga' ? { data: { orden_id: 'o9', codigo: 'D-0009', numero_remito: '0001-00003100', talonario: 'oficial' }, error: null } : { data: null, error: null })
     await S.confirmarRemito()
-    chk('confirmado: avisa la orden creada', S.__llamadas.exitos.some(x => x === 'Remito N° 0001-00003100 confirmado: es la orden D-0009. Ya se puede valorizar.'), S.__llamadas.exitos.join(' | '))
-    chk('…lo saca de la lista y vuelve a Órdenes', !S.estado.remitos.filas?.some?.(r => r.id === 'r1') && S.estado.remito === null && S.estado.vista === 'ad-vista-ordenes')
+    chk('confirmado: avisa la orden creada', S.__llamadas.exitos.some(x => x === 'Remito N° 0001-00003100 confirmado: es la orden D-0009. Ya se puede valorizar en Administración.'), S.__llamadas.exitos.join(' | '))
+    chk('…lo saca de la lista y vuelve a Revisar', !S.estado.remitos.filas?.some?.(r => r.id === 'r1') && S.estado.remito === null && S.estado.vista === 'rd-vista-revisar')
     chk('…aunque la base lo vuelva a traer, no aparece', !/data-remito="r1"/.test(S.__els.get('ad-remitos').innerHTML) && /data-remito="r2"/.test(S.__els.get('ad-remitos').innerHTML))
   }))
 }
@@ -489,7 +492,7 @@ const renglonHtml = (h, i) => {
   }))
 }
 
-// ═══ "‹ Órdenes" con cambios sin guardar ═════════════════════════════════
+// ═══ "‹ Revisar" con cambios sin guardar ═════════════════════════════════
 {
   const S = nuevo()
   enDolce(S)
@@ -501,39 +504,8 @@ const renglonHtml = (h, i) => {
     chk('con cambios, el primer toque avisa y no sale', S.estado.vista === 'ad-vista-remito' && /cambios sin guardar/.test(cuerpo(S)))
     S.volverDeRemito()
     await new Promise(r => setImmediate(r))
-    chk('el segundo toque sale', S.estado.vista === 'ad-vista-ordenes' && S.estado.remito === null)
+    chk('el segundo toque sale', S.estado.vista === 'rd-vista-revisar' && S.estado.remito === null)
   }))
-}
-
-// ═══ La ficha y la hoja de una orden con N° de remito ═══════════════════
-{
-  const S = nuevo()
-  enDolce(S)
-  const base = { id: 'o1', numero: 1, codigo: 'D-0001', unidad_negocio_id: 'u-d', fecha: '2026-10-20', estado: 'confirmada', estado_valorizacion: 'pendiente', total: 0, moneda: 'ARS', cliente_id: 'c-alm', cargada_por: 'emp-9', cargada_en: '2026-10-20T15:00:00Z', transporte: null, observaciones: 'Remito 0001-00003050' }
-  const d = (o) => ({ orden: o, items: [], lotes: [], lotesInsumos: null, planillas: [], facturas: [], valorizar: null })
-  const conRemito = S.htmlDetalleOrden(d({ ...base, numero_remito: '0001-00003050', talonario: null }), CAT)
-  chk('la ficha: "Remito N° X"', /<p class="ad-orden-remito" data-orden-remito>Remito N° 0001-00003050<\/p>/.test(conRemito))
-  const acopio = S.htmlDetalleOrden(d({ ...base, numero_remito: '977490', talonario: 'acopio' }), CAT)
-  chk('la ficha de acopio: "Acopio N° X" y el sello', /Acopio N° 977490/.test(acopio) && /ad-sello--acopio">Acopio/.test(acopio))
-  const sin = S.htmlDetalleOrden(d({ ...base }), CAT)
-  chk('sin N° de remito la ficha no cambia', !/ad-orden-remito/.test(sin) && !/ad-sello--acopio/.test(sin))
-  S.estado.nombres = new Map()
-  const hoja = S.ordenParaHoja(d({ ...base, numero_remito: '0001-00003050', talonario: null }))
-  chk('la hoja recibe el N° de remito', hoja.numeroRemito === '0001-00003050' && hoja.talonario === null)
-  chk('…y la hoja impresa dice "Remito N° X"', /<span class="rh-orden__remito">Remito N° 0001-00003050<\/span>/.test(S.htmlHoja(hoja, { copias: ['ORIGINAL'] })))
-  const hojaA = S.ordenParaHoja(d({ ...base, numero_remito: '977490', talonario: 'acopio' }))
-  chk('la de acopio: "Acopio N°"', hojaA.talonario === 'acopio' && /Acopio N° 977490/.test(S.htmlHoja(hojaA, { copias: ['ORIGINAL'] })))
-  chk('sin N°, la hoja no lo nombra', S.ordenParaHoja(d(base)).numeroRemito === null && !/rh-orden__remito/.test(S.htmlHoja(S.ordenParaHoja(d(base)), { copias: ['ORIGINAL'] })))
-  esperas.push((async () => {
-    S.__tablas.ordenes_retiro = [base]
-    await S.leerOrden('o1')
-    const c = S.__llamadas.consultas.find(x => x[0] === 'ordenes_retiro')
-    chk('la orden se lee con numero_remito y talonario', c[1].some(f => f[0] === 'select' && /numero_remito/.test(f[1]) && /talonario/.test(f[1])))
-    S.__llamadas.consultas.length = 0
-    await S.leerOrdenes('u-d', { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false, sinComision: false })
-    const l = S.__llamadas.consultas.find(x => x[0] === 'ordenes_retiro')
-    chk('la lista se lee con numero_remito, numero_remito_n y talonario', l[1].some(f => f[0] === 'select' && /numero_remito, numero_remito_n, talonario/.test(f[1])))
-  })())
 }
 
 // ═══ Escape: todo lo de la base con texto malicioso ════════════════════

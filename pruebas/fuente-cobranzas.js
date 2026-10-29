@@ -19,6 +19,7 @@ const RUTA_COMUN = process.env.ARCHIVO_COMUN || path.join(__dirname, '..', 'js',
 // script la importa. ARCHIVO_COMUN_RETIROS la reemplaza (para mutarla).
 const RUTA_COMUN_RETIROS = process.env.ARCHIVO_COMUN_RETIROS || path.join(__dirname, '..', 'js', 'retiros-comun.js')
 const RUTA_MODULOS = process.env.ARCHIVO_MODULOS || path.join(__dirname, '..', 'js', 'modulos.js')
+const RUTA_COMUN_REMITOS = process.env.ARCHIVO_COMUN_REMITOS || path.join(__dirname, '..', 'js', 'remitos-comun.js')
 
 // Un archivo común sin imports y sin la palabra `export`. Se informa lo leído
 // ("ARCHIVO <ruta> (N bytes)"), una vez por archivo: el runner de mutaciones
@@ -71,6 +72,13 @@ function fuenteConComun(htmlOScript) {
     const deRetiros = declaracionesComun(RUTA_COMUN_RETIROS)
       .filter(d => !propios.has(d.nombre) && !agregados.some(a => a.nombre === d.nombre))
     fuente += '\n// ── js/retiros-comun.js ──\n' + deRetiros.map(d => d.texto).join('\n')
+  }
+  // Los remitos de Dolce (28/10/2026): Administración y Remitos Dolce lo
+  // importan. ARCHIVO_COMUN_REMITOS lo reemplaza (para mutarlo).
+  if (script.includes("from '../js/remitos-comun.js'")) {
+    const yaEstan = nombresDeclarados(fuente)
+    const deRemitos = declaracionesComun(RUTA_COMUN_REMITOS).filter(d => !yaEstan.has(d.nombre))
+    fuente += '\n// ── js/remitos-comun.js ──\n' + deRemitos.map(d => d.texto).join('\n')
   }
   // El catálogo de módulos (27/09/2026): Administración lo importa para sus
   // accesos directos. ARCHIVO_MODULOS lo reemplaza (para mutarlo).

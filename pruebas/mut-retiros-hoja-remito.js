@@ -58,4 +58,17 @@ correrMutacionesEnVarios([{
     { nombre: 'el remito sin su estilo', de: '.rh-orden__remito { font-size: 11px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere;', a: '.rh-orden__remito { font-size: 11px; line-height: 1.15;' },
     { nombre: 'el remito no corta en el recuadro', de: 'line-height: 1.15; overflow-wrap: anywhere; border-top: 1px solid #000;', a: 'line-height: 1.15; white-space: nowrap; border-top: 1px solid #000;' },
   ],
+}, {
+  // La Carga (28/10/2026): lo que trae mis_ordenes_retiro llega a la hoja.
+  suite: SUITE,
+  original: path.join(RAIZ, 'modulos', 'retiros.html'),
+  variable: 'ARCHIVO_TEST',
+  funciones: [],
+  manuales: [
+    { nombre: 'la Carga sin el número', de: "        numeroRemito: limpio(o.numero_remito) || null, talonario: o.talonario === 'acopio' ? 'acopio' : null,\n", a: '' },
+    { nombre: 'la Carga sin limpiar el número', de: 'numeroRemito: limpio(o.numero_remito) || null,', a: 'numeroRemito: o.numero_remito || null,' },
+    { nombre: 'la Carga sin el talonario', de: "talonario: o.talonario === 'acopio' ? 'acopio' : null,", a: 'talonario: null,' },
+    { nombre: 'la Carga: todo es acopio', de: "talonario: o.talonario === 'acopio' ? 'acopio' : null,", a: "talonario: 'acopio'," },
+    { nombre: 'la Carga lee otro campo', de: 'numeroRemito: limpio(o.numero_remito) || null,', a: 'numeroRemito: limpio(o.numeroRemito) || null,' },
+  ],
 }])

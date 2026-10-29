@@ -1,13 +1,13 @@
-// Mutaciones de test-retiros-subir-remitos.js (subir remitos Rosario,
-// 27/10/2026): mutan modulos/retiros.html, que la suite recibe por
+// Mutaciones de test-remitos-dolce-subir.js (Remitos Dolce → Subir,
+// 28/10/2026; antes mut-retiros-subir-remitos.js, cuando Subir estaba en la
+// Carga): mutan modulos/remitos-dolce.html, que la suite recibe por
 // ARCHIVO_TEST. Ver mutar.js.
 //
 // BASELINE FIJO: antes de mutar, la suite tiene que estar en ROJO sobre la
-// carga de ANTES del cambio (BASE = f364914, el pedido del que salió la rama
-// ci-prueba/remitos-rosario-subir). Si estuviera verde ahí, no probaría nada
-// de lo nuevo. Nunca HEAD: al commitear el cambio, HEAD ya lo tiene.
+// Carga de 133555d (el main del que salió la rama ci-prueba/modulo-remitos-dolce:
+// Subir todavía vivía en retiros.html y el módulo no existía). Nunca HEAD.
 //
-//   node pruebas/mut-retiros-subir-remitos.js
+//   node pruebas/mut-remitos-dolce-subir.js
 //
 // UN RUNNER POR VEZ.
 
@@ -17,13 +17,13 @@ const { execFileSync } = require('child_process')
 const { correrMutaciones } = require('./mutar')
 
 const RAIZ = path.join(__dirname, '..')
-const SUITE = path.join(__dirname, 'test-retiros-subir-remitos.js')
-const BASE = 'f364914'
+const SUITE = path.join(__dirname, 'test-remitos-dolce-subir.js')
+const BASE = '133555d'
 
 // La suite sobre la carga de antes: tiene que dar rojo.
 if (process.env.MUT_SOLO_ANCLAS !== '1') {
   const viejo = execFileSync('git', ['show', `${BASE}:modulos/retiros.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
-  const tmp = path.join(__dirname, 'mut-tmp-base-retiros-subir-remitos.html')
+  const tmp = path.join(__dirname, 'mut-tmp-base-remitos-dolce-subir.html')
   fs.writeFileSync(tmp, viejo)
   let rojo = false
   try {
@@ -35,29 +35,35 @@ if (process.env.MUT_SOLO_ANCLAS !== '1') {
 
 correrMutaciones({
   suite: SUITE,
-  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/retiros.html'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/remitos-dolce.html'),
   escape: 'esc',
   funciones: ['htmlRemitoSubido', 'htmlMisRemitos', 'htmlFabricaRemitos'],
   equivalentes: [
     { expr: 'esc(d.error)', motivo: 'd.error es uno de dos textos constantes del código ("No se pudieron leer tus remitos subidos…"), nunca de la base' },
   ],
   manuales: [
-    // ── Quién ve el botón ──────────────────────────────────────────────
+    // ── Quién sube ──────────────────────────────────────────────
     { nombre: 'el botón sin mirar si carga ahí', de: '      return empresasDeCarga().filter(e => sin.has(e.id))', a: '      return (estado.empresas ?? []).filter(e => sin.has(e.id))' },
     { nombre: 'el botón en todas las fábricas', de: '      return empresasDeCarga().filter(e => sin.has(e.id))', a: '      return empresasDeCarga()' },
     { nombre: 'sin saber, todas sin control', de: "      if (!(sin instanceof Set) || !sin.size) return []\n", a: "      if (!(sin instanceof Set)) return empresasDeCarga()\n" },
-    { nombre: 'controla_stock_terminado null cuenta como sin control', de: "filter(u => u?.controla_stock_terminado === false && ids.includes(u.id))", a: "filter(u => u?.controla_stock_terminado !== true && ids.includes(u.id))" },
-    { nombre: 'una fábrica donde no carga cuenta', de: "filter(u => u?.controla_stock_terminado === false && ids.includes(u.id))", a: "filter(u => u?.controla_stock_terminado === false)" },
-    { nombre: 'no pide controla_stock_terminado de las fábricas donde carga', de: ".select('id, controla_stock_terminado').in('id', ids)", a: ".select('id, controla_stock_terminado')" },
-    { nombre: 'si no se puede leer, igual sigue', de: "        const { data, error } = await supabase.from('unidades_negocio').select('id, controla_stock_terminado').in('id', ids)\n        if (error) throw error\n", a: "        const { data, error } = await supabase.from('unidades_negocio').select('id, controla_stock_terminado').in('id', ids)\n" },
-    { nombre: 'la entrada en medio de la orden', de: "(id === 'rt-vista-form' && paso === 'cliente')", a: "(id === 'rt-vista-form')" },
-    { nombre: 'la entrada sin mirar si puede', de: '      el.hidden = !(enVista && puedeSubirRemitos())', a: '      el.hidden = !enVista' },
-    { nombre: 'pintarEncabezado no prende la entrada', de: '      pintarEntradaRemitos(id, paso)\n', a: '' },
-    { nombre: 'la flecha de la pantalla de remitos no se ve', de: "        'rt-remitos-volver': id === 'rt-vista-remitos',\n", a: '' },
-    { nombre: 'abrir sin mirar si puede', de: "      if (!puedeSubirRemitos()) return\n      mostrarVista('rt-vista-remitos')", a: "      mostrarVista('rt-vista-remitos')" },
+    { nombre: 'abrir sin mirar si puede', de: "      if (!puedeSubirRemitos()) return\n      estado.pestana = 'subir'", a: "      estado.pestana = 'subir'" },
+    // cargarFabricas y las pestañas (28/10/2026)
+    { nombre: 'controla_stock_terminado null cuenta como sin control', de: "      const sin = activas.filter(u => u.controla_stock_terminado === false)", a: "      const sin = activas.filter(u => u.controla_stock_terminado !== true)" },
+    { nombre: 'una fábrica donde no carga ni ve cuenta', de: "        .filter(e => puedeEn('retiros', 'cargar', e.id) || puedeEn('retiros', 'ver', e.id))", a: '' },
+    { nombre: 'retiros:ver no cuenta para las fábricas', de: "        .filter(e => puedeEn('retiros', 'cargar', e.id) || puedeEn('retiros', 'ver', e.id))", a: "        .filter(e => puedeEn('retiros', 'cargar', e.id))" },
+    { nombre: 'la fábrica de pruebas cuenta', de: "      const activas = sinUnidadesDePrueba((data ?? []).filter(u => u?.id && u.activo !== false), estado.fabrica)", a: "      const activas = (data ?? []).filter(u => u?.id && u.activo !== false)" },
+    { nombre: 'una fábrica apagada cuenta', de: "(data ?? []).filter(u => u?.id && u.activo !== false), estado.fabrica)", a: "(data ?? []).filter(u => u?.id), estado.fabrica)" },
+    { nombre: 'si no se pueden leer las fábricas, sigue', de: "      const { data, error } = await supabase.from('unidades_negocio').select('id, nombre, activo, controla_stock_terminado')\n      if (error) throw error\n", a: "      const { data, error } = await supabase.from('unidades_negocio').select('id, nombre, activo, controla_stock_terminado')\n" },
+    { nombre: 'Subir sin retiros:cargar', de: "      return [empresasDeCarga().length ? 'subir' : null,", a: "      return [(estado.empresas ?? []).length ? 'subir' : null," },
+    { nombre: 'Revisar sin retiros:ver', de: "empresasDeRevision().length ? 'revisar' : null].filter(Boolean)", a: "(estado.empresas ?? []).length ? 'revisar' : null].filter(Boolean)" },
+    { nombre: 'la pestaña elegida no se marca', de: "        b.setAttribute('aria-pressed', estado.pestana === p ? 'true' : 'false')", a: "        b.setAttribute('aria-pressed', 'false')" },
+    { nombre: 'pestañas adentro de un remito', de: "      document.getElementById('rd-tabs').hidden = id === 'ad-vista-remito' || pestanasVisibles().length < 2", a: "      document.getElementById('rd-tabs').hidden = pestanasVisibles().length < 2" },
+    { nombre: 'la barra de pestañas con una sola', de: "      document.getElementById('rd-tabs').hidden = id === 'ad-vista-remito' || pestanasVisibles().length < 2", a: "      document.getElementById('rd-tabs').hidden = id === 'ad-vista-remito'" },
+    { nombre: 'el encabezado no dice la pestaña', de: "      document.getElementById('rd-sub').textContent = SUB_DE_VISTA[id] ?? ''", a: '' },
+    { nombre: 'una pestaña sin permiso se elige', de: "      if (!pestanasVisibles().includes(p)) return\n      // Con un remito", a: '      // Con un remito' },
+    { nombre: 'la pestaña no se recuerda', de: '      guardarPreferencia(CLAVE_PESTANA, p)\n', a: '' },
     // ── La fábrica ─────────────────────────────────────────────────────
     { nombre: 'con varias, la primera sin preguntar', de: '      if (lista.length === 1) return lista[0]\n', a: '      if (lista.length) return lista[0]\n' },
-    { nombre: 'con varias, sin la de la barra', de: '      if (deBarra) return deBarra\n', a: '' },
     { nombre: 'con varias, sin la última', de: '      return lista.find(e => e.id === ultima) ?? null\n    }', a: '      return null\n    }' },
     { nombre: 'se puede elegir una con control', de: '      if (!fabricasRemitos().some(e => e.id === id)) return\n', a: '' },
     { nombre: 'la elegida no se recuerda', de: '      datosRemitos().fabricaId = id\n      guardarPreferencia(CLAVE_REMITOS_FABRICA, id)\n', a: '      datosRemitos().fabricaId = id\n' },
@@ -103,7 +109,7 @@ correrMutaciones({
     { nombre: 'otra Edge Function', de: "await supabase.functions.invoke('ocr-remito', { body: { remito_id: id } })", a: "await supabase.functions.invoke('ocr-materia-prima', { body: { remito_id: id } })" },
     { nombre: 'sin el id', de: "await supabase.functions.invoke('ocr-remito', { body: { remito_id: id } })", a: "await supabase.functions.invoke('ocr-remito', { body: { id } })" },
     { nombre: 'un error de la función no se ve', de: "        if (error) throw error\n        if (data?.error) throw new Error(String(data.error))\n      } catch (err) {\n        console.error('No se pudo leer el remito:', err)", a: "        if (data?.error) throw new Error(String(data.error))\n      } catch (err) {\n        console.error('No se pudo leer el remito:', err)" },
-    { nombre: 'una respuesta con error es lectura buena', de: "        if (data?.error) throw new Error(String(data.error))\n", a: '' },
+    { nombre: 'una respuesta con error es lectura buena', de: "        if (error) throw error\n        if (data?.error) throw new Error(String(data.error))\n", a: "        if (error) throw error\n" },
     { nombre: 'al volver la lectura no se refresca', de: '      d.leyendo.delete(id)\n      await leerMisRemitos()\n', a: '      d.leyendo.delete(id)\n' },
     { nombre: 'reintentar una lectura no la pide', de: '      lanzarLectura(item?.remitoId ?? clave)\n      pintarRemitos()', a: '      pintarRemitos()' },
     { nombre: 'una lectura fallida no se olvida al reintentar', de: '      d.lecturaFallida.delete(remitoId)\n', a: '' },
@@ -112,8 +118,7 @@ correrMutaciones({
     { nombre: 'sin el tope de días', de: ".eq('subido_por', estado.miEmpleadoId).gte('subido_en', desde)", a: ".eq('subido_por', estado.miEmpleadoId)" },
     { nombre: '30 días', de: 'const DIAS_MIS_REMITOS = 7', a: 'const DIAS_MIS_REMITOS = 30' },
     { nombre: 'sin el talonario', de: 'numero_remito, talonario, error', a: 'numero_remito, error' },
-    { nombre: 'el embed sin nombrar la FK', de: 'orden:ordenes_retiro!remitos_precarga_orden_id_fkey(codigo)', a: 'orden:ordenes_retiro(codigo)' },
-    { nombre: 'más viejo primero', de: ".sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))", a: ".sort((a, b) => String(a.subido_en ?? '').localeCompare(String(b.subido_en ?? '')))" },
+    { nombre: 'más viejo primero', de: "filter(f => f?.id)\n          .sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))", a: "filter(f => f?.id)\n          .sort((a, b) => String(a.subido_en ?? '').localeCompare(String(b.subido_en ?? '')))" },
     { nombre: 'lo que ya está en la base sigue en la cola', de: '        d.cola = d.cola.filter(i => !(i.remitoId && enBase.has(i.remitoId)))\n', a: '' },
     { nombre: 'un error de lectura de la lista pasa de largo', de: "          .order('subido_en', { ascending: false }).limit(60)\n        if (error) throw error\n", a: "          .order('subido_en', { ascending: false }).limit(60)\n" },
     { nombre: 'sin miniaturas', de: '        pedirMiniaturas(filas)\n', a: '' },
@@ -126,14 +131,18 @@ correrMutaciones({
     // ── Los estados ────────────────────────────────────────────────────
     { nombre: 'leyendo: no muestra que se está releyendo', de: "      if (pidiendo && ['leyendo', 'error'].includes(f.estado)) return { tipo: 'leyendo', texto: 'Leyendo…', detalle: '' }\n", a: '' },
     { nombre: 'pidiendo la lectura tapa el resultado de la base', de: "      if (pidiendo && ['leyendo', 'error'].includes(f.estado)) return", a: '      if (pidiendo) return' },
-    { nombre: 'precargado sin el N°', de: "detalle: n ? n.texto : 'Sin número leído · lo revisa Administración'", a: "detalle: 'Sin número leído · lo revisa Administración'" },
+    { nombre: 'precargado sin el N°', de: "detalle: n ? n.texto : 'Sin número leído · falta revisarlo'", a: "detalle: 'Sin número leído · falta revisarlo'" },
     { nombre: 'el N° sin "Remito N°"', de: '      return n ? { texto: `Remito N° ${n}`, acopio:', a: '      return n ? { texto: n, acopio:' },
     { nombre: 'el sello para cualquier talonario', de: "acopio: f?.talonario === 'acopio' } : null", a: "acopio: !!f?.talonario } : null" },
     { nombre: 'el sello nunca', de: "acopio: f?.talonario === 'acopio' } : null", a: 'acopio: false } : null' },
-    { nombre: 'precargado sin sello', de: "'Sin número leído · lo revisa Administración', acopio: !!n?.acopio }", a: "'Sin número leído · lo revisa Administración' }" },
+    { nombre: 'precargado sin sello', de: "'Sin número leído · falta revisarlo', acopio: !!n?.acopio }", a: "'Sin número leído · falta revisarlo' }" },
     { nombre: 'confirmado sin sello', de: "detalle: n ? n.texto : '', acopio: !!n?.acopio }", a: "detalle: n ? n.texto : '' }" },
     { nombre: 'el sello no se dibuja', de: "      const selloAcopio = e.acopio ? '<span class=\"rt-remito__sello\">Acopio</span>' : ''", a: "      const selloAcopio = ''" },
-    { nombre: 'confirmado sin el código', de: '      const codigo = limpio(f.orden?.codigo)', a: "      const codigo = ''" },
+    { nombre: 'confirmado sin el código', de: '      const codigo = limpio(f.orden_codigo)', a: "      const codigo = ''" },
+    { nombre: 'el código sin limpiar', de: '      const codigo = limpio(f.orden_codigo)', a: '      const codigo = f.orden_codigo' },
+    { nombre: 'el código del embebido viejo', de: '      const codigo = limpio(f.orden_codigo)', a: '      const codigo = limpio(f.orden?.codigo ?? f.orden_codigo)' },
+    { nombre: 'confirmado dice el texto viejo', de: "texto: codigo ? `Confirmado: Orden ${codigo}` :", a: "texto: codigo ? `Confirmado como orden ${codigo}` :" },
+    { nombre: 'sin pedir orden_codigo', de: 'orden_id, orden_codigo, descartado_motivo', a: 'orden_id, descartado_motivo' },
     { nombre: 'descartado sin el motivo', de: "texto: `Descartado: ${limpio(f.descartado_motivo) || 'sin motivo'}`", a: "texto: 'Descartado'" },
     { nombre: 'error sin Reintentar', de: "          return { tipo: 'error', texto: 'No se pudo leer', detalle: limpio(f.error), reintentar: true }", a: "          return { tipo: 'error', texto: 'No se pudo leer', detalle: limpio(f.error) }" },
     { nombre: 'error sin el motivo', de: "          return { tipo: 'error', texto: 'No se pudo leer', detalle: limpio(f.error), reintentar: true }", a: "          return { tipo: 'error', texto: 'No se pudo leer', detalle: '', reintentar: true }" },
@@ -156,6 +165,7 @@ correrMutaciones({
     // ── La página ──────────────────────────────────────────────────────
     { nombre: 'la cámara sin capture', de: 'accept="image/*" capture="environment">', a: 'accept="image/*">' },
     { nombre: 'la galería de a una', de: 'class="rt-sr" accept="image/*" multiple>', a: 'class="rt-sr" accept="image/*">' },
-    { nombre: 'al arrancar no se lee qué fábricas', de: '      leerFabricasSinControl().then(() => { if (estado.vista) pintarEncabezado() })\n', a: '' },
+    { nombre: 'la cámara sin conectar', de: "      document.getElementById('rt-remitos-camara').addEventListener('change', (e) => fotosElegidas(e.target))\n", a: '' },
+    { nombre: 'Reintentar sin conectar', de: "        else if ((b = e.target.closest('[data-remito-reintentar]'))) reintentarRemito(b.dataset.remitoReintentar)\n", a: '' },
   ],
 })

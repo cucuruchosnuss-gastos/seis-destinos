@@ -37,7 +37,7 @@ import { TAMANOS, normalizarPrefs, leerPrefs, guardarPrefs, ordenarBarra, cargar
 // Administración, Cuentas corrientes, Stock y Proyectos Taller medianas; el
 // resto chicas.
 export const ORDEN_TABLERO = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'pedidos', 'administracion',
-  'cuentas-corrientes', 'stock', 'materia-prima', 'retiros', 'taller', 'accesos', 'empleados', 'seguridad', 'conos']
+  'cuentas-corrientes', 'stock', 'materia-prima', 'retiros', 'remitos-dolce', 'taller', 'accesos', 'empleados', 'seguridad', 'conos']
 
 export const TAMANOS_POR_DEFECTO = {
   produccion: 'ancha', cobranzas: 'mediana', caja: 'mediana', gastos: 'mediana', administracion: 'mediana',
@@ -720,11 +720,18 @@ export async function cargarConos(ctx) {
   }
 }
 
+// Buscar (28/10/2026): es un acceso, no tiene cifras. La tarjeta dice qué se
+// busca ahí, sin pie de pendientes, y sin pedir nada a la base.
+export async function cargarBuscar() {
+  return { estado: 'acceso', etiqueta: 'Acceso rápido', vacioMsg: 'Lote de una caja o precio de un insumo', ctx: [], resolver: [], nota: '', sinPie: true }
+}
+
 export const CARGADORES = {
   gastos: cargarGastos, caja: cargarCaja, cobranzas: cargarCobranzas, cheques: cargarCheques,
   'cuentas-corrientes': cargarCuentasCorrientes, 'materia-prima': cargarIngreso, stock: cargarStock,
   produccion: cargarProduccion, pedidos: cargarPedidos, retiros: cargarRetiros, administracion: cargarAdministracion,
   taller: cargarTaller, conos: cargarConos, accesos: cargarAccesos, empleados: cargarEmpleados, seguridad: cargarSeguridad,
+  buscar: cargarBuscar,
 }
 
 // Carga UNA tarjeta: su cargador + los renglones de mis_pendientes. Nunca

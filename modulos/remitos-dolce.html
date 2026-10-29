@@ -1,0 +1,2499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Remitos Dolce — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#FFFFFF">
+
+  <!-- REMITOS DOLCE (28/10/2026, rama ci-prueba/modulo-remitos-dolce). Pedido
+       de Facu: los remitos de Rosario en un MÓDULO APARTE, para que no se
+       mezclen con la Carga ni con Administración. Antes (27/10/2026) subir
+       estaba en la Carga (retiros.html, "Subir remitos Rosario") y revisar en
+       Administración → Órdenes. El código se MUDÓ (no se copió): lo que usan
+       dos pantallas vive en js/remitos-comun.js (decimoséptima excepción).
+
+       Dos pestañas:
+       - SUBIR (retiros:cargar con alcance en una fábrica SIN control de stock,
+         hoy solo Dolce Pasta): la foto de cada remito hecho a mano, la cola
+         sin señal y "Mis remitos subidos" con su estado ("Confirmado: Orden
+         D-0012" con remitos_precarga.orden_codigo, que Manuel puede leer).
+       - REVISAR (retiros:ver en esa fábrica; corregir y confirmar piden
+         además retiros:cargar, como la base): los precargados arriba y abajo
+         las órdenes por N° de remito, el más nuevo primero, en solapas
+         Oficial / Acopio. Corregir, confirmar, descartar, talonario, saldo de
+         acopio y zoom de la foto: lo mismo que había en Administración.
+
+       Los nombres de clase quedaron como venían (rt-* lo de Subir, ad-* lo de
+       Revisar) para mover el código tal cual; rd-* es lo propio del módulo. -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    body {
+      --rt-segmento-fondo: #EDE9E3;
+      --rt-texto-2: #6B645A;
+      --rt-modulo: oklch(0.5 0.13 250);
+      --rt-borde-faltante: #E8CDD5;
+      --rt-fila-faltante: #FBF1F4;
+      --rt-viejo-pastilla: oklch(0.93 0.07 90);
+      --rt-viejo-letra: #3B2E00;
+      --ad-texto-secundario: var(--color-texto-2);
+      --borde-tarjeta: var(--color-borde);
+      --sombra-tarjeta: none;
+      --ad-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+    }
+
+    .rd-app { max-width: 1120px; margin: 0 auto; padding: 0 1rem 6rem; min-width: 0; }
+
+    /* ── El encabezado: el de todos los módulos, .cab-modulo de main.css, con
+       el color de Remitos Dolce (PALETA_MODULO de js/modulos.js: el azul de
+       Rosario, 250). ── */
+    .cab-modulo { --cab-modulo: oklch(0.5 0.13 250); --cab-modulo-suave: oklch(0.955 0.036 250); }
+
+    .rd-vacio { padding: 2rem 0; text-align: center; color: var(--color-texto-2); }
+
+    /* Las pestañas Subir / Revisar. */
+    .rd-tabs { display: flex; gap: 8px; margin: 12px 0 4px; min-width: 0; }
+    .rd-tab {
+      flex: 1; min-height: 48px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo);
+      color: var(--color-texto); font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; padding: 0 12px;
+    }
+    .rd-tab[aria-pressed="true"] { border-color: oklch(0.5 0.13 250); color: oklch(0.42 0.13 250); background: oklch(0.955 0.036 250); }
+    .rd-tab:focus-visible { outline: 3px solid oklch(0.42 0.13 250); outline-offset: 2px; }
+    @media (min-width: 1024px) { .rd-tabs { max-width: 420px; } }
+
+    .rd-link-admin { display: inline-block; margin: 4px 0 12px; font-weight: 700; color: var(--naranja-oscuro); }
+    .rd-fabricas { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .rd-fila-orden { cursor: default; }
+
+    /* ── Subir (de la Carga, 27/10/2026) ──────────────────────────────────
+       La cámara, la galería y "Mis remitos subidos" con su estado. Naranja para
+       lo que se toca, dorado del módulo para "Leyendo…", verde para
+       confirmado y bordó para lo que no se pudo. */
+    .rt-remitos-fabrica:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .rt-remitos-acciones { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .rt-remitos-camara {
+      min-height: 124px; border-radius: 16px; background: var(--naranja); color: #fff; border: 2px solid var(--naranja);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; text-align: center; padding: 12px; touch-action: manipulation;
+    }
+    .rt-remitos-camara svg { width: 40px; height: 40px; }
+    .rt-remitos-camara strong { font-family: var(--fuente-titulo); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+    .rt-remitos-camara small { font-size: 13.5px; font-weight: 600; }
+    .rt-remitos-galeria {
+      min-height: 48px; border-radius: var(--radio-boton); border: 2px solid var(--naranja); color: var(--naranja); background: var(--color-fondo);
+      font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 0 12px; text-align: center;
+    }
+    .rt-remitos-galeria svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .rt-remitos-acciones:focus-within label { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .rt-remitos-acciones--apagadas label { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+    .rt-remitos-fabricas { display: flex; flex-wrap: wrap; gap: 8px; }
+    .rt-remitos-fabrica {
+      min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo);
+      font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; color: var(--color-texto); max-width: 100%; overflow-wrap: anywhere;
+    }
+    .rt-remitos-fabrica[aria-pressed="true"] { border-color: var(--naranja); color: var(--naranja-oscuro); }
+    .rt-remito { display: flex; align-items: center; gap: 10px; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 14px; padding: 8px 10px; min-width: 0; }
+    .rt-remito__foto {
+      width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--rt-segmento-fondo);
+      display: flex; align-items: center; justify-content: center; color: var(--rt-texto-2);
+    }
+    .rt-remito__foto svg { width: 22px; height: 22px; }
+    .rt-remito__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+    .rt-remito__estado { font-weight: 800; font-size: 15px; overflow-wrap: anywhere; color: var(--color-texto); }
+    .rt-remito__detalle { font-size: 13px; color: var(--color-texto-menu); overflow-wrap: anywhere; }
+    .rt-remito--subiendo .rt-remito__estado, .rt-remito--leyendo .rt-remito__estado { color: var(--rt-modulo); }
+    .rt-remito--precargada .rt-remito__estado { color: var(--naranja-oscuro); }
+    .rt-remito--confirmada .rt-remito__estado { color: var(--verde-oscuro); }
+    .rt-remito--error { border-color: var(--rt-borde-faltante); background: var(--rt-fila-faltante); }
+    .rt-remito--error .rt-remito__estado { color: var(--bordo-oscuro); }
+    .rt-remito--descartada .rt-remito__estado { color: var(--rt-texto-2); }
+    /* El talonario de acopio (el celeste genérico, número rojo): un sello chico al lado del N°. */
+    .rt-remito__sello {
+      display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; vertical-align: 1px;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      background: var(--rt-viejo-pastilla); color: var(--rt-viejo-letra);
+    }
+    .rt-remito__accion { flex-shrink: 0; min-height: 44px; padding: 0 12px; font-size: 14px; }
+    @media (min-width: 1024px) {
+      #rt-vista-remitos { max-width: 820px; padding: 14px 0; }
+      .rt-remitos-acciones { flex-direction: row; align-items: stretch; }
+      .rt-remitos-camara { flex: 2; }
+      .rt-remitos-galeria { flex: 1; min-height: 124px; border-radius: 16px; }
+    }
+
+    /* ── Los remitos precargados de Rosario (27/10/2026) ─────────────────
+       Arriba de Revisar (antes en Administración → Órdenes). El
+       renglón que la IA marcó, en AMARILLO; el que no va en la orden,
+       tachado en gris. La foto al lado en la compu y arriba en el celular. */
+    .ad-rm-seccion { margin: 0 0 1rem; min-width: 0; }
+    .ad-rm-titulo { display: flex; align-items: center; gap: 0.5rem; margin-top: 0; }
+    .ad-rm-contador { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; padding: 0 0.375rem; border-radius: 999px; background: var(--amarillo-oscuro); color: #fff; font-size: 0.8125rem; letter-spacing: 0; }
+    .ad-rm-numero { font-weight: 900; font-size: 1.125rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
+    .ad-rm-numero--sin { color: var(--ad-texto-secundario); font-weight: 700; font-size: 1rem; }
+    .ad-fila__sellos { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; min-width: 0; }
+    .ad-sello--acopio { background: #E4F2FB; color: #0B4F7A; border-color: #5AA9DA; }
+    .ad-sello--amarillo { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border-color: var(--amarillo); }
+    .ad-sello--omitido { background: var(--color-superficie); color: var(--ad-texto-secundario); border-color: var(--color-borde); }
+    .ad-sello--rm-error { background: var(--bordo-suave); color: var(--bordo-oscuro); border-color: var(--bordo); }
+    .ad-rm-tarjeta__error { color: var(--bordo-oscuro); font-weight: 600; }
+    .ad-orden-remito { margin: 0 0 0.375rem; font-size: 1.25rem; font-weight: 900; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .ad-rm { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    @media (min-width: 1024px) {
+      .ad-rm { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; }
+      .ad-rm__foto { position: sticky; top: 0.75rem; }
+    }
+    .ad-rm__foto, .ad-rm__datos { min-width: 0; }
+    .ad-rm-foto { padding: 0.5rem; }
+    .ad-rm-foto__zoom { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; }
+    .ad-rm-foto__nivel { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.5rem; text-align: center; }
+    .ad-rm-foto__lienzo { overflow: auto; max-height: 70vh; border-radius: var(--radio-input); background: var(--color-superficie); }
+    @media (max-width: 1023.98px) { .ad-rm-foto__lienzo { max-height: 45vh; } }
+    .ad-rm-foto__img { display: block; max-width: none; height: auto; }
+    .ad-rm-renglones { display: flex; flex-direction: column; gap: 0.625rem; margin: 0 0 0.75rem; min-width: 0; }
+    .ad-rm-renglon { border: 1px solid var(--color-borde); border-radius: 12px; padding: 0.75rem; min-width: 0; background: var(--color-fondo); }
+    .ad-rm-renglon--revisar { background: var(--amarillo-suave); border: 2px solid var(--amarillo); }
+    .ad-rm-renglon--omitido { background: var(--color-superficie); color: var(--ad-texto-secundario); }
+    .ad-rm-omitido__texto { margin: 0; text-decoration: line-through; overflow-wrap: anywhere; }
+    .ad-rm-renglon__cab { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.375rem; }
+    .ad-rm-renglon__n { font-weight: 800; font-size: 0.875rem; }
+    .ad-rm-leido { margin: 0 0 0.25rem; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .ad-rm-nota { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 700; color: var(--amarillo-oscuro); overflow-wrap: anywhere; }
+    .ad-rm-renglon--omitido .ad-rm-nota { color: var(--ad-texto-secundario); }
+    .ad-rm-elegido { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.5rem; min-width: 0; }
+    .ad-rm-elegido__nombre { font-weight: 800; overflow-wrap: anywhere; min-width: 0; flex: 1 1 12rem; }
+    .ad-rm-opciones { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.375rem 0 0; max-height: 18rem; overflow-y: auto; min-width: 0; }
+    .ad-rm-opciones--conos { flex-direction: row; flex-wrap: wrap; max-height: none; }
+    .ad-rm-grupo { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
+    .ad-rm-grupo__titulo { margin: 0.375rem 0 0; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ad-texto-secundario); }
+    .ad-rm-opcion {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; min-height: 44px; box-sizing: border-box;
+      text-align: left; padding: 0.5rem 0.75rem; border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+      background: var(--color-fondo); font: inherit; color: var(--color-texto); cursor: pointer; overflow-wrap: anywhere; min-width: 0;
+    }
+    .ad-rm-opcion:hover { border-color: var(--color-borde-fuerte); }
+    .ad-rm-opcion[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); font-weight: 700; }
+    .ad-rm-opcion--cono { width: auto; }
+    .ad-rm-opcion__detalle { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
+    .ad-rm-cantidad .ad-input { max-width: 10rem; }
+    .ad-rm-lotes { margin: 0 0 0.5rem; min-width: 0; }
+    .ad-rm-lotes > .ad-campo__rotulo { display: block; margin: 0 0 0.375rem; }
+    .ad-rm-lote { display: flex; gap: 0.5rem; align-items: flex-end; margin: 0 0 0.375rem; min-width: 0; }
+    .ad-rm-lote__campo { display: flex; flex-direction: column; gap: 0.125rem; flex: 1 1 0; min-width: 0; font-size: 0.8125rem; font-weight: 700; }
+    .ad-rm-lote__campo--cajas { flex: 0 0 6rem; }
+    .ad-rm-lote__quitar { min-width: 44px; min-height: 44px; border: 1px solid var(--color-borde); background: var(--color-fondo); border-radius: var(--radio-input); font-size: 1.25rem; cursor: pointer; }
+    .ad-rm-lotes__pie { margin: 0.25rem 0 0; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .ad-rm-estado-lotes--falta { color: var(--bordo-oscuro); font-weight: 700; }
+    .ad-rm-estado-lotes--ok { color: var(--verde-oscuro); font-weight: 700; }
+    .ad-rm-renglon__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.5rem 0 0; }
+    .ad-rm-acciones { min-width: 0; }
+    .ad-rm-acciones > .ad-btn { margin: 0.375rem 0 0.5rem; }
+    /* El saldo del acopio al lado de cada renglón (de los Acopios). */
+    .ad-rm-acopio { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 700; color: #0B4F7A; overflow-wrap: anywhere; }
+    .ad-rm-acopio--falta { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border: 2px solid var(--amarillo); border-radius: 8px; padding: 0.375rem 0.5rem; }
+
+    /* ── Lo de base que usa lo mudado (copiado de la Carga y de Administración, 28/10/2026) ── */
+    .rt-contenido { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .rt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .rt-num { font-family: var(--fuente-titulo); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+    .rt-btn { min-height: 44px; padding: 0 1rem; font: inherit; font-size: 15px; font-weight: 800;
+      border-radius: var(--radio-boton); border: 2px solid var(--naranja);
+      background: var(--naranja); color: #fff; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+      text-align: center; touch-action: manipulation; }
+    .rt-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .rt-btn--secundario { background: var(--color-fondo); color: var(--naranja); }
+    .rt-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde-boton); }
+    .rt-texto-suave { color: var(--rt-texto-2); font-size: 14px; margin: 0; }
+    .rt-pista { color: var(--rt-texto-2); font-size: 12.5px; margin: 0; padding: 0 4px; }
+    .rt-vacio { padding: 2rem 1rem; text-align: center; color: var(--rt-texto-2); }
+    .rt-aviso { padding: 10px 12px; border-radius: 14px; margin: 0;
+      background: var(--color-fondo); border: 1.5px solid var(--color-borde);
+      color: var(--color-texto-menu); font-size: 14px; overflow-wrap: anywhere; line-height: 1.35; }
+    .rt-aviso--grave { background: var(--bordo-suave); border-color: var(--rt-borde-faltante); color: var(--bordo-oscuro); font-weight: 600; }
+    .rt-aviso strong { font-weight: 800; }
+    .rt-campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .rt-campo > label, .rt-campo__rotulo { font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rt-lista { display: flex; flex-direction: column; gap: 6px; }
+    .rt-mis-cabecera { display: flex; align-items: center; gap: 8px; padding: 0 2px; }
+    .rt-mis-cabecera .rt-texto-suave { flex: 1; font-size: 14.5px; }
+    .rt-mis-cabecera .rt-num { font-size: 18px; }
+    .rt-fila__meta { font-size: 12.5px; color: var(--rt-texto-2); }
+    .rt-remitos-camara { min-height: 124px; border-radius: 16px; background: var(--naranja); color: #fff; border: 2px solid var(--naranja);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; text-align: center; padding: 12px; touch-action: manipulation; }
+    .rt-remitos-galeria { min-height: 48px; border-radius: var(--radio-boton); border: 2px solid var(--naranja); color: var(--naranja); background: var(--color-fondo);
+      font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 0 12px; text-align: center; }
+    .rt-remitos-fabrica { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo);
+      font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; color: var(--color-texto); max-width: 100%; overflow-wrap: anywhere; }
+    .rt-remito__foto { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--rt-segmento-fondo);
+      display: flex; align-items: center; justify-content: center; color: var(--rt-texto-2); }
+    .rt-remito__sello { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; vertical-align: 1px;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      background: var(--rt-viejo-pastilla); color: var(--rt-viejo-letra); }
+    @media (min-width: 1024px) { .rt-contenido { padding: 12px 0 0; gap: 12px; } }
+    @media (min-width: 1024px) { .rt-fila__meta { width: 240px; flex-shrink: 0; } }
+    .ad-btn { min-height: 44px; padding: 0 1rem; font: inherit; font-size: 0.9375rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--naranja);
+      background: var(--naranja); color: #fff; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+      text-align: center; touch-action: manipulation; text-decoration: none; }
+    .ad-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ad-btn:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .ad-btn--secundario { background: var(--color-fondo); color: var(--naranja-oscuro); }
+    .ad-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde); }
+    .ad-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .ad-link { background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit; font-size: 0.875rem;
+      font-weight: 600; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center; }
+    .ad-tarjeta { background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      padding: 1rem; margin-bottom: 0.75rem; min-width: 0; }
+    .ad-titulo { font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--color-texto); overflow-wrap: anywhere; }
+    .ad-subtitulo { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); margin: 1rem 0 0.5rem; }
+    .ad-texto-suave { color: var(--ad-texto-secundario); font-size: 0.875rem; }
+    .ad-vacio { padding: 2rem 1rem; text-align: center; color: var(--ad-texto-secundario); }
+    .ad-aviso { padding: 0.75rem 0.875rem; border-radius: var(--radio-input); margin: 0.5rem 0;
+      background: var(--color-superficie); border-left: 4px solid var(--color-acento-gris);
+      color: var(--ad-texto-secundario); font-size: 0.875rem; overflow-wrap: anywhere; }
+    .ad-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+    .ad-error-pegado { color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; margin: 0.375rem 0 0; overflow-wrap: anywhere; }
+    .ad-barra-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0 0 0.75rem; }
+    .ad-cabecera-vista { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.75rem; }
+    .ad-cabecera-vista .ad-titulo { flex: 1 1 auto; }
+    .ad-segmento { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--ad-segmento-fondo); min-width: 0; overflow-x: auto; margin: 0 0 0.75rem; }
+    .ad-segmento__opcion { flex: 1 0 auto; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 8px;
+      background: transparent; font: inherit; font-size: 0.8125rem; font-weight: 600;
+      color: var(--naranja-oscuro); white-space: nowrap; cursor: pointer; }
+    .ad-segmento__opcion[aria-pressed="true"] { background: var(--naranja); color: #fff; font-weight: 700; }
+    @media (max-width: 1023.98px) { #ad-comision-panel .ad-segmento__opcion { flex: 1 1 0; min-width: 0; padding: 4px 6px; white-space: normal; line-height: 1.15; } }
+    .ad-campo { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.875rem; min-width: 0; }
+    .ad-campo > label, .ad-campo__rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto); }
+    .ad-campo__ayuda { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
+    .ad-textarea { min-height: 72px; resize: vertical; }
+    .ad-fila-campos { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+    .ad-lista { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+    .ad-fila { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left;
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: 12px; padding: 0.75rem 1rem; font: inherit; color: var(--color-texto); cursor: pointer;
+      min-width: 0; min-height: 56px; }
+    .ad-fila--anulada { background: var(--bordo-suave); }
+    .ad-fila--atencion { border-left: 4px solid var(--bordo); }
+    .ad-fila__linea { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; flex-wrap: wrap; }
+    .ad-fila__meta { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-sello { display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; border-radius: 999px; padding: 0.1875rem 0.5625rem; white-space: nowrap;
+      background: var(--color-superficie); color: var(--ad-texto-secundario); border: 1px solid var(--color-borde); }
+    .ad-panel { border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 1rem; margin: 0 0 0.75rem; background: var(--color-fondo); }
+    .ad-panel--peligro { border-color: var(--bordo); }
+    .ad-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
+    .ad-ret-elegido { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+      padding: 0.5rem 0.75rem; border-radius: 10px; border: 2px solid var(--naranja); background: var(--naranja-suave); margin: 0 0 0.375rem; min-width: 0; }
+    .ad-ret-elegido__nombre { font-weight: 800; overflow-wrap: anywhere; min-width: 0; }
+    .ad-opciones-clientes { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.25rem 0 0.5rem; min-width: 0; }
+    .ad-opcion-cliente { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; min-height: 48px;
+      padding: 0.5rem 0.75rem; text-align: left; font: inherit; color: var(--color-texto); cursor: pointer; min-width: 0;
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 10px; }
+    .ad-opcion-cliente__nombre { font-weight: 800; overflow-wrap: anywhere; }
+    .ad-opcion-cliente__detalle { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-opcion-cliente[aria-pressed="true"] { border: 2px solid var(--naranja-oscuro); background: var(--naranja); color: #fff; }
+    .ad-opcion-cliente[aria-pressed="true"] .ad-opcion-cliente__detalle { color: #fff; }
+    .ad-rm-opcion { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; min-height: 44px; box-sizing: border-box;
+      text-align: left; padding: 0.5rem 0.75rem; border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+      background: var(--color-fondo); font: inherit; color: var(--color-texto); cursor: pointer; overflow-wrap: anywhere; min-width: 0; }
+  </style>
+  <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. -->
+  <script type="module" src="../js/barra-lateral.js"></script>
+  <!-- La barra de arriba (js/barra-unidad.js). Los remitos son de las
+       fábricas sin control de stock (Dolce Pasta): la pantalla elige sola y la
+       barra dice en chico que no filtra. -->
+  <script type="module" src="../js/barra-unidad.js"></script>
+  <meta name="sd-unidad" content="no-filtra">
+</head>
+<body class="pagina-modulo">
+  <div class="rd-app" id="rd-app">
+
+    <!-- El encabezado de todos los módulos (.cab-modulo de main.css). -->
+    <header class="cab-modulo">
+      <a href="../dashboard.html" class="cab-modulo__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <span class="cab-modulo__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4"/></svg></span>
+      <div class="cab-modulo__col">
+        <span class="cab-modulo__titulo">Remitos Dolce</span>
+        <span class="cab-modulo__sub" id="rd-sub"></span>
+      </div>
+    </header>
+
+    <div class="rd-vacio" id="rd-cargando">Cargando…</div>
+    <div class="rd-vacio" id="rd-sin-acceso" hidden></div>
+
+    <nav class="rd-tabs" id="rd-tabs" aria-label="Remitos Dolce" hidden>
+      <button type="button" class="rd-tab" id="rd-tab-subir" data-pestana="subir" aria-pressed="false">Subir</button>
+      <button type="button" class="rd-tab" id="rd-tab-revisar" data-pestana="revisar" aria-pressed="false">Revisar</button>
+    </nav>
+
+    <!-- ══ SUBIR ════════════════════════════════════════════════════════════
+         La foto de cada remito hecho a mano: se achica, se sube y la lee la
+         IA (ocr-remito) en segundo plano. Abajo, "Mis remitos subidos". -->
+    <section id="rt-vista-remitos" class="rt-contenido" hidden>
+      <p class="rt-texto-suave">Sacale una foto a cada remito hecho a mano, de a uno y que se lea entero. La IA lo lee y se revisa en «Revisar» antes de que sea una orden.</p>
+      <div id="rt-remitos-fabrica"></div>
+      <div class="rt-remitos-acciones" id="rt-remitos-acciones">
+        <label class="rt-remitos-camara" for="rt-remitos-camara">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
+          <strong>Sacar foto</strong><small>Podés sacar varias seguidas</small>
+        </label>
+        <input type="file" id="rt-remitos-camara" class="rt-sr" accept="image/*" capture="environment">
+        <label class="rt-remitos-galeria" for="rt-remitos-galeria">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5a1 1 0 1 0 0-.01"/></svg>
+          Elegir de la galería
+        </label>
+        <input type="file" id="rt-remitos-galeria" class="rt-sr" accept="image/*" multiple>
+      </div>
+      <p class="rt-pista" id="rt-remitos-cola" aria-live="polite"></p>
+      <div class="rt-mis-cabecera"><p class="rt-texto-suave"><strong>Mis remitos subidos</strong> · últimos 7 días</p><span class="rt-num" id="rt-remitos-cuenta"></span></div>
+      <div class="rt-lista" id="rt-remitos-lista" aria-live="polite"></div>
+    </section>
+
+    <!-- ══ REVISAR ═══════════════════════════════════════════════════════════
+         Arriba los precargados por revisar (pintarRemitosPrecarga) y abajo las
+         órdenes por N° de remito, en solapas Oficial / Acopio. -->
+    <section id="rd-vista-revisar" hidden>
+      <div id="rd-revisar-fabrica"></div>
+      <div id="ad-remitos"></div>
+      <section class="ad-rm-seccion" aria-label="Órdenes por N° de remito">
+        <div id="rd-ordenes-talonario"></div>
+        <div class="ad-lista" id="rd-ordenes-lista"></div>
+        <a class="rd-link-admin" href="administracion.html?seccion=ordenes" id="rd-link-admin">Valorizar en Administración →</a>
+      </section>
+    </section>
+
+    <!-- ══ UN REMITO PRECARGADO (de Administración, 27/10/2026) ═════════════════════════════ -->
+    <section id="ad-vista-remito" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-remito-volver">&lsaquo; Revisar</button>
+        <h1 class="ad-titulo" id="ad-remito-titulo">Remito precargado</h1>
+      </div>
+      <div id="ad-remito-cuerpo"></div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import {
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero,
+      cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
+    } from '../js/utils.js'
+    import { enteroHoja, unidadHoja } from '../js/retiros-comun.js'
+    import {
+      talonarioDe, textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito,
+    } from '../js/remitos-comun.js'
+    import { nombreCorto } from '../js/barra-unidad.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      // 'retiros:cargar' → alcance ({"todas": true} | {"unidades": [...]} | null)
+      misTareas: new Map(),
+      fabrica: FABRICA_SIN_DATOS,
+      // Todas las fábricas (id, nombre: para "también en Nuss") y las SIN
+      // control de stock donde la persona carga o ve retiros (los remitos).
+      unidades: [],
+      empresas: [],
+      sinControlIds: new Set(),
+      sinControl: new Map(),
+      vista: null,
+      pestana: null,
+      // SUBIR: lo de esa pantalla (datosRemitos()).
+      subida: null,
+      // REVISAR: la fábrica, sus clientes y su catálogo, los precargados
+      // ({ empresaId, filas, error }), el abierto, las órdenes por N° de
+      // remito y la solapa del talonario ('oficial' | 'acopio').
+      empresaId: null,
+      clientes: null,
+      catalogo: null,
+      catalogoEmpresa: null,
+      principales: new Map(),
+      remitos: null,
+      remito: null,
+      remitosResueltos: new Set(),
+      turnoRemitos: 0,
+      ordenes: null,
+      errorOrdenes: null,
+      turnoOrdenes: 0,
+      talonarioOrdenes: 'oficial',
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Escape de TODO texto que venga de una persona o de la base antes de
+    // meterlo en un innerHTML. Cada módulo tiene el suyo.
+    function esc(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    function normalizar(t) {
+      return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+    }
+
+    function limpio(t) {
+      return String(t ?? '').replace(/\s+/g, ' ').trim()
+    }
+
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+
+    function hoyArgentina() {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    }
+
+    function esFechaIso(t) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(t ?? ''))
+    }
+
+    function fechaCorta(iso) {
+      if (!esFechaIso(iso)) return '—'
+      const [a, m, d] = iso.split('-')
+      return `${d}/${m}/${a}`
+    }
+
+    // El buscador de clientes (el de Administración): hasta tantos
+    // resultados, desde tantas letras.
+    const MAX_RESULTADOS_CLIENTES = 30
+
+    const MIN_LETRAS_BUSCAR = 2
+
+    const ESTADOS_ACOPIO = ['activo', 'terminado', 'anulado']
+
+
+    function nuevoUuid() {
+      if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+      const b = new Uint8Array(16)
+      globalThis.crypto.getRandomValues(b)
+      b[6] = (b[6] & 0x0f) | 0x40
+      b[8] = (b[8] & 0x3f) | 0x80
+      const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
+      return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+    }
+
+    function leerPreferencia(clave) {
+      try { return localStorage.getItem(clave) } catch { return null }
+    }
+
+    function guardarPreferencia(clave, valor) {
+      try {
+        if (valor == null) localStorage.removeItem(clave)
+        else localStorage.setItem(clave, valor)
+      } catch { /* sin memoria: se vuelve a elegir la próxima vez */ }
+    }
+
+    function esErrorDeRed(err) {
+      return !err?.code && /fetch|network|red|conexi|Failed/i.test(String(err?.message ?? err ?? ''))
+    }
+
+    function claveBusquedaCliente(texto) {
+      return normalizar(texto).replace(/[^a-z0-9]+/g, '').replace(/^(.)y(.)$/, '$1$2')
+    }
+
+    function clientesParaAsentar(lista, busqueda) {
+      const q = normalizar(busqueda)
+      const qc = claveBusquedaCliente(busqueda)
+      const porClave = (t) => qc.length >= MIN_LETRAS_BUSCAR && claveBusquedaCliente(t).startsWith(qc)
+      const todos = Array.isArray(lista) ? lista : []
+      const ok = !q ? todos : todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
+        porClave(c.nombre) || porClave(c.razon_social) ||
+        (Array.isArray(c.apodos) && c.apodos.some(a => normalizar(a).includes(q))))
+      return [...ok].sort((a, b) => normalizar(a.nombre).localeCompare(normalizar(b.nombre)))
+    }
+
+    function apodoMostrarRet(cl, busqueda) {
+      const q = normalizar(busqueda)
+      if (!q) return ''
+      if (normalizar(cl?.nombre).includes(q) || normalizar(cl?.razon_social).includes(q)) return ''
+      const apodo = limpio(cl?.apodo_coincide) || (Array.isArray(cl?.apodos) ? (cl.apodos.find(a => normalizar(a).includes(q)) ?? '') : '')
+      return limpio(apodo)
+    }
+
+    function momentoAr(ts) {
+      const d = new Date(ts)
+      if (Number.isNaN(d.getTime())) return '—'
+      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+    }
+
+    async function leerClientes(unidadId) {
+      // cliente_principal_id (27/10/2026): el mismo cliente en otra empresa
+      // del grupo (FERNANDEZ RICARDO de Dolce → el de Nuss).
+      const { data, error } = await supabase.from('clientes')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior, proveedor_id, pct_parte_a, cliente_principal_id, comision_habitual, apodos, provisorio, unidad_grupo_id')
+        .eq('unidad_negocio_id', unidadId).order('nombre')
+      if (error) throw error
+      return data ?? []
+    }
+
+    function insumoDe(cat, id) {
+      return id ? (cat?.insumos ?? []).find(i => i.id === id) ?? null : null
+    }
+
+    async function asegurarDatosEmpresa() {
+      const unidad = estado.empresaId
+      const tareas = []
+      if (estado.clientes === null) tareas.push(leerClientes(unidad).then(c => { if (unidad === estado.empresaId) estado.clientes = c }))
+      if (!estado.catalogo || estado.catalogoEmpresa !== unidad) {
+        tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.empresaId) { estado.catalogo = c; estado.catalogoEmpresa = unidad } }))
+      }
+      await Promise.all(tareas)
+      // De qué empresa es el principal de cada vinculado (27/10/2026): solo
+      // si hay alguno, y nunca frena (si falla, "otra empresa del grupo").
+      await leerPrincipales(estado.clientes)
+    }
+
+    async function leerPrincipales(clientes) {
+      const ids = [...new Set((Array.isArray(clientes) ? clientes : []).map(c => c?.cliente_principal_id).filter(Boolean))]
+      if (!(estado.principales instanceof Map)) estado.principales = new Map()
+      const faltan = ids.filter(id => !estado.principales.has(id))
+      if (!faltan.length) return
+      try {
+        const { data, error } = await supabase.from('clientes').select('id, unidad_negocio_id').in('id', faltan)
+        if (error) throw error
+        for (const f of Array.isArray(data) ? data : []) if (f?.id) estado.principales.set(f.id, f.unidad_negocio_id ?? null)
+      } catch (err) {
+        console.error('No se pudo leer la empresa de los clientes vinculados:', err)
+      }
+      for (const id of faltan) if (!estado.principales.has(id)) estado.principales.set(id, null)
+    }
+
+    function textoTambienEn(c) {
+      if (!c?.cliente_principal_id) return ''
+      const u = estado.principales?.get?.(c.cliente_principal_id) ?? null
+      // El principal en esta misma empresa no es "otra" cuenta del grupo.
+      if (u && u === estado.empresaId) return ''
+      const e = u ? (estado.unidades ?? []).find(x => x.id === u) : null
+      return ` (también en ${e ? nombreCorto(e) : 'otra empresa del grupo'})`
+    }
+
+    function clienteDe(id) {
+      return (estado.clientes ?? []).find(c => c.id === id) ?? null
+    }
+
+    async function leerAcopios(unidadId, clienteId = null) {
+      const { data, error } = await supabase.rpc('acopios_lista', { p_unidad_negocio_id: unidadId, p_cliente_id: clienteId })
+      if (error) throw error
+      return (Array.isArray(data) ? data : []).filter(a => a && a.id)
+    }
+
+    function estadoAcopio(a) {
+      return ESTADOS_ACOPIO.includes(a?.estado) ? a.estado : 'activo'
+    }
+
+    function cajasAcopio(n) {
+      const v = Number(n)
+      return n === null || n === undefined || n === '' || !Number.isFinite(v) ? 0 : Math.trunc(v)
+    }
+
+    // El catálogo de la fábrica para los renglones: productos (con su
+    // categoría) y presentaciones, los conos y los INSUMOS (uno para las
+    // cuatro empresas: se leen todos, activos o no, para nombrar el de un
+    // remito viejo).
+    async function leerCatalogo(unidadId) {
+      const { data: productos, error: e1 } = await supabase.from('productos_terminados')
+        .select('id, nombre, categoria, orden, activo').eq('unidad_negocio_id', unidadId).order('orden').order('nombre')
+      if (e1) throw e1
+      const ids = (productos ?? []).map(p => p.id)
+      let presentaciones = []
+      if (ids.length) {
+        const r = await supabase.from('producto_presentaciones')
+          .select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, activa, orden').in('producto_id', ids).order('orden')
+        if (r.error) throw r.error
+        presentaciones = r.data ?? []
+      }
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
+      if (e3) throw e3
+      const { data: insumos, error: e4 } = await supabase.from('insumos')
+        .select('id, nombre, marca, unidad_medida, categoria, activo').order('categoria').order('nombre')
+      if (e4) throw e4
+      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [], insumos: insumos ?? [] }
+    }
+
+    // Las categorías del producto terminado, en el orden en que se muestran
+    // (el mismo de la Carga y de Administración).
+    const CATEGORIAS_PRODUCTO = [
+      { clave: 'cucuruchones', titulo: 'Cucuruchones' },
+      { clave: 'barquillos', titulo: 'Barquillos' },
+      { clave: 'especiales', titulo: 'Especiales' },
+      { clave: 'pasta', titulo: 'Pasta' },
+    ]
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // La MISMA regla que tiene_tarea_alcance(): super_admin todas;
+    // {"todas": true} todas; si no, las de {"unidades": [...]}; null, ninguna.
+    function puedeEn(modulo, tarea, unidadId = estado.empresaId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      const clave = `${modulo}:${tarea}`
+      if (!estado.misTareas.has(clave)) return false
+      const alcance = estado.misTareas.get(clave)
+      if (alcance && alcance.todas === true) return true
+      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
+
+    // Las fábricas donde SUBE remitos (retiros:cargar) y donde los REVISA
+    // (retiros:ver). Todas son sin control de stock (estado.empresas).
+    function empresasDeCarga() {
+      return (estado.empresas ?? []).filter(e => puedeEn('retiros', 'cargar', e.id))
+    }
+
+    function empresasDeRevision() {
+      return (estado.empresas ?? []).filter(e => puedeEn('retiros', 'ver', e.id))
+    }
+
+    // ¿La fábrica NO controla el stock del producto terminado? (Las de este
+    // módulo, todas; si no se pudo leer, ninguna.)
+    function sinControlStockEmpresa(unidadId = estado.empresaId) {
+      return !!unidadId && estado.sinControl?.get?.(unidadId) === true
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTAS Y PESTAÑAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const VISTAS = ['rt-vista-remitos', 'rd-vista-revisar', 'ad-vista-remito']
+    const SUB_DE_VISTA = { 'rt-vista-remitos': 'Subir', 'rd-vista-revisar': 'Revisar', 'ad-vista-remito': 'Revisar' }
+
+    function mostrarVista(id) {
+      for (const v of VISTAS) document.getElementById(v).hidden = v !== id
+      estado.vista = id
+      document.getElementById('rd-sub').textContent = SUB_DE_VISTA[id] ?? ''
+      // Adentro de un remito no hay pestañas: se sale con "‹ Revisar".
+      document.getElementById('rd-tabs').hidden = id === 'ad-vista-remito' || pestanasVisibles().length < 2
+      window.scrollTo(0, 0)
+    }
+
+    // Las pestañas que ve: Subir con retiros:cargar, Revisar con retiros:ver.
+    function pestanasVisibles() {
+      return [empresasDeCarga().length ? 'subir' : null, empresasDeRevision().length ? 'revisar' : null].filter(Boolean)
+    }
+
+    function pintarPestanas() {
+      for (const p of ['subir', 'revisar']) {
+        const b = document.getElementById(`rd-tab-${p}`)
+        b.hidden = !pestanasVisibles().includes(p)
+        b.setAttribute('aria-pressed', estado.pestana === p ? 'true' : 'false')
+      }
+    }
+
+    function elegirPestana(p) {
+      if (!pestanasVisibles().includes(p)) return
+      // Con un remito abierto y cambios sin guardar, se avisa (volverDeRemito).
+      if (estado.vista === 'ad-vista-remito' && estado.remito?.sucio) { volverDeRemito(); return }
+      estado.pestana = p
+      guardarPreferencia(CLAVE_PESTANA, p)
+      pintarPestanas()
+      if (p === 'subir') abrirSubirRemitos()
+      else mostrarRevisar()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SUBIR (de la Carga, 27/10/2026; acá desde el 28/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // En Rosario (Dolce Pasta) no hay compu ni impresora: el remito se hace a
+    // mano y acá se le saca una foto. Cada foto se achica (1600 px de lado
+    // mayor, JPEG 0,82), se sube a comprobantes/<auth.uid>/remitos/<uuid>.jpg,
+    // crear_remito_precarga la registra con un client_uuid POR FOTO que se
+    // REUSA en cada reintento (la base devuelve el mismo remito) y la Edge
+    // Function ocr-remito la lee en segundo plano, sin trabar la pantalla.
+    // La pestaña Revisar corrige la precarga y la confirma como orden.
+    // La pestaña se ve solo con retiros:cargar (con alcance) en una fábrica que
+    // NO controla el stock terminado (unidades_negocio.controla_stock_terminado
+    // = false; cargarFabricas()).
+
+    const LADO_MAXIMO_FOTO = 1600
+    const CALIDAD_FOTO = 0.82
+    const DIAS_MIS_REMITOS = 7
+    const SONDEO_REMITOS_MS = 6000
+    const LECTURAS_A_LA_VEZ = 2
+    // Un "Leyendo…" de más de esto ya no se espera: se ofrece "Reintentar".
+    const LECTURA_TRABADA_MS = 3 * 60 * 1000
+    const SEGUNDOS_MINIATURA = 3600
+    const CLAVE_REMITOS_COLA = 'retiros.remitos.cola'
+    const CLAVE_REMITOS_FABRICA = 'retiros.remitos.fabrica'
+    const TEXTO_FOTO_PERDIDA = 'La foto no llegó a subirse antes de cerrar la página: sacala de nuevo.'
+    const ICONO_REMITO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4"/></svg>'
+
+    // Lo de esta pantalla, armado la primera vez que se usa.
+    function datosRemitos() {
+      if (!estado.subida) {
+        estado.subida = {
+          fabricaId: null, filas: null, error: null, cargando: false, turno: 0,
+          miniaturas: new Map(),
+          // Las fotos que todavía no son un remito en la base (o que la lista
+          // todavía no trajo): { clientUuid, unidadId, ruta, paso, error, remitoId, ... }
+          cola: leerColaRemitos(), trabajando: false,
+          // Las lecturas: en espera, en curso (de a LECTURAS_A_LA_VEZ) y las
+          // que fallaron antes de llegar a la base (id → texto).
+          lecturas: [], leyendo: new Set(), lecturaFallida: new Map(), sondeo: null,
+        }
+      }
+      return estado.subida
+    }
+
+    // ── Quién sube ─────────────────────────────────────────────────────────
+    // Las fábricas donde se suben remitos: donde carga (cargarFabricas ya
+    // saca la de pruebas para una cuenta real) y que no controlan el stock.
+    function fabricasRemitos() {
+      const sin = estado.sinControlIds
+      if (!(sin instanceof Set) || !sin.size) return []
+      return empresasDeCarga().filter(e => sin.has(e.id))
+    }
+
+    function puedeSubirRemitos() {
+      return fabricasRemitos().length > 0
+    }
+
+
+    // La fábrica de los remitos: la elegida; con una sola, esa; si no, la
+    // última que se usó. Con varias y ninguna, null (se pregunta).
+    function fabricaRemitos() {
+      const lista = fabricasRemitos()
+      const d = datosRemitos()
+      const elegida = lista.find(e => e.id === d.fabricaId)
+      if (elegida) return elegida
+      if (lista.length === 1) return lista[0]
+      const ultima = leerPreferencia(CLAVE_REMITOS_FABRICA)
+      return lista.find(e => e.id === ultima) ?? null
+    }
+
+    function elegirFabricaRemitos(id) {
+      if (!fabricasRemitos().some(e => e.id === id)) return
+      datosRemitos().fabricaId = id
+      guardarPreferencia(CLAVE_REMITOS_FABRICA, id)
+      pintarRemitos()
+    }
+
+
+    function abrirSubirRemitos() {
+      if (!puedeSubirRemitos()) return
+      estado.pestana = 'subir'
+      pintarPestanas()
+      mostrarVista('rt-vista-remitos')
+      pintarRemitos()
+      leerMisRemitos()
+      // Lo que quedó a medias de antes (se subió la foto pero no se registró).
+      procesarCola()
+    }
+
+
+    // ── La foto ────────────────────────────────────────────────────────────
+    function rutaFotoRemito(uid, uuid) {
+      return `${uid}/remitos/${uuid}.jpg`
+    }
+
+    // Las medidas de la foto achicada: el lado mayor a 1600 px como mucho
+    // (una más chica queda como está).
+    function medidasAchicadas(ancho, alto, max = LADO_MAXIMO_FOTO) {
+      const w = Number(ancho) || 0
+      const h = Number(alto) || 0
+      if (w <= 0 || h <= 0) return null
+      const k = Math.min(1, max / Math.max(w, h))
+      return { ancho: Math.max(1, Math.round(w * k)), alto: Math.max(1, Math.round(h * k)) }
+    }
+
+    async function cargarImagenRemito(archivo) {
+      if (typeof createImageBitmap === 'function') {
+        try { return await createImageBitmap(archivo, { imageOrientation: 'from-image' }) } catch { /* sigue con <img> */ }
+      }
+      return await new Promise((res, rej) => {
+        const url = URL.createObjectURL(archivo)
+        const img = new Image()
+        img.onload = () => { URL.revokeObjectURL(url); res(img) }
+        img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No se pudo abrir la foto.')) }
+        img.src = url
+      })
+    }
+
+    // La foto achicada en JPEG. Si el celular no la puede abrir (un formato
+    // raro), va como vino: mejor una foto pesada que ninguna.
+    async function achicarFoto(archivo, max = LADO_MAXIMO_FOTO, calidad = CALIDAD_FOTO) {
+      try {
+        const img = await cargarImagenRemito(archivo)
+        const m = medidasAchicadas(img.naturalWidth || img.width, img.naturalHeight || img.height, max)
+        if (!m) throw new Error('La foto no tiene medidas.')
+        const lienzo = document.createElement('canvas')
+        lienzo.width = m.ancho
+        lienzo.height = m.alto
+        lienzo.getContext('2d').drawImage(img, 0, 0, m.ancho, m.alto)
+        if (typeof img.close === 'function') img.close()
+        const blob = await new Promise(res => lienzo.toBlob(res, 'image/jpeg', calidad))
+        if (!blob) throw new Error('No se pudo armar el JPEG.')
+        return blob
+      } catch (err) {
+        console.warn('No se pudo achicar la foto, va como vino:', err)
+        return archivo
+      }
+    }
+
+    function urlLocalDeFoto(blob) {
+      try { return blob && typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(blob) : null } catch { return null }
+    }
+
+    // ── La cola (en segundo plano, de a una foto) ──────────────────────────
+    function itemColaRemito(archivo, unidadId, uid) {
+      return {
+        clientUuid: nuevoUuid(), unidadId, ruta: rutaFotoRemito(uid, nuevoUuid()),
+        archivo, blob: null, vista: null, paso: 'achicar', error: null, remitoId: null, creadoEn: new Date().toISOString(),
+      }
+    }
+
+    // La cola sobrevive a una recarga, sin la foto: lo que ya se subió se
+    // vuelve a registrar con el MISMO client_uuid; lo que no, se perdió.
+    function guardarColaRemitos() {
+      const d = datosRemitos()
+      const lista = d.cola.filter(i => !i.remitoId)
+        .map(({ clientUuid, unidadId, ruta, paso, error, creadoEn }) => ({ clientUuid, unidadId, ruta, paso, error, creadoEn }))
+      try { guardarPreferencia(CLAVE_REMITOS_COLA, lista.length ? JSON.stringify(lista) : null) } catch { /* nada */ }
+    }
+
+    function leerColaRemitos() {
+      try {
+        const l = JSON.parse(leerPreferencia(CLAVE_REMITOS_COLA) || '[]')
+        if (!Array.isArray(l)) return []
+        return l.filter(i => i && typeof i.clientUuid === 'string' && typeof i.ruta === 'string' && i.unidadId).map(i => {
+          const subida = i.paso === 'crear'
+          return {
+            clientUuid: i.clientUuid, unidadId: i.unidadId, ruta: i.ruta, creadoEn: i.creadoEn ?? null,
+            archivo: null, blob: null, vista: null, remitoId: null,
+            paso: subida ? 'crear' : 'perdida', error: subida ? (i.error ?? null) : TEXTO_FOTO_PERDIDA,
+          }
+        })
+      } catch { return [] }
+    }
+
+    // Las fotos elegidas (cámara o galería) entran a la cola y la pantalla
+    // queda libre para sacar la siguiente.
+    function fotosElegidas(input) {
+      const archivos = [...(input?.files ?? [])].filter(f => f && (!f.type || String(f.type).startsWith('image/')))
+      try { input.value = '' } catch { /* nada */ }
+      return encolarFotos(archivos)
+    }
+
+    function encolarFotos(archivos) {
+      if (!archivos?.length) return 0
+      const fab = fabricaRemitos()
+      if (!fab) { mostrarError('Elegí de qué fábrica son los remitos.'); return 0 }
+      const uid = estado.sesion?.user?.id
+      if (!uid) { mostrarError('No pudimos identificar tu usuario. Volvé a entrar.'); return 0 }
+      const d = datosRemitos()
+      for (const a of archivos) d.cola.unshift(itemColaRemito(a, fab.id, uid))
+      guardarPreferencia(CLAVE_REMITOS_FABRICA, fab.id)
+      guardarColaRemitos()
+      pintarRemitos()
+      // Sin await: la cola sigue sola.
+      procesarCola()
+      return archivos.length
+    }
+
+    async function procesarCola() {
+      const d = datosRemitos()
+      if (d.trabajando) return
+      d.trabajando = true
+      try {
+        let item
+        while ((item = d.cola.find(i => ['achicar', 'subir', 'crear'].includes(i.paso) && !i.error))) await procesarRemito(item)
+      } finally {
+        d.trabajando = false
+      }
+    }
+
+    // Un reintento de una foto que SÍ había llegado (se cortó la respuesta):
+    // la base dice que ya existe, y está bien.
+    function yaEstabaSubida(error) {
+      return String(error?.statusCode ?? error?.status ?? '') === '409' || /already exists|duplicate/i.test(String(error?.message ?? ''))
+    }
+
+    function textoErrorRemito(err, paso) {
+      if (esErrorDeRed(err)) return 'Sin señal: no se pudo subir. Tocá «Reintentar».'
+      const msg = limpio(err?.message)
+      if (paso === 'crear') return msg ? `No se pudo registrar: ${msg}` : 'No se pudo registrar el remito.'
+      return msg ? `No se pudo subir la foto: ${msg}` : 'No se pudo subir la foto.'
+    }
+
+    async function procesarRemito(item) {
+      item.error = null
+      try {
+        if (item.paso === 'achicar') {
+          item.blob = await achicarFoto(item.archivo)
+          item.archivo = null
+          item.vista = urlLocalDeFoto(item.blob)
+          item.paso = 'subir'
+          pintarRemitos()
+        }
+        if (item.paso === 'subir') {
+          if (!item.blob) throw new Error(TEXTO_FOTO_PERDIDA)
+          const { error } = await supabase.storage.from('comprobantes')
+            .upload(item.ruta, item.blob, { contentType: item.blob.type || 'image/jpeg', upsert: false })
+          if (error && !yaEstabaSubida(error)) throw error
+          item.paso = 'crear'
+          guardarColaRemitos()
+        }
+        if (item.paso === 'crear') {
+          const { data, error } = await supabase.rpc('crear_remito_precarga', {
+            p_unidad_negocio_id: item.unidadId, p_foto_path: item.ruta, p_client_uuid: item.clientUuid,
+          })
+          if (error) throw error
+          if (!data) throw new Error('La base no devolvió el remito.')
+          item.remitoId = String(data)
+          item.blob = null
+          item.paso = 'leer'
+          guardarColaRemitos()
+          lanzarLectura(item.remitoId)
+        }
+      } catch (err) {
+        console.error('No se pudo subir el remito:', err)
+        item.error = textoErrorRemito(err, item.paso)
+        guardarColaRemitos()
+      }
+      pintarRemitos()
+    }
+
+    // ── La lectura (ocr-remito), de a LECTURAS_A_LA_VEZ y sin esperarla ────
+    function lanzarLectura(remitoId) {
+      const d = datosRemitos()
+      d.lecturaFallida.delete(remitoId)
+      if (!d.lecturas.includes(remitoId) && !d.leyendo.has(remitoId)) d.lecturas.push(remitoId)
+      seguirLecturas()
+      programarSondeo()
+    }
+
+    function seguirLecturas() {
+      const d = datosRemitos()
+      while (d.leyendo.size < LECTURAS_A_LA_VEZ && d.lecturas.length) {
+        const id = d.lecturas.shift()
+        d.leyendo.add(id)
+        // SIN await: se pueden seguir sacando fotos mientras la IA lee.
+        leerRemitoConIa(id).finally(() => { d.leyendo.delete(id); seguirLecturas() })
+      }
+    }
+
+    async function leerRemitoConIa(id) {
+      const d = datosRemitos()
+      try {
+        const { data, error } = await supabase.functions.invoke('ocr-remito', { body: { remito_id: id } })
+        if (error) throw error
+        if (data?.error) throw new Error(String(data.error))
+      } catch (err) {
+        console.error('No se pudo leer el remito:', err)
+        d.lecturaFallida.set(id, esErrorDeRed(err) ? 'Sin señal: no se pudo pedir la lectura.' : (limpio(err?.message) || 'La IA no pudo leerlo.'))
+      }
+      d.leyendo.delete(id)
+      await leerMisRemitos()
+    }
+
+    // "Reintentar": lo que falló antes de ser un remito se vuelve a mandar
+    // desde el paso que falló, con el MISMO client_uuid; un remito que no se
+    // pudo leer se vuelve a leer.
+    function reintentarRemito(clave) {
+      const d = datosRemitos()
+      const item = d.cola.find(i => i.clientUuid === clave)
+      if (item && !item.remitoId) {
+        if (item.paso === 'perdida') return
+        item.error = null
+        pintarRemitos()
+        procesarCola()
+        return
+      }
+      lanzarLectura(item?.remitoId ?? clave)
+      pintarRemitos()
+    }
+
+    function quitarRemitoDeCola(clave) {
+      const d = datosRemitos()
+      d.cola = d.cola.filter(i => !(i.clientUuid === clave && i.paso === 'perdida'))
+      guardarColaRemitos()
+      pintarRemitos()
+    }
+
+    // ── Mis remitos subidos ────────────────────────────────────────────────
+    async function leerMisRemitos() {
+      const d = datosRemitos()
+      const turno = ++d.turno
+      if (d.filas === null) { d.cargando = true; pintarRemitos() }
+      try {
+        const desde = new Date(Date.now() - DIAS_MIS_REMITOS * 86400000).toISOString()
+        const { data, error } = await supabase.from('remitos_precarga')
+          .select('id, unidad_negocio_id, foto_path, subido_en, estado, numero_remito, talonario, error, orden_id, orden_codigo, descartado_motivo, client_uuid')
+          .eq('subido_por', estado.miEmpleadoId).gte('subido_en', desde)
+          .order('subido_en', { ascending: false }).limit(60)
+        if (error) throw error
+        if (turno !== d.turno) return
+        const filas = (Array.isArray(data) ? data : []).filter(f => f?.id)
+          .sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))
+        // Lo que ya está en la base sale de la cola (con su foto local como miniatura).
+        const enBase = new Set(filas.map(f => f.id))
+        for (const i of d.cola) if (i.remitoId && enBase.has(i.remitoId) && i.vista && !d.miniaturas.has(i.ruta)) d.miniaturas.set(i.ruta, i.vista)
+        d.cola = d.cola.filter(i => !(i.remitoId && enBase.has(i.remitoId)))
+        guardarColaRemitos()
+        d.filas = filas
+        d.error = null
+        d.cargando = false
+        pedirMiniaturas(filas)
+      } catch (err) {
+        console.error('No se pudieron leer los remitos subidos:', err)
+        if (turno !== d.turno) return
+        d.error = 'No se pudieron leer tus remitos subidos. Revisá la conexión.'
+        d.cargando = false
+      }
+      pintarRemitos()
+      programarSondeo()
+    }
+
+    // Las miniaturas: un link firmado por foto, una sola vez.
+    function pedirMiniaturas(filas) {
+      const d = datosRemitos()
+      const faltan = filas.map(f => f.foto_path).filter(p => p && !d.miniaturas.has(p))
+      if (!faltan.length) return
+      for (const p of faltan) d.miniaturas.set(p, null)
+      Promise.all(faltan.map(async (p) => {
+        try {
+          const { data, error } = await supabase.storage.from('comprobantes').createSignedUrl(p, SEGUNDOS_MINIATURA)
+          if (!error && data?.signedUrl) d.miniaturas.set(p, data.signedUrl)
+        } catch { /* sin miniatura: va el ícono */ }
+      })).then(() => pintarRemitos())
+    }
+
+    // Solo links de la base (https) o de la foto recién sacada (blob:).
+    function urlMiniaturaSegura(u) {
+      const s = String(u ?? '')
+      return /^(https:\/\/|blob:)/i.test(s) ? s : null
+    }
+
+    function fechaHoraRemito(iso) {
+      const t = Date.parse(String(iso ?? ''))
+      if (!Number.isFinite(t)) return ''
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+        timeZone: ZONA_AR, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(new Date(t)).map(x => [x.type, x.value]))
+      return `${p.day}/${p.month} · ${p.hour}:${p.minute}`
+    }
+
+    // El N° leído, si hay, con el talonario de acopio marcado.
+    function numeroLeido(f) {
+      const n = limpio(f?.numero_remito)
+      return n ? { texto: `Remito N° ${n}`, acopio: f?.talonario === 'acopio' } : null
+    }
+
+    // El estado de un remito de la base, en palabras.
+    function estadoRemitoSubido(f, d = datosRemitos(), ahora = Date.now()) {
+      // Pidiendo la lectura (o releyendo uno que falló): "Leyendo…", salvo que
+      // la base ya tenga el resultado.
+      const pidiendo = d.leyendo.has(f.id) || d.lecturas.includes(f.id)
+      if (pidiendo && ['leyendo', 'error'].includes(f.estado)) return { tipo: 'leyendo', texto: 'Leyendo…', detalle: '' }
+      const n = numeroLeido(f)
+      switch (f.estado) {
+        case 'precargada':
+          return { tipo: 'precargada', texto: 'Precargado', detalle: n ? n.texto : 'Sin número leído · falta revisarlo', acopio: !!n?.acopio }
+        case 'confirmada': {
+          // El código de la orden: remitos_precarga.orden_codigo (28/10/2026,
+          // verificada con information_schema), que se lee con lo mismo que el
+          // remito: Manuel (solo retiros:cargar) también lo ve.
+          const codigo = limpio(f.orden_codigo)
+          return { tipo: 'confirmada', texto: codigo ? `Confirmado: Orden ${codigo}` : 'Confirmado: ya es una orden', detalle: n ? n.texto : '', acopio: !!n?.acopio }
+        }
+        case 'descartada':
+          return { tipo: 'descartada', texto: `Descartado: ${limpio(f.descartado_motivo) || 'sin motivo'}`, detalle: '' }
+        case 'error':
+          return { tipo: 'error', texto: 'No se pudo leer', detalle: limpio(f.error), reintentar: true }
+        default: {
+          const fallo = d.lecturaFallida.get(f.id)
+          if (fallo) return { tipo: 'error', texto: 'No se pudo leer', detalle: fallo, reintentar: true }
+          const trabado = ahora - Date.parse(String(f.subido_en ?? '')) > LECTURA_TRABADA_MS
+          return { tipo: 'leyendo', texto: 'Leyendo…', detalle: trabado ? 'Tarda más de lo normal' : '', reintentar: trabado }
+        }
+      }
+    }
+
+    // El estado de una foto que todavía no está en la lista de la base.
+    function estadoRemitoEnCola(i, d = datosRemitos()) {
+      if (i.paso === 'perdida') return { tipo: 'error', texto: 'No se subió', detalle: i.error || TEXTO_FOTO_PERDIDA, quitar: true }
+      if (i.error) return { tipo: 'error', texto: i.paso === 'crear' ? 'No se pudo registrar' : 'No se pudo subir', detalle: i.error, reintentar: true }
+      if (i.remitoId) return estadoRemitoSubido({ id: i.remitoId, estado: 'leyendo', subido_en: i.creadoEn }, d)
+      return { tipo: 'subiendo', texto: 'Subiendo…', detalle: '' }
+    }
+
+    // Lo que se muestra, más nuevo primero: la cola arriba y después la base.
+    function remitosParaMostrar(d = datosRemitos()) {
+      const enCola = d.cola.map(i => ({
+        clave: i.clientUuid, cuando: i.creadoEn, unidadId: i.unidadId, miniatura: i.vista, estado: estadoRemitoEnCola(i, d),
+        reintentarCon: i.remitoId ?? i.clientUuid,
+      }))
+      const deBase = (d.filas ?? []).map(f => ({
+        clave: f.id, cuando: f.subido_en, unidadId: f.unidad_negocio_id, miniatura: d.miniaturas.get(f.foto_path) ?? null,
+        estado: estadoRemitoSubido(f, d), reintentarCon: f.id,
+      }))
+      return [...enCola, ...deBase]
+    }
+
+    // La miniatura NO va en el HTML: pintarRemitos() le pone el src por el
+    // DOM (urlMiniaturaSegura), así ningún link entra a un atributo.
+    function htmlRemitoSubido(x, varias = fabricasRemitos().length > 1) {
+      const e = x.estado
+      const tipoRemito = e.tipo
+      const fotoRemito = urlMiniaturaSegura(x.miniatura)
+        ? `<img class="rt-remito__foto" data-remito-miniatura="${esc(x.clave)}" alt="Foto del remito">`
+        : `<span class="rt-remito__foto" aria-hidden="true">${ICONO_REMITO}</span>`
+      const fabrica = varias ? limpio(empresasDeCarga().find(f => f.id === x.unidadId)?.nombre) : ''
+      const meta = [fechaHoraRemito(x.cuando), fabrica].filter(Boolean).join(' · ')
+      const selloAcopio = e.acopio ? '<span class="rt-remito__sello">Acopio</span>' : ''
+      return `<div class="rt-remito rt-remito--${tipoRemito}" data-remito="${esc(x.clave)}" data-remito-estado="${tipoRemito}">${fotoRemito}` +
+        `<div class="rt-remito__texto"><span class="rt-remito__estado">${esc(e.texto)}</span>` +
+        (e.detalle || selloAcopio ? `<span class="rt-remito__detalle">${esc(e.detalle)}${selloAcopio}</span>` : '') +
+        (meta ? `<span class="rt-fila__meta">${esc(meta)}</span>` : '') + '</div>' +
+        (e.reintentar ? `<button type="button" class="rt-btn rt-btn--secundario rt-remito__accion" data-remito-reintentar="${esc(x.reintentarCon)}">Reintentar</button>` : '') +
+        (e.quitar ? `<button type="button" class="rt-btn rt-btn--suave rt-remito__accion" data-remito-quitar="${esc(x.clave)}">Quitar</button>` : '') +
+        '</div>'
+    }
+
+    function htmlMisRemitos(d = datosRemitos()) {
+      const lista = remitosParaMostrar(d)
+      if (!lista.length) {
+        if (d.cargando) return '<p class="rt-vacio">Cargando…</p>'
+        if (d.error) return `<p class="rt-aviso rt-aviso--grave">${esc(d.error)}</p>`
+        return '<p class="rt-vacio">Todavía no subiste remitos en los últimos 7 días.</p>'
+      }
+      const varias = fabricasRemitos().length > 1
+      return (d.error ? `<p class="rt-aviso rt-aviso--grave">${esc(d.error)}</p>` : '') + lista.map(x => htmlRemitoSubido(x, varias)).join('')
+    }
+
+    function htmlFabricaRemitos() {
+      const lista = fabricasRemitos()
+      const fab = fabricaRemitos()
+      if (lista.length === 1) return `<p class="rt-aviso">Los remitos van a <strong>${esc(lista[0].nombre)}</strong>.</p>`
+      return '<div class="rt-campo"><span class="rt-campo__rotulo">¿De qué fábrica son los remitos?</span><div class="rt-remitos-fabricas">' +
+        lista.map(e => `<button type="button" class="rt-remitos-fabrica" data-remito-fabrica="${esc(e.id)}" aria-pressed="${fab?.id === e.id ? 'true' : 'false'}">${esc(e.nombre)}</button>`).join('') +
+        '</div>' + (fab ? '' : '<p class="rt-pista">Elegí la fábrica antes de sacar la foto.</p>') + '</div>'
+    }
+
+    function textoColaRemitos(d = datosRemitos()) {
+      const subiendo = d.cola.filter(i => ['achicar', 'subir', 'crear'].includes(i.paso) && !i.error).length
+      const leyendo = d.leyendo.size + d.lecturas.length
+      const partes = []
+      if (subiendo) partes.push(subiendo === 1 ? 'Subiendo 1 foto…' : `Subiendo ${subiendo} fotos…`)
+      if (leyendo) partes.push(leyendo === 1 ? 'La IA está leyendo 1 remito.' : `La IA está leyendo ${leyendo} remitos.`)
+      return partes.length ? `${partes.join(' ')} Podés seguir sacando fotos.` : ''
+    }
+
+    function pintarRemitos() {
+      if (estado.vista !== 'rt-vista-remitos') return
+      const d = datosRemitos()
+      const fab = fabricaRemitos()
+      document.getElementById('rt-remitos-fabrica').innerHTML = htmlFabricaRemitos()
+      document.getElementById('rt-remitos-acciones').classList.toggle('rt-remitos-acciones--apagadas', !fab)
+      document.getElementById('rt-remitos-camara').disabled = !fab
+      document.getElementById('rt-remitos-galeria').disabled = !fab
+      document.getElementById('rt-remitos-cola').textContent = textoColaRemitos(d)
+      const n = remitosParaMostrar(d).length
+      document.getElementById('rt-remitos-cuenta').textContent = n ? String(n) : ''
+      const lista = document.getElementById('rt-remitos-lista')
+      lista.innerHTML = htmlMisRemitos(d)
+      const urls = new Map(remitosParaMostrar(d).map(x => [x.clave, urlMiniaturaSegura(x.miniatura)]))
+      for (const img of lista.querySelectorAll('img[data-remito-miniatura]')) {
+        const u = urls.get(img.dataset.remitoMiniatura)
+        if (u) img.src = u
+      }
+    }
+
+    // ── El sondeo: mientras alguno se esté leyendo, la lista se vuelve a
+    // pedir cada 6 segundos (solo con esta pantalla a la vista).
+    function hayRemitosLeyendo(d = datosRemitos()) {
+      return d.cola.some(i => i.remitoId) || d.leyendo.size > 0 || d.lecturas.length > 0 ||
+        (d.filas ?? []).some(f => f.estado === 'leyendo' && !d.lecturaFallida.has(f.id))
+    }
+
+    function programarSondeo() {
+      const d = datosRemitos()
+      if (d.sondeo || estado.vista !== 'rt-vista-remitos' || !hayRemitosLeyendo(d)) return
+      d.sondeo = setTimeout(() => {
+        d.sondeo = null
+        if (estado.vista !== 'rt-vista-remitos') return
+        if (document.hidden) { programarSondeo(); return }
+        leerMisRemitos()
+      }, SONDEO_REMITOS_MS)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REVISAR: LOS REMITOS PRECARGADOS (de Administración → Órdenes,
+    // 27/10/2026; acá desde el 28/10/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // En Rosario (Dolce Pasta, controla_stock_terminado = false) Manuel saca
+    // la foto de un remito escrito a mano y la IA (Edge Function ocr-remito)
+    // deja una PRECARGA (remitos_precarga) que acá se revisa, se corrige y se
+    // confirma; la orden que sale se valoriza en Administración como
+    // cualquier otra.
+    // La base (verificada con pg_get_functiondef el 27/10/2026):
+    //  - actualizar_remito_precarga(p_id, p_numero_remito, p_fecha,
+    //    p_cliente_id, p_transporte, p_observaciones, p_items, p_talonario):
+    //    deja 'precargada' y normaliza los renglones: revisar = revisar || sin
+    //    producto ni insumo || sin cantidad (salvo omitir, que nunca queda en
+    //    revisar). Por eso va revisar:false en lo que Yanina ya corrigió.
+    //  - confirmar_remito_precarga(p_id): arma la orden con
+    //    registrar_orden_retiro (saltea los omitidos) y le pone numero_remito y
+    //    talonario. Sus errores van TAL CUAL, pegados a los botones.
+    //  - descartar_remito_precarga(p_id, p_motivo): motivo de 3 letras o más.
+    //  - Volver a leer: functions.invoke('ocr-remito', { body: { remito_id } }).
+    // EL TALONARIO: 'oficial' (el de Dolce Pasta, 0001-0000XXXX) o 'acopio'
+    // (el celeste con número rojo, para retirar lo ya facturado como acopio).
+    // Cada uno con su numeración: el listado de órdenes va por solapas.
+    // UN RENGLÓN OMITIDO ("No va en la orden"): mercadería de terceros que
+    // está en el papel (envases térmicos, salsas): se tacha en gris, no cuenta
+    // en los amarillos ni en la orden.
+    const ESTADOS_REMITO_POR_REVISAR = ['precargada', 'error', 'leyendo']
+    const ETIQUETA_ESTADO_REMITO = { precargada: 'Por revisar', error: 'No se pudo leer', leyendo: 'Leyendo…' }
+    const TALONARIOS = [{ id: 'oficial', nombre: 'Oficial' }, { id: 'acopio', nombre: 'Acopio' }]
+    const CAMPOS_REMITO = 'id, unidad_negocio_id, foto_path, subido_por, subido_en, estado, talonario, numero_remito, numero_remito_n, fecha, cliente_id, cliente_leido, transporte, observaciones, items, error, leido_en'
+    const ZOOM_FOTO_REMITO = [1, 1.5, 2, 3]
+    const LARGO_LOTE_REMITO = 40
+    const LARGO_MINIMO_MOTIVO_REMITO = 3
+    // El error de confirmar que pide descartar: el remito a una empresa del
+    // grupo que ya entró como ingreso allá.
+    const RE_YA_INGRESADO = /ya entró como ingreso/i
+
+
+
+
+
+    function numeroRemitoN(o) {
+      const v = o?.numero_remito_n
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    // Por N° de remito, el más nuevo arriba; las sin número al final, en el
+    // orden en que vinieron (fecha y número de orden).
+    function ordenarPorRemito(lista) {
+      return (Array.isArray(lista) ? lista : []).map((o, i) => [o, i]).sort(([a, i], [b, j]) => {
+        const x = numeroRemitoN(a), y = numeroRemitoN(b)
+        if (x === null && y === null) return i - j
+        if (x === null) return 1
+        if (y === null) return -1
+        return y - x || i - j
+      }).map(([o]) => o)
+    }
+
+    // Lo que muestra la lista de órdenes de abajo: las del talonario
+    // elegido, por N° de remito (las sin número al final).
+    function ordenesVisibles(lista = estado.ordenes) {
+      if (!Array.isArray(lista)) return []
+      if (!sinControlStockEmpresa()) return lista
+      const tal = estado.talonarioOrdenes === 'acopio' ? 'acopio' : 'oficial'
+      return ordenarPorRemito(lista.filter(o => talonarioDe(o) === tal))
+    }
+
+    function htmlTalonariosOrdenes() {
+      if (!sinControlStockEmpresa() || !Array.isArray(estado.ordenes)) return ''
+      const tal = estado.talonarioOrdenes === 'acopio' ? 'acopio' : 'oficial'
+      return '<h2 class="ad-subtitulo">Órdenes por N° de remito</h2><div class="ad-segmento" role="group" aria-label="Talonario">' + TALONARIOS.map(t => {
+        const n = estado.ordenes.filter(o => talonarioDe(o) === t.id).length
+        return `<button type="button" class="ad-segmento__opcion" data-talonario-ordenes="${esc(t.id)}" aria-pressed="${t.id === tal ? 'true' : 'false'}">${esc(t.nombre + ' · ' + n)}</button>`
+      }).join('') + '</div>'
+    }
+
+    function elegirTalonarioOrdenes(t) {
+      if (!TALONARIOS.some(x => x.id === t) || estado.talonarioOrdenes === t) return
+      estado.talonarioOrdenes = t
+      pintarOrdenesRemito()
+    }
+
+
+    // ── La lista de arriba: los remitos por revisar ───────────────────────
+    // Los ya confirmados o descartados en esta visita no vuelven aunque una
+    // lectura vieja los traiga.
+    function remitosPorRevisar(filas) {
+      const resueltos = estado.remitosResueltos
+      return (Array.isArray(filas) ? filas : [])
+        .filter(r => r && ESTADOS_REMITO_POR_REVISAR.includes(r.estado) && !(resueltos instanceof Set && resueltos.has(r.id)))
+        .sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))
+    }
+
+    async function leerRemitosPrecarga(unidadId) {
+      const { data, error } = await supabase.from('remitos_precarga').select(CAMPOS_REMITO)
+        .eq('unidad_negocio_id', unidadId).in('estado', ESTADOS_REMITO_POR_REVISAR).order('subido_en', { ascending: false })
+      if (error) throw error
+      return remitosPorRevisar(data)
+    }
+
+    async function leerRemito(id) {
+      const { data, error } = await supabase.from('remitos_precarga').select(CAMPOS_REMITO).eq('id', id).maybeSingle()
+      if (error) throw error
+      return data ?? null
+    }
+
+    async function cargarRemitosPrecarga() {
+      const turno = estado.turnoRemitos = (estado.turnoRemitos ?? 0) + 1
+      const empresaId = estado.empresaId
+      estado.remitos = { empresaId, filas: null, error: null }
+      pintarRemitosPrecarga()
+      try {
+        const filas = await leerRemitosPrecarga(empresaId)
+        if (turno !== estado.turnoRemitos || estado.empresaId !== empresaId) return
+        estado.remitos = { empresaId, filas, error: null }
+      } catch (err) {
+        if (turno !== estado.turnoRemitos) return
+        console.error('No se pudieron leer los remitos precargados:', err)
+        estado.remitos = { empresaId, filas: null, error: 'No se pudieron leer los remitos precargados. Revisá la conexión y volvé a entrar.' }
+      }
+      pintarRemitosPrecarga()
+    }
+
+    // Los renglones en amarillo: para revisar y que van en la orden.
+    function amarillosDe(items) {
+      return (Array.isArray(items) ? items : []).filter(it => it?.revisar === true && it?.omitir !== true).length
+    }
+
+    function nombreClienteRemito(r) {
+      const c = clienteDe(r?.cliente_id)
+      if (c) return c.nombre
+      return limpio(r?.cliente_leido) ? `«${limpio(r.cliente_leido)}» (leído)` : 'Sin cliente'
+    }
+
+    function htmlTarjetaRemito(r) {
+      const items = Array.isArray(r.items) ? r.items : []
+      const amarillos = amarillosDe(items)
+      const numero = textoNumeroRemito(r) || 'Sin número'
+      const meta = [nombreClienteRemito(r), esFechaIso(r.fecha) ? fechaCorta(r.fecha) : 'sin fecha', `${items.length} ${items.length === 1 ? 'renglón' : 'renglones'}`].join(' · ')
+      const estadoR = ETIQUETA_ESTADO_REMITO[r.estado] ?? r.estado
+      return `<button type="button" class="ad-fila ad-rm-tarjeta" data-remito="${esc(r.id)}">` +
+        `<span class="ad-fila__linea"><span class="ad-rm-numero">${esc(numero)}</span><span class="ad-fila__sellos">` +
+        `<span class="ad-sello ad-sello--rm-${esc(r.estado)}">${esc(estadoR)}</span>${htmlSelloAcopio(r)}` +
+        (amarillos ? `<span class="ad-sello ad-sello--amarillo">${esc(amarillos + ' en amarillo')}</span>` : '') + '</span></span>' +
+        `<span class="ad-fila__meta">${esc(meta)}</span>` +
+        (r.estado === 'error' && limpio(r.error) ? `<span class="ad-fila__meta ad-rm-tarjeta__error">${esc(limpio(r.error))}</span>` : '') +
+        `<span class="ad-fila__meta">${esc('Subido ' + momentoAr(r.subido_en))}</span></button>`
+    }
+
+    function htmlRemitosPrecarga() {
+      const rr = estado.remitos
+      if (!sinControlStockEmpresa() || !rr || rr.empresaId !== estado.empresaId) return ''
+      const n = Array.isArray(rr.filas) ? rr.filas.length : null
+      const rmTitulo = `<h2 class="ad-subtitulo ad-rm-titulo">Remitos precargados · por revisar${n !== null ? ` <span class="ad-rm-contador" data-remitos-cuenta>${esc(n)}</span>` : ''}</h2>`
+      let rmLista
+      if (rr.error) rmLista = `<div class="ad-aviso ad-aviso--grave">${esc(rr.error)}</div>`
+      else if (rr.filas === null) rmLista = '<div class="ad-vacio">Cargando los remitos…</div>'
+      else if (!rr.filas.length) rmLista = '<p class="ad-texto-suave">No hay remitos por revisar.</p>'
+      else rmLista = `<div class="ad-lista">${rr.filas.map(htmlTarjetaRemito).join('')}</div>`
+      return `<section class="ad-rm-seccion" aria-label="Remitos precargados por revisar">${rmTitulo}${rmLista}</section>`
+    }
+
+    function pintarRemitosPrecarga() {
+      const el = document.getElementById('ad-remitos')
+      if (el) el.innerHTML = htmlRemitosPrecarga()
+    }
+
+    function quitarRemitoDeLaLista(id) {
+      if (!(estado.remitosResueltos instanceof Set)) estado.remitosResueltos = new Set()
+      estado.remitosResueltos.add(id)
+      if (Array.isArray(estado.remitos?.filas)) estado.remitos.filas = remitosPorRevisar(estado.remitos.filas)
+    }
+
+    // ── El remito abierto: el formulario ──────────────────────────────────
+    function cajasLoteRemito(l) {
+      const n = Number(l?.cajas)
+      return l?.cajas !== null && l?.cajas !== undefined && l?.cajas !== '' && Number.isInteger(n) && n > 0 ? n : 0
+    }
+
+    function normalizarLoteRemito(t) {
+      return String(t ?? '').trim().toUpperCase()
+    }
+
+    function renglonDesdeItem(it) {
+      const pres = typeof it?.presentacion_id === 'string' && it.presentacion_id ? it.presentacion_id : null
+      const cant = Number(it?.cantidad)
+      return {
+        texto_leido: String(it?.texto_leido ?? ''), nota: String(it?.nota ?? ''),
+        revisar: it?.revisar === true, omitir: it?.omitir === true,
+        cantidad: it?.cantidad !== null && it?.cantidad !== undefined && it?.cantidad !== '' && Number.isFinite(cant) && cant > 0 ? cant : null,
+        presentacionId: pres,
+        marcaId: pres && typeof it?.marca_id === 'string' && it.marca_id ? it.marca_id : null,
+        insumoId: !pres && typeof it?.insumo_id === 'string' && it.insumo_id ? it.insumo_id : null,
+        lotes: pres ? (Array.isArray(it?.lotes) ? it.lotes : []).map(l => ({ lote: String(l?.lote ?? ''), cajas: cajasLoteRemito(l) || null })) : [],
+        eligiendo: false, busqueda: '', marcaBusqueda: '',
+      }
+    }
+
+    function renglonRemitoNuevo() {
+      return { texto_leido: '', nota: '', revisar: false, omitir: false, cantidad: null, presentacionId: null, marcaId: null, insumoId: null,
+        lotes: [], eligiendo: true, busqueda: '', marcaBusqueda: '' }
+    }
+
+    function formDesdeRemito(f) {
+      return {
+        numero: String(f?.numero_remito ?? ''), fecha: esFechaIso(f?.fecha) ? f.fecha : '', talonario: talonarioDe(f),
+        clienteId: f?.cliente_id ?? null, clienteBusqueda: '',
+        transporte: String(f?.transporte ?? ''), observaciones: String(f?.observaciones ?? ''),
+        renglones: (Array.isArray(f?.items) ? f.items : []).map(renglonDesdeItem),
+      }
+    }
+
+    function lotesRemitoParaBase(r) {
+      return (r?.lotes ?? []).filter(l => cajasLoteRemito(l) > 0 && normalizarLoteRemito(l.lote))
+        .map(l => ({ lote: normalizarLoteRemito(l.lote).slice(0, LARGO_LOTE_REMITO), cajas: cajasLoteRemito(l) }))
+    }
+
+    // Un renglón como lo pide actualizar_remito_precarga.
+    function itemRemitoParaBase(r) {
+      const pres = r?.presentacionId ?? null
+      const cant = r?.cantidad === null || r?.cantidad === undefined || r?.cantidad === '' ? null : Number(r.cantidad)
+      return {
+        texto_leido: String(r?.texto_leido ?? ''),
+        cantidad: Number.isFinite(cant) ? cant : null,
+        presentacion_id: pres,
+        marca_id: pres ? (r.marcaId ?? null) : null,
+        insumo_id: pres ? null : (r?.insumoId ?? null),
+        lotes: pres ? lotesRemitoParaBase(r) : [],
+        revisar: r?.omitir === true ? false : r?.revisar === true,
+        omitir: r?.omitir === true,
+        nota: String(r?.nota ?? ''),
+      }
+    }
+
+    function parametrosActualizarRemito(rm) {
+      const f = rm.form
+      return {
+        p_id: rm.id, p_numero_remito: limpio(f.numero) || null, p_fecha: esFechaIso(f.fecha) ? f.fecha : null,
+        p_cliente_id: f.clienteId || null, p_transporte: limpio(f.transporte) || null, p_observaciones: limpio(f.observaciones) || null,
+        p_items: f.renglones.map(itemRemitoParaBase), p_talonario: f.talonario === 'acopio' ? 'acopio' : 'oficial',
+      }
+    }
+
+    // Lo pedido, lo asignado a los lotes escritos y lo que falta (como la
+    // Carga sin control de stock).
+    function asignacionRemito(r) {
+      const pedido = r?.cantidad === null || r?.cantidad === undefined || r?.cantidad === '' ? null : Number(r.cantidad)
+      const asignado = (r?.lotes ?? []).reduce((s, l) => s + cajasLoteRemito(l), 0)
+      return { pedido, asignado, falta: pedido === null ? null : pedido - asignado }
+    }
+
+    // El pie: "Asignado X de Y · faltan Z", o "Va sin lote".
+    function htmlResumenLotesRemito(r) {
+      const a = asignacionRemito(r)
+      if (a.pedido === null) return '<span class="ad-rm-lotes__resumen">Poné las cajas y escribí de qué lotes salen.</span>'
+      if (!(a.asignado > 0)) return '<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">Va sin lote</span> <span class="ad-rm-lotes__resumen">Sin lotes escritos sale como «SIN LOTE».</span>'
+      const rmEstadoLotes = a.falta > 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">faltan ${esc(enteroHoja(a.falta))} cajas</span>`
+        : a.falta < 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">${esc(enteroHoja(-a.falta))} de más</span>`
+        : '<span class="ad-rm-estado-lotes ad-rm-estado-lotes--ok">✓ Asignado completo</span>'
+      return `<span class="ad-rm-lotes__asignado">Asignado ${esc(enteroHoja(a.asignado))} de ${esc(enteroHoja(a.pedido))}</span> · ${rmEstadoLotes}`
+    }
+
+    // "Aceptar sugerencia": la IA reconoció el producto (o el insumo) y la
+    // cantidad pero lo marcó; aceptar no cambia nada más que el amarillo.
+    function puedeAceptarSugerencia(r) {
+      return !!r && r.revisar === true && r.omitir !== true && !!(r.presentacionId || r.insumoId) && Number(r.cantidad) > 0
+    }
+
+    function textoResumenRemito(renglones) {
+      const lista = Array.isArray(renglones) ? renglones : []
+      const omitidos = lista.filter(r => r.omitir === true).length
+      const amarillos = lista.filter(r => r.revisar === true && r.omitir !== true).length
+      return [`${lista.length} ${lista.length === 1 ? 'renglón' : 'renglones'}`, amarillos ? `${amarillos} en amarillo` : '',
+        omitidos ? `${omitidos} no ${omitidos === 1 ? 'va' : 'van'} en la orden` : ''].filter(Boolean).join(' · ')
+    }
+
+
+
+
+
+
+
+    function htmlOpcionesRemito(i, cat, busqueda) {
+      if (!cat) return '<p class="ad-texto-suave">Cargando los productos…</p>'
+      const grupos = gruposRemito(cat, busqueda, CATEGORIAS_PRODUCTO)
+      const q = limpio(busqueda)
+      const pista = q ? '' : '<p class="ad-texto-suave">Escribí para buscar también los insumos.</p>'
+      if (!grupos.length) return q ? `<p class="ad-texto-suave">${esc('Nada coincide con «' + q + '».')}</p>` : pista
+      return grupos.map(g => `<div class="ad-rm-grupo"><p class="ad-rm-grupo__titulo">${esc(g.titulo)}</p>` +
+        g.lista.map(o => o.grupo === 'insumos'
+          ? `<button type="button" class="ad-rm-opcion" data-rm-insumo="${esc(i)}" data-id="${esc(o.insumoId)}">${esc(o.nombre)}</button>`
+          : `<button type="button" class="ad-rm-opcion" data-rm-producto="${esc(i)}" data-presentacion="${esc(o.presentacionId)}">${esc(o.nombre)}` +
+            `${o.conCono ? '<span class="ad-rm-opcion__detalle">elegí el cono</span>' : ''}</button>`).join('') +
+        '</div>').join('') + pista
+    }
+
+    function htmlSelectorRemito(r, i, cat) {
+      const rmVolver = r.eligiendo && (r.presentacionId || r.insumoId) ? `<button type="button" class="ad-link" data-rm-cambiar-no="${esc(i)}">Dejar ${esc(nombreRenglonRemito(cat, r) || 'el que estaba')}</button>` : ''
+      return `<div class="ad-rm-selector"><label class="ad-campo__rotulo" for="ad-rm-buscar-${esc(i)}">Producto, cono o insumo</label>` +
+        `<input type="search" class="ad-input" id="ad-rm-buscar-${esc(i)}" data-rm-buscar="${esc(i)}" value="${esc(r.busqueda ?? '')}" autocomplete="off" maxlength="60" placeholder="Buscar producto, cono o insumo">` +
+        `${rmVolver}<div class="ad-rm-opciones" role="group" aria-label="Producto o insumo" data-rm-opciones="${esc(i)}">${htmlOpcionesRemito(i, cat, r.busqueda ?? '')}</div></div>`
+    }
+
+    function htmlMarcasRemito(r, i, cat) {
+      const q = normalizar(r.marcaBusqueda)
+      const lista = (cat?.marcas ?? []).filter(m => !q || normalizar(m.nombre).includes(q)).slice(0, 12)
+      if (!lista.length) return q ? `<span class="ad-texto-suave">${esc('Ningún cono coincide con «' + limpio(r.marcaBusqueda) + '».')}</span>` : ''
+      return lista.map(m => `<button type="button" class="ad-rm-opcion ad-rm-opcion--cono" data-rm-marca="${esc(i)}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+    }
+
+    function htmlConoRemito(r, i, cat) {
+      return `<div class="ad-campo"><label for="ad-rm-cono-${esc(i)}">Cono</label>` +
+        `<input type="search" class="ad-input" id="ad-rm-cono-${esc(i)}" data-rm-cono-buscar="${esc(i)}" value="${esc(r.marcaBusqueda ?? '')}" autocomplete="off" maxlength="60" placeholder="Buscar el cono…">` +
+        `<div class="ad-rm-opciones ad-rm-opciones--conos" data-rm-marcas="${esc(i)}">${htmlMarcasRemito(r, i, cat)}</div></div>`
+    }
+
+    function filasLotesRemito(r) {
+      return Array.isArray(r?.lotes) && r.lotes.length ? r.lotes : [{ lote: '', cajas: null }]
+    }
+
+    function htmlLotesRemito(r, i) {
+      const filas = filasLotesRemito(r)
+      const cuerpo = filas.map((l, k) => '<div class="ad-rm-lote">' +
+        `<label class="ad-rm-lote__campo"><span>Lote</span><input type="text" class="ad-input" data-rm-lote="${esc(i)}" data-k="${esc(k)}" value="${esc(l.lote ?? '')}" ` +
+        `maxlength="${LARGO_LOTE_REMITO}" autocomplete="off" autocapitalize="characters" placeholder="Ej. 10430" aria-label="${esc('Lote ' + (k + 1))}"></label>` +
+        `<label class="ad-rm-lote__campo ad-rm-lote__campo--cajas"><span>Cajas</span><input type="text" class="ad-input" data-rm-lote-cajas="${esc(i)}" data-k="${esc(k)}" ` +
+        `inputmode="numeric" autocomplete="off" aria-label="${esc('Cajas del lote ' + (k + 1))}"></label>` +
+        (filas.length > 1 ? `<button type="button" class="ad-rm-lote__quitar" data-rm-lote-quitar="${esc(i)}" data-k="${esc(k)}" aria-label="${esc('Quitar el lote ' + (k + 1))}">×</button>` : '') +
+        '</div>').join('')
+      return `<div class="ad-rm-lotes"><p class="ad-campo__rotulo">¿De qué lotes?</p>${cuerpo}` +
+        `<button type="button" class="ad-link" data-rm-lote-agregar="${esc(i)}">+ Agregar lote</button>` +
+        `<p class="ad-rm-lotes__pie" data-rm-lotes-pie="${esc(i)}">${htmlResumenLotesRemito(r)}</p></div>`
+    }
+
+    // UN RENGLÓN: en AMARILLO si la IA lo marcó (revisar), con lo que leyó y
+    // su nota; el selector si no tiene producto (o se tocó "Cambiar"); la
+    // cantidad y los lotes; "Aceptar sugerencia", "No va en la orden" y
+    // "Quitar". Omitido: tachado en gris, con "Va en la orden".
+    function htmlRenglonRemito(r, i, cat, rm = estado.remito) {
+      const rmLeido = limpio(r.texto_leido) ? `<p class="ad-rm-leido">Leído: «${esc(limpio(r.texto_leido))}»</p>` : ''
+      const rmNota = limpio(r.nota) ? `<p class="ad-rm-nota">${esc(limpio(r.nota))}</p>` : ''
+      // (El omitido sale antes, tachado: acá nunca es amarillo.)
+      const amarillo = r.revisar === true && r.omitir !== true
+      const sello = r.omitir === true ? '<span class="ad-sello ad-sello--omitido">No va en la orden</span>'
+        : amarillo ? '<span class="ad-sello ad-sello--amarillo">Revisar</span>' : ''
+      const rmCab = `<div class="ad-rm-renglon__cab"><span class="ad-rm-renglon__n">${esc('Renglón ' + (i + 1))}</span>${sello}</div>`
+      if (r.omitir === true) {
+        return `<div class="ad-rm-renglon ad-rm-renglon--omitido" data-rm-renglon="${esc(i)}">${rmCab}${rmLeido}${rmNota}` +
+          `<p class="ad-rm-omitido__texto">${esc(nombreRenglonRemito(cat, r) || limpio(r.texto_leido) || 'Renglón sin producto')}</p>` +
+          `<div class="ad-rm-renglon__acciones"><button type="button" class="ad-btn ad-btn--suave" data-rm-omitir="${esc(i)}" data-valor="no">Va en la orden</button></div></div>`
+      }
+      const elegido = !!(r.presentacionId || r.insumoId) && !r.eligiendo
+      let cuerpo
+      if (!elegido) cuerpo = htmlSelectorRemito(r, i, cat)
+      else {
+        const pr = presentacionRemito(cat, r.presentacionId)
+        const ins = r.insumoId ? insumoDe(cat, r.insumoId) : null
+        const rotulo = r.insumoId ? `Cantidad (${unidadHoja(ins?.unidad_medida) || 'unidad'})` : 'Cajas'
+        cuerpo = `<div class="ad-rm-elegido"><span class="ad-rm-elegido__nombre">${esc(nombreRenglonRemito(cat, r))}</span>` +
+          (r.insumoId ? '<span class="ad-sello">Insumo</span>' : '') +
+          `<button type="button" class="ad-link" data-rm-cambiar="${esc(i)}">Cambiar</button></div>` +
+          (pr?.con_cono ? htmlConoRemito(r, i, cat) : '') +
+          `<div class="ad-campo ad-rm-cantidad"><label for="ad-rm-cantidad-${esc(i)}">${esc(rotulo)}</label>` +
+          `<input type="text" class="ad-input" id="ad-rm-cantidad-${esc(i)}" data-rm-cantidad="${esc(i)}" inputmode="decimal" autocomplete="off"></div>` +
+          // Talonario Acopio: el saldo del acopio que va a descontar (27/10/2026).
+          (r.presentacionId ? htmlSaldoAcopioRemito(rm, r, i) + htmlLotesRemito(r, i) : '')
+      }
+      const rmAceptar = puedeAceptarSugerencia(r) ? `<button type="button" class="ad-btn ad-btn--secundario" data-rm-aceptar="${esc(i)}">Aceptar sugerencia</button>` : ''
+      return `<div class="ad-rm-renglon${amarillo ? ' ad-rm-renglon--revisar' : ''}" data-rm-renglon="${esc(i)}">${rmCab}${rmLeido}${rmNota}${cuerpo}` +
+        `<div class="ad-rm-renglon__acciones">${rmAceptar}` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-omitir="${esc(i)}" data-valor="si">No va en la orden</button>` +
+        `<button type="button" class="ad-link" data-rm-quitar="${esc(i)}">Quitar el renglón</button></div></div>`
+    }
+
+    // El buscador de clientes de siempre del módulo (el de Retenciones y
+    // Asentar: nombre, razón social, apodo), entre los activos de la fábrica.
+    function htmlClientesRemito(rm) {
+      const q = limpio(rm?.form?.clienteBusqueda)
+      if (q.length < MIN_LETRAS_BUSCAR) return `<p class="ad-texto-suave">${esc('Escribí al menos ' + MIN_LETRAS_BUSCAR + ' letras para buscar el cliente.')}</p>`
+      if (!Array.isArray(estado.clientes)) return '<p class="ad-texto-suave">Cargando los clientes…</p>'
+      const lista = clientesParaAsentar(estado.clientes.filter(c => c.activo !== false), q).slice(0, MAX_RESULTADOS_CLIENTES)
+      if (!lista.length) return '<p class="ad-texto-suave">Ningún cliente de esta fábrica coincide.</p>'
+      return '<div class="ad-opciones-clientes">' + lista.map(c => {
+        const apodo = apodoMostrarRet(c, q)
+        const razon = limpio(c.razon_social) && normalizar(c.razon_social) !== normalizar(c.nombre) ? limpio(c.razon_social) : ''
+        const detalle = [razon, limpio(c.localidad)].filter(Boolean).join(' · ')
+        return `<button type="button" class="ad-opcion-cliente" data-rm-cliente="${esc(c.id)}">` +
+          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + textoTambienEn(c) + (apodo ? ' · ' + apodo : ''))}</span>` +
+          `${detalle ? `<span class="ad-opcion-cliente__detalle">${esc(detalle)}</span>` : ''}</button>`
+      }).join('') + '</div>'
+    }
+
+    function htmlClienteRemito(rm) {
+      const f = rm.form
+      const leido = limpio(rm.fila?.cliente_leido)
+      const rmAyuda = leido ? `<p class="ad-campo__ayuda">Leído en la foto: «${esc(leido)}»` +
+        (f.clienteId ? '' : ' <button type="button" class="ad-link" data-rm-cliente-leido>Buscar así</button>') + '</p>' : ''
+      if (f.clienteId) {
+        const c = clienteDe(f.clienteId)
+        return '<div class="ad-campo"><span class="ad-campo__rotulo">Cliente</span>' +
+          `<div class="ad-ret-elegido"><span class="ad-ret-elegido__nombre">${esc(c?.nombre ?? 'Cliente (no se pudo leer)')}</span>` +
+          `<button type="button" class="ad-btn ad-btn--suave" data-rm-cliente-cambiar>Cambiar</button></div>${rmAyuda}</div>`
+      }
+      return '<div class="ad-campo"><label for="ad-rm-cliente-buscar">Cliente</label>' +
+        `<input type="search" class="ad-input" id="ad-rm-cliente-buscar" data-rm-cliente-buscar value="${esc(f.clienteBusqueda)}" autocomplete="off" maxlength="80" placeholder="Nombre, razón social o apodo">` +
+        `${rmAyuda}<div id="ad-rm-clientes">${htmlClientesRemito(rm)}</div></div>`
+    }
+
+    function htmlEncabezadoRemito(rm) {
+      const f = rm.form
+      const rmTal = TALONARIOS.map(t => `<button type="button" class="ad-segmento__opcion" data-rm-talonario="${esc(t.id)}" aria-pressed="${f.talonario === t.id ? 'true' : 'false'}">${esc(t.nombre)}</button>`).join('')
+      return '<div class="ad-tarjeta ad-rm-encabezado">' +
+        `<div class="ad-campo"><span class="ad-campo__rotulo">Talonario</span><div class="ad-segmento" role="group" aria-label="Talonario">${rmTal}</div>` +
+        `<span class="ad-campo__ayuda">${esc(f.talonario === 'acopio' ? 'Acopio: el talonario celeste con número rojo, para retirar lo ya facturado como acopio.' : 'Oficial: el talonario de Dolce Pasta (0001-0000…).')}</span></div>` +
+        '<div class="ad-fila-campos">' +
+        `<div class="ad-campo"><label for="ad-rm-numero">N° de remito</label><input type="text" class="ad-input" id="ad-rm-numero" data-rm-campo="numero" value="${esc(f.numero)}" maxlength="30" autocomplete="off"></div>` +
+        `<div class="ad-campo"><label for="ad-rm-fecha">Fecha</label><input type="date" class="ad-input" id="ad-rm-fecha" data-rm-campo="fecha" value="${esc(f.fecha)}" max="${esc(hoyArgentina())}"></div></div>` +
+        htmlClienteRemito(rm) +
+        `<div class="ad-campo"><label for="ad-rm-transporte">Transporte</label><input type="text" class="ad-input" id="ad-rm-transporte" data-rm-campo="transporte" value="${esc(f.transporte)}" maxlength="120" autocomplete="off"></div>` +
+        `<div class="ad-campo"><label for="ad-rm-observaciones">Observaciones</label><textarea class="ad-textarea" id="ad-rm-observaciones" data-rm-campo="observaciones" maxlength="500">${esc(f.observaciones)}</textarea></div></div>`
+    }
+
+    // La foto, firmada (createSignedUrl): solo un link https, un blob o una
+    // imagen en data: (la maqueta) se dibuja.
+    function urlFotoSegura(u) {
+      const t = String(u ?? '')
+      return /^https?:\/\//i.test(t) || /^blob:/i.test(t) || /^data:image\//i.test(t) ? t : null
+    }
+
+    function htmlFotoRemito(rm) {
+      const ft = rm?.foto
+      const z = Math.min(Math.max(Number(rm?.zoom) || 0, 0), ZOOM_FOTO_REMITO.length - 1)
+      let rmLienzo
+      if (!ft || ft.cargando) rmLienzo = '<div class="ad-vacio">Cargando la foto…</div>'
+      else if (ft.error || !urlFotoSegura(ft.url)) rmLienzo = `<div class="ad-aviso">${esc(ft.error || 'No se pudo mostrar la foto.')}</div>`
+      else rmLienzo = `<div class="ad-rm-foto__lienzo"><img class="ad-rm-foto__img" data-rm-foto alt="Foto del remito" style="width: ${esc(ZOOM_FOTO_REMITO[z] * 100)}%"></div>`
+      const rmZoom = '<div class="ad-rm-foto__zoom" role="group" aria-label="Zoom de la foto">' +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-zoom="-1" aria-label="Achicar la foto"${z <= 0 ? ' disabled' : ''}>−</button>` +
+        `<span class="ad-rm-foto__nivel">${esc(Math.round(ZOOM_FOTO_REMITO[z] * 100) + ' %')}</span>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-zoom="1" aria-label="Agrandar la foto"${z >= ZOOM_FOTO_REMITO.length - 1 ? ' disabled' : ''}>+</button></div>`
+      return `<div class="ad-tarjeta ad-rm-foto">${rmZoom}${rmLienzo}</div>`
+    }
+
+    function htmlAccionesRemito(rm) {
+      if (!puedeEn('retiros', 'cargar', rm.fila?.unidad_negocio_id ?? estado.empresaId)) {
+        return '<div class="ad-aviso">Con tu usuario podés mirar el remito, pero no corregirlo ni confirmarlo (hace falta Retiros · cargar en esta fábrica).</div>'
+      }
+      const rmDis = rm.trabajando ? ' disabled' : ''
+      const rmError = rm.mensaje ? `<p class="ad-error-pegado" id="ad-rm-error" role="alert">${esc(rm.mensaje)}</p>` +
+        (rm.yaIngresado ? `<button type="button" class="ad-btn ad-btn--peligro" data-rm-accion="ya-ingresado"${rmDis}>Descartar (ya ingresado)</button>` : '') : ''
+      const rmAviso = rm.aviso ? `<p class="ad-aviso" id="ad-rm-aviso">${esc(rm.aviso)}</p>` : ''
+      const rmLeer = rm.confirmarLeer ? '<div class="ad-panel" id="ad-rm-panel-leer">' +
+        `<p>${esc('Volver a leer la foto con la IA pisa todo lo de este remito' + (rm.sucio ? ', también lo que corregiste y todavía no guardaste.' : '.'))}</p>` +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-rm-accion="leer-si"${rmDis}>Sí, volver a leer</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="leer-no"${rmDis}>Cancelar</button></div></div>` : ''
+      const rmDescartar = rm.descartar ? '<div class="ad-panel ad-panel--peligro" id="ad-rm-panel-descartar"><div class="ad-campo">' +
+        '<label for="ad-rm-motivo">¿Por qué se descarta? (obligatorio)</label>' +
+        `<textarea class="ad-textarea" id="ad-rm-motivo" data-rm-motivo maxlength="300" placeholder="Foto repetida, no es un remito…">${esc(rm.descartar.motivo)}</textarea></div>` +
+        (rm.descartar.error ? `<p class="ad-error-pegado" id="ad-rm-descartar-error">${esc(rm.descartar.error)}</p>` : '') +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--peligro" data-rm-accion="descartar-si"${rmDis}>Descartar el remito</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="descartar-no"${rmDis}>Cancelar</button></div></div>` : ''
+      return `<div class="ad-rm-acciones">${rmError}${rmAviso}${rmLeer}${rmDescartar}<div class="ad-barra-acciones">` +
+        `<button type="button" class="ad-btn" data-rm-accion="guardar"${rmDis}>Guardar</button>` +
+        `<button type="button" class="ad-btn" data-rm-accion="confirmar"${rmDis}>Confirmar</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="leer"${rmDis}>Volver a leer</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-accion="descartar"${rmDis}>Descartar</button></div></div>`
+    }
+
+    function pintarTituloRemito() {
+      const rm = estado.remito
+      const f = rm?.form
+      document.getElementById('ad-remito-titulo').textContent = f ? (textoNumeroRemito({ numero_remito: f.numero, talonario: f.talonario }) || 'Remito sin número') : 'Remito precargado'
+    }
+
+    function pintarFotoRemito() {
+      const el = document.getElementById('ad-rm-foto-caja')
+      if (el && estado.remito) el.innerHTML = htmlFotoRemito(estado.remito)
+      ponerSrcFotoRemito()
+    }
+
+    // El link firmado va a la propiedad src (nunca dentro del HTML), y solo
+    // si es uno que se puede mostrar (urlFotoSegura).
+    function ponerSrcFotoRemito() {
+      const url = urlFotoSegura(estado.remito?.foto?.url)
+      const img = document.getElementById('ad-rm-foto-caja')?.querySelector?.('[data-rm-foto]')
+      if (img && url) img.src = url
+    }
+
+    function pintarRemito() {
+      const rm = estado.remito
+      const cuerpo = document.getElementById('ad-remito-cuerpo')
+      if (!rm || !cuerpo) return
+      pintarTituloRemito()
+      if (rm.error) { cuerpo.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(rm.error)}</div>`; return }
+      if (!rm.form) { cuerpo.innerHTML = '<div class="ad-vacio">Cargando el remito…</div>'; return }
+      const cat = estado.catalogo
+      const rmLectura = rm.fila?.estado === 'error' ? `<div class="ad-aviso ad-aviso--grave">${esc('La IA no pudo leerlo' + (limpio(rm.fila?.error) ? ': ' + limpio(rm.fila.error) : '.') + ' Cargalo a mano o tocá Volver a leer.')}</div>`
+        : rm.fila?.estado === 'leyendo' ? '<div class="ad-aviso">La IA todavía lo está leyendo. Podés esperar y volver, o cargarlo a mano.</div>' : ''
+      const rmRenglones = rm.form.renglones.map((r, i) => htmlRenglonRemito(r, i, cat)).join('')
+      cuerpo.innerHTML = `<div class="ad-rm"><div class="ad-rm__foto" id="ad-rm-foto-caja">${htmlFotoRemito(rm)}</div>` +
+        `<div class="ad-rm__datos">${rmLectura}${htmlEncabezadoRemito(rm)}` +
+        `<div class="ad-tarjeta"><h2 class="ad-subtitulo" id="ad-rm-resumen">${esc(textoResumenRemito(rm.form.renglones))}</h2>` +
+        `<div class="ad-rm-renglones">${rmRenglones || '<p class="ad-texto-suave">Sin renglones: agregá uno.</p>'}</div>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-rm-agregar>+ Agregar renglón</button></div>${htmlAccionesRemito(rm)}</div></div>`
+      ponerSrcFotoRemito()
+      // Los números se enlazan DESPUÉS de dibujarlos y se escriben con
+      // ponerNumero(): nunca un número en un value="…".
+      for (const input of cuerpo.querySelectorAll('[data-rm-cantidad]')) {
+        const r = rm.form.renglones[Number(input.dataset.rmCantidad)]
+        const ins = r?.insumoId ? insumoDe(cat, r.insumoId) : null
+        enlazarCampoNumero(input, { decimales: r?.insumoId ? (ins?.unidad_medida === 'un' ? 0 : 3) : 0 })
+        if (r) ponerNumero(input, r.cantidad)
+      }
+      for (const input of cuerpo.querySelectorAll('[data-rm-lote-cajas]')) {
+        enlazarCampoNumero(input, { decimales: 0 })
+        const r = rm.form.renglones[Number(input.dataset.rmLoteCajas)]
+        ponerNumero(input, filasLotesRemito(r)[Number(input.dataset.k)]?.cajas ?? null)
+      }
+    }
+
+    function renglonRemito(i) {
+      return estado.remito?.form?.renglones?.[Number(i)] ?? null
+    }
+
+    function marcarSucioRemito() {
+      const rm = estado.remito
+      if (!rm) return
+      rm.sucio = true
+      rm.aviso = null
+      rm.saliendo = false
+    }
+
+    // Elegir el producto saca el amarillo (revisar = false).
+    function elegirProductoRemito(i, presentacionId) {
+      const r = renglonRemito(i)
+      const pr = presentacionRemito(estado.catalogo, presentacionId)
+      if (!r || !pr) return
+      // El cono que ya tenía queda si la nueva también lleva cono.
+      if (!pr.con_cono) r.marcaId = null
+      r.presentacionId = pr.id
+      r.insumoId = null
+      r.revisar = false
+      r.eligiendo = false
+      r.busqueda = ''
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function elegirInsumoRemito(i, insumoId) {
+      const r = renglonRemito(i)
+      if (!r || !insumoDe(estado.catalogo, insumoId)) return
+      r.insumoId = insumoId
+      r.presentacionId = null
+      r.marcaId = null
+      r.lotes = []
+      r.revisar = false
+      r.eligiendo = false
+      r.busqueda = ''
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function elegirMarcaRemito(i, marcaId) {
+      const r = renglonRemito(i)
+      if (!r || !(estado.catalogo?.marcas ?? []).some(m => m.id === marcaId)) return
+      r.marcaId = marcaId
+      r.marcaBusqueda = ''
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function cambiarProductoRemito(i, si) {
+      const r = renglonRemito(i)
+      if (!r) return
+      r.eligiendo = !!si
+      r.busqueda = ''
+      pintarRemito()
+      if (si) document.getElementById(`ad-rm-buscar-${Number(i)}`)?.focus?.()
+    }
+
+    function aceptarSugerenciaRemito(i) {
+      const r = renglonRemito(i)
+      if (!puedeAceptarSugerencia(r)) return
+      r.revisar = false
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function omitirRenglonRemito(i, si) {
+      const r = renglonRemito(i)
+      if (!r) return
+      r.omitir = !!si
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function quitarRenglonRemito(i) {
+      const rm = estado.remito
+      if (!renglonRemito(i)) return
+      rm.form.renglones.splice(Number(i), 1)
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function agregarRenglonRemito() {
+      const rm = estado.remito
+      if (!rm?.form) return
+      rm.form.renglones.push(renglonRemitoNuevo())
+      marcarSucioRemito()
+      pintarRemito()
+      document.getElementById(`ad-rm-buscar-${rm.form.renglones.length - 1}`)?.focus?.()
+    }
+
+    function agregarLoteRemito(i) {
+      const r = renglonRemito(i)
+      if (!r) return
+      r.lotes = [...filasLotesRemito(r).map(l => ({ ...l })), { lote: '', cajas: null }]
+      marcarSucioRemito()
+      pintarRemito()
+      const campos = document.getElementById('ad-remito-cuerpo')?.querySelectorAll?.(`[data-rm-lote="${Number(i)}"]`)
+      campos?.[campos.length - 1]?.focus?.()
+    }
+
+    function quitarLoteRemito(i, k) {
+      const r = renglonRemito(i)
+      if (!r) return
+      r.lotes = filasLotesRemito(r).filter((_, j) => j !== Number(k))
+      marcarSucioRemito()
+      pintarRemito()
+    }
+
+    function pintarPieLotesRemito(i) {
+      const r = renglonRemito(i)
+      const el = document.getElementById('ad-remito-cuerpo')?.querySelector?.(`[data-rm-lotes-pie="${Number(i)}"]`)
+      if (r && el) el.innerHTML = htmlResumenLotesRemito(r)
+    }
+
+    function elegirTalonarioRemito(t) {
+      const f = estado.remito?.form
+      if (!f || !TALONARIOS.some(x => x.id === t) || f.talonario === t) return
+      f.talonario = t
+      marcarSucioRemito()
+      pintarRemito()
+      cargarAcopiosRemito()
+    }
+
+    function elegirClienteRemito(id) {
+      const f = estado.remito?.form
+      const c = clienteDe(id)
+      if (!f || !c || c.activo === false) return
+      f.clienteId = id
+      f.clienteBusqueda = ''
+      marcarSucioRemito()
+      pintarRemito()
+      cargarAcopiosRemito()
+    }
+
+    function cambiarClienteRemito() {
+      const f = estado.remito?.form
+      if (!f) return
+      f.clienteId = null
+      marcarSucioRemito()
+      pintarRemito()
+      document.getElementById('ad-rm-cliente-buscar')?.focus?.()
+    }
+
+    function buscarClienteLeidoRemito() {
+      const rm = estado.remito
+      if (!rm?.form) return
+      rm.form.clienteBusqueda = limpio(rm.fila?.cliente_leido)
+      pintarRemito()
+    }
+
+    function zoomFotoRemito(paso) {
+      const rm = estado.remito
+      if (!rm) return
+      rm.zoom = Math.min(Math.max((Number(rm.zoom) || 0) + (Number(paso) || 0), 0), ZOOM_FOTO_REMITO.length - 1)
+      pintarFotoRemito()
+    }
+
+    // Lo que se escribe no redibuja (el foco no se pierde): solo lo que
+    // depende de eso (los resultados del buscador, el pie de los lotes).
+    function alEscribirRemito(e) {
+      const t = e?.target
+      const rm = estado.remito
+      if (!rm?.form || !t?.dataset) return
+      const d = t.dataset
+      if (d.rmCampo !== undefined) {
+        if (!['numero', 'fecha', 'transporte', 'observaciones'].includes(d.rmCampo)) return
+        rm.form[d.rmCampo] = t.value
+        marcarSucioRemito()
+        if (d.rmCampo === 'numero') pintarTituloRemito()
+      } else if (d.rmClienteBuscar !== undefined) {
+        rm.form.clienteBusqueda = t.value
+        const el = document.getElementById('ad-rm-clientes')
+        if (el) el.innerHTML = htmlClientesRemito(rm)
+      } else if (d.rmBuscar !== undefined) {
+        const r = renglonRemito(d.rmBuscar)
+        if (!r) return
+        r.busqueda = t.value
+        const el = document.getElementById('ad-remito-cuerpo')?.querySelector?.(`[data-rm-opciones="${Number(d.rmBuscar)}"]`)
+        if (el) el.innerHTML = htmlOpcionesRemito(Number(d.rmBuscar), estado.catalogo, r.busqueda)
+      } else if (d.rmConoBuscar !== undefined) {
+        const r = renglonRemito(d.rmConoBuscar)
+        if (!r) return
+        r.marcaBusqueda = t.value
+        const el = document.getElementById('ad-remito-cuerpo')?.querySelector?.(`[data-rm-marcas="${Number(d.rmConoBuscar)}"]`)
+        if (el) el.innerHTML = htmlMarcasRemito(r, Number(d.rmConoBuscar), estado.catalogo)
+      } else if (d.rmCantidad !== undefined) {
+        const r = renglonRemito(d.rmCantidad)
+        if (!r) return
+        r.cantidad = leerCampoNumero(t)
+        marcarSucioRemito()
+        pintarPieLotesRemito(d.rmCantidad)
+        pintarAcopiosRemito()
+      } else if (d.rmLote !== undefined || d.rmLoteCajas !== undefined) {
+        const i = d.rmLote !== undefined ? d.rmLote : d.rmLoteCajas
+        const r = renglonRemito(i)
+        if (!r) return
+        r.lotes = filasLotesRemito(r).map(l => ({ ...l }))
+        const l = r.lotes[Number(d.k)]
+        if (!l) return
+        if (d.rmLote !== undefined) {
+          const may = String(t.value).toUpperCase()
+          if (may !== t.value) {
+            const a = t.selectionStart, b = t.selectionEnd
+            t.value = may
+            try { t.setSelectionRange(a, b) } catch { /* sin selección */ }
+          }
+          l.lote = t.value
+        } else l.cajas = leerCampoNumero(t)
+        marcarSucioRemito()
+        pintarPieLotesRemito(i)
+      } else if (d.rmMotivo !== undefined && rm.descartar) {
+        rm.descartar.motivo = t.value
+      }
+    }
+
+    function alTocarRemito(e) {
+      const b = e?.target?.closest?.('button')
+      if (!b || b.disabled) return
+      const d = b.dataset
+      if (d.rmProducto !== undefined) elegirProductoRemito(d.rmProducto, d.presentacion)
+      else if (d.rmInsumo !== undefined) elegirInsumoRemito(d.rmInsumo, d.id)
+      else if (d.rmMarca !== undefined) elegirMarcaRemito(d.rmMarca, d.id)
+      else if (d.rmCambiar !== undefined) cambiarProductoRemito(d.rmCambiar, true)
+      else if (d.rmCambiarNo !== undefined) cambiarProductoRemito(d.rmCambiarNo, false)
+      else if (d.rmAceptar !== undefined) aceptarSugerenciaRemito(d.rmAceptar)
+      else if (d.rmOmitir !== undefined) omitirRenglonRemito(d.rmOmitir, d.valor === 'si')
+      else if (d.rmQuitar !== undefined) quitarRenglonRemito(d.rmQuitar)
+      else if (d.rmAgregar !== undefined) agregarRenglonRemito()
+      else if (d.rmLoteAgregar !== undefined) agregarLoteRemito(d.rmLoteAgregar)
+      else if (d.rmLoteQuitar !== undefined) quitarLoteRemito(d.rmLoteQuitar, d.k)
+      else if (d.rmTalonario !== undefined) elegirTalonarioRemito(d.rmTalonario)
+      else if (d.rmCliente !== undefined) elegirClienteRemito(d.rmCliente)
+      else if (d.rmClienteCambiar !== undefined) cambiarClienteRemito()
+      else if (d.rmClienteLeido !== undefined) buscarClienteLeidoRemito()
+      else if (d.rmZoom !== undefined) zoomFotoRemito(Number(d.rmZoom))
+      else if (d.rmAccion !== undefined) accionRemito(d.rmAccion)
+    }
+
+    function accionRemito(a) {
+      const rm = estado.remito
+      if (!rm?.form || rm.trabajando) return
+      if (a === 'guardar') guardarRemito()
+      else if (a === 'confirmar') confirmarRemito()
+      else if (a === 'leer') { rm.confirmarLeer = true; rm.descartar = null; pintarRemito() }
+      else if (a === 'leer-no') { rm.confirmarLeer = false; pintarRemito() }
+      else if (a === 'leer-si') volverALeerRemito()
+      else if (a === 'descartar') {
+        rm.descartar = { motivo: '', error: null }
+        rm.confirmarLeer = false
+        pintarRemito()
+        document.getElementById('ad-rm-motivo')?.focus?.()
+      } else if (a === 'descartar-no') { rm.descartar = null; pintarRemito() }
+      else if (a === 'descartar-si') descartarRemito(rm.descartar?.motivo)
+      else if (a === 'ya-ingresado') descartarRemito('ya ingresado')
+    }
+
+    // ── Abrir, guardar, confirmar, volver a leer, descartar ──────────────
+    async function abrirRemito(id) {
+      if (!id) return
+      const fila = (estado.remitos?.filas ?? []).find(r => r.id === id) ?? null
+      const rm = {
+        id, fila, form: fila ? formDesdeRemito(fila) : null, error: null, sucio: false, saliendo: false,
+        foto: { cargando: true }, zoom: 0, trabajando: false, mensaje: null, aviso: null, yaIngresado: false, confirmarLeer: false, descartar: null,
+      }
+      estado.remito = rm
+      mostrarVista('ad-vista-remito')
+      pintarRemito()
+      try {
+        await asegurarDatosEmpresa()
+        if (!rm.fila) {
+          const f = await leerRemito(id)
+          if (!f) rm.error = 'No se encontró el remito: puede ser de una fábrica que no ves.'
+          else { rm.fila = f; rm.form = formDesdeRemito(f) }
+        }
+      } catch (err) {
+        console.error('No se pudo leer el remito:', err)
+        if (!rm.form) rm.error = 'No se pudo leer el remito. Revisá la conexión y volvé a entrar.'
+      }
+      if (estado.remito !== rm) return
+      pintarRemito()
+      // De acopio: el saldo de cada renglón, al costado de la foto (no la frena).
+      cargarAcopiosRemito(rm)
+      await cargarFotoRemito(rm)
+    }
+
+    async function cargarFotoRemito(rm) {
+      const ruta = rm?.fila?.foto_path
+      if (!ruta) rm.foto = { error: 'Este remito no tiene foto.' }
+      else {
+        try {
+          const { data, error } = await supabase.storage.from('comprobantes').createSignedUrl(ruta, 600)
+          if (error) throw error
+          rm.foto = data?.signedUrl ? { url: data.signedUrl } : { error: 'No se pudo mostrar la foto.' }
+        } catch (err) {
+          console.error('No se pudo abrir la foto del remito:', err)
+          rm.foto = { error: 'No se pudo abrir la foto. Revisá la conexión.' }
+        }
+      }
+      if (estado.remito === rm) pintarFotoRemito()
+    }
+
+    // Lo guardado vuelve de la base normalizado: el formulario se rearma con
+    // eso (así el amarillo es el de la base) y la lista de arriba queda al día.
+    function aplicarFilaRemito(rm, fila) {
+      rm.fila = { ...(rm.fila ?? {}), ...fila }
+      rm.form = formDesdeRemito(rm.fila)
+      rm.sucio = false
+      const rr = estado.remitos
+      if (Array.isArray(rr?.filas)) rr.filas = remitosPorRevisar(rr.filas.map(x => x.id === rm.id ? { ...x, ...fila } : x))
+    }
+
+    async function guardarRemitoEnBase(rm) {
+      const { data, error } = await supabase.rpc('actualizar_remito_precarga', parametrosActualizarRemito(rm))
+      if (error) throw error
+      if (data && typeof data === 'object' && !Array.isArray(data)) aplicarFilaRemito(rm, data)
+      else rm.sucio = false
+    }
+
+    async function guardarRemito() {
+      const rm = estado.remito
+      if (!rm?.form || rm.trabajando) return
+      rm.trabajando = true
+      rm.mensaje = null
+      rm.yaIngresado = false
+      rm.aviso = null
+      pintarRemito()
+      try {
+        await guardarRemitoEnBase(rm)
+        rm.aviso = 'Guardado. Todavía no es una orden: falta Confirmar.'
+      } catch (err) {
+        console.error('No se pudo guardar el remito:', err)
+        rm.mensaje = err?.message || 'No se pudo guardar el remito. Probá de nuevo.'
+      }
+      rm.trabajando = false
+      if (estado.remito === rm) pintarRemito()
+    }
+
+    // Confirmar GUARDA primero si hay cambios. El error de la base va TAL
+    // CUAL; si dice que ya entró como ingreso en la otra empresa, aparece
+    // "Descartar (ya ingresado)".
+    async function confirmarRemito() {
+      const rm = estado.remito
+      if (!rm?.form || rm.trabajando) return
+      rm.trabajando = true
+      rm.mensaje = null
+      rm.yaIngresado = false
+      rm.aviso = null
+      rm.confirmarLeer = false
+      rm.descartar = null
+      pintarRemito()
+      let res = null
+      try {
+        if (rm.sucio) await guardarRemitoEnBase(rm)
+        const { data, error } = await supabase.rpc('confirmar_remito_precarga', { p_id: rm.id })
+        if (error) throw error
+        res = data ?? {}
+      } catch (err) {
+        console.error('No se pudo confirmar el remito:', err)
+        rm.mensaje = err?.message || 'No se pudo confirmar el remito. Probá de nuevo.'
+        rm.yaIngresado = RE_YA_INGRESADO.test(rm.mensaje)
+        rm.trabajando = false
+        if (estado.remito === rm) pintarRemito()
+        return
+      }
+      rm.trabajando = false
+      quitarRemitoDeLaLista(rm.id)
+      const numero = textoNumeroRemito({ numero_remito: res.numero_remito ?? rm.form.numero, talonario: res.talonario ?? rm.form.talonario }) || 'El remito'
+      mostrarExito(`${numero} confirmado: ${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}. Ya se puede valorizar en Administración.`)
+      if (estado.remito === rm) estado.remito = null
+      estado.ordenes = null
+      if (estado.vista === 'ad-vista-remito') await mostrarRevisar()
+    }
+
+    // El mensaje de una Edge Function que respondió con error: el que trae
+    // en su cuerpo ({ error }), si no el de supabase-js.
+    async function mensajeDeFuncion(error) {
+      try {
+        const cuerpo = await error?.context?.json?.()
+        if (cuerpo?.error) return String(cuerpo.error)
+      } catch { /* sin cuerpo */ }
+      return error?.message || 'No se pudo volver a leer la foto. Probá de nuevo.'
+    }
+
+    async function volverALeerRemito() {
+      const rm = estado.remito
+      if (!rm?.form || rm.trabajando) return
+      rm.trabajando = true
+      rm.confirmarLeer = false
+      rm.mensaje = null
+      rm.yaIngresado = false
+      rm.aviso = 'Leyendo la foto de nuevo…'
+      pintarRemito()
+      try {
+        const { data, error } = await supabase.functions.invoke('ocr-remito', { body: { remito_id: rm.id } })
+        if (error) throw new Error(await mensajeDeFuncion(error))
+        if (data?.error) throw new Error(String(data.error))
+        let fila = data?.id === rm.id ? data : (data?.remito?.id === rm.id ? data.remito : null)
+        if (!fila) fila = await leerRemito(rm.id)
+        if (!fila) throw new Error('No se encontró el remito.')
+        if (estado.remito === rm) {
+          aplicarFilaRemito(rm, fila)
+          rm.aviso = fila.estado === 'error' ? null : 'Listo: se volvió a leer la foto.'
+        }
+      } catch (err) {
+        console.error('No se pudo volver a leer el remito:', err)
+        rm.aviso = null
+        rm.mensaje = err?.message || 'No se pudo volver a leer la foto. Probá de nuevo.'
+      }
+      rm.trabajando = false
+      if (estado.remito === rm) pintarRemito()
+    }
+
+    async function descartarRemito(motivo) {
+      const rm = estado.remito
+      if (!rm?.form || rm.trabajando) return
+      const m = limpio(motivo)
+      if (m.length < LARGO_MINIMO_MOTIVO_REMITO) {
+        rm.descartar = { motivo: String(motivo ?? ''), error: `Poné el motivo (al menos ${LARGO_MINIMO_MOTIVO_REMITO} letras): foto repetida, no es un remito…` }
+        pintarRemito()
+        return
+      }
+      rm.trabajando = true
+      if (rm.descartar) rm.descartar.error = null
+      rm.mensaje = null
+      pintarRemito()
+      try {
+        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: m })
+        if (error) throw error
+      } catch (err) {
+        console.error('No se pudo descartar el remito:', err)
+        const texto = err?.message || 'No se pudo descartar el remito. Probá de nuevo.'
+        if (rm.descartar) rm.descartar.error = texto
+        else rm.mensaje = texto
+        rm.trabajando = false
+        if (estado.remito === rm) pintarRemito()
+        return
+      }
+      rm.trabajando = false
+      quitarRemitoDeLaLista(rm.id)
+      mostrarExito(`${textoNumeroRemito({ numero_remito: rm.form.numero, talonario: rm.form.talonario }) || 'El remito'} se descartó (${m}).`)
+      if (estado.remito === rm) estado.remito = null
+      if (estado.vista === 'ad-vista-remito') await mostrarRevisar()
+    }
+
+    // "‹ Revisar": con cambios sin guardar avisa una vez; el segundo toque sale.
+    function volverDeRemito() {
+      const rm = estado.remito
+      if (rm?.sucio && !rm.saliendo && !rm.trabajando) {
+        rm.saliendo = true
+        rm.aviso = 'Tenés cambios sin guardar: tocá Guardar, o volvé a tocar «‹ Revisar» para salir sin guardarlos.'
+        pintarRemito()
+        return
+      }
+      if (rm?.trabajando) return
+      estado.remito = null
+      mostrarRevisar()
+    }
+
+    // ── En la revisión de un remito de talonario ACOPIO (27/10/2026) ───────
+    // Al lado de cada renglón, el saldo del acopio que va a descontar
+    // confirmar_remito_precarga: los activos del cliente con el MISMO
+    // producto y cono (si hay varios, se suman). Si no hay o no alcanza, en
+    // amarillo; es solo un aviso: el error definitivo lo da la base al
+    // confirmar, tal cual.
+    function claveAcopio(presentacionId, marcaId) {
+      return String(presentacionId ?? '') + '|' + String(marcaId ?? '')
+    }
+
+    async function cargarAcopiosRemito(rm = estado.remito) {
+      const f = rm?.form
+      if (!f || f.talonario !== 'acopio' || !f.clienteId) return
+      if (rm.acopios?.clienteId === f.clienteId && !rm.acopios.error) return
+      const a = { clienteId: f.clienteId, filas: null, error: null, cargando: true }
+      rm.acopios = a
+      pintarAcopiosRemito(rm)
+      try {
+        a.filas = await leerAcopios(rm.fila?.unidad_negocio_id ?? estado.empresaId, a.clienteId)
+      } catch (err) {
+        console.error('No se pudo leer el acopio del cliente:', err)
+        a.error = 'No se pudo leer el acopio del cliente: revisá la conexión.'
+      }
+      a.cargando = false
+      if (estado.remito === rm && rm.acopios === a) pintarAcopiosRemito(rm)
+    }
+
+    // null (no va), { cargando }, { error } o { saldo, pide, alcanza }.
+    function saldoAcopioRemito(rm, r) {
+      const f = rm?.form
+      if (!f || f.talonario !== 'acopio' || !f.clienteId || !r?.presentacionId || r.omitir === true) return null
+      const a = rm.acopios
+      if (!a || a.clienteId !== f.clienteId || a.cargando) return { cargando: true }
+      if (a.error) return { error: a.error }
+      const k = claveAcopio(r.presentacionId, r.marcaId)
+      const saldo = (a.filas ?? []).filter(x => estadoAcopio(x) === 'activo' && claveAcopio(x.presentacion_id, x.marca_id) === k)
+        .reduce((s, x) => s + Math.max(cajasAcopio(x.saldo), 0), 0)
+      const pide = (f.renglones ?? []).filter(x => x.omitir !== true && x.presentacionId && claveAcopio(x.presentacionId, x.marcaId) === k)
+        .reduce((s, x) => s + (Number(x.cantidad) > 0 ? Number(x.cantidad) : 0), 0)
+      return { saldo, pide, alcanza: saldo > 0 && pide <= saldo }
+    }
+
+    function htmlSaldoAcopioRemito(rm, r, i) {
+      const s = saldoAcopioRemito(rm, r)
+      if (!s) return ''
+      let texto
+      let clase = 'ad-rm-acopio'
+      if (s.cargando) texto = 'Buscando el acopio del cliente…'
+      else if (s.error) texto = s.error
+      else if (!s.alcanza) {
+        clase += ' ad-rm-acopio--falta'
+        texto = s.saldo > 0 ? `No hay acopio de esto para el cliente: quedan ${enteroHoja(s.saldo)} ${s.saldo === 1 ? 'caja' : 'cajas'} y el remito pide ${enteroHoja(s.pide)}.`
+          : 'No hay acopio de esto para el cliente.'
+      } else texto = `Acopio: quedan ${enteroHoja(s.saldo)} ${s.saldo === 1 ? 'caja' : 'cajas'}` + (s.pide > 0 ? `; después de este remito, ${enteroHoja(s.saldo - s.pide)}.` : '.')
+      return `<p class="${esc(clase)}" data-rm-acopio="${esc(i)}">${esc(texto)}</p>`
+    }
+
+    // Sin redibujar el remito (el foco no se pierde): solo los saldos.
+    function pintarAcopiosRemito(rm = estado.remito) {
+      const cuerpo = document.getElementById('ad-remito-cuerpo')
+      if (!rm?.form || !cuerpo) return
+      for (const el of cuerpo.querySelectorAll?.('[data-rm-acopio]') ?? []) {
+        const i = Number(el.dataset.rmAcopio)
+        const r = rm.form.renglones[i]
+        el.outerHTML = r ? htmlSaldoAcopioRemito(rm, r, i) : ''
+      }
+    }
+
+    // ── Abajo: las órdenes de la fábrica por N° de remito ─────────────────
+    // ordenes_retiro (retiros:ver): las de los últimos DIAS_ORDENES_REMITO
+    // días, con su N° de remito y su talonario. Se valorizan en
+    // Administración (el link de abajo).
+    const DIAS_ORDENES_REMITO = 120
+    const TOPE_ORDENES_REMITO = 400
+    const ETIQUETA_ESTADO_ORDEN = { anulada: 'Anulada', pendiente: 'Por valorizar', valorizada: 'Valorizada' }
+
+    async function cargarOrdenesRemito() {
+      const turno = ++estado.turnoOrdenes
+      const empresaId = estado.empresaId
+      estado.ordenes = null
+      estado.errorOrdenes = null
+      pintarOrdenesRemito()
+      try {
+        const desde = new Date(Date.now() - DIAS_ORDENES_REMITO * 86400000).toISOString().slice(0, 10)
+        const { data, error } = await supabase.from('ordenes_retiro')
+          .select('id, codigo, fecha, estado, estado_valorizacion, cliente_id, numero_remito, numero_remito_n, talonario')
+          .eq('unidad_negocio_id', empresaId).gte('fecha', desde)
+          .order('fecha', { ascending: false }).limit(TOPE_ORDENES_REMITO)
+        if (error) throw error
+        if (turno !== estado.turnoOrdenes) return
+        estado.ordenes = (Array.isArray(data) ? data : []).filter(o => o?.id)
+      } catch (err) {
+        if (turno !== estado.turnoOrdenes) return
+        console.error('No se pudieron leer las órdenes:', err)
+        estado.errorOrdenes = 'No se pudieron leer las órdenes. Revisá la conexión y volvé a entrar.'
+      }
+      pintarOrdenesRemito()
+    }
+
+    function estadoOrdenRemito(o) {
+      if (o?.estado === 'anulada') return 'anulada'
+      return o?.estado_valorizacion === 'valorizada' ? 'valorizada' : 'pendiente'
+    }
+
+    // La fila de una orden: el N° de remito grande, si está valorizada, el
+    // cliente, la fecha y el código de la orden.
+    function htmlFilaOrdenRemito(o) {
+      const cli = clienteDe(o.cliente_id)
+      const numero = textoNumeroRemito(o) || 'Sin N° de remito'
+      const est = estadoOrdenRemito(o)
+      const meta = [cli?.nombre ?? 'Cliente', fechaCorta(o.fecha), o.codigo ? 'Orden ' + o.codigo : ''].filter(Boolean).join(' · ')
+      return `<div class="ad-fila ad-fila--remito rd-fila-orden${est === 'anulada' ? ' ad-fila--anulada' : ''}${est === 'pendiente' ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
+        `<span class="ad-fila__linea"><span class="ad-rm-numero${limpio(o.numero_remito) ? '' : ' ad-rm-numero--sin'}">${esc(numero)}</span>` +
+        `<span class="ad-fila__sellos"><span class="ad-sello ad-sello--orden-${esc(est)}">${esc(ETIQUETA_ESTADO_ORDEN[est])}</span>${htmlSelloAcopio(o)}</span></span>` +
+        `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta)}</span></span></div>`
+    }
+
+    function htmlListaOrdenesRemito() {
+      if (estado.errorOrdenes) return `<div class="ad-aviso ad-aviso--grave">${esc(estado.errorOrdenes)}</div>`
+      if (estado.ordenes === null) return '<div class="ad-vacio">Cargando las órdenes…</div>'
+      const lista = ordenesVisibles()
+      if (!lista.length) return '<div class="ad-vacio">No hay órdenes de este talonario en los últimos meses.</div>'
+      return lista.map(htmlFilaOrdenRemito).join('')
+    }
+
+    function pintarOrdenesRemito() {
+      const tal = document.getElementById('rd-ordenes-talonario')
+      const lista = document.getElementById('rd-ordenes-lista')
+      if (tal) tal.innerHTML = htmlTalonariosOrdenes()
+      if (lista) lista.innerHTML = htmlListaOrdenesRemito()
+      const link = document.getElementById('rd-link-admin')
+      if (link) link.hidden = !puedeEn('retiros', 'precios')
+    }
+
+    // ── La fábrica de Revisar (con una sola, esa) ─────────────────────────
+    const CLAVE_PESTANA = 'remitos-dolce.pestana'
+    const CLAVE_FABRICA_REVISAR = 'remitos-dolce.fabrica'
+
+    function htmlFabricaRevisar() {
+      const lista = empresasDeRevision()
+      if (lista.length < 2) return ''
+      return '<div class="rd-fabricas" role="group" aria-label="Fábrica">' + lista.map(e =>
+        `<button type="button" class="ad-segmento__opcion" data-rd-fabrica="${esc(e.id)}" aria-pressed="${e.id === estado.empresaId ? 'true' : 'false'}">${esc(e.nombre)}</button>`).join('') + '</div>'
+    }
+
+    function elegirFabricaRevisar(id) {
+      if (!empresasDeRevision().some(e => e.id === id) || estado.empresaId === id) return
+      estado.empresaId = id
+      estado.clientes = null
+      estado.catalogo = null
+      estado.catalogoEmpresa = null
+      estado.remitos = null
+      estado.ordenes = null
+      guardarPreferencia(CLAVE_FABRICA_REVISAR, id)
+      mostrarRevisar()
+    }
+
+    async function mostrarRevisar() {
+      if (!empresasDeRevision().length) return
+      if (!empresasDeRevision().some(e => e.id === estado.empresaId)) {
+        const ultima = leerPreferencia(CLAVE_FABRICA_REVISAR)
+        estado.empresaId = (empresasDeRevision().find(e => e.id === ultima) ?? empresasDeRevision()[0]).id
+      }
+      estado.pestana = 'revisar'
+      pintarPestanas()
+      mostrarVista('rd-vista-revisar')
+      document.getElementById('rd-revisar-fabrica').innerHTML = htmlFabricaRevisar()
+      // Los clientes nombran las filas de abajo: se leen al costado (no frenan).
+      asegurarDatosEmpresa().then(() => { pintarRemitosPrecarga(); pintarOrdenesRemito() })
+        .catch(err => console.error('No se pudieron leer los clientes o el catálogo:', err))
+      cargarRemitosPrecarga()
+      await cargarOrdenesRemito()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function conectarTodo() {
+      document.getElementById('rd-tabs').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pestana]')
+        if (b) elegirPestana(b.dataset.pestana)
+      })
+      // Subir
+      document.getElementById('rt-remitos-camara').addEventListener('change', (e) => fotosElegidas(e.target))
+      document.getElementById('rt-remitos-galeria').addEventListener('change', (e) => fotosElegidas(e.target))
+      document.getElementById('rt-vista-remitos').addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-remito-fabrica]'))) elegirFabricaRemitos(b.dataset.remitoFabrica)
+        else if ((b = e.target.closest('[data-remito-reintentar]'))) reintentarRemito(b.dataset.remitoReintentar)
+        else if ((b = e.target.closest('[data-remito-quitar]'))) quitarRemitoDeCola(b.dataset.remitoQuitar)
+      })
+      // Revisar
+      document.getElementById('rd-revisar-fabrica').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-rd-fabrica]')
+        if (b) elegirFabricaRevisar(b.dataset.rdFabrica)
+      })
+      document.getElementById('ad-remitos').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-remito]')
+        if (b) abrirRemito(b.dataset.remito)
+      })
+      document.getElementById('rd-ordenes-talonario').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-talonario-ordenes]')
+        if (b) elegirTalonarioOrdenes(b.dataset.talonarioOrdenes)
+      })
+      document.getElementById('ad-remito-volver').addEventListener('click', () => volverDeRemito())
+      document.getElementById('ad-remito-cuerpo').addEventListener('click', (e) => alTocarRemito(e))
+      document.getElementById('ad-remito-cuerpo').addEventListener('input', (e) => alEscribirRemito(e))
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function sinAcceso(texto) {
+      document.getElementById('rd-cargando').hidden = true
+      const el = document.getElementById('rd-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase
+        .from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+      const { data: tareas, error: e2 } = await supabase
+        .from('empleado_tareas').select('modulo, tarea, alcance')
+        .eq('empleado_id', emp.id).eq('modulo', 'retiros').eq('habilitado', true)
+      if (e2) throw e2
+      estado.misTareas = new Map((tareas ?? []).map(t => [`${t.modulo}:${t.tarea}`, t.alcance ?? null]))
+    }
+
+    // Las fábricas: todas (para nombrarlas) y las SIN control de stock
+    // (controla_stock_terminado = false) donde carga o ve retiros. La de
+    // pruebas no cuenta para una cuenta real.
+    async function cargarFabricas() {
+      const { data, error } = await supabase.from('unidades_negocio').select('id, nombre, activo, controla_stock_terminado')
+      if (error) throw error
+      const activas = sinUnidadesDePrueba((data ?? []).filter(u => u?.id && u.activo !== false), estado.fabrica)
+      estado.unidades = activas.map(u => ({ id: u.id, nombre: limpio(u.nombre) }))
+      const sin = activas.filter(u => u.controla_stock_terminado === false)
+      estado.sinControlIds = new Set(sin.map(u => u.id))
+      estado.sinControl = new Map(activas.map(u => [u.id, u.controla_stock_terminado === false]))
+      estado.empresas = sin.map(u => ({ id: u.id, nombre: limpio(u.nombre) }))
+        .filter(e => puedeEn('retiros', 'cargar', e.id) || puedeEn('retiros', 'ver', e.id))
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      try {
+        const [, f] = await Promise.all([cargarPermisos(), cargarFabricaDePruebas(supabase)])
+        estado.fabrica = f
+        await cargarFabricas()
+      } catch (err) {
+        console.error('No se pudieron leer los permisos o las fábricas:', err)
+        sinAcceso('No pudimos identificar tu usuario o tus fábricas. Te llevamos al inicio…')
+        return
+      }
+      if (!pestanasVisibles().length) {
+        sinAcceso('No tenés permiso para subir ni revisar remitos de Dolce Pasta. Te llevamos al inicio…')
+        return
+      }
+      document.getElementById('rd-cargando').hidden = true
+      conectarTodo()
+      const pedida = new URLSearchParams(window.location.search).get('pestana') || leerPreferencia(CLAVE_PESTANA)
+      const p = pestanasVisibles().includes(pedida) ? pedida : pestanasVisibles()[0]
+      elegirPestana(p)
+    }
+
+    mostrarBannerVersion()
+    init()
+  </script>
+</body>
+</html>

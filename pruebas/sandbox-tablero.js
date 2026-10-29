@@ -29,7 +29,7 @@ const FUNCIONES = ['escTab', 'tarjetasPosibles', 'tamanoDe', 'tarjetasOrdenadas'
   'esNumero', 'num', 'plata', 'haceCuanto', 'entero', 'plural', 'mapaPendientes', 'resolverDePendientes', 'usaPendientes', 'itemsFranja', 'avisoParcial',
   'nombreUnidad', 'sinPermisoEn', 'consulta', 'cargarGastos', 'cargarCaja', 'cargarCobranzas', 'plazoCheque', 'cargarCheques',
   'cargarCuentasCorrientes', 'cargarIngreso', 'cargarStock', 'cargarProduccion', 'cargarPedidos', 'cargarRetiros', 'cargarAdministracion',
-  'cargarTaller', 'cargarConos', 'cargarAccesos', 'cargarEmpleados', 'cargarSeguridad', 'cargarTarjeta', 'htmlTono', 'htmlCtx', 'htmlMaquinas',
+  'cargarTaller', 'cargarConos', 'cargarAccesos', 'cargarEmpleados', 'cargarSeguridad', 'cargarBuscar', 'cargarTarjeta', 'htmlTono', 'htmlCtx', 'htmlMaquinas',
   'htmlTendencia', 'htmlCuerpo', 'htmlPie', 'htmlTarjeta', 'htmlFranja', 'htmlEscondidas', 'htmlPersonalizar', 'unidadesPermitidas',
   'refrescarTarjeta']
 

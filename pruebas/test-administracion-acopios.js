@@ -8,10 +8,10 @@
 // cajas, fecha, remito, factura y el precio opcional. En la cuenta del
 // cliente, sus acopios activos y la "Cuenta en el grupo"
 // (cuenta_cliente_consolidada); "(también en Nuss)" en los buscadores; los
-// tipos 'acopio' / 'anulacion_acopio'; y en la revisión de un remito de
-// talonario Acopio, el saldo al lado de cada renglón (en amarillo si no hay o
-// no alcanza). Se EJECUTAN las funciones reales, con texto malicioso donde va
-// algo de la base.
+// tipos 'acopio' / 'anulacion_acopio'. (El saldo al lado de cada renglón de
+// un remito de talonario Acopio se mudó a Remitos Dolce el 28/10/2026:
+// test-remitos-dolce-acopio.js.) Se EJECUTAN las funciones reales, con texto
+// malicioso donde va algo de la base.
 //
 //   node pruebas/test-administracion-acopios.js
 'use strict'
@@ -24,15 +24,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/
 const src = leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
 
-// Lo de la revisión de remitos que usa el saldo del acopio.
-const FUNCIONES_REMITO = [
-  'renglonDesdeItem', 'formDesdeRemito', 'htmlRenglonRemito', 'htmlSelectorRemito', 'htmlOpcionesRemito', 'htmlMarcasRemito', 'htmlConoRemito',
-  'filasLotesRemito', 'htmlLotesRemito', 'htmlResumenLotesRemito', 'asignacionRemito', 'cajasLoteRemito', 'puedeAceptarSugerencia', 'htmlClientesRemito',
-  'elegirClienteRemito', 'elegirTalonarioRemito', 'marcarSucioRemito', 'pintarRemito', 'pintarTituloRemito', 'htmlEncabezadoRemito', 'htmlClienteRemito',
-  'htmlFotoRemito', 'urlFotoSegura', 'ponerSrcFotoRemito', 'htmlAccionesRemito', 'textoResumenRemito', 'momentoAr',
-  'alEscribirRemito', 'renglonRemito', 'pintarPieLotesRemito',
-]
-const nuevo = () => construirAdministracion(ARCHIVO, { funciones: FUNCIONES_REMITO, constantes: ['ZOOM_FOTO_REMITO', 'LARGO_LOTE_REMITO'] })
+const nuevo = () => construirAdministracion(ARCHIVO)
 
 const CAT = {
   productos: [
@@ -464,8 +456,6 @@ const GRUPO = [
   S.estado.principales = new Map([['c-n-fer', 'u-n']])
   const fila = S.htmlFilaCliente({ cliente_id: 'c-fer', nombre: 'FERNANDEZ RICARDO', saldo: 0, lista: null, retiros_mes: 0 })
   chk('la lista de Clientes: "FERNANDEZ RICARDO (también en Nuss)"', /FERNANDEZ RICARDO \(también en Nuss\)/.test(fila))
-  const rm = { form: { clienteBusqueda: 'fern', clienteId: null } }
-  chk('el buscador del remito también', /FERNANDEZ RICARDO \(también en Nuss\)/.test(S.htmlClientesRemito(rm)))
   chk('leerClientes pide cliente_principal_id', /from\('clientes'\)\s*\n\s*\.select\('[^']*\bcliente_principal_id\b[^']*'\)\s*\n\s*\.eq\('unidad_negocio_id', unidadId\)/.test(src))
 }
 {
@@ -484,75 +474,6 @@ const GRUPO = [
   })())
 }
 chk('las etiquetas de la cuenta: Acopio y Anulación de acopio', /acopio: 'Acopio', anulacion_acopio: 'Anulación de acopio'/.test(src))
-
-// ── En la revisión de un remito de talonario ACOPIO ─────────────────────────
-function remito(S, { talonario = 'acopio', clienteId = 'c-ros', items } = {}) {
-  const f = S.formDesdeRemito({ numero_remito: '977492', fecha: '2026-10-25', talonario, cliente_id: clienteId, items })
-  const rm = { id: 'r1', fila: { id: 'r1', unidad_negocio_id: 'u-d', estado: 'precargada' }, form: f, foto: { cargando: true }, zoom: 0 }
-  S.estado.remito = rm
-  return rm
-}
-const IT = (x) => ({ texto_leido: '', cantidad: null, presentacion_id: null, marca_id: null, insumo_id: null, lotes: [], revisar: false, omitir: false, nota: '', ...x })
-{
-  const S = nuevo()
-  enDolce(S)
-  rpcAcopios(S)
-  const rm = remito(S, { items: [IT({ cantidad: 30, presentacion_id: 'pr-tall' }), IT({ cantidad: 25, presentacion_id: 'pr-cono', marca_id: 'm-ler' }),
-    IT({ cantidad: 5, presentacion_id: 'pr-cono', marca_id: 'm-lel' }), IT({ cantidad: 3, presentacion_id: 'pr-tall', omitir: true }), IT({ cantidad: 2, insumo_id: 'ins-h' })] })
-  const r = rm.form.renglones
-  chk('mientras lee el acopio: "Buscando el acopio del cliente…"', /Buscando el acopio del cliente…/.test(S.htmlSaldoAcopioRemito(rm, r[0], 0)))
-  esperas.push(S.cargarAcopiosRemito(rm).then(() => {
-    const ll = rpcDe(S, 'acopios_lista')[0]
-    chk('lee los acopios del cliente del remito, en su fábrica', ll && ll[1].p_unidad_negocio_id === 'u-d' && ll[1].p_cliente_id === 'c-ros')
-    const h0 = S.htmlSaldoAcopioRemito(rm, r[0], 0)
-    chk('alcanza: suma los activos del mismo producto (70 + 10)', /class="ad-rm-acopio" data-rm-acopio="0">Acopio: quedan 80 cajas; después de este remito, 50\.<\/p>/.test(h0), h0)
-    const h1 = S.htmlSaldoAcopioRemito(rm, r[1], 1)
-    chk('no alcanza: en amarillo', /ad-rm-acopio--falta/.test(h1) && /No hay acopio de esto para el cliente: quedan 20 cajas y el remito pide 25\./.test(h1), h1)
-    const h2 = S.htmlSaldoAcopioRemito(rm, r[2], 2)
-    chk('otro cono (el de LELONA está anulado): "No hay acopio de esto para el cliente."', /ad-rm-acopio--falta/.test(h2) && />No hay acopio de esto para el cliente\.<\/p>/.test(h2), h2)
-    chk('el omitido no lleva saldo', S.htmlSaldoAcopioRemito(rm, r[3], 3) === '')
-    chk('un insumo no lleva saldo', S.htmlSaldoAcopioRemito(rm, r[4], 4) === '')
-    const t = S.saldoAcopioRemito(rm, { ...r[0], cantidad: 60 })
-    chk('el terminado no cuenta', t.saldo === 80)
-    // Cambiar las cajas actualiza el saldo sin redibujar el remito.
-    const el = { dataset: { rmAcopio: '1' }, outerHTML: '' }
-    S.__els.get('ad-remito-cuerpo').querySelectorAll = (sel) => sel === '[data-rm-acopio]' ? [el] : []
-    S.alEscribirRemito({ target: { dataset: { rmCantidad: '1' }, value: '20' } })
-    chk('cambiar las cajas actualiza el saldo (20 de 20 alcanza justo)', /class="ad-rm-acopio" data-rm-acopio="1">Acopio: quedan 20 cajas; después de este remito, 0\.<\/p>/.test(el.outerHTML), el.outerHTML)
-    S.__els.get('ad-remito-cuerpo').querySelectorAll = () => []
-    // Dos renglones del mismo producto suman lo que piden.
-    rm.form.renglones.push(S.renglonDesdeItem(IT({ cantidad: 60, presentacion_id: 'pr-tall' })))
-    chk('dos renglones del mismo producto: suma lo que piden (90 de 80)', S.saldoAcopioRemito(rm, rm.form.renglones[0]).alcanza === false)
-    const html = S.htmlRenglonRemito(rm.form.renglones[1], 1, CAT, rm)
-    chk('el saldo va en el renglón, antes de los lotes', /data-rm-acopio="1"[\s\S]*¿De qué lotes\?/.test(html))
-    rm.form.talonario = 'oficial'
-    chk('con talonario Oficial, nada', S.htmlSaldoAcopioRemito(rm, r[0], 0) === '' && !/data-rm-acopio/.test(S.htmlRenglonRemito(r[0], 0, CAT, rm)))
-    rm.form.talonario = 'acopio'
-    rm.form.clienteId = null
-    chk('sin cliente, nada', S.htmlSaldoAcopioRemito(rm, r[0], 0) === '')
-  }))
-}
-{
-  // Elegir el cliente o el talonario Acopio lee el acopio; si falla, lo dice (sin amarillo).
-  const S = nuevo()
-  enDolce(S)
-  rpcAcopios(S, { extra: { acopios_lista: { data: null, error: { message: 'sin red' } } } })
-  const rm = remito(S, { clienteId: null, items: [IT({ cantidad: 3, presentacion_id: 'pr-tall' })] })
-  S.elegirClienteRemito('c-ros')
-  esperas.push((async () => {
-    for (let i = 0; i < 10; i++) await Promise.resolve()
-    chk('elegir el cliente lee su acopio', rpcDe(S, 'acopios_lista').some(r => r[1].p_cliente_id === 'c-ros'))
-    const h = S.htmlSaldoAcopioRemito(rm, rm.form.renglones[0], 0)
-    chk('si falla, lo dice sin amarillo', /No se pudo leer el acopio del cliente/.test(h) && !/--falta/.test(h))
-    const S2 = nuevo()
-    enDolce(S2)
-    rpcAcopios(S2)
-    remito(S2, { talonario: 'oficial', items: [IT({ cantidad: 3, presentacion_id: 'pr-tall' })] })
-    S2.elegirTalonarioRemito('acopio')
-    for (let i = 0; i < 10; i++) await Promise.resolve()
-    chk('pasar a talonario Acopio lee el acopio', rpcDe(S2, 'acopios_lista').length === 1)
-  })())
-}
 
 // ── XSS: lo que viene de la base, escapado ──────────────────────────────────
 {
@@ -575,8 +496,6 @@ const IT = (x) => ({ texto_leido: '', cantidad: null, presentacion_id: null, mar
   const n = { ...S.nuevoAcopioVacio(), clienteBusqueda: marca('busqueda'), numeroRemito: marca('nRemito'), numeroFactura: marca('nFactura'), observaciones: marca('nObs'), error: marca('nError') }
   chequearMarcas(chk, 'htmlNuevoAcopio', S.htmlNuevoAcopio(n), ['busqueda', 'nRemito', 'nFactura', 'nObs', 'nError', 'prod', 'pres'])
   chequearMarcas(chk, 'htmlNuevoAcopio (elegido)', S.htmlNuevoAcopio({ ...n, clienteId: 'c-x', presentacionId: 'pr-x', eligiendo: false, marcaBusqueda: '' }), ['nombre', 'prod', 'pres', 'marcaCono'])
-  const rm = { form: { talonario: 'acopio', clienteId: 'c-x', renglones: [] }, acopios: { clienteId: 'c-x', filas: [], error: marca('errorLectura') } }
-  chequearMarcas(chk, 'htmlSaldoAcopioRemito', S.htmlSaldoAcopioRemito(rm, { presentacionId: 'pr-x', cantidad: 1 }, 0), ['errorLectura'])
 }
 {
   // Los ids y lo escrito, también escapados.

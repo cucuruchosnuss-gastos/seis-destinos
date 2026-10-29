@@ -1,6 +1,7 @@
 // Mutaciones de test-administracion-acopios.js (los acopios en
-// Administración, la cuenta en el grupo, "(también en Nuss)" y el saldo del
-// acopio en la revisión de un remito, 27/10/2026): mutan
+// Administración, la cuenta en el grupo y "(también en Nuss)", 27/10/2026;
+// el saldo en la revisión de un remito se mudó a mut-remitos-dolce-acopio.js
+// el 28/10/2026): mutan
 // modulos/administracion.html, que la suite recibe por ARCHIVO_TEST. Ver
 // mutar.js.
 //
@@ -47,7 +48,7 @@ correrMutaciones({
   escape: 'esc',
   funciones: ['htmlTarjetaAcopio', 'htmlFiltroAcopios', 'htmlListaAcopios', 'htmlBarraAcopio', 'htmlClientesAcopio', 'htmlClienteAcopio', 'htmlOpcionesAcopio',
     'htmlMarcasAcopio', 'htmlProductoAcopio', 'htmlNuevoAcopio', 'htmlMovimientoAcopio', 'htmlAnularAcopio', 'htmlDetalleAcopio', 'htmlAcopiosCliente',
-    'htmlCuentaGrupo', 'htmlSaldoAcopioRemito', 'pintarAcopios'],
+    'htmlCuentaGrupo', 'pintarAcopios'],
   equivalentes: [
     { expr: 'esc(pct)', motivo: 'un número de 0 a 100 calculado acá (porcentajeAcopio)' },
     { expr: 'esc(est)', motivo: 'un estado de ESTADOS_ACOPIO (constante): estadoAcopio() nunca devuelve otra cosa' },
@@ -65,14 +66,12 @@ correrMutaciones({
     { expr: 'esc(fechaCorta(m.fecha))', motivo: 'una fecha formateada por fechaCorta() (o "—")' },
     { expr: "esc((cajas < 0 ? '−' : '+') + enteroHoja(Math.abs(cajas)) + (Math.abs(cajas) === 1 ? ' caja' : ' cajas'))", motivo: 'un número formateado con texto constante' },
     { expr: 'esc(importeHoja(centavos / 100))', motivo: 'un importe formateado por importeHoja()' },
-    { expr: 'esc(clase)', motivo: 'una de dos clases constantes' },
     { expr: 'esc(ac.error)', motivo: 'texto constante: lo pone cargarAcopios() (nunca el de la base)' },
     { expr: 'esc(det.error)', motivo: 'texto constante: lo pone abrirAcopio() (nunca el de la base)' },
     { expr: 'esc(det.aviso)', motivo: 'texto constante: lo pone confirmarAnularAcopio()' },
     { expr: 'esc(a.error)', motivo: 'texto constante: lo pone cargarAcopiosCliente()' },
     { expr: 'esc(g.error)', motivo: 'texto constante: lo pone cargarCuentaGrupo()' },
     { expr: 'esc(f.unidad_negocio_id)', motivo: 'el id de una empresa que ya está en estado.empresas (el link solo sale si empresasDeAdministracion() la tiene)' },
-    { expr: 'esc(i)', motivo: 'el índice del renglón (un número de la pantalla)' },
     { expr: "esc(a.precio_caja !== null && a.precio_caja !== undefined && Number(a.precio_caja) > 0 ? 'Lo que se le cargó en la cuenta al cliente se revierte.' : 'No tiene nada cargado en la cuenta del cliente.')", motivo: 'texto constante' },  ],
   manuales: [
     // La sección: dónde y para quién
@@ -135,23 +134,8 @@ correrMutaciones({
     { nombre: 'el principal de la misma empresa también', de: "      if (u && u === estado.empresaId) return ''\n", a: '' },
     { nombre: 'los principales sin recordar', de: '      const faltan = ids.filter(id => !estado.principales.has(id))', a: '      const faltan = ids' },
     { nombre: 'la lista de Clientes sin "(también en…)"', de: '${esc((c.nombre ?? \'\') + textoTambienEn(fichaCliente(c.cliente_id)))}', a: "${esc(c.nombre ?? '')}" },
-    { nombre: 'el buscador del remito sin "(también en…)"', de: 'data-rm-cliente="${esc(c.id)}">` +\n          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + textoTambienEn(c) + (apodo',
-      a: 'data-rm-cliente="${esc(c.id)}">` +\n          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + (apodo' },
     { nombre: 'el buscador del acopio sin "(también en…)"', de: 'data-ac-cliente="${esc(c.id)}">` +\n          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + textoTambienEn(c) + (apodo',
       a: 'data-ac-cliente="${esc(c.id)}">` +\n          `<span class="ad-opcion-cliente__nombre">${esc(limpio(c.nombre) + (apodo' },
     { nombre: 'leerClientes sin cliente_principal_id', de: 'pct_parte_a, cliente_principal_id, comision_habitual', a: 'pct_parte_a, comision_habitual' },
-    // El saldo en la revisión del remito
-    { nombre: 'el saldo también con talonario Oficial', de: "      if (!f || f.talonario !== 'acopio' || !f.clienteId || !r?.presentacionId || r.omitir === true) return null", a: '      if (!f || !f.clienteId || !r?.presentacionId || r.omitir === true) return null' },
-    { nombre: 'el omitido con saldo', de: "      if (!f || f.talonario !== 'acopio' || !f.clienteId || !r?.presentacionId || r.omitir === true) return null", a: "      if (!f || f.talonario !== 'acopio' || !f.clienteId || !r?.presentacionId) return null" },
-    { nombre: 'sin mirar el cono', de: 'claveAcopio(x.presentacion_id, x.marca_id) === k)\n        .reduce', a: 'x.presentacion_id === r.presentacionId)\n        .reduce' },
-    { nombre: 'cuenta los anulados', de: "estadoAcopio(x) === 'activo' && claveAcopio(x.presentacion_id, x.marca_id) === k", a: 'claveAcopio(x.presentacion_id, x.marca_id) === k' },
-    { nombre: 'lo que pide solo este renglón', de: 'const pide = (f.renglones ?? []).filter(', a: 'const pide = [r].filter(' },
-    { nombre: 'justo no alcanza', de: 'alcanza: saldo > 0 && pide <= saldo', a: 'alcanza: saldo > 0 && pide < saldo' },
-    { nombre: 'sin amarillo', de: "        clase += ' ad-rm-acopio--falta'\n", a: '' },
-    { nombre: 'el acopio de todos los clientes', de: 'a.filas = await leerAcopios(rm.fila?.unidad_negocio_id ?? estado.empresaId, a.clienteId)', a: 'a.filas = await leerAcopios(rm.fila?.unidad_negocio_id ?? estado.empresaId, null)' },
-    { nombre: 'elegir el cliente no lee el acopio', de: '      pintarRemito()\n      cargarAcopiosRemito()\n    }\n\n    function cambiarClienteRemito', a: '      pintarRemito()\n    }\n\n    function cambiarClienteRemito' },
-    { nombre: 'pasar a Acopio no lee el acopio', de: '      pintarRemito()\n      cargarAcopiosRemito()\n    }\n\n    function elegirClienteRemito', a: '      pintarRemito()\n    }\n\n    function elegirClienteRemito' },
-    { nombre: 'las cajas no actualizan el saldo', de: '        pintarPieLotesRemito(d.rmCantidad)\n        pintarAcopiosRemito()', a: '        pintarPieLotesRemito(d.rmCantidad)' },
-    { nombre: 'el renglón sin el saldo', de: '(r.presentacionId ? htmlSaldoAcopioRemito(rm, r, i) + htmlLotesRemito(r, i) : \'\')', a: "(r.presentacionId ? htmlLotesRemito(r, i) : '')" },
   ],
 })

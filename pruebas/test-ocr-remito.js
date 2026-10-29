@@ -273,8 +273,9 @@ const prompt = () => E.llamadasModelo[0]?.cuerpo?.messages?.[0]?.content?.find(b
   const llamada = E.llamadasModelo[0]
   chk('llama a la Messages API', llamada?.url === 'https://api.anthropic.com/v1/messages' && llamada.init.method === 'POST' &&
     llamada.init.headers['x-api-key'] === 'sk-prueba' && llamada.init.headers['anthropic-version'] === '2023-06-01')
-  const porDefectoMP = (fs.readFileSync(path.join(RAIZ, 'supabase/functions/ocr-materia-prima/index.ts'), 'utf8').match(/const MODELO = '([^']+)'/) || [])[1]
-  chk('sin OCR_REMITO_MODELO: el mismo modelo por defecto que ocr-materia-prima', porDefectoMP && llamada?.cuerpo?.model === porDefectoMP, `${llamada?.cuerpo?.model} vs ${porDefectoMP}`)
+  // 28/10/2026: publicada con Opus por defecto (letra a mano, pedido de Facu).
+  const porDefectoMP = 'claude-opus-5'
+  chk('sin OCR_REMITO_MODELO: Opus por defecto (como quedó publicada)', llamada?.cuerpo?.model === porDefectoMP, llamada?.cuerpo?.model)
   chk('max_tokens alcanza para 60 renglones (≥ 8000)', llamada?.cuerpo?.max_tokens >= 8000, llamada?.cuerpo?.max_tokens)
   const img = llamada?.cuerpo?.messages?.[0]?.content?.[0]
   chk('la foto va como imagen base64, antes del texto', img?.type === 'image' && img.source.type === 'base64' && img.source.media_type === 'image/jpeg' &&
@@ -341,9 +342,9 @@ const prompt = () => E.llamadasModelo[0]?.cuerpo?.messages?.[0]?.content?.find(b
 
   // ── El modelo por el secret ────────────────────────────────────────────────
   nuevoEstado()
-  E.entorno.OCR_REMITO_MODELO = '  claude-opus-5  '
+  E.entorno.OCR_REMITO_MODELO = '  claude-sonnet-4-6  '
   r = await pedir()
-  chk('OCR_REMITO_MODELO elige el modelo y va en p_modelo', E.llamadasModelo[0]?.cuerpo?.model === 'claude-opus-5' && guardar()?.args?.p_modelo === 'claude-opus-5')
+  chk('OCR_REMITO_MODELO elige el modelo y va en p_modelo', E.llamadasModelo[0]?.cuerpo?.model === 'claude-sonnet-4-6' && guardar()?.args?.p_modelo === 'claude-sonnet-4-6')
   nuevoEstado()
   E.entorno.OCR_COMPROBANTES_MODELO = 'otro'
   r = await pedir()
