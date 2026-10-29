@@ -65,6 +65,7 @@ export const ICONOS = {
   produccion: 'M3 21V10l6 4v-4l6 4V5h6v16zM7 17h2M13 17h2',
   pedidos: 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M9 11h6M9 15h4',
   retiros: 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0',
+  'remitos-dolce': 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4',
   administracion: 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18',
   taller: 'M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z',
   conos: 'M6 9h12l-6 12zM6 9a6 6 0 0 1 12 0M8.5 13h7',
@@ -327,17 +328,21 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     const esAdmin = esSuperAdmin
     let misModulos = []
     let misTareas = new Set()
+    let misAlcances = new Map()
     if (!esSuperAdmin) {
       const [m, t] = await Promise.all([
         sb.from('empleado_modulos').select('modulo').eq('empleado_id', yo.id).eq('habilitado', true),
-        sb.from('empleado_tareas').select('modulo, tarea').eq('empleado_id', yo.id).eq('habilitado', true),
+        sb.from('empleado_tareas').select('modulo, tarea, alcance').eq('empleado_id', yo.id).eq('habilitado', true),
       ])
       misModulos = (m.data || []).map(x => x.modulo)
       // Si las tareas no se pudieron leer, los módulos que las piden no se
       // muestran (lo mismo que el dashboard).
       misTareas = new Set((t.error ? [] : (t.data || [])).map(x => `${x.modulo}:${x.tarea}`))
+      // El alcance de cada tarea (28/10/2026): Remitos Dolce se ve solo con
+      // retiros:cargar o retiros:ver EN Dolce Pasta (alcanceEn).
+      misAlcances = new Map((t.error ? [] : (t.data || [])).map(x => [`${x.modulo}:${x.tarea}`, x.alcance ?? null]))
     }
-    const modulos = modulosDeBarra({ esAdmin, esSuperAdmin, misModulos, misTareas })
+    const modulos = modulosDeBarra({ esAdmin, esSuperAdmin, misModulos, misTareas, misAlcances })
     if (!modulos.length) return null
 
     let actual = claveActual(win.location.pathname, win.location.search)

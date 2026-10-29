@@ -49,7 +49,7 @@ correrMutaciones({
     // Modelo, bucket, CORS
     { nombre: 'el modelo por otro secret', de: "Deno.env.get('OCR_REMITO_MODELO')", a: "Deno.env.get('OCR_MODELO')" },
     { nombre: 'el secret sin trim', de: "Deno.env.get('OCR_REMITO_MODELO')?.trim() || MODELO_POR_DEFECTO", a: "Deno.env.get('OCR_REMITO_MODELO') || MODELO_POR_DEFECTO" },
-    { nombre: 'otro modelo por defecto', de: "const MODELO_POR_DEFECTO = 'claude-sonnet-4-6'", a: "const MODELO_POR_DEFECTO = 'claude-opus-5'" },
+    { nombre: 'otro modelo por defecto', de: "const MODELO_POR_DEFECTO = 'claude-opus-5'", a: "const MODELO_POR_DEFECTO = 'claude-sonnet-4-6'" },
     { nombre: 'max_tokens corto', de: 'const MAX_TOKENS = 8192', a: 'const MAX_TOKENS = 4096' },
     { nombre: 'otro bucket', de: "const BUCKET = 'comprobantes'", a: "const BUCKET = 'cobranzas'" },
     { nombre: 'CORS cerrado', de: "'Access-Control-Allow-Origin': '*',", a: "'Access-Control-Allow-Origin': 'https://otro.ejemplo',", },

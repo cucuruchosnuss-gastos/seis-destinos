@@ -14,7 +14,8 @@ const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTE
 
 // Los acopios, la cuenta en el grupo, "(también en Nuss)" y valorizar con la
 // lista de otra empresa (27/10/2026). Van todas a la base: las llaman la
-// portada, la cuenta del cliente, valorizar y la revisión de un remito.
+// portada, la cuenta del cliente y valorizar. (El saldo del acopio al revisar
+// un remito se mudó a Remitos Dolce el 28/10/2026.)
 const FUNCIONES_ACOPIOS = [
   'leerPrincipales', 'textoTambienEn', 'unidadListaDeOtraEmpresa', 'presentacionEnUnidad', 'leerPrecioVentaEn',
   'acopiosVacio', 'acopiosEnEmpresa', 'asegurarAcopiosEmpresa', 'leerAcopios', 'estadoAcopio', 'cajasAcopio', 'textoQuedanAcopio', 'porcentajeAcopio',
@@ -26,9 +27,9 @@ const FUNCIONES_ACOPIOS = [
   'acopioDe', 'leerMovimientosAcopio', 'leerAnulacionAcopio', 'abrirAcopio', 'htmlMovimientoAcopio', 'puedeAnularAcopio', 'htmlAnularAcopio',
   'htmlDetalleAcopio', 'pintarAcopio', 'confirmarAnularAcopio', 'alTocarAcopio', 'alEscribirAcopio', 'volverDeAcopio',
   'cargarAcopiosCliente', 'htmlAcopiosCliente', 'cargarCuentaGrupo', 'nombreEmpresaGrupo', 'htmlCuentaGrupo',
-  'claveAcopio', 'cargarAcopiosRemito', 'saldoAcopioRemito', 'htmlSaldoAcopioRemito', 'pintarAcopiosRemito',
-  // Lo de la Carga que usan "Nuevo acopio" y el saldo en el remito.
+  // Lo de la Carga que usa "Nuevo acopio" (js/remitos-comun.js desde el 28/10/2026).
   'presentacionRemito', 'productoDePresentacionRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
+  'limpioRc', 'normalizarRc', 'insumoRemito',
   'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
 ]
 
@@ -226,11 +227,10 @@ const FUNCIONES_BASE = [
   // La orden a otra empresa del grupo (24/10/2026)
   'empresaGrupoDe', 'ordenEntreEmpresas', 'textoDeudaEntre', 'htmlDeudaEntre', 'htmlSelloEntre', 'htmlFichaEntre', 'ponerEmpresa',
   'codigoOrdenEntre', 'puedeAbrirOrdenEntre', 'htmlOrdenEntre', 'vincularOrdenesEntre', 'abrirOrdenEntre',
-  // Los remitos precargados de Rosario (27/10/2026): lo que usan Órdenes y la
-  // ficha (el resto lo pide test-administracion-remitos-precarga.js).
-  'sinControlStockEmpresa', 'leerSinControl', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio', 'numeroRemitoN', 'ordenarPorRemito',
-  'ordenesVisibles', 'htmlTalonariosOrdenes', 'elegirTalonarioOrdenes', 'htmlFilaOrdenRemito', 'remitosPorRevisar', 'leerRemitosPrecarga',
-  'cargarRemitosPrecarga', 'amarillosDe', 'nombreClienteRemito', 'htmlTarjetaRemito', 'htmlRemitosPrecarga', 'pintarRemitosPrecarga',
+  // Lo que quedó de los remitos de Rosario (28/10/2026; la revisión se mudó
+  // a Remitos Dolce): si la fábrica controla el stock, el link de Órdenes y
+  // el "Remito N° X" de la ficha (js/remitos-comun.js).
+  'sinControlStockEmpresa', 'leerSinControl', 'pintarLinkRemitos', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio',
   // Los acopios, la cuenta en el grupo y la lista de otra empresa (27/10/2026)
   ...FUNCIONES_ACOPIOS,
 ]
@@ -426,6 +426,8 @@ const OPCIONALES_FN = {
   htmlTarjetaRemito: "function htmlTarjetaRemito() { return '' }",
   htmlRemitosPrecarga: "function htmlRemitosPrecarga() { return '' }",
   pintarRemitosPrecarga: 'function pintarRemitosPrecarga() {}',
+  // El link a Remitos Dolce (28/10/2026): una copia de antes no lo tiene.
+  pintarLinkRemitos: 'function pintarLinkRemitos() {}',
 }
 const OPCIONALES_CONST = {
   TOPE_BUSCAR_CLIENTES: 'var TOPE_BUSCAR_CLIENTES = 60', TEXTO_SOLO_PROVISORIOS: "var TEXTO_SOLO_PROVISORIOS = '(no existe)'", TEXTO_SIN_LEER_CLIENTES: "var TEXTO_SIN_LEER_CLIENTES = '(no existe)'",
@@ -449,7 +451,12 @@ for (const n of FUNCIONES_ACOPIOS) {
 }
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
-  const texto = require('fs').readFileSync(ruta, 'utf8')
+  const html = require('fs').readFileSync(ruta, 'utf8')
+  // Lo que se mudó a js/remitos-comun.js (28/10/2026) cuenta como del
+  // módulo si el módulo lo importa (lo pega fuenteConComun).
+  const comunRemitos = html.includes("from '../js/remitos-comun.js'")
+    ? require('fs').readFileSync(process.env.ARCHIVO_COMUN_REMITOS || require('path').join(__dirname, '..', 'js', 'remitos-comun.js'), 'utf8').replace(/^export /gm, '') : ''
+  const texto = html + '\n' + comunRemitos
   const falta = (n, re) => !re.test(texto)
   const fnFaltan = Object.keys(OPCIONALES_FN).filter(n => falta(n, new RegExp('function ' + n + '\\(')))
   const constFaltan = Object.keys(OPCIONALES_CONST).filter(n => falta(n, new RegExp('const ' + n + ' =')))

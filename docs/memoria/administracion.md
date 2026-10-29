@@ -69,6 +69,8 @@
 
 ## Remitos precargados de Rosario (27/10/2026)
 
+> **28/10/2026: se MUDÓ a Remitos Dolce** (`modulos/remitos-dolce.html`, pestaña Revisar; ver `remitos-dolce.md`), con el saldo de acopio al revisar y las órdenes por N° de remito. En Órdenes de una fábrica sin control queda la lista de siempre y un link chico "Remitos Dolce →" (`pintarLinkRemitos`); la ficha y la hoja siguen con "Remito N° X". El catálogo de un renglón (Nuevo acopio) y `textoNumeroRemito` / `htmlSelloAcopio` vienen de `js/remitos-comun.js`. Lo de abajo describe el código como era.
+
 Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, pedido `.claude/pedidos/2026-10-27-remitos-rosario.md`, partes C y D). En Rosario (Dolce Pasta, `controla_stock_terminado = false`) Manuel saca la foto de un remito escrito a mano, la IA (Edge Function `ocr-remito`, la escribe otra parte) deja una **precarga** en `remitos_precarga` y acá Yanina la revisa, la corrige y la confirma. La orden que sale se valoriza como cualquier otra.
 
 - **La base** (verificada con `pg_get_functiondef` el 27/10/2026, con el agregado de talonario y omitir del mismo día):

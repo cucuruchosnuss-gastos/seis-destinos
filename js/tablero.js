@@ -37,7 +37,7 @@ import { TAMANOS, normalizarPrefs, leerPrefs, guardarPrefs, ordenarBarra, cargar
 // Administración, Cuentas corrientes, Stock y Proyectos Taller medianas; el
 // resto chicas.
 export const ORDEN_TABLERO = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'pedidos', 'administracion',
-  'cuentas-corrientes', 'stock', 'materia-prima', 'retiros', 'taller', 'accesos', 'empleados', 'seguridad', 'conos']
+  'cuentas-corrientes', 'stock', 'materia-prima', 'retiros', 'remitos-dolce', 'taller', 'accesos', 'empleados', 'seguridad', 'conos']
 
 export const TAMANOS_POR_DEFECTO = {
   produccion: 'ancha', cobranzas: 'mediana', caja: 'mediana', gastos: 'mediana', administracion: 'mediana',

@@ -68,5 +68,23 @@ const recuadro = (h) => (h.match(/<div class="rh-orden">.*?<\/div><\/header>/) |
   const pdf = fuenteComun.slice(fuenteComun.indexOf('export async function generarPdf('), fuenteComun.indexOf('export async function enviarOrden('))
   chk('el PDF usa htmlHoja (lleva el mismo "Remito N°")', /cont\.innerHTML = htmlHoja\(orden, \{ conPrecios, copias: COPIAS_PDF, plan \}\)/.test(pdf))
 }
+// LA CARGA (28/10/2026): mis_ordenes_retiro devuelve numero_remito y
+// talonario; la hoja y el PDF que se imprimen desde la Carga los llevan
+// (ordenParaHoja de retiros.html).
+{
+  S.estado.empresas = [EMPRESA]
+  S.estado.empresaId = 'u-d'
+  S.estado.misTareas = new Map([['retiros:cargar', { todas: true }]])
+  const fila = (extra = {}) => ({ orden_id: 'o1', codigo: 'D-0012', fecha: '2026-10-28', estado: 'confirmada', cliente: 'ALMACÉN ROSARIO', renglones: [], ...extra })
+  const oficial = S.ordenParaHoja(fila({ numero_remito: ' 0001-00003100 ', talonario: 'oficial' }))
+  chk('la Carga: numero_remito de mis_ordenes_retiro llega a la hoja (limpio)', oficial.numeroRemito === '0001-00003100' && oficial.talonario === null, JSON.stringify([oficial.numeroRemito, oficial.talonario]))
+  chk('…y la hoja de la Carga dice "Remito N° 0001-00003100"', /Remito N° 0001-00003100/.test(hoja(oficial)))
+  const acopio = S.ordenParaHoja(fila({ numero_remito: '977492', talonario: 'acopio' }))
+  chk('…de acopio: "Acopio N° 977492"', acopio.talonario === 'acopio' && /Acopio N° 977492/.test(hoja(acopio)))
+  const sin = S.ordenParaHoja(fila({ numero_remito: null, talonario: null }))
+  chk('…sin número (una orden cargada en la Carga): no dice ningún remito', sin.numeroRemito === null && !/Remito N°|Acopio N°/.test(hoja(sin)))
+  chk('…ni con el número en blanco', S.ordenParaHoja(fila({ numero_remito: '   ' })).numeroRemito === null)
+  chk('…el número de la base va escapado en la hoja', !/<b data-xss=/.test(hoja(S.ordenParaHoja(fila({ numero_remito: marca('rem') })))))
+}
 
 fin()

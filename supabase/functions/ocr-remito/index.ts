@@ -37,12 +37,15 @@
 //
 // NO DESPLEGADA: la despliega el chat de la base después de auditarla, con
 // verify_jwt: true como las demás.
+// Publicada por el chat de la base el 28/10/2026 después de auditarla (main
+// 7750ac8), con el modelo por defecto en Opus: es letra a mano (pedido de Facu).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
-// El MISMO por defecto que ocr-materia-prima (su constante MODELO).
-const MODELO_POR_DEFECTO = 'claude-sonnet-4-6'
+// 28/10/2026: Opus por defecto (letra a mano, pedido de Facu). Se cambia con el
+// secret OCR_REMITO_MODELO sin tocar código.
+const MODELO_POR_DEFECTO = 'claude-opus-5'
 const BUCKET = 'comprobantes'
 const BYTES_MAXIMO = 10 * 1024 * 1024
 // Hasta 60 renglones (el tope de _remito_items_normalizar), cada uno con tres
