@@ -74,6 +74,7 @@ Los módulos son enormes (`modulos/administracion.html` ~850 KB, `produccion-ges
 - `administracion.md` — Administración (clientes, órdenes, listas, retenciones, préstamos, entre empresas, errores).
 - `taller.md` — Proyectos Taller.
 - `conos.md` — Conos de papel.
+- `buscar.md` — Buscar (el lote de una caja con toda su fabricación y los precios de compra; el primer paso del buscador general).
 - `planificados.md` — módulos planificados.
 - `estilo-visual.md` — el sistema visual, colores por módulo, barras, celular.
 - `seguridad.md` — RLS, grants, Storage, XSS, registro de errores.

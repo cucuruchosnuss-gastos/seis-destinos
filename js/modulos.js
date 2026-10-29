@@ -203,6 +203,22 @@ export const MODULOS = [
     color: 'marron',
     sinFilaModulo: true,
     requiereTareas: ['conos:ver', 'conos:pedir', 'conos:precios', 'conos:recibir'],
+  },
+  {
+    // Buscar (28/10/2026): el acceso rápido al lote de una caja (toda su
+    // fabricación) y al precio de compra de un insumo. Sin fila en la tabla
+    // modulos: se ve con alguna de las tareas que miran trazabilidad_lote
+    // (produccion:ver, stock:ver) o precios_compra (stock:ver_costos,
+    // retiros:precios).
+    clave: 'buscar',
+    nombre: 'Buscar',
+    icono: 'search',
+    descripcion: 'Lote de una caja y precio de un insumo',
+    url: 'modulos/buscar.html',
+    proximamente: false,
+    color: 'grafito',
+    sinFilaModulo: true,
+    requiereTareas: ['produccion:ver', 'stock:ver', 'stock:ver_costos', 'retiros:precios'],
   }
 ]
 
@@ -374,6 +390,9 @@ export const PALETA_MODULO = {
   conos: [0.55, 0.12, 45],
   accesos: [0.50, 0.07, 205],
   empleados: [0.60, 0.13, 340],
+  // Buscar (28/10/2026): óxido oscuro, entre Pedidos (20) y Conos (45) pero
+  // mucho más oscuro que los dos.
+  buscar: [0.42, 0.10, 30],
   seguridad: [0.40, 0.012, 60],
   personalizar: [0.35, 0.012, 60],
 }
