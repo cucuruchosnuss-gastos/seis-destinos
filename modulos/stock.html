@@ -429,6 +429,88 @@
     .stock-sin-ingreso__lote { font-size: 0.875rem; font-weight: 700; color: var(--bordo); }
     .stock-sin-ingreso__datos { font-size: 0.8125rem; color: var(--color-texto-2); }
 
+    /* ── En camino desde otra empresa (29/10/2026) ──────────────────────────
+       Arriba de todo: lo que otra empresa del grupo mandó a esta fábrica y
+       falta recibir (una tarjeta por envío, con borde amarillo: espera algo
+       de quien mira), y abajo, plegado, lo recibido en los últimos 30 días.
+       Sin nada no ocupa lugar (pintarEnCamino la esconde). Las columnas van
+       FIJAS (aprendizaje del auto-fit con una tarjeta a todo el ancho): la
+       que tiene el formulario abierto ocupa las dos. */
+    .st-camino { margin: 0.25rem 0 1rem; min-width: 0; }
+    .st-camino__titulo {
+      display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem;
+      font-family: var(--fuente-titulo); font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto);
+    }
+    .st-camino__n {
+      min-width: 1.5rem; padding: 0.0625rem 0.5rem; border-radius: 999px; box-sizing: border-box;
+      background: var(--amarillo-suave); color: var(--amarillo-oscuro); font-family: var(--fuente); font-size: 0.8125rem; text-align: center;
+    }
+    .st-camino__vacio { margin: 0; font-size: 0.875rem; color: var(--color-texto-2); }
+    .st-camino__lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.625rem; }
+    @media (min-width: 1024px) { .st-camino__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .st-camino__envio {
+      padding: 0.875rem 1rem; border: 1px solid var(--borde-tarjeta); border-left: 4px solid var(--amarillo);
+      border-radius: var(--radio-tarjeta); background: var(--color-fondo); box-shadow: var(--sombra-tarjeta);
+      min-width: 0; overflow-wrap: anywhere;
+    }
+    .st-camino__envio--abierto { grid-column: 1 / -1; }
+    .st-camino__cabeza { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.125rem 0.625rem; }
+    .st-camino__orden { font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); }
+    .st-camino__remito, .st-camino__fecha { font-size: 0.8125rem; color: var(--color-texto-2); }
+    .st-camino__fecha { margin-left: auto; white-space: nowrap; }
+    .st-camino__desde { margin-top: 0.125rem; font-size: 0.875rem; color: var(--color-texto); }
+    .st-camino__obs { margin-top: 0.25rem; font-size: 0.8125rem; color: var(--color-texto-2); }
+    .st-camino__renglones { list-style: none; margin: 0.625rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.375rem; }
+    .st-camino__renglon {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem;
+      padding-top: 0.375rem; border-top: 1px solid var(--color-borde); min-width: 0;
+    }
+    .st-camino__desc { min-width: 0; font-size: 0.875rem; color: var(--color-texto); }
+    .st-camino__lote { color: var(--color-texto-2); }
+    .st-camino__cant { flex-shrink: 0; font-size: 0.875rem; font-weight: 700; white-space: nowrap; color: var(--color-texto); }
+    .st-camino__pie { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
+    .st-camino__pie .btn-stock { min-height: 44px; min-width: 8rem; }
+    /* El formulario de recibir: cada renglón con lo enviado, "Recibido" y,
+       si difiere, "Motivo de la diferencia". */
+    .st-camino__renglon--form { display: flex; flex-direction: column; align-items: stretch; gap: 0.375rem; padding-top: 0.5rem; }
+    .st-camino__enviado { font-size: 0.8125rem; color: var(--color-texto-2); }
+    .st-camino__campos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    @media (min-width: 640px) { .st-camino__campos { grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); align-items: end; } }
+    .st-camino__campo { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; font-size: 0.8125rem; font-weight: 600; color: var(--color-texto); }
+    .st-camino__campo input, .st-camino__campo textarea {
+      width: 100%; box-sizing: border-box; min-height: 44px; padding: 0.5rem 0.75rem;
+      border: 1.5px solid var(--color-borde); border-radius: var(--radio-input);
+      font-family: var(--fuente); font-size: 16px; background: var(--color-fondo); color: var(--color-texto);
+    }
+    .st-camino__campo textarea { resize: vertical; }
+    .st-camino__campo input:focus, .st-camino__campo textarea:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 4px var(--verde-suave); }
+    .st-camino__campo input.st-camino__input--error { border-color: var(--bordo); }
+    .st-camino__campo--obs { margin-top: 0.75rem; }
+    .st-camino__error { margin: 0.75rem 0 0; }
+    .st-camino__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .st-camino__acciones .btn-stock { flex: 1 1 10rem; min-height: 44px; }
+    /* Recibidos: una barra chica que se despliega. */
+    .st-camino__recibidos { margin-top: 0.625rem; }
+    .st-camino__plegar {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      width: 100%; min-height: 44px; padding: 0.5rem 0.875rem; box-sizing: border-box;
+      border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta); background: var(--color-fondo);
+      color: var(--color-texto-2); font-family: var(--fuente); font-size: 0.8125rem; font-weight: 600; text-align: left; cursor: pointer;
+    }
+    .st-camino__accion { flex-shrink: 0; text-decoration: underline; }
+    .st-camino__hechos { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.375rem; }
+    .st-camino__hecho {
+      padding: 0.625rem 0.875rem; border: 1px solid var(--borde-tarjeta); border-radius: var(--radio-tarjeta);
+      background: var(--color-fondo); font-size: 0.8125rem; min-width: 0; overflow-wrap: anywhere;
+    }
+    .st-camino__quien { color: var(--color-texto-2); }
+    .st-camino__difs { margin: 0.375rem 0 0; padding-left: 1.125rem; color: var(--bordo-oscuro); }
+    .st-camino__sin-difs { margin-top: 0.25rem; color: var(--verde-oscuro); }
+    /* Es de la pantalla principal (la entrada, el stock y el producto
+       terminado): en el catálogo, el recuento, los alias, los precios y el
+       traspaso no se ve. Con un navegador sin :has() se ve igual (no rompe). */
+    body:not(.stock-en-eleccion) .contenedor-stock:has(#vista-catalogo:not([hidden]), #vista-recuento:not([hidden]), #vista-alias:not([hidden]), #vista-costos:not([hidden]), #vista-traspaso:not([hidden])) #st-en-camino { display: none; }
+
     /* Alguien consumió mercadería que nunca se cargó. Tiene que saltar en una
        lista larga, en bordó (el rojo es el acento de Accesos). */
     .chip-saldo-negativo {
@@ -2670,6 +2752,13 @@
       No tenés permiso para ver el stock ni el catálogo de insumos. Pedíselo a un administrador.
     </div>
 
+    <!-- EN CAMINO DESDE OTRA EMPRESA (29/10/2026): lo que otra empresa del
+         grupo mandó a esta fábrica (una orden de retiro a ella como cliente)
+         y falta recibir, con "Recibir"; abajo, lo recibido en los últimos 30
+         días. Lo arma pintarEnCamino(). El tablero lleva acá con
+         #st-en-camino (o ?seccion=en-camino). -->
+    <section class="st-camino" id="st-en-camino" aria-label="En camino desde otra empresa" hidden></section>
+
     <!-- DOS ENTRADAS (14/10/2026, pedido del 13/10, paso 4): quien puede ver
          el producto terminado Y los insumos elige primero qué mirar. Con una
          sola de las dos se entra derecho (ver decidirEntrada()). -->
@@ -4241,6 +4330,12 @@
       if (estado.cargados.has('mermas')) renderizarMermas()
       if (estado.cargados.has('transito')) { renderizarTransito(); renderizarTransfHistorial() }
       if (estado.ptm?.leido) pintarTerminado()
+      // En camino: es de la fábrica de la barra, así que se relee. Un envío a
+      // medio recibir se cierra (no se había mandado nada).
+      if (estado.enCamino?.leido) {
+        if (!estado.enCamino.form?.enviando) estado.enCamino.form = null
+        cargarEnCamino()
+      }
       if (estado.cargados.has('recuento')) {
         const nueva = unidadRecuentoPorBarra()
         if (nueva !== estado.unidadRecuento) {
@@ -12766,6 +12861,9 @@
       if (estado.vista === 'transito') tareas.push(cargarTransito())
       if (estado.vista === 'costos') tareas.push(cargarCostos())
       if (estado.vista === 'terminado') tareas.push(cargarTerminado({ silencioso: true }))
+      // En camino desde otra empresa (29/10/2026): con un envío a medio
+      // recibir, cargarEnCamino no toca nada.
+      if (estado.enCamino?.leido) tareas.push(cargarEnCamino())
       tareas.push(cargarPendientesStock())
       const res = await Promise.all(tareas)
       return res.every(r => r !== false)
@@ -13050,6 +13148,476 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // EN CAMINO DESDE OTRA EMPRESA (29/10/2026, pedido de Facu del 29/10)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Toda orden de retiro a otra empresa del grupo (un cliente con
+    // clientes.unidad_grupo_id) queda EN TRÁNSITO hasta que la empresa que
+    // recibe la acepta. Acá, arriba de todo (#st-en-camino): lo que viene en
+    // camino hacia la fábrica de la barra, con "Recibir" para confirmar lo que
+    // llegó (con el motivo de cada diferencia), y abajo, plegado, lo recibido
+    // en los últimos 30 días. La base (pg_get_functiondef, 29/10/2026):
+    //  - recepciones_grupo(p_unidad_negocio_id, p_estado) → jsonb array. Con
+    //    la unidad null trae todas; devuelve solo lo que la persona puede ver:
+    //    tiene_tarea_alcance('stock','ver') o ('stock','recibir_transferencia')
+    //    en el DESTINO. Sin filtro de fecha: los 30 días se miran acá.
+    //  - recibir_orden_grupo(p_recepcion_id, p_items, p_observaciones): pide
+    //    stock:recibir_transferencia CON ALCANCE en el destino y TODOS los
+    //    renglones ({item_id, cantidad_recibida, motivo_diferencia}); corta
+    //    con sus mensajes ("Hay una diferencia sin explicar: poné el motivo.",
+    //    "No se puede recibir más de lo que se mandó (N)…", "La orden X se
+    //    anuló…"), que se muestran TAL CUAL pegados al botón. Devuelve
+    //    {estado:'recibida', entradas, codigo}.
+
+    const DIAS_RECIBIDOS_CAMINO = 30
+    const TEXTO_FALTA_CANTIDAD_CAMINO = 'La cantidad recibida no puede faltar ni ser negativa.'
+    const TEXTO_FALTA_MOTIVO_CAMINO = 'Hay una diferencia sin explicar: poné el motivo.'
+
+    // El estado de la sección, creado la primera vez que se lo pide.
+    // form: el envío que se está recibiendo ({ id, renglones: { item_id:
+    // { recibido, motivo } }, obs, enviando, error, marcas: Map item_id →
+    // 'cantidad' | 'motivo' }) o null. soloEsto: la persona entró a Stock SOLO
+    // para recibir (sin ninguna otra vista): sin envíos, se dice.
+    function camino() {
+      estado.enCamino ??= { leido: false, error: null, enTransito: [], recibidos: [], form: null, recibidosAbierto: false, soloEsto: false }
+      return estado.enCamino
+    }
+
+    // La MISMA condición que recepciones_grupo, en la fábrica de la barra.
+    // Con "Todas" (o una sola fábrica, sin barra) alcanza con tener alguna de
+    // las dos tareas: la base devuelve solo las fábricas de su alcance.
+    function puedeVerEnCamino() {
+      const u = estado.unidadBarra
+      if (u) return puedeTareaEn('stock:ver', u) || puedeTareaEn('stock:recibir_transferencia', u)
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:ver') || estado.misTareas.has('stock:recibir_transferencia')
+    }
+
+    // "Recibir": la condición de recibir_orden_grupo, en la fábrica que RECIBE
+    // ese envío (no la de la barra: con "Todas" hay de varias).
+    function puedeRecibirEnCamino(envio) {
+      return puedeTareaEn('stock:recibir_transferencia', envio?.destino_id)
+    }
+
+    // ¿Tiene la tarea de recibir en alguna fábrica? (para entrar a Stock solo
+    // a recibir, sin ninguna otra vista).
+    function recibeEnAlgunaFabrica() {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has('stock:recibir_transferencia')
+    }
+
+    function numeroCamino(v) {
+      // null, undefined y '' son "no hay dato", nunca 0 (Number('') es 0).
+      if (v == null || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    function esCajaCamino(it) {
+      return it?.tipo === 'producto'
+    }
+
+    // Las cajas van enteras (la base lo exige); los insumos, con decimales.
+    function decimalesCamino(it) {
+      return esCajaCamino(it) ? 0 : DECIMALES_CANTIDAD
+    }
+
+    // "12 cajas", "1 caja", "1.250,5 kg". Un dato ausente es "—", nunca 0.
+    function textoCantidadCamino(v, it) {
+      const n = numeroCamino(v)
+      if (n === null) return '—'
+      if (esCajaCamino(it)) return `${formatearNumeroAr(n, { decimales: 0 })} ${n === 1 ? 'caja' : 'cajas'}`
+      return formatearCantidadStock(n, it?.unidad)
+    }
+
+    // ordenes_retiro.fecha es date ('AAAA-MM-DD'): dd/mm/aaaa.
+    function fechaCamino(f) {
+      return typeof f === 'string' && /^\d{4}-\d{2}-\d{2}/.test(f) ? formatearFecha(f.slice(0, 10)) : ''
+    }
+
+    // recibida_en es timestamptz: dd/mm/aaaa hh:mm en hora de Argentina (no
+    // la del celular).
+    function momentoCamino(iso) {
+      const d = new Date(iso ?? '')
+      if (Number.isNaN(d.getTime())) return ''
+      const p = {}
+      for (const x of new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      }).formatToParts(d)) p[x.type] = x.value
+      return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`
+    }
+
+    // ¿Lo recibido difiere de lo enviado? (sin número, no: falta la cantidad).
+    function difiereCamino(it, r) {
+      const rec = numeroCamino(r?.recibido)
+      const env = numeroCamino(it?.cantidad_enviada)
+      return rec !== null && env !== null && Math.abs(rec - env) > 1e-9
+    }
+
+    // Lo de la fábrica de la barra, sin la fábrica de pruebas (ni como destino
+    // ni como origen) para una cuenta real. La base ya filtra por la unidad
+    // pedida; se vuelve a mirar acá.
+    function enviosDeLaBarra(data) {
+      const lista = Array.isArray(data) ? data.filter(Boolean) : []
+      const sinPrueba = sinUnidadesDePrueba(sinUnidadesDePrueba(lista, estado.fabrica, r => r?.destino_id), estado.fabrica, r => r?.origen_id)
+      return sinPrueba.filter(r => pasaFiltroUnidad(r.destino_id, estado.unidadBarra))
+    }
+
+    // Recibidos en los últimos 30 días, el más nuevo primero.
+    function recibidosRecientes(lista, ahora = Date.now()) {
+      const desde = ahora - DIAS_RECIBIDOS_CAMINO * 24 * 60 * 60 * 1000
+      return (lista || [])
+        .filter(r => { const t = Date.parse(r?.recibida_en ?? ''); return Number.isFinite(t) && t >= desde })
+        .sort((x, y) => Date.parse(y.recibida_en) - Date.parse(x.recibida_en))
+    }
+
+    // Lee lo que viene en camino y lo recibido, de la fábrica de la barra.
+    // Con un envío a medio recibir NO relee (redibujaría el formulario y
+    // movería el foco): sigue con lo que tiene. Devuelve si pudo leer.
+    let turnoCamino = 0
+    async function cargarEnCamino() {
+      const c = camino()
+      if (!puedeVerEnCamino()) {
+        turnoCamino++
+        Object.assign(c, { leido: true, error: null, enTransito: [], recibidos: [], form: null })
+        pintarEnCamino()
+        return true
+      }
+      if (c.form) return true
+      const turno = ++turnoCamino
+      const unidad = estado.unidadBarra || null
+      let res
+      try {
+        res = await Promise.all([
+          supabase.rpc('recepciones_grupo', { p_unidad_negocio_id: unidad, p_estado: 'en_transito' }),
+          supabase.rpc('recepciones_grupo', { p_unidad_negocio_id: unidad, p_estado: 'recibida' }),
+        ])
+      } catch (err) {
+        res = [{ data: null, error: err }, { data: null, error: null }]
+      }
+      // Una respuesta vieja (cambiaron la barra) no pisa la nueva, y si en el
+      // medio se abrió un envío para recibir, no se lo redibuja.
+      if (turno !== turnoCamino || c.form) return true
+      const error = res[0]?.error || res[1]?.error
+      c.leido = true
+      if (error) {
+        console.error('recepciones_grupo:', error)
+        c.error = error.message || 'Revisá la conexión y probá de nuevo.'
+        pintarEnCamino()
+        return false
+      }
+      c.error = null
+      c.enTransito = enviosDeLaBarra(res[0]?.data)
+      c.recibidos = recibidosRecientes(enviosDeLaBarra(res[1]?.data))
+      pintarEnCamino()
+      return true
+    }
+
+    function pintarEnCamino() {
+      const caja = document.getElementById('st-en-camino')
+      if (!caja) return
+      const c = camino()
+      const hayAlgo = c.enTransito.length > 0 || c.recibidos.length > 0 || !!c.error || c.soloEsto
+      if (!c.leido || !puedeVerEnCamino() || !hayAlgo) {
+        caja.hidden = true
+        caja.innerHTML = ''
+        return
+      }
+      // Con envíos a más de una fábrica ("Todas"), cada uno dice a cuál va.
+      const conDestino = new Set([...c.enTransito, ...c.recibidos].map(e => e.destino_id)).size > 1
+      caja.hidden = false
+      caja.innerHTML = htmlEnCamino(c, conDestino)
+      prepararCamposCamino()
+      pintarFormCamino()
+      irAEnCaminoSiSePidio()
+    }
+
+    function htmlEnCamino(c, conDestino) {
+      const n = c.enTransito.length
+      let html = ''
+      if (n) html += `<h2 class="st-camino__titulo">En camino desde otra empresa <span class="st-camino__n">${esc(n)}</span></h2>`
+      if (c.error) html += `<p class="rec-aviso" role="alert">No se pudo leer lo que viene en camino: ${esc(c.error)}</p>`
+      if (!n && c.soloEsto && !c.error) html += '<p class="st-camino__vacio">No hay nada en camino desde otra empresa.</p>'
+      if (n) html += '<div class="st-camino__lista">' + c.enTransito.map(e => htmlEnvioCamino(e, c.form, conDestino)).join('') + '</div>'
+      return html + htmlRecibidosCamino(c.recibidos, c.recibidosAbierto, conDestino)
+    }
+
+    function htmlEnvioCamino(e, form, conDestino) {
+      const abierto = form?.id === e.id
+      const items = Array.isArray(e.items) ? e.items.filter(Boolean) : []
+      let html = `<article class="st-camino__envio${abierto ? ' st-camino__envio--abierto' : ''}" data-camino-envio="${esc(e.id)}">` +
+        '<div class="st-camino__cabeza">' +
+        `<span class="st-camino__orden">Orden ${esc(e.codigo || '—')}</span>` +
+        (e.numero_remito ? `<span class="st-camino__remito">Remito ${esc(e.numero_remito)}</span>` : '') +
+        `<span class="st-camino__fecha">${esc(fechaCamino(e.fecha))}</span></div>` +
+        `<div class="st-camino__desde">Desde ${esc(e.origen || 'otra empresa')}${conDestino ? ` → ${esc(e.destino || '')}` : ''}${e.transporte ? ` · ${esc(e.transporte)}` : ''}</div>` +
+        (e.observaciones ? `<div class="st-camino__obs">${esc(e.observaciones)}</div>` : '')
+      if (!abierto) {
+        html += '<ul class="st-camino__renglones">' + items.map(htmlRenglonCamino).join('') + '</ul>'
+        if (puedeRecibirEnCamino(e)) html += `<div class="st-camino__pie"><button type="button" class="btn-stock" data-camino-recibir="${esc(e.id)}">Recibir</button></div>`
+        return html + '</article>'
+      }
+      // El formulario: los valores (lo recibido, el motivo, las
+      // observaciones) los escribe prepararCamposCamino desde el estado.
+      return html + '<div class="st-camino__form">' +
+        '<ul class="st-camino__renglones">' + items.map(htmlRenglonRecibir).join('') + '</ul>' +
+        '<label class="st-camino__campo st-camino__campo--obs"><span>Observaciones (opcional)</span><textarea data-camino-obs rows="2" maxlength="500"></textarea></label>' +
+        '<p class="rec-aviso st-camino__error" data-camino-error role="alert" hidden></p>' +
+        '<div class="st-camino__acciones">' +
+        '<button type="button" class="btn-stock btn-stock--primario" data-camino-confirmar>Confirmar recepción</button>' +
+        '<button type="button" class="btn-stock" data-camino-cancelar>Cancelar</button>' +
+        '</div></div></article>'
+    }
+
+    function htmlRenglonCamino(it) {
+      return '<li class="st-camino__renglon">' +
+        `<span class="st-camino__desc">${esc(it.descripcion || 'Sin descripción')}${it.lote ? `<span class="st-camino__lote"> · Lote ${esc(it.lote)}</span>` : ''}</span>` +
+        `<span class="st-camino__cant">${esc(textoCantidadCamino(it.cantidad_enviada, it))}</span></li>`
+    }
+
+    function htmlRenglonRecibir(it) {
+      return '<li class="st-camino__renglon st-camino__renglon--form">' +
+        `<span class="st-camino__desc">${esc(it.descripcion || 'Sin descripción')}${it.lote ? `<span class="st-camino__lote"> · Lote ${esc(it.lote)}</span>` : ''}</span>` +
+        `<span class="st-camino__enviado">Enviado: ${esc(textoCantidadCamino(it.cantidad_enviada, it))}</span>` +
+        '<div class="st-camino__campos">' +
+        `<label class="st-camino__campo"><span>Recibido (${esc(esCajaCamino(it) ? 'cajas' : (it.unidad || 'cantidad'))})</span>` +
+        `<input type="text" data-camino-recibido="${esc(it.item_id)}"></label>` +
+        `<label class="st-camino__campo" data-camino-motivo-caja="${esc(it.item_id)}" hidden><span>Motivo de la diferencia</span>` +
+        `<input type="text" data-camino-motivo="${esc(it.item_id)}" maxlength="200" autocomplete="off"></label>` +
+        '</div></li>'
+    }
+
+    function htmlRecibidosCamino(lista, abierto, conDestino) {
+      if (!lista.length) return ''
+      return '<div class="st-camino__recibidos">' +
+        `<button type="button" class="st-camino__plegar" data-camino-plegar aria-expanded="${abierto ? 'true' : 'false'}">` +
+        `<span>Recibidos en los últimos ${esc(DIAS_RECIBIDOS_CAMINO)} días (${esc(lista.length)})</span>` +
+        `<span class="st-camino__accion">${abierto ? 'Ocultar' : 'Ver'}</span></button>` +
+        (abierto ? '<ul class="st-camino__hechos">' + lista.map(r => htmlRecibidoCamino(r, conDestino)).join('') + '</ul>' : '') +
+        '</div>'
+    }
+
+    // Uno recibido: de qué empresa, quién y cuándo, y cada diferencia con su
+    // motivo (enviado X, recibido Y).
+    function htmlRecibidoCamino(r, conDestino) {
+      const difs = (Array.isArray(r.items) ? r.items.filter(Boolean) : []).filter(it => {
+        const env = numeroCamino(it.cantidad_enviada)
+        const rec = numeroCamino(it.cantidad_recibida)
+        return env !== null && rec !== null && Math.abs(env - rec) > 1e-9
+      })
+      return '<li class="st-camino__hecho">' +
+        `<div class="st-camino__cabeza"><span class="st-camino__orden">Orden ${esc(r.codigo || '—')}</span>${r.numero_remito ? `<span class="st-camino__remito">Remito ${esc(r.numero_remito)}</span>` : ''}</div>` +
+        `<div class="st-camino__desde">Desde ${esc(r.origen || 'otra empresa')}${conDestino ? ` → ${esc(r.destino || '')}` : ''}</div>` +
+        `<div class="st-camino__quien">Recibió ${esc(r.recibida_por || 'alguien')} el ${esc(momentoCamino(r.recibida_en))}</div>` +
+        (difs.length
+          ? '<ul class="st-camino__difs">' + difs.map(it => `<li>${esc(it.descripcion || 'Sin descripción')}${it.lote ? ` · Lote ${esc(it.lote)}` : ''}: enviado ${esc(textoCantidadCamino(it.cantidad_enviada, it))}, recibido ${esc(textoCantidadCamino(it.cantidad_recibida, it))}${it.motivo_diferencia ? ` — ${esc(it.motivo_diferencia)}` : ''}</li>`).join('') + '</ul>'
+          : '<div class="st-camino__sin-difs">Llegó todo lo que se mandó.</div>') +
+        '</li>'
+    }
+
+    // El envío que se está recibiendo y sus renglones, o null.
+    function envioDelFormCamino() {
+      const c = camino()
+      if (!c.form) return null
+      return c.enTransito.find(e => e.id === c.form.id) || null
+    }
+
+    function itemsDeEnvioCamino(e) {
+      return Array.isArray(e?.items) ? e.items.filter(Boolean) : []
+    }
+
+    // Después de dibujar: enlaza los campos (cajas enteras, insumos con
+    // decimales) y les escribe lo que dice el estado. Los ids se buscan
+    // recorriendo los campos, no armando un selector con el dato.
+    function prepararCamposCamino() {
+      const c = camino()
+      const e = envioDelFormCamino()
+      const caja = document.getElementById('st-en-camino')
+      if (!e || !caja) return
+      const items = itemsDeEnvioCamino(e)
+      for (const el of caja.querySelectorAll('[data-camino-recibido]')) {
+        const it = items.find(x => String(x.item_id) === el.dataset.caminoRecibido)
+        if (!it) continue
+        enlazarCampoNumero(el, { decimales: decimalesCamino(it) })
+        ponerCantidadEnCampo(el, c.form.renglones[it.item_id]?.recibido ?? null)
+      }
+      for (const el of caja.querySelectorAll('[data-camino-motivo]')) el.value = c.form.renglones[el.dataset.caminoMotivo]?.motivo ?? ''
+      const obs = caja.querySelector('[data-camino-obs]')
+      if (obs) obs.value = c.form.obs
+    }
+
+    // Lo que cambia mientras se escribe, sin redibujar (el foco se queda): el
+    // motivo de cada renglón que difiere, las marcas de lo que falta, el error
+    // y el botón. El botón se traba SOLO mientras se manda.
+    function pintarFormCamino() {
+      const c = camino()
+      const f = c.form
+      const e = envioDelFormCamino()
+      const caja = document.getElementById('st-en-camino')
+      if (!f || !e || !caja) return
+      const items = itemsDeEnvioCamino(e)
+      for (const el of caja.querySelectorAll('[data-camino-motivo-caja]')) {
+        const it = items.find(x => String(x.item_id) === el.dataset.caminoMotivoCaja)
+        el.hidden = !(it && difiereCamino(it, f.renglones[it.item_id]))
+      }
+      for (const el of caja.querySelectorAll('[data-camino-recibido]')) el.classList.toggle('st-camino__input--error', f.marcas.get(el.dataset.caminoRecibido) === 'cantidad')
+      for (const el of caja.querySelectorAll('[data-camino-motivo]')) el.classList.toggle('st-camino__input--error', f.marcas.get(el.dataset.caminoMotivo) === 'motivo')
+      const err = caja.querySelector('[data-camino-error]')
+      if (err) { err.textContent = f.error || ''; err.hidden = !f.error }
+      const btn = caja.querySelector('[data-camino-confirmar]')
+      if (btn) { btn.disabled = !!f.enviando; btn.textContent = f.enviando ? 'Recibiendo…' : 'Confirmar recepción' }
+      const cancelar = caja.querySelector('[data-camino-cancelar]')
+      if (cancelar) cancelar.disabled = !!f.enviando
+    }
+
+    // "Recibir": abre en la tarjeta cada renglón con "Recibido" = lo enviado.
+    function abrirRecepcion(id) {
+      const c = camino()
+      if (c.form?.enviando) return
+      const e = c.enTransito.find(x => x.id === id)
+      if (!e || !puedeRecibirEnCamino(e)) return
+      const renglones = {}
+      for (const it of itemsDeEnvioCamino(e)) renglones[it.item_id] = { recibido: numeroCamino(it.cantidad_enviada), motivo: '' }
+      c.form = { id: e.id, renglones, obs: '', enviando: false, error: '', marcas: new Map() }
+      pintarEnCamino()
+    }
+
+    // "Cancelar": cierra sin llamar a nada.
+    function cancelarRecepcion() {
+      const c = camino()
+      if (!c.form || c.form.enviando) return
+      c.form = null
+      pintarEnCamino()
+    }
+
+    // Lo que viaja: TODOS los renglones, cada uno con lo recibido y el motivo
+    // solo si difiere (si no, null).
+    function itemsParaRecibir(e, f) {
+      return itemsDeEnvioCamino(e).map(it => {
+        const r = f.renglones[it.item_id] ?? {}
+        const motivo = difiereCamino(it, r) ? String(r.motivo ?? '').trim() : ''
+        return { item_id: it.item_id, cantidad_recibida: numeroCamino(r.recibido), motivo_diferencia: motivo || null }
+      })
+    }
+
+    // "Confirmar recepción". Lo que falta (una cantidad, un motivo) se dice al
+    // tocar y se marca el campo, con el mismo texto que usa la base; el resto
+    // (más de lo enviado, la orden anulada, el permiso) lo dice la base, tal
+    // cual. Doble toque: manda una vez.
+    async function confirmarRecepcion() {
+      const c = camino()
+      const f = c.form
+      const e = envioDelFormCamino()
+      if (!f || !e || f.enviando) return
+      const items = itemsDeEnvioCamino(e)
+      f.marcas = new Map()
+      for (const it of items) {
+        const r = f.renglones[it.item_id]
+        const rec = numeroCamino(r?.recibido)
+        if (rec === null || rec < 0) f.marcas.set(String(it.item_id), 'cantidad')
+        else if (difiereCamino(it, r) && !String(r?.motivo ?? '').trim()) f.marcas.set(String(it.item_id), 'motivo')
+      }
+      const marcas = [...f.marcas.values()]
+      if (marcas.length) {
+        f.error = marcas.includes('cantidad') ? TEXTO_FALTA_CANTIDAD_CAMINO : TEXTO_FALTA_MOTIVO_CAMINO
+        pintarFormCamino()
+        return
+      }
+      f.enviando = true
+      f.error = ''
+      pintarFormCamino()
+      let res
+      try {
+        res = await supabase.rpc('recibir_orden_grupo', {
+          p_recepcion_id: e.id,
+          p_items: itemsParaRecibir(e, f),
+          p_observaciones: String(f.obs ?? '').trim() || null,
+        })
+      } catch (err) {
+        res = { data: null, error: err }
+      }
+      if (res?.error) {
+        console.error('recibir_orden_grupo:', res.error)
+        f.enviando = false
+        f.error = res.error.message || 'No se pudo confirmar la recepción. Revisá la conexión y probá de nuevo.'
+        pintarFormCamino()
+        return
+      }
+      const codigo = res?.data?.codigo || e.codigo
+      c.form = null
+      c.enTransito = c.enTransito.filter(x => x.id !== e.id)
+      pintarEnCamino()
+      mostrarExito(`Orden ${codigo} recibida: entró al stock.`)
+      // Relee la sección y el stock que se esté mirando (insumos y producto
+      // terminado), y las burbujas.
+      await Promise.all([
+        cargarEnCamino(),
+        estado.cargados.has('stock') ? cargarStock({ silencioso: true }) : null,
+        estado.ptm?.leido ? cargarTerminado({ silencioso: true }) : null,
+        cargarPendientesStock(),
+      ])
+    }
+
+    function alTocarEnCamino(ev) {
+      const t = ev?.target
+      if (!t || typeof t.closest !== 'function') return
+      const recibir = t.closest('[data-camino-recibir]')
+      if (recibir) { abrirRecepcion(recibir.dataset.caminoRecibir); return }
+      if (t.closest('[data-camino-confirmar]')) { confirmarRecepcion(); return }
+      if (t.closest('[data-camino-cancelar]')) { cancelarRecepcion(); return }
+      if (t.closest('[data-camino-plegar]')) {
+        const c = camino()
+        c.recibidosAbierto = !c.recibidosAbierto
+        pintarEnCamino()
+      }
+    }
+
+    function alEscribirEnCamino(ev) {
+      const f = camino().form
+      const t = ev?.target
+      if (!f || !t?.dataset || f.enviando) return
+      if (t.dataset.caminoRecibido !== undefined) {
+        const r = f.renglones[t.dataset.caminoRecibido]
+        if (!r) return
+        r.recibido = leerCampoNumero(t)
+        f.marcas.delete(t.dataset.caminoRecibido)
+        f.error = ''
+        pintarFormCamino()
+      } else if (t.dataset.caminoMotivo !== undefined) {
+        const r = f.renglones[t.dataset.caminoMotivo]
+        if (!r) return
+        r.motivo = t.value
+        f.marcas.delete(t.dataset.caminoMotivo)
+        f.error = ''
+        pintarFormCamino()
+      } else if (t.dataset.caminoObs !== undefined) {
+        f.obs = t.value
+      }
+    }
+
+    // El tablero lleva acá con #st-en-camino o ?seccion=en-camino: la primera
+    // vez que la sección se ve, se la trae a la vista (la carga es posterior
+    // al scroll que haría el navegador solo).
+    let caminoYaMostrado = false
+    function pidieronEnCamino() {
+      try {
+        if (window.location.hash === '#st-en-camino') return true
+        return new URLSearchParams(window.location.search).get('seccion') === 'en-camino'
+      } catch { return false }
+    }
+
+    // (La llama solo pintarEnCamino, con la sección ya a la vista.)
+    function irAEnCaminoSiSePidio() {
+      if (caminoYaMostrado || !pidieronEnCamino()) return
+      const caja = document.getElementById('st-en-camino')
+      if (!caja) return
+      caminoYaMostrado = true
+      caja.scrollIntoView?.({ block: 'start' })
+    }
+
+    document.getElementById('st-en-camino').addEventListener('click', alTocarEnCamino)
+    document.getElementById('st-en-camino').addEventListener('input', alEscribirEnCamino)
+
+    // ═══════════════════════════════════════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -13126,6 +13694,19 @@
       const terminado = puedeVerTerminado()
       const entrada = decidirEntrada({ insumos, terminado, pedida: entradaPedida() })
       if (entrada === 'sin') {
+        // Solo para recibir lo que manda otra empresa del grupo (29/10/2026):
+        // con stock:recibir_transferencia y ninguna otra vista, la sección
+        // "En camino" sola (sin envíos, lo dice).
+        if (recibeEnAlgunaFabrica()) {
+          document.getElementById('pestanas-stock').hidden = true
+          document.getElementById('stock-subtitulo').textContent = 'En camino desde otra empresa'
+          estado.fabrica = await fabricaP
+          await estado.barraLista
+          camino().soloEsto = true
+          await cargarEnCamino()
+          iniciarActualizacionSola()
+          return
+        }
         document.getElementById('sin-acceso').hidden = false
         return
       }
@@ -13141,6 +13722,8 @@
       if (!insumos) {
         document.getElementById('pestanas-stock').hidden = true
         estado.fabrica = await fabricaP
+        // En camino desde otra empresa: con la barra ya leída (29/10/2026).
+        estado.barraLista.then(cargarEnCamino)
         await abrirTerminado()
         iniciarActualizacionSola()
         return
@@ -13233,6 +13816,9 @@
       // "Mandar a otra empresa del grupo" (26/10/2026): con retiros:cargar en
       // la fábrica de la barra; por eso, con la barra ya leída.
       pintarMandarGrupo()
+      // "En camino desde otra empresa" (29/10/2026): de la fábrica de la
+      // barra, así que también con la barra ya leída. No frena lo que sigue.
+      cargarEnCamino()
       if (inicial === 'costos') await cargarCostos()
 
       if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()
