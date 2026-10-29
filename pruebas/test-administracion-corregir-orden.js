@@ -254,6 +254,21 @@ const llamadas = (S, n) => S.__llamadas.rpc.filter(([x]) => x === n)
     escribir(S, { coCampo: 'fecha' }, '2026-10-22')
     chk('…y aunque llegue un cambio, no se toma', co(S).fecha === '2026-10-20')
     chk('…p_fecha viaja null', S.parametrosCorregir(co(S)).p_fecha === null)
+    co(S).fecha = '2026-10-22'
+    chk('…y aunque la fecha del editor difiera, valorizada viaja null', S.parametrosCorregir(co(S)).p_fecha === null)
+    chk('transporte y observaciones sin cambios: viajan null (no cambian)', S.parametrosCorregir(co(S)).p_transporte === null && S.parametrosCorregir(co(S)).p_observaciones === null)
+  }))
+}
+{
+  // Una orden de acopio valorizada: la base no la revaloriza; sin precios.
+  const S = nuevo()
+  preparar(S, { datos: { ...DATOS, talonario: 'acopio' } })
+  conOrden(S)
+  esperas.push(S.abrirCorregir().then(() => {
+    const h = cuerpo(S)
+    chk('acopio: sin campos de precio ni total, con el aviso', !/data-co-precio=/.test(h) && !/id="ad-co-total"/.test(h) && /Es una orden de acopio: al corregirla no se tocan los precios\./.test(h))
+    chk('acopio: nada de precio en p_items', S.parametrosCorregir(co(S)).p_items.every(i => !('precio' in i)))
+    chk('acopio valorizada: la fecha igual bloqueada', /id="ad-co-fecha"[^>]* disabled/.test(h))
   }))
 }
 {
@@ -521,6 +536,9 @@ for (const msg of ['Faltan precios en 1 renglón(es): cargalos en la lista del c
     { corregida_en: '2026-10-29T15:05:00Z', corregida_por: 'emp-7', motivo: 'Faltaban 2 cajas', total_antes: '42250', total_despues: '48250' },
     { corregida_en: '2026-10-28T02:30:00Z', corregida_por: 'emp-9', motivo: 'El transporte', total_antes: null, total_despues: null },
   ] })
+  // Los nombres, como la base: solo los ids que se piden (.in('id', …)).
+  const empleados = [{ id: 'emp-9', nombre: 'Emanuel Romero' }, { id: 'emp-7', nombre: 'Lucía Pérez' }]
+  S.__tablas.v_empleados_publico = (f) => ({ data: empleados.filter(e => (f.find(x => x[0] === 'in' && x[1] === 'id')?.[2] ?? []).includes(e.id)), error: null })
   esperas.push(S.abrirOrden('o1').then(() => {
     const q = S.__llamadas.consultas.find(([t]) => t === 'orden_correcciones')
     chk('lee orden_correcciones de la orden, con los totales de antes y después', !!q && q[1].some(f => f[0] === 'eq' && f[1] === 'orden_retiro_id' && f[2] === 'o1') &&
