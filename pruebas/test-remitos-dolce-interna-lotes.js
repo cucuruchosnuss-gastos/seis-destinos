@@ -134,7 +134,7 @@ const sinEtiquetas = (h) => String(h).replace(/<[^>]+>/g, '')
     chk('quitar un lote', JSON.stringify(S.estado.remito.form.renglones[0].lotes.map(l => l.lote)) === '["A","C"]')
     await vuelta(); await vuelta()
     chk('…y se guarda sin ese lote', JSON.stringify(guardados.pop()?.p_items?.[0]?.lotes) === '[{"lote":"A","cajas":10},{"lote":"C","cajas":7}]')
-    chk('un insumo no lleva lotes de cajas', !/data-rm-lote-agregar="1"/.test(cuerpo(S)))
+    chk('el insumo también lleva lotes (29/10/2026, con su unidad)', /data-rm-lote-agregar="1"/.test(cuerpo(S)) && /Cantidad \(kg\)/.test(cuerpo(S)))
   }))
 }
 {
@@ -145,7 +145,7 @@ const sinEtiquetas = (h) => String(h).replace(/<[^>]+>/g, '')
   chk('sin cantidad: pide las cajas', /Poné las cajas/.test(S.htmlResumenLotesRemito({ cantidad: null, lotes: [] })))
   chk('sin lotes escritos: "Va sin lote"', /Va sin lote/.test(S.htmlResumenLotesRemito({ cantidad: 31, lotes: [] })))
   chk('lo leído con cajas inválidas no se precarga como número', S.renglonDesdeItem({ presentacion_id: 'pr-bar', cantidad: 5, lotes: [{ lote: 'A', cajas: 'diez' }] }).lotes[0].cajas === null)
-  chk('lo leído de un insumo no trae lotes de cajas', S.renglonDesdeItem({ insumo_id: 'ins-h', cantidad: 5, lotes: [{ lote: 'A', cajas: 2 }] }).lotes.length === 0)
+  chk('lo leído de un insumo trae sus lotes (cantidad o, si no, cajas)', JSON.stringify(S.renglonDesdeItem({ insumo_id: 'ins-h', cantidad: 5, lotes: [{ lote: 'A', cantidad: 2.5 }, { lote: 'B', cajas: 2 }] }).lotes) === '[{"lote":"A","cajas":2.5},{"lote":"B","cajas":2}]')
 }
 
 fin()

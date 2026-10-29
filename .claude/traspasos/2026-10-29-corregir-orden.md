@@ -5,7 +5,7 @@ Pedido: `.claude/pedidos/2026-10-29-corregir-orden.md`. Rama `ci-prueba/corregir
 worktree aparte. A mitad de camino esa rama avanzó a ac11ce8 (Stock: En camino, y el mismo arreglo de la maqueta y de las
 seguras de XSS que se había hecho acá): se trajo con un merge (5386635), quedándose con su versión de
 `pruebas/datos-maqueta/remitos-dolce-revisar.js` y de las dos seguras de la recepción. **No se integró** (la integra la noche, después de que otro chat audite el patch) y no se tomó el
-candado. No toca `modulos/produccion.html` ni `modulos/remitos-dolce.html`.
+candado. No toca `modulos/produccion.html`. La parte 1 (Administración) no toca `modulos/remitos-dolce.html`; la parte 2 sí (abajo).
 
 ## Qué cambió (modulos/administracion.html, detalle de una orden)
 - Botón **"Corregir orden"** al lado de Valorizar / Corregir valorización / Anular: con retiros:precios en la fábrica de
@@ -25,6 +25,16 @@ candado. No toca `modulos/produccion.html` ni `modulos/remitos-dolce.html`.
   `stock_insuficiente` trae algo, "Lo que no estaba en stock" arriba del detalle.
 - **"Corregida N veces"** en la tarjeta de la orden, con fecha y hora de Argentina, quién, motivo y total antes → después.
 - Detalle: `docs/memoria/administracion.md`, "Corregir una orden".
+
+## Parte 2 — Lotes de insumo en Remitos Dolce (la hizo la sesión principal, sobre la rama)
+- La rama trae `ci-prueba/remitos-mas-simple` (302b351) con un merge, para que esto vaya sobre el editor nuevo de Remitos
+  Dolce. **Por eso el patch de esta rama incluye también remitos-mas-simple: se auditan e integran en ese orden**
+  (primero remitos-mas-simple, después corregir-orden; o las dos juntas).
+- Renglón de insumo: lote + "Cantidad (kg)" con decimales según la unidad, "Lotes: 20,5 de 25 kg · falta repartir 4,5 kg"
+  en amarillo, `{lote, cantidad}` a la base; confirmar_remito_precarga exige la suma (verificado el 29/10/2026). Detalle en
+  docs/memoria/remitos-dolce.md.
+- Pruebas: test-/mut-remitos-dolce-lotes-insumo (24; 20/20, baseline 302b351), e2e 101; revisar, interna-lotes,
+  mas-simple y acopio con anclas o casos ajustados.
 
 ## Pruebas
 - Nueva `test-administracion-corregir-orden.js` (178) y `mut-administracion-corregir-orden.js` (135/135 detectadas + 21
