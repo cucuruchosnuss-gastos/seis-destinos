@@ -19,11 +19,17 @@
 'use strict'
 
 const path = require('path')
+const fs = require('fs')
 const { construirRemitosDolce } = require('./sandbox-remitos-dolce')
 const { arnes, leer, marca, chequearMarcas, escapada } = require('./circuito-comun')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/remitos-dolce.html')
 leer(ARCHIVO)
+// El runner de mutaciones también muta js/remitos-comun.js (lo pega
+// fuente-cobranzas.js): necesita saber cuántos bytes leyó de ESE archivo
+// (29/10/2026: sin este renglón, sus 6 mutaciones daban "error del test").
+const COMUN_REMITOS = process.env.ARCHIVO_COMUN_REMITOS || path.join(__dirname, '..', 'js', 'remitos-comun.js')
+console.log(`COMUN ${COMUN_REMITOS} (${fs.readFileSync(COMUN_REMITOS, 'utf8').length} bytes)`)
 const { chk, esperas, fin } = arnes()
 
 const FUNCIONES = [
@@ -36,7 +42,7 @@ const FUNCIONES = [
   'elegirInsumoRemito', 'elegirMarcaRemito', 'cambiarProductoRemito', 'aceptarSugerenciaRemito', 'omitirRenglonRemito', 'quitarRenglonRemito',
   'agregarRenglonRemito', 'agregarLoteRemito', 'quitarLoteRemito', 'pintarPieLotesRemito', 'elegirTalonarioRemito', 'elegirClienteRemito',
   'cambiarClienteRemito', 'buscarClienteLeidoRemito', 'zoomFotoRemito', 'alEscribirRemito', 'alTocarRemito', 'accionRemito', 'abrirRemito',
-  'cargarFotoRemito', 'aplicarFilaRemito', 'guardarRemitoEnBase', 'guardarRemito', 'confirmarRemito', 'mensajeDeFuncion', 'volverALeerRemito',
+  'cargarFotoRemito', 'aplicarFilaRemito', 'confirmarRemito', 'mensajeDeFuncion', 'volverALeerRemito',
   'descartarRemito', 'volverDeRemito', 'clientesParaAsentar', 'apodoMostrarRet', 'momentoAr',
 ]
 const CONSTANTES = ['ZOOM_FOTO_REMITO', 'LARGO_LOTE_REMITO', 'LARGO_MINIMO_MOTIVO_REMITO', 'RE_YA_INGRESADO', 'GRUPOS_REMITO']
@@ -249,7 +255,9 @@ esperas.push((async () => {
     chk('el resumen de renglones', /4 renglones · 3 en amarillo/.test(h))
     chk('el cliente leído como ayuda, con "Buscar así"', /Leído en la foto: «Almacen Rosar»/.test(h) && /data-rm-cliente-leido/.test(h))
     chk('el talonario Oficial elegido', /data-rm-talonario="oficial" aria-pressed="true"/.test(h))
-    chk('los cuatro botones', ['guardar', 'confirmar', 'leer', 'descartar'].every(a => h.includes(`data-rm-accion="${a}"`)))
+    chk('los tres botones: Confirmar, Volver a leer y Descartar', ['confirmar', 'leer', 'descartar'].every(a => h.includes(`data-rm-accion="${a}"`)))
+    chk('…sin "Guardar" (se guarda solo, 29/10/2026)', !/data-rm-accion="guardar"/.test(h) && !/>Guardar</.test(h))
+    chk('…y al lado de Confirmar, el estado chico', /data-rm-accion="confirmar"[^>]*>Confirmar<\/button><span class="ad-rm-guardado" id="ad-rm-guardado" role="status" aria-live="polite">Los cambios se guardan solos\.<\/span>/.test(h))
 
     const grupos = S.gruposRemito(CAT, 'harina')
     chk('buscar "harina" trae el insumo', grupos.length === 1 && grupos[0].tipo === 'insumos' && grupos[0].lista[0].insumoId === 'ins-h')
@@ -320,11 +328,13 @@ esperas.push((async () => {
     chk('los campos del encabezado se anotan', S.estado.remito.form.transporte === 'Expreso Rosario' && S.estado.remito.form.observaciones === 'Frágil' && S.estado.remito.form.numero === '0001-00003101' && S.estado.remito.form.otra === undefined)
     chk('el título sigue al número', S.__els.get('ad-remito-titulo').textContent === 'Remito N° 0001-00003101')
 
-    // Guardar: lo que va a actualizar_remito_precarga.
+    // El autoguardado: lo que va a actualizar_remito_precarga (lo escrito
+    // espera el retardo; guardarYaRemito lo manda sin esperar).
+    chk('lo escrito espera el retardo: "Guardando…"', S.estado.remito.temporizador !== null && S.estadoGuardadoRemito(S.estado.remito).texto === 'Guardando…')
     let params = null
     S.__setRpc(async (n, p) => { if (n === 'actualizar_remito_precarga') { params = p; return { data: { ...R1, ...p, id: 'r1', items: p.p_items, estado: 'precargada' }, error: null } } return { data: null, error: null } })
-    return S.guardarRemito().then(() => {
-      chk('Guardar llama a actualizar_remito_precarga', !!params)
+    return S.esperarGuardadoRemito(S.estado.remito).then(() => {
+      chk('se guarda solo con actualizar_remito_precarga', !!params)
       chk('…con el encabezado', params.p_id === 'r1' && params.p_numero_remito === '0001-00003101' && params.p_fecha === '2026-10-26' && params.p_cliente_id === 'c-alm' &&
         params.p_transporte === 'Expreso Rosario' && params.p_observaciones === 'Frágil', JSON.stringify(params))
       chk('…y SIEMPRE el talonario elegido', params.p_talonario === 'oficial')
@@ -334,7 +344,7 @@ esperas.push((async () => {
         { texto_leido: 'Harina 000 x 25', cantidad: 25, presentacion_id: null, marca_id: null, insumo_id: 'ins-h', lotes: [], revisar: false, omitir: false, nota: '' },
         { texto_leido: 'Envases térmicos', cantidad: 5, presentacion_id: null, marca_id: null, insumo_id: null, lotes: [], revisar: false, omitir: true, nota: '¿de terceros?' },
       ]), JSON.stringify(params.p_items))
-      chk('guardado: sin cambios pendientes y avisa', S.estado.remito.sucio === false && /Guardado/.test(cuerpo(S)))
+      chk('guardado: sin cambios pendientes y el estado dice "Guardado"', S.estado.remito.sucio === false && S.__els.get('ad-rm-guardado').textContent === 'Guardado' && S.estadoGuardadoRemito(S.estado.remito).texto === 'Guardado')
     })
   }))
 }
@@ -379,7 +389,6 @@ esperas.push((async () => {
   S.estado.remitos = { empresaId: 'u-d', filas: S.remitosPorRevisar(JSON.parse(JSON.stringify([R1, R2]))), error: null }
   const ERROR = 'El remito 0001-00003100 ya entró como ingreso en la otra empresa. No lo confirmes: descartalo con el motivo "ya ingresado".'
   esperas.push(S.abrirRemito('r1').then(async () => {
-    S.aceptarSugerenciaRemito(0)
     const orden = []
     S.__setRpc(async (n, p) => {
       orden.push(n)
@@ -388,8 +397,9 @@ esperas.push((async () => {
       if (n === 'descartar_remito_precarga') return { data: null, error: null }
       return { data: null, error: null }
     })
+    S.aceptarSugerenciaRemito(0)
     await S.confirmarRemito()
-    chk('Confirmar con cambios: primero guarda, después confirma', orden.join() === 'actualizar_remito_precarga,confirmar_remito_precarga', orden.join())
+    chk('Confirmar con cambios: primero el guardado, después confirma', orden.join() === 'actualizar_remito_precarga,confirmar_remito_precarga', orden.join())
     chk('el error de la base TAL CUAL (escapado)', cuerpo(S).includes(S.esc(ERROR)) && /role="alert"/.test(cuerpo(S)))
     chk('"ya entró como ingreso" → el botón "Descartar (ya ingresado)"', /data-rm-accion="ya-ingresado"[^>]*>Descartar \(ya ingresado\)/.test(cuerpo(S)))
     chk('el remito sigue en la lista', S.estado.remitos.filas.some(r => r.id === 'r1'))
@@ -464,7 +474,7 @@ esperas.push((async () => {
     S.estado.remito.form.transporte = 'algo sin guardar'
     S.marcarSucioRemito()
     S.accionRemito('leer')
-    chk('Volver a leer avisa que pisa lo no guardado', /pisa todo lo de este remito, también lo que corregiste y todavía no guardaste/.test(cuerpo(S)))
+    chk('Volver a leer avisa que pisa lo corregido', /pisa todo lo de este remito, también lo que ya corregiste\./.test(cuerpo(S)))
     S.accionRemito('leer-no')
     chk('Cancelar no llama a nada', !S.__llamadas.rpc.some(x => x[0] === 'fn:ocr-remito'))
     S.__win.__fn = () => ({ data: { ...R2, estado: 'precargada', error: null, numero_remito: '0001-00003200', items: [ITEMS_R1[0]] }, error: null })
@@ -492,19 +502,21 @@ esperas.push((async () => {
   }))
 }
 
-// ═══ "‹ Revisar" con cambios sin guardar ═════════════════════════════════
+// ═══ "‹ Revisar" con un cambio sin mandar: se manda y sale ═══════════════
+// (el detalle —la respuesta que tarda, el error— en test-remitos-dolce-autoguardado.js)
 {
   const S = nuevo()
   enDolce(S)
   S.estado.remitos = { empresaId: 'u-d', filas: [JSON.parse(JSON.stringify(R1))], error: null }
   S.__tablas.unidades_negocio = [{ id: 'u-d', controla_stock_terminado: false }]
   esperas.push(S.abrirRemito('r1').then(async () => {
-    S.aceptarSugerenciaRemito(0)
-    S.volverDeRemito()
-    chk('con cambios, el primer toque avisa y no sale', S.estado.vista === 'ad-vista-remito' && /cambios sin guardar/.test(cuerpo(S)))
-    S.volverDeRemito()
+    S.alEscribirRemito({ target: { dataset: { rmCampo: 'transporte' }, value: 'Expreso' } })
+    chk('lo escrito todavía no se mandó', !S.__llamadas.rpc.some(x => x[0] === 'actualizar_remito_precarga'))
+    await S.volverDeRemito()
+    const ll = S.__llamadas.rpc.filter(x => x[0] === 'actualizar_remito_precarga')
+    chk('al salir se manda igual', ll.length === 1 && ll[0][1].p_transporte === 'Expreso', JSON.stringify(ll))
     await new Promise(r => setImmediate(r))
-    chk('el segundo toque sale', S.estado.vista === 'rd-vista-revisar' && S.estado.remito === null)
+    chk('…y sale a Revisar sin preguntar', S.estado.vista === 'rd-vista-revisar' && S.estado.remito === null)
   }))
 }
 

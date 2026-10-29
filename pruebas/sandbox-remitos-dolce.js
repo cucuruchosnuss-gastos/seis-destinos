@@ -51,8 +51,11 @@ const FUNCIONES_BASE = [
   'elegirInsumoRemito', 'elegirMarcaRemito', 'cambiarProductoRemito', 'aceptarSugerenciaRemito', 'omitirRenglonRemito', 'quitarRenglonRemito',
   'agregarRenglonRemito', 'agregarLoteRemito', 'quitarLoteRemito', 'pintarPieLotesRemito', 'elegirTalonarioRemito', 'elegirClienteRemito',
   'cambiarClienteRemito', 'buscarClienteLeidoRemito', 'zoomFotoRemito', 'alEscribirRemito', 'alTocarRemito', 'accionRemito', 'abrirRemito',
-  'cargarFotoRemito', 'aplicarFilaRemito', 'guardarRemitoEnBase', 'guardarRemito', 'confirmarRemito', 'mensajeDeFuncion', 'volverALeerRemito',
+  'cargarFotoRemito', 'aplicarFilaRemito', 'confirmarRemito', 'mensajeDeFuncion', 'volverALeerRemito',
   'descartarRemito', 'volverDeRemito',
+  // El autoguardado (29/10/2026)
+  'estadoGuardadoRemito', 'htmlGuardadoRemito', 'pintarGuardadoRemito', 'autoguardarRemito', 'guardarYaRemito', 'esperarGuardadoRemito',
+  'frenarAutoguardadoRemito', 'seguirAutoguardadoRemito', 'puedeGuardarRemito', 'pendienteRemito',
   // El saldo del acopio al revisar uno de talonario Acopio
   'claveAcopio', 'cargarAcopiosRemito', 'saldoAcopioRemito', 'htmlSaldoAcopioRemito', 'pintarAcopiosRemito',
 ]
@@ -64,7 +67,7 @@ const CONSTANTES_BASE = [
   'LADO_MAXIMO_FOTO', 'CALIDAD_FOTO', 'DIAS_MIS_REMITOS', 'SONDEO_REMITOS_MS', 'LECTURAS_A_LA_VEZ', 'LECTURA_TRABADA_MS',
   'SEGUNDOS_MINIATURA', 'CLAVE_REMITOS_COLA', 'CLAVE_REMITOS_FABRICA', 'TEXTO_FOTO_PERDIDA', 'ICONO_REMITO',
   'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO', 'ZOOM_FOTO_REMITO', 'LARGO_LOTE_REMITO',
-  'LARGO_MINIMO_MOTIVO_REMITO', 'RE_YA_INGRESADO',
+  'LARGO_MINIMO_MOTIVO_REMITO', 'RE_YA_INGRESADO', 'RETARDO_AUTOGUARDADO_REMITO',
 ]
 
 const PRELUDIO = `

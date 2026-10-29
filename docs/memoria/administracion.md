@@ -102,7 +102,7 @@ Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, p
   - Se agregan y quitan renglones.
   - **Lo que viaja**: `itemRemitoParaBase` arma `{ texto_leido, cantidad, presentacion_id, marca_id, insumo_id, lotes, revisar, omitir, nota }`. Los lotes van en mayúsculas, sin bordes y con cajas enteras.
 - **Los botones** (solo con `retiros:cargar` en la fábrica; sin él, el remito se mira y lo dice):
-  - Guardar.
+  - Guardar. **Desde el 29/10/2026 ya no existe: se guarda solo** (remitos-dolce.md, "El autoguardado").
   - Volver a leer: avisa que pisa lo no guardado y el formulario queda con lo leído. El error de la función se muestra tal cual, el del cuerpo si viene.
   - Confirmar: guarda primero si hay cambios. El error de la base va TAL CUAL en `#ad-rm-error`, y si dice "ya entró como ingreso" aparece **"Descartar (ya ingresado)"**, que descarta con ese motivo. Al confirmar avisa "Remito N° X confirmado: es la orden D-0009", lo saca de la lista y vuelve a Órdenes.
   - Descartar: con motivo de 3 letras o más.

@@ -29,7 +29,7 @@ precargados de Rosario"): esas dos secciones describen el código que se MUDÓ t
 - Pestañas (`pestanasVisibles`): **Subir** con `retiros:cargar`, **Revisar** con `retiros:ver` (en esa fábrica). Con
   una sola, la barra de pestañas no se ve. Sin ninguna: "No tenés permiso…" y vuelve al dashboard. `?pestana=subir|revisar`
   (los links de la Carga y de Administración) o la última usada (`remitos-dolce.pestana`). Adentro de un remito no hay
-  pestañas (se sale con "‹ Revisar"; con cambios sin guardar avisa una vez).
+  pestañas (se sale con "‹ Revisar", que manda antes lo que quedó sin guardar: ver "El autoguardado").
 
 ## Subir
 Lo de retiros.md "Subir remitos Rosario", con estos cambios: sin el botón de entrada ni la flecha de volver (es su
@@ -45,6 +45,35 @@ el aviso dice "Ya se puede valorizar en Administración.". **Abajo, las órdenes
 en solapas Oficial / Acopio, el más nuevo primero y las sin número al final, **de solo lectura** (sello Valorizada /
 Por valorizar / Anulada, sin plata) y "Valorizar en Administración →" con `retiros:precios`.
 
+### El autoguardado (29/10/2026, rama `ci-prueba/remitos-autoguardado`)
+Pedido de Facu: "Guardar" y "Confirmar" confundían (tocó Guardar, salió "guardado" y pensó que había confirmado).
+**Ya no hay botón Guardar**: quedan **Confirmar** (crea la orden), Volver a leer y Descartar.
+- Cada cambio se manda solo a `actualizar_remito_precarga` (firma verificada con pg_get_functiondef el 29/10/2026:
+  `(p_id, p_numero_remito, p_fecha, p_cliente_id, p_transporte, p_observaciones, p_items, p_talonario)`, devuelve la
+  fila normalizada y la deja en 'precargada'). Lo que se **toca** (cliente, talonario, producto, insumo, cono, Aceptar
+  sugerencia, "No va en la orden", agregar/quitar renglón o lote), en seguida; lo que se **escribe** (número, fecha,
+  transporte, observaciones, cantidad, lote, cajas del lote), después de `RETARDO_AUTOGUARDADO_REMITO` (800 ms) sin
+  tocar nada, y al salir del campo (`change` → `guardarYaRemito`). Buscar (cliente, producto, cono) no guarda.
+- **Una sola llamada a la vez** (`autoguardarRemito`, `rm.guardando`): la que vuelve, si hubo cambios mientras tanto
+  (`rm.version`), manda lo último. Así una respuesta vieja no pisa a una nueva ni en la pantalla ni en la base. Lo que
+  vuelve deja al día `rm.fila` y la lista, pero **NO rearma el formulario** (pisaría lo que se escribe, un renglón con
+  el buscador abierto o un lote a medio cargar); lo idéntico a lo último guardado (`rm.ultimoGuardado`, el JSON de los
+  parámetros) no se vuelve a mandar. Sin `retiros:cargar` no se guarda nada.
+- El estado chico al lado de Confirmar (`#ad-rm-guardado`, `pintarGuardadoRemito` lo pinta solo, sin redibujar):
+  "Los cambios se guardan solos." al abrir, **"Guardando…"**, **"Guardado"** o **el error de la base tal cual**, en
+  bordó. Un error se borra con el próximo guardado bueno; si falla una vieja con algo nuevo detrás, se manda lo nuevo
+  sin mostrar ese error.
+- **Confirmar** (`esperarGuardadoRemito`): espera la llamada en curso, manda lo que esperaba el retardo y recién después
+  llama a `confirmar_remito_precarga`; si el guardado falla, no confirma (el error, pegado a los botones). Antes de
+  confirmar rearma el formulario con lo guardado (el amarillo es el de la base: si dice "el renglón 2 está en amarillo",
+  se ve). Mientras confirma, el autoguardado queda en pausa (`rm.pausado`); si confirmar falla, lo cambiado mientras
+  tanto se manda.
+- **"‹ Revisar"** con algo pendiente lo manda y sale cuando la base respondió; si lo rechaza, se queda con el error y
+  el segundo toque sale igual. Cambiar de pestaña con algo pendiente hace lo mismo. Al esconder la página
+  (`visibilitychange`, `pagehide`) se manda ya, y `beforeunload` pregunta si quedó algo sin llegar.
+- **Volver a leer y Descartar** (`frenarAutoguardadoRemito`): esperan la llamada en curso (que no caiga en la base
+  DESPUÉS) y no mandan lo que esperaba el retardo (se pisa o se tira); si fallan, lo pendiente se manda.
+
 ## Lo que quedó afuera
 - **La Carga** (retiros.html): un link chico **"Remitos Dolce →"** (`#rt-link-remitos`, a `?pestana=subir`), con la
   misma regla de antes (retiros:cargar en una fábrica sin control; `pintarEntradaRemitos`).
@@ -59,8 +88,13 @@ Por valorizar / Anulada, sin plata) y "Valorizar en Administración →" con `re
 
 ## Pruebas
 - `test-/mut-remitos-dolce-subir.js` (152; mut 125/125 + 2 equivalentes, baseline la Carga de 133555d),
-  `test-/mut-remitos-dolce-revisar.js` (181; mut 90/90 + 55 equivalentes, baseline Administración de 133555d; la vieja
-  mut-administracion-remitos-precarga estaba ROTA desde el 27/10: un ancla repetida por los Acopios),
+  `test-/mut-remitos-dolce-revisar.js` (185; mut 98/98 + 55 equivalentes, baseline Administración de 133555d; la vieja
+  mut-administracion-remitos-precarga estaba ROTA desde el 27/10: un ancla repetida por los Acopios; sus 6 mutaciones de
+  `js/remitos-comun.js` daban "error del test" hasta el 29/10: el runner mandaba la copia por
+  `ARCHIVO_JS_REMITOS_COMUN` y el arnés lee `ARCHIVO_COMUN_REMITOS` → alias en `imports.js` y la línea `COMUN` en la suite),
+  `test-/mut-remitos-dolce-autoguardado.js` (140; 42/42, baseline el módulo de 2d04d3e; relojes y respuestas de la
+  base manejados por la suite: cada tipo de campo, el retardo, la respuesta vieja, el error tal cual, Confirmar que
+  espera, salir con algo pendiente, Volver a leer y Descartar),
   `test-/mut-remitos-dolce-acopio.js` (20; 13/13, el saldo del acopio, que salió de test-/mut-administracion-acopios),
   `test-/mut-administracion-link-remitos.js` (26; 20/20), `test-/mut-retiros-link-remitos.js` (25; 9/9),
   `test-/mut-modulos-remitos-dolce.js` (22; 15/15, la tarjeta y el alcance), `test-/mut-retiros-hoja-remito.js` (23; 18/18,
@@ -68,4 +102,6 @@ Por valorizar / Anulada, sin plata) y "Valorizar en Administración →" con `re
 - Arnés: `pruebas/sandbox-remitos-dolce.js`; `fuente-cobranzas.js` pega `js/remitos-comun.js` si el módulo lo importa
   (`ARCHIVO_COMUN_REMITOS` para mutarlo).
 - Navegador: `e2e/70-subir-remitos.spec.js` (maqueta `remitos-dolce-subir` + la Carga) y `e2e/71-revisar-remitos.spec.js`
-  (maqueta `remitos-dolce-revisar` + Administración), a 390 y 1280 px.
+  (maqueta `remitos-dolce-revisar` + Administración), a 390 y 1280 px. El 71 mira el autoguardado (sin Guardar, lo
+  escrito letra por letra va en UNA llamada, el error de la base en rojo) y un test aparte: salir con algo sin mandar
+  lo manda, y con la base en `'ESPERAR'` Confirmar no llama a `confirmar_remito_precarga`.
