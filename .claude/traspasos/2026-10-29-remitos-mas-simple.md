@@ -53,6 +53,15 @@ cliente_leido, items), la política de lectura de `remitos_precarga` y `clientes
   "En camino" y el `c-d-paz` de la maqueta en su generador, que yo había arreglado igual: quedó el de la base). Las
   mutaciones siguen ancladas a 2003aa3 (el hash al empezar).
 
+## Ensayo y suite completa
+- `npm run pruebas`: 330/330 en verde (sobre ac11ce8 + esta rama). Antes del rebase daba rojo `test-administracion-xss.js`
+  (la recepción de la base, sin justificar): lo arregló la propia base en abcb7b6.
+- `npm run ensayo -- ci-prueba/remitos-mas-simple` con `BASE=origin/ci-prueba/recibir-entre-empresas`: se une sin chocar,
+  suites VERDE; navegador ROJO en las dos mitades por specs de pantallas que esta rama no toca (Gastos 58/61, dashboard y
+  Empleados en 5-maqueta, 13-comparar-administracion, 31, 66, 78, 89, dispositivos, 0-humo "la planta sin sesión").
+  Las mismas specs (5, 13, 58, 61) fallan IGUAL sobre ac11ce8 sin esta rama en este contenedor (no llegan a lo de afuera):
+  no son de acá. Las de Remitos Dolce (70, 71, 72, 98, 99) y Stock en camino (97): 36/36 en verde.
+
 ## Lo que no se pudo probar
 - Contra la base real (Claude Code solo lee): todo con el doble de la suite y la maqueta.
 - En un celular real: el scroll de la lista de conos se midió en Chromium a 390 px (overflow-y: auto, altura 16rem,
