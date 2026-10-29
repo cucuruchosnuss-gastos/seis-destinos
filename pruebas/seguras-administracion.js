@@ -17,6 +17,9 @@ const SEGURAS_ADMINISTRACION = [
   ['anulada', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del motivo, o vacío'],
   ['sinLotes', 'HTML constante del código: el aviso de que no se pueden ver los lotes, o vacío'],
   ['renglones', 'HTML armado por htmlRenglonOrden(), que escapa cada dato'],
+  // 29/10/2026: la orden interna recibida, con sus diferencias.
+  ['recepcion', 'HTML armado por htmlRecepcionOrden(), que escapa el texto, el estado y cada diferencia, o vacío (orden común)'],
+  ["dif.map(t => `<li>${esc(t)}</li>`).join('')", 'HTML ya escapado: cada diferencia (de diferenciasRecepcion) va con esc() en su <li> (test-administracion-orden-recepcion.js lo ejecuta con marcas)'],
   // 13/10/2026: el faltante, "¿de dónde salen?".
   ['htmlFaltanteRenglon(it, d)', 'HTML armado por htmlFaltanteRenglon(), que escapa el estado y el motivo con esc()'],
   ['htmlBotonesRevisar(f)', 'HTML armado por htmlBotonesRevisar(), con esc() del id del renglón'],
