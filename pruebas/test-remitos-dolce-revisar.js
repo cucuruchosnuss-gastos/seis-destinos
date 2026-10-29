@@ -168,6 +168,19 @@ const renglonHtml = (h, i) => {
   S.pintarOrdenesRemito()
   chk('si no se pudieron leer, lo dice', /ad-aviso--grave">No se pudieron leer las órdenes/.test(S.__els.get('rd-ordenes-lista').innerHTML))
 }
+// La red: una fábrica CON control (no debería llegar acá: cargarFabricas solo
+// trae las sin control) no muestra precargados ni solapas, y no ordena.
+{
+  const S = nuevo()
+  enDolce(S)
+  S.estado.empresaId = 'u-n'
+  S.estado.ordenes = JSON.parse(JSON.stringify(ORDENES))
+  S.estado.remitos = { empresaId: 'u-n', filas: [R1], error: null }
+  chk('con control: no es "sin control"', S.sinControlStockEmpresa('u-n') === false && S.sinControlStockEmpresa('u-d') === true && S.sinControlStockEmpresa('u-x') === false)
+  chk('con control: sin la sección de precargados', S.htmlRemitosPrecarga() === '')
+  chk('con control: sin solapas', S.htmlTalonariosOrdenes() === '')
+  chk('con control: la lista como vino (sin ordenar por remito)', S.ordenesVisibles().map(o => o.id).join() === 'o1,o2,o3,o4,o5')
+}
 esperas.push((async () => {
   const S = nuevo()
   enDolce(S)

@@ -58,11 +58,13 @@ Por valorizar / Anulada, sin plata) y "Valorizar en Administración →" con `re
   quedó igual a lo publicado.
 
 ## Pruebas
-- `test-/mut-remitos-dolce-subir.js` (151; mut 127, baseline la Carga de 133555d), `test-/mut-remitos-dolce-revisar.js`
-  (177; mut 145 + 6 derivadas a js/remitos-comun.js, baseline Administración de 133555d; la vieja
+- `test-/mut-remitos-dolce-subir.js` (152; mut 125/125 + 2 equivalentes, baseline la Carga de 133555d),
+  `test-/mut-remitos-dolce-revisar.js` (181; mut 90/90 + 55 equivalentes, baseline Administración de 133555d; la vieja
   mut-administracion-remitos-precarga estaba ROTA desde el 27/10: un ancla repetida por los Acopios),
-  `test-/mut-administracion-link-remitos.js` (26), `test-/mut-retiros-link-remitos.js` (25),
-  `test-/mut-modulos-remitos-dolce.js` (21, la tarjeta y el alcance), `test-retiros-hoja-remito.js` (+6 de la Carga).
+  `test-/mut-remitos-dolce-acopio.js` (20; 13/13, el saldo del acopio, que salió de test-/mut-administracion-acopios),
+  `test-/mut-administracion-link-remitos.js` (26; 20/20), `test-/mut-retiros-link-remitos.js` (25; 9/9),
+  `test-/mut-modulos-remitos-dolce.js` (22; 15/15, la tarjeta y el alcance), `test-/mut-retiros-hoja-remito.js` (23; 18/18,
+  +6 de la Carga).
 - Arnés: `pruebas/sandbox-remitos-dolce.js`; `fuente-cobranzas.js` pega `js/remitos-comun.js` si el módulo lo importa
   (`ARCHIVO_COMUN_REMITOS` para mutarlo).
 - Navegador: `e2e/70-subir-remitos.spec.js` (maqueta `remitos-dolce-subir` + la Carga) y `e2e/71-revisar-remitos.spec.js`

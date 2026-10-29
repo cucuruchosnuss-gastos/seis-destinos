@@ -54,6 +54,8 @@ correrMutaciones({
   funciones: ['htmlTarjetaRemito', 'htmlRenglonRemito', 'htmlEncabezadoRemito', 'htmlAccionesRemito', 'htmlFilaOrdenRemito', 'htmlClientesRemito',
     'htmlClienteRemito', 'htmlOpcionesRemito', 'htmlLotesRemito', 'htmlMarcasRemito', 'htmlRemitosPrecarga', 'htmlTalonariosOrdenes', 'htmlFotoRemito'],
   equivalentes: [
+    { expr: 'esc(est)', motivo: 'est es uno de tres textos del código (estadoOrdenRemito: anulada, pendiente, valorizada), nunca de la base' },
+    { expr: 'esc(ETIQUETA_ESTADO_ORDEN[est])', motivo: 'una etiqueta constante del código (Anulada, Por valorizar, Valorizada)' },
     { expr: 'esc(r.id)', motivo: 'el id de un remito (uuid de la base) en un data-remito entre comillas' },
     { expr: 'esc(r.estado)', motivo: 'un estado de remitos_precarga (CHECK de la base: leyendo, precargada, error…) como clase y fuera de la lista no llega' },
     { expr: 'esc(estadoR)', motivo: 'una etiqueta constante de ETIQUETA_ESTADO_REMITO (o el estado del CHECK)' },

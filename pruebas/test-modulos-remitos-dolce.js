@@ -44,6 +44,8 @@ chk('retiros:precios en Dolce (sin cargar ni ver) → NO la ve', !ver([['retiros
 chk('alcance null → NO la ve (como tiene_tarea_alcance)', !ver([['retiros:cargar', null]]))
 chk('"todas" que no es true → NO la ve', !ver([['retiros:cargar', { todas: 'si' }]]))
 chk('sin poder leer los alcances → NO la ve', !ver([['retiros:cargar', { unidades: [DOLCE] }]], { alcances: null }))
+chk('un alcance de una tarea que no tiene (apagada) → NO la ve', !S.moduloVisible(m, { esAdmin: false, esSuperAdmin: false, misModulos: ['retiros'],
+  misTareas: new Set(['retiros:precios']), misAlcances: new Map([['retiros:cargar', { unidades: [DOLCE] }], ['retiros:precios', { todas: true }]]) }))
 chk('sin el módulo retiros → NO la ve', !ver([['retiros:cargar', { unidades: [DOLCE] }]], { modulos: [] }))
 chk('super_admin → la ve', ver([], { sa: true, modulos: [] }))
 // Los demás módulos no cambian: sin alcanceEn, alcanza con la tarea.

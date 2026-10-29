@@ -265,6 +265,14 @@ esperas.push((async () => {
     JSON.stringify(c[0][1]) === JSON.stringify({ p_unidad_negocio_id: 'u-d', p_foto_path: item.ruta, p_client_uuid: item.clientUuid }))
   chk('después pide la lectura a ocr-remito con el id', JSON.stringify(S.__llamadas.invocaciones[0]) === JSON.stringify(['ocr-remito', { body: { remito_id: 'rp-1' } }]))
   chk('al volver la lectura, se vuelve a leer la lista', S.__llamadas.consultas.filter(q => q[0] === 'remitos_precarga').length >= 1)
+  // La fábrica de la foto es la de Subir, aunque Revisar mire otra.
+  const T = armar({ sinControl: ['u-d', 'u-d2'], empresas: [DOLCE, DOLCE2] })
+  T.estado.empresaId = 'u-d'
+  T.__setRpc(async (n) => n === 'crear_remito_precarga' ? { data: 'rp-2', error: null } : { data: null, error: null })
+  T.elegirFabricaRemitos('u-d2')
+  T.encolarFotos([foto('b.jpg')])
+  await asentar()
+  chk('la foto va a la fábrica elegida en Subir (no a la de Revisar)', crearLlamadas(T)[0]?.[1]?.p_unidad_negocio_id === 'u-d2', JSON.stringify(crearLlamadas(T)[0]?.[1]))
   chk('la fábrica usada queda recordada', S.__ls.get(S.CLAVE_REMITOS_FABRICA) === 'u-d')
 })())
 
