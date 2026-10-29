@@ -214,9 +214,9 @@ esperas.push((async () => {
     chk('Dolce: se leen los remitos de la fábrica, por revisar', c && c[1].some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === 'u-d') &&
       c[1].some(f => f[0] === 'in' && f[1] === 'estado' && JSON.stringify(f[2]) === '["precargada","error","leyendo"]'))
     const h = S.__els.get('ad-remitos').innerHTML
-    chk('el título y el contador', /Remitos precargados · por revisar <span class="ad-rm-contador" data-remitos-cuenta>4<\/span>/.test(h))
+    chk('el título y el contador (29/10/2026: "Sin terminar · para cargar lotes")', /Sin terminar · para cargar lotes <span class="ad-rm-contador" data-remitos-cuenta>4<\/span>/.test(h))
     chk('las cuatro, en orden: r2, r1, r6, r3', [...h.matchAll(/data-remito="([^"]+)"/g)].map(m => m[1]).join() === 'r2,r1,r6,r3')
-    chk('el estado de cada una', /Por revisar/.test(h) && /No se pudo leer/.test(h) && /Leyendo…/.test(h))
+    chk('el estado de cada una', /Listo para cargar lotes/.test(h) && /No se pudo leer/.test(h) && /Leyendo…/.test(h))
     chk('la que no se pudo leer dice por qué', /La foto está borrosa/.test(h))
     chk('cuántos en amarillo', /3 en amarillo/.test(h))
     chk('la de acopio con su sello y "Acopio N°"', /Acopio N° 977492/.test(h) && /ad-sello--acopio/.test(h))
@@ -249,7 +249,7 @@ esperas.push((async () => {
     chk('el selector: los dos grupos de producto terminado', /Producto terminado · SIN CONO/.test(r1) && /Producto terminado · CON CONO/.test(r1))
     chk('…sin una presentación apagada ni un producto apagado', !/pr-cap-vieja/.test(r1) && !/pr-apagado/.test(r1))
     chk('…los insumos, al buscar', !/data-rm-insumo/.test(r1) && /Escribí para buscar también los insumos/.test(r1))
-    chk('el producto elegido con su cono', /Cono dulce 48 · Caja x 48 con cono · LELONA/.test(r0) && /data-rm-marca="0" data-id="m-lel" aria-pressed="true"/.test(r0))
+    chk('el producto elegido con su cono (el leído, con la lista cerrada y "Cambiar")', /Cono dulce 48 · Caja x 48 con cono · LELONA/.test(r0) && /data-rm-cono-elegido="0"><span class="ad-rm-cono-elegido__nombre">LELONA<\/span><button type="button" class="ad-link" data-rm-cono-cambiar="0">Cambiar<\/button>/.test(r0) && !/data-rm-marca=/.test(r0))
     chk('el insumo con su unidad', /Cantidad \(kg\)/.test(r2) && /Harina 000 · Wali/.test(r2))
     chk('los lotes, solo para producto', /data-rm-lote-agregar="0"/.test(r0) && !/data-rm-lote-agregar="2"/.test(r2))
     chk('el resumen de renglones', /4 renglones · 3 en amarillo/.test(h))
@@ -294,7 +294,7 @@ esperas.push((async () => {
     // Los lotes del renglón 1: 84 cajas.
     const r = S.estado.remito.form.renglones[1]
     r.lotes = [{ lote: '10430', cajas: 30 }, { lote: ' 10433 ', cajas: 39 }]
-    chk('"Lotes: 69 de 84 cajas · faltan 15 cajas"', sinEtiquetas(S.htmlResumenLotesRemito(r)) === 'Lotes: 69 de 84 cajas · faltan 15 cajas', sinEtiquetas(S.htmlResumenLotesRemito(r)))
+    chk('"Lotes: 69 de 84 cajas · falta repartir 15 cajas"', sinEtiquetas(S.htmlResumenLotesRemito(r)) === 'Lotes: 69 de 84 cajas · falta repartir 15 cajas', sinEtiquetas(S.htmlResumenLotesRemito(r)))
     r.lotes.push({ lote: '10440', cajas: 15 })
     chk('completo: "✓ Asignado completo"', /✓ Asignado completo/.test(S.htmlResumenLotesRemito(r)))
     r.lotes.push({ lote: 'X', cajas: 1 })
@@ -367,7 +367,7 @@ esperas.push((async () => {
   S.quitarRenglonRemito(0)
   chk('"Quitar el renglón"', S.estado.remito.form.renglones.length === 0)
   chk('el renglón desde la base: lo inválido se descarta', JSON.stringify(S.renglonDesdeItem({ presentacion_id: '', insumo_id: 'ins-h', cantidad: -2, revisar: 'si', lotes: [{ lote: 'A', cajas: 2 }] })) ===
-    JSON.stringify({ texto_leido: '', nota: '', revisar: false, omitir: false, cantidad: null, presentacionId: null, marcaId: null, insumoId: 'ins-h', lotes: [], eligiendo: false, busqueda: '', marcaBusqueda: '' }))
+    JSON.stringify({ texto_leido: '', nota: '', revisar: false, omitir: false, cantidad: null, presentacionId: null, marcaId: null, insumoId: 'ins-h', lotes: [], eligiendo: false, busqueda: '', marcaBusqueda: '', cambiandoCono: false }))
   chk('un insumo nunca viaja con cono', S.itemRemitoParaBase({ insumoId: 'ins-h', marcaId: 'm-lel', cantidad: 3 }).marca_id === null &&
     S.itemRemitoParaBase({ presentacionId: 'pr-cono', marcaId: 'm-lel', cantidad: 3 }).marca_id === 'm-lel')
   chk('el talonario de la fila: solo "acopio" es acopio', S.talonarioDe({ talonario: 'acopio' }) === 'acopio' && S.talonarioDe({ talonario: null }) === 'oficial' && S.talonarioDe({ talonario: 'x' }) === 'oficial')
@@ -543,7 +543,10 @@ esperas.push((async () => {
     S.estado.remito.aviso = marca('aviso')
     S.estado.remito.descartar = { motivo: marca('motivo'), error: marca('errorDescartar') }
     S.pintarRemito()
-    chequearMarcas(chk, 'el remito', cuerpo(S), ['clienteLeido', 'transporte', 'observaciones', 'error', 'textoLeido', 'nota', 'lote', 'producto', 'presentacion', 'cono', 'mensaje', 'aviso', 'motivo', 'errorDescartar'])
+    chequearMarcas(chk, 'el remito', cuerpo(S), ['clienteLeido', 'transporte', 'observaciones', 'error', 'textoLeido', 'nota', 'lote', 'producto', 'presentacion', 'mensaje', 'aviso', 'motivo', 'errorDescartar'])
+    // Los conos, recién al buscar (29/10/2026).
+    S.estado.remito.form.renglones[0].marcaBusqueda = 'data-xss'
+    chequearMarcas(chk, 'el buscador del cono', S.htmlConoRemito(S.estado.remito.form.renglones[0], 0, S.estado.catalogo), ['cono'])
     chequearMarcas(chk, 'el selector', S.htmlOpcionesRemito(0, S.estado.catalogo, '"><b data-xss='), ['producto', 'presentacion', 'insumo', 'marcaInsumo'])
     S.estado.remito.form.clienteBusqueda = 'data-xss'
     chequearMarcas(chk, 'los clientes', S.htmlClientesRemito(S.estado.remito), ['cliente', 'razon', 'localidad'])

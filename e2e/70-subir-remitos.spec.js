@@ -212,7 +212,7 @@ for (const [ancho, alto] of TAMANOS) {
     expect(errores, errores.join('\n')).toEqual([]);
     // Y el módulo, sin ninguna fábrica sin control: dice que no tiene permiso.
     await page.goto(`${MAQUETA}/modulos/remitos-dolce.html?maqueta=remitos-dolce-subir`, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('#rd-sin-acceso')).toContainText('No tenés permiso para subir ni revisar remitos de Dolce Pasta', { timeout: 2000 });
+    await expect(page.locator('#rd-sin-acceso')).toContainText('No tenés permiso para subir ni ver los remitos de Dolce Pasta', { timeout: 2000 });
     await expect(page.locator('#rt-vista-remitos')).toBeHidden();
   });
 }

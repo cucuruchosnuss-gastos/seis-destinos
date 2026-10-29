@@ -112,7 +112,7 @@ const sinEtiquetas = (h) => String(h).replace(/<[^>]+>/g, '')
     const r = S.estado.remito.form.renglones[0]
     chk('lo leído por la IA viene precargado', JSON.stringify(r.lotes) === JSON.stringify([{ lote: 'A', cajas: 10 }, { lote: 'B', cajas: 15 }]))
     const h0 = S.htmlResumenLotesRemito(r)
-    chk('"Lotes: 25 de 31 cajas · faltan 6 cajas"', sinEtiquetas(h0) === 'Lotes: 25 de 31 cajas · faltan 6 cajas', sinEtiquetas(h0))
+    chk('"Lotes: 25 de 31 cajas · falta repartir 6 cajas" (29/10/2026)', sinEtiquetas(h0) === 'Lotes: 25 de 31 cajas · falta repartir 6 cajas', sinEtiquetas(h0))
     chk('…en amarillo mientras no suman', /ad-rm-lotes__asignado ad-rm-lotes__asignado--falta/.test(h0))
     chk('en la pantalla, el pie del renglón', /data-rm-lotes-pie="0"[^>]*>[\s\S]*Lotes: 25 de 31 cajas/.test(cuerpo(S)))
     const guardados = []

@@ -27,7 +27,16 @@
          acopio y zoom de la foto: lo mismo que había en Administración.
 
        Los nombres de clase quedaron como venían (rt-* lo de Subir, ad-* lo de
-       Revisar) para mover el código tal cual; rd-* es lo propio del módulo. -->
+       Revisar) para mover el código tal cual; rd-* es lo propio del módulo.
+
+       UN SOLO RECORRIDO (29/10/2026, rama ci-prueba/remitos-mas-simple, pedido
+       de Facu: "que Manuel suba la foto y cargue los lotes en el mismo lugar").
+       En Subir, cuando la IA termina, el remito queda en NARANJA "Listo para
+       cargar lotes" y tocarlo abre el editor (ad-vista-remito) ahí mismo;
+       confirmado, en VERDE "Orden cargada · D-00XX". La segunda pestaña se
+       llama "Órdenes cargadas" (por dentro sigue siendo 'revisar': los links
+       ?pestana=revisar de la Carga y de Administración la abren). En la base
+       los estados siguen siendo 'precargada' y 'confirmada'. -->
 
   <style>
     [hidden] { display: none !important; }
@@ -105,9 +114,17 @@
     .rt-remito__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
     .rt-remito__estado { font-weight: 800; font-size: 15px; overflow-wrap: anywhere; color: var(--color-texto); }
     .rt-remito__detalle { font-size: 13px; color: var(--color-texto-menu); overflow-wrap: anywhere; }
-    .rt-remito--subiendo .rt-remito__estado, .rt-remito--leyendo .rt-remito__estado { color: var(--rt-modulo); }
+    /* Los estados (29/10/2026): "Leyendo…" en gris → "Listo para cargar
+       lotes" en NARANJA (se toca y abre el remito) → "Orden cargada · D-00XX"
+       en VERDE; "No se pudo leer" en bordó. */
+    .rt-remito--subiendo .rt-remito__estado, .rt-remito--leyendo .rt-remito__estado { color: var(--rt-texto-2); }
+    .rt-remito--precargada { border: 2px solid var(--naranja); background: var(--naranja-suave); }
     .rt-remito--precargada .rt-remito__estado { color: var(--naranja-oscuro); }
+    .rt-remito--confirmada { border-color: var(--verde); background: var(--verde-suave); }
     .rt-remito--confirmada .rt-remito__estado { color: var(--verde-oscuro); }
+    button.rt-remito { width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; touch-action: manipulation; }
+    button.rt-remito:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .rt-remito__ir { flex-shrink: 0; font-weight: 800; font-size: 14px; color: var(--naranja-oscuro); white-space: nowrap; }
     .rt-remito--error { border-color: var(--rt-borde-faltante); background: var(--rt-fila-faltante); }
     .rt-remito--error .rt-remito__estado { color: var(--bordo-oscuro); }
     .rt-remito--descartada .rt-remito__estado { color: var(--rt-texto-2); }
@@ -139,6 +156,7 @@
     .ad-sello--amarillo { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border-color: var(--amarillo); }
     .ad-sello--omitido { background: var(--color-superficie); color: var(--ad-texto-secundario); border-color: var(--color-borde); }
     .ad-sello--rm-error { background: var(--bordo-suave); color: var(--bordo-oscuro); border-color: var(--bordo); }
+    .ad-sello--rm-precargada { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: var(--naranja); white-space: normal; }
     .ad-rm-tarjeta__error { color: var(--bordo-oscuro); font-weight: 600; }
     .ad-orden-remito { margin: 0 0 0.375rem; font-size: 1.25rem; font-weight: 900; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
     .ad-rm { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); min-width: 0; }
@@ -164,9 +182,19 @@
     .ad-rm-nota { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 700; color: var(--amarillo-oscuro); overflow-wrap: anywhere; }
     .ad-rm-renglon--omitido .ad-rm-nota { color: var(--ad-texto-secundario); }
     .ad-rm-elegido { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.5rem; min-width: 0; }
-    .ad-rm-elegido__nombre { font-weight: 800; overflow-wrap: anywhere; min-width: 0; flex: 1 1 12rem; }
-    .ad-rm-opciones { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.375rem 0 0; max-height: 18rem; overflow-y: auto; min-width: 0; }
-    .ad-rm-opciones--conos { flex-direction: row; flex-wrap: wrap; max-height: none; }
+    .ad-rm-elegido__nombre { font-weight: 700; overflow-wrap: anywhere; min-width: 0; flex: 1 1 12rem; }
+    .rd-buscar-orden { margin: 0 0 0.75rem; max-width: 22rem; }
+    /* Las listas del buscador (29/10/2026): de a una opción por renglón, con
+       altura máxima y scroll propio (también en el celular); la página no se
+       estira. Los conos, recién con 2 letras (htmlMarcasRemito). */
+    .ad-rm-opciones { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.375rem 0 0; max-height: 16rem; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; min-width: 0; }
+    .ad-rm-opciones--conos { flex-direction: column; flex-wrap: nowrap; }
+    .ad-rm-opciones--vacia { max-height: none; overflow: visible; }
+    .ad-rm-pista { margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--ad-texto-secundario); }
+    .ad-rm-cono-elegido { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; padding: 0.375rem 0.75rem; border: 2px solid var(--naranja); border-radius: var(--radio-input); background: var(--naranja-suave); }
+    .ad-rm-cono-elegido__nombre { font-weight: 800; overflow-wrap: anywhere; min-width: 0; flex: 1 1 8rem; }
+    /* "× 252 u." en negrita y sin cortarse en dos renglones. */
+    .ad-rm-unidades { font-weight: 900; white-space: nowrap; }
     .ad-rm-grupo { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
     .ad-rm-grupo__titulo { margin: 0.375rem 0 0; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ad-texto-secundario); }
     .ad-rm-opcion {
@@ -176,7 +204,8 @@
     }
     .ad-rm-opcion:hover { border-color: var(--color-borde-fuerte); }
     .ad-rm-opcion[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); font-weight: 700; }
-    .ad-rm-opcion--cono { width: auto; }
+    .ad-rm-opcion--cono { width: 100%; flex-shrink: 0; }
+    .ad-rm-opciones > .ad-rm-opcion, .ad-rm-grupo > .ad-rm-opcion { flex-shrink: 0; }
     .ad-rm-opcion__detalle { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
     .ad-rm-cantidad .ad-input { max-width: 10rem; }
     .ad-rm-lotes { margin: 0 0 0.5rem; min-width: 0; }
@@ -334,14 +363,14 @@
 
     <nav class="rd-tabs" id="rd-tabs" aria-label="Remitos Dolce" hidden>
       <button type="button" class="rd-tab" id="rd-tab-subir" data-pestana="subir" aria-pressed="false">Subir</button>
-      <button type="button" class="rd-tab" id="rd-tab-revisar" data-pestana="revisar" aria-pressed="false">Revisar</button>
+      <button type="button" class="rd-tab" id="rd-tab-revisar" data-pestana="revisar" aria-pressed="false">Órdenes cargadas</button>
     </nav>
 
     <!-- ══ SUBIR ════════════════════════════════════════════════════════════
          La foto de cada remito hecho a mano: se achica, se sube y la lee la
          IA (ocr-remito) en segundo plano. Abajo, "Mis remitos subidos". -->
     <section id="rt-vista-remitos" class="rt-contenido" hidden>
-      <p class="rt-texto-suave">Sacale una foto a cada remito hecho a mano, de a uno y que se lea entero. La IA lo lee y se revisa en «Revisar» antes de que sea una orden.</p>
+      <p class="rt-texto-suave" id="rt-remitos-ayuda">Sacale una foto a cada remito, de a uno y que se lea entero. Cuando la IA lo lea, tocalo para cargar los lotes y confirmar la orden.</p>
       <div id="rt-remitos-fabrica"></div>
       <div class="rt-remitos-acciones" id="rt-remitos-acciones">
         <label class="rt-remitos-camara" for="rt-remitos-camara">
@@ -360,14 +389,19 @@
       <div class="rt-lista" id="rt-remitos-lista" aria-live="polite"></div>
     </section>
 
-    <!-- ══ REVISAR ═══════════════════════════════════════════════════════════
-         Arriba los precargados por revisar (pintarRemitosPrecarga) y abajo las
-         órdenes por N° de remito, en solapas Oficial / Acopio. -->
+    <!-- ══ ÓRDENES CARGADAS (por dentro, 'revisar') ═══════════════════════════
+         Arriba los que quedaron "Listo para cargar lotes" de cualquiera
+         (pintarRemitosPrecarga, para que otro los termine) y abajo las órdenes
+         por N° de remito, en solapas Oficial / Acopio, con buscador. -->
     <section id="rd-vista-revisar" hidden>
       <div id="rd-revisar-fabrica"></div>
       <div id="ad-remitos"></div>
-      <section class="ad-rm-seccion" aria-label="Órdenes por N° de remito">
+      <section class="ad-rm-seccion" aria-label="Órdenes cargadas por N° de remito">
         <div id="rd-ordenes-talonario"></div>
+        <div class="ad-campo rd-buscar-orden" id="rd-buscar-orden-caja" hidden>
+          <label for="rd-buscar-orden">Buscar por N° de remito</label>
+          <input type="search" class="ad-input" id="rd-buscar-orden" inputmode="numeric" autocomplete="off" maxlength="30" placeholder="Ej. 3100">
+        </div>
         <div class="ad-lista" id="rd-ordenes-lista"></div>
         <a class="rd-link-admin" href="administracion.html?seccion=ordenes" id="rd-link-admin">Valorizar en Administración →</a>
       </section>
@@ -376,8 +410,8 @@
     <!-- ══ UN REMITO PRECARGADO (de Administración, 27/10/2026) ═════════════════════════════ -->
     <section id="ad-vista-remito" hidden>
       <div class="ad-cabecera-vista">
-        <button type="button" class="ad-link" id="ad-remito-volver">&lsaquo; Revisar</button>
-        <h1 class="ad-titulo" id="ad-remito-titulo">Remito precargado</h1>
+        <button type="button" class="ad-link" id="ad-remito-volver">&lsaquo; Remitos</button>
+        <h1 class="ad-titulo" id="ad-remito-titulo">Remito</h1>
       </div>
       <div id="ad-remito-cuerpo"></div>
     </section>
@@ -391,7 +425,7 @@
     } from '../js/utils.js'
     import { enteroHoja, unidadHoja } from '../js/retiros-comun.js'
     import {
-      talonarioDe, textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito,
+      talonarioDe, textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito,
     } from '../js/remitos-comun.js'
     import { nombreCorto } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
@@ -433,6 +467,10 @@
       errorOrdenes: null,
       turnoOrdenes: 0,
       talonarioOrdenes: 'oficial',
+      // Lo escrito en "Buscar por N° de remito" (Órdenes cargadas).
+      buscarOrden: '',
+      // De dónde se abrió el remito ('subir' | 'revisar'): "‹ Remitos" vuelve ahí.
+      origenRemito: null,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -677,18 +715,21 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     const VISTAS = ['rt-vista-remitos', 'rd-vista-revisar', 'ad-vista-remito']
-    const SUB_DE_VISTA = { 'rt-vista-remitos': 'Subir', 'rd-vista-revisar': 'Revisar', 'ad-vista-remito': 'Revisar' }
+    // Lo que ve el usuario (29/10/2026): la pestaña 'revisar' se llama
+    // "Órdenes cargadas" y adentro de un remito se cargan los lotes.
+    const SUB_DE_VISTA = { 'rt-vista-remitos': 'Subir', 'rd-vista-revisar': 'Órdenes cargadas', 'ad-vista-remito': 'Cargar lotes' }
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       estado.vista = id
       document.getElementById('rd-sub').textContent = SUB_DE_VISTA[id] ?? ''
-      // Adentro de un remito no hay pestañas: se sale con "‹ Revisar".
+      // Adentro de un remito no hay pestañas: se sale con "‹ Remitos".
       document.getElementById('rd-tabs').hidden = id === 'ad-vista-remito' || pestanasVisibles().length < 2
       window.scrollTo(0, 0)
     }
 
-    // Las pestañas que ve: Subir con retiros:cargar, Revisar con retiros:ver.
+    // Las pestañas que ve: Subir con retiros:cargar, Órdenes cargadas
+    // ('revisar') con retiros:ver.
     function pestanasVisibles() {
       return [empresasDeCarga().length ? 'subir' : null, empresasDeRevision().length ? 'revisar' : null].filter(Boolean)
     }
@@ -703,9 +744,9 @@
 
     function elegirPestana(p) {
       if (!pestanasVisibles().includes(p)) return
-      // Con un remito abierto y algo sin mandar, se manda y vuelve a Revisar
-      // (volverDeRemito).
-      if (estado.vista === 'ad-vista-remito' && pendienteRemito(estado.remito)) { volverDeRemito(); return }
+      // Con un remito abierto y algo sin mandar, se manda y sale a esa
+      // pestaña (volverDeRemito).
+      if (estado.vista === 'ad-vista-remito' && pendienteRemito(estado.remito)) { volverDeRemito(p); return }
       estado.pestana = p
       guardarPreferencia(CLAVE_PESTANA, p)
       pintarPestanas()
@@ -722,7 +763,9 @@
     // crear_remito_precarga la registra con un client_uuid POR FOTO que se
     // REUSA en cada reintento (la base devuelve el mismo remito) y la Edge
     // Function ocr-remito la lee en segundo plano, sin trabar la pantalla.
-    // La pestaña Revisar corrige la precarga y la confirma como orden.
+    // Leído, el remito queda "Listo para cargar lotes" (naranja): tocarlo
+    // abre el editor ahí mismo, se corrige, se cargan los lotes y se confirma
+    // (29/10/2026; antes se iba a la pestaña Revisar).
     // La pestaña se ve solo con retiros:cargar (con alcance) en una fábrica que
     // NO controla el stock terminado (unidades_negocio.controla_stock_terminado
     // = false; cargarFabricas()).
@@ -1040,13 +1083,15 @@
       try {
         const desde = new Date(Date.now() - DIAS_MIS_REMITOS * 86400000).toISOString()
         const { data, error } = await supabase.from('remitos_precarga')
-          .select('id, unidad_negocio_id, foto_path, subido_en, estado, numero_remito, talonario, error, orden_id, orden_codigo, descartado_motivo, client_uuid')
+          // cliente_id, cliente_leido e items (29/10/2026): la tarjeta naranja
+          // dice el cliente y cuántos renglones tiene.
+          .select('id, unidad_negocio_id, foto_path, subido_en, estado, numero_remito, talonario, error, orden_id, orden_codigo, descartado_motivo, client_uuid, cliente_id, cliente_leido, items')
           .eq('subido_por', estado.miEmpleadoId).gte('subido_en', desde)
           .order('subido_en', { ascending: false }).limit(60)
         if (error) throw error
         if (turno !== d.turno) return
-        const filas = (Array.isArray(data) ? data : []).filter(f => f?.id)
-          .sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? '')))
+        const filas = conResueltosSubida((Array.isArray(data) ? data : []).filter(f => f?.id)
+          .sort((a, b) => String(b.subido_en ?? '').localeCompare(String(a.subido_en ?? ''))), d)
         // Lo que ya está en la base sale de la cola (con su foto local como miniatura).
         const enBase = new Set(filas.map(f => f.id))
         for (const i of d.cola) if (i.remitoId && enBase.has(i.remitoId) && i.vista && !d.miniaturas.has(i.ruta)) d.miniaturas.set(i.ruta, i.vista)
@@ -1056,6 +1101,7 @@
         d.error = null
         d.cargando = false
         pedirMiniaturas(filas)
+        asegurarClientesSubida(filas, d)
       } catch (err) {
         console.error('No se pudieron leer los remitos subidos:', err)
         if (turno !== d.turno) return
@@ -1101,6 +1147,50 @@
       return n ? { texto: `Remito N° ${n}`, acopio: f?.talonario === 'acopio' } : null
     }
 
+    // El cliente de la tarjeta naranja: el elegido (si ya se leyeron los
+    // clientes de esa fábrica, asegurarClientesSubida) o lo que leyó la IA.
+    function clienteTarjetaSubida(f) {
+      const c = f?.cliente_id && estado.empresaId === f.unidad_negocio_id ? clienteDe(f.cliente_id) : null
+      return limpio(c?.nombre) || limpio(f?.cliente_leido)
+    }
+
+    // "Remito N° 0001-00003100 · Almacén Rosario · 3 renglones".
+    function detalleListoSubida(f, n = numeroLeido(f)) {
+      const k = Array.isArray(f?.items) ? f.items.length : 0
+      return [n ? n.texto : 'Sin N° leído', clienteTarjetaSubida(f) || 'sin cliente', `${k} ${k === 1 ? 'renglón' : 'renglones'}`].join(' · ')
+    }
+
+    // Los clientes de la fábrica de un remito listo (para nombrarlo en la
+    // tarjeta): una sola lectura, al costado; si falla, va lo leído.
+    function asegurarClientesSubida(filas, d = datosRemitos()) {
+      const f = (Array.isArray(filas) ? filas : []).find(x => x?.estado === 'precargada' && x.cliente_id && x.unidad_negocio_id)
+      if (!f || d.pidiendoClientes) return
+      if (estado.empresaId && estado.empresaId !== f.unidad_negocio_id) return
+      if (estado.empresaId === f.unidad_negocio_id && Array.isArray(estado.clientes)) return
+      const unidad = f.unidad_negocio_id
+      d.pidiendoClientes = true
+      leerClientes(unidad).then(c => {
+        if (!estado.empresaId) estado.empresaId = unidad
+        if (estado.empresaId === unidad && !Array.isArray(estado.clientes)) estado.clientes = c
+        pintarRemitos()
+      }).catch(err => console.error('No se pudieron leer los clientes:', err))
+        .finally(() => { d.pidiendoClientes = false })
+    }
+
+    // Lo confirmado o descartado en esta visita (los cambios de la fila): una
+    // lectura vieja que todavía lo trae 'precargada' no lo vuelve naranja.
+    function marcarSubidoRemito(id, cambios) {
+      const d = datosRemitos()
+      if (!(d.resueltos instanceof Map)) d.resueltos = new Map()
+      d.resueltos.set(id, cambios)
+      if (Array.isArray(d.filas)) d.filas = d.filas.map(f => f.id === id ? { ...f, ...cambios } : f)
+    }
+
+    function conResueltosSubida(filas, d = datosRemitos()) {
+      const r = d.resueltos instanceof Map ? d.resueltos : null
+      return !r ? filas : filas.map(f => r.has(f.id) && f.estado === 'precargada' ? { ...f, ...r.get(f.id) } : f)
+    }
+
     // El estado de un remito de la base, en palabras.
     function estadoRemitoSubido(f, d = datosRemitos(), ahora = Date.now()) {
       // Pidiendo la lectura (o releyendo uno que falló): "Leyendo…", salvo que
@@ -1110,13 +1200,15 @@
       const n = numeroLeido(f)
       switch (f.estado) {
         case 'precargada':
-          return { tipo: 'precargada', texto: 'Precargado', detalle: n ? n.texto : 'Sin número leído · falta revisarlo', acopio: !!n?.acopio }
+          // NARANJA (29/10/2026): se toca y abre el remito para cargar los
+          // lotes y confirmar, ahí mismo (abrir).
+          return { tipo: 'precargada', texto: 'Listo para cargar lotes', detalle: detalleListoSubida(f, n), acopio: !!n?.acopio, abrir: true }
         case 'confirmada': {
           // El código de la orden: remitos_precarga.orden_codigo (28/10/2026,
           // verificada con information_schema), que se lee con lo mismo que el
-          // remito: Manuel (solo retiros:cargar) también lo ve.
+          // remito: Manuel (solo retiros:cargar) también lo ve. VERDE.
           const codigo = limpio(f.orden_codigo)
-          return { tipo: 'confirmada', texto: codigo ? `Confirmado: Orden ${codigo}` : 'Confirmado: ya es una orden', detalle: n ? n.texto : '', acopio: !!n?.acopio }
+          return { tipo: 'confirmada', texto: codigo ? `Orden cargada · ${codigo}` : 'Orden cargada', detalle: n ? n.texto : '', acopio: !!n?.acopio }
         }
         case 'descartada':
           return { tipo: 'descartada', texto: `Descartado: ${limpio(f.descartado_motivo) || 'sin motivo'}`, detalle: '' }
@@ -1163,6 +1255,15 @@
       const fabrica = varias ? limpio(empresasDeCarga().find(f => f.id === x.unidadId)?.nombre) : ''
       const meta = [fechaHoraRemito(x.cuando), fabrica].filter(Boolean).join(' · ')
       const selloAcopio = e.acopio ? '<span class="rt-remito__sello">Acopio</span>' : ''
+      // "Listo para cargar lotes": la tarjeta entera es un botón que abre el
+      // remito (con Retiros · cargar en esa fábrica; sin eso, se ve igual).
+      if (e.abrir && puedeEn('retiros', 'cargar', x.unidadId)) {
+        return `<button type="button" class="rt-remito rt-remito--${tipoRemito}" data-remito="${esc(x.clave)}" data-remito-estado="${tipoRemito}" data-remito-abrir="${esc(x.clave)}">${fotoRemito}` +
+          `<span class="rt-remito__texto"><span class="rt-remito__estado">${esc(e.texto)}</span>` +
+          (e.detalle || selloAcopio ? `<span class="rt-remito__detalle">${esc(e.detalle)}${selloAcopio}</span>` : '') +
+          (meta ? `<span class="rt-fila__meta">${esc(meta)}</span>` : '') + '</span>' +
+          '<span class="rt-remito__ir" aria-hidden="true">Cargar ›</span></button>'
+      }
       return `<div class="rt-remito rt-remito--${tipoRemito}" data-remito="${esc(x.clave)}" data-remito-estado="${tipoRemito}">${fotoRemito}` +
         `<div class="rt-remito__texto"><span class="rt-remito__estado">${esc(e.texto)}</span>` +
         (e.detalle || selloAcopio ? `<span class="rt-remito__detalle">${esc(e.detalle)}${selloAcopio}</span>` : '') +
@@ -1266,7 +1367,7 @@
     // está en el papel (envases térmicos, salsas): se tacha en gris, no cuenta
     // en los amarillos ni en la orden.
     const ESTADOS_REMITO_POR_REVISAR = ['precargada', 'error', 'leyendo']
-    const ETIQUETA_ESTADO_REMITO = { precargada: 'Por revisar', error: 'No se pudo leer', leyendo: 'Leyendo…' }
+    const ETIQUETA_ESTADO_REMITO = { precargada: 'Listo para cargar lotes', error: 'No se pudo leer', leyendo: 'Leyendo…' }
     const TALONARIOS = [{ id: 'oficial', nombre: 'Oficial' }, { id: 'acopio', nombre: 'Acopio' }]
     const CAMPOS_REMITO = 'id, unidad_negocio_id, foto_path, subido_por, subido_en, estado, talonario, numero_remito, numero_remito_n, fecha, cliente_id, cliente_leido, transporte, observaciones, items, error, leido_en'
     const ZOOM_FOTO_REMITO = [1, 1.5, 2, 3]
@@ -1312,16 +1413,30 @@
       if (!Array.isArray(lista)) return []
       if (!sinControlStockEmpresa()) return lista
       const tal = estado.talonarioOrdenes === 'acopio' ? 'acopio' : 'oficial'
-      return ordenarPorRemito(lista.filter(o => talonarioDe(o) === tal))
+      // "Buscar por N° de remito" (29/10/2026): los dígitos escritos, en
+      // cualquier parte del número ("3100" encuentra 0001-00003100).
+      const q = digitosRemito(estado.buscarOrden)
+      return ordenarPorRemito(lista.filter(o => talonarioDe(o) === tal && (!q || digitosRemito(o.numero_remito).includes(q))))
+    }
+
+    function digitosRemito(t) {
+      return String(t ?? '').replace(/\D+/g, '')
     }
 
     function htmlTalonariosOrdenes() {
       if (!sinControlStockEmpresa() || !Array.isArray(estado.ordenes)) return ''
       const tal = estado.talonarioOrdenes === 'acopio' ? 'acopio' : 'oficial'
-      return '<h2 class="ad-subtitulo">Órdenes por N° de remito</h2><div class="ad-segmento" role="group" aria-label="Talonario">' + TALONARIOS.map(t => {
+      return '<h2 class="ad-subtitulo">Órdenes cargadas por N° de remito</h2><div class="ad-segmento" role="group" aria-label="Talonario">' + TALONARIOS.map(t => {
         const n = estado.ordenes.filter(o => talonarioDe(o) === t.id).length
         return `<button type="button" class="ad-segmento__opcion" data-talonario-ordenes="${esc(t.id)}" aria-pressed="${t.id === tal ? 'true' : 'false'}">${esc(t.nombre + ' · ' + n)}</button>`
       }).join('') + '</div>'
+    }
+
+    // Lo escrito en el buscador: solo se redibuja la lista (el foco queda).
+    function buscarOrdenRemito(texto) {
+      estado.buscarOrden = String(texto ?? '')
+      const lista = document.getElementById('rd-ordenes-lista')
+      if (lista) lista.innerHTML = htmlListaOrdenesRemito()
     }
 
     function elegirTalonarioOrdenes(t) {
@@ -1366,7 +1481,7 @@
       } catch (err) {
         if (turno !== estado.turnoRemitos) return
         console.error('No se pudieron leer los remitos precargados:', err)
-        estado.remitos = { empresaId, filas: null, error: 'No se pudieron leer los remitos precargados. Revisá la conexión y volvé a entrar.' }
+        estado.remitos = { empresaId, filas: null, error: 'No se pudieron leer los remitos sin terminar. Revisá la conexión y volvé a entrar.' }
       }
       pintarRemitosPrecarga()
     }
@@ -1401,13 +1516,15 @@
       const rr = estado.remitos
       if (!sinControlStockEmpresa() || !rr || rr.empresaId !== estado.empresaId) return ''
       const n = Array.isArray(rr.filas) ? rr.filas.length : null
-      const rmTitulo = `<h2 class="ad-subtitulo ad-rm-titulo">Remitos precargados · por revisar${n !== null ? ` <span class="ad-rm-contador" data-remitos-cuenta>${esc(n)}</span>` : ''}</h2>`
+      // Los que quedaron sin terminar, de cualquiera (29/10/2026): para que
+      // otro los termine. Sin ninguno, la sección no se ve.
+      if (n === 0 && !rr.error) return ''
+      const rmTitulo = `<h2 class="ad-subtitulo ad-rm-titulo">Sin terminar · para cargar lotes${n !== null ? ` <span class="ad-rm-contador" data-remitos-cuenta>${esc(n)}</span>` : ''}</h2>`
       let rmLista
       if (rr.error) rmLista = `<div class="ad-aviso ad-aviso--grave">${esc(rr.error)}</div>`
       else if (rr.filas === null) rmLista = '<div class="ad-vacio">Cargando los remitos…</div>'
-      else if (!rr.filas.length) rmLista = '<p class="ad-texto-suave">No hay remitos por revisar.</p>'
       else rmLista = `<div class="ad-lista">${rr.filas.map(htmlTarjetaRemito).join('')}</div>`
-      return `<section class="ad-rm-seccion" aria-label="Remitos precargados por revisar">${rmTitulo}${rmLista}</section>`
+      return `<section class="ad-rm-seccion" aria-label="Remitos sin terminar">${rmTitulo}${rmLista}</section>`
     }
 
     function pintarRemitosPrecarga() {
@@ -1442,13 +1559,14 @@
         marcaId: pres && typeof it?.marca_id === 'string' && it.marca_id ? it.marca_id : null,
         insumoId: !pres && typeof it?.insumo_id === 'string' && it.insumo_id ? it.insumo_id : null,
         lotes: pres ? (Array.isArray(it?.lotes) ? it.lotes : []).map(l => ({ lote: String(l?.lote ?? ''), cajas: cajasLoteRemito(l) || null })) : [],
-        eligiendo: false, busqueda: '', marcaBusqueda: '',
+        // cambiandoCono: el buscador del cono abierto con un cono ya elegido.
+        eligiendo: false, busqueda: '', marcaBusqueda: '', cambiandoCono: false,
       }
     }
 
     function renglonRemitoNuevo() {
       return { texto_leido: '', nota: '', revisar: false, omitir: false, cantidad: null, presentacionId: null, marcaId: null, insumoId: null,
-        lotes: [], eligiendo: true, busqueda: '', marcaBusqueda: '' }
+        lotes: [], eligiendo: true, busqueda: '', marcaBusqueda: '', cambiandoCono: false }
     }
 
     function formDesdeRemito(f) {
@@ -1504,7 +1622,8 @@
       const a = asignacionRemito(r)
       if (a.pedido === null) return '<span class="ad-rm-lotes__resumen">Poné las cajas y escribí de qué lotes salen.</span>'
       if (!(a.asignado > 0)) return '<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">Va sin lote</span> <span class="ad-rm-lotes__resumen">Sin lotes escritos sale como «SIN LOTE».</span>'
-      const rmEstadoLotes = a.falta > 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">faltan ${esc(enteroHoja(a.falta))} cajas</span>`
+      // "falta repartir 6 cajas" (29/10/2026): cuántas cajas quedan sin lote.
+      const rmEstadoLotes = a.falta > 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">falta repartir ${esc(enteroHoja(a.falta))} ${a.falta === 1 ? 'caja' : 'cajas'}</span>`
         : a.falta < 0 ? `<span class="ad-rm-estado-lotes ad-rm-estado-lotes--falta">${esc(enteroHoja(-a.falta))} de más</span>`
         : '<span class="ad-rm-estado-lotes ad-rm-estado-lotes--ok">✓ Asignado completo</span>'
       // "Lotes: 25 de 31 cajas" (29/10/2026), en amarillo mientras no suman:
@@ -1553,17 +1672,58 @@
         `${rmVolver}<div class="ad-rm-opciones" role="group" aria-label="Producto o insumo" data-rm-opciones="${esc(i)}">${htmlOpcionesRemito(i, cat, r.busqueda ?? '')}</div></div>`
     }
 
+    // EL BUSCADOR DE CONOS (29/10/2026, pedido de Facu: antes salían de
+    // entrada 12 conos por la A, sin scroll, estirando la pantalla). Con menos
+    // de MIN_LETRAS_CONO letras, ninguno; con más, primero los que EMPIEZAN
+    // así (el nombre o una de sus palabras), después los que lo contienen; sin
+    // tildes ni mayúsculas y hasta MAX_CONOS_REMITO.
+    const MIN_LETRAS_CONO = 2
+    const MAX_CONOS_REMITO = 20
+
+    function conosParaBuscar(marcas, busqueda) {
+      const q = normalizar(busqueda)
+      if (q.length < MIN_LETRAS_CONO) return []
+      const empiezan = []
+      const contienen = []
+      for (const m of Array.isArray(marcas) ? marcas : []) {
+        const n = normalizar(m?.nombre)
+        if (!m?.id || !n) continue
+        if (n.startsWith(q) || n.split(/[^a-z0-9ñ]+/).some(p => p && p.startsWith(q))) empiezan.push(m)
+        else if (n.includes(q)) contienen.push(m)
+      }
+      const alfabetico = (a, b) => normalizar(a.nombre).localeCompare(normalizar(b.nombre))
+      return [...empiezan.sort(alfabetico), ...contienen.sort(alfabetico)].slice(0, MAX_CONOS_REMITO)
+    }
+
     function htmlMarcasRemito(r, i, cat) {
-      const q = normalizar(r.marcaBusqueda)
-      const lista = (cat?.marcas ?? []).filter(m => !q || normalizar(m.nombre).includes(q)).slice(0, 12)
-      if (!lista.length) return q ? `<span class="ad-texto-suave">${esc('Ningún cono coincide con «' + limpio(r.marcaBusqueda) + '».')}</span>` : ''
+      if (normalizar(r.marcaBusqueda).length < MIN_LETRAS_CONO) return '<p class="ad-rm-pista">Escribí 2 o 3 letras del cono</p>'
+      const lista = conosParaBuscar(cat?.marcas, r.marcaBusqueda)
+      if (!lista.length) return `<p class="ad-rm-pista">${esc('Ningún cono coincide con «' + limpio(r.marcaBusqueda) + '».')}</p>`
       return lista.map(m => `<button type="button" class="ad-rm-opcion ad-rm-opcion--cono" data-rm-marca="${esc(i)}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
     }
 
+    // Con el cono elegido (también el que leyó la IA), la lista cerrada y el
+    // cono a la vista con "Cambiar"; si no, el buscador.
     function htmlConoRemito(r, i, cat) {
+      const elegido = r.marcaId ? ((cat?.marcas ?? []).find(m => m.id === r.marcaId)?.nombre ?? 'Cono que no se pudo leer') : ''
+      if (r.marcaId && !r.cambiandoCono) {
+        return '<div class="ad-campo"><span class="ad-campo__rotulo">Cono</span>' +
+          `<div class="ad-rm-cono-elegido" data-rm-cono-elegido="${esc(i)}"><span class="ad-rm-cono-elegido__nombre">${esc(elegido)}</span>` +
+          `<button type="button" class="ad-link" data-rm-cono-cambiar="${esc(i)}">Cambiar</button></div></div>`
+      }
+      const rmDejarCono = r.marcaId ? `<button type="button" class="ad-link" data-rm-cono-dejar="${esc(i)}">${esc('Dejar ' + elegido)}</button>` : ''
       return `<div class="ad-campo"><label for="ad-rm-cono-${esc(i)}">Cono</label>` +
         `<input type="search" class="ad-input" id="ad-rm-cono-${esc(i)}" data-rm-cono-buscar="${esc(i)}" value="${esc(r.marcaBusqueda ?? '')}" autocomplete="off" maxlength="60" placeholder="Buscar el cono…">` +
-        `<div class="ad-rm-opciones ad-rm-opciones--conos" data-rm-marcas="${esc(i)}">${htmlMarcasRemito(r, i, cat)}</div></div>`
+        `${rmDejarCono}<div class="ad-rm-opciones ad-rm-opciones--conos" role="group" aria-label="Conos" data-rm-marcas="${esc(i)}">${htmlMarcasRemito(r, i, cat)}</div></div>`
+    }
+
+    // El nombre del renglón elegido con "× 252 u." en negrita.
+    function htmlNombreRenglonRemito(cat, r) {
+      const t = nombreRenglonRemito(cat, r)
+      const u = r?.presentacionId ? textoUnidadesRemito(presentacionRemito(cat, r.presentacionId)) : ''
+      const k = u ? t.indexOf(u) : -1
+      if (k < 0) return esc(t)
+      return `${esc(t.slice(0, k))}<strong class="ad-rm-unidades">${esc(u)}</strong>${esc(t.slice(k + u.length))}`
     }
 
     function filasLotesRemito(r) {
@@ -1594,7 +1754,7 @@
       // (El omitido sale antes, tachado: acá nunca es amarillo.)
       const amarillo = r.revisar === true && r.omitir !== true
       const sello = r.omitir === true ? '<span class="ad-sello ad-sello--omitido">No va en la orden</span>'
-        : amarillo ? '<span class="ad-sello ad-sello--amarillo">Revisar</span>' : ''
+        : amarillo ? '<span class="ad-sello ad-sello--amarillo">Controlar</span>' : ''
       const rmCab = `<div class="ad-rm-renglon__cab"><span class="ad-rm-renglon__n">${esc('Renglón ' + (i + 1))}</span>${sello}</div>`
       if (r.omitir === true) {
         return `<div class="ad-rm-renglon ad-rm-renglon--omitido" data-rm-renglon="${esc(i)}">${rmCab}${rmLeido}${rmNota}` +
@@ -1608,7 +1768,7 @@
         const pr = presentacionRemito(cat, r.presentacionId)
         const ins = r.insumoId ? insumoDe(cat, r.insumoId) : null
         const rotulo = r.insumoId ? `Cantidad (${unidadHoja(ins?.unidad_medida) || 'unidad'})` : 'Cajas'
-        cuerpo = `<div class="ad-rm-elegido"><span class="ad-rm-elegido__nombre">${esc(nombreRenglonRemito(cat, r))}</span>` +
+        cuerpo = `<div class="ad-rm-elegido"><span class="ad-rm-elegido__nombre">${htmlNombreRenglonRemito(cat, r)}</span>` +
           (r.insumoId ? '<span class="ad-sello">Insumo</span>' : '') +
           `<button type="button" class="ad-link" data-rm-cambiar="${esc(i)}">Cambiar</button></div>` +
           (pr?.con_cono ? htmlConoRemito(r, i, cat) : '') +
@@ -1739,7 +1899,7 @@
     function pintarTituloRemito() {
       const rm = estado.remito
       const f = rm?.form
-      document.getElementById('ad-remito-titulo').textContent = f ? (textoNumeroRemito({ numero_remito: f.numero, talonario: f.talonario }) || 'Remito sin número') : 'Remito precargado'
+      document.getElementById('ad-remito-titulo').textContent = f ? (textoNumeroRemito({ numero_remito: f.numero, talonario: f.talonario }) || 'Remito sin número') : 'Remito'
     }
 
     function pintarFotoRemito() {
@@ -1845,8 +2005,21 @@
       if (!r || !(estado.catalogo?.marcas ?? []).some(m => m.id === marcaId)) return
       r.marcaId = marcaId
       r.marcaBusqueda = ''
+      // Elegido, la lista se cierra y queda el cono con "Cambiar".
+      r.cambiandoCono = false
       marcarSucioRemito()
       pintarRemito()
+    }
+
+    // "Cambiar" abre el buscador del cono (vacío: la pista); "Dejar X" lo
+    // cierra con el que estaba. No guarda nada: solo elegir guarda.
+    function cambiarConoRemito(i, si) {
+      const r = renglonRemito(i)
+      if (!r) return
+      r.cambiandoCono = !!si
+      r.marcaBusqueda = ''
+      pintarRemito()
+      if (si) document.getElementById(`ad-rm-cono-${Number(i)}`)?.focus?.()
     }
 
     function cambiarProductoRemito(i, si) {
@@ -2023,6 +2196,8 @@
       if (d.rmProducto !== undefined) elegirProductoRemito(d.rmProducto, d.presentacion)
       else if (d.rmInsumo !== undefined) elegirInsumoRemito(d.rmInsumo, d.id)
       else if (d.rmMarca !== undefined) elegirMarcaRemito(d.rmMarca, d.id)
+      else if (d.rmConoCambiar !== undefined) cambiarConoRemito(d.rmConoCambiar, true)
+      else if (d.rmConoDejar !== undefined) cambiarConoRemito(d.rmConoDejar, false)
       else if (d.rmCambiar !== undefined) cambiarProductoRemito(d.rmCambiar, true)
       else if (d.rmCambiarNo !== undefined) cambiarProductoRemito(d.rmCambiarNo, false)
       else if (d.rmAceptar !== undefined) aceptarSugerenciaRemito(d.rmAceptar)
@@ -2057,8 +2232,14 @@
     }
 
     // ── Abrir, guardar, confirmar, volver a leer, descartar ──────────────
-    async function abrirRemito(id) {
+    // origen: 'subir' (la tarjeta naranja de Subir, 29/10/2026) o 'revisar'
+    // (Órdenes cargadas): "‹ Remitos", Confirmar y Descartar vuelven ahí.
+    async function abrirRemito(id, origen = 'revisar') {
       if (!id) return
+      estado.origenRemito = origen === 'subir' ? 'subir' : 'revisar'
+      // La fábrica del remito (desde Subir puede no ser la de Órdenes cargadas).
+      const deSubida = (estado.subida?.filas ?? []).find(f => f?.id === id)
+      if (deSubida?.unidad_negocio_id) usarEmpresaRemito(deSubida.unidad_negocio_id)
       const fila = (estado.remitos?.filas ?? []).find(r => r.id === id) ?? null
       const rm = {
         id, fila, form: fila ? formDesdeRemito(fila) : null, error: null, sucio: false, saliendo: false,
@@ -2084,6 +2265,18 @@
       // De acopio: el saldo de cada renglón, al costado de la foto (no la frena).
       cargarAcopiosRemito(rm)
       await cargarFotoRemito(rm)
+    }
+
+    // Pasa a la fábrica del remito: si es otra, lo leído de la anterior
+    // (clientes, catálogo, listas) se vuelve a leer.
+    function usarEmpresaRemito(unidadId) {
+      if (!unidadId || estado.empresaId === unidadId) return
+      estado.empresaId = unidadId
+      estado.clientes = null
+      estado.catalogo = null
+      estado.catalogoEmpresa = null
+      estado.remitos = null
+      estado.ordenes = null
     }
 
     async function cargarFotoRemito(rm) {
@@ -2266,13 +2459,17 @@
       if (rm.temporizador !== null && rm.temporizador !== undefined) clearTimeout(rm.temporizador)
       rm.temporizador = null
       quitarRemitoDeLaLista(rm.id)
+      // En Subir, la tarjeta pasa a VERDE "Orden cargada · D-00XX" (el código
+      // de la respuesta; la lectura siguiente trae orden_codigo de la base).
+      marcarSubidoRemito(rm.id, { estado: 'confirmada', orden_id: res.orden_id ?? null, orden_codigo: res.codigo ?? null,
+        numero_remito: res.numero_remito ?? (limpio(rm.form.numero) || null), talonario: res.talonario ?? rm.form.talonario })
       const numero = textoNumeroRemito({ numero_remito: res.numero_remito ?? rm.form.numero, talonario: res.talonario ?? rm.form.talonario }) || 'El remito'
       const grupo = empresaGrupoRemito(rm)
       mostrarExito(`${numero} confirmado: ${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}. ` +
         (grupo ? `Va en tránsito hasta que ${grupo} la reciba. ` : '') + 'Ya se puede valorizar en Administración.')
       if (estado.remito === rm) estado.remito = null
       estado.ordenes = null
-      if (estado.vista === 'ad-vista-remito') await mostrarRevisar()
+      if (estado.vista === 'ad-vista-remito') await salirDeRemito()
     }
 
     // El mensaje de una Edge Function que respondió con error: el que trae
@@ -2348,9 +2545,10 @@
       }
       rm.trabajando = false
       quitarRemitoDeLaLista(rm.id)
+      marcarSubidoRemito(rm.id, { estado: 'descartada', descartado_motivo: m })
       mostrarExito(`${textoNumeroRemito({ numero_remito: rm.form.numero, talonario: rm.form.talonario }) || 'El remito'} se descartó (${m}).`)
       if (estado.remito === rm) estado.remito = null
-      if (estado.vista === 'ad-vista-remito') await mostrarRevisar()
+      if (estado.vista === 'ad-vista-remito') await salirDeRemito()
     }
 
     function puedeGuardarRemito(rm) {
@@ -2363,10 +2561,11 @@
       return !!(rm.sucio || rm.guardando || (rm.temporizador !== null && rm.temporizador !== undefined))
     }
 
-    // "‹ Revisar": lo que quedó sin mandar se manda igual, y se sale cuando la
+    // "‹ Remitos": lo que quedó sin mandar se manda igual, y se sale cuando la
     // base respondió. Si lo rechaza, se queda con el error a la vista; el
-    // segundo toque sale igual.
-    async function volverDeRemito() {
+    // segundo toque sale igual. Sale a donde se abrió (Subir u Órdenes
+    // cargadas) o a la pestaña tocada (destino).
+    async function volverDeRemito(destino) {
       const rm = estado.remito
       if (rm?.trabajando) return
       if (rm && !rm.saliendo && pendienteRemito(rm)) {
@@ -2374,13 +2573,23 @@
         const ok = await esperarGuardadoRemito(rm)
         if (estado.remito !== rm || !rm.saliendo) return
         if (!ok) {
-          rm.aviso = 'No se pudo guardar el último cambio (el error está al lado de Confirmar). Volvé a tocar «‹ Revisar» para salir igual.'
+          rm.aviso = 'No se pudo guardar el último cambio (el error está al lado de Confirmar). Volvé a tocar «‹ Remitos» para salir igual.'
           pintarRemito()
           return
         }
       }
       estado.remito = null
-      mostrarRevisar()
+      salirDeRemito(destino)
+    }
+
+    // A la pestaña de donde se abrió el remito (o la pedida), si la ve; si
+    // no, a la otra.
+    function salirDeRemito(destino = estado.origenRemito) {
+      estado.remito = null
+      const p = destino === 'subir' ? 'subir' : 'revisar'
+      if (p === 'subir' && puedeSubirRemitos()) return abrirSubirRemitos()
+      if (empresasDeRevision().length) return mostrarRevisar()
+      if (puedeSubirRemitos()) return abrirSubirRemitos()
     }
 
     // ── En la revisión de un remito de talonario ACOPIO (27/10/2026) ───────
@@ -2504,6 +2713,8 @@
       if (estado.errorOrdenes) return `<div class="ad-aviso ad-aviso--grave">${esc(estado.errorOrdenes)}</div>`
       if (estado.ordenes === null) return '<div class="ad-vacio">Cargando las órdenes…</div>'
       const lista = ordenesVisibles()
+      const q = limpio(estado.buscarOrden)
+      if (!lista.length && digitosRemito(q)) return `<div class="ad-vacio">${esc('Ningún remito de este talonario tiene «' + q + '» en el número.')}</div>`
       if (!lista.length) return '<div class="ad-vacio">No hay órdenes de este talonario en los últimos meses.</div>'
       return lista.map(htmlFilaOrdenRemito).join('')
     }
@@ -2513,6 +2724,9 @@
       const lista = document.getElementById('rd-ordenes-lista')
       if (tal) tal.innerHTML = htmlTalonariosOrdenes()
       if (lista) lista.innerHTML = htmlListaOrdenesRemito()
+      // El buscador por N° de remito, con las órdenes ya leídas.
+      const caja = document.getElementById('rd-buscar-orden-caja')
+      if (caja) caja.hidden = !(sinControlStockEmpresa() && Array.isArray(estado.ordenes) && estado.ordenes.length)
       const link = document.getElementById('rd-link-admin')
       if (link) link.hidden = !puedeEn('retiros', 'precios')
     }
@@ -2574,12 +2788,15 @@
         if ((b = e.target.closest('[data-remito-fabrica]'))) elegirFabricaRemitos(b.dataset.remitoFabrica)
         else if ((b = e.target.closest('[data-remito-reintentar]'))) reintentarRemito(b.dataset.remitoReintentar)
         else if ((b = e.target.closest('[data-remito-quitar]'))) quitarRemitoDeCola(b.dataset.remitoQuitar)
+        // La tarjeta naranja "Listo para cargar lotes": el remito, ahí mismo.
+        else if ((b = e.target.closest('[data-remito-abrir]'))) abrirRemito(b.dataset.remitoAbrir, 'subir')
       })
       // Revisar
       document.getElementById('rd-revisar-fabrica').addEventListener('click', (e) => {
         const b = e.target.closest('[data-rd-fabrica]')
         if (b) elegirFabricaRevisar(b.dataset.rdFabrica)
       })
+      document.getElementById('rd-buscar-orden').addEventListener('input', (e) => buscarOrdenRemito(e.target.value))
       document.getElementById('ad-remitos').addEventListener('click', (e) => {
         const b = e.target.closest('[data-remito]')
         if (b) abrirRemito(b.dataset.remito)
@@ -2660,7 +2877,7 @@
         return
       }
       if (!pestanasVisibles().length) {
-        sinAcceso('No tenés permiso para subir ni revisar remitos de Dolce Pasta. Te llevamos al inicio…')
+        sinAcceso('No tenés permiso para subir ni ver los remitos de Dolce Pasta. Te llevamos al inicio…')
         return
       }
       document.getElementById('rd-cargando').hidden = true
