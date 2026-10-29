@@ -241,8 +241,9 @@ const PANTALLAS = [
   // reloj NO está fijo acá: lo compara 11-comparar-esqueleto.spec.js).
   ['dashboard.html', 'tablero', [
     ['tablero', async (page) => {
-      // 15 desde el 10/10/2026: Conos de papel va última.
-      await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(16)
+      // 15 desde el 10/10/2026 (Conos de papel) y 17 desde el 28/10/2026: Buscar va última y
+      // Remitos Dolce después de Órdenes de retiro.
+      await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(17)
       await expect(page.locator('.tb-tarjeta--cargando')).toHaveCount(0)
       await expect(page.locator('[data-tarjeta="produccion"]')).toContainText('Máquina 4')
     }],
@@ -273,8 +274,8 @@ const PANTALLAS = [
       await page.locator('#tb-confirmar-si').click()
       await expect(page.locator('#tb-confirmar')).toBeHidden()
       await page.locator('#tb-acomodar-listo').click()
-      await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(16)
-      await expect(page.locator('.tb-tarjeta__abrir')).toHaveCount(16)
+      await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(17)
+      await expect(page.locator('.tb-tarjeta__abrir')).toHaveCount(17)
     }],
   ]],
   ['dashboard.html', 'tablero-estados', [

@@ -1,0 +1,125 @@
+// Datos de la maqueta: Buscar (28/10/2026, rama ci-prueba/modulo-buscar). Ver
+// pruebas/datos-maqueta/README.md.
+//
+// - LOTE: trazabilidad_lote como la devuelve la base (leída con
+//   pg_get_functiondef el 28/10/2026): el lote 6262-1 de Cucuruchos Nuss con
+//   2 masas (en la primera, el agua con 0 kg —no se muestra— y la sal sin
+//   ingreso encontrado), 1 parada, el inicio tarde con su motivo y 2 salidas;
+//   "6262" (todo el turno) suma el sublote 6262-2; "ABC" da el error de la
+//   base; cualquier otro, ningún turno.
+// - PRECIOS: precios_compra de Nuss (la harina de una compra con su bolsa de
+//   25 kg, la lecitina cargada a mano y el azúcar con marca) y de Dolce Pasta
+//   (una sola fila); las compras de la harina para el historial.
+//
+// La persona ve lotes en Nuss (produccion:ver) y precios en Nuss y Dolce
+// (stock:ver_costos): con "Todas", Precios pide la fábrica.
+//
+//   http://localhost:4180/modulos/buscar.html?maqueta=buscar
+'use strict';
+
+const { UID, tarea, UNIDADES } = require('./comun');
+
+const EMP = 'emp-buscar';
+const NUSS = 'u-n', DOLCE = 'u-d';
+
+const TURNO_6262 = {
+  id: 't-6262', lote: 6262, unidad_negocio_id: NUSS, fecha: '2026-10-27', turno: 'Mañana', maquina: 'Máquina 2', estado: 'cerrado',
+  encargado: 'Pérez Juan', hora_inicio: '06:00:00', hora_largada: '06:40:00', largada_motivo: 'Faltaba gas en la línea',
+  hora_apagado: '13:50:00', hora_fin: '14:00:00', scrap_kg: '3.5', observaciones: 'Se cambió la plancha 4 a media mañana',
+};
+const OPERARIOS = [
+  { nombre: 'Gómez Ana', desde: '2026-10-27T09:00:00+00:00', hasta: '2026-10-27T17:00:00+00:00' },
+  { nombre: 'Ríos Luis', desde: '2026-10-27T11:30:00+00:00', hasta: null },
+];
+const PARADAS = [
+  { motivo: 'Limpieza de planchas', categoria: 'programada', detalle: null, inicio: '2026-10-27T13:00:00+00:00', fin: '2026-10-27T13:25:00+00:00' },
+];
+const MASAS = [
+  { nro: 1, hora: '2026-10-27T09:10:00+00:00', tipo: 'Común', doble: false, chocolate: false, masero: 'Sosa Marta', insumos: [
+    { insumo: 'Agua', marca: null, lote: null, kg: 0, origen: null },
+    { insumo: 'Harina 000', marca: 'Molino del Sur', lote: 'L-2710', kg: 25, origen: [
+      { fecha: '2026-10-20', proveedor: 'Molino del Sur SA', comprobante: '0001-00004321' },
+    ] },
+    { insumo: 'Sal fina', marca: null, lote: 'S-99', kg: 0.25, origen: null },
+  ] },
+  { nro: 2, hora: '2026-10-27T11:45:00+00:00', tipo: 'Común', doble: true, chocolate: true, masero: 'Sosa Marta', insumos: [
+    { insumo: 'Harina 000', marca: 'Molino del Sur', lote: 'L-2710', kg: 50, origen: [
+      { fecha: '2026-10-20', proveedor: 'Molino del Sur SA', comprobante: '0001-00004321' },
+    ] },
+    { insumo: 'Cacao amargo', marca: 'Cacaos SRL', lote: 'C-12', kg: 4, origen: [
+      { fecha: '2026-10-02', proveedor: 'Cacaos SRL', comprobante: '0003-00000077' },
+    ] },
+  ] },
+];
+const SUB_1 = { sublote: '6262-1', producto: 'Cucurucho grande', presentacion: 'Caja x 100', cono: 'GRIDO', cajas: 40, unidades: 4000 };
+const SUB_2 = { sublote: '6262-2', producto: 'Cucurucho chico', presentacion: 'Caja x 200', cono: null, cajas: 12, unidades: 2400 };
+const SALIDAS = [
+  { fecha: '2026-10-27', lote: '6262-1', cajas: 10, orden: 'N-0040', cliente: 'HELADERÍA LA ESQUINA', tipo: 'despacho' },
+  { fecha: '2026-10-28', lote: '6262-1', cajas: 18, orden: 'N-0041', cliente: 'FERNANDEZ RICARDO', tipo: 'despacho' },
+];
+
+const comun = { turno: TURNO_6262, operarios: OPERARIOS, paradas: PARADAS, masas: MASAS };
+const LOTE_6262_1 = [{
+  lote_buscado: '6262-1', ...comun, produccion: [SUB_1],
+  stock_por_lote: [{ lote: '6262-1', presentacion: 'Cucurucho grande · Caja x 100', cajas: 12 }],
+  salidas: SALIDAS,
+}];
+const LOTE_6262 = [{
+  lote_buscado: '6262', ...comun, produccion: [SUB_1, SUB_2],
+  stock_por_lote: [
+    { lote: '6262-1', presentacion: 'Cucurucho grande · Caja x 100', cajas: 12 },
+    { lote: '6262-2', presentacion: 'Cucurucho chico · Caja x 200', cajas: 0 },
+  ],
+  salidas: [...SALIDAS, { fecha: '2026-10-28', lote: '6262-2', cajas: 12, orden: null, cliente: null, tipo: 'traspaso_salida' }],
+}];
+
+// precios_compra, como la base: los numeric como texto.
+const PRECIOS_NUSS = [
+  { insumo_id: 'i-azucar', insumo: 'Azúcar común', marca: 'Ledesma', unidad_medida: 'kg', contenido_bulto: '50', nombre_bulto: 'bolsa', precio_unitario: '850.0000', alicuota_iva: '21', precio_final: '1028.5000', fecha: '2026-10-15', origen: 'compra', proveedor: 'Distribuidora Norte', comprobante: 'remito R-0001-00000123' },
+  { insumo_id: 'i-harina', insumo: 'Harina 000', marca: null, unidad_medida: 'kg', contenido_bulto: '25', nombre_bulto: 'bolsa', precio_unitario: '1100.0000', alicuota_iva: '21', precio_final: '1331.0000', fecha: '2026-10-20', origen: 'compra', proveedor: 'Molino del Sur', comprobante: 'factura_a 0001-00004321' },
+  { insumo_id: 'i-lecitina', insumo: 'Lecitina de soja', marca: null, unidad_medida: 'kg', contenido_bulto: null, nombre_bulto: null, precio_unitario: '5432.1234', alicuota_iva: '10.5', precio_final: '6002.5964', fecha: '2026-09-15', origen: 'manual', proveedor: null, comprobante: 'Lista de septiembre' },
+];
+const PRECIOS_DOLCE = [
+  { insumo_id: 'i-semola', insumo: 'Sémola', marca: 'Favorita', unidad_medida: 'kg', contenido_bulto: null, nombre_bulto: null, precio_unitario: '950.0000', alicuota_iva: '10.5', precio_final: '1049.7500', fecha: '2026-10-10', origen: 'compra', proveedor: 'Molino Rosario', comprobante: 'factura_a 0002-00000011' },
+];
+
+module.exports = {
+  uid: UID,
+  tablas: {
+    empleados: [{ id: EMP, auth_user_id: UID, nombre: 'Facu Maqueta', rol_app: 'usuario', activo: true, unidad_negocio_id: NUSS, es_prueba: false, es_dispositivo: false }],
+    empleado_modulos: [],
+    empleado_tareas: [
+      tarea(EMP, 'produccion', 'ver', { unidades: [NUSS] }),
+      tarea(EMP, 'stock', 'ver_costos', { unidades: [NUSS, DOLCE] }),
+    ],
+    unidades_negocio: UNIDADES,
+    v_empleados_publico: [{ id: EMP, nombre: 'Facu Maqueta', activo: true, tipo: 'persona', unidad_negocio_id: NUSS }],
+    materia_prima_items: [
+      { id: 'mpi-2', insumo_id: 'i-harina', precio_unitario: '1100.0000', alicuota_iva: '21', created_at: '2026-10-20T12:00:00Z', materia_prima_ingresos: { fecha: '2026-10-20', tipo_doc: 'factura_a', numero_doc: '0001-00004321', razon_social: 'Molino del Sur', unidad_negocio_id: NUSS } },
+      { id: 'mpi-1', insumo_id: 'i-harina', precio_unitario: '1000.0000', alicuota_iva: '21', created_at: '2026-09-20T12:00:00Z', materia_prima_ingresos: { fecha: '2026-09-20', tipo_doc: 'factura_a', numero_doc: '0001-00004100', razon_social: 'Molino del Sur', unidad_negocio_id: NUSS } },
+      { id: 'mpi-d', insumo_id: 'i-harina', precio_unitario: '990.0000', alicuota_iva: '21', created_at: '2026-10-01T12:00:00Z', materia_prima_ingresos: { fecha: '2026-10-01', tipo_doc: 'factura_a', numero_doc: '0009-00000001', razon_social: 'Otro molino', unidad_negocio_id: DOLCE } },
+    ],
+    insumo_costos: [
+      { id: 'ic-1', unidad_negocio_id: NUSS, insumo_id: 'i-harina', costo_unitario: '980.0000', alicuota_iva: '21', vigente_desde: '2026-09-01', nota: 'Lista de agosto', anulado: false, cargado_en: '2026-09-01T12:00:00Z' },
+      // De Dolce: no se ve en el historial de Nuss.
+      { id: 'ic-d', unidad_negocio_id: DOLCE, insumo_id: 'i-harina', costo_unitario: '1500.0000', alicuota_iva: '21', vigente_desde: '2026-09-05', nota: 'De Dolce', anulado: false, cargado_en: '2026-09-05T12:00:00Z' },
+    ],
+  },
+  rpc: {
+    trazabilidad_lote: {
+      __segun: [
+        { si: { p_lote: '6262-1' }, r: LOTE_6262_1 },
+        { si: { p_lote: '6262' }, r: LOTE_6262 },
+        { si: { p_lote: 'ABC' }, r: 'ERROR:Escribí el lote como está en la caja, por ejemplo 6262-1.' },
+      ],
+      __defecto: [],
+    },
+    precios_compra: {
+      __segun: [
+        { si: { p_unidad_negocio_id: NUSS }, r: PRECIOS_NUSS },
+        { si: { p_unidad_negocio_id: DOLCE }, r: PRECIOS_DOLCE },
+      ],
+      __defecto: [],
+    },
+  },
+};
