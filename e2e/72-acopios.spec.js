@@ -162,9 +162,11 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(saldo(1)).toHaveText('Acopio: quedan 20 cajas; después de este remito, 0.');
     await expect(page.locator('#ad-rm-cantidad-1')).toBeFocused();
     expect(rpc.some(r => r.nombre === 'acopios_lista' && r.params.p_cliente_id === 'c-d-ros')).toBe(true);
-    // Con las cajas cambiadas (sin guardar), "‹ Revisar" avisa una vez.
+    // Las cajas cambiadas se guardan solas (29/10/2026): "‹ Revisar" las manda
+    // si todavía esperaban, y sale.
     await page.locator('#ad-remito-volver').click();
-    await expect(page.locator('#ad-remito-cuerpo')).toContainText('cambios sin guardar');
+    await expect(page.locator('#rd-vista-revisar')).toBeVisible();
+    expect(rpc.filter(r => r.nombre === 'actualizar_remito_precarga').pop()?.params?.p_items?.[1]?.cantidad).toBe(20);
     await abrir(page, 'u-d');
 
     // La cuenta de Almacén Rosario: sus acopios activos y los movimientos.
