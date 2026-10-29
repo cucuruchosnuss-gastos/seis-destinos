@@ -122,7 +122,8 @@ const cuerpo = (S) => S.__els.get('ad-remito-cuerpo')?.innerHTML ?? ''
     chk('leído: la tarjeta en NARANJA (rt-remito--precargada)', /<button type="button" class="rt-remito rt-remito--precargada" data-remito="r-1" data-remito-estado="precargada" data-remito-abrir="r-1">/.test(h), h.slice(0, 300))
     chk('…dice "Listo para cargar lotes"', /<span class="rt-remito__estado">Listo para cargar lotes<\/span>/.test(h))
     chk('…con el N°, el cliente y los renglones', /Remito N° 0001-00003100 · Almacén Rosario · 3 renglones/.test(h), sinEtiquetas(h))
-    chk('…y "Cargar ›"', /<span class="rt-remito__ir" aria-hidden="true">Cargar ›<\/span><\/button>/.test(h))
+    chk('…adentro del botón, solo <span> (un <div> no va)', /data-remito-abrir="r-1"><span class="rt-remito__foto"[^]*?<span class="rt-remito__texto">/.test(h) && !/<button[^>]*data-remito-abrir="r-1">[^]*?<div/.test(h.split('</button>')[0]))
+    chk('…y "Cargar ›"',/<span class="rt-remito__ir" aria-hidden="true">Cargar ›<\/span><\/button>/.test(h))
     chk('ya no dice "Precargado"', !/Precargado/.test(h))
     // Tocar la tarjeta: el editor, sin pasar por la otra pestaña.
     await S.abrirRemito('r-1', 'subir')
