@@ -1,7 +1,7 @@
 # Traspaso 29/10/2026 — Remitos Dolce más simple (un solo recorrido)
 
 Pedido: `.claude/pedidos/2026-10-29-remitos-mas-simple.md`. Rama `ci-prueba/remitos-mas-simple`, salida de
-`origin/ci-prueba/recibir-entre-empresas` = 2003aa3, en un git worktree aparte. **No se integró** (lo audita otro chat
+`origin/ci-prueba/recibir-entre-empresas` = 2003aa3 y rebasada sobre ac11ce8 (la base se movió), en un git worktree aparte. **No se integró** (lo audita otro chat
 y se integra de noche, después de `ci-prueba/recibir-entre-empresas`). Patch: `/tmp/remitos-mas-simple.patch`.
 
 ## Qué cambió (para Facu)
@@ -49,8 +49,9 @@ cliente_leido, items), la política de lectura de `remitos_precarga` y `clientes
   (con la pista) y ofrece "Dejar <cono>".
 - El selector de producto ya tenía scroll: quedó igual, con la misma altura máxima que los conos (16rem).
 - Los sellos de color (`.ad-sello.ad-sello--x`): la regla base los pisaba y salían grises; arreglado en el módulo.
-- La maqueta `remitos-dolce-revisar` tenía el cliente `c-d-paz` (de la rama base) solo en el `.json`: al regenerar
-  se perdía; ahora sale del generador.
+- Rebasada sobre `origin/ci-prueba/recibir-entre-empresas` = ac11ce8 (la base se movió mientras trabajaba: trajo Stock
+  "En camino" y el `c-d-paz` de la maqueta en su generador, que yo había arreglado igual: quedó el de la base). Las
+  mutaciones siguen ancladas a 2003aa3 (el hash al empezar).
 
 ## Lo que no se pudo probar
 - Contra la base real (Claude Code solo lee): todo con el doble de la suite y la maqueta.
