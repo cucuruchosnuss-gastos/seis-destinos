@@ -77,3 +77,10 @@ cliente_leido, items), la política de lectura de `remitos_precarga` y `clientes
 - **El arnés de escape que arma solo las marcas para cada `esc()` nuevo**: la mutación de Subir encontró 4 escapes sin
   prueba en el botón nuevo; un generador que, para cada función html listada en la mutación, pase marcas en todos los
   campos del objeto de entrada daría esa prueba sin escribirla a mano.
+
+## Agregado del 30/10/2026: el cono de papel ilustración a la vista
+Pedido de Facu (también en ci-prueba/valorizar-legible, cada rama en lo suyo): donde se nombre el cono de un renglón, si
+es de papel ilustración (`marcas_personalizadas.papel_ilustracion`), "(ilustración)": "Barquillo 40 x4 · Caja con cono
+× 252 u. · MARBET (ilustración)". En esta rama: el renglón y el buscador de conos de Remitos Dolce
+(`nombreConoRemito` en js/remitos-comun.js) y la hoja de la Carga (`conoParaHoja` en modulos/retiros.html). Leído junto con
+el catálogo de conos, nunca copiado a mano. Suites `test-/mut-remitos-dolce-ilustracion.js` (17; 14/14).

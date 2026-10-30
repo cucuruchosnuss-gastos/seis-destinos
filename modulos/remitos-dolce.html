@@ -428,6 +428,7 @@
     import { enteroHoja, unidadHoja, cantidadInsumoHoja, decimalesDeUnidad } from '../js/retiros-comun.js'
     import {
       talonarioDe, textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito,
+      nombreConoRemito, nombreConoPorIdRemito,
     } from '../js/remitos-comun.js'
     import { nombreCorto } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
@@ -663,7 +664,8 @@
         if (r.error) throw r.error
         presentaciones = r.data ?? []
       }
-      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
+      // papel_ilustracion (30/10/2026): "MARBET (ilustración)" en el renglón y en el buscador.
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre, papel_ilustracion')
       if (e3) throw e3
       const { data: insumos, error: e4 } = await supabase.from('insumos')
         .select('id, nombre, marca, unidad_medida, categoria, activo').order('categoria').order('nombre')
@@ -1735,13 +1737,13 @@
       if (normalizar(r.marcaBusqueda).length < MIN_LETRAS_CONO) return '<p class="ad-rm-pista">Escribí 2 o 3 letras del cono</p>'
       const lista = conosParaBuscar(cat?.marcas, r.marcaBusqueda)
       if (!lista.length) return `<p class="ad-rm-pista">${esc('Ningún cono coincide con «' + limpio(r.marcaBusqueda) + '».')}</p>`
-      return lista.map(m => `<button type="button" class="ad-rm-opcion ad-rm-opcion--cono" data-rm-marca="${esc(i)}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+      return lista.map(m => `<button type="button" class="ad-rm-opcion ad-rm-opcion--cono" data-rm-marca="${esc(i)}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(nombreConoRemito(m))}</button>`).join('')
     }
 
     // Con el cono elegido (también el que leyó la IA), la lista cerrada y el
     // cono a la vista con "Cambiar"; si no, el buscador.
     function htmlConoRemito(r, i, cat) {
-      const elegido = r.marcaId ? ((cat?.marcas ?? []).find(m => m.id === r.marcaId)?.nombre ?? 'Cono que no se pudo leer') : ''
+      const elegido = nombreConoPorIdRemito(cat, r.marcaId)
       if (r.marcaId && !r.cambiandoCono) {
         return '<div class="ad-campo"><span class="ad-campo__rotulo">Cono</span>' +
           `<div class="ad-rm-cono-elegido" data-rm-cono-elegido="${esc(i)}"><span class="ad-rm-cono-elegido__nombre">${esc(elegido)}</span>` +

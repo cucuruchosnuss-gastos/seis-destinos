@@ -90,6 +90,18 @@ Pedido de Facu: "Guardar" y "Confirmar" confundían (tocó Guardar, salió "guar
 - Suites `test-/mut-remitos-dolce-interna-lotes.js` (33; 15/15, baseline 497c393) y `e2e/98-recibir-entre-empresas.spec.js`
   (la maqueta `remitos-dolce-revisar` tiene el cliente `c-d-paz` del grupo).
 
+## El cono de papel ilustración a la vista (30/10/2026, rama `ci-prueba/remitos-mas-simple`)
+- `marcas_personalizadas.papel_ilustracion` (boolean not null default false; al 30/10/2026: MARBET, QUINTANA, RIO, RIO
+  OLIMPICOS) marca los conos que se cobran más caros (precio_venta lo resuelve con `papel_conito = 'ilustracion'`).
+- Donde se nombra el cono va "MARBET (ilustración)": `nombreConoRemito(m)` / `nombreConoPorIdRemito(cat, id)` en
+  `js/remitos-comun.js` (las usa `nombreRenglonRemito`, así que también Administración: Corregir orden, Nuevo acopio), el
+  buscador de conos (`htmlMarcasRemito`) y el cono elegido (`htmlConoRemito`). Remitos Dolce lee `papel_ilustracion` con
+  su catálogo de conos; ningún nombre copiado a mano.
+- La hoja de la Carga (modulos/retiros.html): `conoParaHoja` busca el cono por `marca_id` (mis_ordenes_retiro lo trae)
+  en el catálogo (que ahora lee `papel_ilustracion`) y agrega "(ilustración)"; sin el cono en el catálogo, el nombre de
+  la orden.
+- Suites `test-/mut-remitos-dolce-ilustracion.js` (17; 14/14, baseline 302b351 del común).
+
 ## Un solo recorrido (29/10/2026, rama `ci-prueba/remitos-mas-simple`)
 Pedido de Facu: "que Manuel suba la foto y cargue los lotes en el mismo lugar, sin ir a otra pestaña a revisar".
 **Lo de arriba sobre "Revisar" sigue valiendo por dentro** (la pestaña se llama `'revisar'` en el código, `rd-vista-revisar`,

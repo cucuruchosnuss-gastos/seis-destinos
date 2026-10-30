@@ -35,7 +35,7 @@ const { chk, esperas, fin } = arnes()
 const FUNCIONES = [
   'leerRemito', 'quitarRemitoDeLaLista', 'cajasLoteRemito', 'normalizarLoteRemito', 'renglonDesdeItem', 'renglonRemitoNuevo', 'formDesdeRemito',
   'lotesRemitoParaBase', 'itemRemitoParaBase', 'parametrosActualizarRemito', 'asignacionRemito', 'htmlResumenLotesRemito', 'puedeAceptarSugerencia',
-  'textoResumenRemito', 'presentacionRemito', 'productoDePresentacionRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito',
+  'textoResumenRemito', 'presentacionRemito', 'productoDePresentacionRemito', 'nombreConoRemito', 'nombreConoPorIdRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito',
   'gruposRemito', 'htmlOpcionesRemito', 'htmlSelectorRemito', 'htmlMarcasRemito', 'htmlConoRemito', 'filasLotesRemito', 'htmlLotesRemito',
   'htmlRenglonRemito', 'htmlClientesRemito', 'htmlClienteRemito', 'htmlEncabezadoRemito', 'urlFotoSegura', 'htmlFotoRemito', 'htmlAccionesRemito',
   'pintarTituloRemito', 'pintarFotoRemito', 'ponerSrcFotoRemito', 'pintarRemito', 'renglonRemito', 'marcarSucioRemito', 'elegirProductoRemito',
