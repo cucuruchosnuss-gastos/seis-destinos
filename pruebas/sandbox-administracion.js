@@ -10,6 +10,21 @@ const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
+// Entre empresas v2 (30/10/2026): el saldo neto por par, la mercadería sin
+// valorizar, los links, "Cargar ajuste o compensación" y las listas
+// internas. Una copia de antes no las tiene: van con un reemplazo que no
+// hace nada (ver OPCIONALES_FN, abajo).
+const FUNCIONES_ENTRE_V2 = [
+  'claveParEntre', 'nombreParEntre', 'textoLadosEntre', 'saldosEntre', 'desdeSaldosEntre', 'sinCortarPlataEntre', 'htmlSaldoEntre', 'htmlSaldosEntre',
+  'codigoMercaderiaEntre', 'productoMercaderiaEntre', 'sinValorizarEntre', 'htmlQuienEntre', 'htmlGrupoSinValorizarEntre', 'htmlSinValorizarEntre',
+  'htmlLinkEntre', 'paresConocidosEntre', 'elegirParEntre', 'cargarSaldosEntre',
+  'puedeAjustarEntre', 'ajusteVacioEntre', 'htmlAjusteEntre', 'pintarAjusteEntre', 'abrirAjusteEntre', 'cerrarAjusteEntre', 'leerAjusteEntre',
+  'validarAjusteEntre', 'parametrosAjusteEntre', 'guardarAjusteEntre',
+  'internasVacioEntre', 'puedeCambiarInternaEntre', 'numeroPctEntre', 'textoPctInternaEntre', 'campoPctEntre', 'htmlItemInternaEntre',
+  'htmlInternaEntre', 'htmlInternasEntre', 'pintarInternasEntre', 'cargarInternasEntre', 'leerPreciosInternaEntre', 'guardarInternaEntre',
+]
+const CONSTANTES_ENTRE_V2 = ['DIAS_SALDO_ENTRE', 'RE_ORDEN_MERCADERIA_ENTRE', 'ORIGEN_MERCADERIA_ENTRE', 'AYUDA_AJUSTE_ENTRE', 'AYUDA_INTERNAS_ENTRE']
+
 const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
 // Los acopios, la cuenta en el grupo, "(también en Nuss)" y valorizar con la
@@ -32,21 +47,6 @@ const FUNCIONES_ACOPIOS = [
   'limpioRc', 'normalizarRc', 'insumoRemito',
   'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
 ]
-
-// Entre empresas v2 (30/10/2026): el saldo neto por par, la mercadería sin
-// valorizar, los links, "Cargar ajuste o compensación" y las listas
-// internas. Una copia de antes no las tiene: van con un reemplazo que no
-// hace nada (ver OPCIONALES_FN, abajo).
-const FUNCIONES_ENTRE_V2 = [
-  'claveParEntre', 'nombreParEntre', 'textoLadosEntre', 'saldosEntre', 'desdeSaldosEntre', 'sinCortarPlataEntre', 'htmlSaldoEntre', 'htmlSaldosEntre',
-  'codigoMercaderiaEntre', 'productoMercaderiaEntre', 'sinValorizarEntre', 'htmlQuienEntre', 'htmlGrupoSinValorizarEntre', 'htmlSinValorizarEntre',
-  'htmlLinkEntre', 'paresConocidosEntre', 'elegirParEntre', 'cargarSaldosEntre',
-  'puedeAjustarEntre', 'ajusteVacioEntre', 'htmlAjusteEntre', 'pintarAjusteEntre', 'abrirAjusteEntre', 'cerrarAjusteEntre', 'leerAjusteEntre',
-  'validarAjusteEntre', 'parametrosAjusteEntre', 'guardarAjusteEntre',
-  'internasVacioEntre', 'puedeCambiarInternaEntre', 'numeroPctEntre', 'textoPctInternaEntre', 'campoPctEntre', 'htmlItemInternaEntre',
-  'htmlInternaEntre', 'htmlInternasEntre', 'pintarInternasEntre', 'cargarInternasEntre', 'leerPreciosInternaEntre', 'guardarInternaEntre',
-]
-const CONSTANTES_ENTRE_V2 = ['DIAS_SALDO_ENTRE', 'RE_ORDEN_MERCADERIA_ENTRE', 'ORIGEN_MERCADERIA_ENTRE', 'AYUDA_AJUSTE_ENTRE', 'AYUDA_INTERNAS_ENTRE']
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
