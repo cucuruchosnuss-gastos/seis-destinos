@@ -1584,7 +1584,7 @@
     // Los remitos de Dolce (28/10/2026): el catálogo de un renglón (Nuevo
     // acopio) y el "Remito N° X" (con el sello Acopio) de la ficha, los
     // mismos de Remitos Dolce.
-    import { textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito } from '../js/remitos-comun.js'
+    import { textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito, nombreConoPorIdRemito } from '../js/remitos-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
@@ -2252,7 +2252,8 @@
         if (r.error) throw r.error
         presentaciones = r.data ?? []
       }
-      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
+      // papel_ilustracion (30/10/2026): "MARBET (ilustración)" donde se nombre el cono.
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre, papel_ilustracion')
       if (e3) throw e3
       const { data: insumos, error: e4 } = await supabase.from('insumos')
         // nombre_bulto (26/10/2026, la hoja nueva: "bolsa de 25 kg"; text,
@@ -2451,10 +2452,11 @@
       const pr = (cat?.presentaciones ?? []).find(x => x.id === it.presentacion_id)
       const prod = pr ? (cat?.productos ?? []).find(x => x.id === pr.producto_id) : null
       let cono = '—'
-      if (pr) cono = !pr.con_cono ? 'Sin cono' : (it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? 'Cono que no se pudo leer') : 'Falta el cono')
+      // Un cono de papel ilustración (30/10/2026): "MARBET (ilustración)" (nombreConoPorIdRemito, js/remitos-comun.js).
+      if (pr) cono = !pr.con_cono ? 'Sin cono' : (it.marca_id ? nombreConoPorIdRemito(cat, it.marca_id) : 'Falta el cono')
       // La hoja nueva (26/10/2026): las unidades por caja y el NOMBRE del cono
       // (o null), sin la presentación.
-      const conoNombre = pr?.con_cono && it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? null) : null
+      const conoNombre = pr?.con_cono && it.marca_id && (cat?.marcas ?? []).some(m => m.id === it.marca_id) ? nombreConoPorIdRemito(cat, it.marca_id) : null
       // sinStock (27/10/2026): se vende por unidad (los conos sueltos).
       return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono, conoNombre, porCaja: pr?.unidades_por_caja ?? null,
         sinStock: pr?.sin_stock === true }
@@ -3812,7 +3814,17 @@
 
     function htmlOrigenPrecio(o) {
       if (!o?.texto) return ''
-      return `<div class="ad-renglon__origen${o.grave ? ' ad-renglon__origen--grave' : ''}">${esc(o.texto)}</div>`
+      return `<div class="ad-renglon__origen${o.grave ? ' ad-renglon__origen--grave' : ''}">${esc(o.texto)}</div>` +
+        (o.ilustracion ? `<div class="ad-renglon__origen ad-renglon__descuento" data-conito-ilustracion>${esc(o.ilustracion)}</div>` : '')
+    }
+
+    // EL CONO DE PAPEL ILUSTRACIÓN AL VALORIZAR (30/10/2026): precio_venta
+    // devuelve papel_conito = 'ilustracion' y su conito_unitario (más caro):
+    // "conito ilustración $ 47,00 por unidad". '' si no es de ilustración.
+    function textoConitoIlustracion(datos) {
+      if (datos?.papel_conito !== 'ilustracion') return ''
+      const n = numeroONulo(datos?.conito_unitario)
+      return n === null ? '' : 'conito ilustración ' + textoPrecioUnitario(n) + ' por unidad'
     }
 
     // LAS CONDICIONES ESPECIALES DEL CLIENTE (30/10/2026, pedido de Facu): un
@@ -4055,7 +4067,8 @@
           v.precios[it.id] = r.precio
           v.desdeLista.add(it.id)
           const conCono = !!(estado.catalogo?.presentaciones ?? []).find(p => p.id === it.presentacion_id)?.con_cono || !!r.datos?.papel_conito
-          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono) + (r.empresaLista ? ' · de ' + r.empresaLista : ''), grave: false }
+          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono) + (r.empresaLista ? ' · de ' + r.empresaLista : ''), grave: false,
+            ilustracion: textoConitoIlustracion(r.datos) }
         } else {
           v.origen[it.id] = { texto: r?.error ?? r?.motivo ?? 'No se pudo leer el precio de la lista.', grave: true }
         }

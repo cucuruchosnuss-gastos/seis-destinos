@@ -65,3 +65,16 @@ d) Corregir orden: orden_para_corregir ahora trae en cada renglón precio_lista,
 PRUEBAS: alta, edición y desactivar condición; valorizar con y sin tilde (solo los renglones con esos conos bajan 5 %);
 con condición "toda la orden" bajan todos menos las reposiciones; revalorizar trae los tildes. Ensayo y CI en verde.
 Mismo cierre: un resumen y, como último mensaje, solo: TERMINADO — mandar al chat
+
+## AGREGADO (30/10/2026): CONO DE ILUSTRACIÓN A LA VISTA (también en remitos-mas-simple, cada rama en lo suyo)
+- marcas_personalizadas.papel_ilustracion = true marca los conos de papel ilustración (hoy MARBET, RIO, RIO OLIMPICOS,
+  QUINTANA). Se cobran más caros: la base ya lo resuelve en precio_venta, que devuelve papel_conito = 'ilustracion' y su
+  conito_unitario.
+- Donde se nombre el cono de un renglón, si es de ilustración, agregá "(ilustración)": "Barquillo 40 x4 · Caja con cono ×
+  252 u. · MARBET (ilustración)". Va en: la pantalla de valorizar y el detalle de la orden (administracion.html); las hojas
+  N1/N2; el renglón y el buscador de conos de Remitos Dolce; la hoja de la Carga.
+- Al valorizar, en el renglón de un cono de ilustración, mostrá en chico: "conito ilustración $ 47 por unidad" (el
+  conito_unitario que devuelve precio_venta).
+- Leé papel_ilustracion junto con el catálogo de conos (agregalo al select de marcas_personalizadas) y no lo copies a mano
+  en ningún lado.
+PRUEBAS: renglón con MARBET muestra "(ilustración)" en las cuatro pantallas; con un cono común no.

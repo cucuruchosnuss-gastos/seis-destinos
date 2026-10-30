@@ -138,6 +138,6 @@ correrMutaciones({
     { nombre: 'sin valorizar la hoja inventa precios', de: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,", a: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: it.precio_caja ?? 0," },
     { nombre: 'la hoja sin quién cargó', de: "        cargadaPor: estado.nombres.get(o.cargada_por) ?? '',", a: "        cargadaPor: ''," },
     // Un solo "sin cono" (10/10/2026)
-    { nombre: 'con cono y sin marca vuelve a ser "Común"', de: "?.nombre ?? 'Cono que no se pudo leer') : 'Falta el cono')", a: "?.nombre ?? 'Cono que no se pudo leer') : 'Común')" },
+    { nombre: 'con cono y sin marca vuelve a ser "Común"', de: "(it.marca_id ? nombreConoPorIdRemito(cat, it.marca_id) : 'Falta el cono')", a: "(it.marca_id ? nombreConoPorIdRemito(cat, it.marca_id) : 'Común')" },
   ],
 })

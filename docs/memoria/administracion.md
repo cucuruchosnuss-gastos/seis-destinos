@@ -152,6 +152,11 @@ Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, p
     renglón tiene condición y hay retiros:precios; si no, "(−5 %)"). La hoja de retiro (js/retiros-comun.js) no lo muestra.
   - **Corregir orden** (esta rama trae `ci-prueba/corregir-orden`): el precio editable es `precio_lista` de
     `orden_para_corregir`; el total estimado vuelve a aplicar las condiciones de la orden (`leerCondicionesCorregir`).
+- **El cono de papel ilustración** (30/10/2026, agregado al pedido): el catálogo lee `marcas_personalizadas.papel_ilustracion`
+  y `partesRenglon` nombra el cono con `nombreConoPorIdRemito` (js/remitos-comun.js, de `ci-prueba/remitos-mas-simple`):
+  "… · MARBET (ilustración)" al valorizar, en el detalle, en las hojas N1/N2 y en la hoja de la orden (`conoNombre`). Al
+  valorizar, debajo del origen del precio y en chico, "conito ilustración $ 47,00 por unidad" (`textoConitoIlustracion`, con
+  el `conito_unitario` cuando `precio_venta` devuelve `papel_conito = 'ilustracion'`). Ningún nombre de cono copiado a mano.
 - **La caja con cono en Listas** (`conConoConPrecioNuevo`): la misma cuenta que `precio_venta` sin redondear el precio
   por unidad en el medio, y con la aritmética de numeric (`cuentaNumeric` con BigInt: `dividirNumeric` da los decimales
   de Postgres —select_div_scale, al menos 16 cifras, en grupos de 4— y redondea la mitad para arriba; el final a 2).

@@ -102,7 +102,41 @@ const el = (S, id) => S.__doc.getElementById(id)
   chk('con cono y sin marca (una orden vieja): "Falta el cono"', S.htmlNombreRenglon(CAT, { presentacion_id: 'pr-bar-con', marca_id: null }) === 'Barquillo 40 x4 · Caja con cono' + U(252) + ' · Falta el cono')
   chk('escapa el nombre del producto y del cono', S.htmlNombreRenglon({ ...CAT, productos: [{ id: 'p-bar', nombre: '<b>x</b>' }], marcas: [{ id: 'm-ven', nombre: 'A&B' }] },
     { presentacion_id: 'pr-bar-con', marca_id: 'm-ven' }) === '&lt;b&gt;x&lt;/b&gt; · Caja con cono' + U(252) + ' · A&amp;B')
-  chk('reusa la función de Remitos Dolce (no la duplica)', /textoUnidadesRemito \} from '\.\.\/js\/remitos-comun\.js'/.test(src) && !/function textoUnidadesRemito/.test(src))
+  chk('reusa la función de Remitos Dolce (no la duplica)', /textoUnidadesRemito[^}]*\} from '\.\.\/js\/remitos-comun\.js'/.test(src) && !/function textoUnidadesRemito/.test(src))
+}
+
+// ── El cono de papel ilustración (30/10/2026) ──────────────────────────────
+{
+  const S = nuevo()
+  const CATI = { ...CAT, marcas: [...CAT.marcas, { id: 'm-mar', nombre: 'MARBET', papel_ilustracion: true }] }
+  const U = ' <strong class="ad-renglon__u">× 252 u.</strong>'
+  chk('el renglón con MARBET: "Barquillo 40 x4 · Caja con cono × 252 u. · MARBET (ilustración)"',
+    S.htmlNombreRenglon(CATI, { presentacion_id: 'pr-bar-con', marca_id: 'm-mar' }) === 'Barquillo 40 x4 · Caja con cono' + U + ' · MARBET (ilustración)')
+  chk('…con un cono común, sin "(ilustración)"', S.htmlNombreRenglon(CATI, { presentacion_id: 'pr-bar-con', marca_id: 'm-cas' }) === 'Barquillo 40 x4 · Caja con cono' + U + ' · CASERATO')
+  chk('…la hoja de la orden también ("conoNombre")', S.partesRenglon(CATI, { presentacion_id: 'pr-bar-con', marca_id: 'm-mar' }).conoNombre === 'MARBET (ilustración)' &&
+    S.partesRenglon(CATI, { presentacion_id: 'pr-bar-con', marca_id: 'm-cas' }).conoNombre === 'CASERATO' && S.partesRenglon(CATI, { presentacion_id: 'pr-bar-con', marca_id: 'm-otro' }).conoNombre === null)
+  S.estado.catalogo = CATI
+  S.estado.orden = { id: 'o9', orden: { ...ORDEN }, items: [{ ...ITEMS[0], marca_id: 'm-mar' }] }
+  const hoja = nb(S.htmlHojaPunto({ orden_id: 'o9', items: [{ orden: 1, tipo: 'retiro', descripcion: 'x', unidad: 'cajas', precio: 1, cantidad: 1, cant_a: 1, cant_b: 0, subtotal_a: 1, subtotal_b: 0 }] }, 'A'))
+  chk('…las hojas N1 / N2', hoja.includes('· MARBET (ilustración)</td>'))
+  chk('al valorizar: "conito ilustración $ 47,00 por unidad"', S.textoConitoIlustracion({ papel_conito: 'ilustracion', conito_unitario: 47 }) === 'conito ilustración $ 47,00 por unidad' &&
+    S.textoConitoIlustracion({ papel_conito: 'comun', conito_unitario: 8.5 }) === '' && S.textoConitoIlustracion({ papel_conito: 'ilustracion', conito_unitario: null }) === '')
+  chk('…en chico debajo del origen', S.htmlOrigenPrecio({ texto: 'lista X', ilustracion: 'conito ilustración $ 47,00 por unidad' }) ===
+    '<div class="ad-renglon__origen">lista X</div><div class="ad-renglon__origen ad-renglon__descuento" data-conito-ilustracion>conito ilustración $ 47,00 por unidad</div>')
+  chk('Administración lee papel_ilustracion con su catálogo de conos', /from\('marcas_personalizadas'\)\.select\('id, nombre, papel_ilustracion'\)/.test(src) &&
+    !/MARBET|QUINTANA|RIO OLIMPICOS/.test(src.replace(/\/\/.*$/gm, '')))
+}
+{
+  // Valorizar un renglón con MARBET: el nombre y la línea del conito.
+  const S = nuevo()
+  const CATI = { ...CAT, marcas: [...CAT.marcas, { id: 'm-mar', nombre: 'MARBET', papel_ilustracion: true }] }
+  preparar(S, { items: [{ ...ITEMS[0], marca_id: 'm-mar' }], conds: [], rpc: async (n, p) => n === 'precio_venta' ? { data: { ...PV['pr-bar-con'], papel_conito: 'ilustracion', conito_unitario: 47 }, error: null } : null })
+  S.estado.catalogo = CATI
+  esperas.push(S.abrirOrden('o9').then(() => S.abrirValorizar()).then(() => {
+    const h = cuerpo(S)
+    chk('valorizar con MARBET: el renglón dice "MARBET (ilustración)"', h.includes('· MARBET (ilustración)</div>'))
+    chk('…y en chico "conito ilustración $ 47,00 por unidad"', h.includes('data-conito-ilustracion>conito ilustración $ 47,00 por unidad</div>'))
+  }))
 }
 
 // ── La regla de las condiciones (la misma que valorizar_orden_retiro) ──────

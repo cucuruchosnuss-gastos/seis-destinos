@@ -44,6 +44,7 @@ correrMutaciones({
   funciones: ['htmlNombreRenglon', 'htmlDescuentoGuardado', 'htmlOrigenPrecio', 'htmlNombreHojaPunto', 'htmlDescuentoValorizar', 'htmlCondicionesValorizar',
     'htmlDescuentoHojaPunto', 'htmlFilaEspecial', 'htmlFormEspecial', 'pintarPartesFormEspecial', 'pintarEspecialesFicha'],
   equivalentes: [
+    { expr: 'esc(o.ilustracion)', motivo: 'texto armado por textoConitoIlustracion() con un importe formateado (textoPrecioUnitario de un número): sin texto de la base' },
     { expr: 'esc(importeHoja(precioConDescuento(p, k.descuento_pct), moneda))', motivo: 'un importe formateado por el código (importeHoja de un número): sin texto de la base' },
     { expr: "esc('(−' + textoPct(k.descuento_pct) + ' % · antes ' + importeHoja(p, moneda) + ')')", motivo: 'un % y un importe formateados por el código: sin texto de la base' },
   ],
@@ -99,6 +100,15 @@ correrMutaciones({
     { nombre: 'editar abre vacío', de: "      e.form = { id: k?.id ?? null, nombre: k?.nombre ?? '',", a: "      e.form = { id: k?.id ?? null, nombre: '', " },
     { nombre: 'después de guardar no relee', de: '        e.lista = Array.isArray(data) ? data : []\n        e.form = null\n', a: '        e.form = null\n' },
     { nombre: 'el error de la base se tapa', de: "alFallar(err?.message || 'No se pudo guardar la condición. Probá de nuevo.')", a: "alFallar('No se pudo guardar la condición. Probá de nuevo.')" },
+    // El cono de papel ilustración (30/10/2026)
+    { nombre: 'Administración no lee papel_ilustracion', de: "from('marcas_personalizadas').select('id, nombre, papel_ilustracion')", a: "from('marcas_personalizadas').select('id, nombre')" },
+    { nombre: 'el renglón sin "(ilustración)"', de: "(it.marca_id ? nombreConoPorIdRemito(cat, it.marca_id) : 'Falta el cono')", a: "(it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? '') : 'Falta el cono')" },
+    { nombre: 'la hoja de la orden sin "(ilustración)"', de: "(cat?.marcas ?? []).some(m => m.id === it.marca_id) ? nombreConoPorIdRemito(cat, it.marca_id) : null", a: "(cat?.marcas ?? []).some(m => m.id === it.marca_id) ? (cat?.marcas ?? []).find(m => m.id === it.marca_id).nombre : null" },
+    { nombre: 'la hoja con un cono que no está', de: "      const conoNombre = pr?.con_cono && it.marca_id && (cat?.marcas ?? []).some(m => m.id === it.marca_id) ? ", a: '      const conoNombre = pr?.con_cono && it.marca_id ? ' },
+    { nombre: 'el conito de ilustración para cualquier cono', de: "      if (datos?.papel_conito !== 'ilustracion') return ''\n", a: '' },
+    { nombre: 'el conito sin el precio', de: "      return n === null ? '' : 'conito ilustración ' + textoPrecioUnitario(n) + ' por unidad'", a: "      return 'conito ilustración por unidad'" },
+    { nombre: 'valorizar sin la línea del conito', de: '            ilustracion: textoConitoIlustracion(r.datos) }', a: "            ilustracion: '' }" },
+    { nombre: 'la línea del conito sin mostrarse', de: "        (o.ilustracion ? `<div class=\"ad-renglon__origen ad-renglon__descuento\" data-conito-ilustracion>${esc(o.ilustracion)}</div>` : '')", a: "        ''" },
     // Las hojas N1 / N2
     { nombre: 'la hoja con el nombre de la base', de: '        ? filas.map(r => `<tr><td>${htmlNombreHojaPunto(datos, r)}</td>` +', a: '        ? filas.map(r => `<tr><td>${esc(r.descripcion)}</td>` +' },
     { nombre: 'la hoja de otra orden con el nombre de la abierta', de: "d?.orden?.id && d.orden.id === datos?.orden_id && Array.isArray(d.items)", a: 'Array.isArray(d?.items)' },

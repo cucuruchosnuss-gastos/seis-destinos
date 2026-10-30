@@ -172,7 +172,7 @@ function enDolce(S, { cargar = true } = {}) {
 {
   chk('sin la vista del remito ni las solapas de talonario', !/id="ad-vista-remito"/.test(FUENTE) && !/id="ad-ordenes-talonario"/.test(FUENTE) && !/id="ad-remito-cuerpo"/.test(FUENTE))
   chk('sin las funciones de la revisión', !/function (abrirRemito|confirmarRemito|htmlRemitosPrecarga|cargarAcopiosRemito|ordenesVisibles)\(/.test(FUENTE))
-  chk('el catálogo de un renglón y el "Remito N° X" vienen de js/remitos-comun.js', /import \{ textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito \} from '\.\.\/js\/remitos-comun\.js'/.test(FUENTE))
+  chk('el catálogo de un renglón y el "Remito N° X" vienen de js/remitos-comun.js', /import \{ textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito, nombreConoPorIdRemito \} from '\.\.\/js\/remitos-comun\.js'/.test(FUENTE))
   chk('Nuevo acopio ordena el catálogo con las categorías de la pantalla', /gruposRemito\(cat, busqueda, CATEGORIAS_PRODUCTO\)/.test(FUENTE))
 }
 

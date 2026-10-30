@@ -17,6 +17,10 @@ pruebas y docs). La base no se tocó.
 3. **La caja con cono en Listas** hace la misma cuenta que la base (sin redondeo intermedio y con la aritmética de
    numeric: la caja de 23.990,80 se ve 23.990,80; comprobado contra la base con 10 casos).
 
+4. **El cono de papel ilustración** (agregado): "… · MARBET (ilustración)" al valorizar, en el detalle, en las hojas N1/N2 y
+   en la hoja de la orden, y "conito ilustración $ 47,00 por unidad" en chico al valorizar. Lo de Remitos Dolce y la hoja
+   de la Carga está en `ci-prueba/remitos-mas-simple` (esta rama la trae de nuevo, 2f3ce1e).
+
 ## Decidido sin consultar
 - Al revalorizar se propone `precio_lista` (no `precio_caja`, que ya viene descontado: si no, la base descontaría dos veces).
 - Una condición tildada que después se desactivó no se manda al revalorizar (solo se ofrecen y mandan las activas).

@@ -57,6 +57,9 @@ async function abrirAdministracion(page, { valorizada = false } = {}) {
         precio_caja: valorizada ? 34039.26 : null, subtotal: valorizada ? 102117.78 : null, precio_lista: valorizada ? 35830.8 : null, descuento_pct: valorizada ? 5 : null, condicion_id: valorizada ? 'k1' : null },
       { id: 'i90b', orden_id: 'o90', orden: 2, presentacion_id: 'pr-soft-sin', marca_id: null, cajas: 2, unidades: 448,
         precio_caja: valorizada ? 5380.37 : null, subtotal: valorizada ? 10760.74 : null, precio_lista: null, descuento_pct: null, condicion_id: null },
+      // El cono de papel ilustración (30/10/2026): solo en la orden valorizada.
+      ...(valorizada ? [{ id: 'i90c', orden_id: 'o90', orden: 3, presentacion_id: 'pr-bar-con', marca_id: 'm-mar', cajas: 1, unidades: 252,
+        precio_caja: 0, subtotal: 0, precio_lista: null, descuento_pct: null, condicion_id: null }] : []),
     ];
     const pvBar = { precio_unitario: 142.1857, precio_caja: 35830.8, unidades_por_caja: 252, producto_unitario: 137.2157, conito_unitario: 4.97, papel_conito: 'comun', lista: 'Mayoristas', recargo_pct: 0, sin_precio: false };
     const pvSoft = { precio_unitario: 24.02, precio_caja: 5380.37, unidades_por_caja: 224, producto_unitario: 24.02, conito_unitario: 0, papel_conito: null, lista: 'Mayoristas', recargo_pct: 0, sin_precio: false };
@@ -65,7 +68,7 @@ async function abrirAdministracion(page, { valorizada = false } = {}) {
         clientes: [cli, ...base.tablas.clientes],
         productos_terminados: [...productos, ...(base.tablas.productos_terminados ?? [])],
         producto_presentaciones: [...presentaciones, ...(base.tablas.producto_presentaciones ?? [])],
-        marcas_personalizadas: [{ id: 'm-cas', nombre: 'CASERATO' }, { id: 'm-dip', nombre: 'DIPALE' }, ...(base.tablas.marcas_personalizadas ?? [])],
+        marcas_personalizadas: [{ id: 'm-cas', nombre: 'CASERATO', papel_ilustracion: false }, { id: 'm-dip', nombre: 'DIPALE' }, { id: 'm-mar', nombre: 'MARBET', papel_ilustracion: true }, ...(base.tablas.marcas_personalizadas ?? [])],
         ordenes_retiro: [orden, ...base.tablas.ordenes_retiro],
         orden_retiro_items: [...items, ...base.tablas.orden_retiro_items],
         orden_facturas: [],
@@ -141,6 +144,9 @@ for (const [nombre, ancho, alto] of [['390', 390, 844], ['1280', 1280, 900]]) {
     await expect(d).toHaveCount(1);
     await expect(d).toHaveText('(−5 % · Caserato · Verasens · Dipale)');
     expect(nb(await d.locator('xpath=..').textContent())).toContain('$ 34.039,26 x caja (−5 % · Caserato · Verasens · Dipale)');
+    // El cono de papel ilustración: "MARBET (ilustración)"; CASERATO, sin nada.
+    await expect(cuerpo).toContainText('1 cajas · Barquillo 40 x4 · Caja con cono × 252 u. · MARBET (ilustración)');
+    await expect(cuerpo).not.toContainText('CASERATO (ilustración)');
     expect(await sinCostado(page), 'sin scroll de costado').toBe(true);
     await captura(page, `valorizar-legible-valorizada-${nombre}`, info);
     expect(errores, errores.join('\n')).toEqual([]);
