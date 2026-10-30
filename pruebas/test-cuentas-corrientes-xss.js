@@ -672,6 +672,11 @@ const SEGURAS = {
   pintarRenglonesNd: {
     'htmlRenglonesNd(n.renglones)': 'htmlRenglonesNd() escapa la clave y el concepto de cada renglón',
   },
+  // 30/10/2026: la venta y sus N1 / N2 (lo ejecuta con marcas
+  // test-cuentas-corrientes-orden-n1-n2.js).
+  decorarVentasCC: {
+    'htmlDivisionVentaCC(fila, infoDivisionCC(id))': 'htmlDivisionVentaCC() escapa el código de la orden, los importes, el mensaje de la base y cada texto (ejecutada con marcas)',
+  },
 }
 const SEGURAS_REGEX = {}
 
