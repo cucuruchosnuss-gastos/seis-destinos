@@ -32,6 +32,7 @@ const path = require('path')
 const { execFileSync } = require('child_process')
 const { construirCon, scriptModulo } = require('./sandbox')
 const { fuenteNumeros, inputFalso } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 const { extraerFn, cuerpoDesde } = require('./extraer')
 const { leer } = require('./circuito-comun')
 
@@ -213,6 +214,8 @@ const FUNCIONES = [
   'esMedioCheque', 'puedeUsarCartera', 'hoyCC',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
 ]
 
 function sandbox() {
@@ -384,6 +387,9 @@ async function main() {
     S.__fifo()[0].checked = false
     S.__limpiar()
     await S.confirmarPago()
+    // Sin ninguna factura elegida, primero pregunta (30/10/2026, caso BADIC).
+    chk('FIFO: sin facturas elegidas pregunta antes de dejarlo a cuenta', rpc(S, 'pagar_proveedor_mixto').length === 0 && S.estado.pagoPreguntaACuenta === true)
+    await S.siDejarACuenta()
     const ll = rpc(S, 'pagar_proveedor_mixto')
     chk('FIFO: un monto vacío no viaja como aplicación', ll[0] && ll[0].params.p_aplicaciones.length === 0, ll[0] && ll[0].params)
     const S2 = (await prepararFifo('100')).S
@@ -609,9 +615,13 @@ async function main() {
     // con DECIMALES_ND = 2.
     const deLaNotaDebito = enlaces.filter(a => /decimales: DECIMALES_ND \}/.test(a))
     chk('la nota de débito enlaza sus importes con 2 decimales', deLaNotaDebito.length === 1 && /const DECIMALES_ND = 2\n/.test(codigo))
-    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo), más los 3 de la nota de crédito y el de la de débito',
-      enlaces.length === 7 && deLaNota.length === 3 &&
-      enlaces.filter(a => !deLaNota.includes(a)).filter(a => /decimales: 2 \}|decimales: 2, max: /.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)) &&
+    // Y el monto de cada factura de "Aplicar a facturas" (30/10/2026): 2
+    // decimales, hasta su saldo.
+    const deAplicarPago = enlaces.filter(a => /max: f\.saldo > 0 \? f\.saldo : undefined \}/.test(a))
+    chk('"Aplicar a facturas" enlaza cada monto con 2 decimales y su saldo como máximo', deAplicarPago.length === 1 && /decimales: 2, max: f\.saldo > 0/.test(deAplicarPago[0]))
+    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo), más los 3 de la nota de crédito, el de la de débito y el de "Aplicar a facturas"',
+      enlaces.length === 8 && deLaNota.length === 3 &&
+      enlaces.filter(a => !deLaNota.includes(a) && !deAplicarPago.includes(a)).filter(a => /decimales: 2 \}|decimales: 2, max: /.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)) &&
       deLaNota.some(a => /enlazarCampoNumero\(imp, \{ decimales: 2 \}\)/.test(a)) && deLaNota.some(a => /\{ decimales: 2, max: f \? Number\(f\.saldo\) : undefined \}/.test(a)) &&
       deLaNota.some(a => /enlazarCampoNumero\(input, \{ decimales: 3 \}\)/.test(a)), enlaces)
     chk('los CUIT NO se enlazan', !/enlazarCampoNumero\([^)]*cuit/i.test(codigo) && !/IDS_CAMPOS_MONTO = \[[^\]]*cuit/.test(codigo))

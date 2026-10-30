@@ -26,6 +26,7 @@ const fs = require('fs')
 const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -104,6 +105,8 @@ const FUNCIONES = [
   'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL']
 

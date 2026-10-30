@@ -27,6 +27,7 @@ const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -128,6 +129,8 @@ const FUNCIONES = [
   'logoSeguroCC', 'cuitConGuiones', 'fechaOrden', 'letrasMenorDeMil', 'letrasMenorDeMillon', 'enteroEnLetras', 'importeEnLetras',
   'htmlOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
   'numeroTextoOrden', 'cargarFichaOrdenesPago', 'htmlOrdenesPagoFicha', 'renderizarFichaOrdenesPago',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL',
   'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'COPIAS_ORDEN_PAGO']
