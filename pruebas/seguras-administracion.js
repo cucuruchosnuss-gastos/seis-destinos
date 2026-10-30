@@ -185,6 +185,10 @@ const SEGURAS_ADMINISTRACION = [
   ['datos', "HTML armado por htmlDatoAd(), que escapa rótulo y valor (htmlDetalleAcopio, unidos con join(''))"],
   ['acObs', 'HTML ya escapado: htmlDetalleAcopio() arma las observaciones con esc(), o vacío'],
   ['acMovs', 'HTML armado por htmlMovimientoAcopio(), que escapa cada movimiento, o un texto constante'],
+  // valorizar-legible (30/10/2026)
+  ['htmlDescuentoGuardado(it)', 'HTML armado por htmlDescuentoGuardado(), con esc() del % (o vacío)'],
+  ['descHtml', 'HTML ya escapado: esc() de la cantidad más htmlNombreRenglon(), que escapa producto, presentación, unidades y cono (si no, esc(desc))'],
+  ['htmlNombreHojaPunto(datos, r)', 'HTML armado por htmlNombreHojaPunto(): esc() de la descripción de la base, o htmlNombreRenglon(), que escapa cada parte'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

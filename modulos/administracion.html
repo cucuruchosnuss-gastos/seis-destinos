@@ -428,6 +428,10 @@
        + conito"), o por qué no hay (en bordó: falta un dato). */
     .ad-renglon__origen { white-space: normal; font-size: 0.8125rem; color: var(--ad-texto-secundario); max-width: 20rem; margin-left: auto; overflow-wrap: anywhere; }
     .ad-renglon__origen--grave { color: var(--bordo-oscuro); font-weight: 600; }
+    /* El descuento del cono (30/10/2026): letra chica y color normal (no es un error). */
+    .ad-renglon__descuento { font-size: 0.8125rem; font-weight: 400; color: var(--ad-texto-secundario); white-space: normal; }
+    /* "× 252 u." en negrita y entero (no se parte en dos renglones). */
+    .ad-renglon__u { font-weight: 700; white-space: nowrap; }
     /* Una fila de la grilla de precios. La que tiene un precio nuevo sin
        guardar lleva el fondo naranja suave: es lo elegido/editado, no una
        validez. */
@@ -1527,7 +1531,7 @@
     // Los remitos de Dolce (28/10/2026): el catálogo de un renglón (Nuevo
     // acopio) y el "Remito N° X" (con el sello Acopio) de la ficha, los
     // mismos de Remitos Dolce.
-    import { textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito } from '../js/remitos-comun.js'
+    import { textoNumeroRemito, htmlSelloAcopio, presentacionRemito, nombreRenglonRemito, gruposRemito, textoUnidadesRemito } from '../js/remitos-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
@@ -2403,6 +2407,20 @@
         sinStock: pr?.sin_stock === true }
     }
 
+    // EL NOMBRE DEL RENGLÓN AL VALORIZAR Y EN EL DETALLE (30/10/2026, pedido
+    // de Facu): "Barquillo 40 x4 · Caja con cono × 252 u. · VENEZIA" y "Soft ·
+    // Caja sin cono × 224 u.". Las unidades de la caja con textoUnidadesRemito
+    // (js/remitos-comun.js, la misma de Remitos Dolce: nada con 1 ni si el
+    // nombre ya trae el número), en negrita; el cono solo si la presentación es
+    // con cono (sin el "· Sin cono" del final). Devuelve HTML ya escapado.
+    function htmlNombreRenglon(cat, it) {
+      const p = partesRenglon(cat, it)
+      const pr = presentacionRemito(cat, it?.presentacion_id)
+      const u = textoUnidadesRemito(pr)
+      const cono = pr?.con_cono ? p.cono : ''
+      return esc(p.producto + ' · ' + p.presentacion) + (u ? ' <strong class="ad-renglon__u">' + esc(u) + '</strong>' : '') + (cono ? esc(' · ' + cono) : '')
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PORTADA
     // ═══════════════════════════════════════════════════════════════════════
@@ -3251,7 +3269,7 @@
       if (error) throw error
       if (!o) return null
       const { data: items, error: e2 } = await supabase.from('orden_retiro_items')
-        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')
+        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, descuento_pct, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')
         .eq('orden_id', id).order('orden')
       if (e2) throw e2
       let lotes = null
@@ -3387,6 +3405,7 @@
 
     function htmlRenglonOrden(it, d, cat) {
       let desc, detalle, porQue
+      let descHtml = null
       let modo = null
       if (it.insumo_id) {
         // Un INSUMO de reventa: por cantidad en su unidad, y su precio es por
@@ -3405,7 +3424,8 @@
         const lotes = lotesDeRenglon(d.lotes, it)
         const tipo = tipoItem(it)
         const suelto = esPorUnidadHoja({ ...p, cajas: it.cajas, unidades: it.unidades })
-        desc = (tipo === 'devolucion' ? '−' : '') + (suelto ? cantidadUnidadesHoja(p.producto, it.cajas) : enteroHoja(it.cajas) + ' cajas') + ' · ' + [p.producto, p.presentacion, p.cono].join(' · ')
+        desc = (tipo === 'devolucion' ? '−' : '') + (suelto ? cantidadUnidadesHoja(p.producto, it.cajas) : enteroHoja(it.cajas) + ' cajas') + ' · '
+        descHtml = esc(desc) + htmlNombreRenglon(cat, it)
         const textoLotesIt = lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes)
         // Devolución: el motivo, el lote que trajo y qué se hizo con las cajas
         // (no sale de ningún lote). Reposición: eso y de qué lotes salió.
@@ -3432,11 +3452,11 @@
         const precio = modo?.porBulto
           ? precioDesdeBase(it.precio_caja, modo, { decimalesBase: 2, subtotal: it.subtotal, cantidad: it.cantidad })
           : it.precio_caja
-        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(precio, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div>` +
+        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(precio, moneda) + ' x ' + porQue)}${htmlDescuentoGuardado(it)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div>` +
           (modo?.porBulto ? `<div class="ad-texto-suave ad-renglon__por-base">${esc(textoPrecioPorBase(it.precio_caja, modo, moneda))}</div>` : '') + '</div>'
       }
       const sello = esItemDev(it) ? `<span class="ad-sello ad-sello--dev">${tipoItem(it) === 'reposicion' ? 'Reposición' : 'Devolución'}</span> ` : ''
-      return `<div class="ad-renglon${esItemDev(it) ? ' ad-renglon--dev' : ''}"><div><div class="ad-renglon__desc">${sello}${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div>${htmlFaltanteRenglon(it, d)}</div>${plata}</div>`
+      return `<div class="ad-renglon${esItemDev(it) ? ' ad-renglon--dev' : ''}"><div><div class="ad-renglon__desc">${sello}${descHtml ?? esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div>${htmlFaltanteRenglon(it, d)}</div>${plata}</div>`
     }
 
     // Lo que no estaba en stock de un renglón (13/10/2026): "Esperando la
@@ -3725,7 +3745,31 @@
 
     function htmlOrigenPrecio(o) {
       if (!o?.texto) return ''
-      return `<div class="ad-renglon__origen${o.grave ? ' ad-renglon__origen--grave' : ''}">${esc(o.texto)}</div>`
+      return `<div class="ad-renglon__origen${o.grave ? ' ad-renglon__origen--grave' : ''}">${esc(o.texto)}</div>` +
+        (o.descuento ? `<div class="ad-renglon__origen ad-renglon__descuento" data-descuento>${esc(o.descuento)}</div>` : '')
+    }
+
+    // EL DESCUENTO DEL CONO (30/10/2026, pedido de Facu): si precio_venta
+    // devuelve descuento_pct, su precio_caja ya viene con el descuento hecho
+    // (se usa tal cual) y al lado va "(−5 % CASERATO · antes $ 35.830,80)".
+    // '' si no hay descuento. OJO: al 30/10/2026 precio_venta todavía NO
+    // devuelve descuento_pct (leída con pg_get_functiondef): esto queda listo
+    // para cuando lo devuelva.
+    function textoDescuentoPrecio(datos, nombreCono, moneda = 'ARS') {
+      const pct = numeroONulo(datos?.descuento_pct)
+      if (pct === null || pct === 0) return ''
+      const antes = numeroONulo(datos?.precio_caja_sin_descuento)
+      const partes = [`−${textoPct(pct)} %` + (limpio(nombreCono) ? ' ' + limpio(nombreCono) : '')]
+      if (antes !== null) partes.push('antes ' + importeHoja(antes, moneda))
+      return '(' + partes.join(' · ') + ')'
+    }
+
+    // La orden ya valorizada: orden_retiro_items.descuento_pct (lo pone
+    // valorizar_orden_retiro) al lado del precio por caja, "(−5 %)".
+    function htmlDescuentoGuardado(it) {
+      const pct = numeroONulo(it?.descuento_pct)
+      if (pct === null || pct === 0) return ''
+      return ` <span class="ad-renglon__descuento" data-descuento-guardado>${esc('(−' + textoPct(pct) + ' %)')}</span>`
     }
 
     // El precio de venta de UN producto con precio_venta() (la base): el de la
@@ -3896,7 +3940,9 @@
           v.precios[it.id] = r.precio
           v.desdeLista.add(it.id)
           const conCono = !!(estado.catalogo?.presentaciones ?? []).find(p => p.id === it.presentacion_id)?.con_cono || !!r.datos?.papel_conito
-          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono) + (r.empresaLista ? ' · de ' + r.empresaLista : ''), grave: false }
+          const nombreCono = it.marca_id ? (estado.catalogo?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre : null
+          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono) + (r.empresaLista ? ' · de ' + r.empresaLista : ''), grave: false,
+            descuento: textoDescuentoPrecio(r.datos, nombreCono, d.orden.moneda || 'ARS') }
         } else {
           v.origen[it.id] = { texto: r?.error ?? r?.motivo ?? 'No se pudo leer el precio de la lista.', grave: true }
         }
@@ -4416,7 +4462,19 @@
       const k = parte === 'A' ? 'a' : 'b'
       return (Array.isArray(datos?.items) ? datos.items : [])
         .filter(it => { const n = Number(it?.['cant_' + k]); return Number.isFinite(n) && n !== 0 })
-        .map(it => ({ descripcion: it.descripcion, cantidad: Number(it['cant_' + k]), unidad: it.unidad, precio: it.precio, subtotal: it['subtotal_' + k] }))
+        .map(it => ({ orden: it.orden, tipo: it.tipo, descripcion: it.descripcion, cantidad: Number(it['cant_' + k]), unidad: it.unidad, precio: it.precio, subtotal: it['subtotal_' + k] }))
+    }
+
+    // El nombre de un renglón en la hoja N1 / N2 (30/10/2026): el de la orden
+    // abierta ("… · Caja con cono × 252 u. · VENEZIA"), buscado por su número
+    // de renglón; si no se encuentra (o es un insumo), el que manda la base.
+    // HTML ya escapado.
+    function htmlNombreHojaPunto(datos, r) {
+      const d = estado.orden
+      const it = d?.orden?.id && d.orden.id === datos?.orden_id && Array.isArray(d.items) ? d.items.find(x => x.orden === r.orden) : null
+      if (!it?.presentacion_id || it.insumo_id) return esc(r.descripcion)
+      const prefijo = r.tipo === 'devolucion' ? 'Devolución: ' : r.tipo === 'reposicion' ? 'Reposición: ' : ''
+      return esc(prefijo) + htmlNombreRenglon(estado.catalogo, it)
     }
 
     // Los totales de un punto (en la pantalla y en el papel): en el N1, Total
@@ -4442,7 +4500,7 @@
       const plata = (n) => importeHoja(n, moneda)
       const filas = renglonesParte(datos, parte)
       const cuerpo = filas.length
-        ? filas.map(r => `<tr><td>${esc(r.descripcion)}</td>` +
+        ? filas.map(r => `<tr><td>${htmlNombreHojaPunto(datos, r)}</td>` +
             `<td class="opv__num">${esc(cantidadDivision(r.cantidad, r.unidad))}</td>` +
             `<td class="opv__num">${esc(plata(r.precio))}</td>` +
             `<td class="opv__num">${esc(plata(r.subtotal))}</td></tr>`).join('')
@@ -8648,9 +8706,13 @@
     }
 
     // Con un precio SIN cono nuevo (por caja), cuánto queda la caja CON cono:
-    // la misma cuenta de precio_venta() (precio por unidad con el recargo de
-    // la lista, redondeado a 4, más el conito colocado, por las unidades de
-    // la caja con cono, a 2 decimales). null si no se puede saber.
+    // la misma cuenta de precio_venta() —
+    //   round(((caja / unidades sin cono) * (1 + recargo / 100.0) + conito) * unidades con cono, 2)
+    // — SIN redondear el precio por unidad en el medio (desde el 30/10/2026,
+    // leída con pg_get_functiondef: antes la caja de $ 23.990,80 daba
+    // 23.990,82) y con la aritmética de numeric (cuentaNumeric): con los
+    // decimales de la compu, una caja "en la mitad justa" salía un centavo
+    // distinta. null si no se puede saber.
     function conConoConPrecioNuevo(f, meta, conCono, precioCajaNuevo) {
       const nuevo = numeroONull(precioCajaNuevo)
       const upcSin = numeroONull(f?.upcSin)
@@ -8658,8 +8720,71 @@
       const conito = numeroONull(conCono?.conito_unitario)
       if (nuevo === null || !upcSin || !upcCon || conito === null || conCono?.sin_precio === true) return null
       const pct = recargoDeLista(meta)
-      const unidad = Math.round(nuevo / upcSin * (1 + pct / 100) * 10000) / 10000
-      return Math.round((unidad + conito) * upcCon * 100) / 100
+      return cuentaNumeric(nuevo, upcSin, pct, conito, upcCon)
+    }
+
+    // LA ARITMÉTICA DE numeric DE POSTGRES (30/10/2026), con BigInt: cada
+    // número es { v, s } = v / 10^s. Sumar y multiplicar son exactos; dividir
+    // da los decimales que da Postgres (select_div_scale: al menos 16 cifras
+    // significativas, en grupos de 4) y redondea la mitad para arriba; el
+    // final, a 2. Comprobado contra la base el 30/10/2026 (los casos de
+    // test-administracion-valorizar-legible.js).
+    function decimalNumeric(x) {
+      let t = typeof x === 'string' ? x.trim() : Number(x).toPrecision(15)
+      if (!/^-?\d+(\.\d+)?$/.test(t)) return null
+      if (t.includes('.')) t = t.replace(/0+$/, '').replace(/\.$/, '')
+      const [ent, frac = ''] = t.split('.')
+      return { v: BigInt(ent + frac), s: frac.length }
+    }
+
+    // El "weight" y el primer dígito en base 10000, como los guarda numeric.
+    function pesoNumeric(d) {
+      const abs = d.v < 0n ? -d.v : d.v
+      if (abs === 0n) return { peso: 0, primero: 0 }
+      const escala = 10n ** BigInt(d.s)
+      const ent = abs / escala === 0n ? '' : (abs / escala).toString()
+      const frac = d.s ? (abs % escala).toString().padStart(d.s, '0') : ''
+      const enteros = ent ? ent.padStart(Math.ceil(ent.length / 4) * 4, '0').match(/.{4}/g) : []
+      const decimales = frac ? frac.padEnd(Math.ceil(frac.length / 4) * 4, '0').match(/.{4}/g) : []
+      const grupos = [...enteros, ...decimales]
+      const i = grupos.findIndex(g => Number(g) !== 0)
+      return { peso: enteros.length - 1 - i, primero: Number(grupos[i]) }
+    }
+
+    function dividirNumeric(a, b) {
+      const pa = pesoNumeric(a)
+      const pb = pesoNumeric(b)
+      let q = pa.peso - pb.peso
+      if (pa.primero < pb.primero) q--
+      const escala = Math.min(1000, Math.max(16 - q * 4, a.s, b.s, 0))
+      // Con un decimal de más y truncado; después, la mitad para arriba (lejos del 0).
+      const t = (a.v * 10n ** BigInt(escala + b.s + 1)) / (b.v * 10n ** BigInt(a.s))
+      return { v: t >= 0n ? (t + 5n) / 10n : (t - 5n) / 10n, s: escala }
+    }
+
+    function sumarNumeric(a, b) {
+      const s = Math.max(a.s, b.s)
+      return { v: a.v * 10n ** BigInt(s - a.s) + b.v * 10n ** BigInt(s - b.s), s }
+    }
+
+    function multiplicarNumeric(a, b) {
+      return { v: a.v * b.v, s: a.s + b.s }
+    }
+
+    // round(x, 2): la mitad, lejos del 0. Devuelve un Number.
+    function plataNumeric(d) {
+      if (d.s <= 2) return Number(d.v * 10n ** BigInt(2 - d.s)) / 100
+      const k = 10n ** BigInt(d.s - 2)
+      const t = d.v * 10n / k
+      return Number(t >= 0n ? (t + 5n) / 10n : (t - 5n) / 10n) / 100
+    }
+
+    function cuentaNumeric(caja, upcSin, pct, conito, upcCon) {
+      const [c, us, p, co, uc] = [caja, upcSin, pct, conito, upcCon].map(decimalNumeric)
+      if ([c, us, p, co, uc].some(x => !x) || us.v === 0n) return null
+      const recargo = sumarNumeric({ v: 1n, s: 0 }, dividirNumeric(p, { v: 1000n, s: 1 }))
+      const unidad = multiplicarNumeric(dividirNumeric(c, us), recargo)
+      return plataNumeric(multiplicarNumeric(sumarNumeric(unidad, co), uc))
     }
 
     // HUECO DE BASE: guardar_precios con la MISMA fecha de una versión que ya

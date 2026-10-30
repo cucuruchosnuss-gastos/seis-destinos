@@ -212,7 +212,8 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   S.estado.misTareas.set('stock:ver', { todas: true })
   esperas.push(S.abrirOrden('o1').then(() => {
     const h = S.__els.get('ad-orden-cuerpo').innerHTML
-    chk('el detalle muestra cada renglón con cono y presentación', /10 cajas · Cucurucho grande · Caja x 100 · Sin cono/.test(h) && /4 cajas · Cucurucho grande · Caja x 100 con cono · LOLO/.test(h))
+    // 30/10/2026 (valorizar-legible): sin el "· Sin cono" del final; "Caja x 100" ya trae sus unidades (no se repiten).
+    chk('el detalle muestra cada renglón con cono y presentación', /10 cajas · Cucurucho grande · Caja x 100</.test(h) && !/Sin cono/.test(h) && /4 cajas · Cucurucho grande · Caja x 100 con cono · LOLO/.test(h))
     chk('y los lotes de cada renglón', /lotes 7030-1 \(6\) · 7031-2 \(4\)/.test(h) && /lotes 7032-1 \(4\)</.test(h))
     chk('el lote de un cono no se mezcla con el de la misma presentación sin marca (dato viejo: "Falta el cono", nunca "Común")', /Falta el cono<\/div><div class="ad-renglon__lotes">200 unidades · lotes 7039-9 \(2\)</.test(h) && !/· Común</.test(h))
     chk('quién la cargó (por v_empleados_publico, sin embed)', /Emanuel Romero/.test(h) && S.__llamadas.consultas.some(c => c[0] === 'v_empleados_publico'))

@@ -45,7 +45,7 @@ const FUNCIONES_BASE = [
   // Lista | detalle en la compu (05/10/2026)
   'ladoALado', 'aplicarListaDetalle', 'marcarElegidosLista',
   'htmlLogo', 'empresaSegunBarra', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial', 'alCambiarLaBarra',
-  'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon',
+  'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon', 'htmlNombreRenglon',
   'contarSinValorizar', 'textoNumeroSeccion', 'htmlSeccion', 'htmlLink', 'pintarPortada', 'mostrarInicio', 'abrirSeccion',
   // El diseño "Administración" (29/09/2026): pestañas y tarjetas de la portada
   'colorDeModulo', 'htmlTrazo', 'coloresIcono', 'plataPortada', 'diasEntreIso', 'resumenCheques', 'htmlLineaSeccion', 'contenidoSeccion',
@@ -56,7 +56,7 @@ const FUNCIONES_BASE = [
   'clavePrecio', 'preciosInsumosDeLista', 'leerSaldoCliente', 'abrirValorizar',
   'precioFijoDeVersion', 'textoPrecioInsumoGrilla',
   // Valorizar con precio_venta() (30/09/2026)
-  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
+  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'textoDescuentoPrecio', 'htmlDescuentoGuardado', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
   // La comisión de una orden (06/10/2026)
   'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
@@ -110,7 +110,7 @@ const FUNCIONES_BASE = [
   'textoListaInterna', 'pintarListaInterna',
   // La grilla completa: lista_completa (30/09/2026)
   'leerListaCompleta', 'leerListaCompletaSegura', 'completaDelProducto', 'listaDerivada', 'filaEditable', 'numeroONull',
-  'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'chocanMismaFecha', 'textoChoqueMismaFecha',
+  'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'decimalNumeric', 'pesoNumeric', 'dividirNumeric', 'sumarNumeric', 'multiplicarNumeric', 'plataNumeric', 'cuentaNumeric', 'chocanMismaFecha', 'textoChoqueMismaFecha',
   'htmlFilaProducto', 'htmlConito', 'plantillaConito', 'textoConConoNuevo', 'pintarConConoNuevo', 'recargoDeLista',
   // Los insumos de una lista a precio fijo o costo + % (09/10/2026)
   'plataInsumoLista', 'porUnidadInsumo', 'renglonesInsumosLista', 'precioConRecargo', 'textoRenglonInsumo', 'leerInsumosLista',
@@ -207,7 +207,7 @@ const FUNCIONES_BASE = [
   // La condición de venta (21/10/2026) y las órdenes de pedido N1 / N2 (28/10/2026)
   'leerFacturasDeOrden', 'leerRecepcionDeOrden', 'cantidadRecepcion', 'textoRecepcionOrden', 'diferenciasRecepcion', 'htmlRecepcionOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'parametrosDivision',
   'codigoPunto', 'textoCondicion', 'facturasPorParte', 'puntosDePct', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura',
-  'cantidadDivision', 'renglonesParte', 'htmlTotalesPunto', 'htmlHojaPunto', 'nombrePdfPunto', 'htmlFacturasOrden', 'puedeFacturar',
+  'cantidadDivision', 'renglonesParte', 'htmlNombreHojaPunto', 'htmlTotalesPunto', 'htmlHojaPunto', 'nombrePdfPunto', 'htmlFacturasOrden', 'puedeFacturar',
   'pctInicialFacturar', 'actualizarFilaOrden', 'contenedorFacturar', 'sincronizarFacturar', 'cerrarFacturar', 'iniciarFacturar',
   'aplicarDatosFacturar', 'anotarDivisionGuardada', 'pintarFacturar', 'idFc', 'htmlPuntoFacturar', 'pintarVendedoresFacturar', 'facturarPendiente',
   'puntoListo', 'actualizarFacturar', 'actualizarFacturaPunto', 'elegirPctFacturar', 'escribirPctFacturar', 'cambiarVendedorFacturar',

@@ -75,11 +75,11 @@ correrMutaciones({
       a: '<div class="ad-renglon__desc">${f.producto}</div>` +\n        `<div class="ad-renglon__lotes">${esc(f.presentacion)}</div></div>` +\n        `<div class="ad-precio__col">' },
     // El con cono con el precio nuevo
     { nombre: 'el recargo se ignora en el con cono nuevo',
-      de: '      const pct = recargoDeLista(meta)\n      const unidad', a: '      const pct = 0\n      const unidad' },
+      de: '      const pct = recargoDeLista(meta)\n      return cuentaNumeric(', a: '      const pct = 0\n      return cuentaNumeric(' },
     { nombre: 'el aviso de lista derivada no usa el recargo de la base',
       de: '        const pct = recargoDeLista(meta)\n        const texto', a: '        const pct = numeroONull(meta.recargo_pct) ?? 0\n        const texto' },
     { nombre: 'el conito no se suma al con cono nuevo',
-      de: 'Math.round((unidad + conito) * upcCon * 100) / 100', a: 'Math.round(unidad * upcCon * 100) / 100' },
+      de: '      return cuentaNumeric(nuevo, upcSin, pct, conito, upcCon)', a: '      return cuentaNumeric(nuevo, upcSin, pct, 0, upcCon)' },
     { nombre: 'el con cono nuevo se calcula sin conito conocido',
       de: 'if (nuevo === null || !upcSin || !upcCon || conito === null || conCono?.sin_precio === true) return null',
       a: 'if (nuevo === null || !upcSin || !upcCon || conCono?.sin_precio === true) return null' },
