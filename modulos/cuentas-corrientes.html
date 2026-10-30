@@ -1062,6 +1062,49 @@
       font-size: 0.8125rem;
     }
     .detalle-pago-credito div + div { margin-top: 0.25rem; }
+    /* Dos columnas iguales (30/10/2026): "Con qué se pagó" | "Facturas que
+       paga"; en el celular, una abajo de la otra. */
+    @media (min-width: 641px) { #modal-detalle-pago .modal-cc__panel { max-width: 920px; } }
+    .detalle-pago-columnas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+    @media (min-width: 720px) { .detalle-pago-columnas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; } }
+    .detalle-pago-col { min-width: 0; }
+    .detalle-pago-col .detalle-pago-seccion-titulo:first-child { margin-top: 0; }
+    .detalle-pago-obs { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: var(--color-superficie); font-size: 0.8125rem; color: var(--color-texto-2); overflow-wrap: anywhere; white-space: pre-line; }
+    .detalle-pago-anulado { margin: 0 0 0.75rem; font-size: 0.875rem; font-weight: 700; color: var(--color-error); }
+    .detalle-pago-cheques { display: flex; flex-direction: column; }
+    .detalle-pago-cheque { padding: 0.625rem 0; border-bottom: 1px solid var(--color-borde); font-size: 0.8125rem; color: var(--color-texto-2); }
+    .detalle-pago-cheque__fila1 { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; color: var(--color-texto); font-size: 0.875rem; }
+    .detalle-pago-cheque__banco { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+    .detalle-pago-cheque__importe { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .detalle-pago-cheque__meta { margin-top: 0.125rem; overflow-wrap: anywhere; }
+    .btn-sacar-cheque, .btn-agregar-cheque {
+      margin-top: 0.375rem; min-height: 36px; padding: 0.25rem 0.75rem; border-radius: 8px;
+      border: 1px solid var(--color-borde-boton); background: var(--color-fondo); color: var(--color-texto);
+      font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-agregar-cheque { margin-top: 0.75rem; color: var(--color-acento); border-color: var(--color-acento); }
+    .detalle-pago-accion { margin-top: 0.5rem; padding: 0.75rem; border-radius: 10px; background: var(--color-superficie); display: flex; flex-direction: column; gap: 0.5rem; }
+    .detalle-pago-accion textarea, .detalle-pago-accion input[type="text"], .detalle-pago-buscar {
+      width: 100%; box-sizing: border-box; min-height: 44px; padding: 0.5rem 0.75rem; border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input); background: var(--color-fondo); font: inherit; font-size: 16px; color: var(--color-texto);
+    }
+    .detalle-pago-accion__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-2); }
+    .detalle-pago-accion__botones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+    .detalle-pago-accion__botones .btn { width: auto; flex: 1 1 8rem; }
+    .detalle-pago-previa { margin: 0; padding-left: 1.1rem; font-size: 0.8125rem; color: var(--color-texto); }
+    .detalle-pago-previa li + li { margin-top: 0.125rem; }
+    .detalle-pago-error { font-size: 0.8125rem; font-weight: 600; color: var(--color-error); }
+    .detalle-pago-error[hidden] { display: none; }
+    .detalle-pago-suave { margin: 0; font-size: 0.8125rem; color: var(--color-texto-2); }
+    .detalle-pago-aviso { margin: 0 0 0.75rem; padding: 0.625rem 0.75rem; border-radius: 10px; background: var(--verde-suave); color: var(--verde-oscuro); font-size: 0.8125rem; }
+    .detalle-pago-cartera { max-height: 18rem; overflow-y: auto; border: 1px solid var(--color-borde); border-radius: 8px; background: var(--color-fondo); }
+    .detalle-pago-cartera > .detalle-pago-suave { padding: 0.75rem; }
+    .detalle-pago-cartera__fila { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-divisor); font-size: 0.8125rem; cursor: pointer; }
+    .detalle-pago-cartera__fila:last-child { border-bottom: 0; }
+    .detalle-pago-cartera__fila--tildada { background: var(--color-acento-fila); }
+    .detalle-pago-cartera__fila input { width: 20px; height: 20px; flex-shrink: 0; }
+    .detalle-pago-cartera__info { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+    .detalle-pago-cartera__fila strong { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 
     /* Combobox de proveedor (mismo patrón que gastos.html) */
     .sugerencias-proveedor-cc {
@@ -3064,73 +3107,560 @@
     // este modal muestra TODAS las aplicaciones de ese mismo gasto_id, más
     // el estado actual (no una foto del día del pago) de cualquier crédito
     // que haya generado por sobrepago.
+    //
+    // DOS COLUMNAS Y LOS CHEQUES DEL PAGO (30/10/2026, rama
+    // ci-prueba/detalle-pago-cheques). Izquierda, "Con qué se pagó": el total,
+    // la fecha, las observaciones del gasto (ahí la base anota qué cheque se
+    // sacó o agregó y por qué), la LISTA de cheques de terceros (uno por
+    // renglón: banco de bancos_bcra, N°, importe, fecha de pago, a nombre de
+    // quién y de qué cliente vino; cobranza_cheques con pago_gasto_id o
+    // salida_gasto_id = el gasto) y el crédito a favor que sobró. Derecha,
+    // "Facturas que paga". En el celular, una abajo de la otra.
+    // Con cuentas_corrientes:registrar_pago Y cobranzas:procesar (lo mismo que
+    // pide la base, con bypass de super_admin):
+    //  - "Sacar del pago" en cada cheque: motivo, la vista previa y
+    //    sacar_cheque_de_pago(p_cheque_id, p_motivo) → {pago_antes,
+    //    pago_despues, del_credito, vuelve_a_facturas, pago_anulado};
+    //  - "Agregar cheque": la cartera (en cartera, cobranza asentada, en
+    //    pesos) con buscador, varios tildados, la vista previa, motivo
+    //    opcional y agregar_cheques_a_pago(p_gasto_id, p_cheque_ids,
+    //    p_motivo) → {pago_antes, pago_despues, a_facturas, credito_a_favor}.
+    // Las dos funciones verificadas con pg_get_functiondef el 30/10/2026. La
+    // base NO tiene una función para simular: la vista previa repite en el
+    // navegador, en centavos, el mismo orden que la base (previaSacarChequeDP
+    // y previaAgregarChequesDP); lo que manda es la respuesta del RPC, que se
+    // muestra al terminar. Después de cada cambio se relee el detalle y la
+    // cuenta del proveedor.
+    const COLUMNAS_CHEQUE_DP = 'id, cobranza_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, titulares, estado'
+
+    function puedeCambiarChequesPagoDP() {
+      return tieneTarea('cuentas_corrientes', 'registrar_pago') && tieneTarea('cobranzas', 'procesar')
+    }
+
+    function centavosDP(v) {
+      const n = Number(v)
+      return Number.isFinite(n) ? Math.round(n * 100) : 0
+    }
+
     async function abrirModalDetallePago(gastoId) {
       cargarAccionesDetallePago(gastoId)   // "Aplicar a facturas" y "Anular el pago" (30/10/2026), aparte
       const cont = document.getElementById('detalle-pago-contenido')
       cont.innerHTML = '<p style="color:var(--color-texto-suave); font-size:0.875rem; padding:1rem 0;">Cargando…</p>'
       document.getElementById('modal-detalle-pago').removeAttribute('hidden')
+      const dp = { gastoId, gasto: null, aplicaciones: [], creditos: [], cheques: [], chequesError: false, error: null,
+        sacar: null, agregar: null, aviso: null, ofrecerReemplazo: false }
+      estado.detallePago = dp
+      await cargarDetallePago(dp)
+      if (estado.detallePago !== dp) return
+      pintarDetallePago()
+    }
 
-      const [gastoRes, aplicacionesRes, creditosRes] = await Promise.all([
-        supabase.from('gastos').select('fecha_pago, medio_pago, importe, moneda, descripcion').eq('id', gastoId).maybeSingle(),
+    async function cargarDetallePago(dp) {
+      const id = dp.gastoId
+      const [gastoRes, aplicacionesRes, creditosRes, chPago, chSalida] = await Promise.all([
+        supabase.from('gastos').select('fecha_pago, medio_pago, importe, moneda, descripcion, observaciones, estado, unidad_negocio_id').eq('id', id).maybeSingle(),
         supabase.from('aplicaciones_pago')
-          .select('monto_aplicado, facturas_pendientes(numero_comprobante, razon_social, fecha_factura, categorias(nombre))')
-          .eq('gasto_id', gastoId),
+          .select('id, monto_aplicado, created_at, factura_pendiente_id, facturas_pendientes(numero_comprobante, razon_social, fecha_factura, created_at, saldo_pendiente, estado, categorias(nombre))')
+          .eq('gasto_id', id),
         supabase.from('creditos_proveedor')
-          .select('id, monto_original, monto_disponible, moneda, aplicaciones_credito(monto_aplicado, facturas_pendientes(numero_comprobante))')
-          .eq('origen_gasto_id', gastoId),
+          .select('id, monto_original, monto_disponible, moneda, estado, created_at, aplicaciones_credito(monto_aplicado, facturas_pendientes(numero_comprobante))')
+          .eq('origen_gasto_id', id),
+        supabase.from('cobranza_cheques').select(COLUMNAS_CHEQUE_DP).eq('pago_gasto_id', id),
+        supabase.from('cobranza_cheques').select(COLUMNAS_CHEQUE_DP).eq('salida_gasto_id', id),
       ])
-
       if (gastoRes.error || aplicacionesRes.error || creditosRes.error) {
-        cont.innerHTML = '<p style="color:var(--color-error); font-size:0.875rem; padding:1rem 0;">Error al cargar el detalle del pago.</p>'
-        return
+        dp.error = 'Error al cargar el detalle del pago.'
+        return dp
       }
-
-      const gasto = gastoRes.data
+      dp.error = null
+      dp.gasto = gastoRes.data
       // supabase-js no ordena confiablemente por columna de una tabla
       // relacionada (facturas_pendientes.fecha_factura) — se ordena acá.
-      const aplicaciones = (aplicacionesRes.data ?? []).slice()
+      dp.aplicaciones = (aplicacionesRes.data ?? []).slice()
         .sort((a, b) => (a.facturas_pendientes?.fecha_factura || '').localeCompare(b.facturas_pendientes?.fecha_factura || ''))
-      const creditos = creditosRes.data ?? []
+      dp.creditos = creditosRes.data ?? []
+      // Los cheques: sin poder leerlos (la cobranza es de otro y no hay
+      // cobranzas:ver_todo) la lista no se inventa: se dice.
+      dp.chequesError = !!(chPago?.error || chSalida?.error)
+      const vistos = new Map()
+      for (const ch of [...(chPago?.data ?? []), ...(chSalida?.data ?? [])]) if (ch?.id && !vistos.has(ch.id)) vistos.set(ch.id, ch)
+      const crudos = [...vistos.values()]
+      const cobranzas = new Map()
+      const ids = [...new Set(crudos.map(c => c.cobranza_id).filter(Boolean))]
+      if (ids.length) {
+        const { data, error } = await supabase.from('v_cobranzas').select('id, cliente').in('id', ids)
+        if (error) console.error('No se pudieron leer las cobranzas de los cheques:', error)
+        for (const c of data ?? []) cobranzas.set(c.id, c)
+      }
+      const bancos = crudos.length ? await asegurarBancos() : new Map()
+      dp.cheques = chequesDelPagoDP(crudos, cobranzas, bancos)
+      return dp
+    }
 
-      const filasFacturas = aplicaciones.map(a => {
+    // Puro: los cheques del pago, uno por renglón, por número.
+    function chequesDelPagoDP(cheques, cobranzas, bancos) {
+      return (cheques ?? []).map(ch => ({
+        id: ch.id,
+        numero: ch.numero ?? null,
+        banco: bancos?.get?.(ch.banco_codigo) ?? (ch.banco_codigo ? `Banco ${ch.banco_codigo}` : null),
+        importe: Number(ch.importe),
+        cobra: fechaCobroCheque(ch),
+        comun: ch.tipo !== 'diferido',
+        titulares: libradorDe(ch.titulares),
+        cliente: cobranzas?.get?.(ch.cobranza_id)?.cliente ?? null,
+      })).sort((a, b) => String(a.numero ?? '').localeCompare(String(b.numero ?? '')))
+    }
+
+    // Puro: lo que va a pasar al sacar ESE cheque, en el MISMO orden que
+    // sacar_cheque_de_pago: primero sale del crédito a favor que dejó el pago
+    // (disponible, el más nuevo primero) y lo que falta vuelve a deberse en
+    // las facturas (la última aplicación primero; a igual fecha, la más chica).
+    function previaSacarChequeDP(dp, cheque) {
+      const antes = centavosDP(dp?.gasto?.importe)
+      const importe = centavosDP(cheque?.importe)
+      let resta = importe
+      let delCredito = 0
+      const creditos = (dp?.creditos ?? []).filter(c => c.estado === 'disponible' && centavosDP(c.monto_disponible) > 0)
+        .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
+      for (const c of creditos) {
+        if (resta <= 0) break
+        const toma = Math.min(resta, centavosDP(c.monto_disponible))
+        resta -= toma
+        delCredito += toma
+      }
+      const facturas = []
+      const apls = [...(dp?.aplicaciones ?? [])]
+        .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')) || centavosDP(a.monto_aplicado) - centavosDP(b.monto_aplicado))
+      for (const a of apls) {
+        if (resta <= 0) break
+        const toma = Math.min(resta, centavosDP(a.monto_aplicado))
+        if (toma <= 0) continue
+        resta -= toma
+        facturas.push({ numero: a.facturas_pendientes?.numero_comprobante ?? null, monto: toma / 100 })
+      }
+      const despues = antes - importe
+      return { pagoAntes: antes / 100, pagoDespues: Math.max(despues, 0) / 100, anula: despues <= 0, delCredito: delCredito / 100, facturas, falta: resta / 100 }
+    }
+
+    // Puro: lo que va a pasar al agregar cheques por `total`, en el MISMO
+    // orden que agregar_cheques_a_pago: completa las facturas que este pago
+    // ya cubría y quedaron con saldo (la más vieja primero) y lo que sobra
+    // queda como crédito a favor.
+    function previaAgregarChequesDP(dp, total) {
+      const antes = centavosDP(dp?.gasto?.importe)
+      const suma = centavosDP(total)
+      const vistas = new Map()
+      for (const a of dp?.aplicaciones ?? []) {
         const fp = a.facturas_pendientes
-        const categoria = fp?.categorias?.nombre ? ` · ${esc(fp.categorias.nombre)}` : ''
+        const clave = a.factura_pendiente_id ?? fp?.numero_comprobante
+        if (!fp || vistas.has(clave)) continue
+        if (centavosDP(fp.saldo_pendiente) > 0 && ['pendiente', 'parcial'].includes(fp.estado)) vistas.set(clave, fp)
+      }
+      const abiertas = [...vistas.values()]
+        .sort((a, b) => String(a.fecha_factura ?? '').localeCompare(String(b.fecha_factura ?? '')) || String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))
+      let resta = suma
+      const aFacturas = []
+      for (const fp of abiertas) {
+        if (resta <= 0) break
+        const saldo = centavosDP(fp.saldo_pendiente)
+        const toma = Math.min(resta, saldo)
+        resta -= toma
+        aFacturas.push({ numero: fp.numero_comprobante ?? null, monto: toma / 100, queda: (saldo - toma) / 100 })
+      }
+      return { pagoAntes: antes / 100, pagoDespues: (antes + suma) / 100, aFacturas, credito: resta / 100 }
+    }
+
+    function lineasPreviaSacarDP(p, cheque) {
+      const m = 'ARS'
+      const lineas = [p.anula
+        ? `El pago baja de ${formatearImporte(p.pagoAntes, m)} a ${formatearImporte(0, m)}: queda anulado (era el único cheque).`
+        : `El pago baja de ${formatearImporte(p.pagoAntes, m)} a ${formatearImporte(p.pagoDespues, m)}.`]
+      if (centavosDP(p.delCredito) > 0) lineas.push(`Sale ${formatearImporte(p.delCredito, m)} del crédito a favor.`)
+      for (const f of p.facturas) lineas.push(`${formatearImporte(f.monto, m)} vuelve a deberse en la ${nombreFactura(f.numero).replace(/^Factura/, 'factura')}.`)
+      if (centavosDP(p.falta) > 0) lineas.push(`Faltan ${formatearImporte(p.falta, m)}: el pago no alcanza para sacar este cheque y la base lo va a frenar.`)
+      lineas.push(`El cheque N° ${cheque?.numero ?? '—'} vuelve a la cartera.`)
+      return lineas
+    }
+
+    function lineasPreviaAgregarDP(p) {
+      const m = 'ARS'
+      const lineas = [`El pago sube de ${formatearImporte(p.pagoAntes, m)} a ${formatearImporte(p.pagoDespues, m)}.`]
+      for (const f of p.aFacturas) {
+        const nombre = nombreFactura(f.numero).replace(/^Factura/, 'factura')
+        lineas.push(centavosDP(f.queda) > 0
+          ? `${formatearImporte(f.monto, m)} va a la ${nombre} (sigue debiendo ${formatearImporte(f.queda, m)}).`
+          : `${formatearImporte(f.monto, m)} completa la ${nombre}.`)
+      }
+      if (centavosDP(p.credito) > 0) lineas.push(`${formatearImporte(p.credito, m)} queda como crédito a favor.`)
+      return lineas
+    }
+
+    function textoResultadoSacarDP(res, numero) {
+      const m = 'ARS'
+      const vuelve = `El cheque N° ${numero ?? '—'} volvió a la cartera.`
+      if (res?.pago_anulado) return `El pago quedó anulado (era el único cheque). ${vuelve}`
+      return [`Listo: el pago bajó de ${formatearImporte(res?.pago_antes, m)} a ${formatearImporte(res?.pago_despues, m)}.`,
+        centavosDP(res?.del_credito) > 0 ? `Salieron ${formatearImporte(res.del_credito, m)} del crédito a favor.` : '',
+        centavosDP(res?.vuelve_a_facturas) > 0 ? `${formatearImporte(res.vuelve_a_facturas, m)} volvieron a deberse en las facturas.` : '',
+        vuelve].filter(Boolean).join(' ')
+    }
+
+    function textoResultadoAgregarDP(res) {
+      const m = 'ARS'
+      return [`Listo: el pago subió de ${formatearImporte(res?.pago_antes, m)} a ${formatearImporte(res?.pago_despues, m)}.`,
+        centavosDP(res?.a_facturas) > 0 ? `${formatearImporte(res.a_facturas, m)} fueron a las facturas.` : '',
+        centavosDP(res?.credito_a_favor) > 0 ? `${formatearImporte(res.credito_a_favor, m)} quedaron como crédito a favor.` : '',
+      ].filter(Boolean).join(' ')
+    }
+
+    // La cartera que se ofrece para agregar, filtrada por lo que se buscó
+    // (número o importe, escrito como sea: "16603", "150.000", "150000,5").
+    function carteraFiltradaDP(cartera, busqueda) {
+      const t = String(busqueda ?? '').trim().replace(/\s+/g, '')
+      if (!t) return cartera ?? []
+      const comoNumero = t.replace(/\./g, '').replace(',', '.')
+      return (cartera ?? []).filter(c => String(c.numero ?? '').includes(t) ||
+        formatearNumeroAr(c.importe, { decimales: 2 }).includes(t) ||
+        String(Number(c.importe)).includes(comoNumero))
+    }
+
+    function htmlChequeDP(c, dp, puede) {
+      const cobra = c.cobra ? `${c.comun ? 'a la vista · ' : 'paga '}${formatearFecha(c.cobra)}` : 'sin fecha de pago'
+      const quien = [c.titulares ? 'A nombre de ' + c.titulares : '', c.cliente ? 'De ' + c.cliente : ''].filter(Boolean).join(' · ')
+      const s = dp.sacar && dp.sacar.chequeId === c.id ? dp.sacar : null
+      const panel = s ? `
+          <div class="detalle-pago-accion">
+            <label class="detalle-pago-accion__rotulo" for="campo-motivo-sacar-cheque">Motivo</label>
+            <textarea id="campo-motivo-sacar-cheque" data-sacar-motivo rows="2" placeholder="Ej.: El proveedor no lo aceptó: tiene rechazos">${esc(s.motivo)}</textarea>
+            <ul class="detalle-pago-previa">${lineasPreviaSacarDP(previaSacarChequeDP(dp, c), c).map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+            <div class="detalle-pago-error" data-sacar-error role="alert"${s.error ? '' : ' hidden'}>${esc(s.error ?? '')}</div>
+            <div class="detalle-pago-accion__botones">
+              <button type="button" class="btn btn--secundario" data-sacar-cancelar${s.enviando ? ' disabled' : ''}>Cancelar</button>
+              <button type="button" class="btn btn--primario" data-sacar-confirmar${s.enviando ? ' disabled' : ''}>${s.enviando ? 'Sacando…' : 'Sacar el cheque'}</button>
+            </div>
+          </div>` : ''
+      return `
+        <div class="detalle-pago-cheque">
+          <div class="detalle-pago-cheque__fila1">
+            <span class="detalle-pago-cheque__banco">${esc(c.banco ?? 'Banco —')}</span>
+            <strong class="detalle-pago-cheque__importe">${esc(formatearImporte(c.importe, 'ARS'))}</strong>
+          </div>
+          <div class="detalle-pago-cheque__meta">N° ${esc(c.numero ?? '—')} · ${esc(cobra)}</div>
+          ${quien ? `<div class="detalle-pago-cheque__meta">${esc(quien)}</div>` : ''}
+          ${puede && !s ? `<button type="button" class="btn-sacar-cheque" data-sacar-cheque="${esc(c.id)}">Sacar del pago</button>` : ''}
+          ${panel}
+        </div>`
+    }
+
+    function htmlListaAgregarDP(dp) {
+      const a = dp.agregar
+      if (!a || a.cargando) return '<p class="detalle-pago-suave">Cargando la cartera…</p>'
+      if (a.errorLectura) return `<p class="detalle-pago-suave">${esc(a.errorLectura)}</p>`
+      if (!a.cartera.length) return '<p class="detalle-pago-suave">No hay cheques en cartera para agregar.</p>'
+      const lista = carteraFiltradaDP(a.cartera, a.busqueda)
+      if (!lista.length) return `<p class="detalle-pago-suave">${esc('Ningún cheque con «' + a.busqueda + '».')}</p>`
+      return lista.map(c => {
+        const cobra = c.cobra ? `${c.comun ? 'a la vista · ' : 'paga '}${formatearFecha(c.cobra)}` : 'sin fecha de pago'
+        const linea2 = [c.banco, c.cliente ? 'De ' + c.cliente : '', c.otraEmpresa ? 'de ' + (c.unidadNombre ?? '—') : ''].filter(Boolean).join(' · ')
+        const tildado = a.tildados.has(c.id)
+        return `<label class="detalle-pago-cartera__fila${tildado ? ' detalle-pago-cartera__fila--tildada' : ''}">
+            <input type="checkbox" data-agregar-tildar="${esc(c.id)}"${tildado ? ' checked' : ''}>
+            <span class="detalle-pago-cartera__info">
+              <span>N° ${esc(c.numero ?? '—')} · ${esc(cobra)}</span>
+              ${linea2 ? `<span class="detalle-pago-suave">${esc(linea2)}</span>` : ''}
+            </span>
+            <strong>${esc(formatearImporte(c.importe, 'ARS'))}</strong>
+          </label>`
+      }).join('')
+    }
+
+    function chequesTildadosDP(a) {
+      return (a?.cartera ?? []).filter(c => a.tildados.has(c.id))
+    }
+
+    function htmlPreviaAgregarDP(dp) {
+      const a = dp.agregar
+      const elegidos = chequesTildadosDP(a)
+      if (!elegidos.length) return '<p class="detalle-pago-suave">Elegí uno o más cheques.</p>'
+      const total = elegidos.reduce((s, c) => s + centavosDP(c.importe), 0) / 100
+      const unidad = dp.gasto?.unidad_negocio_id ?? null
+      const avisos = avisosOtraEmpresa(elegidos.map(c => ({ ...c, tildado: true })), unidad, nombreUnidad(unidad))
+      const cuantos = elegidos.length + (elegidos.length === 1 ? ' cheque tildado' : ' cheques tildados') + ' · total ' + formatearImporte(total, 'ARS')
+      return `<p class="detalle-pago-suave">${esc(cuantos)}</p>` +
+        `<ul class="detalle-pago-previa">${lineasPreviaAgregarDP(previaAgregarChequesDP(dp, total)).map(l => `<li>${esc(l)}</li>`).join('')}</ul>` +
+        avisos.map(t => `<p class="detalle-pago-suave">${esc(t)}</p>`).join('')
+    }
+
+    function htmlAgregarDP(dp) {
+      const a = dp.agregar
+      if (!a) return ''
+      return `
+        <div class="detalle-pago-accion detalle-pago-agregar">
+          <div class="detalle-pago-seccion-titulo">Agregar cheques de la cartera</div>
+          <input type="search" class="detalle-pago-buscar" data-agregar-buscar placeholder="Buscar por número o importe" value="${esc(a.busqueda)}" aria-label="Buscar cheque por número o importe">
+          <div class="detalle-pago-cartera" data-agregar-lista>${htmlListaAgregarDP(dp)}</div>
+          <div data-agregar-previa>${htmlPreviaAgregarDP(dp)}</div>
+          <label class="detalle-pago-accion__rotulo" for="campo-motivo-agregar-cheque">Motivo (opcional)</label>
+          <input type="text" id="campo-motivo-agregar-cheque" data-agregar-motivo placeholder="Ej.: Reemplaza al cheque N° 16603539" value="${esc(a.motivo)}">
+          <div class="detalle-pago-error" data-agregar-error role="alert"${a.error ? '' : ' hidden'}>${esc(a.error ?? '')}</div>
+          <div class="detalle-pago-accion__botones">
+            <button type="button" class="btn btn--secundario" data-agregar-cancelar${a.enviando ? ' disabled' : ''}>Cancelar</button>
+            <button type="button" class="btn btn--primario" data-agregar-confirmar${a.enviando || a.cargando ? ' disabled' : ''}>${a.enviando ? 'Agregando…' : 'Agregar al pago'}</button>
+          </div>
+        </div>`
+    }
+
+    function htmlCreditosDP(dp) {
+      // Un crédito puede tener más de una aplicación (repartido en varias
+      // facturas futuras) — se listan todas, no solo la primera.
+      return (dp.creditos ?? []).map(c => {
+        const aplicacionesCredito = c.aplicaciones_credito ?? []
+        if (!aplicacionesCredito.length) {
+          return `<div>Sobrante: ${esc(formatearImporte(c.monto_original, c.moneda))} — sigue como crédito a favor, sin aplicar todavía.</div>`
+        }
+        const lineas = aplicacionesCredito.map(ac =>
+          `<div>${esc(formatearImporte(ac.monto_aplicado, c.moneda))} se aplicó a: ${esc(nombreFactura(ac.facturas_pendientes?.numero_comprobante))}</div>`
+        ).join('')
+        const restante = Number(c.monto_disponible) > 0
+          ? `<div>${esc(formatearImporte(c.monto_disponible, c.moneda))} sigue disponible como crédito a favor.</div>`
+          : ''
+        return lineas + restante
+      }).join('')
+    }
+
+    function htmlFacturasDP(dp) {
+      const moneda = dp.gasto?.moneda
+      return (dp.aplicaciones ?? []).map(a => {
+        const fp = a.facturas_pendientes
+        const meta = (fp?.razon_social || '') + (fp?.categorias?.nombre ? ' · ' + fp.categorias.nombre : '')
         return `
           <div class="fila-pago-aplicacion">
             <div class="fila-fifo__info">
               <div class="fila-fifo__numero">${esc(nombreFactura(fp?.numero_comprobante))}</div>
-              <div class="fila-fifo__meta">${esc(fp?.razon_social || '')}${categoria}</div>
+              <div class="fila-fifo__meta">${esc(meta)}</div>
             </div>
-            <div class="fila-pago-aplicacion__monto">${importeHtml(a.monto_aplicado, gasto?.moneda)}</div>
+            <div class="fila-pago-aplicacion__monto">${esc(formatearImporte(a.monto_aplicado, moneda))}</div>
           </div>
         `
       }).join('')
+    }
 
-      // Un crédito puede tener más de una aplicación (repartido en varias
-      // facturas futuras) — se listan todas, no solo la primera.
-      const bloquesCredito = creditos.map(c => {
-        const aplicacionesCredito = c.aplicaciones_credito ?? []
-        if (!aplicacionesCredito.length) {
-          return `<div>Sobrante: ${importeHtml(c.monto_original, c.moneda)} — sigue como crédito a favor, sin aplicar todavía.</div>`
-        }
-        const lineas = aplicacionesCredito.map(ac =>
-          `<div>${importeHtml(ac.monto_aplicado, c.moneda)} se aplicó a: ${esc(nombreFactura(ac.facturas_pendientes?.numero_comprobante))}</div>`
-        ).join('')
-        const restante = Number(c.monto_disponible) > 0
-          ? `<div>${importeHtml(c.monto_disponible, c.moneda)} sigue disponible como crédito a favor.</div>`
-          : ''
-        return lineas + restante
-      }).join('')
-
-      cont.innerHTML = `
-        <div class="detalle-pago-hero">
-          <div class="detalle-pago-hero__monto">${importeHtml(gasto?.importe, gasto?.moneda)}</div>
-          <div class="detalle-pago-hero__meta">${formatearFecha(gasto?.fecha_pago)} · ${esc(etiquetaPagoDeGasto(gasto) || MEDIOS_PAGO_LABEL[gasto?.medio_pago] || gasto?.medio_pago || '')}</div>
+    function htmlDetallePago(dp, { puede = false } = {}) {
+      if (dp.error) return `<p style="color:var(--color-error); font-size:0.875rem; padding:1rem 0;">${esc(dp.error)}</p>`
+      const g = dp.gasto
+      const anulado = g?.estado === 'anulado'
+      const conCheques = dp.cheques.length > 0
+      const medio = conCheques
+        ? `Cheques de terceros (${dp.cheques.length})`
+        : (etiquetaPagoDeGasto(g) || MEDIOS_PAGO_LABEL[g?.medio_pago] || g?.medio_pago || '')
+      const cambia = puede && !anulado
+      const obs = String(g?.observaciones ?? '').trim()
+      const aviso = dp.aviso ? `
+          <div class="detalle-pago-aviso" role="status">
+            <div>${esc(dp.aviso)}</div>
+            ${dp.ofrecerReemplazo && cambia && g?.medio_pago === 'cheque' && !dp.agregar ? '<button type="button" class="btn-sacar-cheque" data-agregar-cheque>¿Lo reemplazás por otro de la cartera?</button>' : ''}
+          </div>` : ''
+      const sinLeer = !conCheques && g?.medio_pago === 'cheque' && dp.chequesError
+        ? '<p class="detalle-pago-suave">Con tu usuario no se pueden ver los cheques de este pago (hace falta poder ver sus cobranzas).</p>'
+        : ''
+      const agregarBoton = cambia && g?.medio_pago === 'cheque' && !dp.agregar
+        ? '<button type="button" class="btn-agregar-cheque" data-agregar-cheque>+ Agregar cheque</button>'
+        : ''
+      const creditos = htmlCreditosDP(dp)
+      const facturas = htmlFacturasDP(dp)
+      return `
+        <div class="detalle-pago-columnas">
+          <section class="detalle-pago-col">
+            <div class="detalle-pago-seccion-titulo">Con qué se pagó</div>
+            <div class="detalle-pago-hero">
+              <div class="detalle-pago-hero__monto">${esc(formatearImporte(g?.importe, g?.moneda))}</div>
+              <div class="detalle-pago-hero__meta">${esc(formatearFecha(g?.fecha_pago))} · ${esc(medio)}</div>
+            </div>
+            ${anulado ? '<p class="detalle-pago-anulado">Este pago está anulado.</p>' : ''}
+            ${obs ? `<div class="detalle-pago-obs">${esc(obs)}</div>` : ''}
+            ${aviso}
+            ${conCheques ? `<div class="detalle-pago-cheques">${dp.cheques.map(c => htmlChequeDP(c, dp, cambia)).join('')}</div>` : sinLeer}
+            ${agregarBoton}
+            ${htmlAgregarDP(dp)}
+            ${creditos ? `<div class="detalle-pago-credito">${creditos}</div>` : ''}
+          </section>
+          <section class="detalle-pago-col">
+            <div class="detalle-pago-seccion-titulo">Facturas que paga</div>
+            ${facturas || '<p style="color:var(--color-texto-suave); font-size:0.8125rem;">Sin facturas asociadas.</p>'}
+          </section>
         </div>
-        <div class="detalle-pago-seccion-titulo">Facturas cubiertas</div>
-        ${filasFacturas || '<p style="color:var(--color-texto-suave); font-size:0.8125rem;">Sin facturas asociadas.</p>'}
-        ${bloquesCredito ? `<div class="detalle-pago-credito">${bloquesCredito}</div>` : ''}
       `
+    }
+
+    function pintarDetallePago() {
+      const dp = estado.detallePago
+      const cont = document.getElementById('detalle-pago-contenido')
+      if (!dp || !cont) return
+      cont.innerHTML = htmlDetallePago(dp, { puede: puedeCambiarChequesPagoDP() })
+    }
+
+    // Lo que cambia mientras se elige: la lista y la vista previa (sin
+    // repintar el buscador, que perdería el foco).
+    function repintarAgregarDP() {
+      const dp = estado.detallePago
+      const cont = document.getElementById('detalle-pago-contenido')
+      if (!dp?.agregar || !cont?.querySelector) return
+      const lista = cont.querySelector('[data-agregar-lista]')
+      if (lista) lista.innerHTML = htmlListaAgregarDP(dp)
+      const previa = cont.querySelector('[data-agregar-previa]')
+      if (previa) previa.innerHTML = htmlPreviaAgregarDP(dp)
+      const err = cont.querySelector('[data-agregar-error]')
+      if (err) { err.textContent = dp.agregar.error ?? ''; err.hidden = !dp.agregar.error }
+    }
+
+    async function abrirAgregarChequeDP() {
+      const dp = estado.detallePago
+      if (!dp?.gasto || dp.agregar || !puedeCambiarChequesPagoDP()) return
+      const a = { cargando: true, cartera: [], busqueda: '', tildados: new Set(), motivo: '', error: null, errorLectura: null, enviando: false }
+      dp.agregar = a
+      dp.sacar = null
+      dp.ofrecerReemplazo = false
+      pintarDetallePago()
+      const unidadId = dp.gasto.unidad_negocio_id ?? null
+      try {
+        const { data: cheques, error } = await supabase.from('cobranza_cheques').select(COLUMNAS_CHEQUE_DP).eq('estado', 'en_cartera')
+        if (error) throw error
+        const ids = [...new Set((cheques ?? []).map(c => c.cobranza_id))]
+        const cobranzas = new Map()
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error: e2 } = await supabase.from('v_cobranzas')
+            .select('id, estado, unidad_negocio_id, unidad_negocio_nombre, moneda, cliente')
+            .in('id', ids.slice(i, i + 200))
+          if (e2) throw e2
+          for (const c of data ?? []) cobranzas.set(c.id, c)
+        }
+        const bancos = await asegurarBancos()
+        if (dp.agregar !== a) return
+        const clientePorCheque = new Map((cheques ?? []).map(ch => [ch.id, cobranzas.get(ch.cobranza_id)?.cliente ?? null]))
+        a.cartera = sinUnidadesDePrueba(chequesParaPagar(cheques, cobranzas, unidadId, bancos), estado.fabrica, c => c.unidadId === unidadId ? null : c.unidadId)
+          .map(c => ({ ...c, cliente: clientePorCheque.get(c.id) ?? null, unidadNombre: c.unidadNombre ?? nombreUnidad(c.unidadId) }))
+      } catch (err) {
+        if (dp.agregar !== a) return
+        console.error('No se pudo leer la cartera de cheques:', err)
+        a.errorLectura = 'No se pudo leer la cartera de cheques. Cerrá y probá de nuevo.'
+      }
+      a.cargando = false
+      if (estado.detallePago === dp && dp.agregar === a) pintarDetallePago()
+    }
+
+    async function confirmarSacarChequeDP() {
+      const dp = estado.detallePago
+      const s = dp?.sacar
+      if (!s || s.enviando) return
+      const cheque = dp.cheques.find(c => c.id === s.chequeId)
+      const motivo = String(s.motivo ?? '').trim()
+      if (motivo.length < 3) { s.error = 'Poné el motivo (ej. "el proveedor no lo aceptó: tiene rechazos").'; pintarDetallePago(); return }
+      s.enviando = true
+      s.error = null
+      pintarDetallePago()
+      try {
+        const { data, error } = await supabase.rpc('sacar_cheque_de_pago', { p_cheque_id: s.chequeId, p_motivo: motivo })
+        if (error) throw error
+        dp.sacar = null
+        dp.aviso = textoResultadoSacarDP(data, cheque?.numero)
+        dp.ofrecerReemplazo = !data?.pago_anulado
+        if (data?.pago_anulado) mostrarExito('El pago quedó anulado')
+      } catch (err) {
+        console.error('No se pudo sacar el cheque del pago:', err)
+        // El error de la base va TAL CUAL, pegado al botón.
+        s.enviando = false
+        s.error = err?.message || 'No se pudo sacar el cheque. Probá de nuevo.'
+        if (estado.detallePago === dp) pintarDetallePago()
+        return
+      }
+      await cargarDetallePago(dp)
+      if (estado.detallePago === dp) pintarDetallePago()
+      refrescarCuentaTrasCambioPago()
+    }
+
+    async function confirmarAgregarChequesDP() {
+      const dp = estado.detallePago
+      const a = dp?.agregar
+      if (!a || a.enviando || a.cargando) return
+      const elegidos = chequesTildadosDP(a)
+      if (!elegidos.length) { a.error = 'Elegí al menos un cheque de la cartera.'; repintarAgregarDP(); return }
+      a.enviando = true
+      a.error = null
+      pintarDetallePago()
+      try {
+        const { data, error } = await supabase.rpc('agregar_cheques_a_pago', {
+          p_gasto_id: dp.gastoId, p_cheque_ids: elegidos.map(c => c.id), p_motivo: String(a.motivo ?? '').trim() || null,
+        })
+        if (error) throw error
+        dp.agregar = null
+        dp.aviso = textoResultadoAgregarDP(data)
+        dp.ofrecerReemplazo = false
+      } catch (err) {
+        console.error('No se pudieron agregar los cheques al pago:', err)
+        a.enviando = false
+        a.error = err?.message || 'No se pudieron agregar los cheques. Probá de nuevo.'
+        if (estado.detallePago === dp) pintarDetallePago()
+        return
+      }
+      await cargarDetallePago(dp)
+      if (estado.detallePago === dp) pintarDetallePago()
+      refrescarCuentaTrasCambioPago()
+    }
+
+    // Después de sacar o agregar un cheque: los saldos y, si hay una ficha
+    // abierta, su banner, sus movimientos y sus créditos.
+    async function refrescarCuentaTrasCambioPago() {
+      cargarSaldos()
+      const f = estado.ficha
+      if (!f) return
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+      if (estado.ficha !== f) return
+      renderizarFichaBanner()
+    }
+
+    // Los toques y lo que se escribe adentro del detalle (se delega en el
+    // contenedor: el contenido se arma con innerHTML).
+    function alTocarDetallePago(ev) {
+      const t = ev?.target
+      const dp = estado.detallePago
+      if (!t?.closest || !dp) return
+      const sacar = t.closest('[data-sacar-cheque]')
+      if (sacar) {
+        if (!puedeCambiarChequesPagoDP()) return
+        dp.sacar = { chequeId: sacar.dataset.sacarCheque, motivo: '', error: null, enviando: false }
+        dp.agregar = null
+        pintarDetallePago()
+        document.getElementById('campo-motivo-sacar-cheque')?.focus?.()
+        return
+      }
+      if (t.closest('[data-sacar-cancelar]')) { if (!dp.sacar?.enviando) { dp.sacar = null; pintarDetallePago() } return }
+      if (t.closest('[data-sacar-confirmar]')) { confirmarSacarChequeDP(); return }
+      if (t.closest('[data-agregar-cheque]')) { abrirAgregarChequeDP(); return }
+      if (t.closest('[data-agregar-cancelar]')) { if (!dp.agregar?.enviando) { dp.agregar = null; pintarDetallePago() } return }
+      if (t.closest('[data-agregar-confirmar]')) confirmarAgregarChequesDP()
+    }
+
+    function alEscribirDetallePago(ev) {
+      const t = ev?.target
+      const dp = estado.detallePago
+      if (!t?.matches || !dp) return
+      if (t.matches('[data-sacar-motivo]') && dp.sacar) {
+        dp.sacar.motivo = t.value
+        if (dp.sacar.error) {
+          dp.sacar.error = null
+          const e = document.querySelector('#detalle-pago-contenido [data-sacar-error]')
+          if (e) { e.textContent = ''; e.hidden = true }
+        }
+        return
+      }
+      if (t.matches('[data-agregar-buscar]') && dp.agregar) { dp.agregar.busqueda = t.value; repintarAgregarDP(); return }
+      if (t.matches('[data-agregar-motivo]') && dp.agregar) { dp.agregar.motivo = t.value; return }
+      if (t.matches('[data-agregar-tildar]') && dp.agregar && ev.type === 'change') {
+        const id = t.dataset.agregarTildar
+        if (t.checked) dp.agregar.tildados.add(id); else dp.agregar.tildados.delete(id)
+        dp.agregar.error = null
+        repintarAgregarDP()
+      }
     }
 
     function cerrarModalDetallePago() {
@@ -8193,6 +8723,11 @@
 
     document.getElementById('btn-cerrar-detalle-pago').addEventListener('click', cerrarModalDetallePago)
     document.querySelector('#modal-detalle-pago .modal-cc__backdrop').addEventListener('click', cerrarModalDetallePago)
+    // Sacar / agregar cheques del pago (30/10/2026): el contenido se arma con
+    // innerHTML, los eventos se delegan.
+    const detallePagoCont = document.getElementById('detalle-pago-contenido')
+    detallePagoCont.addEventListener('click', alTocarDetallePago)
+    for (const tipo of ['input', 'change']) detallePagoCont.addEventListener(tipo, alEscribirDetallePago)
 
     // AMPLIAR (06/10/2026, js/ampliar.js). En la compu, el detalle de un pago
     // se puede ver en una ventana grande: el importe y lo que pasó con el
@@ -8209,8 +8744,8 @@
         return 'Detalle del pago' + (monto ? ' · ' + monto : '')
       },
       tituloResumen: 'El pago',
-      tituloGrilla: 'Facturas cubiertas',
-      resumen: () => document.querySelectorAll('#detalle-pago-contenido .detalle-pago-hero, #detalle-pago-contenido .detalle-pago-credito'),
+      tituloGrilla: 'Facturas que paga',
+      resumen: () => document.querySelectorAll('#detalle-pago-contenido .detalle-pago-hero, #detalle-pago-contenido .detalle-pago-obs, #detalle-pago-contenido .detalle-pago-cheques, #detalle-pago-contenido .detalle-pago-credito'),
       grilla: () => document.querySelectorAll('#detalle-pago-contenido .fila-pago-aplicacion'),
       acciones: () => [],
     })

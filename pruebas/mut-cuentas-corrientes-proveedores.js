@@ -74,8 +74,9 @@ correrMutacionesEnVarios([
       { nombre: 'el historial sigue con la referencia de la vista', de: '        const referencia = referenciaMovimiento(m, estado.etiquetasPagoHistorial, estado.obsSaldoInicialHistorial)', a: "        const referencia = m.referencia || ''" },
       { nombre: 'el historial no guarda las etiquetas', de: '      estado.etiquetasPagoHistorial = etiquetasPago\n', a: '' },
       { nombre: 'el Excel sigue con la referencia de la vista', de: "        'Referencia': referenciaMovimiento(m, estado.etiquetasPagoHistorial, estado.obsSaldoInicialHistorial),", a: "        'Referencia': m.referencia || ''," },
-      { nombre: 'el detalle del pago dice solo "Cheque"', de: '${esc(etiquetaPagoDeGasto(gasto) || MEDIOS_PAGO_LABEL[gasto?.medio_pago]', a: '${esc(MEDIOS_PAGO_LABEL[gasto?.medio_pago]' },
-      { nombre: 'el detalle del pago no lee la descripción', de: "select('fecha_pago, medio_pago, importe, moneda, descripcion')", a: "select('fecha_pago, medio_pago, importe, moneda')" },
+      // 30/10/2026: el detalle del pago lo arma htmlDetallePago (dos columnas).
+      { nombre: 'el detalle del pago dice solo "Cheque"', de: ": (etiquetaPagoDeGasto(g) || MEDIOS_PAGO_LABEL[g?.medio_pago] || g?.medio_pago || '')", a: ": (MEDIOS_PAGO_LABEL[g?.medio_pago] || g?.medio_pago || '')" },
+      { nombre: 'el detalle del pago no lee la descripción', de: "select('fecha_pago, medio_pago, importe, moneda, descripcion, observaciones,", a: "select('fecha_pago, medio_pago, importe, moneda, observaciones," },
       { nombre: 'la referencia de la ficha sin escapar', de: '<div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>', a: '<div class="fila-movimiento__referencia">${referencia}${badgeEstado}</div>' },
     ],
   },

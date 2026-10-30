@@ -27,6 +27,7 @@ const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
+const { FUNCIONES_DETALLE_PAGO, CONSTANTES_DETALLE_PAGO } = require('./detalle-pago-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -107,8 +108,10 @@ const FUNCIONES = [
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
   // aplicar un pago a facturas y anular un pago (30/10/2026)
   ...FUNCIONES_PAGO_APLICAR,
+  // el detalle del pago en dos columnas, con sus cheques (30/10/2026)
+  ...FUNCIONES_DETALLE_PAGO.filter(f => f !== 'abrirModalDetallePago'),
 ]
-const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL']
+const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL', ...CONSTANTES_DETALLE_PAGO]
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -307,7 +310,7 @@ async function main() {
     chk('un pago en efectivo sigue diciendo "Efectivo"', /detalle-pago-hero__meta">[^<]*· Efectivo</.test(html(T, 'detalle-pago-contenido')))
     // El doble de la base devuelve todas las columnas sin mirar el select: la
     // columna se exige en el TEXTO de la consulta.
-    chk('el detalle del pago lee la descripción del gasto', /from\('gastos'\)\.select\('fecha_pago, medio_pago, importe, moneda, descripcion'\)/.test(FUENTE))
+    chk('el detalle del pago lee la descripción del gasto', /from\('gastos'\)\.select\('fecha_pago, medio_pago, importe, moneda, descripcion[,']/.test(FUENTE))
     chk('las etiquetas leen medio_pago y descripcion', /from\('gastos'\)\.select\('id, medio_pago, descripcion'\)/.test(FUENTE))
   }
 

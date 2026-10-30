@@ -538,12 +538,27 @@ const SEGURAS = {
     chipUnidad: HTML_PROPIO,
     'formatearFecha(f.fecha_factura)': fecha('facturas_pendientes.fecha_factura'), 'importeHtml(f.importe, f.moneda)': IMPORTE,
   },
-  abrirModalDetallePago: {
-    categoria: "' · ' + esc(fp.categorias.nombre), armado arriba",
-    'importeHtml(a.monto_aplicado, gasto?.moneda)': IMPORTE, 'importeHtml(c.monto_original, c.moneda)': IMPORTE,
-    'importeHtml(ac.monto_aplicado, c.moneda)': IMPORTE, 'importeHtml(c.monto_disponible, c.moneda)': IMPORTE,
-    'importeHtml(gasto?.importe, gasto?.moneda)': IMPORTE, 'formatearFecha(gasto?.fecha_pago)': fecha('gastos.fecha_pago'),
-    filasFacturas: HTML_PROPIO, bloquesCredito: HTML_PROPIO,
+  // 30/10/2026: el detalle del pago en dos columnas, con los cheques y
+  // sacar / agregar (lo ejecuta con marcas test-cuentas-corrientes-detalle-pago-cheques.js
+  // y el render "detalle del pago" de abajo).
+  htmlChequeDP: { panel: HTML_PROPIO },
+  htmlAgregarDP: {
+    'htmlListaAgregarDP(dp)': 'htmlListaAgregarDP() escapa el número, el banco, el cliente, la empresa y lo buscado (ejecutada con marcas)',
+    'htmlPreviaAgregarDP(dp)': 'htmlPreviaAgregarDP() escapa cada línea de la vista previa (ejecutada con marcas)',
+  },
+  htmlDetallePago: {
+    aviso: HTML_PROPIO, sinLeer: 'texto constante del código, o ""', agregarBoton: 'botón constante del código, o ""',
+    "dp.cheques.map(c => htmlChequeDP(c, dp, cambia)).join('')": 'htmlChequeDP() escapa el id, el banco, el número, la fecha, los titulares, el cliente y el motivo (ejecutada con marcas)',
+    'htmlAgregarDP(dp)': 'htmlAgregarDP() escapa lo buscado y el motivo; la lista y la vista previa, sus funciones (ejecutada con marcas)',
+    creditos: 'htmlCreditosDP(): cada importe con esc(formatearImporte()) y el número de factura con esc()',
+    facturas: 'htmlFacturasDP(): el número, la razón social, la categoría y el importe con esc()',
+  },
+  pintarDetallePago: {
+    'htmlDetallePago(dp, { puede: puedeCambiarChequesPagoDP() })': 'htmlDetallePago() escapa cada dato de la base (ejecutada con marcas)',
+  },
+  repintarAgregarDP: {
+    'htmlListaAgregarDP(dp)': 'htmlListaAgregarDP() escapa cada dato (ejecutada con marcas)',
+    'htmlPreviaAgregarDP(dp)': 'htmlPreviaAgregarDP() escapa cada línea (ejecutada con marcas)',
   },
   cargarPendientesAceptacion: {
     'colorAvatar(p.razon_social)': 'colorAvatar(): un elemento de PALETA_AVATAR (hex literales del código), nunca el nombre',
