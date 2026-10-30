@@ -81,10 +81,12 @@ for (const [ancho, alto] of TAMANOS) {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrirRevisar(page);
-    await expect(page.locator('#rd-sub')).toHaveText('Revisar');
+    // 29/10/2026: la pestaña se llama "Órdenes cargadas" (por dentro, revisar).
+    await expect(page.locator('#rd-sub')).toHaveText('Órdenes cargadas');
+    await expect(page.locator('#rd-tab-revisar')).toHaveText('Órdenes cargadas');
     await expect(page.locator('#rd-tab-revisar')).toHaveAttribute('aria-pressed', 'true');
     const seccion = page.locator('#ad-remitos');
-    await expect(seccion).toContainText('Remitos precargados · por revisar');
+    await expect(seccion).toContainText('Sin terminar · para cargar lotes');
     await expect(seccion.locator('[data-remitos-cuenta]')).toHaveText('4');
     expect(await seccion.locator('[data-remito]').evaluateAll(bs => bs.map(b => b.dataset.remito))).toEqual(['rm-3', 'rm-2', 'rm-1', 'rm-4']);
     await expect(seccion.locator('[data-remito="rm-2"]')).toContainText('La foto está muy oscura');
@@ -184,7 +186,11 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(page.locator('[data-rm-accion="guardar"]')).toHaveCount(0);
     await expect(page.locator('#ad-rm-guardado')).toHaveText('Los cambios se guardan solos.');
     const guardados = () => rpc.filter(r => r.nombre === 'actualizar_remito_precarga').map(r => r.params);
+    // El cono leído está elegido con la lista cerrada (29/10/2026): "Cambiar" y buscar.
+    await renglon(page, 0).locator('[data-rm-cono-cambiar="0"]').click();
+    await renglon(page, 0).locator('[data-rm-cono-buscar="0"]').fill('ler');
     await renglon(page, 0).locator('[data-rm-marca="0"][data-id="m-ler"]').click();
+    await expect(renglon(page, 0).locator('[data-rm-cono-elegido="0"]')).toContainText('LEROMA');
     // Lo que se toca se guarda solo, en seguida.
     await expect.poll(() => guardados().length).toBeGreaterThan(0);
     expect(guardados()[0].p_items[0].marca_id).toBe('m-ler');
@@ -206,7 +212,7 @@ for (const [ancho, alto] of TAMANOS) {
     await page.locator('[data-rm-lote="1"][data-k="1"]').pressSequentially('l-10433');
     await expect(page.locator('[data-rm-lote="1"][data-k="1"]')).toHaveValue('L-10433');
     await page.locator('[data-rm-lote-cajas="1"][data-k="1"]').fill('39');
-    await expect(page.locator('[data-rm-lotes-pie="1"]')).toHaveText('Lotes: 69 de 84 cajas · faltan 15 cajas');
+    await expect(page.locator('[data-rm-lotes-pie="1"]')).toHaveText('Lotes: 69 de 84 cajas · falta repartir 15 cajas');
     await expect(page.locator('[data-rm-lotes-pie="1"] .ad-rm-lotes__asignado')).toHaveClass(/ad-rm-lotes__asignado--falta/);
     await page.locator('[data-rm-lote-agregar="1"]').click();
     await page.locator('[data-rm-lote="1"][data-k="2"]').fill('10440');

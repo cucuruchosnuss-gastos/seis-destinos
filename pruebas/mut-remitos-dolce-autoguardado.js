@@ -85,7 +85,7 @@ correrMutaciones({
     { nombre: 'sale sin esperar el guardado', de: '        const ok = await esperarGuardadoRemito(rm)', a: '        const ok = true' },
     { nombre: 'sale aunque la base lo rechace', de: '        if (!ok) {\n          rm.aviso', a: '        if (false) {\n          rm.aviso' },
     { nombre: 'sin permiso igual queda pendiente', de: '      if (!puedeGuardarRemito(rm)) return false\n', a: '' },
-    { nombre: 'la pestaña sale sin mandar', de: "      if (estado.vista === 'ad-vista-remito' && pendienteRemito(estado.remito)) { volverDeRemito(); return }", a: '' },
+    { nombre: 'la pestaña sale sin mandar', de: "      if (estado.vista === 'ad-vista-remito' && pendienteRemito(estado.remito)) { volverDeRemito(p); return }", a: '' },
     // Volver a leer y Descartar
     { nombre: 'volver a leer no espera la llamada en curso', de: "      pintarRemito()\n      await frenarAutoguardadoRemito(rm)\n      try {\n        const { data, error } = await supabase.functions.invoke", a: "      pintarRemito()\n      try {\n        const { data, error } = await supabase.functions.invoke" },
     { nombre: 'descartar no espera la llamada en curso', de: "      pintarRemito()\n      await frenarAutoguardadoRemito(rm)\n      try {\n        const { error } = await supabase.rpc('descartar_remito_precarga'", a: "      pintarRemito()\n      try {\n        const { error } = await supabase.rpc('descartar_remito_precarga'" },

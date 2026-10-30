@@ -26,7 +26,8 @@ precargados de Rosario"): esas dos secciones describen el código que se MUDÓ t
 - `cargarPermisos` (empleados + `empleado_tareas` del módulo `retiros` con su alcance) y `cargarFabricas`
   (`unidades_negocio`: todas para nombrarlas —"(también en Nuss)"— y las **sin control de stock** donde la persona
   carga o ve retiros, sin la de pruebas para una cuenta real).
-- Pestañas (`pestanasVisibles`): **Subir** con `retiros:cargar`, **Revisar** con `retiros:ver` (en esa fábrica). Con
+- Pestañas (`pestanasVisibles`): **Subir** con `retiros:cargar`, **Revisar** (a la vista **"Órdenes cargadas"** desde el
+  29/10/2026; adentro de un remito se sale con "‹ Remitos": ver "Un solo recorrido") con `retiros:ver` (en esa fábrica). Con
   una sola, la barra de pestañas no se ve. Sin ninguna: "No tenés permiso…" y vuelve al dashboard. `?pestana=subir|revisar`
   (los links de la Carga y de Administración) o la última usada (`remitos-dolce.pestana`). Adentro de un remito no hay
   pestañas (se sale con "‹ Revisar", que manda antes lo que quedó sin guardar: ver "El autoguardado").
@@ -88,6 +89,43 @@ Pedido de Facu: "Guardar" y "Confirmar" confundían (tocó Guardar, salió "guar
   `_remito_items_normalizar` el 29/10/2026; en insumo la base ya acepta {lote, cantidad}, la pantalla todavía no).
 - Suites `test-/mut-remitos-dolce-interna-lotes.js` (33; 15/15, baseline 497c393) y `e2e/98-recibir-entre-empresas.spec.js`
   (la maqueta `remitos-dolce-revisar` tiene el cliente `c-d-paz` del grupo).
+
+## Un solo recorrido (29/10/2026, rama `ci-prueba/remitos-mas-simple`)
+Pedido de Facu: "que Manuel suba la foto y cargue los lotes en el mismo lugar, sin ir a otra pestaña a revisar".
+**Lo de arriba sobre "Revisar" sigue valiendo por dentro** (la pestaña se llama `'revisar'` en el código, `rd-vista-revisar`,
+`mostrarRevisar`), pero el usuario ya no ve esa palabra.
+- **Subir**: leído, el remito queda en **NARANJA "Listo para cargar lotes"** (`estadoRemitoSubido` → `abrir: true`;
+  `detalleListoSubida`: "Remito N° … · cliente · N renglones"; el cliente, el elegido si ya se leyeron los clientes de esa
+  fábrica —`asegurarClientesSubida`, una lectura al costado— o el leído). `leerMisRemitos` ahora trae `cliente_id,
+  cliente_leido, items`. La tarjeta entera es un `<button data-remito-abrir>` (con `retiros:cargar` en esa fábrica; sin eso se
+  ve igual pero no se abre) que llama a **`abrirRemito(id, 'subir')`**: el mismo editor `ad-vista-remito`, que pasa a la
+  fábrica del remito (`usarEmpresaRemito`). Estados a la vista: "Leyendo…" (gris) → "Listo para cargar lotes" (naranja) →
+  **"Orden cargada · D-00XX"** (verde, `orden_codigo` o la respuesta de `confirmar_remito_precarga`, verificada con
+  pg_get_functiondef el 29/10/2026: `v_res` con `codigo` + `numero_remito` y `talonario`) / "No se pudo leer" (rojo, igual).
+  En la base sigue 'precargada' / 'confirmada'.
+- **"‹ Remitos"** (antes "‹ Revisar") y Confirmar/Descartar vuelven a donde se abrió (`estado.origenRemito`, `salirDeRemito`);
+  cambiar de pestaña con algo pendiente lo manda y va a la pestaña tocada (`volverDeRemito(p)`). Todo el autoguardado igual.
+- Lo confirmado o descartado en la visita queda marcado (`marcarSubidoRemito`, `conResueltosSubida`): una lectura vieja que
+  todavía lo trae 'precargada' no lo vuelve naranja (la maqueta no cambia las tablas al confirmar).
+- **"Órdenes cargadas"** (la segunda pestaña, `retiros:ver`): arriba **"Sin terminar · para cargar lotes"** (los
+  precargados/leyendo/error de CUALQUIERA, para que otro los termine; sin ninguno, la sección no se ve) y abajo **"Órdenes
+  cargadas por N° de remito"** con **"Buscar por N° de remito"** (`buscarOrdenRemito`, `digitosRemito`: los dígitos en
+  cualquier parte del número). `?pestana=revisar` (los links de la Carga y Administración) la abre: no se tocaron.
+- El sello del renglón dudoso dice **"Controlar"**; el pie de lotes **"Lotes: 25 de 31 cajas · falta repartir 6 cajas"**
+  ("1 caja"). Los sellos de color (`.ad-sello.ad-sello--x`) ya no los pisa la regla base `.ad-sello` (salían grises).
+- **El buscador de conos** (`conosParaBuscar`, `MIN_LETRAS_CONO` 2, `MAX_CONOS_REMITO` 20): con menos de 2 letras ninguno y
+  la pista "Escribí 2 o 3 letras del cono"; con 2, primero los que EMPIEZAN así (el nombre o una palabra), después los que lo
+  contienen, sin tildes; lista vertical, `max-height: 16rem; overflow-y: auto`. Con cono elegido (también el que leyó la IA):
+  cerrado, el cono a la vista y "Cambiar" (`cambiarConoRemito`, `r.cambiandoCono`; "Dejar X" vuelve). El selector de
+  producto ya tenía scroll: quedó con la misma altura (16rem).
+- **"× N u."** (`js/remitos-comun.js`: `unidadesPresentacionRemito`, `textoUnidadesRemito`; `producto_presentaciones.unidades_por_caja`
+  integer not null, information_schema el 29/10/2026): "Barquillo 40 x4 · Caja con cono × 252 u. · GLACE", "Media caja × 128 u.";
+  con 1 ("Por cono") nada; si el nombre ya trae el número ("Caja ×1800", "Caja x 48") no se repite; miles con punto. Las
+  opciones también, y el número se busca ("180" → la Caja N°2). En el renglón elegido, en negrita (`htmlNombreRenglonRemito`,
+  `.ad-rm-unidades` sin cortarse). Administración ("Nuevo acopio") usa el mismo `nombreRenglonRemito`/`gruposRemito`: también
+  lo muestra. La Carga y la hoja no lo usan.
+- Suites `test-/mut-remitos-dolce-mas-simple.js` (112; 77/77, baseline 2003aa3; también `test-remitos-dolce-subir` 156 / 125/125 y `-revisar` 188 / 98/98), `e2e/99-remitos-mas-simple.spec.js` (maqueta
+  nueva `remitos-dolce-mas-simple`: el catálogo de Dolce de la base y 30 conos).
 
 ## Lo que quedó afuera
 - **La Carga** (retiros.html): un link chico **"Remitos Dolce →"** (`#rt-link-remitos`, a `?pestana=subir`), con la

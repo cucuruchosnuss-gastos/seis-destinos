@@ -30,6 +30,8 @@ const FUNCIONES_ACOPIOS = [
   // Lo de la Carga que usa "Nuevo acopio" (js/remitos-comun.js desde el 28/10/2026).
   'presentacionRemito', 'productoDePresentacionRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
   'limpioRc', 'normalizarRc', 'insumoRemito',
+  // Las unidades de la caja ("× 252 u.", 29/10/2026).
+  'unidadesPresentacionRemito', 'textoUnidadesRemito', 'presentacionConUnidadesRc',
   'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
 ]
 

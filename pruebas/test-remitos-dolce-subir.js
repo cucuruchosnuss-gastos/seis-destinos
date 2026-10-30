@@ -15,7 +15,9 @@
 //  - ocr-remito sin esperar: la cola sigue con la próxima foto, de a dos
 //    lecturas a la vez;
 //  - "Mis remitos subidos": lo que se lee, el orden, cada estado (y el sello
-//    "Acopio"; "Confirmado: Orden D-0012" con remitos_precarga.orden_codigo),
+//    "Acopio"; "Orden cargada · D-0012" con remitos_precarga.orden_codigo —antes
+//    "Confirmado: Orden D-0012"; desde el 29/10/2026 la precargada dice "Listo
+//    para cargar lotes" y abre el remito ahí mismo: test-remitos-dolce-mas-simple.js),
 //    Reintentar, el sondeo y el escape de lo que viene de la base.
 //
 //   node pruebas/test-remitos-dolce-subir.js
@@ -178,7 +180,7 @@ esperas.push((async () => {
   chk('Subir: el encabezado dice "Subir" y se ven las pestañas', S.__els.get('rd-sub').textContent === 'Subir' && S.__els.get('rd-tabs').hidden === false &&
     S.__els.get('rt-vista-remitos').hidden === false && S.__els.get('rd-vista-revisar').hidden === true)
   S.mostrarVista('ad-vista-remito')
-  chk('adentro de un remito no hay pestañas', S.__els.get('rd-tabs').hidden === true && S.__els.get('rd-sub').textContent === 'Revisar')
+  chk('adentro de un remito no hay pestañas', S.__els.get('rd-tabs').hidden === true && S.__els.get('rd-sub').textContent === 'Cargar lotes')
   const S1 = armar({ tareas: [['retiros:cargar', { todas: true }]] })
   S1.mostrarVista('rt-vista-remitos')
   chk('con una sola pestaña, la barra de pestañas no se ve', S1.__els.get('rd-tabs').hidden === true)
@@ -513,23 +515,23 @@ esperas.push((async () => {
   const trabado = e({ id: 'a', estado: 'leyendo', subido_en: hace(10) })
   chk('leyendo hace más de 3 minutos: se ofrece Reintentar', trabado.reintentar === true && /Tarda más de lo normal/.test(trabado.detalle))
   const pre = e({ id: 'b', estado: 'precargada', numero_remito: '0001-00003100', talonario: 'oficial' })
-  chk('precargada: "Precargado" con el N° leído', pre.texto === 'Precargado' && pre.detalle === 'Remito N° 0001-00003100' && pre.acopio === false)
-  chk('precargada sin N°: lo dice', /Sin número leído/.test(e({ id: 'b', estado: 'precargada' }).detalle))
+  chk('precargada: "Listo para cargar lotes" con el N° leído (29/10/2026)', pre.texto === 'Listo para cargar lotes' && pre.detalle === 'Remito N° 0001-00003100 · sin cliente · 0 renglones' && pre.acopio === false && pre.abrir === true, pre.detalle)
+  chk('precargada sin N°: lo dice', /^Sin N° leído/.test(e({ id: 'b', estado: 'precargada' }).detalle))
   const aco = e({ id: 'b', estado: 'precargada', numero_remito: '977492', talonario: 'acopio' })
   chk('precargada de acopio: el sello', aco.acopio === true && S.htmlRemitoSubido({ clave: 'b', cuando: hace(1), estado: aco }).includes('<span class="rt-remito__sello">Acopio</span>'))
   chk('oficial: sin sello', !S.htmlRemitoSubido({ clave: 'b', cuando: hace(1), estado: pre }).includes('rt-remito__sello'))
   const conf = e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden_codigo: ' D-0012 ', numero_remito: '977492', talonario: 'acopio' })
-  chk('confirmada: "Confirmado: Orden D-0012"', conf.texto === 'Confirmado: Orden D-0012' && conf.detalle === 'Remito N° 977492' && conf.acopio === true, conf.texto)
+  chk('confirmada: "Orden cargada · D-0012"', conf.texto === 'Orden cargada · D-0012' && conf.detalle === 'Remito N° 977492' && conf.acopio === true, conf.texto)
   chk('confirmada de acopio: el sello', S.htmlRemitoSubido({ clave: 'c', cuando: hace(1), estado: conf }).includes('rt-remito__sello'))
-  chk('confirmada sin el código (una fila vieja): "ya es una orden"', e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden_codigo: null }).texto === 'Confirmado: ya es una orden')
-  chk('…el código de un embebido viejo ya no se usa', e({ id: 'c', estado: 'confirmada', orden: { codigo: 'D-9' } }).texto === 'Confirmado: ya es una orden')
+  chk('confirmada sin el código (una fila vieja): "ya es una orden"', e({ id: 'c', estado: 'confirmada', orden_id: 'o-1', orden_codigo: null }).texto === 'Orden cargada')
+  chk('…el código de un embebido viejo ya no se usa', e({ id: 'c', estado: 'confirmada', orden: { codigo: 'D-9' } }).texto === 'Orden cargada')
   chk('descartada: "Descartado: motivo"', e({ id: 'd', estado: 'descartada', descartado_motivo: 'Foto repetida' }).texto === 'Descartado: Foto repetida')
   chk('descartada de acopio: SIN sello (solo precargado o confirmado)', !e({ id: 'd', estado: 'descartada', numero_remito: '9', talonario: 'acopio' }).acopio)
   const err = e({ id: 'e', estado: 'error', error: 'No se ve la fecha' })
   chk('error: "No se pudo leer" con el motivo y Reintentar', err.texto === 'No se pudo leer' && err.detalle === 'No se ve la fecha' && err.reintentar === true)
   chk('error de acopio: sin sello', !e({ id: 'e', estado: 'error', talonario: 'acopio', numero_remito: '9' }).acopio)
   S.datosRemitos().leyendo.add('b')
-  chk('pidiendo la lectura pero la base ya lo tiene leído: "Precargado"', e({ id: 'b', estado: 'precargada', numero_remito: '1' }).texto === 'Precargado')
+  chk('pidiendo la lectura pero la base ya lo tiene leído: "Listo para cargar lotes"', e({ id: 'b', estado: 'precargada', numero_remito: '1' }).texto === 'Listo para cargar lotes')
   S.datosRemitos().leyendo.add('e')
   chk('releyendo uno con error: "Leyendo…"', e({ id: 'e', estado: 'error', error: 'x' }).texto === 'Leyendo…')
   chk('en la cola sin registrar: "Subiendo…"', S.estadoRemitoEnCola({ paso: 'subir', error: null }).texto === 'Subiendo…')
@@ -547,6 +549,8 @@ esperas.push((async () => {
   const d = S.datosRemitos()
   d.filas = [
     { id: 'x1', estado: 'precargada', numero_remito: marca('numero'), unidad_negocio_id: FID, subido_en: hace(1) },
+    // La tarjeta naranja, que es un botón (29/10/2026): su id y lo leído.
+    { id: marca('idlisto'), estado: 'precargada', numero_remito: '9', cliente_leido: marca('clienteListo'), items: [], unidad_negocio_id: FID, subido_en: hace(1) },
     { id: 'x2', estado: 'descartada', descartado_motivo: marca('motivo'), subido_en: hace(2) },
     { id: marca('iderr'), estado: 'error', error: marca('error'), subido_en: hace(3) },
     { id: marca('id'), estado: 'confirmada', orden_codigo: marca('codigo'), subido_en: hace(4), foto_path: 'f-id' },
@@ -560,7 +564,10 @@ esperas.push((async () => {
   const lista = S.__els.get('rt-remitos-lista').innerHTML
   const html = lista + S.__els.get('rt-remitos-fabrica').innerHTML
   chk('ninguna marca cruda en Mis remitos subidos', !/<b data-xss=/.test(html), (html.match(/.{0,60}<b data-xss=[^>]*>/) || [''])[0])
-  for (const c of ['numero', 'motivo', 'error', 'id', 'iderr', 'codigo', 'fallo', 'fabrica', 'fid', 'cu']) chk(`«${c}» escapado`, html.includes(escapada(c)))
+  for (const c of ['numero', 'motivo', 'error', 'id', 'iderr', 'codigo', 'fallo', 'fabrica', 'fid', 'cu', 'idlisto', 'clienteListo']) chk(`«${c}» escapado`, html.includes(escapada(c)))
+  chk('la tarjeta naranja (botón): su clave escapada en data-remito y data-remito-abrir', lista.includes(`data-remito="${S.esc(marca('idlisto'))}" data-remito-estado="precargada" data-remito-abrir="${S.esc(marca('idlisto'))}"`))
+  const boton = (lista.match(/<button type="button" class="rt-remito [^]*?<\/button>/g) || []).find(b => b.includes(S.esc(marca('idlisto')))) || ''
+  chk('…y adentro, la fábrica escapada (con varias)', boton.includes(escapada('fabrica')) && !/<b data-xss=/.test(boton), boton.slice(0, 200))
   chk('la miniatura de la fila con id raro: su clave escapada', lista.includes(`data-remito-miniatura="${S.esc(marca('id'))}"`))
   chk('Reintentar y Quitar con la clave escapada', lista.includes(`data-remito-reintentar="${S.esc(marca('iderr'))}"`) && lista.includes(`data-remito-quitar="${S.esc(marca('cu'))}"`))
   chk('una miniatura javascript: no se dibuja', !lista.includes('data-remito-miniatura="x4"'))

@@ -100,7 +100,7 @@ for (const [ancho, alto] of TAMANOS) {
     const pie = page.locator('[data-rm-lotes-pie="2"]');
     await expect(pie).toHaveText('Lotes: 20 de 20 cajas · ✓ Asignado completo');
     await page.locator('[data-rm-lote-cajas="2"][data-k="0"]').fill('12');
-    await expect(pie).toHaveText('Lotes: 12 de 20 cajas · faltan 8 cajas');
+    await expect(pie).toHaveText('Lotes: 12 de 20 cajas · falta repartir 8 cajas');
     await expect(pie.locator('.ad-rm-lotes__asignado')).toHaveClass(/ad-rm-lotes__asignado--falta/);
     await page.locator('[data-rm-lote-agregar="2"]').click();
     await page.locator('[data-rm-lote="2"][data-k="1"]').pressSequentially('l-10433');
@@ -117,7 +117,7 @@ for (const [ancho, alto] of TAMANOS) {
       .toBe(JSON.stringify([{ lote: '10430', cajas: 12 }, { lote: 'L-10433', cajas: 5 }, { lote: '10440', cajas: 3 }]));
     // Quitar el del medio: vuelve a faltar.
     await renglon(page, 2).locator('[data-rm-lote-quitar="2"][data-k="1"]').click();
-    await expect(pie).toHaveText('Lotes: 15 de 20 cajas · faltan 5 cajas');
+    await expect(pie).toHaveText('Lotes: 15 de 20 cajas · falta repartir 5 cajas');
     await expect.poll(() => JSON.stringify(rpc.filter(r => r.nombre === 'actualizar_remito_precarga').pop()?.params?.p_items?.[2]?.lotes))
       .toBe(JSON.stringify([{ lote: '10430', cajas: 12 }, { lote: '10440', cajas: 3 }]));
     expect(errores, errores.join('\n')).toEqual([]);

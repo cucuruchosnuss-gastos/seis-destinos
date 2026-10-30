@@ -108,7 +108,7 @@ correrMutaciones({
     // El listado de abajo
     { nombre: 'las sin número primero', de: "        if (x === null) return 1\n        if (y === null) return -1", a: "        if (x === null) return -1\n        if (y === null) return 1" },
     { nombre: 'por número de menor a mayor', de: '        return y - x || i - j', a: '        return x - y || i - j' },
-    { nombre: 'sin solapas: todos los talonarios juntos', de: '      return ordenarPorRemito(lista.filter(o => talonarioDe(o) === tal))', a: '      return ordenarPorRemito(lista)' },
+    { nombre: 'sin solapas: todos los talonarios juntos', de: 'lista.filter(o => talonarioDe(o) === tal && (', a: 'lista.filter(o => (' },
     { nombre: 'null es acopio', de: "      return x?.talonario === 'acopio' ? 'acopio' : 'oficial'", a: "      return x?.talonario === 'oficial' ? 'oficial' : 'acopio'" },
     { nombre: 'el acopio dice Remito', de: "      return `${talonarioDe(o) === 'acopio' ? 'Acopio' : 'Remito'} N° ${n}`", a: '      return `Remito N° ${n}`' },
     { nombre: 'sin el sello Acopio', de: "      return o?.talonario === 'acopio' ? '<span class=\"ad-sello ad-sello--acopio\">Acopio</span>' : ''", a: "      return ''" },
@@ -165,7 +165,7 @@ correrMutaciones({
     { nombre: 'el error de confirmar genérico', de: "        rm.mensaje = err?.message || 'No se pudo confirmar el remito. Probá de nuevo.'", a: "        rm.mensaje = 'No se pudo confirmar el remito. Probá de nuevo.'" },
     { nombre: 'sin "Descartar (ya ingresado)"', de: '        rm.yaIngresado = RE_YA_INGRESADO.test(rm.mensaje)\n', a: '' },
     { nombre: '"ya ingresado" con otro motivo', de: "      else if (a === 'ya-ingresado') descartarRemito('ya ingresado')", a: "      else if (a === 'ya-ingresado') descartarRemito('repetido')" },
-    { nombre: 'confirmado no vuelve a Revisar', de: "      estado.ordenes = null\n      if (estado.vista === 'ad-vista-remito') await mostrarRevisar()", a: '      estado.ordenes = null' },
+    { nombre: 'confirmado no vuelve a Revisar', de: "      estado.ordenes = null\n      if (estado.vista === 'ad-vista-remito') await salirDeRemito()", a: '      estado.ordenes = null' },
     { nombre: 'el aviso de confirmar sin la orden', de: "${res.codigo ? 'es la orden ' + res.codigo : 'ya es una orden'}", a: 'ya es una orden' },
     { nombre: 'el motivo sin mínimo', de: '      if (m.length < LARGO_MINIMO_MOTIVO_REMITO) {', a: '      if (m.length < 1) {' },
     { nombre: 'el motivo sin limpiar', de: "        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: m })", a: "        const { error } = await supabase.rpc('descartar_remito_precarga', { p_id: rm.id, p_motivo: motivo })" },
