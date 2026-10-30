@@ -67,6 +67,48 @@
 
    - **LA VENTA POR UNIDAD (27/10/2026, rama `ci-prueba/venta-por-unidad`; ver `retiros.md`).** Las presentaciones de 1 por caja o con `sin_stock` (los "Conos de papel sueltos · Por cono") se dicen en unidades: el catálogo lee `sin_stock` y `partesRenglon` lo pasa (`sinStock`) a la hoja; la lista de órdenes lee también las `unidades` de cada renglón y dice "3 cajas + 720 un." (un renglón con cajas = unidades es por unidad); la ficha "720 conos · Conos de papel sueltos · …" y, al valorizar, **"Precio x cono"** (el precio es por cono, como cualquier presentación de 1 unidad: `precio_venta` de la Lista 1 propone $ 27 y el subtotal es precio × conos, sin cambios en la base).
 
+## La división: el 0 % y la factura que se carga después (30/10/2026, rama `ci-prueba/division-cero-y-factura`)
+- **El 0 % vale**: `pctInicialFacturar` = `numeroONulo(orden.division_pct_a) ?? numeroONulo(cliente.pct_parte_a) ?? 100`
+  (`numeroONulo` lee 0 y "0.00", que es como manda la base el numeric). Si los dos son null, desde la rama
+  `ci-prueba/condicion-venta-sin-defecto` ya no hay 100: ver la sección siguiente. Revisado en toda la
+  app el 30/10/2026: `pct_parte_a`, `division_pct_a`, `comision_parte_a_pct` y los % de comisión no se leen con `||`.
+  Con 0 el N1 no se muestra ni pide número (`puntosDePct`).
+- **La factura va después**: primero se divide (se guarda sola, "Guardado.") y recién después se factura en ARCA.
+  "Guardar la factura" está apagado mientras el número está vacío y no hay PDF (`actualizarFacturaPunto`; escribir o
+  elegir un PDF lo prende con `escribirNumeroFactura`, que también borra el error de antes); si igual se llama sin
+  número ni PDF, `guardarFacturaPunto` no llama a `guardar_factura_orden` ni muestra error. Con un PDF y sin número sí
+  pide el número (la base no guarda una factura sin número). Debajo del campo: "No hace falta para guardar la división:
+  se carga cuando ARCA dé el número." Cada punto tiene su botón: se puede volver a la orden y cargar solo el del N2.
+- Suites: `test-administracion-valorizar-con-division.js` (cliente SALVADOR LOFORTE con "0.00", la N-0033) y `mut-`
+  (12 mutaciones nuevas; baseline ac3cb25).
+
+## Sin condición no se inventa el 100/0, y la ficha no la pierde (30/10/2026, rama `ci-prueba/condicion-venta-sin-defecto`)
+- **La pantalla de facturar** (`iniciarFacturar`): `pctInicialFacturar` = orden → cliente → **null** (antes caía en 100).
+  Con null: N1 y N2 vacíos, no se llama a `datos_division_orden` (la base lo rechaza sin %) ni se guarda nada; solo se
+  leen los vendedores (`comisionesSinDatos`). Para el cliente sin condición, el aviso en naranja (`.ad-aviso--naranja`,
+  `AVISO_SIN_CONDICION`, el texto de Facu tal cual) y el estado "Sin el % de N1 y N2 no se puede guardar la división ni
+  armar las órdenes de pedido."; los puntos N1/N2 escondidos (sin imprimir ni compartir). Vaciar el % de un cliente
+  que sí tiene condición no es error: muestra ese estado y no guarda (`programarGuardarFacturar` no arma el retardo).
+- Hay dos campos: "Otro % del N1-…" (`#ad-fc-otro`) y "% del N2-…" (`#ad-fc-otro-b`); escribir uno completa el otro
+  (`escribirPctFacturar(valor, 'A'|'B')`, `ponerPctsFacturar` no pisa el que se está escribiendo). Los rápidos completan los dos.
+- **El tilde "Guardar también como condición del cliente"** (`#ad-fc-guardar-cliente`, solo si el cliente no tenía
+  condición al abrir): con la división guardada va `guardar_condicion_venta_cliente(p_cliente_id, p_pct_a, p_comisiones null)`
+  con el % que devolvió `guardar_division_orden` (las comisiones del cliente no se tocan; verificada con pg_get_functiondef
+  el 30/10/2026); tildarlo con la división ya guardada va en el momento; nunca dos en camino; el error de la base tal
+  cual al lado; "Condición guardada: N1 30% / N2 70% (en el cliente)." La lista de clientes se actualiza (copia, sin
+  mutar), así la próxima orden abre con ese %.
+- **La ficha**: cada cambio en la condición (los % o un vendedor, "Volver al de la configuración") sube
+  `condicion.version`; `condicionSinGuardar` compara con `guardadaVersion`. **Lo elegido (lo más simple): se guarda sola,
+  sin preguntar**, al tocar "Guardar la ficha" (antes que el resto; si falla, no sigue y lo dice en el pie) y al salir de
+  la ficha por cualquier lado (`mostrarVista` → `guardarCondicionAlSalir`; también al abrir otra ficha). Si al salir
+  no se puede, `mostrarError` "No se guardó la condición de venta de <cliente>: <texto de la base>". Cerrar o recargar la
+  página con algo sin guardar: el navegador pregunta (`beforeunload`). Después de guardar: "Condición guardada: N1 X% /
+  N2 Y%" en el aviso y escrito al lado del botón (`#ad-f-condicion-estado`). Vacío = "sin condición (se pone el % en
+  cada orden, al facturar)".
+- Suites: `test-administracion-valorizar-con-division.js` (204) y `test-administracion-division-orden.js` (108) con los
+  casos nuevos; `mut-` de las dos y `mut-administracion-clientes.js` con anclas al día; `e2e/102-condicion-sin-defecto.spec.js`
+  (390 y 1280 px) y `e2e/53` ajustada al texto nuevo.
+
 ## Remitos precargados de Rosario (27/10/2026)
 
 > **28/10/2026: se MUDÓ a Remitos Dolce** (`modulos/remitos-dolce.html`, pestaña Revisar; ver `remitos-dolce.md`), con el saldo de acopio al revisar y las órdenes por N° de remito. En Órdenes de una fábrica sin control queda la lista de siempre y un link chico "Remitos Dolce →" (`pintarLinkRemitos`); la ficha y la hoja siguen con "Remito N° X". El catálogo de un renglón (Nuevo acopio) y `textoNumeroRemito` / `htmlSelloAcopio` vienen de `js/remitos-comun.js`. Lo de abajo describe el código como era.
@@ -155,45 +197,3 @@ Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedi
   lo resolvería (pedido para el chat de la base).
 - Suites `test-/mut-administracion-orden-recepcion.js` (36; baseline 497c393), `test-administracion-orden-entre-empresas.js`
   ajustada, e2e 98.
-
-## La división: el 0 % y la factura que se carga después (30/10/2026, rama `ci-prueba/division-cero-y-factura`)
-- **El 0 % vale**: `pctInicialFacturar` = `numeroONulo(orden.division_pct_a) ?? numeroONulo(cliente.pct_parte_a) ?? 100`
-  (`numeroONulo` lee 0 y "0.00", que es como manda la base el numeric). Si los dos son null, desde la rama
-  `ci-prueba/condicion-venta-sin-defecto` ya no hay 100: ver la sección siguiente. Revisado en toda la
-  app el 30/10/2026: `pct_parte_a`, `division_pct_a`, `comision_parte_a_pct` y los % de comisión no se leen con `||`.
-  Con 0 el N1 no se muestra ni pide número (`puntosDePct`).
-- **La factura va después**: primero se divide (se guarda sola, "Guardado.") y recién después se factura en ARCA.
-  "Guardar la factura" está apagado mientras el número está vacío y no hay PDF (`actualizarFacturaPunto`; escribir o
-  elegir un PDF lo prende con `escribirNumeroFactura`, que también borra el error de antes); si igual se llama sin
-  número ni PDF, `guardarFacturaPunto` no llama a `guardar_factura_orden` ni muestra error. Con un PDF y sin número sí
-  pide el número (la base no guarda una factura sin número). Debajo del campo: "No hace falta para guardar la división:
-  se carga cuando ARCA dé el número." Cada punto tiene su botón: se puede volver a la orden y cargar solo el del N2.
-- Suites: `test-administracion-valorizar-con-division.js` (cliente SALVADOR LOFORTE con "0.00", la N-0033) y `mut-`
-  (12 mutaciones nuevas; baseline ac3cb25).
-
-## Sin condición no se inventa el 100/0, y la ficha no la pierde (30/10/2026, rama `ci-prueba/condicion-venta-sin-defecto`)
-- **La pantalla de facturar** (`iniciarFacturar`): `pctInicialFacturar` = orden → cliente → **null** (antes caía en 100).
-  Con null: N1 y N2 vacíos, no se llama a `datos_division_orden` (la base lo rechaza sin %) ni se guarda nada; solo se
-  leen los vendedores (`comisionesSinDatos`). Para el cliente sin condición, el aviso en naranja (`.ad-aviso--naranja`,
-  `AVISO_SIN_CONDICION`, el texto de Facu tal cual) y el estado "Sin el % de N1 y N2 no se puede guardar la división ni
-  armar las órdenes de pedido."; los puntos N1/N2 escondidos (sin imprimir ni compartir). Vaciar el % de un cliente
-  que sí tiene condición no es error: muestra ese estado y no guarda (`programarGuardarFacturar` no arma el retardo).
-- Hay dos campos: "Otro % del N1-…" (`#ad-fc-otro`) y "% del N2-…" (`#ad-fc-otro-b`); escribir uno completa el otro
-  (`escribirPctFacturar(valor, 'A'|'B')`, `ponerPctsFacturar` no pisa el que se está escribiendo). Los rápidos completan los dos.
-- **El tilde "Guardar también como condición del cliente"** (`#ad-fc-guardar-cliente`, solo si el cliente no tenía
-  condición al abrir): con la división guardada va `guardar_condicion_venta_cliente(p_cliente_id, p_pct_a, p_comisiones null)`
-  con el % que devolvió `guardar_division_orden` (las comisiones del cliente no se tocan; verificada con pg_get_functiondef
-  el 30/10/2026); tildarlo con la división ya guardada va en el momento; nunca dos en camino; el error de la base tal
-  cual al lado; "Condición guardada: N1 30% / N2 70% (en el cliente)." La lista de clientes se actualiza (copia, sin
-  mutar), así la próxima orden abre con ese %.
-- **La ficha**: cada cambio en la condición (los % o un vendedor, "Volver al de la configuración") sube
-  `condicion.version`; `condicionSinGuardar` compara con `guardadaVersion`. **Lo elegido (lo más simple): se guarda sola,
-  sin preguntar**, al tocar "Guardar la ficha" (antes que el resto; si falla, no sigue y lo dice en el pie) y al salir de
-  la ficha por cualquier lado (`mostrarVista` → `guardarCondicionAlSalir`; también al abrir otra ficha). Si al salir
-  no se puede, `mostrarError` "No se guardó la condición de venta de <cliente>: <texto de la base>". Cerrar o recargar la
-  página con algo sin guardar: el navegador pregunta (`beforeunload`). Después de guardar: "Condición guardada: N1 X% /
-  N2 Y%" en el aviso y escrito al lado del botón (`#ad-f-condicion-estado`). Vacío = "sin condición (se pone el % en
-  cada orden, al facturar)".
-- Suites: `test-administracion-valorizar-con-division.js` (204) y `test-administracion-division-orden.js` (108) con los
-  casos nuevos; `mut-` de las dos y `mut-administracion-clientes.js` con anclas al día; `e2e/102-condicion-sin-defecto.spec.js`
-  (390 y 1280 px) y `e2e/53` ajustada al texto nuevo.
