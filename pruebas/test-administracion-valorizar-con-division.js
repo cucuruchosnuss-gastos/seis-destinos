@@ -78,6 +78,8 @@ const VENDEDORES = [
 const CLIENTES = [
   { id: 'c-icardi', nombre: 'ICARDI REPRESENTACIONES S.A.', razon_social: null, cuit: '30711222333', lista_precio_id: 'l1', activo: true, pct_parte_a: 40 },
   { id: 'c-pepe', nombre: 'Kiosco Pepe', razon_social: null, cuit: null, lista_precio_id: 'l1', activo: true, pct_parte_a: null },
+  // 30/10/2026: la condición 0/100 (todo al N2), como la manda la base (numeric → "0.00").
+  { id: 'c-loforte', nombre: 'SALVADOR LOFORTE', razon_social: null, cuit: null, lista_precio_id: 'l1', activo: true, pct_parte_a: '0.00' },
   { id: 'c-dolce', nombre: 'DOLCE PASTA SRL', razon_social: null, cuit: null, lista_precio_id: 'l1', activo: true, pct_parte_a: null, unidad_grupo_id: 'u-d' },
 ]
 const CAT = {
@@ -668,6 +670,69 @@ async function abrir(S, opciones) {
     await vaciar()
     chequearMarcas(chk, 'el aviso de la base al leer los importes', html(S, 'ad-fc-aviso'), ['aviso-base'])
     chk('y los vendedores salen igual (los propios o la configuración)', el(S, 'ad-fc-v1').value === '2')
+  }))
+}
+
+// ── El 0 % no es "sin condición", y la factura se carga después (30/10/2026) ──
+// Pedido de Facu: SALVADOR LOFORTE (pct_parte_a = 0) tiene que abrir en 0/100,
+// no en 100/0; y guardar sin los números de factura de ARCA no da error (primero
+// se divide la orden y recién después se factura en ARCA).
+{
+  const S = nuevo()
+  const LOF = CLIENTES.find(c => c.id === 'c-loforte')
+  chk('el 0 del cliente vale: 0/100 (no cae en 100)', S.pctInicialFacturar({ division_pct_a: null }, LOF) === 0)
+  chk('el 0 de la orden vale aunque el cliente diga 40', S.pctInicialFacturar({ division_pct_a: '0.00' }, CLIENTES[0]) === 0 && S.pctInicialFacturar({ division_pct_a: 0 }, CLIENTES[0]) === 0)
+  chk('ICARDI sigue en 40; sin condición (null) o sin cliente, 100/0', S.pctInicialFacturar({ division_pct_a: null }, CLIENTES[0]) === 40 &&
+    S.pctInicialFacturar({ division_pct_a: null }, { pct_parte_a: null }) === 100 && S.pctInicialFacturar({}, null) === 100)
+  chk('la condición con 0: "N1-0033: 0 % · N2-0033: 100 %"', S.textoCondicion('N-0033', '0.00') === 'N1-0033: 0 % · N2-0033: 100 %')
+  chk('con 0 el N1 no se factura (no pide número): solo el N2', json(S.partesFacturaOrden('0.00', {})) === '["B"]' && json(S.partesFacturaOrden(0, {})) === '["B"]')
+  chk('el 0 viaja como 0 (no null) a la base', S.parametrosDivision('o33', 0, null).p_pct_a === 0)
+}
+{
+  // Una orden nueva de Loforte, ya valorizada y sin la condición guardada: abre en 0/100.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, id: 'o36', codigo: 'N-0033', cliente_id: 'c-loforte', division_pct_a: null } })
+  esperas.push(abrir(S).then(async () => {
+    const d = llamadasDe(S, 'datos_division_orden')
+    chk('Loforte: pide los importes con 0 (no con 100)', d.length === 1 && d[0][1].p_pct_a === 0, json(d))
+    chk('…y la pantalla dice 0/100', txt(S, 'ad-fc-condicion') === 'N1-0033: 0 % · N2-0033: 100 %', txt(S, 'ad-fc-condicion'))
+    chk('…el % escrito es 0', el(S, 'ad-fc-otro').value === '0')
+    chk('…sin el N1 y con el N2', el(S, 'ad-fc-punto-a').hidden === true && el(S, 'ad-fc-punto-b').hidden === false)
+    chk('…ningún botón rápido apretado (no hay 0/100 en los rápidos)', ['100', '80', '50', '40'].every(n => el(S, 'ad-fc-rapida-' + n).getAttribute('aria-pressed') === 'false'))
+  }))
+}
+{
+  // La N-0033 de Loforte (0/100 ya guardada): sin números de factura no hay error;
+  // después se carga solo el del N2, sin tocar la división.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, id: 'o36', codigo: 'N-0033', cliente_id: 'c-loforte', division_pct_a: '0.00' } })
+  esperas.push(abrir(S).then(async () => {
+    chk('N-0033: dice "Guardado." (la división ya está en la orden)', txt(S, 'ad-fc-estado') === 'Guardado.')
+    chk('sin número, "Guardar la factura" del N2 está apagado', el(S, 'ad-fc-factura-b').disabled === true)
+    chk('…con la ayuda de que no hace falta para la división', /No hace falta para guardar la división: se carga cuando ARCA dé el número./.test(html(S, 'ad-orden-facturar')))
+    await S.guardarFacturaPunto('B')
+    chk('tocarlo igual sin número: no llama a guardar_factura_orden', llamadasDe(S, 'guardar_factura_orden').length === 0)
+    chk('…ni muestra un error', !txt(S, 'ad-fc-factura-error-b') && el(S, 'ad-fc-factura-error-b').hidden === true)
+    chk('…y la división sigue "Guardado."', txt(S, 'ad-fc-estado') === 'Guardado.' && !llamadasDe(S, 'guardar_division_orden').length)
+    el(S, 'ad-fc-numero-b').value = '0002-00000789'
+    S.escribirNumeroFactura('B')
+    chk('al escribir el número se prende el botón', el(S, 'ad-fc-factura-b').disabled === false)
+    await S.guardarFacturaPunto('B')
+    const f = llamadasDe(S, 'guardar_factura_orden')
+    chk('se guarda SOLO la factura del N2', f.length === 1 && json(f[0][1]) === json({ p_orden_id: 'o36', p_parte: 'B', p_numero: '0002-00000789', p_archivo_url: null }), json(f))
+    chk('…sin volver a guardar la división', !llamadasDe(S, 'guardar_division_orden').length)
+    chk('…y se ve al lado del punto', txt(S, 'ad-fc-guardada-b') === 'Factura 0002-00000789')
+    // Un PDF sin número: eso sí lo pide (la base no guarda una factura sin número).
+    el(S, 'ad-fc-numero-b').value = ''
+    el(S, 'ad-fc-pdf-b').files = [{ name: 'f.pdf', type: 'application/pdf' }]
+    S.escribirNumeroFactura('B')
+    chk('con un PDF elegido el botón se prende', el(S, 'ad-fc-factura-b').disabled === false)
+    await S.guardarFacturaPunto('B')
+    chk('…y sin número lo dice (y no llama)', txt(S, 'ad-fc-factura-error-b') === 'Pegá el número de la factura de ARCA.' && llamadasDe(S, 'guardar_factura_orden').length === 1)
+    el(S, 'ad-fc-pdf-b').files = []
+    el(S, 'ad-fc-numero-b').value = '00'
+    S.escribirNumeroFactura('B')
+    chk('al volver a escribir se va el error de antes', !txt(S, 'ad-fc-factura-error-b'))
   }))
 }
 

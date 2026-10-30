@@ -155,3 +155,17 @@ Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedi
   lo resolvería (pedido para el chat de la base).
 - Suites `test-/mut-administracion-orden-recepcion.js` (36; baseline 497c393), `test-administracion-orden-entre-empresas.js`
   ajustada, e2e 98.
+
+## La división: el 0 % y la factura que se carga después (30/10/2026, rama `ci-prueba/division-cero-y-factura`)
+- **El 0 % vale**: `pctInicialFacturar` = `numeroONulo(orden.division_pct_a) ?? numeroONulo(cliente.pct_parte_a) ?? 100`
+  (`numeroONulo` lee 0 y "0.00", que es como manda la base el numeric). 100 solo si los dos son null. Revisado en toda la
+  app el 30/10/2026: `pct_parte_a`, `division_pct_a`, `comision_parte_a_pct` y los % de comisión no se leen con `||`.
+  Con 0 el N1 no se muestra ni pide número (`puntosDePct`).
+- **La factura va después**: primero se divide (se guarda sola, "Guardado.") y recién después se factura en ARCA.
+  "Guardar la factura" está apagado mientras el número está vacío y no hay PDF (`actualizarFacturaPunto`; escribir o
+  elegir un PDF lo prende con `escribirNumeroFactura`, que también borra el error de antes); si igual se llama sin
+  número ni PDF, `guardarFacturaPunto` no llama a `guardar_factura_orden` ni muestra error. Con un PDF y sin número sí
+  pide el número (la base no guarda una factura sin número). Debajo del campo: "No hace falta para guardar la división:
+  se carga cuando ARCA dé el número." Cada punto tiene su botón: se puede volver a la orden y cargar solo el del N2.
+- Suites: `test-administracion-valorizar-con-division.js` (cliente SALVADOR LOFORTE con "0.00", la N-0033) y `mut-`
+  (12 mutaciones nuevas; baseline ac3cb25).
