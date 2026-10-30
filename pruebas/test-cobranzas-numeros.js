@@ -388,8 +388,10 @@ async function main() {
     // el 30/09/2026) el de cada e-cheque y transferencia (campoImporte).
     // Ningún identificador.
     const enlaces = [...FUENTE.matchAll(/enlazarCampoNumero\(([^,)]+)/g)].map(m => m[1].trim())
-    chk('solo se enlazan el efectivo, el importe del cheque y el de e-cheques / transferencias', enlaces.length === 3 &&
-      enlaces.some(e => e.includes("'cob-efectivo'")) && enlaces.some(e => e === 'inp') && enlaces.some(e => e === 'campoImporte'), enlaces)
+    // (30/10/2026) Y el importe que se aplica a cada renglón de la cuenta del
+    // cliente (campoAplicar): también es plata, no un identificador.
+    chk('solo se enlazan el efectivo, el importe del cheque, el de e-cheques / transferencias y lo aplicado', enlaces.length === 4 &&
+      enlaces.some(e => e.includes("'cob-efectivo'")) && enlaces.some(e => e === 'inp') && enlaces.some(e => e === 'campoImporte') && enlaces.some(e => e === 'campoAplicar'), enlaces)
     chk('el campo enlazado de e-cheques y transferencias es solo el importe (data-importe-forma)',
       /querySelectorAll\('\[data-importe-forma\]'\)\.forEach\(campoImporte =>/.test(FUENTE) &&
       (FUENTE.match(/data-importe-forma placeholder/g) || []).length === 2)

@@ -35,11 +35,22 @@ const FUNCIONES_PAGO = [
   'itemsParaRevisar', 'programarRevisionRepetidos', 'revisarRepetidos', 'textoCobranzaDe', 'mismoImporte',
   'repetidoDeTransferencia', 'claseRepetido', 'htmlRepetido', 'hayRepetidosRojos', 'pintarRepetidos',
   'pintarAvisoRepetidos', 'pintarLineaTransferencia',
+  // A qué se aplica la cobranza y el recibo (30/10/2026).
+  'estadoAplicarVacio', 'aplicacionVacia', 'claveDocAplicar', 'centavosAplicar', 'docsParaAplicar', 'aplicarActivo',
+  'cobradoPorMedio', 'montoElegido', 'itemsDeAplicacion', 'resumenAplicacion', 'cargarPendientesCliente',
+  'sugerirAplicarTodo', 'programarSugerirTodo', 'sugerirMedioLocal', 'sugerirAplicarMedio', 'cambiarModoAplicar',
+  'actualizarMontoAplicar', 'htmlCifrasAplicar', 'htmlBotonesParte', 'htmlFilaAplicar', 'htmlCuerpoAplicar',
+  'pintarCifrasAplicar', 'pintarAplicar', 'firmaAplicar', 'refrescarAplicar', 'pintarBarraAplicar', 'alTocarEnAplicar', 'alEscribirEnAplicar',
+  'motivosAplicar', 'aplicarCobranzaAsentada', 'htmlRecienAsentada', 'pintarRecienAsentada', 'alTocarRecienAsentada',
+  'cuitConGuionesCob', 'fechaRecibo', 'bancoCorto', 'etiquetaRecibo', 'textoSaldoCuenta', 'filasRecibo', 'htmlRecibo',
+  'ponerLogoRecibo', 'nombreArchivoRecibo', 'abrirRecibo', 'cerrarRecibo', 'imprimirRecibo', 'cargarScriptCob',
+  'generarPdfRecibo', 'descargarCob', 'enviarRecibo',
 ]
 const CONSTANTES_PAGO = [
   'FORMAS_PAGO', 'SECCION_FORMA', 'TEXTO_OTRO_COMPROBANTE', 'TEXTO_PRIMER_COMPROBANTE', 'TIPOS_COMPROBANTE', 'BANCOS_ORIGEN',
   'BYTES_MAXIMO_ARCHIVO', 'TEXTO_BOTON_CHEQUE_MANO_ADMIN', 'MEDIOS_TRANSFERENCIA', 'NOTA_DEPOSITO',
   'MS_REVISAR_REPETIDOS', 'TEXTO_SACAR_REPETIDOS',
+  'MEDIOS_APLICAR', 'NOMBRE_MEDIO_APLICAR', 'MS_SUGERIR_APLICAR', 'LIBRERIAS_PDF_COB',
 ]
 
 const FUNCIONES_ASENTAR = [

@@ -1286,6 +1286,81 @@
     .cob-transferencia--repetida { border-color: var(--bordo); box-shadow: 0 0 0 1px var(--bordo); }
     .cob-aviso--revisar { background: var(--amarillo-suave); border-left-color: var(--amarillo); color: var(--amarillo-oscuro); font-weight: 600; }
     .cob-transf-linea { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+    /* ── A qué se aplica la cobranza (30/10/2026) ───────────────────────── */
+    .cob-aplicar-cifras {
+      position: sticky; top: 0; z-index: 2;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.5rem;
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta);
+      padding: 0.625rem 0.75rem; margin: 0 0 0.75rem;
+    }
+    .cob-aplicar-cifra { min-width: 0; }
+    .cob-aplicar-barra { font-size: 0.8125rem; font-weight: 600; color: var(--color-texto); font-variant-numeric: tabular-nums; margin: -0.25rem 0 0.5rem; }
+    .cob-aplicar-cifra__rotulo { display: block; font-size: 0.75rem; color: var(--cob-texto-secundario); }
+    .cob-aplicar-cifra__valor { display: block; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .cob-aplicar-botones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 0.75rem; }
+    .cob-aplicar-bloque { border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta); padding: 0.75rem; margin: 0 0 0.75rem; min-width: 0; }
+    .cob-aplicar-bloque__titulo { font-weight: 700; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; }
+    .cob-aplicar-fila {
+      display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem; gap: 0.5rem; align-items: center;
+      padding: 0.5rem 0; border-top: 1px solid var(--color-borde); min-width: 0;
+    }
+    .cob-aplicar-fila__doc { min-width: 0; overflow-wrap: anywhere; }
+    .cob-aplicar-fila__etiqueta { font-weight: 600; }
+    .cob-aplicar-fila__datos { font-size: 0.75rem; color: var(--cob-texto-secundario); font-variant-numeric: tabular-nums; }
+    .cob-aplicar-fila__datos span { white-space: nowrap; }
+    .cob-aplicar-fila input { width: 100%; min-height: 44px; box-sizing: border-box; text-align: right; font-variant-numeric: tabular-nums; }
+    .cob-aplicar-fila--excedida input { border-color: var(--bordo); }
+
+    /* ── Recibo (30/10/2026): copia del estilo de la ORDEN DE PAGO de
+       cuentas-corrientes.html (.op-*), con su propio prefijo. ───────────── */
+    .cob-recibo-modal { align-items: flex-start; overflow-y: auto; }
+    .cob-recibo-panel { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 820px; min-width: 0; }
+    .cob-recibo-acciones { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .cob-recibo-botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .rc-marco { overflow-x: auto; }
+    .rc-hoja {
+      box-sizing: border-box; width: 100%; max-width: 194mm; margin: 0 auto;
+      padding: 5mm; background: #fff; color: #111;
+      font-family: var(--fuente); font-size: 8.5pt; line-height: 1.25;
+      border: 1px solid var(--color-borde);
+      /* Ancho de papel: en el celular la hoja se desplaza dentro de su marco
+         en vez de apretarse (se ve igual que impresa). */
+      min-width: 182mm;
+    }
+    .rc-hoja--compacta { font-size: 7.5pt; line-height: 1.15; }
+    .rc-hoja--compacta .rc-tabla { font-size: 6.5pt; }
+    .rc-cab { display: flex; justify-content: space-between; gap: 5mm; align-items: flex-start; border-bottom: 1.5px solid #111; padding-bottom: 2.4mm; }
+    .rc-cab__emisor { display: flex; gap: 3mm; align-items: flex-start; min-width: 0; }
+    .rc-cab__logo { max-height: 13mm; max-width: 24mm; object-fit: contain; }
+    .rc-cab__razon { font-size: 10.5pt; font-weight: 800; }
+    .rc-cab__dato { font-size: 7.5pt; }
+    .rc-cab__fecha { text-align: right; flex-shrink: 0; font-weight: 700; }
+    .rc-titulo { text-align: center; font-size: 18pt; font-weight: 800; letter-spacing: 0.08em; margin: 3mm 0 1mm; }
+    .rc-seccion { margin-top: 3mm; min-width: 0; }
+    .rc-seccion__titulo { font-size: 8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.2mm; }
+    .rc-columnas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4mm; align-items: start; }
+    .rc-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+    .rc-tabla + .rc-tabla { margin-top: 2mm; }
+    .rc-tabla th, .rc-tabla td { border: 1px solid #555; padding: 0.6mm 1.2mm; text-align: left; vertical-align: top; }
+    .rc-tabla th { background: #eee; font-weight: 700; }
+    .rc-tabla caption { text-align: left; font-weight: 700; padding: 0 0 0.6mm; }
+    .rc-tabla .rc-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: #111; }
+    .rc-totales { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4mm; margin-top: 3mm; align-items: stretch; }
+    .rc-caja { border: 1.5px solid #111; padding: 1.6mm 2mm; display: flex; flex-direction: column; justify-content: flex-end; gap: 0.8mm; }
+    .rc-caja__fila { display: flex; justify-content: space-between; gap: 3mm; font-variant-numeric: tabular-nums; }
+    .rc-caja__total { display: flex; justify-content: space-between; gap: 3mm; font-size: 11pt; font-weight: 800; border-top: 1px solid #111; padding-top: 1mm; white-space: nowrap; }
+    .rc-franja { margin-top: 3mm; padding: 1.6mm 2mm; background: #eee; border: 1px solid #555; font-weight: 700; display: flex; justify-content: space-between; gap: 3mm; }
+    .rc-pie { margin-top: 3mm; border-top: 1px solid #111; padding-top: 1.6mm; font-weight: 700; }
+    @media print {
+      @page { size: A4 portrait; margin: 8mm; }
+      html.rc-imprimiendo body > *:not(#cob-modal-recibo) { display: none !important; }
+      html.rc-imprimiendo, html.rc-imprimiendo body { background: #fff !important; margin: 0 !important; }
+      html.rc-imprimiendo #cob-modal-recibo { position: static; display: block; background: #fff; padding: 0; }
+      html.rc-imprimiendo .cob-recibo-acciones { display: none !important; }
+      html.rc-imprimiendo .cob-recibo-panel { max-width: none; padding: 0; border-radius: 0; }
+      html.rc-imprimiendo .rc-hoja { border: 0; padding: 0; max-width: none; break-inside: avoid; page-break-inside: avoid; }
+    }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1328,6 +1403,10 @@
       <div class="cob-acceso-cheques" id="cob-acceso-cheques" hidden>
         <a class="cob-link-cheques" id="cob-link-cheques" href="cheques.html">Cartera de cheques &rarr;</a>
       </div>
+
+      <!-- La cobranza recién asentada con aplicación (30/10/2026): lo aplicado,
+           lo que quedó a cuenta y "Ver / enviar recibo". pintarRecienAsentada(). -->
+      <div class="cob-aviso" id="cob-recien-asentada" role="status" hidden></div>
 
       <!-- Banner de lo que está solo en el celular. Se dibuja SOLO si hay algo
            pendiente: un banner en cero entrena a ignorarlo. -->
@@ -1553,6 +1632,16 @@
         <datalist id="cob-bancos-origen"></datalist>
       </div>
 
+      <!-- A QUÉ SE APLICA (30/10/2026): solo al asentar, con cobranzas:procesar
+           y un cliente CON CORTE (cliente_pendientes → activo). Lo pinta
+           pintarAplicar(); sin corte queda oculto y se asienta como siempre. -->
+      <div class="cob-seccion" id="cob-aplicar" hidden>
+        <div class="cob-seccion__titulo">A qué se aplica</div>
+        <div class="cob-aplicar-cifras" id="cob-aplicar-cifras" role="status"></div>
+        <div id="cob-aplicar-cuerpo"></div>
+        <div class="cob-aviso cob-aviso--grave" id="cob-aplicar-errores" role="alert" hidden></div>
+      </div>
+
       <div class="cob-seccion">
         <div class="cob-seccion__titulo">Datos del pago</div>
         <div class="cob-campo">
@@ -1584,6 +1673,9 @@
         <span class="cob-barra-fija__etiqueta">Total de la cobranza</span>
         <span class="cob-barra-fija__cifra" id="cob-total">$ 0,00</span>
       </div>
+      <!-- A qué se aplica (30/10/2026): Aplicado / Queda a cuenta, siempre a
+           la vista mientras se reparte. pintarBarraAplicar(). -->
+      <div class="cob-aplicar-barra" id="cob-barra-aplicar" hidden></div>
       <button type="button" class="cob-btn cob-btn--primario cob-btn--ancho" id="cob-btn-guardar">Guardar cobranza</button>
       <div class="cob-campo__error" id="cob-error-guardar" hidden></div>
     </div>
@@ -1646,6 +1738,24 @@
   <!-- El asentado se mudó a Administración (27/09/2026): allá se elige el
        CLIENTE (y con él la empresa) y se asienta con asentar_cobranza(). El
        diálogo de la unidad que vivía acá ya no existe. -->
+
+  <!-- ══ RECIBO (30/10/2026) ════════════════════════════════════════════
+       recibo_cobranza() en una hoja A4, con el estilo de la ORDEN DE PAGO de
+       Cuentas corrientes (copiado, no compartido). Al imprimir se ve SOLO la
+       hoja (html.rc-imprimiendo). Hijo directo de <body> a propósito. -->
+  <div class="cob-modal cob-recibo-modal" id="cob-modal-recibo" hidden role="dialog" aria-modal="true" aria-labelledby="cob-recibo-titulo">
+    <div class="cob-recibo-panel">
+      <div class="cob-recibo-acciones">
+        <div class="cob-modal__titulo" id="cob-recibo-titulo" style="margin:0">Recibo</div>
+        <div class="cob-recibo-botones">
+          <button type="button" class="cob-btn cob-btn--primario" id="cob-recibo-enviar">Enviar</button>
+          <button type="button" class="cob-btn" id="cob-recibo-imprimir">Imprimir</button>
+          <button type="button" class="cob-btn" id="cob-recibo-cerrar">Cerrar</button>
+        </div>
+      </div>
+      <div class="rc-marco"><div class="rc-hoja" id="cob-recibo-hoja"></div></div>
+    </div>
+  </div>
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
@@ -3731,6 +3841,9 @@
       f.cliente_saldo = c.saldo ?? null
       f.proyecto_id = null
       a.proyectos = undefined
+      // A qué se aplica (30/10/2026): otro cliente, otra cuenta (se lee de nuevo).
+      f.aplicacion = null
+      estado.aplicar = null
       guardarBorrador()
       pintarAsentar()
       pintarTotalYGuardado()
@@ -3904,6 +4017,723 @@
         console.error('Falló la RPC de la cobranza asentada:', errRpc)
         return { ok: false, tipo: 'red', mensaje: 'No se pudo contactar al servidor.' }
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // A QUÉ SE APLICA LA COBRANZA (30/10/2026)
+    //
+    // Al asentar (cobranzas:procesar) a un cliente CON CORTE, se elige a qué
+    // renglones de su cuenta va la plata. Verificado con pg_get_functiondef
+    // el 30/10/2026:
+    //  - cliente_pendientes(p_cliente_id) → {activo, imputa_desde,
+    //    saldo_cuenta, docs[{doc_tipo, doc_id, parte, etiqueta, fecha, monto,
+    //    aplicado, pendiente, orden_id}] (del más viejo al más nuevo),
+    //    creditos[…]}. activo = el cliente tiene corte.
+    //  - sugerir_aplicacion(p_cliente_id, p_monto, p_parte) → {items[{doc_tipo,
+    //    doc_id, parte, etiqueta, monto}], sobra}: del más viejo al más nuevo.
+    //  - aplicar_credito_cliente(p_cliente_id, 'cobranza', <id>, p_items
+    //    [{doc_tipo, doc_id, parte, monto, medio}]) → {aplicado, a_cuenta}:
+    //    REEMPLAZA lo que ese pago tenía aplicado; sus errores se muestran
+    //    tal cual.
+    // Sin corte, nada de esto aparece y se asienta como siempre.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MEDIOS_APLICAR = ['cheque', 'transferencia', 'efectivo']
+    const NOMBRE_MEDIO_APLICAR = { cheque: 'Cheques', transferencia: 'Transferencias', efectivo: 'Efectivo' }
+    const MS_SUGERIR_APLICAR = 400
+
+    function estadoAplicarVacio(clienteId, formId) {
+      return { clienteId: clienteId ?? null, formId: formId ?? null, cargando: false, error: '', datos: null, turnoSugerir: 0, errorSugerir: '', temporizador: null }
+    }
+
+    // Lo que se eligió vive en el borrador (f.aplicacion): modo 'todo' o
+    // 'medio', la parte pedida ('N1' | 'N2' | null) y lo que va a cada
+    // renglón (montos por clave de renglón; por medio, uno por medio).
+    function aplicacionVacia() {
+      const porMedio = {}
+      for (const m of MEDIOS_APLICAR) porMedio[m] = { parte: null, montos: {} }
+      return { modo: 'todo', parte: null, montos: {}, medios: porMedio, tocado: false, cobradoSugerido: null }
+    }
+
+    function claveDocAplicar(d) {
+      return `${d?.doc_tipo}|${d?.doc_id}|${d?.parte}`
+    }
+
+    function centavosAplicar(n) {
+      const x = Number(n)
+      return Number.isFinite(x) ? Math.round(x * 100) : 0
+    }
+
+    // Los renglones con algo pendiente, en el orden en que vienen (del más
+    // viejo al más nuevo).
+    function docsParaAplicar(datos) {
+      return (Array.isArray(datos?.docs) ? datos.docs : []).filter(d => centavosAplicar(d?.pendiente) > 0)
+    }
+
+    // ¿Se muestra el selector? Quien controla, al asentar, con el cliente
+    // elegido y su cuenta leída CON corte.
+    function aplicarActivo(f) {
+      const a = estado.aplicar
+      return puedeProcesar() && esFormAsentado(f) && !!f?.cliente_id && a?.clienteId === f.cliente_id && a?.formId === f.id && a?.datos?.activo === true
+    }
+
+    // Lo cobrado por medio, como lo cuenta la base (_cobranza_medios): los
+    // e-cheques son cheques y un depósito en efectivo es una transferencia.
+    function cobradoPorMedio(f) {
+      const t = totalesPorForma(f)
+      return { cheque: t.cheques + t.echecks, transferencia: t.transferencias, efectivo: t.efectivo }
+    }
+
+    function montoElegido(montos, clave) {
+      const n = leerNumeroAr(montos?.[clave])
+      return n !== null && n > 0 ? n : 0
+    }
+
+    // Los items para aplicar_credito_cliente. En "Aplicar todo" van sin medio
+    // (null); por medio, cada uno con el suyo.
+    function itemsDeAplicacion(f, datos) {
+      const ap = f?.aplicacion
+      if (!ap) return []
+      const docs = docsParaAplicar(datos)
+      const item = (d, monto, medio) => ({ doc_tipo: d.doc_tipo, doc_id: d.doc_id, parte: d.parte, monto: Math.round(monto * 100) / 100, medio })
+      if (ap.modo === 'medio') {
+        const r = []
+        for (const m of MEDIOS_APLICAR) for (const d of docs) {
+          const monto = montoElegido(ap.medios?.[m]?.montos, claveDocAplicar(d))
+          if (monto > 0) r.push(item(d, monto, m))
+        }
+        return r
+      }
+      return docs.map(d => [d, montoElegido(ap.montos, claveDocAplicar(d))]).filter(([, n]) => n > 0).map(([d, n]) => item(d, n, null))
+    }
+
+    // Total cobrado / aplicado / a cuenta y lo que está MAL: un renglón con
+    // más que su pendiente, un medio con más que lo cobrado con él, o más
+    // aplicado que cobrado. La base frena lo mismo.
+    function resumenAplicacion(f, datos) {
+      const cobradoM = cobradoPorMedio(f)
+      const cobrado = cobradoM.cheque + cobradoM.transferencia + cobradoM.efectivo
+      const items = itemsDeAplicacion(f, datos)
+      const porDoc = new Map()
+      const porMedio = { cheque: 0, transferencia: 0, efectivo: 0 }
+      let aplicadoC = 0
+      for (const it of items) {
+        const k = claveDocAplicar(it)
+        porDoc.set(k, (porDoc.get(k) ?? 0) + centavosAplicar(it.monto))
+        if (it.medio) porMedio[it.medio] += centavosAplicar(it.monto)
+        aplicadoC += centavosAplicar(it.monto)
+      }
+      const errores = []
+      const excedidos = new Set()
+      for (const d of docsParaAplicar(datos)) {
+        const k = claveDocAplicar(d)
+        if ((porDoc.get(k) ?? 0) > centavosAplicar(d.pendiente)) {
+          excedidos.add(k)
+          errores.push(`${d.etiqueta}: le querés aplicar ${formatearImporte((porDoc.get(k) ?? 0) / 100)} y tiene ${formatearImporte(Number(d.pendiente))} pendientes.`)
+        }
+      }
+      if (f?.aplicacion?.modo === 'medio') {
+        for (const m of MEDIOS_APLICAR) {
+          if (porMedio[m] > centavosAplicar(cobradoM[m])) errores.push(`Con ${NOMBRE_MEDIO_APLICAR[m].toLowerCase()} aplicás ${formatearImporte(porMedio[m] / 100)} y se cobró ${formatearImporte(cobradoM[m])}.`)
+        }
+      }
+      if (aplicadoC > centavosAplicar(cobrado)) errores.push(`Aplicás ${formatearImporte(aplicadoC / 100)} y se cobró ${formatearImporte(cobrado)}.`)
+      return {
+        cobrado, aplicado: aplicadoC / 100, aCuenta: Math.max(0, centavosAplicar(cobrado) - aplicadoC) / 100,
+        cobradoPorMedio: cobradoM, aplicadoPorMedio: { cheque: porMedio.cheque / 100, transferencia: porMedio.transferencia / 100, efectivo: porMedio.efectivo / 100 },
+        errores, excedidos,
+      }
+    }
+
+    // Lee la cuenta del cliente elegido. Con turno: si cambió el cliente o
+    // el formulario mientras leía, la respuesta no se usa.
+    async function cargarPendientesCliente(f) {
+      // El permiso lo mira quien la llama (pintarAplicar).
+      if (!f?.cliente_id) return
+      const clienteId = f.cliente_id
+      const a = estadoAplicarVacio(clienteId, f.id)
+      a.cargando = true
+      estado.aplicar = a
+      let res
+      // Guardar espera esta lectura si la persona toca Guardar mientras tanto.
+      a.promesa = Promise.resolve().then(() => supabase.rpc('cliente_pendientes', { p_cliente_id: clienteId }))
+        .catch(err => ({ data: null, error: err }))
+      res = await a.promesa
+      // Otra lectura empezó después (otro cliente, "Volver a intentar") u
+      // otro formulario: esta respuesta ya no se usa.
+      if (estado.aplicar !== a || estado.form !== f) return
+      a.cargando = false
+      if (res?.error) {
+        console.error('No se pudo leer lo que debe el cliente:', res.error)
+        a.error = res.error.message || 'No se pudo leer lo que debe el cliente.'
+      } else {
+        a.datos = res?.data && typeof res.data === 'object' ? res.data : null
+      }
+      pintarAplicar()
+      pintarTotalYGuardado()
+    }
+
+    // "Aplicar todo": reparte el total con sugerir_aplicacion (del más viejo
+    // al más nuevo; con "Solo N1" / "Solo N2", solo esa parte).
+    async function sugerirAplicarTodo(parte = null) {
+      const f = estado.form
+      if (!aplicarActivo(f)) return
+      const a = estado.aplicar
+      const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
+      const cobrado = resumenAplicacion(f, a.datos).cobrado
+      const turno = (a.turnoSugerir ?? 0) + 1
+      a.turnoSugerir = turno
+      ap.parte = parte === 'N1' || parte === 'N2' ? parte : null
+      if (!(cobrado > 0)) {
+        ap.montos = {}
+        ap.tocado = false
+        ap.cobradoSugerido = cobrado
+        guardarBorrador()
+        pintarAplicar()
+        pintarTotalYGuardado()
+        return
+      }
+      let res
+      try {
+        res = await supabase.rpc('sugerir_aplicacion', { p_cliente_id: f.cliente_id, p_monto: Math.round(cobrado * 100) / 100, p_parte: ap.parte })
+      } catch (err) {
+        res = { data: null, error: err }
+      }
+      if (estado.form !== f || estado.aplicar !== a || a.turnoSugerir !== turno) return
+      if (res?.error) {
+        a.errorSugerir = res.error.message || 'No se pudo calcular la sugerencia.'
+      } else {
+        a.errorSugerir = ''
+        const montos = {}
+        for (const it of Array.isArray(res?.data?.items) ? res.data.items : []) {
+          const n = Number(it?.monto)
+          if (Number.isFinite(n) && n > 0) montos[claveDocAplicar(it)] = n
+        }
+        ap.modo = 'todo'
+        ap.montos = montos
+        ap.tocado = false
+        ap.cobradoSugerido = cobrado
+      }
+      guardarBorrador()
+      pintarAplicar()
+      pintarTotalYGuardado()
+    }
+
+    // Con retardo: el total cambia mientras se tipea el efectivo.
+    function programarSugerirTodo() {
+      const a = estado.aplicar
+      if (!a) return
+      clearTimeout(a.temporizador)
+      a.temporizador = setTimeout(() => { sugerirAplicarTodo(estado.form?.aplicacion?.parte ?? null) }, MS_SUGERIR_APLICAR)
+    }
+
+    // "Por medio de pago": el reparto de UN medio, igual que
+    // sugerir_aplicacion (del más viejo al más nuevo, el último parcial) pero
+    // sobre lo que los OTROS medios todavía no tomaron. Se calcula acá porque
+    // la base no conoce lo elegido y sin guardar en los otros bloques.
+    function sugerirMedioLocal(docs, monto, parte, ocupados) {
+      const r = {}
+      let resta = centavosAplicar(monto)
+      for (const d of docs) {
+        if (resta <= 0) break
+        if (parte && d.parte !== parte) continue
+        const k = claveDocAplicar(d)
+        const libre = centavosAplicar(d.pendiente) - (ocupados.get(k) ?? 0)
+        if (libre <= 0) continue
+        const toma = Math.min(resta, libre)
+        r[k] = toma / 100
+        resta -= toma
+      }
+      return r
+    }
+
+    function sugerirAplicarMedio(medio, parte = null) {
+      const f = estado.form
+      if (!aplicarActivo(f) || !MEDIOS_APLICAR.includes(medio)) return
+      const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
+      const docs = docsParaAplicar(estado.aplicar.datos)
+      const ocupados = new Map()
+      for (const m of MEDIOS_APLICAR) {
+        if (m === medio) continue
+        for (const [k, v] of Object.entries(ap.medios?.[m]?.montos ?? {})) ocupados.set(k, (ocupados.get(k) ?? 0) + centavosAplicar(leerNumeroAr(v)))
+      }
+      const p = parte === 'N1' || parte === 'N2' ? parte : null
+      ap.medios[medio] = { parte: p, montos: sugerirMedioLocal(docs, cobradoPorMedio(f)[medio], p, ocupados) }
+      ap.tocado = true
+      guardarBorrador()
+      pintarAplicar()
+      pintarTotalYGuardado()
+    }
+
+    function cambiarModoAplicar(modo) {
+      const f = estado.form
+      if (!aplicarActivo(f) || !['todo', 'medio'].includes(modo)) return
+      const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
+      if (ap.modo === modo) return
+      ap.modo = modo
+      guardarBorrador()
+      if (modo === 'todo' && !ap.tocado) { sugerirAplicarTodo(ap.parte); return }
+      pintarAplicar()
+      pintarTotalYGuardado()
+    }
+
+    // Un monto escrito a mano: se guarda tal cual (texto) y se repintan SOLO
+    // las cifras y los errores, para no sacarle el foco a quien escribe.
+    function actualizarMontoAplicar(clave, medio, valor) {
+      const f = estado.form
+      if (!aplicarActivo(f)) return
+      const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
+      const montos = medio ? ap.medios?.[medio]?.montos : ap.montos
+      if (!montos) return
+      montos[clave] = valor
+      ap.tocado = true
+      guardarBorrador()
+      pintarCifrasAplicar()
+      pintarTotalYGuardado()
+    }
+
+    function htmlCifrasAplicar(r) {
+      const cifra = (rotulo, valor, dato) => `<div class="cob-aplicar-cifra"><span class="cob-aplicar-cifra__rotulo">${escCob(rotulo)}</span><span class="cob-aplicar-cifra__valor" data-aplicar-cifra="${escCob(dato)}">${escCob(formatearImporte(valor))}</span></div>`
+      return cifra('Total cobrado', r.cobrado, 'cobrado') + cifra('Aplicado', r.aplicado, 'aplicado') + cifra('Queda a cuenta', r.aCuenta, 'a_cuenta')
+    }
+
+    function htmlBotonesParte(destino, docs) {
+      const hay = (p) => docs.some(d => d.parte === p)
+      return `<div class="cob-aplicar-botones">
+          <button type="button" class="cob-btn cob-btn--chico" data-aplicar-sugerir="${escCob(destino)}" data-aplicar-parte="">Sugerir</button>
+          ${hay('N1') ? `<button type="button" class="cob-btn cob-btn--chico" data-aplicar-sugerir="${escCob(destino)}" data-aplicar-parte="N1">Solo N1</button>` : ''}
+          ${hay('N2') ? `<button type="button" class="cob-btn cob-btn--chico" data-aplicar-sugerir="${escCob(destino)}" data-aplicar-parte="N2">Solo N2</button>` : ''}
+        </div>`
+    }
+
+    // Un renglón pendiente: etiqueta, fecha, monto, pendiente y "Aplicar".
+    function htmlFilaAplicar(d, medio, excedido) {
+      const clave = claveDocAplicar(d)
+      return `<div class="cob-aplicar-fila${excedido ? ' cob-aplicar-fila--excedida' : ''}" data-aplicar-fila="${escCob(clave)}">
+          <div class="cob-aplicar-fila__doc">
+            <div class="cob-aplicar-fila__etiqueta">${escCob(d.etiqueta ?? '—')}</div>
+            <div class="cob-aplicar-fila__datos">${esFechaIso(d.fecha) ? `<span>${escCob(formatearFechaCob(d.fecha))}</span> · ` : ''}<span>Monto ${escCob(formatearImporte(Number(d.monto)))}</span> · <span>Pendiente ${escCob(formatearImporte(Number(d.pendiente)))}</span></div>
+          </div>
+          <input type="text" inputmode="decimal" autocomplete="off" aria-label="${escCob('Aplicar a ' + (d.etiqueta ?? 'este renglón'))}" placeholder="Aplicar" data-aplicar-doc="${escCob(clave)}" data-aplicar-medio="${escCob(medio ?? '')}">
+        </div>`
+    }
+
+    function htmlCuerpoAplicar(f, a) {
+      if (a.cargando) return '<div class="cob-aviso">Leyendo lo que debe el cliente…</div>'
+      const docs = docsParaAplicar(a.datos)
+      if (!docs.length) return '<div class="cob-aviso">El cliente no tiene nada pendiente: todo queda a cuenta.</div>'
+      const ap = f.aplicacion ?? aplicacionVacia()
+      const r = resumenAplicacion(f, a.datos)
+      const modo = ap.modo === 'medio' ? 'medio' : 'todo'
+      const segmento = `<div class="cob-segmento" role="group" aria-label="Cómo se aplica">
+          ${[['todo', 'Aplicar todo'], ['medio', 'Por medio de pago']].map(([id, texto]) => `<button type="button" class="cob-segmento__opcion ${modo === id ? 'cob-segmento__opcion--activo' : ''}" aria-pressed="${modo === id ? 'true' : 'false'}" data-aplicar-modo="${escCob(id)}">${escCob(texto)}</button>`).join('')}
+        </div>`
+      const errorSugerir = a.errorSugerir ? `<div class="cob-aviso cob-aviso--grave">${escCob(a.errorSugerir)}</div>` : ''
+      if (modo === 'todo') {
+        return `${segmento}${htmlBotonesParte('todo', docs)}${errorSugerir}
+          <div class="cob-aplicar-bloque">${docs.map(d => htmlFilaAplicar(d, null, r.excedidos.has(claveDocAplicar(d)))).join('')}</div>`
+      }
+      const bloques = MEDIOS_APLICAR.filter(m => centavosAplicar(r.cobradoPorMedio[m]) > 0).map(m => `
+          <div class="cob-aplicar-bloque" data-aplicar-bloque="${escCob(m)}">
+            <div class="cob-aplicar-bloque__titulo"><span>${escCob(NOMBRE_MEDIO_APLICAR[m])} ${escCob(formatearImporte(r.cobradoPorMedio[m]))}</span><span>aplicado <span data-aplicar-medio-total="${escCob(m)}">${escCob(formatearImporte(r.aplicadoPorMedio[m]))}</span></span></div>
+            ${htmlBotonesParte(m, docs)}
+            ${docs.map(d => htmlFilaAplicar(d, m, r.excedidos.has(claveDocAplicar(d)))).join('')}
+          </div>`).join('')
+      return `${segmento}${errorSugerir}${bloques || '<div class="cob-aviso">Todavía no hay nada cobrado para repartir.</div>'}`
+    }
+
+    // Las cifras de arriba, los errores y los totales por medio, EN EL LUGAR.
+    function pintarCifrasAplicar() {
+      const f = estado.form
+      if (!aplicarActivo(f)) return
+      const r = resumenAplicacion(f, estado.aplicar.datos)
+      document.getElementById('cob-aplicar-cifras').innerHTML = htmlCifrasAplicar(r)
+      const err = document.getElementById('cob-aplicar-errores')
+      err.hidden = !r.errores.length
+      err.innerHTML = r.errores.map(escCob).join('<br>')
+      ;(document.querySelectorAll?.('[data-aplicar-medio-total]') ?? []).forEach(el => {
+        el.textContent = formatearImporte(r.aplicadoPorMedio[el.dataset?.aplicarMedioTotal] ?? 0)
+      })
+      ;(document.querySelectorAll?.('[data-aplicar-fila]') ?? []).forEach(el => {
+        el.classList?.toggle?.('cob-aplicar-fila--excedida', r.excedidos.has(el.dataset?.aplicarFila))
+      })
+    }
+
+    // La sección entera. Sin corte (o sin permiso, o una edición) se oculta.
+    function pintarAplicar() {
+      const sec = document.getElementById('cob-aplicar')
+      const f = estado.form
+      if (!f || !puedeProcesar() || !esFormAsentado(f) || !f.cliente_id) { sec.hidden = true; return }
+      if (estado.aplicar?.clienteId !== f.cliente_id || estado.aplicar?.formId !== f.id) { sec.hidden = true; cargarPendientesCliente(f); return }
+      const a = estado.aplicar
+      a.firma = firmaAplicar(f, a)
+      if (a.error) {
+        sec.hidden = false
+        document.getElementById('cob-aplicar-cifras').innerHTML = ''
+        document.getElementById('cob-aplicar-errores').hidden = true
+        document.getElementById('cob-aplicar-cuerpo').innerHTML = `<div class="cob-aviso">No se pudo leer lo que debe el cliente (${escCob(a.error)}). Si guardás así, toda la cobranza queda a cuenta.</div>
+          <div class="cob-acciones"><button type="button" class="cob-btn cob-btn--chico" data-aplicar-reintentar>Volver a intentar</button></div>`
+        return
+      }
+      // Mientras lee, o sin corte: nada (un cliente sin corte no ve nada nuevo).
+      if (a.cargando || a.datos?.activo !== true) { sec.hidden = true; return }
+      sec.hidden = false
+      if (!f.aplicacion) f.aplicacion = aplicacionVacia()
+      const ap = f.aplicacion
+      a.firma = firmaAplicar(f, a)
+      // "Aplicar todo" sin tocar: si cambió lo cobrado, se vuelve a sugerir.
+      if (ap.modo === 'todo' && !ap.tocado && ap.cobradoSugerido !== resumenAplicacion(f, a.datos).cobrado) programarSugerirTodo()
+      const cuerpo = document.getElementById('cob-aplicar-cuerpo')
+      const activo = document.activeElement
+      const foco = activo?.dataset?.aplicarDoc ? { clave: activo.dataset.aplicarDoc, medio: activo.dataset.aplicarMedio ?? '' } : null
+      cuerpo.innerHTML = htmlCuerpoAplicar(f, a)
+      // Los montos con el formato argentino, escritos con ponerNumero: nunca
+      // un value="${número}" en la plantilla.
+      ;(cuerpo.querySelectorAll?.('[data-aplicar-doc]') ?? []).forEach(campoAplicar => {
+        enlazarCampoNumero(campoAplicar, { decimales: 2 })
+        const medio = campoAplicar.dataset.aplicarMedio
+        const montos = medio ? ap.medios?.[medio]?.montos : ap.montos
+        const n = leerNumeroAr(montos?.[campoAplicar.dataset.aplicarDoc])
+        if (n !== null && n > 0) ponerNumero(campoAplicar, n)
+        if (foco && campoAplicar.dataset.aplicarDoc === foco.clave && (campoAplicar.dataset.aplicarMedio ?? '') === foco.medio) campoAplicar.focus?.()
+      })
+      pintarCifrasAplicar()
+    }
+
+    // Lo que decide si hay que rehacer la sección entera (y no solo sus
+    // cifras): el formulario, el cliente, si está leyendo, si falló, si hay
+    // datos, el modo y qué medios tienen algo cobrado.
+    function firmaAplicar(f, a) {
+      const r = a?.datos ? resumenAplicacion(f, a.datos) : null
+      const medios = r ? MEDIOS_APLICAR.filter(m => centavosAplicar(r.cobradoPorMedio[m]) > 0).join(',') : ''
+      return [f?.id, f?.cliente_id, a?.clienteId, a?.cargando ? 1 : 0, a?.error ?? '', a?.datos ? 1 : 0, f?.aplicacion?.modo ?? '', medios].join('|')
+    }
+
+    // Lo que corre en CADA cambio del formulario (pintarTotalYGuardado):
+    // rehace la sección solo si cambió su firma; si no, las cifras en el
+    // lugar. Con "Aplicar todo" sin tocar, un total nuevo se vuelve a sugerir.
+    function refrescarAplicar() {
+      const f = estado.form
+      // Sin el selector activo (sin permiso, sin cliente, leyendo, sin corte o
+      // con error) decide pintarAplicar, que es barato en esos casos.
+      if (!aplicarActivo(f)) { pintarAplicar(); return }
+      const a = estado.aplicar
+      if (a.firma !== firmaAplicar(f, a)) { pintarAplicar(); return }
+      const ap = f.aplicacion
+      if (ap && !a.cargando && ap.modo === 'todo' && !ap.tocado && ap.cobradoSugerido !== resumenAplicacion(f, a.datos).cobrado) programarSugerirTodo()
+      pintarCifrasAplicar()
+    }
+
+    // En la barra fija de abajo, junto al total: Aplicado y Queda a cuenta,
+    // para que se vean mientras se recorre la lista (el sticky de la cabecera
+    // no alcanza en el celular: la página scrollea en el documento).
+    function pintarBarraAplicar() {
+      const barra = document.getElementById('cob-barra-aplicar')
+      const f = estado.form
+      if (!aplicarActivo(f)) { barra.hidden = true; barra.textContent = ''; return }
+      const r = resumenAplicacion(f, estado.aplicar.datos)
+      barra.hidden = false
+      barra.textContent = `Aplicado ${formatearImporte(r.aplicado)} · Queda a cuenta ${formatearImporte(r.aCuenta)}`
+    }
+
+    function alTocarEnAplicar(ev) {
+      const el = ev?.target?.closest?.('[data-aplicar-modo], [data-aplicar-sugerir], [data-aplicar-reintentar]')
+      if (!el) return
+      const d = el.dataset
+      if (d.aplicarModo) cambiarModoAplicar(d.aplicarModo)
+      else if (d.aplicarSugerir === 'todo') sugerirAplicarTodo(d.aplicarParte || null)
+      else if (d.aplicarSugerir) sugerirAplicarMedio(d.aplicarSugerir, d.aplicarParte || null)
+      else if (d.aplicarReintentar !== undefined) cargarPendientesCliente(estado.form)
+    }
+
+    function alEscribirEnAplicar(ev) {
+      const el = ev?.target
+      if (el?.dataset?.aplicarDoc) actualizarMontoAplicar(el.dataset.aplicarDoc, el.dataset.aplicarMedio || null, el.value)
+    }
+
+    // Lo que falta o está mal en la aplicación, para "lo que falta para guardar".
+    function motivosAplicar(f) {
+      if (!puedeProcesar() || !esFormAsentado(f) || !f?.cliente_id) return []
+      // Mientras se lee la cuenta no se frena: Guardar espera la lectura.
+      const a = estado.aplicar
+      if (!aplicarActivo(f)) return []
+      return resumenAplicacion(f, a.datos).errores
+    }
+
+    // Después de asentar: aplicar_credito_cliente con lo elegido. Devuelve
+    // {ok, aplicado, a_cuenta} o {ok: false, mensaje} (el de la base, tal cual).
+    async function aplicarCobranzaAsentada(cobranzaId, aplicar) {
+      try {
+        const { data, error } = await supabase.rpc('aplicar_credito_cliente', {
+          p_cliente_id: aplicar.clienteId, p_credito_tipo: 'cobranza', p_credito_id: cobranzaId, p_items: aplicar.items,
+        })
+        if (error) return { ok: false, mensaje: error.message || 'No se pudo aplicar la cobranza.' }
+        return { ok: true, aplicado: Number(data?.aplicado ?? 0), a_cuenta: Number(data?.a_cuenta ?? 0) }
+      } catch (err) {
+        console.error('Falló aplicar_credito_cliente:', err)
+        return { ok: false, mensaje: 'No se pudo contactar al servidor para aplicar la cobranza. Volvé a intentar.' }
+      }
+    }
+
+    // El cartel arriba del listado: lo asentado, lo aplicado o el error de la
+    // base tal cual (con "Volver a intentar"), y "Ver / enviar recibo".
+    function htmlRecienAsentada(r) {
+      if (!r) return ''
+      const ap = r.resultado
+      const lineaAplicado = ap?.ok
+        ? `<div>Aplicado ${escCob(formatearImporte(ap.aplicado))} · Queda a cuenta ${escCob(formatearImporte(ap.a_cuenta))}</div>`
+        : `<div class="cob-aviso cob-aviso--grave" style="margin:.5rem 0 0">No se pudo aplicar: ${escCob(ap?.mensaje ?? '')}</div>`
+      return `<div><strong>${escCob(r.texto)}</strong></div>${lineaAplicado}
+        <div class="cob-aviso__acciones">
+          ${ap?.ok ? '' : '<button type="button" class="cob-btn cob-btn--chico" data-recien-reintentar>Volver a intentar aplicar</button>'}
+          <button type="button" class="cob-btn cob-btn--chico cob-btn--primario" data-recien-recibo>Ver / enviar recibo</button>
+          <button type="button" class="cob-btn cob-btn--chico" data-recien-cerrar>Cerrar</button>
+        </div>`
+    }
+
+    function pintarRecienAsentada() {
+      const el = document.getElementById('cob-recien-asentada')
+      const html = htmlRecienAsentada(estado.recienAsentada)
+      el.hidden = !html
+      el.innerHTML = html
+    }
+
+    async function alTocarRecienAsentada(ev) {
+      const el = ev?.target?.closest?.('[data-recien-reintentar], [data-recien-recibo], [data-recien-cerrar]')
+      const r = estado.recienAsentada
+      if (!el || !r) return
+      if (el.dataset.recienCerrar !== undefined) { estado.recienAsentada = null; pintarRecienAsentada(); return }
+      if (el.dataset.recienRecibo !== undefined) { abrirRecibo(r.cobranzaId); return }
+      el.disabled = true
+      r.resultado = await aplicarCobranzaAsentada(r.cobranzaId, r.aplicar)
+      if (estado.recienAsentada === r) pintarRecienAsentada()
+    }
+
+    // ── El recibo ──────────────────────────────────────────────────────────
+    // recibo_cobranza(p_cobranza_id) → {empresa{nombre, razon_social, cuit,
+    // domicilio, logo_url}, cliente{id, nombre, razon_social, cuit, solo_n2},
+    // fecha, estado, cheques[{banco, banco_codigo, numero, tipo, emision, pago,
+    // importe, echeq}], transferencias[{medio, cuenta, banco_origen,
+    // referencia, fecha, importe}], efectivo, medios{cheque, transferencia,
+    // efectivo}, total, aplicaciones[{etiqueta, parte, doc_tipo, doc_id, fecha,
+    // monto_doc, aplicado, medios}], a_cuenta, saldo_cuenta} (30/10/2026).
+
+    function cuitConGuionesCob(cuit) {
+      const d = String(cuit ?? '').replace(/\D/g, '')
+      return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : String(cuit ?? '').trim()
+    }
+
+    function fechaRecibo(f) {
+      const s = String(f ?? '').slice(0, 10)
+      return esFechaIso(s) ? formatearFechaCob(s) : '—'
+    }
+
+    // "Banco de la Nación Argentina" → "Nación Argentina"; sin "S.A." al final.
+    function bancoCorto(nombre) {
+      const t = String(nombre ?? '').trim()
+        .replace(/\s+S\.?\s?A\.?\s?U?\.?$/i, '')
+        .replace(/^banco\s+(de\s+la\s+|del\s+|de\s+)?/i, '')
+      return t || String(nombre ?? '').trim() || '—'
+    }
+
+    // Para un cliente que va solo en N2 no se dice nada de N1 (la base no
+    // debería traer renglones N1, pero una comisión podría armar uno).
+    function etiquetaRecibo(ap, soloN2) {
+      const e = String(ap?.etiqueta ?? '—')
+      return soloN2 ? e.replace(/^N1-/, 'Orden ') : e
+    }
+
+    function textoSaldoCuenta(saldo) {
+      const s = Number(saldo)
+      if (!Number.isFinite(s)) return '—'
+      if (centavosAplicar(s) > 0) return `${formatearImporte(s)} a pagar`
+      if (centavosAplicar(s) < 0) return `${formatearImporte(-s)} a favor del cliente`
+      return 'en cero'
+    }
+
+    function filasRecibo(d) {
+      return (d?.cheques?.length ?? 0) + (d?.transferencias?.length ?? 0) + (d?.aplicaciones?.length ?? 0) + (Number(d?.efectivo) > 0 ? 1 : 0)
+    }
+
+    // Puro: la hoja entera. Todo texto de la base pasa por escCob(). El logo
+    // va sin src (se pone por propiedad en ponerLogoRecibo).
+    function htmlRecibo(d) {
+      const e = d?.empresa ?? {}
+      const c = d?.cliente ?? {}
+      const soloN2 = c.solo_n2 === true
+      const cheques = Array.isArray(d?.cheques) ? d.cheques : []
+      const transf = Array.isArray(d?.transferencias) ? d.transferencias : []
+      const aplic = (Array.isArray(d?.aplicaciones) ? d.aplicaciones : []).filter(x => centavosAplicar(x?.aplicado) > 0)
+      const efectivo = Number(d?.efectivo) || 0
+      const medios = d?.medios ?? {}
+      const aCuenta = Number(d?.a_cuenta) || 0
+      const imp = (n) => escCob(formatearImporte(Number(n)))
+      const tablaCheques = cheques.length ? `<table class="rc-tabla"><caption>Cheques</caption><thead><tr><th>Banco</th><th>N°</th><th>Tipo</th><th>Emisión</th><th>Vence</th><th class="rc-num">Importe</th></tr></thead><tbody>${
+        cheques.map(q => `<tr><td>${escCob(bancoCorto(q.banco))}</td><td>${escCob(q.numero ?? '—')}</td><td>${escCob((q.tipo === 'diferido' ? 'Diferido' : 'A la vista') + (q.echeq ? ' · eCheq' : ''))}</td><td>${escCob(fechaRecibo(q.emision))}</td><td>${escCob(q.tipo === 'diferido' ? fechaRecibo(q.pago) : 'A la vista')}</td><td class="rc-num">${imp(q.importe)}</td></tr>`).join('')
+      }</tbody></table>` : ''
+      const tablaTransf = transf.length ? `<table class="rc-tabla"><caption>Transferencias</caption><thead><tr><th>Cuenta</th><th>Banco de origen</th><th>N° operación</th><th>Fecha</th><th class="rc-num">Importe</th></tr></thead><tbody>${
+        transf.map(t => `<tr><td>${escCob(t.cuenta ?? '—')}</td><td>${escCob((t.banco_origen ?? '—') + (t.medio === 'deposito_efectivo' ? ' (depósito en efectivo)' : ''))}</td><td>${escCob(t.referencia ?? '—')}</td><td>${escCob(fechaRecibo(t.fecha))}</td><td class="rc-num">${imp(t.importe)}</td></tr>`).join('')
+      }</tbody></table>` : ''
+      const tablaEfectivo = efectivo > 0 ? `<table class="rc-tabla"><caption>Efectivo</caption><tbody><tr><td>Efectivo</td><td class="rc-num">${imp(efectivo)}</td></tr></tbody></table>` : ''
+      const tablaAplic = aplic.length ? `<table class="rc-tabla"><thead><tr><th>Renglón</th><th class="rc-num">Monto</th><th class="rc-num">Aplicado</th></tr></thead><tbody>${
+        aplic.map(x => `<tr><td>${escCob(etiquetaRecibo(x, soloN2))}</td><td class="rc-num">${imp(x.monto_doc)}</td><td class="rc-num">${imp(x.aplicado)}</td></tr>`).join('')
+      }</tbody></table>` : '<p>Nada: todo queda a cuenta.</p>'
+      const subtotales = MEDIOS_APLICAR.filter(m => centavosAplicar(medios[m]) > 0)
+        .map(m => `<div class="rc-caja__fila"><span>${escCob(NOMBRE_MEDIO_APLICAR[m])}</span><span>${imp(medios[m])}</span></div>`).join('')
+      const aplicado = aplic.reduce((s, x) => s + centavosAplicar(x.aplicado), 0) / 100
+      return `
+        <div class="rc-cab">
+          <div class="rc-cab__emisor">
+            ${logoUnidad(e.logo_url) ? '<img class="rc-cab__logo" data-recibo-logo alt="">' : ''}
+            <div>
+              <div class="rc-cab__razon">${escCob(e.razon_social || e.nombre || '—')}</div>
+              ${e.cuit ? `<div class="rc-cab__dato">CUIT ${escCob(cuitConGuionesCob(e.cuit))}</div>` : ''}
+              ${e.domicilio ? `<div class="rc-cab__dato">${escCob(e.domicilio)}</div>` : ''}
+            </div>
+          </div>
+          <div class="rc-cab__fecha">Fecha ${escCob(fechaRecibo(d?.fecha))}</div>
+        </div>
+        <div class="rc-titulo">RECIBO</div>
+        <div class="rc-seccion">
+          <div class="rc-seccion__titulo">Cliente</div>
+          <div><strong>${escCob(c.razon_social || c.nombre || '—')}</strong>${c.razon_social && c.nombre && c.razon_social !== c.nombre ? ` · ${escCob(c.nombre)}` : ''}</div>
+          ${c.cuit ? `<div>CUIT ${escCob(cuitConGuionesCob(c.cuit))}</div>` : ''}
+        </div>
+        <div class="rc-columnas">
+          <div class="rc-seccion"><div class="rc-seccion__titulo">Con qué pagó</div>${tablaCheques}${tablaTransf}${tablaEfectivo}${!cheques.length && !transf.length && !(efectivo > 0) ? '<p>—</p>' : ''}</div>
+          <div class="rc-seccion"><div class="rc-seccion__titulo">Qué cancela</div>${tablaAplic}</div>
+        </div>
+        <div class="rc-totales">
+          <div class="rc-caja">${subtotales}<div class="rc-caja__total"><span>TOTAL COBRADO</span><span data-recibo-total="cobrado">${imp(d?.total)}</span></div></div>
+          <div class="rc-caja"><div class="rc-caja__total"><span>TOTAL APLICADO</span><span data-recibo-total="aplicado">${imp(aplicado)}</span></div></div>
+        </div>
+        ${centavosAplicar(aCuenta) > 0 ? `<div class="rc-franja"><span>Queda a cuenta del cliente</span><span>${imp(aCuenta)}</span></div>` : ''}
+        <div class="rc-pie">Saldo de la cuenta: ${escCob(textoSaldoCuenta(d?.saldo_cuenta))}</div>`
+    }
+
+    function ponerLogoRecibo(hoja, d) {
+      const logo = logoUnidad(d?.empresa?.logo_url)
+      const img = hoja?.querySelector?.('[data-recibo-logo]')
+      if (img && logo) img.src = '../' + encodeURIComponent(logo)
+    }
+
+    // "Recibo - <CLIENTE> - <dd-mm-aaaa>.pdf", sin caracteres que un sistema
+    // de archivos no acepte.
+    function nombreArchivoRecibo(d) {
+      const cliente = String(d?.cliente?.nombre || d?.cliente?.razon_social || 'Cliente').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()
+      const f = String(d?.fecha ?? '').slice(0, 10)
+      const fecha = esFechaIso(f) ? `${f.slice(8, 10)}-${f.slice(5, 7)}-${f.slice(0, 4)}` : 'sin-fecha'
+      return `Recibo - ${cliente} - ${fecha}.pdf`
+    }
+
+    async function abrirRecibo(cobranzaId) {
+      const turno = estado.turnoRecibo = (estado.turnoRecibo ?? 0) + 1
+      const modal = document.getElementById('cob-modal-recibo')
+      const hoja = document.getElementById('cob-recibo-hoja')
+      estado.recibo = null
+      hoja.className = 'rc-hoja'
+      hoja.innerHTML = '<p>Cargando el recibo…</p>'
+      document.getElementById('cob-recibo-enviar').disabled = true
+      document.getElementById('cob-recibo-imprimir').disabled = true
+      modal.hidden = false
+      let res
+      try {
+        res = await supabase.rpc('recibo_cobranza', { p_cobranza_id: cobranzaId })
+      } catch (err) {
+        res = { data: null, error: err }
+      }
+      if (turno !== estado.turnoRecibo) return
+      if (res?.error || !res?.data) {
+        hoja.innerHTML = `<p class="cob-aviso cob-aviso--grave">No se pudo leer el recibo: ${escCob(res?.error?.message ?? 'no vino nada')}.</p>`
+        return
+      }
+      estado.recibo = res.data
+      hoja.className = filasRecibo(res.data) > 14 ? 'rc-hoja rc-hoja--compacta' : 'rc-hoja'
+      hoja.innerHTML = htmlRecibo(res.data)
+      ponerLogoRecibo(hoja, res.data)
+      document.getElementById('cob-recibo-enviar').disabled = false
+      document.getElementById('cob-recibo-imprimir').disabled = false
+      document.getElementById('cob-recibo-enviar').focus?.()
+    }
+
+    function cerrarRecibo() {
+      estado.turnoRecibo = (estado.turnoRecibo ?? 0) + 1
+      document.getElementById('cob-modal-recibo').hidden = true
+      document.documentElement.classList.remove('rc-imprimiendo')
+    }
+
+    function imprimirRecibo() {
+      const raiz = document.documentElement
+      raiz.classList.add('rc-imprimiendo')
+      const quitar = () => { raiz.classList.remove('rc-imprimiendo'); window.removeEventListener('afterprint', quitar) }
+      window.addEventListener('afterprint', quitar)
+      window.print()
+    }
+
+    // El PDF, como el resto de la app (html2canvas + jsPDF de cdnjs, cargados
+    // al usarlos). En UNA hoja A4: si no entra, se achica.
+    const LIBRERIAS_PDF_COB = [
+      'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    ]
+    function cargarScriptCob(url) {
+      return new Promise((ok, mal) => {
+        if (document.querySelector(`script[src="${url}"]`)) return ok()
+        const s = document.createElement('script')
+        s.src = url; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + url))
+        document.head.appendChild(s)
+      })
+    }
+
+    async function generarPdfRecibo(d) {
+      if (!(typeof window.html2canvas === 'function' && window.jspdf?.jsPDF)) {
+        for (const url of LIBRERIAS_PDF_COB) await cargarScriptCob(url)
+      }
+      const cont = document.createElement('div')
+      cont.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff;width:194mm'
+      const hoja = document.createElement('div')
+      hoja.className = filasRecibo(d) > 14 ? 'rc-hoja rc-hoja--compacta' : 'rc-hoja'
+      hoja.innerHTML = htmlRecibo(d)
+      ponerLogoRecibo(hoja, d)
+      cont.appendChild(hoja)
+      document.body.appendChild(cont)
+      try {
+        const imgs = [...hoja.querySelectorAll('img')]
+        await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r })))
+        const canvas = await window.html2canvas(hoja, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
+        const escala = Math.min(190 / canvas.width, 277 / canvas.height)
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, canvas.width * escala, canvas.height * escala)
+        return pdf.output('blob')
+      } finally {
+        cont.remove()
+      }
+    }
+
+    function descargarCob(blob, nombre) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = nombre
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    }
+
+    // "Enviar": compartir el PDF (celular) o descargarlo.
+    async function enviarRecibo() {
+      const d = estado.recibo
+      if (!d) return
+      let blob
+      try { blob = await generarPdfRecibo(d) } catch (err) { mostrarError('No se pudo armar el PDF del recibo: ' + (err?.message ?? err)); return }
+      const nombre = nombreArchivoRecibo(d)
+      const archivo = typeof File === 'function' ? new File([blob], nombre, { type: 'application/pdf' }) : null
+      if (archivo && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+        try { await navigator.share({ files: [archivo], title: nombre.replace(/\.pdf$/, '') }); return } catch (err) {
+          if (err && err.name === 'AbortError') return
+        }
+      }
+      descargarCob(blob, nombre)
+      mostrarExito('Se descargó el recibo: ' + nombre)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -6738,6 +7568,8 @@
       // Un comprobante ya cargado (o dos veces en esta tanda) no se guarda: la
       // base igual lo frena, pero se dice antes (30/10/2026).
       if (hayRepetidosRojos(f)) motivos.push(TEXTO_SACAR_REPETIDOS)
+      // A qué se aplica (30/10/2026): un renglón o un medio pasado no se guarda.
+      motivos.push(...motivosAplicar(f))
       // Una cobranza solo con transferencias SÍ entra si la guarda quien
       // controla (02/10/2026, verificado contra la base):
       // guardar_cobranza_completa —y cargar_cobranza_asentada, que pasa por
@@ -6769,6 +7601,10 @@
       const motivos = motivosParaNoGuardar()
       document.getElementById('cob-total').textContent = formatearImporte(totalDelFormulario())
       pintarResumenFormas()
+      // A qué se aplica (30/10/2026): las cifras en el lugar, o la sección
+      // entera si cambió el cliente, lo leído, el modo o los medios.
+      refrescarAplicar()
+      pintarBarraAplicar()
       // El disabled se aplica DESDE JS y no como atributo del HTML: si el
       // script fallara, el botón queda usable en vez de dejar el formulario
       // inutilizable.
@@ -6810,8 +7646,33 @@
 
       // La persona la dio por terminada: aunque falle la red, el celular ya
       // sabe que esto tiene que subir.
+      // A qué se aplica (30/10/2026): si la cuenta del cliente todavía se
+      // está leyendo, se espera; si resulta que tiene corte, primero se mira
+      // a qué se aplica. Y una sugerencia pendiente se termina antes.
+      const leyendo = estado.aplicar
+      if (puedeProcesar() && esFormAsentado(f) && leyendo?.clienteId === f.cliente_id && leyendo.formId === f.id && leyendo.cargando && leyendo.promesa) {
+        await leyendo.promesa
+        if (estado.form !== f) { btn.disabled = false; return }
+        if (aplicarActivo(f)) {
+          btn.disabled = false
+          pintarTotalYGuardado()
+          err.hidden = false
+          err.textContent = 'Revisá a qué se aplica la cobranza y volvé a tocar Guardar.'
+          return
+        }
+      }
+      const apPend = f.aplicacion
+      if (aplicarActivo(f) && apPend && apPend.modo === 'todo' && !apPend.tocado && apPend.cobradoSugerido !== resumenAplicacion(f, estado.aplicar.datos).cobrado) {
+        clearTimeout(estado.aplicar.temporizador)
+        await sugerirAplicarTodo(apPend.parte)
+        if (estado.form !== f) { btn.disabled = false; return }
+        if (motivosParaNoGuardar().length) { btn.disabled = false; pintarTotalYGuardado(); return }
+      }
+
       f.estadoLocal = 'lista_para_subir'
       await guardarBorrador()
+      // Lo elegido se toma ANTES de subir (el formulario se cierra al guardar).
+      const aplicar = aplicarActivo(f) ? { clienteId: f.cliente_id, items: itemsDeAplicacion(f, estado.aplicar.datos) } : null
 
       const resultado = await subirCobranza(f)
       btn.disabled = false
@@ -6822,6 +7683,12 @@
         mostrarExito(resultado.asentada
           ? textoCobranzaAsentada(f, resultado)
           : (resultado.yaExistia ? 'La cobranza ya estaba guardada.' : 'Cobranza guardada.'))
+        // Asentada a un cliente con corte: se aplica (reemplaza lo que tenía)
+        // y arriba del listado queda lo aplicado y "Ver / enviar recibo".
+        if (aplicar && resultado.asentada) {
+          estado.recienAsentada = { cobranzaId: f.id, aplicar, texto: textoCobranzaAsentada(f, resultado), resultado: await aplicarCobranzaAsentada(f.id, aplicar) }
+          pintarRecienAsentada()
+        }
         mostrarVistaCob('listado')
         await Promise.all([refrescarListado(), refrescarLocales()])
         return
@@ -6830,7 +7697,8 @@
       if (resultado.tipo === 'red') {
         // Sin señal no se pierde nada: queda en el celular y el sincronizador
         // la reintenta. El alta es idempotente, así que reintentar es seguro.
-        mostrarExito('Se guardó en el celular. Se va a subir sola cuando haya señal.')
+        mostrarExito('Se guardó en el celular. Se va a subir sola cuando haya señal.' +
+          (aplicar?.items?.length ? ' Lo que elegiste aplicar no se guarda sin señal: queda a cuenta del cliente.' : ''))
         estado.form = null
         mostrarVistaCob('listado')
         await refrescarLocales()
@@ -7185,6 +8053,15 @@
       seccionFormas.addEventListener('click', alTocarEnFormas)
 
       document.getElementById('cob-btn-guardar').addEventListener('click', guardarCobranza)
+
+      // ── A qué se aplica, lo recién asentado y el recibo (30/10/2026) ──
+      const seccionAplicar = document.getElementById('cob-aplicar')
+      seccionAplicar.addEventListener('click', alTocarEnAplicar)
+      seccionAplicar.addEventListener('input', alEscribirEnAplicar)
+      document.getElementById('cob-recien-asentada').addEventListener('click', alTocarRecienAsentada)
+      document.getElementById('cob-recibo-enviar').addEventListener('click', enviarRecibo)
+      document.getElementById('cob-recibo-imprimir').addEventListener('click', imprimirRecibo)
+      document.getElementById('cob-recibo-cerrar').addEventListener('click', cerrarRecibo)
 
       // ── Visor ──
       document.getElementById('cob-visor-cerrar').addEventListener('click', cerrarVisor)
