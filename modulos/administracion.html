@@ -4685,7 +4685,8 @@
         `<div class="ad-dv-factura__cab"><span class="ad-texto-suave">Factura de ARCA:</span> <span id="${esc(idFc('guardada', parte))}"></span>` +
         `<button type="button" class="ad-link" id="${esc(idFc('ver-pdf', parte))}" data-fc-ver-pdf="${esc(parte)}" hidden>Ver el PDF</button></div>` +
         `<div class="ad-campo"><label for="ad-fc-numero-${esc(id)}">N° de factura ARCA</label>` +
-        `<input type="text" class="ad-input" id="ad-fc-numero-${esc(id)}" maxlength="40" autocomplete="off" placeholder="Pegá el número que dio ARCA" value="${esc(fc.facturas?.[parte]?.numero ?? '')}"></div>` +
+        `<input type="text" class="ad-input" id="ad-fc-numero-${esc(id)}" maxlength="40" autocomplete="off" placeholder="Pegá el número que dio ARCA" value="${esc(fc.facturas?.[parte]?.numero ?? '')}">` +
+        '<span class="ad-campo__ayuda">No hace falta para guardar la división: se carga cuando ARCA dé el número.</span></div>' +
         `<div class="ad-campo"><label for="ad-fc-pdf-${esc(id)}" id="${esc(idFc('pdf-rotulo', parte))}">Subir PDF (opcional)</label>` +
         `<input type="file" class="ad-dv-factura__archivo" id="ad-fc-pdf-${esc(id)}" accept="application/pdf,.pdf"></div>` +
         `<p class="ad-error-pegado" id="${esc(idFc('factura-error', parte))}" hidden></p>` +
@@ -4779,7 +4780,11 @@
       const e = document.getElementById(idFc('factura-error', parte))
       if (e) { e.textContent = c.error ?? ''; e.hidden = !c.error }
       const b = document.getElementById(idFc('factura', parte))
-      if (b) { b.disabled = !!c.enviando; b.textContent = c.enviando ? 'Guardando…' : 'Guardar la factura' }
+      // Apagado hasta que se escriba el número (o se elija un PDF): sin eso no hay nada que guardar.
+      const n = document.getElementById(`ad-fc-numero-${String(parte).toLowerCase()}`)
+      const pdf = document.getElementById(`ad-fc-pdf-${String(parte).toLowerCase()}`)
+      const vacio = !String(n?.value ?? '').trim() && !pdf?.files?.length
+      if (b) { b.disabled = !!c.enviando || vacio; b.textContent = c.enviando ? 'Guardando…' : 'Guardar la factura' }
     }
 
     // ── Cambiar la condición o una comisión: se guarda solo ──────────────
@@ -4972,6 +4977,16 @@
       throw new Error('No se pudo subir el PDF: ' + (error.message || 'probá de nuevo.'))
     }
 
+    // Al escribir el número (o elegir el PDF): se va el error de antes y el
+    // botón se prende o se apaga.
+    function escribirNumeroFactura(parte) {
+      const fc = estado.facturar
+      if (!fc || ![...PARTES_DIVISION, PARTE_UNICA].includes(parte)) return
+      const c = fc.cargas[parte]
+      if (c && !c.enviando) c.error = null
+      actualizarFacturaPunto(parte)
+    }
+
     async function guardarFacturaPunto(parte) {
       const fc = estado.facturar
       if (!fc || ![...PARTES_DIVISION, PARTE_UNICA].includes(parte)) return
@@ -4980,6 +4995,11 @@
       const id = parte.toLowerCase()
       const numero = String(document.getElementById(`ad-fc-numero-${id}`)?.value ?? '').trim()
       const archivo = document.getElementById(`ad-fc-pdf-${id}`)?.files?.[0] ?? null
+      // Sin número (30/10/2026): primero se divide la orden y recién después se
+      // factura en ARCA. La división ya se guardó sola: no se llama a
+      // guardar_factura_orden ni se muestra un error (con un PDF elegido sí
+      // hace falta el número, como pide la base).
+      if (!numero && !archivo) { c.error = null; actualizarFacturaPunto(parte); return }
       c.error = validarNumeroFactura(numero) ?? validarPdfFactura(archivo)
       if (c.error) { actualizarFacturaPunto(parte); return }
       c.enviando = true
@@ -13777,6 +13797,12 @@
         const t = e.target
         if (t.id === 'ad-fc-otro') escribirPctFacturar(leerCampoNumero(t))
         else if (t.dataset?.vendedorPct) cambiarVendedorFacturar(t.dataset.vendedorPct, leerCampoNumero(t))
+        else if (t.id?.startsWith?.('ad-fc-numero-')) escribirNumeroFactura(t.id.slice('ad-fc-numero-'.length).toUpperCase())
+      })
+      // Elegir el PDF también prende "Guardar la factura".
+      facturar.addEventListener('change', (e) => {
+        const t = e.target
+        if (t.id?.startsWith?.('ad-fc-pdf-')) escribirNumeroFactura(t.id.slice('ad-fc-pdf-'.length).toUpperCase())
       })
       // El listado se relee solo (28/10/2026): al volver a la pestaña y cada
       // minuto mientras se ve.
