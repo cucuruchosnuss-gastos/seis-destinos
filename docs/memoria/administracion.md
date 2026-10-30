@@ -119,6 +119,32 @@ Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, p
   - `e2e/71-revisar-remitos.spec.js` (8, a 390 y 1280).
   - `sandbox-administracion.js` suma las funciones de Órdenes, con reemplazos para copias viejas, y `textoRemitoHoja`, igual que `sandbox-retiros.js`. `seguras-administracion.js` justifica las interpolaciones nuevas.
 
+## Valorizar más legible (30/10/2026, rama `ci-prueba/valorizar-legible`)
+- **El nombre del renglón** (al valorizar, en el detalle de la orden y en las hojas N1/N2): `htmlNombreRenglon` →
+  "Barquillo 40 x4 · Caja con cono **× 252 u.** · VENEZIA" y "Soft · Caja sin cono **× 224 u.**". Las unidades con
+  `textoUnidadesRemito` de `js/remitos-comun.js` (la misma de Remitos Dolce, de la rama `ci-prueba/remitos-mas-simple`:
+  esta rama la trae con un merge, **se integra después de esa**); nada con 1 ni si el nombre ya trae el número ("Caja
+  x 100"). En negrita y sin partirse (`.ad-renglon__u`). El cono solo si la presentación es con cono: sin el "· Sin
+  cono" final. Las hojas N1/N2 (`htmlNombreHojaPunto`) buscan el renglón de la orden abierta por su número
+  (`datos.items[].orden`); un insumo o de otra orden, la descripción que manda `datos_division_orden`.
+  `partesRenglon` no cambió (la hoja de retiro sigue igual).
+- **El descuento del cono**: al valorizar, si `precio_venta` trae `descuento_pct`, su `precio_caja` va tal cual y al lado
+  "(−5 % CASERATO · antes $ 35.830,80)" (`textoDescuentoPrecio`, `.ad-renglon__descuento`: chico, color normal). La orden
+  valorizada lee `orden_retiro_items.descuento_pct` y muestra "(−5 %)" al lado del precio por caja (`htmlDescuentoGuardado`).
+  **OJO (verificado con pg_get_functiondef el 30/10/2026):** `precio_venta` todavía NO devuelve `descuento_pct` ni
+  `precio_caja_sin_descuento` ("los descuentos van por condición especial del cliente, al valorizar"): el descuento lo pone
+  `valorizar_orden_retiro` desde `ordenes_retiro.condiciones_especiales` (`cliente_condiciones_especiales`) en
+  `descuento_pct` / `precio_lista`. Lo de la pantalla de valorizar queda listo para cuando la base lo devuelva. **El campo
+  "Descuento en el precio de venta (%)" de Conos NO se hizo**: `guardar_descuento_marca` existe pero ningún precio lee
+  `marcas_personalizadas.descuento_pct` (un campo que no cambia nada confundiría). Pedido para el chat de la base.
+- **La caja con cono en Listas** (`conConoConPrecioNuevo`): la misma cuenta que `precio_venta` sin redondear el precio
+  por unidad en el medio, y con la aritmética de numeric (`cuentaNumeric` con BigInt: `dividirNumeric` da los decimales
+  de Postgres —select_div_scale, al menos 16 cifras, en grupos de 4— y redondea la mitad para arriba; el final a 2).
+  Con los decimales de la compu, una caja "en la mitad justa" salía un centavo distinta (16.287,73 contra 16.287,72 de
+  la base). Comprobado contra la base el 30/10/2026 con 10 casos (en la suite). Es el único lugar que copia la cuenta.
+- Suites `test-/mut-administracion-valorizar-legible.js` (baseline f3d7152) y `e2e/103-valorizar-legible.spec.js` (390 y
+  1280 px); `test-administracion-ordenes.js` y `-link-remitos.js` ajustadas; seguras de XSS al día.
+
 ## Acopios (27/10/2026)
 
 Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedido `.claude/pedidos/2026-10-27-acopios.md`). Un acopio es mercadería que el cliente ya compró (y se le facturó) y retira de a poco con el talonario celeste de ACOPIO.
@@ -155,29 +181,3 @@ Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedi
   lo resolvería (pedido para el chat de la base).
 - Suites `test-/mut-administracion-orden-recepcion.js` (36; baseline 497c393), `test-administracion-orden-entre-empresas.js`
   ajustada, e2e 98.
-
-## Valorizar más legible (30/10/2026, rama `ci-prueba/valorizar-legible`)
-- **El nombre del renglón** (al valorizar, en el detalle de la orden y en las hojas N1/N2): `htmlNombreRenglon` →
-  "Barquillo 40 x4 · Caja con cono **× 252 u.** · VENEZIA" y "Soft · Caja sin cono **× 224 u.**". Las unidades con
-  `textoUnidadesRemito` de `js/remitos-comun.js` (la misma de Remitos Dolce, de la rama `ci-prueba/remitos-mas-simple`:
-  esta rama la trae con un merge, **se integra después de esa**); nada con 1 ni si el nombre ya trae el número ("Caja
-  x 100"). En negrita y sin partirse (`.ad-renglon__u`). El cono solo si la presentación es con cono: sin el "· Sin
-  cono" final. Las hojas N1/N2 (`htmlNombreHojaPunto`) buscan el renglón de la orden abierta por su número
-  (`datos.items[].orden`); un insumo o de otra orden, la descripción que manda `datos_division_orden`.
-  `partesRenglon` no cambió (la hoja de retiro sigue igual).
-- **El descuento del cono**: al valorizar, si `precio_venta` trae `descuento_pct`, su `precio_caja` va tal cual y al lado
-  "(−5 % CASERATO · antes $ 35.830,80)" (`textoDescuentoPrecio`, `.ad-renglon__descuento`: chico, color normal). La orden
-  valorizada lee `orden_retiro_items.descuento_pct` y muestra "(−5 %)" al lado del precio por caja (`htmlDescuentoGuardado`).
-  **OJO (verificado con pg_get_functiondef el 30/10/2026):** `precio_venta` todavía NO devuelve `descuento_pct` ni
-  `precio_caja_sin_descuento` ("los descuentos van por condición especial del cliente, al valorizar"): el descuento lo pone
-  `valorizar_orden_retiro` desde `ordenes_retiro.condiciones_especiales` (`cliente_condiciones_especiales`) en
-  `descuento_pct` / `precio_lista`. Lo de la pantalla de valorizar queda listo para cuando la base lo devuelva. **El campo
-  "Descuento en el precio de venta (%)" de Conos NO se hizo**: `guardar_descuento_marca` existe pero ningún precio lee
-  `marcas_personalizadas.descuento_pct` (un campo que no cambia nada confundiría). Pedido para el chat de la base.
-- **La caja con cono en Listas** (`conConoConPrecioNuevo`): la misma cuenta que `precio_venta` sin redondear el precio
-  por unidad en el medio, y con la aritmética de numeric (`cuentaNumeric` con BigInt: `dividirNumeric` da los decimales
-  de Postgres —select_div_scale, al menos 16 cifras, en grupos de 4— y redondea la mitad para arriba; el final a 2).
-  Con los decimales de la compu, una caja "en la mitad justa" salía un centavo distinta (16.287,73 contra 16.287,72 de
-  la base). Comprobado contra la base el 30/10/2026 con 10 casos (en la suite). Es el único lugar que copia la cuenta.
-- Suites `test-/mut-administracion-valorizar-legible.js` (baseline f3d7152) y `e2e/103-valorizar-legible.spec.js` (390 y
-  1280 px); `test-administracion-ordenes.js` y `-link-remitos.js` ajustadas; seguras de XSS al día.
