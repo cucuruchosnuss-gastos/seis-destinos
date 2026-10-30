@@ -654,6 +654,71 @@
     .ad-visor__lienzo { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
     .ad-visor__img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
+    /* ── Pendientes desde el corte, aplicar y el recibo (30/10/2026) ──────
+       En la cuenta del cliente, solo si tiene corte. El selector es copia
+       del de Cobranzas (.cob-aplicar-* → .ad-apl*) y el recibo, de su hoja
+       (.rc-* → .ad-rc-*). Al imprimir, la hoja va en #ad-impresion. */
+    .ad-pend__titulo { font-size: 0.9375rem; font-weight: 800; margin: 0.75rem 0 0.25rem; }
+    .ad-pend__fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.75rem; align-items: center; padding: 0.5rem 0; border-top: 1px solid var(--color-borde); min-width: 0; }
+    .ad-pend__doc { min-width: 0; overflow-wrap: anywhere; }
+    .ad-pend__etiqueta { font-weight: 700; }
+    .ad-pend__plata { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ad-pend__acciones { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; min-width: 0; }
+    .ad-pend__hueco { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+    .ad-apl { margin: 0.25rem 0 0.75rem; min-width: 0; }
+    .ad-apl__titulo { font-weight: 800; margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+    .ad-apl__cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.5rem; background: var(--color-superficie); border-radius: var(--radio-input); padding: 0.625rem 0.75rem; margin: 0 0 0.75rem; }
+    .ad-apl__cifra { min-width: 0; }
+    .ad-apl__rotulo { display: block; font-size: 0.75rem; color: var(--ad-texto-secundario); }
+    .ad-apl__valor { display: block; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ad-apl__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 0.75rem; }
+    .ad-apl__bloque { border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta); padding: 0 0.75rem; margin: 0 0 0.75rem; min-width: 0; }
+    .ad-apl__bloque[data-ad-apl-bloque] { padding-top: 0.75rem; }
+    .ad-apl__bloque-titulo { font-weight: 700; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.5rem; }
+    .ad-apl__fila { display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem; gap: 0.5rem; align-items: center; padding: 0.5rem 0; border-top: 1px solid var(--color-borde); min-width: 0; }
+    .ad-apl__bloque > .ad-apl__fila:first-child { border-top: 0; }
+    .ad-apl__fila .ad-input { width: 100%; min-height: 44px; box-sizing: border-box; text-align: right; font-variant-numeric: tabular-nums; }
+    .ad-apl__fila--excedida .ad-input { border-color: var(--bordo); }
+    @media (max-width: 1023.98px) { .ad-apl .ad-input { font-size: 16px; } }
+    .ad-rc-linea { display: flex; justify-content: flex-end; padding: 0.25rem 0 0.5rem; border-bottom: 1px solid var(--color-borde); }
+    .ad-rc { position: fixed; inset: 0; z-index: 90; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
+    .ad-rc[hidden] { display: none; }
+    @media (min-width: 640px) { .ad-rc { align-items: center; padding: 1rem; } }
+    .ad-rc__caja { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 860px; max-height: 94vh; overflow-y: auto; min-width: 0; }
+    .ad-rc__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .ad-rc__titulo { font-size: 1.125rem; font-weight: 800; margin: 0; }
+    .ad-rc__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--color-texto); }
+    .ad-rc-marco { overflow-x: auto; min-width: 0; margin-top: 0.75rem; }
+    /* Ancho de papel: en el celular la hoja se desplaza dentro de su marco
+       en vez de apretarse (se ve igual que impresa). */
+    .ad-rc-hoja { box-sizing: border-box; width: 100%; max-width: 194mm; min-width: 182mm; margin: 0 auto; padding: 5mm; background: #fff; color: #111;
+      font-family: var(--fuente); font-size: 8.5pt; line-height: 1.25; border: 1px solid var(--color-borde); }
+    .ad-rc-hoja--compacta { font-size: 7.5pt; line-height: 1.15; }
+    .ad-rc-hoja--compacta .ad-rc-tabla { font-size: 6.5pt; }
+    .ad-rc-hoja--papel { border: 0; padding: 0; max-width: none; min-width: 0; break-inside: avoid; page-break-inside: avoid; }
+    .ad-rc-cab { display: flex; justify-content: space-between; gap: 5mm; align-items: flex-start; border-bottom: 1.5px solid #111; padding-bottom: 2.4mm; }
+    .ad-rc-cab__emisor { display: flex; gap: 3mm; align-items: flex-start; min-width: 0; }
+    .ad-rc-cab__logo { max-height: 13mm; max-width: 24mm; object-fit: contain; }
+    .ad-rc-cab__razon { font-size: 10.5pt; font-weight: 800; }
+    .ad-rc-cab__dato { font-size: 7.5pt; }
+    .ad-rc-cab__fecha { text-align: right; flex-shrink: 0; font-weight: 700; }
+    .ad-rc-titulo { text-align: center; font-size: 18pt; font-weight: 800; letter-spacing: 0.08em; margin: 3mm 0 1mm; }
+    .ad-rc-seccion { margin-top: 3mm; min-width: 0; }
+    .ad-rc-seccion__titulo { font-size: 8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.2mm; }
+    .ad-rc-columnas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4mm; align-items: start; }
+    .ad-rc-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+    .ad-rc-tabla + .ad-rc-tabla { margin-top: 2mm; }
+    .ad-rc-tabla th, .ad-rc-tabla td { border: 1px solid #555; padding: 0.6mm 1.2mm; text-align: left; vertical-align: top; color: #111; }
+    .ad-rc-tabla th { background: #eee; font-weight: 700; }
+    .ad-rc-tabla caption { text-align: left; font-weight: 700; padding: 0 0 0.6mm; }
+    .ad-rc-tabla .ad-rc-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ad-rc-totales { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4mm; margin-top: 3mm; align-items: stretch; }
+    .ad-rc-caja { border: 1.5px solid #111; padding: 1.6mm 2mm; display: flex; flex-direction: column; justify-content: flex-end; gap: 0.8mm; }
+    .ad-rc-caja__fila { display: flex; justify-content: space-between; gap: 3mm; font-variant-numeric: tabular-nums; }
+    .ad-rc-caja__total { display: flex; justify-content: space-between; gap: 3mm; font-size: 11pt; font-weight: 800; border-top: 1px solid #111; padding-top: 1mm; white-space: nowrap; }
+    .ad-rc-franja { margin-top: 3mm; padding: 1.6mm 2mm; background: #eee; border: 1px solid #555; font-weight: 700; display: flex; justify-content: space-between; gap: 3mm; }
+    .ad-rc-pie { margin-top: 3mm; border-top: 1px solid #111; padding-top: 1.6mm; font-weight: 700; }
+
     /* ── Errores de la app (27/09/2026, solo super_admin) ─────────────── */
     .ad-error-app { border-left: 4px solid var(--color-acento-gris); }
     /* Por gravedad (30/09/2026): error bordó, aviso amarillo, informativo gris. */
@@ -1472,6 +1537,25 @@
       <button type="button" class="ad-visor__cerrar" id="ad-visor-cerrar" aria-label="Cerrar">&times;</button>
     </div>
     <div class="ad-visor__lienzo"><img class="ad-visor__img" id="ad-visor-img" alt="Foto de los cheques"></div>
+  </div>
+
+  <!-- EL RECIBO DE UNA COBRANZA (30/10/2026): recibo_cobranza() en UNA hoja
+       A4, copiado del de Cobranzas (.rc-* → .ad-rc-*). Lo abre la cuenta del
+       cliente con corte (la línea de la cobranza y "Pendientes desde el
+       corte"). Al imprimir, la hoja va en #ad-impresion. -->
+  <div class="ad-rc" id="ad-rc" hidden role="dialog" aria-modal="true" aria-labelledby="ad-rc-titulo">
+    <div class="ad-rc__caja">
+      <div class="ad-rc__barra">
+        <h2 class="ad-rc__titulo" id="ad-rc-titulo">Recibo</h2>
+        <button type="button" class="ad-rc__cerrar" id="ad-rc-cerrar" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="ad-panel__acciones">
+        <button type="button" class="ad-btn" id="ad-rc-enviar" disabled>Enviar</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-rc-imprimir" disabled>Imprimir</button>
+      </div>
+      <p class="ad-error-pegado" id="ad-rc-error" role="alert" hidden></p>
+      <div class="ad-rc-marco"><div class="ad-rc-hoja" id="ad-rc-hoja"></div></div>
+    </div>
   </div>
 
   <!-- LA NOTA DE DÉBITO (24/10/2026): la hoja de datos_nota_debito, A4
@@ -6980,7 +7064,7 @@
       const cabecera = htmlCuentaGrupo(c, cli) + extras + `<div class="ad-tarjeta"><div class="ad-fila__linea"><span class="ad-dato__rotulo">Saldo</span>` +
         `<span class="ad-total${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(saldo))}</span></div>` +
         `${limite !== null ? `<p class="ad-texto-suave">${esc('Límite de crédito ' + importeHoja(limite))}</p>` : ''}` +
-        `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>` + htmlAcopiosCliente(c)
+        `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>` + htmlAcopiosCliente(c) + htmlPendientesAd(c)
       if (!c.cuenta.length) return cabecera + '<div class="ad-vacio">Todavía no tiene movimientos.</div>'
       // Una cobranza asentada se abre (su detalle, con "Reabrir"), y un
       // movimiento de una orden de retiro abre la orden (14/10/2026; con
@@ -6997,7 +7081,7 @@
           `<div class="ad-renglon__lotes">${esc(fechaCorta(m.fecha) + ' · ' + (ETIQUETA_MOVIMIENTO[m.tipo] ?? m.tipo))}` +
           `${orden ? ' · <span class="ad-renglon__ver">Ver la orden ›</span>' : abre ? ' · <span class="ad-renglon__ver">Ver la cobranza ›</span>' : nota ? ' · <span class="ad-renglon__ver">Ver la nota ›</span>' : ''}</div></div>` +
           `<div class="ad-renglon__plata"><div class="ad-fila__importe">${esc(importeHoja(m.importe))}</div>` +
-          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${orden || abre || nota ? '</button>' : '</div>'}`
+          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${orden || abre || nota ? '</button>' : '</div>'}` + htmlReciboLineaAd(m, c)
       }).join('')
       return cabecera + `<div class="ad-tarjeta">${filas}</div>`
     }
@@ -7008,6 +7092,7 @@
       const cli = clienteDe(c.id)
       document.getElementById('ad-cliente-titulo').textContent = cli?.nombre ?? 'Cliente'
       document.getElementById('ad-cliente-cuerpo').innerHTML = htmlCuenta(c)
+      pintarAplicarAd()
       const precios = puedeEn('retiros', 'precios')
       // Abierto desde "Todas las fábricas": la ficha no se edita (el botón se
       // ve apagado con el motivo; con una fábrica elegida, como siempre).
@@ -7115,9 +7200,810 @@
       // Sus acopios activos y la cuenta en el grupo (27/10/2026), después:
       // tampoco demoran la cuenta, y cada uno dice solo si falla.
       const cl = estado.cliente
-      await Promise.all([cargarAcopiosCliente(cl), cargarCuentaGrupo(cl)])
+      await Promise.all([cargarAcopiosCliente(cl), cargarCuentaGrupo(cl), cargarPendientesAd(cl)])
       if (turno !== turnoCliente || estado.cliente !== cl) return
       pintarCliente()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PENDIENTES DESDE EL CORTE: APLICAR Y EL RECIBO (30/10/2026)
+    // En la cuenta del cliente (#ad-cliente-cuerpo; Cuentas corrientes →
+    // Clientes la ve igual, embebida). Solo si el cliente tiene corte
+    // (cliente_pendientes(cliente).activo): sin corte, nada nuevo.
+    // Leídas con pg_get_functiondef el 30/10/2026 (solo lectura):
+    //  - cliente_pendientes(p_cliente_id) → {activo, imputa_desde,
+    //    saldo_cuenta, docs[{doc_tipo, doc_id, parte, etiqueta, fecha, monto,
+    //    aplicado, pendiente}], creditos[{credito_tipo, credito_id, etiqueta,
+    //    fecha, monto, aplicado, libre, medios, aplicado_por_medio}]}. Leer
+    //    pide cobranzas:procesar o retiros:precios en la fábrica del cliente.
+    //  - sugerir_aplicacion(p_cliente_id, p_monto, p_parte) → {items, sobra}.
+    //  - aplicar_credito_cliente(p_cliente_id, p_credito_tipo, p_credito_id,
+    //    p_items) → {aplicado, a_cuenta}: pide cobranzas:procesar y BORRA lo
+    //    que ese crédito tenía aplicado antes de escribir: se manda lo que ya
+    //    tenía MÁS lo nuevo. Lo que ya tenía una cobranza sale de
+    //    recibo_cobranza(id).aplicaciones; para los demás créditos ninguna
+    //    función lo devuelve (hueco de la base): "Aplicar" solo si no tienen
+    //    nada aplicado.
+    //  - recibo_cobranza(p_cobranza_id) → los datos de la hoja del recibo.
+    // cuenta_cliente() NO trae el id de la cobranza: la línea lo tiene por
+    // aparearCobranzas (cliente_movimientos), que si no cierra no pone ninguno.
+    // Copia adaptada del selector y del recibo de modulos/cobranzas.html
+    // (cada módulo duplica sus helpers).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MEDIOS_APLICAR_AD = ['cheque', 'transferencia', 'efectivo']
+    const NOMBRE_MEDIO_APLICAR_AD = { cheque: 'Cheques', transferencia: 'Transferencias', efectivo: 'Efectivo' }
+    const FILAS_RECIBO_COMPACTO_AD = 14
+    const TEXTO_HUECO_APLICAR_AD = 'Este crédito ya tiene una parte aplicada: para seguir aplicando falta una función de la base'
+
+    function centavosAplAd(n) {
+      const x = Number(n)
+      return Number.isFinite(x) ? Math.round(x * 100) : 0
+    }
+
+    // Leer: la MISMA regla que _cliente_ve_imputaciones (la fábrica del
+    // cliente es la elegida, como el resto de su cuenta).
+    function puedeLeerPendientesAd() {
+      return tieneTarea('cobranzas', 'procesar') || puedeEn('retiros', 'precios')
+    }
+
+    // Aplicar: lo que exige aplicar_credito_cliente.
+    function puedeAplicarAd() {
+      return tieneTarea('cobranzas', 'procesar')
+    }
+
+    function pendientesActivosAd(c) {
+      return c?.pend?.datos?.activo === true
+    }
+
+    // Lee cliente_pendientes. No tira: si falla, lo deja dicho en c.pend.
+    async function cargarPendientesAd(c) {
+      if (!c?.id) return
+      if (!puedeLeerPendientesAd()) { c.pend = null; return }
+      const turno = (c.turnoPend ?? 0) + 1
+      c.turnoPend = turno
+      let res
+      try {
+        res = await supabase.rpc('cliente_pendientes', { p_cliente_id: c.id })
+      } catch (err) {
+        res = { data: null, error: err }
+      }
+      if (c.turnoPend !== turno) return
+      if (res?.error) {
+        console.error('No se pudo leer lo pendiente del cliente:', res.error)
+        c.pend = { datos: null, error: res.error.message || 'no hay conexión' }
+      } else {
+        c.pend = { datos: res?.data && typeof res.data === 'object' ? res.data : null, error: null }
+      }
+    }
+
+    async function reintentarPendientesAd() {
+      const c = estado.cliente
+      if (!c) return
+      c.pend = null
+      pintarCliente()
+      await cargarPendientesAd(c)
+      if (estado.cliente === c) pintarCliente()
+    }
+
+    function docsPendientesAd(datos) {
+      return (Array.isArray(datos?.docs) ? datos.docs : []).filter(d => centavosAplAd(d?.pendiente) > 0)
+    }
+
+    function creditosLibresAd(datos) {
+      return (Array.isArray(datos?.creditos) ? datos.creditos : []).filter(k => centavosAplAd(k?.libre) > 0)
+    }
+
+    function claveCreditoAd(k) {
+      return `${k?.credito_tipo}|${k?.credito_id}`
+    }
+
+    function claveDocAd(d) {
+      return `${d?.doc_tipo}|${d?.doc_id}|${d?.parte}`
+    }
+
+    // ¿Se puede aplicar? Una cobranza siempre (lo que ya tenía sale de su
+    // recibo); los demás créditos, solo sin nada aplicado (hueco de la base).
+    function creditoAplicableAd(k) {
+      if (!k?.credito_id || centavosAplAd(k.libre) <= 0) return false
+      return k.credito_tipo === 'cobranza' || centavosAplAd(k.aplicado) === 0
+    }
+
+    // La sección, entre la cabecera de la cuenta y sus movimientos. Sin
+    // permiso, mientras lee o sin corte: nada.
+    function htmlPendientesAd(c) {
+      const p = c?.pend
+      if (!p) return ''
+      if (p.error) return `<div class="ad-aviso" id="ad-pend">${esc('No se pudo ver si el cliente tiene cobranzas para aplicar (' + p.error + ').')} <button type="button" class="ad-link" data-ad-pend-reintentar>Volver a intentar</button></div>`
+      if (!pendientesActivosAd(c)) return ''
+      const docs = docsPendientesAd(p.datos)
+      const creditos = creditosLibresAd(p.datos)
+      const pendCab = '<h2 class="ad-subtitulo">Pendientes desde el corte</h2>'
+      if (!docs.length && !creditos.length) return `<div class="ad-tarjeta ad-pend" id="ad-pend">${pendCab}<p class="ad-texto-suave">Nada pendiente: lo de después del corte está todo aplicado.</p></div>`
+      const pendDocs = docs.length ? '<h3 class="ad-pend__titulo">Lo que debe</h3>' + docs.map(htmlDocPendienteAd).join('') : ''
+      const pendCreditos = creditos.length ? '<h3 class="ad-pend__titulo">A favor, sin aplicar</h3>' + creditos.map(k => htmlCreditoPendienteAd(k, c)).join('') : ''
+      return `<div class="ad-tarjeta ad-pend" id="ad-pend">${pendCab}${pendDocs}${pendCreditos}</div>`
+    }
+
+    function htmlDocPendienteAd(d) {
+      return `<div class="ad-pend__fila" data-ad-pend-doc="${esc(claveDocAd(d))}"><div class="ad-pend__doc">` +
+        `<div class="ad-pend__etiqueta">${esc(d?.etiqueta ?? '—')}</div>` +
+        `<div class="ad-texto-suave">${esc([esFechaIso(d?.fecha) ? fechaCorta(d.fecha) : '', 'Monto ' + importeHoja(d?.monto)].filter(Boolean).join(' · '))}</div></div>` +
+        `<div class="ad-pend__plata">${esc('Pendiente ' + importeHoja(d?.pendiente))}</div></div>`
+    }
+
+    // Un crédito con algo libre: "Aplicar" (con cobranzas:procesar) y, si es
+    // una cobranza, "Recibo". Abierto, debajo va el selector.
+    function htmlCreditoPendienteAd(k, c) {
+      const clave = claveCreditoAd(k)
+      const abierto = c?.aplicar?.clave === clave
+      const botones = []
+      if (puedeAplicarAd() && !abierto) {
+        botones.push(creditoAplicableAd(k)
+          ? `<button type="button" class="ad-btn" data-ad-aplicar="${esc(clave)}">Aplicar</button>`
+          : `<p class="ad-texto-suave ad-pend__hueco">${esc(TEXTO_HUECO_APLICAR_AD)}</p>`)
+      }
+      if (k?.credito_tipo === 'cobranza' && k.credito_id) botones.push(`<button type="button" class="ad-btn ad-btn--suave" data-ad-recibo="${esc(k.credito_id)}">Recibo</button>`)
+      const datosCredito = [esFechaIso(k?.fecha) ? fechaCorta(k.fecha) : '', 'Monto ' + importeHoja(k?.monto)]
+      if (centavosAplAd(k?.aplicado) > 0) datosCredito.push('Aplicado ' + importeHoja(k.aplicado))
+      const pendBotones = botones.length ? `<div class="ad-pend__acciones">${botones.join('')}</div>` : ''
+      return `<div class="ad-pend__fila" data-ad-pend-credito="${esc(clave)}"><div class="ad-pend__doc">` +
+        `<div class="ad-pend__etiqueta">${esc(k?.etiqueta ?? '—')}</div>` +
+        `<div class="ad-texto-suave">${esc(datosCredito.filter(Boolean).join(' · '))}</div></div>` +
+        `<div class="ad-pend__plata">${esc('Libre ' + importeHoja(k?.libre))}</div>${pendBotones}</div>` +
+        (abierto ? htmlAplicarAd(c) : '')
+    }
+
+    // ── El selector (copia del de Cobranzas) ───────────────────────────────
+    // Reparte lo LIBRE del crédito; lo que ya tenía aplicado (previas) se
+    // manda igual, sumado. modo 'todo' (sugerir_aplicacion) o 'medio' (solo
+    // una cobranza: por lo que queda sin aplicar de cada medio).
+    function aplicacionVaciaAd(k) {
+      const medios = {}
+      for (const m of MEDIOS_APLICAR_AD) medios[m] = { parte: null, montos: {} }
+      return {
+        clave: claveCreditoAd(k), credito: k, modo: 'todo', parte: null, montos: {}, medios,
+        // null = hay que leerlas (una cobranza con algo aplicado).
+        previas: k?.credito_tipo === 'cobranza' && centavosAplAd(k.aplicado) > 0 ? null : [],
+        errorPrevias: '', errorSugerir: '', error: '', enviando: false, turno: 0, foco: null,
+      }
+    }
+
+    // Lo que el crédito puede aplicar ahora: su libre y, en una cobranza, lo
+    // cobrado con cada medio menos lo ya aplicado con ese medio.
+    function disponibleAd(k) {
+      const porMedio = { cheque: 0, transferencia: 0, efectivo: 0 }
+      if (k?.credito_tipo === 'cobranza' && k.medios && typeof k.medios === 'object') {
+        for (const m of MEDIOS_APLICAR_AD) porMedio[m] = Math.max(0, centavosAplAd(k.medios[m]) - centavosAplAd(k.aplicado_por_medio?.[m])) / 100
+      }
+      return { libre: Math.max(0, centavosAplAd(k?.libre)) / 100, porMedio }
+    }
+
+    function hayMediosAd(k) {
+      const d = disponibleAd(k)
+      return MEDIOS_APLICAR_AD.some(m => centavosAplAd(d.porMedio[m]) > 0)
+    }
+
+    function montoElegidoAd(montos, clave) {
+      const n = leerNumeroAr(montos?.[clave])
+      return n !== null && n > 0 ? n : 0
+    }
+
+    // Lo NUEVO elegido en la pantalla. En "Aplicar todo" sin medio (null).
+    function itemsNuevosAd(ap, docs) {
+      if (!ap) return []
+      const item = (d, monto, medio) => ({ doc_tipo: d.doc_tipo, doc_id: d.doc_id, parte: d.parte, monto: Math.round(monto * 100) / 100, medio })
+      if (ap.modo === 'medio') {
+        const r = []
+        for (const m of MEDIOS_APLICAR_AD) for (const d of docs) {
+          const monto = montoElegidoAd(ap.medios?.[m]?.montos, claveDocAd(d))
+          if (monto > 0) r.push(item(d, monto, m))
+        }
+        return r
+      }
+      return docs.map(d => [d, montoElegidoAd(ap.montos, claveDocAd(d))]).filter(([, n]) => n > 0).map(([d, n]) => item(d, n, null))
+    }
+
+    // Lo que la cobranza ya tenía aplicado, como renglones para la base:
+    // recibo_cobranza().aplicaciones[{doc_tipo, doc_id, parte, aplicado,
+    // medios{cheque|transferencia|efectivo|sin_medio: n}}].
+    function itemsPreviosAd(aplicaciones) {
+      const r = []
+      for (const a of Array.isArray(aplicaciones) ? aplicaciones : []) {
+        const medios = a?.medios && typeof a.medios === 'object' ? a.medios : { sin_medio: a?.aplicado }
+        for (const [m, v] of Object.entries(medios)) {
+          const cent = centavosAplAd(v)
+          if (cent > 0) r.push({ doc_tipo: a.doc_tipo, doc_id: a.doc_id, parte: a.parte, monto: cent / 100, medio: MEDIOS_APLICAR_AD.includes(m) ? m : null })
+        }
+      }
+      return r
+    }
+
+    // Lo que ya tenía MÁS lo nuevo, sumado por renglón y medio: la base
+    // reemplaza todo lo del crédito con esta lista.
+    function itemsParaEnviarAd(previas, nuevos) {
+      const porClave = new Map()
+      for (const it of [...(previas ?? []), ...(nuevos ?? [])]) {
+        const k = claveDocAd(it) + '|' + (it.medio ?? '')
+        const ya = porClave.get(k)
+        if (ya) ya.cent += centavosAplAd(it.monto)
+        else porClave.set(k, { it, cent: centavosAplAd(it.monto) })
+      }
+      return [...porClave.values()].filter(x => x.cent > 0)
+        .map(({ it, cent }) => ({ doc_tipo: it.doc_tipo, doc_id: it.doc_id, parte: it.parte, monto: cent / 100, medio: it.medio ?? null }))
+    }
+
+    // Libre / aplicado / a cuenta y lo que está MAL (la base frena lo mismo).
+    function resumenAplicacionAd(ap, datos) {
+      const disp = disponibleAd(ap?.credito)
+      const docs = docsPendientesAd(datos)
+      const nuevos = itemsNuevosAd(ap, docs)
+      const porDoc = new Map()
+      const porMedio = { cheque: 0, transferencia: 0, efectivo: 0 }
+      let aplicadoC = 0
+      for (const it of nuevos) {
+        const k = claveDocAd(it)
+        porDoc.set(k, (porDoc.get(k) ?? 0) + centavosAplAd(it.monto))
+        if (it.medio) porMedio[it.medio] += centavosAplAd(it.monto)
+        aplicadoC += centavosAplAd(it.monto)
+      }
+      const errores = []
+      const excedidos = new Set()
+      for (const d of docs) {
+        const k = claveDocAd(d)
+        if ((porDoc.get(k) ?? 0) > centavosAplAd(d.pendiente)) {
+          excedidos.add(k)
+          errores.push(`${d.etiqueta}: le querés aplicar ${importeHoja((porDoc.get(k) ?? 0) / 100)} y tiene ${importeHoja(Number(d.pendiente))} pendientes.`)
+        }
+      }
+      if (ap?.modo === 'medio') {
+        for (const m of MEDIOS_APLICAR_AD) {
+          if (porMedio[m] > centavosAplAd(disp.porMedio[m])) errores.push(`Con ${NOMBRE_MEDIO_APLICAR_AD[m].toLowerCase()} aplicás ${importeHoja(porMedio[m] / 100)} y quedan ${importeHoja(disp.porMedio[m])} sin aplicar.`)
+        }
+      }
+      if (aplicadoC > centavosAplAd(disp.libre)) errores.push(`Aplicás ${importeHoja(aplicadoC / 100)} y quedan ${importeHoja(disp.libre)} libres.`)
+      return {
+        libre: disp.libre, aplicado: aplicadoC / 100, aCuenta: Math.max(0, centavosAplAd(disp.libre) - aplicadoC) / 100,
+        disponiblePorMedio: disp.porMedio,
+        aplicadoPorMedio: { cheque: porMedio.cheque / 100, transferencia: porMedio.transferencia / 100, efectivo: porMedio.efectivo / 100 },
+        errores, excedidos, nuevos,
+      }
+    }
+
+    // "Aplicar" en un crédito: abre el selector debajo; en una cobranza con
+    // algo aplicado, primero lee lo que ya tenía (sin eso no se aplica: la
+    // base lo borraría). Después sugiere "Aplicar todo".
+    async function abrirAplicarAd(clave) {
+      const c = estado.cliente
+      if (!c || !puedeAplicarAd() || !pendientesActivosAd(c)) return
+      const k = creditosLibresAd(c.pend.datos).find(x => claveCreditoAd(x) === clave)
+      if (!k || !creditoAplicableAd(k)) return
+      const ap = aplicacionVaciaAd(k)
+      c.aplicar = ap
+      pintarCliente()
+      if (ap.previas === null) {
+        let res
+        try {
+          res = await supabase.rpc('recibo_cobranza', { p_cobranza_id: k.credito_id })
+        } catch (err) {
+          res = { data: null, error: err }
+        }
+        if (estado.cliente !== c || c.aplicar !== ap) return
+        if (res?.error || !res?.data) {
+          ap.errorPrevias = 'No se pudo leer lo que esta cobranza ya tenía aplicado (' + (res?.error?.message || 'no vino nada') + '). Sin eso no se puede aplicar: se borraría.'
+          pintarCliente()
+          return
+        }
+        const previas = itemsPreviosAd(res.data.aplicaciones)
+        const suma = previas.reduce((s, x) => s + centavosAplAd(x.monto), 0)
+        if (suma !== centavosAplAd(k.aplicado)) {
+          ap.errorPrevias = `Lo que esta cobranza ya tenía aplicado (${importeHoja(suma / 100)}) no coincide con la cuenta (${importeHoja(k.aplicado)}). Volvé a abrir la cuenta del cliente.`
+          pintarCliente()
+          return
+        }
+        ap.previas = previas
+      }
+      await sugerirTodoAd(null)
+    }
+
+    function cerrarAplicarAd() {
+      const c = estado.cliente
+      if (!c?.aplicar || c.aplicar.enviando) return
+      c.aplicar = null
+      pintarCliente()
+    }
+
+    function aplicarListoAd(c) {
+      const ap = c?.aplicar
+      return !!ap && ap.previas !== null && !ap.errorPrevias && pendientesActivosAd(c)
+    }
+
+    // "Aplicar todo" / "Solo N1" / "Solo N2": sugerir_aplicacion con lo libre.
+    async function sugerirTodoAd(parte = null) {
+      const c = estado.cliente
+      if (!aplicarListoAd(c)) return
+      const ap = c.aplicar
+      const turno = (ap.turno ?? 0) + 1
+      ap.turno = turno
+      ap.parte = parte === 'N1' || parte === 'N2' ? parte : null
+      ap.foco = null
+      const libre = disponibleAd(ap.credito).libre
+      let res
+      try {
+        res = await supabase.rpc('sugerir_aplicacion', { p_cliente_id: c.id, p_monto: Math.round(libre * 100) / 100, p_parte: ap.parte })
+      } catch (err) {
+        res = { data: null, error: err }
+      }
+      if (estado.cliente !== c || c.aplicar !== ap || ap.turno !== turno) return
+      if (res?.error) {
+        ap.errorSugerir = res.error.message || 'No se pudo calcular la sugerencia.'
+      } else {
+        ap.errorSugerir = ''
+        const montos = {}
+        for (const it of Array.isArray(res?.data?.items) ? res.data.items : []) {
+          const n = Number(it?.monto)
+          if (Number.isFinite(n) && n > 0) montos[claveDocAd(it)] = n
+        }
+        ap.modo = 'todo'
+        ap.montos = montos
+      }
+      pintarCliente()
+    }
+
+    // Igual que sugerir_aplicacion (del más viejo al más nuevo, el último
+    // parcial) sobre lo que los OTROS medios no tomaron: la base no conoce
+    // lo elegido sin guardar.
+    function sugerirMedioLocalAd(docs, monto, parte, ocupados) {
+      const r = {}
+      let resta = centavosAplAd(monto)
+      for (const d of docs) {
+        if (resta <= 0) break
+        if (parte && d.parte !== parte) continue
+        const k = claveDocAd(d)
+        const libre = centavosAplAd(d.pendiente) - (ocupados.get(k) ?? 0)
+        if (libre <= 0) continue
+        const toma = Math.min(resta, libre)
+        r[k] = toma / 100
+        resta -= toma
+      }
+      return r
+    }
+
+    function sugerirMedioAd(medio, parte = null) {
+      const c = estado.cliente
+      if (!aplicarListoAd(c) || !MEDIOS_APLICAR_AD.includes(medio)) return
+      const ap = c.aplicar
+      const docs = docsPendientesAd(c.pend.datos)
+      const ocupados = new Map()
+      let otros = 0
+      for (const m of MEDIOS_APLICAR_AD) {
+        if (m === medio) continue
+        for (const [k, v] of Object.entries(ap.medios?.[m]?.montos ?? {})) {
+          const cent = centavosAplAd(leerNumeroAr(v))
+          ocupados.set(k, (ocupados.get(k) ?? 0) + cent)
+          otros += cent
+        }
+      }
+      const disp = disponibleAd(ap.credito)
+      const tope = Math.min(centavosAplAd(disp.porMedio[medio]), Math.max(0, centavosAplAd(disp.libre) - otros)) / 100
+      const p = parte === 'N1' || parte === 'N2' ? parte : null
+      ap.medios[medio] = { parte: p, montos: sugerirMedioLocalAd(docs, tope, p, ocupados) }
+      ap.foco = null
+      pintarCliente()
+    }
+
+    function cambiarModoAd(modo) {
+      const c = estado.cliente
+      if (!aplicarListoAd(c) || !['todo', 'medio'].includes(modo)) return
+      const ap = c.aplicar
+      if (ap.modo === modo || (modo === 'medio' && !hayMediosAd(ap.credito))) return
+      ap.modo = modo
+      ap.foco = null
+      pintarCliente()
+    }
+
+    // Un monto a mano: se guarda tal cual (texto) y se repintan SOLO las
+    // cifras y los errores (no se le saca el foco a quien escribe).
+    function actualizarMontoAd(clave, medio, valor) {
+      const c = estado.cliente
+      if (!aplicarListoAd(c)) return
+      const ap = c.aplicar
+      const montos = medio ? ap.medios?.[medio]?.montos : ap.montos
+      if (!montos) return
+      montos[clave] = valor
+      ap.foco = { clave, medio: medio ?? '' }
+      pintarCifrasAd()
+    }
+
+    function htmlCifrasAd(r) {
+      const cifra = (rotulo, valor, dato) => `<div class="ad-apl__cifra"><span class="ad-apl__rotulo">${esc(rotulo)}</span><span class="ad-apl__valor" data-ad-apl-cifra="${esc(dato)}">${esc(importeHoja(valor))}</span></div>`
+      return cifra('Libre para aplicar', r.libre, 'libre') + cifra('Aplicado ahora', r.aplicado, 'aplicado') + cifra('Queda a cuenta', r.aCuenta, 'a_cuenta')
+    }
+
+    function htmlBotonesParteAd(destino, docs) {
+      const hay = (p) => docs.some(d => d.parte === p)
+      return `<div class="ad-apl__botones">` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-ad-apl-sugerir="${esc(destino)}" data-ad-apl-parte="">Sugerir</button>` +
+        (hay('N1') ? `<button type="button" class="ad-btn ad-btn--suave" data-ad-apl-sugerir="${esc(destino)}" data-ad-apl-parte="N1">Solo N1</button>` : '') +
+        (hay('N2') ? `<button type="button" class="ad-btn ad-btn--suave" data-ad-apl-sugerir="${esc(destino)}" data-ad-apl-parte="N2">Solo N2</button>` : '') +
+        '</div>'
+    }
+
+    function htmlFilaAplicarAd(d, medio, excedido) {
+      const clave = claveDocAd(d)
+      return `<div class="ad-apl__fila${excedido ? ' ad-apl__fila--excedida' : ''}" data-ad-apl-fila="${esc(clave)}"><div class="ad-pend__doc">` +
+        `<div class="ad-pend__etiqueta">${esc(d.etiqueta ?? '—')}</div>` +
+        `<div class="ad-texto-suave">${esc([esFechaIso(d.fecha) ? fechaCorta(d.fecha) : '', 'Monto ' + importeHoja(d.monto), 'Pendiente ' + importeHoja(d.pendiente)].filter(Boolean).join(' · '))}</div></div>` +
+        `<input type="text" class="ad-input" inputmode="decimal" autocomplete="off" aria-label="${esc('Aplicar a ' + (d.etiqueta ?? 'este renglón'))}" placeholder="Aplicar" data-ad-apl-doc="${esc(clave)}" data-ad-apl-medio="${esc(medio ?? '')}"></div>`
+    }
+
+    // El panel del selector. Los montos los pone pintarAplicarAd (con
+    // ponerNumero, nunca un value en la plantilla); los errores y el estado
+    // del botón, pintarCifrasAd.
+    function htmlAplicarAd(c) {
+      const ap = c?.aplicar
+      if (!ap) return ''
+      const k = ap.credito
+      const aplTitulo = `<div class="ad-apl__titulo">${esc('Aplicar: ' + (k?.etiqueta ?? 'el crédito'))}</div>`
+      const aplCancelar = '<button type="button" class="ad-btn ad-btn--suave" data-ad-apl-cancelar>Cancelar</button>'
+      if (ap.errorPrevias) return `<div class="ad-panel ad-apl" id="ad-apl">${aplTitulo}<div class="ad-aviso ad-aviso--grave">${esc(ap.errorPrevias)}</div><div class="ad-panel__acciones">${aplCancelar}</div></div>`
+      if (ap.previas === null) return `<div class="ad-panel ad-apl" id="ad-apl">${aplTitulo}<p class="ad-texto-suave">Leyendo lo que ya tenía aplicado…</p><div class="ad-panel__acciones">${aplCancelar}</div></div>`
+      const docs = docsPendientesAd(c.pend?.datos)
+      const r = resumenAplicacionAd(ap, c.pend?.datos)
+      const yaTenia = (ap.previas ?? []).reduce((s, x) => s + centavosAplAd(x.monto), 0)
+      const aplPrevio = yaTenia > 0 ? `<p class="ad-texto-suave">${esc('Ya tenía aplicado ' + importeHoja(yaTenia / 100) + ': se mantiene y se le suma lo de abajo.')}</p>` : ''
+      if (!docs.length) return `<div class="ad-panel ad-apl" id="ad-apl">${aplTitulo}${aplPrevio}<div class="ad-aviso">El cliente no tiene nada pendiente para aplicar.</div><div class="ad-panel__acciones">${aplCancelar}</div></div>`
+      const medios = hayMediosAd(k)
+      const modo = ap.modo === 'medio' && medios ? 'medio' : 'todo'
+      const aplSegmento = medios ? '<div class="ad-segmento" role="group" aria-label="Cómo se aplica">' +
+        [['todo', 'Aplicar todo'], ['medio', 'Por medio de pago']].map(([id, texto]) => `<button type="button" class="ad-segmento__opcion" aria-pressed="${modo === id ? 'true' : 'false'}" data-ad-apl-modo="${esc(id)}">${esc(texto)}</button>`).join('') + '</div>' : ''
+      const aplSugerir = ap.errorSugerir ? `<div class="ad-aviso ad-aviso--grave">${esc(ap.errorSugerir)}</div>` : ''
+      const aplCuerpo = modo === 'todo'
+        ? htmlBotonesParteAd('todo', docs) + aplSugerir + `<div class="ad-apl__bloque">${docs.map(d => htmlFilaAplicarAd(d, null, r.excedidos.has(claveDocAd(d)))).join('')}</div>`
+        : aplSugerir + MEDIOS_APLICAR_AD.filter(m => centavosAplAd(r.disponiblePorMedio[m]) > 0).map(m =>
+          `<div class="ad-apl__bloque" data-ad-apl-bloque="${esc(m)}"><div class="ad-apl__bloque-titulo"><span>${esc(NOMBRE_MEDIO_APLICAR_AD[m] + ' ' + importeHoja(r.disponiblePorMedio[m]))}</span>` +
+          `<span>aplicado <span data-ad-apl-medio-total="${esc(m)}">${esc(importeHoja(r.aplicadoPorMedio[m]))}</span></span></div>` +
+          htmlBotonesParteAd(m, docs) + docs.map(d => htmlFilaAplicarAd(d, m, r.excedidos.has(claveDocAd(d)))).join('') + '</div>').join('')
+      const aplError = ap.error ? `<p class="ad-error-pegado" id="ad-apl-error" role="alert">${esc(ap.error)}</p>` : ''
+      return `<div class="ad-panel ad-apl" id="ad-apl">${aplTitulo}${aplPrevio}<div class="ad-apl__cifras" id="ad-apl-cifras">${htmlCifrasAd(r)}</div>${aplSegmento}${aplCuerpo}` +
+        `<p class="ad-error-pegado" id="ad-apl-errores" hidden></p>${aplError}<div class="ad-panel__acciones">` +
+        `<button type="button" class="ad-btn" id="ad-apl-confirmar" data-ad-apl-confirmar>${esc(ap.enviando ? 'Aplicando…' : 'Aplicar')}</button>${aplCancelar}</div></div>`
+    }
+
+    // Las cifras, los errores, los totales por medio y el botón, EN EL LUGAR.
+    function pintarCifrasAd() {
+      const c = estado.cliente
+      if (!aplicarListoAd(c)) return
+      const ap = c.aplicar
+      const r = resumenAplicacionAd(ap, c.pend.datos)
+      const cifras = document.getElementById('ad-apl-cifras')
+      if (cifras) cifras.innerHTML = htmlCifrasAd(r)
+      const err = document.getElementById('ad-apl-errores')
+      if (err) { err.hidden = !r.errores.length; err.innerHTML = r.errores.map(esc).join('<br>') }
+      const boton = document.getElementById('ad-apl-confirmar')
+      if (boton) boton.disabled = !r.nuevos.length || r.errores.length > 0 || ap.enviando
+      ;(document.querySelectorAll?.('[data-ad-apl-medio-total]') ?? []).forEach(el => { el.textContent = importeHoja(r.aplicadoPorMedio[el.dataset?.adAplMedioTotal] ?? 0) })
+      ;(document.querySelectorAll?.('[data-ad-apl-fila]') ?? []).forEach(el => { el.classList?.toggle?.('ad-apl__fila--excedida', r.excedidos.has(el.dataset?.adAplFila)) })
+    }
+
+    // Después de cada pintarCliente: los montos en los campos (formato
+    // argentino) y el foco de vuelta donde se estaba escribiendo.
+    function pintarAplicarAd() {
+      const c = estado.cliente
+      const ap = c?.aplicar
+      if (!ap) return
+      const panel = document.getElementById('ad-apl')
+      ;(panel?.querySelectorAll?.('[data-ad-apl-doc]') ?? []).forEach(campo => {
+        enlazarCampoNumero(campo, { decimales: 2 })
+        const medio = campo.dataset.adAplMedio
+        const montos = medio ? ap.medios?.[medio]?.montos : ap.montos
+        const n = leerNumeroAr(montos?.[campo.dataset.adAplDoc])
+        if (n !== null && n > 0) ponerNumero(campo, n)
+        if (ap.foco && ap.foco.clave === campo.dataset.adAplDoc && ap.foco.medio === (medio ?? '')) campo.focus?.()
+      })
+      pintarCifrasAd()
+    }
+
+    // Aplicar: lo que ya tenía MÁS lo nuevo. El error de la base, tal cual;
+    // si sale bien, se vuelven a leer cliente_pendientes y la cuenta.
+    async function confirmarAplicarAd() {
+      const c = estado.cliente
+      if (!aplicarListoAd(c) || !puedeAplicarAd() || c.aplicar.enviando) return
+      const ap = c.aplicar
+      const r = resumenAplicacionAd(ap, c.pend.datos)
+      if (!r.nuevos.length || r.errores.length) return
+      const items = itemsParaEnviarAd(ap.previas, r.nuevos)
+      ap.enviando = true
+      ap.error = ''
+      ap.foco = null
+      pintarCliente()
+      let res
+      try {
+        res = await supabase.rpc('aplicar_credito_cliente', { p_cliente_id: c.id, p_credito_tipo: ap.credito.credito_tipo, p_credito_id: ap.credito.credito_id, p_items: items })
+      } catch (err) {
+        console.error('Falló aplicar_credito_cliente:', err)
+        res = { data: null, error: { message: 'No se pudo contactar al servidor para aplicar. Volvé a intentar.' } }
+      }
+      if (estado.cliente !== c || c.aplicar !== ap) return
+      ap.enviando = false
+      if (res?.error) {
+        ap.error = res.error.message || 'No se pudo aplicar.'
+        pintarCliente()
+        return
+      }
+      c.aplicar = null
+      mostrarExito(`Aplicado ${importeHoja(res?.data?.aplicado)} · Queda a cuenta ${importeHoja(res?.data?.a_cuenta)}`)
+      await releerPendientesYCuentaAd(c)
+    }
+
+    async function releerPendientesYCuentaAd(c) {
+      try {
+        const [r] = await Promise.all([leerCuenta(c.id), cargarPendientesAd(c)])
+        if (estado.cliente !== c) return
+        Object.assign(c, r)
+      } catch (err) {
+        console.error('No se pudo volver a leer la cuenta:', err)
+        if (estado.cliente !== c) return
+        mostrarError('Se aplicó, pero no se pudo volver a leer la cuenta: salí y volvé a entrar.')
+      }
+      if (estado.cliente === c) pintarCliente()
+    }
+
+    function alTocarPendientesAd(ev) {
+      const el = ev?.target?.closest?.('[data-ad-aplicar], [data-ad-apl-cancelar], [data-ad-apl-confirmar], [data-ad-apl-modo], [data-ad-apl-sugerir], [data-ad-recibo], [data-ad-pend-reintentar]')
+      if (!el || !estado.cliente) return
+      const d = el.dataset
+      if (d.adAplicar) abrirAplicarAd(d.adAplicar)
+      else if (d.adAplCancelar !== undefined) cerrarAplicarAd()
+      else if (d.adAplConfirmar !== undefined) confirmarAplicarAd()
+      else if (d.adAplModo) cambiarModoAd(d.adAplModo)
+      else if (d.adAplSugerir === 'todo') sugerirTodoAd(d.adAplParte || null)
+      else if (d.adAplSugerir) sugerirMedioAd(d.adAplSugerir, d.adAplParte || null)
+      else if (d.adRecibo) abrirReciboAd(d.adRecibo)
+      else if (d.adPendReintentar !== undefined) reintentarPendientesAd()
+    }
+
+    function alEscribirPendientesAd(ev) {
+      const el = ev?.target
+      if (el?.dataset?.adAplDoc) actualizarMontoAd(el.dataset.adAplDoc, el.dataset.adAplMedio || null, el.value)
+    }
+
+    // ── El recibo (copia del de Cobranzas) ─────────────────────────────────
+    // "Recibo" en la línea de cada cobranza de la cuenta (la que tiene
+    // cobranza_id), solo si el cliente tiene corte (sin corte, nada nuevo).
+    function htmlReciboLineaAd(m, c) {
+      if (m?.tipo !== 'cobranza' || !m.cobranza_id || !pendientesActivosAd(c)) return ''
+      return `<div class="ad-rc-linea"><button type="button" class="ad-btn ad-btn--suave" data-ad-recibo="${esc(m.cobranza_id)}">Recibo</button></div>`
+    }
+
+    function cuitReciboAd(cuit) {
+      const d = String(cuit ?? '').replace(/\D/g, '')
+      return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : String(cuit ?? '').trim()
+    }
+
+    function fechaReciboAd(f) {
+      return fechaCorta(String(f ?? '').slice(0, 10))
+    }
+
+    // "Banco de la Nación Argentina" → "Nación Argentina"; sin "S.A." al final.
+    function bancoCortoAd(nombre) {
+      const t = String(nombre ?? '').trim()
+        .replace(/\s+S\.?\s?A\.?\s?U?\.?$/i, '')
+        .replace(/^banco\s+(de\s+la\s+|del\s+|de\s+)?/i, '')
+      return t || String(nombre ?? '').trim() || '—'
+    }
+
+    // Para un cliente solo N2 no se dice nada de N1 (una comisión podría
+    // armar un renglón N1).
+    function etiquetaReciboAd(x, soloN2) {
+      const e = String(x?.etiqueta ?? '—')
+      return soloN2 ? e.replace(/^N1-/, 'Orden ') : e
+    }
+
+    function textoSaldoCuentaAd(saldo) {
+      const s = Number(saldo)
+      if (saldo === null || saldo === undefined || !Number.isFinite(s)) return '—'
+      if (centavosAplAd(s) > 0) return `${importeHoja(s)} a pagar`
+      if (centavosAplAd(s) < 0) return `${importeHoja(-s)} a favor del cliente`
+      return 'en cero'
+    }
+
+    function filasReciboAd(d) {
+      return (d?.cheques?.length ?? 0) + (d?.transferencias?.length ?? 0) + (d?.aplicaciones?.length ?? 0) + (Number(d?.efectivo) > 0 ? 1 : 0)
+    }
+
+    // UNA hoja: con muchos renglones, la letra más chica.
+    function claseHojaReciboAd(d) {
+      return filasReciboAd(d) > FILAS_RECIBO_COMPACTO_AD ? 'ad-rc-hoja ad-rc-hoja--compacta' : 'ad-rc-hoja'
+    }
+
+    // Puro: la hoja entera. Todo texto de la base pasa por esc(); el logo,
+    // por logoSeguro().
+    function htmlReciboAd(d) {
+      const e = d?.empresa ?? {}
+      const cl = d?.cliente ?? {}
+      const soloN2 = cl.solo_n2 === true
+      const cheques = Array.isArray(d?.cheques) ? d.cheques : []
+      const transf = Array.isArray(d?.transferencias) ? d.transferencias : []
+      const aplic = (Array.isArray(d?.aplicaciones) ? d.aplicaciones : []).filter(x => centavosAplAd(x?.aplicado) > 0)
+      const efectivo = Number(d?.efectivo) || 0
+      const medios = d?.medios ?? {}
+      const aCuenta = Number(d?.a_cuenta) || 0
+      const logo = logoSeguro(e.logo_url)
+      const imp = (n) => esc(importeHoja(Number(n)))
+      const rcCheques = cheques.length ? '<table class="ad-rc-tabla"><caption>Cheques</caption><thead><tr><th>Banco</th><th>N°</th><th>Tipo</th><th>Emisión</th><th>Vence</th><th class="ad-rc-num">Importe</th></tr></thead><tbody>' +
+        cheques.map(q => `<tr><td>${esc(bancoCortoAd(q.banco))}</td><td>${esc(q.numero ?? '—')}</td><td>${esc((q.tipo === 'diferido' ? 'Diferido' : 'A la vista') + (q.echeq ? ' · eCheq' : ''))}</td><td>${esc(fechaReciboAd(q.emision))}</td><td>${esc(q.tipo === 'diferido' ? fechaReciboAd(q.pago) : 'A la vista')}</td><td class="ad-rc-num">${imp(q.importe)}</td></tr>`).join('') +
+        '</tbody></table>' : ''
+      const rcTransf = transf.length ? '<table class="ad-rc-tabla"><caption>Transferencias</caption><thead><tr><th>Cuenta</th><th>Banco de origen</th><th>N° operación</th><th>Fecha</th><th class="ad-rc-num">Importe</th></tr></thead><tbody>' +
+        transf.map(t => `<tr><td>${esc(t.cuenta ?? '—')}</td><td>${esc((t.banco_origen ?? '—') + (t.medio === 'deposito_efectivo' ? ' (depósito en efectivo)' : ''))}</td><td>${esc(t.referencia ?? '—')}</td><td>${esc(fechaReciboAd(t.fecha))}</td><td class="ad-rc-num">${imp(t.importe)}</td></tr>`).join('') +
+        '</tbody></table>' : ''
+      const rcEfectivo = efectivo > 0 ? `<table class="ad-rc-tabla"><caption>Efectivo</caption><tbody><tr><td>Efectivo</td><td class="ad-rc-num">${imp(efectivo)}</td></tr></tbody></table>` : ''
+      const rcAplic = aplic.length ? '<table class="ad-rc-tabla"><thead><tr><th>Renglón</th><th class="ad-rc-num">Monto</th><th class="ad-rc-num">Aplicado</th></tr></thead><tbody>' +
+        aplic.map(x => `<tr><td>${esc(etiquetaReciboAd(x, soloN2))}</td><td class="ad-rc-num">${imp(x.monto_doc)}</td><td class="ad-rc-num">${imp(x.aplicado)}</td></tr>`).join('') +
+        '</tbody></table>' : '<p>Nada: todo queda a cuenta.</p>'
+      const rcSubtotales = MEDIOS_APLICAR_AD.filter(m => centavosAplAd(medios[m]) > 0)
+        .map(m => `<div class="ad-rc-caja__fila"><span>${esc(NOMBRE_MEDIO_APLICAR_AD[m])}</span><span>${imp(medios[m])}</span></div>`).join('')
+      const aplicado = aplic.reduce((s, x) => s + centavosAplAd(x.aplicado), 0) / 100
+      const sinPago = !cheques.length && !transf.length && !(efectivo > 0)
+      return '<div class="ad-rc-cab"><div class="ad-rc-cab__emisor">' +
+        (logo ? `<img class="ad-rc-cab__logo" src="../${encodeURIComponent(logo)}" alt="">` : '') +
+        `<div><div class="ad-rc-cab__razon">${esc(limpio(e.razon_social) || limpio(e.nombre) || '—')}</div>` +
+        (e.cuit ? `<div class="ad-rc-cab__dato">${esc('CUIT ' + cuitReciboAd(e.cuit))}</div>` : '') +
+        (e.domicilio ? `<div class="ad-rc-cab__dato">${esc(e.domicilio)}</div>` : '') + '</div></div>' +
+        `<div class="ad-rc-cab__fecha">${esc('Fecha ' + fechaReciboAd(d?.fecha))}</div></div>` +
+        '<div class="ad-rc-titulo">RECIBO</div>' +
+        '<div class="ad-rc-seccion"><div class="ad-rc-seccion__titulo">Cliente</div>' +
+        `<div><strong>${esc(limpio(cl.razon_social) || limpio(cl.nombre) || '—')}</strong>${limpio(cl.razon_social) && limpio(cl.nombre) && limpio(cl.razon_social) !== limpio(cl.nombre) ? esc(' · ' + cl.nombre) : ''}</div>` +
+        (cl.cuit ? `<div>${esc('CUIT ' + cuitReciboAd(cl.cuit))}</div>` : '') + '</div>' +
+        '<div class="ad-rc-columnas">' +
+        `<div class="ad-rc-seccion"><div class="ad-rc-seccion__titulo">Con qué pagó</div>${rcCheques}${rcTransf}${rcEfectivo}${sinPago ? '<p>—</p>' : ''}</div>` +
+        `<div class="ad-rc-seccion"><div class="ad-rc-seccion__titulo">Qué cancela</div>${rcAplic}</div></div>` +
+        '<div class="ad-rc-totales">' +
+        `<div class="ad-rc-caja">${rcSubtotales}<div class="ad-rc-caja__total"><span>TOTAL COBRADO</span><span data-ad-rc-total="cobrado">${imp(d?.total)}</span></div></div>` +
+        `<div class="ad-rc-caja"><div class="ad-rc-caja__total"><span>TOTAL APLICADO</span><span data-ad-rc-total="aplicado">${imp(aplicado)}</span></div></div></div>` +
+        (centavosAplAd(aCuenta) > 0 ? `<div class="ad-rc-franja"><span>Queda a cuenta del cliente</span><span>${imp(aCuenta)}</span></div>` : '') +
+        `<div class="ad-rc-pie">${esc('Saldo de la cuenta: ' + textoSaldoCuentaAd(d?.saldo_cuenta))}</div>`
+    }
+
+    // "Recibo - <CLIENTE> - <dd-mm-aaaa>.pdf", sin caracteres que un sistema
+    // de archivos no acepte.
+    function nombreArchivoReciboAd(d) {
+      const cliente = String(d?.cliente?.nombre || d?.cliente?.razon_social || 'Cliente').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()
+      const f = String(d?.fecha ?? '').slice(0, 10)
+      const fecha = esFechaIso(f) ? `${f.slice(8, 10)}-${f.slice(5, 7)}-${f.slice(0, 4)}` : 'sin-fecha'
+      return `Recibo - ${cliente} - ${fecha}.pdf`
+    }
+
+    async function abrirReciboAd(cobranzaId) {
+      if (!cobranzaId) return
+      const turno = (estado.turnoReciboAd ?? 0) + 1
+      estado.turnoReciboAd = turno
+      estado.reciboAd = { id: cobranzaId, datos: null, error: null, enviando: false }
+      document.getElementById('ad-rc').hidden = false
+      pintarReciboAd()
+      let res
+      try {
+        res = await supabase.rpc('recibo_cobranza', { p_cobranza_id: cobranzaId })
+      } catch (err) {
+        res = { data: null, error: err }
+      }
+      if (turno !== estado.turnoReciboAd || estado.reciboAd?.id !== cobranzaId) return
+      if (res?.error || !res?.data) estado.reciboAd.error = 'No se pudo leer el recibo: ' + (res?.error?.message || 'no vino nada.')
+      else estado.reciboAd.datos = res.data
+      pintarReciboAd()
+      document.getElementById('ad-rc-enviar').focus?.()
+    }
+
+    function pintarReciboAd() {
+      const r = estado.reciboAd
+      if (!r) return
+      const hoja = document.getElementById('ad-rc-hoja')
+      hoja.className = r.datos ? claseHojaReciboAd(r.datos) : 'ad-rc-hoja'
+      hoja.innerHTML = r.datos ? htmlReciboAd(r.datos) : (r.error ? '' : '<p>Cargando el recibo…</p>')
+      const err = document.getElementById('ad-rc-error')
+      err.textContent = r.error ?? ''
+      err.hidden = !r.error
+      const enviar = document.getElementById('ad-rc-enviar')
+      enviar.disabled = !r.datos || r.enviando
+      enviar.textContent = r.enviando ? 'Armando el PDF…' : 'Enviar'
+      document.getElementById('ad-rc-imprimir').disabled = !r.datos
+    }
+
+    function cerrarReciboAd() {
+      estado.turnoReciboAd = (estado.turnoReciboAd ?? 0) + 1
+      estado.reciboAd = null
+      document.getElementById('ad-rc').hidden = true
+    }
+
+    // A4 vertical, UNA hoja, en #ad-impresion (como la nota de débito). Sin
+    // ningún await antes del print (el iPhone).
+    function imprimirReciboAd() {
+      const d = estado.reciboAd?.datos
+      if (!d) return
+      olvidarHoja(impresionHoja())
+      const reglaA4 = '<style>@media print { @page { size: A4 portrait; margin: 8mm; } }</style>'
+      document.getElementById('ad-impresion').innerHTML = reglaA4 + `<div class="${claseHojaReciboAd(d)} ad-rc-hoja--papel">${htmlReciboAd(d)}</div>`
+      window.print()
+    }
+
+    // El PDF (html2canvas + jsPDF de cdnjs, cargados al usarlos): UNA hoja
+    // A4; si no entra, se achica.
+    async function pdfReciboAd(d) {
+      if (!(typeof window.html2canvas === 'function' && window.jspdf?.jsPDF)) {
+        for (const url of LIBRERIAS_PDF) await cargarScript(url)
+      }
+      const cont = document.createElement('div')
+      cont.style.cssText = 'position:fixed;left:-10000px;top:0;width:194mm;background:#fff'
+      const hoja = document.createElement('div')
+      hoja.className = claseHojaReciboAd(d) + ' ad-rc-hoja--papel'
+      hoja.innerHTML = htmlReciboAd(d)
+      cont.appendChild(hoja)
+      document.body.appendChild(cont)
+      try {
+        const imgs = [...hoja.querySelectorAll('img')]
+        await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r })))
+        if (document.fonts?.ready) await document.fonts.ready
+        const canvas = await window.html2canvas(hoja, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
+        const escala = Math.min(190 / canvas.width, 277 / canvas.height)
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, canvas.width * escala, canvas.height * escala)
+        return pdf.output('blob')
+      } finally {
+        cont.remove()
+      }
+    }
+
+    // "Enviar": compartir el PDF (celular) o descargarlo.
+    async function enviarReciboAd() {
+      const r = estado.reciboAd
+      const d = r?.datos
+      if (!d || r.enviando) return
+      r.enviando = true
+      r.error = null
+      pintarReciboAd()
+      try {
+        const blob = await pdfReciboAd(d)
+        const nombre = nombreArchivoReciboAd(d)
+        const archivo = typeof File === 'function' ? new File([blob], nombre, { type: 'application/pdf' }) : null
+        let compartido = false
+        if (archivo && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+          try {
+            await navigator.share({ files: [archivo], title: nombre.replace(/\.pdf$/, '') })
+            compartido = true
+          } catch (err) {
+            if (err?.name === 'AbortError') compartido = true
+          }
+        }
+        if (!compartido) {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = nombre
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          setTimeout(() => URL.revokeObjectURL(url), 60000)
+          mostrarExito('Se descargó el recibo: ' + nombre)
+        }
+      } catch (err) {
+        console.error('No se pudo armar el PDF del recibo:', err)
+        if (estado.reciboAd === r) r.error = 'No se pudo armar el PDF del recibo: ' + (err?.message || 'probá de nuevo') + '.'
+      }
+      r.enviando = false
+      if (estado.reciboAd === r) pintarReciboAd()
+    }
+
+    // Los eventos de todo esto (una sola vez, al arrancar).
+    function enlazarPendientesAd() {
+      const cuerpo = document.getElementById('ad-cliente-cuerpo')
+      cuerpo.addEventListener('click', (e) => alTocarPendientesAd(e))
+      cuerpo.addEventListener('input', (e) => alEscribirPendientesAd(e))
+      document.getElementById('ad-rc-cerrar').addEventListener('click', () => cerrarReciboAd())
+      document.getElementById('ad-rc').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarReciboAd() })
+      document.getElementById('ad-rc-imprimir').addEventListener('click', () => imprimirReciboAd())
+      document.getElementById('ad-rc-enviar').addEventListener('click', () => enviarReciboAd())
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('ad-rc').hidden) cerrarReciboAd() })
     }
 
     // ── EL RESUMEN DE CUENTA (11/10/2026, js/resumen-cuenta.js) ────────────
@@ -13840,6 +14726,8 @@
         const o = e.target.closest('[data-otra-cuenta]')
         if (o) abrirOtraCuenta(o.dataset.otraCuenta, o.dataset.otraUnidad)
       })
+      // Pendientes desde el corte, aplicar y el recibo (30/10/2026).
+      enlazarPendientesAd()
       // La cuenta de cliente y proveedor (js/cuenta-unica.js): Compensar, el
       // filtro y los campos del panel.
       const unica = document.getElementById('ad-cuenta-unica')

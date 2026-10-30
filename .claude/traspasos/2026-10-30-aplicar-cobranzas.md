@@ -2,8 +2,10 @@
 
 Autocontenido: quien lo lee no vio el trabajo. Dos partes:
 - **A. Lo hecho en `modulos/cobranzas.html`** (para el chat de arquitectura: documentación).
-- **B. PARA CUENTAS CORRIENTES**: lo que falta en `modulos/cuentas-corrientes.html`, para su dueño. No lo hizo el
-  subagente de Cobranzas porque ese archivo no es su territorio (lo acordó el coordinador: "camino A").
+- **B. PARA CUENTAS CORRIENTES**: lo que faltaba en la cuenta del cliente. No lo hizo el subagente de Cobranzas porque
+  ese archivo no es su territorio (lo acordó el coordinador: "camino A"). **Corrección (30/10/2026): el lugar no era
+  `cuentas-corrientes.html` sino `modulos/administracion.html`** (ver la nota al principio de la B).
+- **C. Lo hecho en Administración**: la parte B, hecha en `modulos/administracion.html`.
 
 Pedido completo: `.claude/pedidos/2026-10-30-aplicar-cobranzas.md`. Rama `ci-prueba/aplicar-cobranzas`, salida de
 `origin/ci-prueba/cobranza-muchos-comprobantes` = `1aa4b4e` (se integra DESPUÉS de esa: las dos tocan
@@ -117,6 +119,14 @@ corte. Sin corte, sin permiso, el chofer o una edición: **nada nuevo** y se asi
 
 ## B. PARA CUENTAS CORRIENTES (`modulos/cuentas-corrientes.html`, para su dueño)
 
+> **Corrección (30/10/2026): el lugar era Administración.** La cuenta del cliente NO vive en `cuentas-corrientes.html`:
+> vive en `modulos/administracion.html` (se arma con `cuenta_cliente` / `cuenta_cliente_consolidada` dentro de
+> `#ad-cliente-cuerpo`), y Cuentas corrientes → Clientes la muestra en un iframe de
+> `administracion.html?seccion=clientes&embebido=cc`. Todo lo de esta sección se hizo en `administracion.html` y llega a
+> los dos lados; `cuentas-corrientes.html` no se tocó. Donde abajo dice "CC", leer "Administración" (por ejemplo, ahí no
+> existen `logoSeguroCC` ni `cuitConGuiones`: se usó `logoSeguro` de `js/retiros-comun.js` y una copia propia del CUIT).
+> La documentación va en `docs/memoria/administracion.md`, no en `cuentas-corrientes.md`. Lo hecho: sección C.
+
 Ojo con las ramas abiertas en ese archivo: `ci-prueba/detalle-pago-cheques`, `ci-prueba/cc-proveedor-una-lista`
 (orden de pago, nota de débito, lista del proveedor) y `ci-prueba/cc-orden-n1-n2` (desplegable N1/N2). Código en
 lugares nuevos y sin reacomodar.
@@ -185,3 +195,79 @@ Se renombró la variable nueva (`lineaAplicado`). Ahora da 347/347. En la lista 
   hacía "escapar" una mutación). Propuesta: que `mutar.js` diga, cuando una mutación escapa, si el mismo texto
   condicional aparece en otra función del archivo, para ir directo a la redundancia en vez de agregar pruebas
   inútiles.
+
+## C. Lo hecho en Administración (`modulos/administracion.html`, 30/10/2026)
+
+La parte B, hecha donde de verdad vive la cuenta del cliente: `#ad-cliente-cuerpo` de `administracion.html`.
+Cuentas corrientes → Clientes la ve igual (iframe `?seccion=clientes&embebido=cc`). `cuentas-corrientes.html` no se
+tocó. Commit encima de `f6c87c1` en la misma rama. Detalle técnico: `docs/memoria/administracion.md`, sección
+"Pendientes desde el corte, aplicar y el recibo en la cuenta del cliente" (en el medio del archivo, antes de Acopios).
+
+### Qué cambió
+- **"Pendientes desde el corte"** (`#ad-pend`), entre la cabecera de la cuenta (saldo, acopios) y los movimientos:
+  solo si `cliente_pendientes(cliente).activo`. "Lo que debe" (docs con pendiente > 0) y "A favor, sin aplicar"
+  (créditos con libre > 0). Cada crédito: "Aplicar" (solo con `cobranzas:procesar`) y, en las cobranzas, "Recibo".
+- **"Aplicar"** abre debajo del crédito el selector de Cobranzas, DUPLICADO con prefijo `Ad` (funciones `…Ad`, CSS
+  `.ad-apl*`). Al abrir sugiere "Aplicar todo" con lo libre; "Solo N1 / Solo N2"; "Por medio de pago" solo en una
+  cobranza. Se manda lo que ya tenía (de `recibo_cobranza(id).aplicaciones`) MÁS lo nuevo, sumado por renglón y medio.
+  El error de la base, tal cual; si sale bien, se releen `cliente_pendientes` y la cuenta.
+- **El hueco de la base**: en los créditos que no son cobranza, "Aplicar" solo con `aplicado = 0`; si no, el texto
+  "Este crédito ya tiene una parte aplicada: para seguir aplicando falta una función de la base". No se inventó
+  ninguna lectura.
+- **"Recibo"** en la línea de la cobranza de la cuenta y en Pendientes: ventana `#ad-rc` con la hoja copiada
+  (`.ad-rc-*`), UNA hoja A4 (compacta con más de 14 renglones), Imprimir (por `#ad-impresion`, como la nota de débito)
+  y Enviar (PDF a una A4: compartir o descargar "Recibo - <CLIENTE> - dd-mm-aaaa.pdf").
+- **`cuenta_cliente` NO trae el id de la cobranza** (leído con `pg_get_functiondef` el 30/10/2026: devuelve fecha,
+  tipo, detalle, importe, saldo y orden_retiro_id). La línea ya lo tenía por `aparearCobranzas` (lee
+  `cliente_movimientos` en el mismo orden y, si los dos listados no cierran uno a uno, no pone ninguno: nunca se
+  adivina). Por eso el "Recibo" va en la línea cuando el id está apareado, y TAMBIÉN en Pendientes (en los créditos
+  de tipo cobranza, con su `credito_id`), que no depende del apareo.
+- Enganches mínimos en lo existente (por los choques con valorizar-legible, condicion-venta-sin-defecto,
+  division-cero-y-factura, corregir-orden y cc-proveedor-una-lista): una llamada más en `htmlCuenta` (dos puntos),
+  en `pintarCliente`, en el `Promise.all` de `abrirCliente` y en la inicialización. Todo lo demás es nuevo y en
+  lugares que esas ramas no tocan (el CSS después del visor de fotos, la ventana después del visor, las funciones
+  después de `abrirCliente`).
+- Pruebas: `pruebas/test-administracion-aplicar-cobranzas.js` (157/157), `pruebas/mut-administracion-aplicar-cobranzas.js`
+  (92/92 detectadas, +22 equivalentes; baseline `f6c87c1` en rojo, 12/33), `e2e/110-aplicar-cuenta-cliente.spec.js`
+  (7/7; el 102 a 109 ya estaban tomados en las ramas remotas). La primera corrida de mutaciones dio 86/91: escaparon
+  una lectura vieja que pisaba a la nueva, el aviso escondido, el "listo" con lo que ya tenía sin leer, el banco
+  largo y una guarda redundante (`creditoAplicableAd` mira el libre, que `creditosLibresAd` ya filtra): se sumaron
+  pruebas. Y `test-anclas-mutaciones` encontró que la línea de imprimir el recibo era IGUAL a la de la nota de
+  débito (rompía el ancla única de `mut-retiros-imprimir-iphone.js`): se escribió distinta (`reglaA4`), sin tocar
+  esa mutación. Ajustadas: `pruebas/sandbox-administracion.js` (`FUNCIONES_PENDIENTES_AD` y sus constantes en la
+  base, con reemplazos que no hacen nada para copias viejas) y `pruebas/seguras-administracion.js` (las
+  interpolaciones nuevas, con su motivo).
+
+### Decidido sin consultar
+1. El selector reparte solo **lo libre** del crédito; lo que ya tenía se manda tal cual, sumado. No se ofrece
+   editar ni sacar lo ya aplicado (para eso haría falta otra pantalla).
+2. Si no se puede leer lo que la cobranza ya tenía, o su suma no da el `aplicado` de `cliente_pendientes`, se dice
+   y **no se deja aplicar** (mandar menos lo borraría).
+3. Si `cliente_pendientes` falla, un aviso chico con "Volver a intentar" (como en Cobranzas), aunque el cliente no
+   tenga corte: no se sabe.
+4. "Recibo" en la línea solo si el cliente tiene corte (sin corte, nada nuevo), aunque `recibo_cobranza` funcione
+   sin corte.
+5. Leer se pide con `cobranzas:procesar` o `retiros:precios` en la fábrica elegida (la misma con la que se abre la
+   cuenta).
+6. El selector va adentro de la sección (debajo del crédito), no en una ventana: en el celular se lee mejor.
+7. La sección se lee después de las otras cuentas, junto con los acopios: no demora la cuenta.
+
+### Lo que no se pudo probar
+- Contra la base real (solo lectura y 0 clientes con corte): las RPCs se probaron con dobles que hacen lo que dice
+  `pg_get_functiondef`.
+- La impresión real en papel (sí el alto en modo impresión: entra en una A4), `navigator.share` en un celular real y
+  la carga de html2canvas/jsPDF desde cdnjs (la red de esta sesión no llega a cdnjs: en la prueba son dobles). Por
+  eso mismo `e2e/60-cheque-rechazado` "Compartir PDF" da rojo acá (no es de este cambio: baja las librerías).
+- El orden de las imputaciones "efectivas": al reescribir lo que ya tenía, sus renglones quedan con fecha nueva; si
+  algún día un documento baja de monto, la base podría repartir lo efectivo distinto que antes. No pasa hoy.
+
+### Qué automatizaría ahora
+- **El traspaso nombró el archivo equivocado** (la cuenta del cliente en Cuentas corrientes) y hubo que corregirlo a
+  mano. Propuesta: un script `pruebas/donde-vive.js <id o texto>` que diga en qué módulo se ARMA una pantalla
+  (busca el id en el markup y en los `innerHTML`, y avisa si está dentro de un iframe embebido de otro módulo). Que
+  el coordinador lo corra antes de partir un pedido.
+- **Sumar una función al sandbox de Administración es a mano** (la lista, las constantes y los reemplazos para
+  copias viejas). Propuesta: que `sandbox-administracion.js` acepte un bloque marcado en el HTML
+  (`// ═══ SANDBOX: pendientes-ad ═══`) y extraiga todas sus funciones solo, con reemplazos generados.
+- **`spec:numero` sigue sin mirar las ramas remotas** (dijo 109 y estaba tomado; el primero libre era el 110): se
+  volvió a usar un script de `git ls-tree` por rama. Ya estaba propuesto arriba: es la segunda vez, así que va.
