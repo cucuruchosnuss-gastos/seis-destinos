@@ -29,10 +29,17 @@ const FUNCIONES_PAGO = [
   'escritoPorPersona', 'echequeSinDatos', 'completarEcheque', 'tarjetaParaComprobante', 'textoLecturaEcheque', 'restaurarFoco',
   // Depósito en efectivo, cuenta por CBU y comprobantes de a uno (27/10/2026).
   'esDeposito', 'separarNotaDeposito', 'medioDeFila', 'cuentaPorCbu', 'esperarTurnoDelLector',
+  // Varios comprobantes en una cobranza, agrupados y sin repetidos (30/10/2026).
+  'huellaSha256', 'huellaDeArchivo', 'textoAvanceLector', 'gruposDeTransferencias', 'htmlResumenTransferencias',
+  'pintarResumenTransferencias', 'textoLineaTransferencia', 'referenciaNormalizada', 'huellaDeTransferencia',
+  'itemsParaRevisar', 'programarRevisionRepetidos', 'revisarRepetidos', 'textoCobranzaDe', 'mismoImporte',
+  'repetidoDeTransferencia', 'claseRepetido', 'htmlRepetido', 'hayRepetidosRojos', 'pintarRepetidos',
+  'pintarAvisoRepetidos', 'pintarLineaTransferencia',
 ]
 const CONSTANTES_PAGO = [
   'FORMAS_PAGO', 'SECCION_FORMA', 'TEXTO_OTRO_COMPROBANTE', 'TEXTO_PRIMER_COMPROBANTE', 'TIPOS_COMPROBANTE', 'BANCOS_ORIGEN',
   'BYTES_MAXIMO_ARCHIVO', 'TEXTO_BOTON_CHEQUE_MANO_ADMIN', 'MEDIOS_TRANSFERENCIA', 'NOTA_DEPOSITO',
+  'MS_REVISAR_REPETIDOS', 'TEXTO_SACAR_REPETIDOS',
 ]
 
 const FUNCIONES_ASENTAR = [

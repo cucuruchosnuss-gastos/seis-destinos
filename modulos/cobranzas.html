@@ -1255,6 +1255,37 @@
     /* La etiqueta dentro del rótulo del tipo de cheque, que va en mayúsculas:
        la etiqueta conserva su forma, igual que en el resto de la app. */
     .cob-cheque__tipo .forma-pago { text-transform: none; letter-spacing: 0; margin-right: 0.25rem; }
+    /* Varios comprobantes en una cobranza (30/10/2026): el resumen agrupado
+       por medio y banco, arriba de las tarjetas, en tinta neutra. */
+    .cob-resumen-transf {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: var(--radio-tarjeta);
+      padding: 0.75rem 1rem;
+      margin: 0 0 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-resumen-transf__fila { margin: 0 0 0.25rem; }
+    .cob-resumen-transf__medio { font-weight: 600; }
+    .cob-resumen-transf__importe { font-variant-numeric: tabular-nums; }
+    .cob-resumen-transf__total {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--color-borde);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    /* El renglón de un comprobante YA CARGADO: borde bordó (no se puede
+       guardar así). El que solo hay que revisar (mismo número de operación,
+       otro importe) usa .cob-aviso--revisar: lo pidió Facu el 30/10/2026 con
+       los tokens de main.css y es la ÚNICA excepción a los dos escalones de
+       arriba; no bloquea. */
+    .cob-transferencia--repetida { border-color: var(--bordo); box-shadow: 0 0 0 1px var(--bordo); }
+    .cob-aviso--revisar { background: var(--amarillo-suave); border-left-color: var(--amarillo); color: var(--amarillo-oscuro); font-weight: 600; }
+    .cob-transf-linea { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1505,6 +1536,11 @@
           </div>
           <div class="cob-campo__ayuda" data-ayuda-comprobante="transferencia">La captura, la foto, el ticket del depósito o el PDF: se lee solo y después lo revisás. En Galería y Archivo podés elegir varios de una vez.</div>
           <div id="cob-comprobantes-transferencia"></div>
+          <!-- Varios comprobantes (30/10/2026): el resumen agrupado por medio y
+               banco, y el aviso si no se pudo revisar si ya estaban cargados.
+               Los pintan pintarResumenTransferencias() y pintarRepetidos(). -->
+          <div class="cob-resumen-transf" id="cob-resumen-transferencias" hidden></div>
+          <div class="cob-aviso" id="cob-repetidos-aviso" role="status" hidden></div>
           <div id="cob-lista-transferencias"></div>
         </div>
 
@@ -2540,6 +2576,8 @@
         if (!f.transferencias) f.transferencias = []
         if (lista.length) lista.forEach(pr => f.transferencias.push(transferenciaDesdeOcr(pr, foto.id, f.fecha)))
         else f.transferencias.push(Object.assign(transferenciaVacia(f.fecha), { foto_id: foto.id }))
+        // Apenas se leyó: ¿alguno ya estaba cargado? (30/10/2026)
+        programarRevisionRepetidos(0)
       }
     }
 
@@ -2648,9 +2686,24 @@
       return texto ? `<div class="cob-aviso">${escCob(n)}: ${escCob(texto)}</div>` : ''
     }
 
+    // El avance de una tanda de varios comprobantes (30/10/2026): "Leyendo 3
+    // de 7…". Se leen de a uno (esperarTurnoDelLector), así que el que se
+    // está leyendo es el que sigue a los ya leídos. Uno solo no lo dice.
+    function textoAvanceLector(f, tipo) {
+      const tanda = estado.tandaLector?.[tipo]
+      if (!f || !tanda || tanda.formId !== f.id || tanda.total < 2) return ''
+      const fotos = tanda.fotos.map(id => (f.fotos ?? []).find(x => x.id === id)).filter(Boolean)
+      const leidas = fotos.filter(x => x.leida).length
+      if (leidas >= tanda.total) return `Listo: se leyeron los ${tanda.total} comprobantes. Revisalos abajo antes de guardar.`
+      if (!navigator.onLine || fotos.some(x => x.errorRed)) return `Sin señal: van ${leidas} de ${tanda.total} leídos; el resto se lee cuando vuelva.`
+      return `Leyendo ${leidas + 1} de ${tanda.total}…`
+    }
+
     function htmlComprobantes(f, tipo) {
       const fotos = fotosDeTipo(f, tipo)
       if (!fotos.length) return ''
+      const avance = textoAvanceLector(f, tipo)
+      const lineaAvance = avance ? `<div class="cob-aviso" data-avance-lector="${escCob(tipo)}" role="status">${escCob(avance)}</div>` : ''
       const minis = fotos.map((foto, i) => {
         const mini = foto.mime === 'application/pdf'
           ? `<button type="button" class="cob-comprobante-pdf" data-ver-comprobante="${escCob(foto.id)}">PDF</button>`
@@ -2658,7 +2711,7 @@
         return `
             <div class="cob-foto">${mini}<div class="cob-foto__pie">Comprobante ${i + 1}</div></div>`
       }).join('')
-      return `<div class="cob-fotos" style="margin:.75rem 0">${minis}
+      return `${lineaAvance}<div class="cob-fotos" style="margin:.75rem 0">${minis}
           </div>${fotos.map((foto, i) => htmlAvisoComprobante(foto, i)).join('')}`
     }
 
@@ -2721,7 +2774,9 @@
       })
       return usadas.map(x => {
         const fila = { id: x.id, storage_path: x.storage_path, ocr_crudo: x.ocr_crudo ?? null, ocr_modelo: x.ocr_modelo ?? null }
-        if (!x.enBase) { fila.tipo = tipoFoto(x); fila.mime = x.mime || 'image/jpeg' }
+        // La huella del archivo (30/10/2026) va solo en las nuevas: la base
+        // rechaza la misma foto en otra cobranza que no esté anulada.
+        if (!x.enBase) { fila.tipo = tipoFoto(x); fila.mime = x.mime || 'image/jpeg'; if (x.sha256) fila.sha256 = x.sha256 }
         return fila
       })
     }
@@ -2894,8 +2949,14 @@
             : estado.unidadElegida
               ? 'La Empresa no tiene cuentas de banco en pesos en ' + (nombreUnidadCob(estado.unidadElegida) || 'esta unidad') + ' (cambiá la unidad de arriba para ver las otras).'
               : 'La Empresa no tiene cuentas de banco en pesos.')}</div>`)
+      // Varios comprobantes (30/10/2026): el renglón con todo a la vista y, si
+      // ya estaba cargado, en rojo con "Sacar" (o para revisar, sin bloquear).
+      const rep = repetidoDeTransferencia(f, t, i)
+      const linea = textoLineaTransferencia(t)
       return `
-        <div class="cob-cheque cob-transferencia${errores.length ? ' cob-cheque--error' : ''}" data-transf="${escCob(t.id)}">${cabecera}
+        <div class="cob-cheque cob-transferencia${errores.length ? ' cob-cheque--error' : ''}${rep.nivel === 'rojo' ? ' cob-transferencia--repetida' : ''}" data-transf="${escCob(t.id)}">${cabecera}
+          <div class="cob-cheque__sub cob-transf-linea" data-transf-linea="${escCob(t.id)}"${linea ? '' : ' hidden'}>${escCob(linea)}</div>
+          <div class="${escCob(claseRepetido(rep))}" data-transf-repetido="${escCob(t.id)}" role="alert"${rep.nivel ? '' : ' hidden'}>${htmlRepetido(rep, t)}</div>
           <div class="cob-cheque__cuerpo">
             <div class="cob-campo__ayuda" data-transf-origen="${escCob(t.id)}"${origen ? '' : ' hidden'}>${escCob(origen)}</div>
             ${t.foto_id ? `<div class="cob-acciones" style="margin-top:0">${htmlBotonComprobante(t.foto_id)}</div>` : ''}
@@ -2973,6 +3034,8 @@
       }
       restaurarFoco(foco)
       pintarResumenFormas()
+      pintarResumenTransferencias()
+      pintarAvisoRepetidos()
     }
 
     // El foco al campo de la tarjeta repintada que corresponde (mismo id y
@@ -3010,6 +3073,254 @@
           ${fila('efectivo', t.efectivo)}${fila('cheque', t.cheques)}${fila('echeck', t.echecks)}${fila('transferencia', t.transferencias)}
         </div>
         <div class="cob-resumen-formas__total"><span>Total de la cobranza</span><span>${escCob(formatearImporte(t.total))}</span></div>`
+    }
+
+    // ── Varios comprobantes en una cobranza (30/10/2026) ──────────────────
+    // Yanina sube 6, 7 o más comprobantes de una vez. Arriba de las tarjetas,
+    // el resumen agrupado por medio y por banco; en cada tarjeta, su renglón;
+    // y los repetidos se marcan ANTES de guardar: contra la base
+    // (comprobantes_ya_cargados) y dentro de la misma tanda.
+
+    // Las transferencias agrupadas: primero por medio, después por banco (sin
+    // distinguir mayúsculas ni espacios de más), en el orden en que aparecen.
+    // Los importes se suman en centavos (sin arrastrar decimales binarios).
+    function gruposDeTransferencias(lista) {
+      const medios = { transferencia: new Map(), deposito_efectivo: new Map() }
+      let totalCentavos = 0
+      for (const t of lista ?? []) {
+        const medio = esDeposito(t) ? 'deposito_efectivo' : 'transferencia'
+        const banco = String(t?.banco_origen ?? '').trim().replace(/\s+/g, ' ')
+        const clave = banco.toLowerCase()
+        const centavos = Math.round((leerNumeroAr(t?.importe) ?? 0) * 100)
+        const g = medios[medio].get(clave) ?? { banco: banco || 'Sin banco', cantidad: 0, centavos: 0 }
+        g.cantidad++
+        g.centavos += centavos
+        medios[medio].set(clave, g)
+        totalCentavos += centavos
+      }
+      const aLista = (m) => [...m.values()].map(g => ({ banco: g.banco, cantidad: g.cantidad, total: g.centavos / 100 }))
+      return { transferencias: aLista(medios.transferencia), depositos: aLista(medios.deposito_efectivo), total: totalCentavos / 100 }
+    }
+
+    // "Transferencias: Mercado Pago 3 · $ 450.000,00 — Banco Nación 2 · …",
+    // "Depósitos en efectivo: …" y "Total: …". Con una sola no hace falta.
+    function htmlResumenTransferencias(lista) {
+      if ((lista ?? []).length < 2) return ''
+      const g = gruposDeTransferencias(lista)
+      const fila = (titulo, grupos) => grupos.length ? `
+          <div class="cob-resumen-transf__fila"><span class="cob-resumen-transf__medio">${escCob(titulo)}:</span> ${grupos.map(x =>
+            `${escCob(x.banco)} ${escCob(x.cantidad)} · <span class="cob-resumen-transf__importe">${escCob(formatearImporte(x.total))}</span>`).join(' — ')}</div>` : ''
+      return `${fila('Transferencias', g.transferencias)}${fila('Depósitos en efectivo', g.depositos)}
+          <div class="cob-resumen-transf__total">Total: ${escCob(formatearImporte(g.total))}</div>`
+    }
+
+    function pintarResumenTransferencias() {
+      const cont = document.getElementById('cob-resumen-transferencias')
+      const html = htmlResumenTransferencias(estado.form?.transferencias)
+      cont.hidden = !html
+      cont.innerHTML = html
+    }
+
+    // El renglón de un comprobante: banco, quién pagó, fecha, importe y
+    // número de operación (lo que haya). Se edita en la tarjeta.
+    function textoLineaTransferencia(t) {
+      const importe = leerNumeroAr(t?.importe)
+      const ref = String(t?.referencia ?? '').trim()
+      return [
+        textoOpcional(t?.banco_origen), textoOpcional(t?.ordenante),
+        esFechaIso(t?.fecha) ? formatearFechaCob(t.fecha) : null,
+        importe !== null ? formatearImporte(importe) : null,
+        ref ? `Op. N° ${ref}` : null,
+      ].filter(Boolean).join(' · ')
+    }
+
+    // El número de operación como lo compara la base: mayúsculas, solo letras
+    // y números, y desde 4 caracteres (_cobranza_escribir_transferencias y
+    // comprobantes_ya_cargados, verificado el 30/10/2026). Más corto: ''.
+    function referenciaNormalizada(ref) {
+      const r = String(ref ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '')
+      return r.length >= 4 ? r : ''
+    }
+
+    function huellaDeTransferencia(f, t) {
+      if (!t?.foto_id) return null
+      return (f?.fotos ?? []).find(x => x.id === t.foto_id)?.sha256 ?? null
+    }
+
+    // Lo que se le pregunta a la base: [{clave, referencia, importe, sha256}],
+    // con clave = el id local de la tarjeta. Sin número ni huella, no va.
+    function itemsParaRevisar(f) {
+      return (f?.transferencias ?? []).map(t => ({
+        clave: t.id,
+        referencia: referenciaNormalizada(t.referencia) ? String(t.referencia).trim() : null,
+        importe: leerNumeroAr(t.importe),
+        sha256: huellaDeTransferencia(f, t),
+      })).filter(x => x.referencia || x.sha256)
+    }
+
+    // Con un pequeño retardo al tipear: cada cambio reprograma la pregunta.
+    const MS_REVISAR_REPETIDOS = 400
+    // Lo que dice "lo que falta para guardar" con algún comprobante en rojo.
+    const TEXTO_SACAR_REPETIDOS = 'Sacá los comprobantes repetidos.'
+    function programarRevisionRepetidos(ms = MS_REVISAR_REPETIDOS) {
+      if (!puedeProcesar()) return
+      clearTimeout(estado.timerRepetidos)
+      estado.timerRepetidos = setTimeout(() => { revisarRepetidos() }, ms)
+    }
+
+    // comprobantes_ya_cargados(p_items, p_cobranza_id) → [{clave, motivo
+    // ('mismo_numero' | 'misma_foto'), cobranza_id, cliente, fecha, importe,
+    // referencia, cargada_por, cargada_en, estado}] (verificado con
+    // pg_get_functiondef el 30/10/2026; las anuladas y la cobranza que se
+    // edita no cuentan). Con TURNO: una respuesta vieja no pisa una nueva.
+    // Se guarda también qué se preguntó por cada tarjeta: si después cambió
+    // el número o el comprobante, esa respuesta ya no le corresponde.
+    async function revisarRepetidos() {
+      const f = estado.form
+      if (!f || !puedeProcesar()) return
+      const items = itemsParaRevisar(f)
+      const turno = (estado.turnoRepetidos ?? 0) + 1
+      estado.turnoRepetidos = turno
+      const enviados = new Map(items.map(x => [x.clave, { ref: referenciaNormalizada(x.referencia), sha256: x.sha256 }]))
+      if (!items.length) {
+        estado.repetidos = { formId: f.id, porClave: new Map(), enviados, error: null }
+        pintarRepetidos()
+        return
+      }
+      let resp
+      try {
+        resp = await supabase.rpc('comprobantes_ya_cargados', { p_items: items, p_cobranza_id: f.modo === 'edicion' ? f.id : null })
+      } catch (err) {
+        resp = { data: null, error: err }
+      }
+      if (turno !== estado.turnoRepetidos || estado.form !== f) return
+      if (resp?.error) {
+        console.error('No se pudo revisar si los comprobantes ya estaban cargados:', resp.error)
+        // Lo que ya se sabía se conserva; se avisa que esta vez no se pudo.
+        const previo = estado.repetidos?.formId === f.id ? estado.repetidos : null
+        estado.repetidos = {
+          formId: f.id, porClave: previo?.porClave ?? new Map(), enviados: previo?.enviados ?? new Map(),
+          error: esErrorDeRed(resp.error) ? 'red' : 'base',
+        }
+      } else {
+        const porClave = new Map()
+        for (const c of Array.isArray(resp?.data) ? resp.data : []) {
+          // Una clave que no se preguntó no hace daño: repetidoDeTransferencia
+          // solo la usa si coincide con lo enviado por esa tarjeta.
+          if (!c) continue
+          if (!porClave.has(c.clave)) porClave.set(c.clave, [])
+          porClave.get(c.clave).push(c)
+        }
+        estado.repetidos = { formId: f.id, porClave, enviados, error: null }
+      }
+      pintarRepetidos()
+    }
+
+    function textoCobranzaDe(c) {
+      const cliente = String(c?.cliente ?? '').trim() || 'otro cliente'
+      return `cobranza de ${cliente}${esFechaIso(c?.fecha) ? ' del ' + formatearFechaCob(c.fecha) : ''}`
+    }
+
+    function mismoImporte(a, b) {
+      const x = leerNumeroAr(a), y = Number(b)
+      return x !== null && b !== null && b !== undefined && b !== '' && Number.isFinite(y) && Math.round(x * 100) === Math.round(y * 100)
+    }
+
+    // Cómo queda UNA tarjeta: { nivel: 'rojo' | 'revisar' | null, textos }.
+    // ROJO (no se puede guardar): la misma foto ya está en otra cobranza; el
+    // mismo número de operación con el MISMO importe; o el mismo número (o
+    // el mismo archivo) que una tarjeta anterior de esta cobranza. AMARILLO
+    // (revisalo, no bloquea): el mismo número con OTRO importe.
+    function repetidoDeTransferencia(f, t, indice) {
+      const rojos = [], revisar = []
+      const lista = f?.transferencias ?? []
+      const i = indice ?? lista.indexOf(t)
+      const ref = referenciaNormalizada(t?.referencia)
+      const sha = huellaDeTransferencia(f, t)
+      // Dentro de la tanda: rojo en la SEGUNDA (la primera queda).
+      const anteriores = lista.slice(0, Math.max(0, i))
+      const conNumero = ref ? anteriores.findIndex(x => referenciaNormalizada(x.referencia) === ref) : -1
+      if (conNumero !== -1) rojos.push(`Mismo número de operación que la transferencia ${conNumero + 1} de esta cobranza (op. ${String(t.referencia).trim()}): sacá una de las dos.`)
+      const conArchivo = sha ? anteriores.findIndex(x => x.foto_id && x.foto_id !== t.foto_id && huellaDeTransferencia(f, x) === sha) : -1
+      if (conArchivo !== -1) rojos.push(`Es el mismo comprobante que el de la transferencia ${conArchivo + 1}: lo elegiste dos veces.`)
+      // Contra la base: solo si lo que se preguntó sigue siendo lo de ahora.
+      const r = estado.repetidos?.formId === f?.id ? estado.repetidos : null
+      const enviado = r?.enviados?.get?.(t?.id)
+      for (const c of r?.porClave?.get?.(t?.id) ?? []) {
+        if (c.motivo === 'misma_foto') {
+          if (!sha || enviado?.sha256 !== sha) continue
+          rojos.push(`Ya cargada: ${textoCobranzaDe(c)}${c.cargada_por ? ', la cargó ' + c.cargada_por : ''} (es la misma foto del comprobante).`)
+        } else if (c.motivo === 'mismo_numero') {
+          if (!ref || enviado?.ref !== ref) continue
+          const datos = `op. ${c.referencia ?? String(t.referencia).trim()}${c.importe != null ? ', ' + formatearImporte(Number(c.importe)) : ''}`
+          if (mismoImporte(t.importe, c.importe)) {
+            rojos.push(`Ya cargada: ${textoCobranzaDe(c)}${c.cargada_por ? ', la cargó ' + c.cargada_por : ''} (${datos}).`)
+          } else {
+            revisar.push(`Mismo número de operación que una ${textoCobranzaDe(c)} con otro importe (${datos}): revisalo.`)
+          }
+        }
+      }
+      if (rojos.length) return { nivel: 'rojo', textos: rojos }
+      if (revisar.length) return { nivel: 'revisar', textos: revisar }
+      return { nivel: null, textos: [] }
+    }
+
+    function claseRepetido(rep) {
+      return rep?.nivel === 'rojo' ? 'cob-aviso cob-aviso--grave' : rep?.nivel === 'revisar' ? 'cob-aviso cob-aviso--revisar' : 'cob-aviso'
+    }
+
+    // El texto (escapado: viene de la base y del lector) y, en rojo, "Sacar".
+    function htmlRepetido(rep, t) {
+      if (!rep?.nivel) return ''
+      const sacar = rep.nivel === 'rojo'
+        ? `<div class="cob-aviso__acciones"><button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-sacar-transf="${escCob(t?.id)}">Sacar</button></div>`
+        : ''
+      return `${rep.textos.map(escCob).join('<br>')}${sacar}`
+    }
+
+    function hayRepetidosRojos(f) {
+      return (f?.transferencias ?? []).some((t, i) => repetidoDeTransferencia(f, t, i).nivel === 'rojo')
+    }
+
+    // Repinta EN EL LUGAR (sin rehacer las tarjetas, para no sacarle el foco
+    // a quien escribe) el aviso de cada tarjeta, el aviso de la sección y el
+    // botón Guardar.
+    function pintarRepetidos() {
+      const f = estado.form
+      if (!f) return
+      ;(f.transferencias ?? []).forEach((t, i) => {
+        const rep = repetidoDeTransferencia(f, t, i)
+        const caja = [...(document.querySelectorAll?.('[data-transf-repetido]') ?? [])].find(x => x.dataset?.transfRepetido === t.id)
+        if (caja) {
+          caja.className = claseRepetido(rep)
+          caja.hidden = !rep.nivel
+          caja.innerHTML = htmlRepetido(rep, t)
+        }
+        const tarjeta = [...(document.querySelectorAll?.('[data-transf]') ?? [])].find(x => x.dataset?.transf === t.id)
+        tarjeta?.classList?.toggle?.('cob-transferencia--repetida', rep.nivel === 'rojo')
+      })
+      pintarAvisoRepetidos()
+      pintarTotalYGuardado()
+    }
+
+    // Si la última pregunta a la base falló, se dice (neutro: no bloquea).
+    function pintarAvisoRepetidos() {
+      const f = estado.form
+      const aviso = document.getElementById('cob-repetidos-aviso')
+      const error = f && estado.repetidos?.formId === f.id ? estado.repetidos.error : null
+      aviso.hidden = !error
+      aviso.textContent = error === 'red'
+        ? 'Sin señal: no se pudo revisar si estos comprobantes ya estaban cargados. Al guardar, la base igual lo controla.'
+        : error ? 'No se pudo revisar si estos comprobantes ya estaban cargados. Al guardar, la base igual lo controla.' : ''
+    }
+
+    // El renglón de una tarjeta, en el lugar (cambió un campo).
+    function pintarLineaTransferencia(t) {
+      const el = [...(document.querySelectorAll?.('[data-transf-linea]') ?? [])].find(x => x.dataset?.transfLinea === t.id)
+      if (!el) return
+      const linea = textoLineaTransferencia(t)
+      el.hidden = !linea
+      el.textContent = linea
     }
 
     function echeckDelForm(id) {
@@ -3102,6 +3413,15 @@
       // El medio cambia el título y los rótulos de la tarjeta: se repinta.
       if (campo === 'medio') pintarFormasNuevas()
       else pintarErroresForma('transf', id, erroresDeTransferencia(t), avisoCuit(t.cuit_ordenante), textoOrigenComprobante(origenDatosTransferencia(t)))
+      // Varios comprobantes (30/10/2026): el renglón, el resumen y los
+      // repetidos, en el lugar (el medio ya repintó todo). Un número o un
+      // importe nuevo se le vuelve a preguntar a la base (con retardo).
+      if (campo !== 'medio') {
+        pintarLineaTransferencia(t)
+        pintarResumenTransferencias()
+        pintarRepetidos()
+      }
+      if (campo === 'referencia' || campo === 'importe') programarRevisionRepetidos()
       pintarTotalYGuardado()
     }
 
@@ -3131,13 +3451,15 @@
     }
 
     function alTocarEnFormas(ev) {
-      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-transf-medio], [data-quitar-echeck], [data-quitar-transf], [data-ver-comprobante], [data-subir-comprobante]')
+      const el = ev?.target?.closest?.('[data-echeck-tipo], [data-transf-medio], [data-quitar-echeck], [data-quitar-transf], [data-sacar-transf], [data-ver-comprobante], [data-subir-comprobante]')
       if (!el) return
       const d = el.dataset
       if (d.echeckTipo) actualizarEcheck(d.echeckId, 'tipo', d.echeckTipo)
       else if (d.transfMedio) actualizarTransferencia(d.transfId, 'medio', d.transfMedio)
       else if (d.quitarEcheck) quitarEcheck(d.quitarEcheck)
       else if (d.quitarTransf) quitarTransferencia(d.quitarTransf)
+      // "Sacar" un comprobante repetido: lo quita de ESTA cobranza (30/10/2026).
+      else if (d.sacarTransf) quitarTransferencia(d.sacarTransf)
       else if (d.verComprobante) abrirComprobante(d.verComprobante)
       else if (d.subirComprobante) elegirArchivoComprobante(d.subirComprobante, d.origen)
     }
@@ -5435,26 +5757,60 @@
       return { blob, mime: 'image/jpeg', extension: 'jpg' }
     }
 
+    // La HUELLA de un archivo (30/10/2026): SHA-256 de sus bytes, en hex con
+    // minúsculas. La base la guarda en cobranza_fotos.sha256 y rechaza la
+    // misma foto en otra cobranza que no esté anulada. Sin crypto.subtle (una
+    // página sin https) no hay huella: null, y la base no compara.
+    async function huellaSha256(bytes) {
+      const sutil = typeof crypto !== 'undefined' ? crypto?.subtle : null
+      if (!sutil || typeof sutil.digest !== 'function' || bytes == null) return null
+      const resumen = await sutil.digest('SHA-256', bytes)
+      return [...new Uint8Array(resumen)].map(b => b.toString(16).padStart(2, '0')).join('')
+    }
+
+    // La huella de un archivo elegido. NUNCA tira: sin huella se sube igual.
+    async function huellaDeArchivo(archivo) {
+      try {
+        if (typeof archivo?.arrayBuffer !== 'function') return null
+        return await huellaSha256(await archivo.arrayBuffer())
+      } catch (err) {
+        console.error('No se pudo calcular la huella del archivo:', err)
+        return null
+      }
+    }
+
     // `tipo`: 'cheque' (va al lector de cheques) o 'echeque' / 'transferencia'
     // (al lector nuevo; solo quien tiene cobranzas:procesar).
     async function agregarFotos(archivos, tipo = 'cheque') {
       const f = estado.form
       if (!f) return
       if (!['cheque', ...TIPOS_COMPROBANTE].includes(tipo)) return
+      // Varios comprobantes de una vez (30/10/2026): la tanda, para decir
+      // "Leyendo 3 de 7…". Una nueva elección reemplaza la anterior.
+      const tanda = tipo !== 'cheque' && puedeProcesar() ? { formId: f.id, total: archivos.length, fotos: [] } : null
+      if (tanda) {
+        if (!estado.tandaLector) estado.tandaLector = {}
+        estado.tandaLector[tipo] = tanda
+      }
       if (tipo !== 'cheque' && !puedeProcesar()) return
       for (const archivo of archivos) {
         const listo = await prepararArchivo(archivo, tipo)
-        if (!listo) continue
+        if (!listo) { if (tanda) tanda.total--; continue }
+        // La huella del archivo ORIGINAL (no del JPEG comprimido): la misma
+        // foto elegida dos veces da la misma huella aunque la compresión
+        // cambie de un celular a otro. Viaja en p_fotos (fotosParaBase).
+        const sha256 = await huellaDeArchivo(archivo)
 
         const foto = {
           id: crypto.randomUUID(),
           // La ruta es la que exige la política de Storage.
           storage_path: `${estado.sesion.user.id}/${f.id}/${crypto.randomUUID()}.${listo.extension}`,
-          tipo, mime: listo.mime,
+          tipo, mime: listo.mime, sha256,
           blob: listo.blob, subida: false, leida: false, ocr_crudo: null, ocr_modelo: null, error: null,
         }
         f.fotos.push(foto)
         tarjetaParaComprobante(f, foto)
+        if (tanda) tanda.fotos.push(foto.id)
         if (!f.abiertas) f.abiertas = {}
         f.abiertas[tipo] = true
         await guardarBorrador()
@@ -5740,6 +6096,9 @@
       pintarCheques()
       pintarFormasNuevas()
       pintarTotalYGuardado()
+      // Un borrador o una edición que se abre con transferencias: ¿alguna ya
+      // estaba cargada en otra cobranza? (lo sabido no se guarda en el borrador)
+      if ((f.transferencias?.length ?? 0) > 0 && estado.repetidos?.formId !== f.id) programarRevisionRepetidos(0)
       // Con el formulario en pantalla, las fotos pendientes se reintentan
       // solas. Idempotente: si ya estaban corriendo, no arranca otro.
       iniciarReintentosFotos()
@@ -6376,6 +6735,9 @@
       transferencias.forEach((t, i) => {
         erroresDeTransferencia(t).forEach(x => motivos.push(`Transferencia ${i + 1}: ${x}`))
       })
+      // Un comprobante ya cargado (o dos veces en esta tanda) no se guarda: la
+      // base igual lo frena, pero se dice antes (30/10/2026).
+      if (hayRepetidosRojos(f)) motivos.push(TEXTO_SACAR_REPETIDOS)
       // Una cobranza solo con transferencias SÍ entra si la guarda quien
       // controla (02/10/2026, verificado contra la base):
       // guardar_cobranza_completa —y cargar_cobranza_asentada, que pasa por

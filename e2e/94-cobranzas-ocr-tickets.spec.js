@@ -44,7 +44,10 @@ async function respuestas() {
 
 // Una imagen de verdad (PNG de 1×1): la pantalla la comprime a JPEG con un canvas.
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-const IMAGEN = (n) => ({ name: `comprobante-${n}.png`, mimeType: 'image/png', buffer: Buffer.from(PNG_1X1, 'base64') });
+// Cada imagen con bytes PROPIOS (30/10/2026): desde los comprobantes repetidos,
+// el mismo archivo elegido dos veces es rojo y no deja guardar. Los bytes de
+// más van después del final del PNG (IEND), que el navegador ignora.
+const IMAGEN = (n) => ({ name: `comprobante-${n}.png`, mimeType: 'image/png', buffer: Buffer.concat([Buffer.from(PNG_1X1, 'base64'), Buffer.from(`comprobante ${n}`)]) });
 
 for (const t of [{ nombre: '1280', ancho: 1280, alto: 900 }, { nombre: '390', ancho: 390, alto: 844 }]) {
   test(`tres comprobantes de una vez: depósito, CBU y de a uno, a ${t.nombre}`, async ({ page }, info) => {
