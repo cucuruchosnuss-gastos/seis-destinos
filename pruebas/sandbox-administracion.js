@@ -35,6 +35,23 @@ const FUNCIONES_ACOPIOS = [
   'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
 ]
 
+// Corregir una orden (29/10/2026): el editor, el resumen, el historial
+// ("Corregida N veces") y lo que faltó en stock. Las llaman leerOrden,
+// htmlDetalleOrden, pintarOrden y pintarAccionesOrden.
+const FUNCIONES_CORREGIR = [
+  'puedeCorregirOrden', 'puedeGuardarCorregir', 'textoSinCargarCorregir', 'valorizadaCorregir', 'conPreciosCorregir', 'redondearCorregir',
+  'decimalesRenglonCorregir', 'claveLotesCorregir', 'fotoRenglonCorregir', 'renglonCorregirDeItem', 'renglonCorregirNuevo', 'renglonCorregir',
+  'nombreItemCorregir', 'nombreRenglonCorregir', 'cantidadTextoCorregir', 'prefijoTipoCorregir', 'descripcionItemCorregir', 'descripcionRenglonCorregir',
+  'estadoLotesCorregir', 'textoLotesCorregir', 'quitadosCorregir', 'cambiosRenglonCorregir', 'cambiosDatosCorregir', 'hayCambiosCorregir',
+  'lineasResumenCorregir', 'erroresCorregir', 'precioEstimadoCorregir', 'subtotalCorregir', 'totalesCorregir', 'textoTotalCorregir',
+  'textoSubtotalCorregir', 'textoDiferenciaCorregir', 'itemCorregirParaBase', 'parametrosCorregir', 'conteosFilaOrden', 'abrirCorregir',
+  'revisarCorregir', 'volverAEditarCorregir', 'cancelarCorregir', 'guardarCorregir', 'textoFaltanteCorreccion', 'htmlFaltantesCorreccion', 'leerCorreccionesDeOrden',
+  'htmlCorreccionesOrden', 'htmlCorregirOrden', 'htmlRenglonCorregir', 'htmlOpcionesCorregir', 'htmlMarcasCorregir', 'htmlProductoCorregir',
+  'htmlDevCorregir', 'htmlLotesCorregir', 'htmlResumenCorregir', 'enlazarCorregir', 'enfocarCorregir', 'agregarRenglonCorregir',
+  'quitarRenglonCorregir', 'cambiarProductoCorregir', 'elegirProductoCorregir', 'elegirMarcaCorregir', 'agregarLoteCorregir', 'quitarLoteCorregir',
+  'accionCorregir', 'alTocarCorregir', 'repintarCuentasCorregir', 'alEscribirCorregir',
+]
+
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
   'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles', 'moduloVisible',
@@ -235,6 +252,8 @@ const FUNCIONES_BASE = [
   'sinControlStockEmpresa', 'leerSinControl', 'pintarLinkRemitos', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio',
   // Los acopios, la cuenta en el grupo y la lista de otra empresa (27/10/2026)
   ...FUNCIONES_ACOPIOS,
+  // Corregir una orden (29/10/2026)
+  ...FUNCIONES_CORREGIR,
 ]
 
 const CONSTANTES_BASE = [
@@ -336,6 +355,7 @@ const PRELUDIO = `
   var turnoPrestamo = 0
   var turnoVolver = 0
   var turnoAcopios = 0, turnoAcopio = 0
+  var turnoCorregir = 0, claveCorregir = 0
   // Embebida en Cuentas corrientes → Clientes (05/10/2026): acá, nunca.
   var EMBEBIDA = false, volviendoAClientes = false
   var history = { replaceState() {} }
@@ -450,6 +470,21 @@ const REEMPLAZOS_ACOPIOS = {
 }
 for (const n of FUNCIONES_ACOPIOS) {
   OPCIONALES_FN[n] = REEMPLAZOS_ACOPIOS[n] ?? (/^(html|texto|nombre|papeles)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
+}
+// Corregir una orden (29/10/2026): una copia de antes no tiene ninguna. Sin
+// permiso para corregir, sin historial y sin errores ni cambios: así esa
+// copia corre y las suites dan ROJO por lo que afirman.
+const REEMPLAZOS_CORREGIR = {
+  puedeCorregirOrden: 'function puedeCorregirOrden() { return false }',
+  leerCorreccionesDeOrden: 'async function leerCorreccionesDeOrden() { return null }',
+  erroresCorregir: 'function erroresCorregir() { return [] }',
+  lineasResumenCorregir: 'function lineasResumenCorregir() { return [] }',
+  conteosFilaOrden: 'function conteosFilaOrden() { return {} }',
+  abrirCorregir: 'async function abrirCorregir() {}',
+  guardarCorregir: 'async function guardarCorregir() {}',
+}
+for (const n of FUNCIONES_CORREGIR) {
+  OPCIONALES_FN[n] = REEMPLAZOS_CORREGIR[n] ?? (/^(html|texto|nombre|descripcion)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
 }
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {

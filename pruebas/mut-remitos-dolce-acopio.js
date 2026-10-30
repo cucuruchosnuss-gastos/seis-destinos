@@ -58,6 +58,6 @@ correrMutaciones({
     { nombre: 'elegir el cliente no lee el acopio', de: '      pintarRemito()\n      cargarAcopiosRemito()\n    }\n\n    function cambiarClienteRemito', a: '      pintarRemito()\n    }\n\n    function cambiarClienteRemito' },
     { nombre: 'pasar a Acopio no lee el acopio', de: '      pintarRemito()\n      cargarAcopiosRemito()\n    }\n\n    function elegirClienteRemito', a: '      pintarRemito()\n    }\n\n    function elegirClienteRemito' },
     { nombre: 'las cajas no actualizan el saldo', de: '        pintarPieLotesRemito(d.rmCantidad)\n        pintarAcopiosRemito()', a: '        pintarPieLotesRemito(d.rmCantidad)' },
-    { nombre: 'el renglón sin el saldo', de: '(r.presentacionId ? htmlSaldoAcopioRemito(rm, r, i) + htmlLotesRemito(r, i) : \'\')', a: "(r.presentacionId ? htmlLotesRemito(r, i) : '')" },
+    { nombre: 'el renglón sin el saldo', de: '(r.presentacionId ? htmlSaldoAcopioRemito(rm, r, i) + htmlLotesRemito(r, i) : r.insumoId', a: '(r.presentacionId ? htmlLotesRemito(r, i) : r.insumoId' },
   ],
 })

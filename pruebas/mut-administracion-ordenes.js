@@ -70,7 +70,7 @@ correrMutaciones({
     { nombre: 'el título no se esconde sin accesos', de: "      document.getElementById('ad-links-titulo').hidden = !links.length\n", a: "      document.getElementById('ad-links-titulo').hidden = false\n" },
     { nombre: 'Cheques no abre su sección', de: "        if (e.target.closest('button[data-link=\"cheques\"]')) mostrarCheques()", a: "        if (e.target.closest('button[data-link=\"cheques\"]')) return" },
     { nombre: 'solo lectura ve Valorizar', de: "      const precios = activa && puedeEn('retiros', 'precios', u)", a: '      const precios = activa' },
-    { nombre: 'Anular sin permiso', de: "      document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))", a: "      document.getElementById('ad-btn-anular').hidden = !activa" },
+    { nombre: 'Anular sin permiso', de: "      document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u) && !corrigiendo)", a: "      document.getElementById('ad-btn-anular').hidden = !(activa && !corrigiendo)" },
     { nombre: 'anular se pide sin permiso', de: "      if (!d?.orden || !puedeEn('retiros', 'anular', d.orden.unidad_negocio_id)) return\n      d.anular", a: '      if (!d?.orden) return\n      d.anular' },
     // Portada
     { nombre: 'la portada no cuenta las sin valorizar', de: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')\n      if (error) throw error\n      return (data ?? []).length", a: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada')\n      if (error) throw error\n      return (data ?? []).length" },

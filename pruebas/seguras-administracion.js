@@ -189,6 +189,22 @@ const SEGURAS_ADMINISTRACION = [
   ['datos', "HTML armado por htmlDatoAd(), que escapa rótulo y valor (htmlDetalleAcopio, unidos con join(''))"],
   ['acObs', 'HTML ya escapado: htmlDetalleAcopio() arma las observaciones con esc(), o vacío'],
   ['acMovs', 'HTML armado por htmlMovimientoAcopio(), que escapa cada movimiento, o un texto constante'],
+  // Corregir una orden (29/10/2026, ci-prueba/corregir-orden): todo lo ejecuta
+  // test-administracion-corregir-orden.js con marcas donde va algo de la base.
+  ['k', 'HTML ya escapado: k = esc(r.clave), la clave del renglón del editor (un número del código)'],
+  ['cab', 'HTML ya escapado: la cabeza del panel / del renglón, con textos constantes, esc() del número y el botón Sacar con k'],
+  ['cant', 'HTML ya escapado: htmlRenglonCorregir() arma el campo de cajas o cantidad con esc() del rótulo y k (el número se pone después con ponerNumero)'],
+  ['precio', 'HTML ya escapado: htmlRenglonCorregir() arma el campo del precio con esc() del rótulo, k y el subtotal, o un texto constante, o vacío'],
+  ['fecha', 'HTML ya escapado: htmlCorregirOrden() arma el campo de la fecha con esc() del valor y de hoy, con su explicación constante'],
+  ["c.errores.map(e => `<li>${esc(e)}</li>`).join('')", 'HTML ya escapado: cada error del editor con esc()'],
+  ["lineasResumenCorregir(c).map(l => `<li>${esc(l)}</li>`).join('')", 'HTML ya escapado: cada línea del resumen con esc()'],
+  ['htmlCorreccionesOrden(d)', 'HTML armado por htmlCorreccionesOrden(), que escapa fecha, nombre, motivo y totales'],
+  ['htmlFaltantesCorreccion(d)', 'HTML armado por htmlFaltantesCorreccion(), que escapa cada renglón que faltó'],
+  ['htmlProductoCorregir(c, r)', 'HTML armado por htmlProductoCorregir(), que escapa el nombre y la búsqueda'],
+  ['htmlOpcionesCorregir(c, r)', 'HTML armado por htmlOpcionesCorregir(), que escapa cada producto o insumo'],
+  ['htmlMarcasCorregir(c, r)', 'HTML armado por htmlMarcasCorregir(), que escapa cada cono'],
+  ['htmlDevCorregir(r)', 'HTML armado por htmlDevCorregir(), que escapa motivo, lote y destino'],
+  ['htmlLotesCorregir(r)', 'HTML armado por htmlLotesCorregir(), que escapa cada lote y el estado'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [
