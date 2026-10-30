@@ -1456,8 +1456,9 @@
     async function leerCatalogo(unidadId) {
       const [c, m, t, u, s] = await Promise.all([
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
+        // papel_ilustracion (30/10/2026): "MARBET (ilustración)" en la hoja.
         supabase.from('marcas_personalizadas')
-          .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
+          .select('id, nombre, estado_alta, papel_ilustracion').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
         // nombre_bulto (26/10/2026, la hoja nueva: "bolsa de 25 kg"; text,
         // nullable, sin default según information_schema el 26/10/2026).
         supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida, vista_preferida, contenido_bulto, nombre_bulto').eq('activo', true).order('nombre'),
@@ -4682,6 +4683,14 @@
 
     // Si la presentación va con cono, lo sabe el catálogo (por nombres: la
     // orden de mis_ordenes_retiro trae nombres, no ids).
+    // El nombre del cono para la hoja: el de la orden y, si es de papel
+    // ilustración (el catálogo de conos, por su id), "(ilustración)".
+    function conoParaHoja(r, cat) {
+      const m = r?.marca_id ? (cat?.marcas ?? []).find(x => x.id === r.marca_id) : null
+      if (m) return limpio(m.nombre) ? limpio(m.nombre) + (m.papel_ilustracion === true ? ' (ilustración)' : '') : null
+      return limpio(r?.marca) || null
+    }
+
     function conoDeRenglonMio(r, cat) {
       if (r?.marca) return r.marca
       const prod = (cat?.productos ?? []).find(p => p.nombre === r?.producto)
@@ -4714,7 +4723,8 @@
             contenido: contenidoParaHoja(r.insumo_id, r.unidad_medida), nombreBulto: insumoDe(estado.catalogo, r.insumo_id)?.nombre_bulto ?? null }
         // mis_ordenes_retiro no trae las unidades por caja: la hoja las saca de
         // unidades ÷ cajas. El cono, por su nombre (r.marca) o ninguno.
-        : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo), conoNombre: limpio(r.marca) || null,
+        // Un cono de ilustración (30/10/2026): "MARBET (ilustración)".
+        : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo), conoNombre: conoParaHoja(r, estado.catalogo),
             cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [],
             // Lo que se vende sin stock (27/10/2026): va por unidad en la hoja.
             sinStock: (estado.catalogo?.presentaciones ?? []).find(x => x.id === r.presentacion_id)?.sin_stock === true,

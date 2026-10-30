@@ -93,7 +93,27 @@ function presentacionConUnidadesRc(pr) {
   return [limpioRc(pr?.nombre), textoUnidadesRemito(pr)].filter(Boolean).join(' ')
 }
 
+// EL CONO DE PAPEL ILUSTRACIÓN (30/10/2026, pedido de Facu): se cobra más
+// caro (precio_venta lo resuelve con papel_conito = 'ilustracion'), así que
+// donde se nombre el cono va "MARBET (ilustración)". Sale de
+// marcas_personalizadas.papel_ilustracion (boolean not null default false,
+// information_schema el 30/10/2026), que cada pantalla lee con su catálogo de
+// conos: nunca una lista copiada a mano.
+export function nombreConoRemito(m) {
+  const n = limpioRc(m?.nombre)
+  if (!n) return ''
+  return m?.papel_ilustracion === true ? n + ' (ilustración)' : n
+}
+
+// El cono de un renglón por su id (o '' si no hay).
+export function nombreConoPorIdRemito(cat, marcaId) {
+  if (!marcaId) return ''
+  const m = (cat?.marcas ?? []).find(x => x.id === marcaId)
+  return m ? nombreConoRemito(m) : 'Cono que no se pudo leer'
+}
+
 // "Barquillo 40 x4 · Caja con cono × 252 u. · GLACE", o un insumo: "Harina 000 · Molino".
+// Con un cono de ilustración: "… · MARBET (ilustración)".
 export function nombreRenglonRemito(cat, r) {
   if (r?.insumoId) {
     const ins = insumoRemito(cat, r.insumoId)
@@ -102,7 +122,7 @@ export function nombreRenglonRemito(cat, r) {
   const pr = presentacionRemito(cat, r?.presentacionId)
   if (!pr) return r?.presentacionId ? 'Producto (no se pudo leer)' : ''
   const prod = productoDePresentacionRemito(cat, pr)
-  const cono = pr.con_cono ? (r.marcaId ? ((cat?.marcas ?? []).find(m => m.id === r.marcaId)?.nombre ?? 'Cono que no se pudo leer') : 'falta el cono') : ''
+  const cono = pr.con_cono ? (r.marcaId ? nombreConoPorIdRemito(cat, r.marcaId) : 'falta el cono') : ''
   return [prod?.nombre ?? 'Producto (no se pudo leer)', presentacionConUnidadesRc(pr), cono].map(limpioRc).filter(Boolean).join(' · ')
 }
 

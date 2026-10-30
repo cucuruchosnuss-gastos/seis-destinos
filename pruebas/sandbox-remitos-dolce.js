@@ -27,7 +27,7 @@ const FUNCIONES_BASE = [
   'sinAcceso', 'cargarPermisos', 'cargarFabricas',
   // de js/remitos-comun.js
   'limpioRc', 'normalizarRc', 'talonarioDe', 'textoNumeroRemito', 'presentacionRemito', 'productoDePresentacionRemito', 'insumoRemito',
-  'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
+  'nombreConoRemito', 'nombreConoPorIdRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
   'unidadesPresentacionRemito', 'textoUnidadesRemito', 'presentacionConUnidadesRc',
   // de js/retiros-comun.js
   'escHoja', 'enteroHoja', 'decimalesDeUnidad', 'unidadHoja',

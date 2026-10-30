@@ -127,6 +127,18 @@ Pedido de Facu: "que Manuel suba la foto y cargue los lotes en el mismo lugar, s
 - Suites `test-/mut-remitos-dolce-mas-simple.js` (112; 77/77, baseline 2003aa3; también `test-remitos-dolce-subir` 156 / 125/125 y `-revisar` 188 / 98/98), `e2e/99-remitos-mas-simple.spec.js` (maqueta
   nueva `remitos-dolce-mas-simple`: el catálogo de Dolce de la base y 30 conos).
 
+## El cono de papel ilustración a la vista (30/10/2026, rama `ci-prueba/remitos-mas-simple`)
+- `marcas_personalizadas.papel_ilustracion` (boolean not null default false; al 30/10/2026: MARBET, QUINTANA, RIO, RIO
+  OLIMPICOS) marca los conos que se cobran más caros (precio_venta lo resuelve con `papel_conito = 'ilustracion'`).
+- Donde se nombra el cono va "MARBET (ilustración)": `nombreConoRemito(m)` / `nombreConoPorIdRemito(cat, id)` en
+  `js/remitos-comun.js` (las usa `nombreRenglonRemito`, así que también Administración: Corregir orden, Nuevo acopio), el
+  buscador de conos (`htmlMarcasRemito`) y el cono elegido (`htmlConoRemito`). Remitos Dolce lee `papel_ilustracion` con
+  su catálogo de conos; ningún nombre copiado a mano.
+- La hoja de la Carga (modulos/retiros.html): `conoParaHoja` busca el cono por `marca_id` (mis_ordenes_retiro lo trae)
+  en el catálogo (que ahora lee `papel_ilustracion`) y agrega "(ilustración)"; sin el cono en el catálogo, el nombre de
+  la orden.
+- Suites `test-/mut-remitos-dolce-ilustracion.js` (17; 14/14, baseline 302b351 del común).
+
 ## Lo que quedó afuera
 - **La Carga** (retiros.html): un link chico **"Remitos Dolce →"** (`#rt-link-remitos`, a `?pestana=subir`), con la
   misma regla de antes (retiros:cargar en una fábrica sin control; `pintarEntradaRemitos`).

@@ -81,7 +81,7 @@ correrMutacionesEnVarios([{
     { nombre: 'el catálogo no guarda el nombre del bulto', de: '        i.nombre_bulto = nombresBulto.get(i.id) ?? null\n', a: '' },
     { nombre: 'el nombre del bulto sin limpiar', de: '[i.id, limpio(i.nombre_bulto) || null]', a: '[i.id, i.nombre_bulto]' },
     { nombre: 'el renglón de insumo sin el nombre del bulto', de: 'nombreBulto: insumoDe(estado.catalogo, r.insumo_id)?.nombre_bulto ?? null }', a: 'nombreBulto: null }' },
-    { nombre: 'el renglón de producto sin el nombre del cono', de: 'conoNombre: limpio(r.marca) || null,', a: 'conoNombre: null,' },
+    { nombre: 'el renglón de producto sin el nombre del cono', de: 'conoNombre: conoParaHoja(r, estado.catalogo),', a: 'conoNombre: null,' },
   ],
 }, {
   suite: SUITE,

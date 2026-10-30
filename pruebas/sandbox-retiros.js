@@ -53,7 +53,7 @@ const FUNCIONES_BASE = [
   // de js/faltante-retiro.js
   ...FUNCIONES_FR,
   'htmlHecho', 'pintarHecho', 'mostrarHecho', 'cargarOrdenHecha', 'faltantesDeLotes', 'htmlAvisoEmpresa',
-  'conoDeRenglonMio', 'clienteDeOrden', 'renglonesParaHoja', 'ordenParaHoja', 'imprimirOrden', 'prepararHojaDe', 'textoResultadoEnvio', 'pintarAccionesHoja',
+  'conoParaHoja', 'conoDeRenglonMio', 'clienteDeOrden', 'renglonesParaHoja', 'ordenParaHoja', 'imprimirOrden', 'prepararHojaDe', 'textoResultadoEnvio', 'pintarAccionesHoja',
   'enviarDesde', 'compartirDesde', 'imprimirDesde',
   'leerMisOrdenes', 'cajasDeOrden', 'htmlFilaMia', 'htmlMisRetiros', 'mostrarMisRetiros', 'htmlDetalleMio', 'abrirMia',
   'empresaDeLaBarra', 'empezarOrden', 'alCambiarLaBarra', 'retomarBorrador',
