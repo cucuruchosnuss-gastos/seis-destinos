@@ -73,7 +73,12 @@ async function abrir(page, { fallaPago = false, ordenes = [] } = {}) {
     const cuentas = [...datos.tablas.cuentas_caja,
       { id: 'cta-banco-yo', nombre: 'Banco Galicia · mía', unidad_negocio_id: null, medio: 'banco', moneda: 'ARS', activa: true, empleado_id: 'emp-1' },
       { id: 'cta-banco-yo2', nombre: 'Banco Nación · mía', unidad_negocio_id: null, medio: 'banco', moneda: 'ARS', activa: true, empleado_id: 'emp-1' }];
-    sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas: { cobranza_cheques: cheques, v_cobranzas: cobranzas, ordenes_pago: ordenes, cuentas_caja: cuentas }, rpc }));
+    // 30/10/2026: cada orden es la de un pago de la cuenta (gastos.orden_pago_id).
+    const gastos = ordenes.map(o => ({ id: 'g-' + o.id, orden_pago_id: o.id, medio_pago: 'transferencia', descripcion: 'Pago a proveedor' }));
+    const movimientos = [...datos.tablas.v_cuenta_corriente_movimientos, ...ordenes.map((o, i) => ({
+      proveedor_id: 'pv1', unidad_negocio_id: o.unidad_negocio_id, moneda: 'ARS', fecha: o.fecha, tipo: 'pago', monto: -o.total,
+      factura_pendiente_id: null, gasto_id: 'g-' + o.id, credito_id: null, referencia: 'Pago a proveedor', saldo_acumulado: 0, orden_desempate: o.creada_en ?? String(i) }))];
+    sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas: { cobranza_cheques: cheques, v_cobranzas: cobranzas, ordenes_pago: ordenes, cuentas_caja: cuentas, gastos, v_cuenta_corriente_movimientos: movimientos }, rpc }));
     localStorage.setItem('barraUnidad.elegida', 'u-n');
   }, { fallaPago, ordenes, ORDEN });
   await page.goto(`${MAQUETA}/modulos/cuentas-corrientes.html?proveedor=pv1&unidad=u-n`);
@@ -235,7 +240,7 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844]]) {
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
-  test(`${nombre}: la ficha lista las órdenes de pago y se reimprimen`, async ({ page }) => {
+  test(`${nombre}: cada pago dice su orden de pago y se reimprime desde su renglón`, async ({ page }) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
@@ -243,11 +248,13 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844]]) {
       { id: 'op-1', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 1, fecha: '2026-10-14', total: 650000.5, creada_en: '2026-10-14T12:00:00Z' },
       { id: 'op-2', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 2, fecha: '2026-10-15', total: 1000, creada_en: '2026-10-15T12:00:00Z' },
     ] });
-    const seccion = page.locator('#ficha-ordenes-pago');
-    await expect(seccion).toContainText('Órdenes de pago (2)');
-    expect(await seccion.locator('.orden-pago-cc__numero').allTextContents(), 'la más nueva arriba').toEqual([
-      expect.stringContaining('N-OP-00002'), expect.stringContaining('N-OP-00001')]);
-    await seccion.locator('[data-reimprimir-orden="op-1"]').click();
+    // Se fue el recuadro "Órdenes de pago (N)" de abajo (30/10/2026).
+    await expect(page.locator('#ficha-ordenes-pago')).toHaveCount(0);
+    const lista = page.locator('#lista-movimientos-ficha');
+    // (La maqueta no ordena: el orden lo da la vista en la base.)
+    await expect(lista.locator('.fila-movimiento__orden')).toHaveCount(2);
+    expect((await lista.locator('.fila-movimiento__orden').allTextContents()).sort()).toEqual(['Orden de pago N-OP-00001', 'Orden de pago N-OP-00002']);
+    await lista.locator('[data-reimprimir-orden="op-1"]').click();
     await expect(page.locator('#orden-pago-hoja')).toContainText('N-OP-00001');
     expect(rpc.filter(r => r.nombre === 'datos_orden_pago').map(r => r.params)).toEqual([{ p_orden_id: 'op-1' }]);
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);

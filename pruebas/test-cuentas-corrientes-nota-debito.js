@@ -106,7 +106,7 @@ const FUNCIONES = [
   // la nota de débito (24/10/2026)
   'puedeCargarNotaDebito', 'renglonNd', 'centavosNd', 'itemsNd', 'totalNd', 'htmlRenglonesNd', 'validarNotaDebito', 'parametrosNotaDebito',
   'rutaPdfNd', 'subirPdfNd', 'abrirModalNotaDebito', 'cerrarModalNotaDebito', 'pintarRenglonesNd', 'pintarPieNd', 'escribirNotaDebito',
-  'accionNotaDebito', 'agregarRenglonNd', 'confirmarNotaDebito', 'cargarNotasDebitoFicha', 'abrirAnularNd', 'cerrarAnularNd', 'pintarAnularNd',
+  'accionNotaDebito', 'agregarRenglonNd', 'confirmarNotaDebito', 'cargarNotasDebitoFicha', 'cargarOrdenesDePagos', 'numeroTextoOrden', 'abrirAnularNd', 'cerrarAnularNd', 'pintarAnularNd',
   'confirmarAnularNd',
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL', 'TOPE_PDF_ND', 'DECIMALES_ND']

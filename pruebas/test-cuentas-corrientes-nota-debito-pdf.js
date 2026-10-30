@@ -107,7 +107,7 @@ const FUNCIONES = [
   'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
   'htmlFilaComision', 'cargarCodigosComision', 'fechaISO', 'puedeCargarNotaDebito',
-  'cargarNotasDebitoFicha', 'verPdfNd',
+  'cargarNotasDebitoFicha', 'cargarOrdenesDePagos', 'numeroTextoOrden', 'verPdfNd',
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL', 'BUCKET_PDF_ND', 'SEGUNDOS_FIRMA_PDF_ND']
 
@@ -240,7 +240,12 @@ chk('los botones de la fila bajan de renglón en el celular (flex-wrap)', /<div 
   if (antes) {
     const marcas = t => new Set([...t.matchAll(/\b(id="[a-z][\w-]*"|data-[a-z][\w-]*)/g)].map(m => m[1]))
     const ahora = marcas(FUENTE)
-    const faltan = [...marcas(antes)].filter(m => !ahora.has(m))
+    // Retirados a propósito el 30/10/2026 (ci-prueba/cc-proveedor-una-lista):
+    // el recuadro "Órdenes de pago (N)" de la ficha (la orden va en el renglón
+    // del pago) y las dos copias ORIGINAL/DUPLICADO de la orden de pago.
+    const RETIRADOS = new Set(['id="ficha-ordenes-pago"', 'id="nota-copias-orden"', 'data-copia'])
+    for (const r of RETIRADOS) chk(`retirado a propósito: ${r} ya no está`, !ahora.has(r))
+    const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !RETIRADOS.has(m))
     chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
     chk(`en ${BASE_COMMIT} la nota de débito no tenía "Ver PDF" (lo que este cambio agrega)`, !/data-ver-pdf-nd/.test(antes))
   }

@@ -305,6 +305,12 @@ for (const [f, clave, titulo] of VIEJOS) {
 const TOCADOS = ['gastos.html', 'caja.html', 'cobranzas.html', 'conos.html', 'pedidos.html', 'stock.html', 'materia-prima.html',
   'cuentas-corrientes.html', 'accesos.html', 'empleados.html', 'produccion-gestion.html', 'administracion.html']
 const CAMBIADOS_A_PROPOSITO = {
+  'cuentas-corrientes.html': {
+    // Rama cc-proveedor-una-lista (30/10/2026): se fue el recuadro "Órdenes de
+    // pago (N)" de la ficha; la orden va en el renglón de su pago
+    // (test-cuentas-corrientes-proveedor-una-lista.js).
+    'id:ficha-ordenes-pago': 'la orden de pago va en el renglón del pago, con "Reimprimir"',
+  },
   'stock.html': {
     // Rama stock-terminado-prolijo (23/10/2026): "Producto terminado" dejó de
     // ser un link a la gestión de Producción y es un <button> que abre la
