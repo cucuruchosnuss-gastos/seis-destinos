@@ -134,7 +134,9 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     expect(rpc.find(r => r.nombre === 'guardar_condicion_venta_cliente').params).toEqual({ p_cliente_id: 'c1', p_pct_a: 40,
       p_comisiones: [{ vendedor_id: 'v1', pct: 2.5 }, { vendedor_id: 'v2', pct: null }, { vendedor_id: 'v3', pct: null }] });
     expect(rpc.some(r => r.nombre === 'guardar_ficha_cliente')).toBe(false);
-    await expect(page.locator('#toast-global')).toContainText('Condición de venta guardada: punto 1 40 % · punto 2 60 %');
+    // 30/10/2026: "Condición guardada: N1 X% / N2 Y%", también escrito al lado del botón.
+    await expect(page.locator('#toast-global')).toContainText('Condición guardada: N1 40% / N2 60%');
+    await expect(page.locator('#ad-f-condicion-estado')).toHaveText('Condición guardada: N1 40% / N2 60%');
 
     // Vacío = no se divide; y el error de la base tal cual.
     await a.fill('');

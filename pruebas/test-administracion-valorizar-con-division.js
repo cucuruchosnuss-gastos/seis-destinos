@@ -183,9 +183,10 @@ async function abrir(S, opciones) {
     json(S.puntosDePct(40)) === '["A","B"]' && json(S.puntosDePct(100)) === '["A"]' && json(S.puntosDePct(0)) === '["B"]')
   chk('una factura ya cargada no se esconde', json(S.partesFacturaOrden(100, { B: { numero: '0002-1' } })) === '["A","B"]' &&
     json(S.partesFacturaOrden(40, { UNICA: { numero: '1-2' } })) === '["A","B","UNICA"]')
-  chk('la condición inicial: la de la orden, si no la del cliente, si no 100/0',
+  // 30/10/2026: sin condición en la orden ni en el cliente ya no se inventa el 100/0: null (vacíos).
+  chk('la condición inicial: la de la orden, si no la del cliente, si no ninguna',
     S.pctInicialFacturar({ division_pct_a: 50 }, CLIENTES[0]) === 50 && S.pctInicialFacturar({ division_pct_a: null }, CLIENTES[0]) === 40 &&
-    S.pctInicialFacturar({ division_pct_a: null }, CLIENTES[1]) === 100)
+    S.pctInicialFacturar({ division_pct_a: null }, CLIENTES[1]) === null)
   chk('el nombre del PDF: "Orden de pedido N1-0036 - ICARDI REPRESENTACIONES S.A.pdf"',
     S.nombrePdfPunto({ codigo: 'N-0036', cliente: 'ICARDI REPRESENTACIONES S.A.' }, 'A') === 'Orden de pedido N1-0036 - ICARDI REPRESENTACIONES S.A.pdf')
   chk('y sin letras que un archivo no admite', S.nombrePdfPunto({ codigo: 'N-0036', cliente: 'A/B: "C"' }, 'B') === 'Orden de pedido N2-0036 - A B C.pdf')
@@ -298,14 +299,90 @@ async function abrir(S, opciones) {
     chk('dice que todavía no se guardó', /Todavía no se guardó en esta orden/.test(txt(S, 'ad-fc-estado')))
   }))
 }
+// ── Sin condición no se inventa el 100/0 (30/10/2026, pedido de Facu) ─────
 {
-  // Un cliente sin pct_parte_a: 100/0, un solo punto.
+  // Un cliente sin pct_parte_a y la orden sin división: N1 y N2 vacíos, el aviso
+  // en naranja y nada que generar ni guardar hasta completarlo.
   const S = nuevo()
-  preparar(S, { orden: { ...ORDEN, cliente_id: 'c-pepe', division_pct_a: null } })
-  esperas.push(abrir(S).then(({ llamadas }) => {
-    chk('sin condición en el cliente: 100/0', llamadas[0][1].p_pct_a === 100 && txt(S, 'ad-fc-condicion') === 'N1-0036: 100 % · N2-0036: 0 %')
-    chk('el 100/0 marcado', el(S, 'ad-fc-rapida-100').getAttribute('aria-pressed') === 'true')
-    chk('uno solo: el N1-0036', el(S, 'ad-fc-punto-a').hidden === false && el(S, 'ad-fc-punto-b').hidden === true)
+  preparar(S, { orden: { ...ORDEN, cliente_id: 'c-pepe', division_pct_a: null }, clientes: CLIENTES.map(c => ({ ...c })) })
+  esperas.push(abrir(S).then(async () => {
+    chk('sin condición: no calcula ni guarda nada (no hay 100/0)', !llamadasDe(S, 'datos_division_orden').length && !llamadasDe(S, 'guardar_division_orden').length)
+    chk('N1 y N2 vacíos', el(S, 'ad-fc-otro').value === '' && el(S, 'ad-fc-otro-b').value === '')
+    chk('el aviso en naranja, con el texto de Facu', /ad-aviso ad-aviso--naranja/.test(html(S, 'ad-fc-sin-condicion')) &&
+      html(S, 'ad-fc-sin-condicion').endsWith('>Este cliente no tiene condición de venta. Poné el % de N1 y N2 (y si querés, guardala en la ficha del cliente)</div>'), html(S, 'ad-fc-sin-condicion'))
+    chk('ningún botón rápido marcado', ['100', '80', '50', '40'].every(n => el(S, 'ad-fc-rapida-' + n).getAttribute('aria-pressed') === 'false'))
+    chk('no se puede generar el N1 / N2 (escondidos, sin imprimir)', el(S, 'ad-fc-punto-a').hidden === true && el(S, 'ad-fc-punto-b').hidden === true &&
+      el(S, 'ad-fc-imprimir-a').disabled === true && el(S, 'ad-fc-imprimir-b').disabled === true)
+    chk('dice que falta el %', txt(S, 'ad-fc-estado') === 'Sin el % de N1 y N2 no se puede guardar la división ni armar las órdenes de pedido.', txt(S, 'ad-fc-estado'))
+    chk('el tilde "Guardar también como condición del cliente", sin marcar', el(S, 'ad-fc-cliente').hidden === false && el(S, 'ad-fc-guardar-cliente').checked === false &&
+      /<input type="checkbox" id="ad-fc-guardar-cliente"> Guardar también como condición del cliente<\/label>/.test(html(S, 'ad-orden-facturar')))
+    S.imprimirPunto('A')
+    await S.compartirPunto('A')
+    chk('imprimir o compartir sin %: nada', S.__impresiones() === 0 && S.__win.__pdfs.length === 0)
+    // Tildar antes del %: espera a que se ponga.
+    S.marcarGuardarCliente(true)
+    chk('tildado sin %: todavía no llama', !llamadasDe(S, 'guardar_condicion_venta_cliente').length && txt(S, 'ad-fc-cliente-estado') === 'Se guarda en el cliente cuando pongas el %.')
+    await correrRelojes(S)
+    chk('sin % no se programa ningún guardado', !llamadasDe(S, 'guardar_division_orden').length && el(S, 'ad-fc-error').hidden === true)
+    // Escribir el N2 completa el N1 (como en la ficha).
+    el(S, 'ad-fc-otro-b').value = '70'
+    S.escribirPctFacturar(70, 'B')
+    chk('escribir el N2 completa el N1', el(S, 'ad-fc-otro').value === '30')
+    chk('…y el aviso se va', !html(S, 'ad-fc-sin-condicion'))
+    await correrRelojes(S)
+    await vaciar()
+    const g = llamadasDe(S, 'guardar_division_orden')
+    chk('completo: guarda la división con 30', g.length === 1 && g[0][1].p_pct_a === 30, json(g))
+    const c = llamadasDe(S, 'guardar_condicion_venta_cliente')
+    chk('con el tilde: el mismo % como condición del cliente', c.length === 1 && json(c[0][1]) === json({ p_cliente_id: 'c-pepe', p_pct_a: 30, p_comisiones: null }), json(c))
+    chk('…lo dice', txt(S, 'ad-fc-cliente-estado') === 'Condición guardada: N1 30% / N2 70% (en el cliente).', txt(S, 'ad-fc-cliente-estado'))
+    chk('…y la próxima orden del cliente ya abre con 30', S.clienteDe('c-pepe').pct_parte_a === 30 && CLIENTES.find(x => x.id === 'c-pepe').pct_parte_a === null)
+    chk('los puntos aparecen, con su total', el(S, 'ad-fc-punto-a').hidden === false && el(S, 'ad-fc-punto-b').hidden === false && el(S, 'ad-fc-imprimir-a').disabled === false)
+    S.escribirPctFacturar(40)
+    await correrRelojes(S)
+    await vaciar()
+    chk('cambiar el % con el tilde puesto lo vuelve a guardar en el cliente', llamadasDe(S, 'guardar_condicion_venta_cliente').length === 2 && llamadasDe(S, 'guardar_condicion_venta_cliente')[1][1].p_pct_a === 40)
+  }))
+}
+{
+  // Sin el tilde: la condición del cliente no se toca.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, cliente_id: 'c-pepe', division_pct_a: null }, clientes: CLIENTES.map(c => ({ ...c })) })
+  esperas.push(abrir(S).then(async () => {
+    S.elegirPctFacturar(50)
+    await correrRelojes(S)
+    await vaciar()
+    chk('un rápido completa los dos (50 / 50)', el(S, 'ad-fc-otro').value === '50' && el(S, 'ad-fc-otro-b').value === '50')
+    chk('sin el tilde: la división sí, el cliente no', llamadasDe(S, 'guardar_division_orden').length === 1 && !llamadasDe(S, 'guardar_condicion_venta_cliente').length)
+    // Tildarlo con la división ya guardada: va en el momento.
+    S.marcarGuardarCliente(true)
+    await vaciar()
+    const c = llamadasDe(S, 'guardar_condicion_venta_cliente')
+    chk('tildarlo después: guarda en el momento con lo guardado (50)', c.length === 1 && c[0][1].p_pct_a === 50, json(c))
+  }))
+}
+{
+  // El error de la base, tal cual, al lado del tilde.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, cliente_id: 'c-pepe', division_pct_a: null }, clientes: CLIENTES.map(c => ({ ...c })) })
+  const base = baseFalsa(S)
+  S.__setRpc(async (n, p) => n === 'guardar_condicion_venta_cliente' ? { data: null, error: { message: 'No tenés permiso sobre este cliente.' } } : base.rpc(n, p))
+  esperas.push(S.abrirOrden('o36').then(vaciar).then(async () => {
+    S.marcarGuardarCliente(true)
+    S.elegirPctFacturar(80)
+    await correrRelojes(S)
+    await vaciar()
+    chk('el error de guardar_condicion_venta_cliente, tal cual', txt(S, 'ad-fc-cliente-error') === 'No tenés permiso sobre este cliente.' && el(S, 'ad-fc-cliente-error').hidden === false)
+    chk('…la división igual quedó', llamadasDe(S, 'guardar_division_orden').length === 1 && txt(S, 'ad-fc-estado') === 'Guardado.')
+  }))
+}
+{
+  // Un cliente CON condición (ICARDI): ni aviso ni tilde.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, division_pct_a: null } })
+  esperas.push(abrir(S).then(() => {
+    chk('ICARDI: abre en 40/60, sin aviso ni tilde', el(S, 'ad-fc-otro').value === '40' && el(S, 'ad-fc-otro-b').value === '60' &&
+      !html(S, 'ad-fc-sin-condicion') && el(S, 'ad-fc-cliente').hidden === true)
   }))
 }
 {
@@ -388,7 +465,11 @@ async function abrir(S, opciones) {
     S.escribirPctFacturar(null)
     await correrRelojes(S)
     chk('vacío no llama', !llamadasDe(S, 'guardar_division_orden').length)
-    chk('y lo dice con el código del punto', txt(S, 'ad-fc-error') === 'El % del N1-0036 va de 0 a 100.' && el(S, 'ad-fc-error').hidden === false)
+    // 30/10/2026: vaciarlo no es un error: se espera a que lo completen (y no se guarda nada).
+    chk('vacío: sin error, dice que falta el %', el(S, 'ad-fc-error').hidden === true &&
+      txt(S, 'ad-fc-estado') === 'Sin el % de N1 y N2 no se puede guardar la división ni armar las órdenes de pedido.', txt(S, 'ad-fc-estado'))
+    chk('…y sin el aviso naranja (ICARDI sí tiene condición)', !html(S, 'ad-fc-sin-condicion'))
+    chk('…y el N2 vacío', el(S, 'ad-fc-otro-b').value === '')
     S.cambiarVendedorFacturar('v2', null)
     S.escribirPctFacturar(40)
     await correrRelojes(S)
@@ -546,10 +627,13 @@ async function abrir(S, opciones) {
   }))
 }
 {
-  // Con 100/0, el N2 no se imprime ni se comparte.
+  // Con 100/0 (elegido: desde el 30/10/2026 sin condición no hay 100/0 solo), el N2 no se imprime ni se comparte.
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, cliente_id: 'c-pepe', division_pct_a: null } })
   esperas.push(abrir(S).then(async () => {
+    S.elegirPctFacturar(100)
+    await correrRelojes(S)
+    chk('100/0 elegido: la base ya devolvió los importes', S.estado.facturar.datos?.pct_a === 100 && el(S, 'ad-fc-punto-b').hidden === true)
     S.imprimirPunto('B')
     await S.compartirPunto('B')
     chk('100/0: el N2 no existe (ni papel ni PDF)', S.__impresiones() === 0 && S.__win.__pdfs.length === 0)
@@ -682,8 +766,8 @@ async function abrir(S, opciones) {
   const LOF = CLIENTES.find(c => c.id === 'c-loforte')
   chk('el 0 del cliente vale: 0/100 (no cae en 100)', S.pctInicialFacturar({ division_pct_a: null }, LOF) === 0)
   chk('el 0 de la orden vale aunque el cliente diga 40', S.pctInicialFacturar({ division_pct_a: '0.00' }, CLIENTES[0]) === 0 && S.pctInicialFacturar({ division_pct_a: 0 }, CLIENTES[0]) === 0)
-  chk('ICARDI sigue en 40; sin condición (null) o sin cliente, 100/0', S.pctInicialFacturar({ division_pct_a: null }, CLIENTES[0]) === 40 &&
-    S.pctInicialFacturar({ division_pct_a: null }, { pct_parte_a: null }) === 100 && S.pctInicialFacturar({}, null) === 100)
+  chk('ICARDI sigue en 40; sin condición (null) o sin cliente, ninguna (null)', S.pctInicialFacturar({ division_pct_a: null }, CLIENTES[0]) === 40 &&
+    S.pctInicialFacturar({ division_pct_a: null }, { pct_parte_a: null }) === null && S.pctInicialFacturar({}, null) === null)
   chk('la condición con 0: "N1-0033: 0 % · N2-0033: 100 %"', S.textoCondicion('N-0033', '0.00') === 'N1-0033: 0 % · N2-0033: 100 %')
   chk('con 0 el N1 no se factura (no pide número): solo el N2', json(S.partesFacturaOrden('0.00', {})) === '["B"]' && json(S.partesFacturaOrden(0, {})) === '["B"]')
   chk('el 0 viaja como 0 (no null) a la base', S.parametrosDivision('o33', 0, null).p_pct_a === 0)

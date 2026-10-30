@@ -123,8 +123,9 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
     const h = cuerpo(S)
     chk('cliente común: sin sello ni deuda entre empresas', !/Orden interna/.test(h) && !/Entre empresas/.test(h) && !/data-entre-deuda/.test(h))
     chk('cliente común: el total, sin la comisión común (28/10/2026)', /Total \$/.test(h) && !/Comisión: sin cargar/.test(h) && !/ad-btn-comision/.test(h))
+    // c1 no tiene condición de venta: desde el 30/10/2026 no se inventa el 100/0 (no se calcula nada hasta poner el %).
     chk('cliente común: las órdenes de pedido N1 / N2 en la misma pantalla', el(S, 'ad-orden-facturar').hidden === false && /id="ad-fc"/.test(el(S, 'ad-orden-facturar').innerHTML) &&
-      S.__llamadas.rpc.some(([n]) => n === 'datos_division_orden'))
+      /data-fc-sin-condicion/.test(el(S, 'ad-fc-sin-condicion').innerHTML) && !S.__llamadas.rpc.some(([n]) => n === 'datos_division_orden'))
   }))
 }
 {

@@ -208,10 +208,10 @@ const FUNCIONES_BASE = [
   'cantidadDivision', 'renglonesParte', 'htmlTotalesPunto', 'htmlHojaPunto', 'nombrePdfPunto', 'htmlFacturasOrden', 'puedeFacturar',
   'pctInicialFacturar', 'actualizarFilaOrden', 'contenedorFacturar', 'sincronizarFacturar', 'cerrarFacturar', 'iniciarFacturar',
   'aplicarDatosFacturar', 'anotarDivisionGuardada', 'pintarFacturar', 'idFc', 'htmlPuntoFacturar', 'pintarVendedoresFacturar', 'facturarPendiente',
-  'puntoListo', 'actualizarFacturar', 'actualizarFacturaPunto', 'elegirPctFacturar', 'escribirPctFacturar', 'cambiarVendedorFacturar',
+  'puntoListo', 'actualizarFacturar', 'actualizarFacturaPunto', 'elegirPctFacturar', 'escribirPctFacturar', 'ponerPctsFacturar', 'marcarGuardarCliente', 'nuevoClienteFacturar', 'guardarCondicionDelCliente', 'actualizarClienteFacturar', 'textoCondicionGuardada', 'cambiarVendedorFacturar',
   'programarGuardarFacturar', 'validarDivision', 'guardarFacturar', 'imprimirPunto', 'pdfPunto', 'compartirPunto', 'rutaPdfFactura',
   'subirPdfFactura', 'escribirNumeroFactura', 'guardarFacturaPunto', 'verPdfFactura', 'listaOrdenesALaVista', 'releerOrdenesEnSilencio',
-  'llenarCondicionVenta', 'completarOtroPct', 'pintarCondicionVenta', 'guardarCondicionVenta',
+  'llenarCondicionVenta', 'completarOtroPct', 'marcarCondicionTocada', 'condicionSinGuardar', 'guardarCondicionAlSalir', 'pintarCondicionVenta', 'guardarCondicionVenta',
   // Los 3 vendedores y la configuración de comisiones (21/10/2026, tarde)
   'numeroONulo', 'leerVendedores', 'leerComisionesCliente', 'sumaPcts', 'parametrosComisiones', 'validarComisiones', 'htmlVendedoresPct',
   'llenarVendedoresPct', 'comisionesDeDatos', 'comisionesSinDatos',
@@ -273,7 +273,7 @@ const CONSTANTES_BASE = [
   // Entre empresas (13/10/2026)
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
   // Dividir para facturar (21/10/2026) y los puntos N1 / N2 (28/10/2026)
-  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
+  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'AVISO_SIN_CONDICION', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
   // Los remitos precargados de Rosario (27/10/2026)
   'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO',
   // Los acopios (27/10/2026)

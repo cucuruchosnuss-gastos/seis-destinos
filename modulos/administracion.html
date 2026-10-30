@@ -175,6 +175,8 @@
       color: var(--ad-texto-secundario); font-size: 0.875rem; overflow-wrap: anywhere;
     }
     .ad-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+    /* Falta un dato que hay que poner (30/10/2026, pedido de Facu: "un aviso en naranja"). */
+    .ad-aviso--naranja { background: var(--naranja-suave); border-left-color: var(--naranja); color: var(--naranja-oscuro); font-weight: 600; }
     .ad-error-pegado { color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; margin: 0.375rem 0 0; overflow-wrap: anywhere; }
     .ad-barra-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0 0 0.75rem; }
     .ad-cabecera-vista { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.75rem; }
@@ -504,6 +506,9 @@
     .ad-fc__rapidas { margin: 0 0 0.5rem; flex-wrap: wrap; }
     .ad-fc__rapidas .ad-segmento__opcion { flex: 1 1 4.5rem; min-width: 0; }
     .ad-fc__otro .ad-input { max-width: 10rem; }
+    .ad-fc__pcts { margin: 0; }
+    #ad-fc-cliente { margin: 0 0 0.75rem; }
+    #ad-fc-cliente-estado:empty { display: none; }
     .ad-fc__estado { margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--color-texto-suave); min-height: 1.25rem; overflow-wrap: anywhere; }
     .ad-fc__puntos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 0.75rem; margin-top: 0.75rem; min-width: 0; }
     .ad-fc-punto { border: 1px solid var(--borde-tarjeta); border-radius: 12px; padding: 0.75rem; min-width: 0; }
@@ -1077,7 +1082,7 @@
              guarda con su propio botón (guardar_condicion_venta_cliente), NO
              con "Guardar la ficha". Ver guardarCondicionVenta() en el script. -->
         <h2 class="ad-subtitulo">Condición de venta</h2>
-        <p class="ad-texto-suave">Al valorizar, cada orden se separa en dos órdenes de pedido: la del punto de venta 1 (N1-…) y la del 2 (N2-…). Vacío: todo al punto 1 (100/0).</p>
+        <p class="ad-texto-suave">Al valorizar, cada orden se separa en dos órdenes de pedido: la del punto de venta 1 (N1-…) y la del 2 (N2-…). Vacío: sin condición (se pone el % en cada orden, al facturar).</p>
         <div class="ad-fila-campos">
           <div class="ad-campo"><label for="ad-f-pct-a">Punto de venta 1 %</label><input type="text" class="ad-input" id="ad-f-pct-a" autocomplete="off"></div>
           <div class="ad-campo"><label for="ad-f-pct-b">Punto de venta 2 %</label><input type="text" class="ad-input" id="ad-f-pct-b" autocomplete="off"><span class="ad-campo__ayuda">Se completa sola con lo que falta para 100.</span></div>
@@ -1089,6 +1094,7 @@
         <span class="ad-campo__ayuda">Se suman aparte al punto 1. Cambiar un % lo deja propio de este cliente.</span>
         <div id="ad-f-vendedores"></div>
         <p class="ad-error-pegado" id="ad-f-condicion-error" hidden></p>
+        <p class="ad-texto-suave" id="ad-f-condicion-estado" aria-live="polite" hidden></p>
         <button type="button" class="ad-btn ad-btn--secundario" id="ad-f-condicion-guardar">Guardar la condición de venta</button>
         <!-- LA CLASIFICACIÓN (06/10/2026): Cliente / Cliente y proveedor.
              Vincular y separar se guardan AL MOMENTO con sus funciones
@@ -1878,6 +1884,8 @@
       if (id !== 'ad-sin-acceso') document.getElementById('ad-sin-acceso').hidden = true
       // Las órdenes de pedido N1 / N2 son de la orden abierta.
       if (id !== 'ad-vista-orden' && estado.facturar) cerrarFacturar()
+      // La condición de venta tocada en la ficha no se pierde al salir (30/10/2026).
+      if (estado.vista === 'ad-vista-ficha' && id !== 'ad-vista-ficha' && estado.ficha) guardarCondicionAlSalir(estado.ficha)
       estado.vista = id
       pintarEmpresas()
       pintarPestanas()
@@ -4505,10 +4513,14 @@
     }
 
     // La condición con que se abre: la guardada en la orden; si no, la del
-    // cliente (clientes.pct_parte_a); si no tiene, 100/0 (todo al N1).
+    // cliente (clientes.pct_parte_a). Si ninguno tiene, null: los dos % quedan
+    // vacíos hasta que se pongan (30/10/2026: antes se inventaba 100/0).
     function pctInicialFacturar(o, cli) {
-      return numeroONulo(o?.division_pct_a) ?? numeroONulo(cli?.pct_parte_a) ?? 100
+      return numeroONulo(o?.division_pct_a) ?? numeroONulo(cli?.pct_parte_a)
     }
+
+    // El aviso de la pantalla de facturar sin condición (texto de Facu).
+    const AVISO_SIN_CONDICION = 'Este cliente no tiene condición de venta. Poné el % de N1 y N2 (y si querés, guardala en la ficha del cliente)'
 
     // Lo que importa del listado de una orden abierta: así su fila queda al
     // día sin releer la lista (28/10/2026: después de valorizar decía
@@ -4579,10 +4591,25 @@
         datos: null, pctA: pctInicialFacturar(o, cli), comisiones: null, guardada: numeroONulo(o.division_pct_a) !== null,
         cargando: true, aviso: null, reloj: null, guardando: false, enCamino: null, otraVez: false, turno: 0, errorGuardar: null,
         facturas: facturasPorParte(d.facturas), cargas: {}, puntos: {}, armado: false,
+        // Sin condición en el cliente (30/10/2026): el tilde para guardarla también ahí.
+        clienteSinCondicion: numeroONulo(cli?.pct_parte_a) === null, cliente: nuevoClienteFacturar(),
       }
       const c = contenedorFacturar()
       if (c) c.hidden = false
       pintarFacturar()
+      // Ni la orden ni el cliente tienen %: no hay nada que calcular ni guardar
+      // (datos_division_orden lo rechazaría). Solo los vendedores, para cuando se ponga.
+      if (fc.pctA === null) {
+        try {
+          fc.comisiones = await comisionesSinDatos(o.cliente_id)
+        } catch (err) {
+          console.error('No se pudieron leer las comisiones de los vendedores:', err)
+          fc.comisiones = []
+        }
+        fc.cargando = false
+        if (estado.facturar === fc) actualizarFacturar()
+        return
+      }
       // Si mientras tanto se tocó la condición (sube el turno), lo que llega
       // no pisa lo que se ve; igual trae los vendedores, si todavía no estaban.
       const turno = fc.turno
@@ -4601,8 +4628,7 @@
         if (fc.comisiones === null) fc.comisiones = comisionesDeDatos(data)
         if (turno === fc.turno) {
           aplicarDatosFacturar(fc, data)
-          const otro = document.getElementById('ad-fc-otro')
-          if (estado.facturar === fc && otro && document.activeElement !== otro) ponerNumero(otro, fc.pctA)
+          if (estado.facturar === fc) ponerPctsFacturar(fc)
         }
       } catch (err) {
         console.error('No se pudo leer la división de la orden:', err)
@@ -4656,9 +4682,15 @@
         '<h2 class="ad-subtitulo">Órdenes de pedido para facturar en ARCA</h2>' +
         `<p class="ad-fc__condicion" id="ad-fc-condicion" data-fc-condicion></p>` +
         `<div class="ad-segmento ad-fc__rapidas" role="group" aria-label="Condición de venta">${rapidas}</div>` +
+        '<div class="ad-fila-campos ad-fc__pcts">' +
         `<div class="ad-campo ad-fc__otro"><label for="ad-fc-otro">${esc('Otro % del ' + a)}</label>` +
-        `<input type="text" class="ad-input" id="ad-fc-otro" inputmode="decimal" autocomplete="off">` +
-        `<span class="ad-campo__ayuda">${esc('El ' + codigoPunto(fc.codigo, 'B') + ' lleva lo que falta para 100.')}</span></div>` +
+        `<input type="text" class="ad-input" id="ad-fc-otro" inputmode="decimal" autocomplete="off"></div>` +
+        `<div class="ad-campo ad-fc__otro"><label for="ad-fc-otro-b">${esc('% del ' + codigoPunto(fc.codigo, 'B'))}</label>` +
+        `<input type="text" class="ad-input" id="ad-fc-otro-b" inputmode="decimal" autocomplete="off">` +
+        '<span class="ad-campo__ayuda">Escribir uno completa el otro.</span></div></div>' +
+        '<div id="ad-fc-sin-condicion"></div>' +
+        '<div id="ad-fc-cliente" hidden><label class="ad-check"><input type="checkbox" id="ad-fc-guardar-cliente"> Guardar también como condición del cliente</label>' +
+        '<p class="ad-texto-suave" id="ad-fc-cliente-estado" aria-live="polite"></p><p class="ad-error-pegado" id="ad-fc-cliente-error" hidden></p></div>' +
         `<span class="ad-campo__rotulo">${esc('Comisiones de los vendedores (van en el ' + a + ')')}</span>` +
         '<div id="ad-fc-vendedores"></div>' +
         '<p class="ad-fc__estado" id="ad-fc-estado" aria-live="polite"></p>' +
@@ -4666,9 +4698,8 @@
         '<div id="ad-fc-aviso"></div>' +
         `<div class="ad-fc__puntos" id="ad-fc-puntos">${puntos}</div></div>`
       fc.armado = true
-      const otro = document.getElementById('ad-fc-otro')
-      enlazarCampoNumero(otro, { decimales: 2, max: 100 })
-      ponerNumero(otro, fc.pctA)
+      for (const id of ['ad-fc-otro', 'ad-fc-otro-b']) enlazarCampoNumero(document.getElementById(id), { decimales: 2, max: 100 })
+      ponerPctsFacturar(fc)
       pintarVendedoresFacturar()
       actualizarFacturar()
     }
@@ -4734,6 +4765,7 @@
         est.textContent = fc.cargando && !fc.guardando ? 'Calculando…'
           : facturarPendiente(fc) ? 'Guardando…'
           : fc.errorGuardar ? ''
+          : fc.pctA === null ? 'Sin el % de N1 y N2 no se puede guardar la división ni armar las órdenes de pedido.'
           : !fc.guardada ? 'Todavía no se guardó en esta orden: tocá la condición para guardarla.'
           : 'Guardado.'
       }
@@ -4741,8 +4773,13 @@
       if (err) { err.textContent = fc.errorGuardar ?? ''; err.hidden = !fc.errorGuardar }
       const aviso = document.getElementById('ad-fc-aviso')
       if (aviso) aviso.innerHTML = fc.aviso ? `<div class="ad-aviso">${esc(fc.aviso)}</div>` : ''
+      const sin = document.getElementById('ad-fc-sin-condicion')
+      if (sin) sin.innerHTML = fc.pctA === null && fc.clienteSinCondicion ? `<div class="ad-aviso ad-aviso--naranja" data-fc-sin-condicion>${esc(AVISO_SIN_CONDICION)}</div>` : ''
+      actualizarClienteFacturar(fc)
       // Con lo que ya devolvió la base: los puntos que lleva y sus totales.
-      const partes = partesFacturaOrden(fc.datos ? fc.datos.pct_a : fc.pctA, fc.facturas)
+      // Sin % (y nada guardado) no hay N1 ni N2 que armar: se esconden.
+      const partes = fc.pctA === null && !fc.datos ? partesFacturaOrden(null, fc.facturas).filter(p => !!fc.facturas?.[p]?.numero)
+        : partesFacturaOrden(fc.datos ? fc.datos.pct_a : fc.pctA, fc.facturas)
       for (const p of [...PARTES_DIVISION, PARTE_UNICA]) {
         const caja = document.getElementById(idFc('punto', p))
         if (!caja) continue
@@ -4799,14 +4836,26 @@
       if (!fc) return
       fc.pctA = numeroONulo(n)
       ponerNumero(document.getElementById('ad-fc-otro'), fc.pctA)
+      ponerNumero(document.getElementById('ad-fc-otro-b'), complementoPct(fc.pctA))
       programarGuardarFacturar(fc)
     }
 
-    function escribirPctFacturar(valor) {
+    // Escribir el % del N1 (parte 'A') o del N2 ('B') completa el otro, como en la ficha.
+    function escribirPctFacturar(valor, parte = 'A') {
       const fc = estado.facturar
       if (!fc) return
-      fc.pctA = numeroONulo(valor)
+      const n = numeroONulo(valor)
+      fc.pctA = parte === 'B' ? (n === null ? null : complementoPct(n)) : n
+      ponerNumero(document.getElementById(parte === 'B' ? 'ad-fc-otro' : 'ad-fc-otro-b'), parte === 'B' ? fc.pctA : complementoPct(fc.pctA))
       programarGuardarFacturar(fc)
+    }
+
+    // Los dos % en pantalla, menos el que se está escribiendo.
+    function ponerPctsFacturar(fc) {
+      const a = document.getElementById('ad-fc-otro')
+      const b = document.getElementById('ad-fc-otro-b')
+      if (a && document.activeElement !== a) ponerNumero(a, fc.pctA)
+      if (b && document.activeElement !== b) ponerNumero(b, complementoPct(fc.pctA))
     }
 
     function cambiarVendedorFacturar(vendedorId, valor) {
@@ -4821,7 +4870,9 @@
       fc.turno++
       fc.errorGuardar = null
       if (fc.reloj) clearTimeout(fc.reloj)
-      fc.reloj = setTimeout(() => guardarFacturar(fc), ESPERA_GUARDAR_DIVISION)
+      fc.reloj = null
+      // Sin el % no se guarda nada (30/10/2026): se espera a que lo completen.
+      if (fc.pctA !== null) fc.reloj = setTimeout(() => guardarFacturar(fc), ESPERA_GUARDAR_DIVISION)
       actualizarFacturar()
     }
 
@@ -4850,6 +4901,8 @@
           fc.datos = data
           fc.errorGuardar = null
           if (Array.isArray(data?.facturas)) fc.facturas = facturasPorParte(data.facturas)
+          // Con el tilde, el mismo % queda también como condición del cliente.
+          if (fc.cliente?.marcado) guardarCondicionDelCliente(fc, numeroONulo(data?.pct_a) ?? fc.pctA)
         }
       } catch (err) {
         console.error('No se pudo guardar la división:', err)
@@ -4861,6 +4914,80 @@
         if (fc.otraVez) { fc.otraVez = false; if (!fc.reloj) guardarFacturar(fc) }
         if (estado.facturar === fc) actualizarFacturar()
       }
+    }
+
+    // ── "Guardar también como condición del cliente" (30/10/2026) ────────
+    // Solo para un cliente sin condición. Va guardar_condicion_venta_cliente
+    // con el % que quedó guardado en la orden (p_comisiones null: las del
+    // cliente no se tocan). Si se tilda con la división ya guardada, va en el
+    // momento; si no, cuando se guarde. Nunca dos en camino: si llega otro
+    // cambio mientras viaja, al volver se manda lo último.
+    function marcarGuardarCliente(marcado) {
+      const fc = estado.facturar
+      if (!fc?.clienteSinCondicion) return
+      fc.cliente ??= nuevoClienteFacturar()
+      fc.cliente.marcado = !!marcado
+      fc.cliente.error = null
+      if (fc.cliente.marcado && fc.guardada && !facturarPendiente(fc) && !fc.errorGuardar) {
+        const pct = numeroONulo(fc.datos?.pct_a) ?? fc.pctA
+        if (pct !== null) { guardarCondicionDelCliente(fc, pct); return }
+      }
+      actualizarFacturar()
+    }
+
+    function nuevoClienteFacturar() {
+      return { marcado: false, guardando: false, otraVez: false, error: null, guardado: null }
+    }
+
+    async function guardarCondicionDelCliente(fc, pct) {
+      const cl = fc.cliente ??= nuevoClienteFacturar()
+      if (cl.guardando) { cl.otraVez = pct; return }
+      cl.guardando = true
+      cl.error = null
+      if (estado.facturar === fc) actualizarFacturar()
+      try {
+        const { error } = await supabase.rpc('guardar_condicion_venta_cliente', { p_cliente_id: fc.clienteId, p_pct_a: pct, p_comisiones: null })
+        if (error) throw error
+        cl.guardado = pct
+        // La próxima orden de este cliente ya abre con este %.
+        if (Array.isArray(estado.clientes)) estado.clientes = estado.clientes.map(c => c.id === fc.clienteId ? { ...c, pct_parte_a: pct } : c)
+        if (estado.ficha?.id === fc.clienteId && estado.ficha.original) estado.ficha.original = { ...estado.ficha.original, pct_parte_a: pct }
+      } catch (err) {
+        console.error('No se pudo guardar la condición del cliente:', err)
+        // Los mensajes de guardar_condicion_venta_cliente vienen escritos para una persona: tal cual.
+        cl.error = err?.message || 'No se pudo guardar la condición del cliente. Probá de nuevo.'
+      } finally {
+        cl.guardando = false
+        const otra = cl.otraVez
+        cl.otraVez = false
+        if (otra !== false && otra !== cl.guardado && cl.marcado) guardarCondicionDelCliente(fc, otra)
+        else if (estado.facturar === fc) actualizarFacturar()
+      }
+    }
+
+    function actualizarClienteFacturar(fc) {
+      const caja = document.getElementById('ad-fc-cliente')
+      if (!caja) return
+      const cl = fc.cliente ?? nuevoClienteFacturar()
+      caja.hidden = !fc.clienteSinCondicion
+      const t = document.getElementById('ad-fc-guardar-cliente')
+      if (t) { t.checked = cl.marcado; t.disabled = cl.guardando }
+      const est = document.getElementById('ad-fc-cliente-estado')
+      if (est) {
+        est.textContent = cl.guardando ? 'Guardando en el cliente…'
+          : cl.guardado !== null ? textoCondicionGuardada(cl.guardado) + ' (en el cliente).'
+          : cl.marcado && fc.pctA === null ? 'Se guarda en el cliente cuando pongas el %.'
+          : ''
+      }
+      const e = document.getElementById('ad-fc-cliente-error')
+      if (e) { e.textContent = cl.error ?? ''; e.hidden = !cl.error }
+    }
+
+    // "Condición guardada: N1 40% / N2 60%" (el texto de Facu).
+    function textoCondicionGuardada(pct) {
+      const a = numeroONulo(pct)
+      if (a === null) return 'Condición guardada: sin condición (se pone el % en cada orden, al facturar)'
+      return `Condición guardada: N1 ${textoPct(a)}% / N2 ${textoPct(complementoPct(a))}%`
     }
 
     // ── Imprimir y compartir UN punto ────────────────────────────────────
@@ -8032,8 +8159,10 @@
       if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return
       // proveedorActual: con quién está vinculado hoy; proveedorId: el que se
       // elige en el panel de vincular (null = que lo busque la base).
+      // Otra ficha sobre esta: la condición que quedó sin guardar se guarda igual.
+      if (estado.ficha && estado.ficha.id !== clienteId) guardarCondicionAlSalir(estado.ficha)
       estado.ficha = { id: clienteId, original: null, proveedorActual: null, proveedorId: null, busquedaProveedor: '', error: null,
-        vinculo: { panel: null, error: null, enviando: false }, condicion: { error: null, enviando: false, vendedores: null, errorVendedores: null } }
+        vinculo: { panel: null, error: null, enviando: false }, condicion: { error: null, enviando: false, vendedores: null, errorVendedores: null, version: 0, guardadaVersion: 0, mensaje: null } }
       mostrarVista('ad-vista-ficha')
       document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-vacio">Cargando la ficha…</div>'
       try {
@@ -8177,10 +8306,24 @@
 
     async function guardarFicha() {
       const f = estado.ficha
+      // La condición de venta tocada y sin guardar (30/10/2026) se guarda
+      // también, ANTES que el resto: si no se puede, no se sigue (no se pierde).
+      let conCondicion = false
+      if (f?.original && !estado.trabajando && condicionSinGuardar(f)) {
+        if (!await guardarCondicionVenta()) {
+          if (estado.ficha === f) { f.error = 'No se guardó la condición de venta: ' + (f.condicion.error ?? 'revisala.'); pintarPieFicha() }
+          return
+        }
+        conCondicion = true
+      }
       if (f?.confirmar) return guardarYConfirmarFicha()
       if (!f?.original || estado.trabajando) return
       const datos = cambiosFicha(f.original, leerFormFicha())
-      if (!Object.keys(datos).length) { f.error = 'No cambiaste nada.'; pintarPieFicha(); return }
+      if (!Object.keys(datos).length) {
+        f.error = conCondicion ? null : 'No cambiaste nada.'
+        pintarPieFicha()
+        return
+      }
       if ('nombre' in datos && datos.nombre.length < 2) { f.error = 'El nombre no puede quedar vacío.'; pintarPieFicha(); return }
       if ('comision_habitual' in datos && datos.comision_habitual !== '' && !(Number(datos.comision_habitual) >= 0 && Number(datos.comision_habitual) <= 100)) {
         f.error = 'La comisión habitual va de 0 a 100 %.'; pintarPieFicha(); return
@@ -8288,6 +8431,7 @@
       if (!v) return
       v.pct = valor
       v.propio = true
+      marcarCondicionTocada()
       const fila = document.querySelector(`#ad-f-vendedores [data-vendedor="${vendedorId}"]`)
       if (fila) {
         const config = fila.querySelector('[data-origen-config]')
@@ -8305,6 +8449,7 @@
       if (!v || c.enviando) return
       v.propio = false
       v.pct = v.defecto
+      marcarCondicionTocada()
       pintarVendedoresFicha()
     }
 
@@ -8322,44 +8467,73 @@
       ponerNumero(document.getElementById(idOtro), complementoPct(leerCampoNumero(document.getElementById(idCampo))))
     }
 
+    // Cada cambio en la condición (los % o un vendedor) sube la versión; queda
+    // "sin guardar" hasta que se guarda esa versión (o una posterior).
+    function marcarCondicionTocada() {
+      const c = estado.ficha?.condicion
+      if (!c) return
+      c.version = (c.version ?? 0) + 1
+      c.mensaje = null
+      pintarCondicionVenta()
+    }
+
+    function condicionSinGuardar(f) {
+      const c = f?.condicion
+      return !!f?.original && !!c && (c.version ?? 0) > (c.guardadaVersion ?? 0)
+    }
+
+    // Al salir de la ficha (otra vista, otra ficha): se guarda sola. Si no se
+    // puede, lo dice con el aviso de arriba (la ficha ya no se ve).
+    function guardarCondicionAlSalir(f) {
+      if (!condicionSinGuardar(f) || f.condicion.enviando) return
+      guardarCondicionVenta(f).then(ok => {
+        if (!ok) mostrarError(`No se guardó la condición de venta de ${f.original?.nombre ?? 'el cliente'}: ${f.condicion.error ?? 'probá de nuevo.'}`)
+      })
+    }
+
     function pintarCondicionVenta() {
       const c = estado.ficha?.condicion
       if (!c) return
       const e = document.getElementById('ad-f-condicion-error')
       e.textContent = c.error ?? ''
       e.hidden = !c.error
+      const est = document.getElementById('ad-f-condicion-estado')
+      if (est) { est.textContent = c.mensaje ?? ''; est.hidden = !c.mensaje }
       const b = document.getElementById('ad-f-condicion-guardar')
       b.disabled = !!c.enviando
       b.textContent = c.enviando ? 'Guardando…' : 'Guardar la condición de venta'
     }
 
-    async function guardarCondicionVenta() {
-      const f = estado.ficha
-      if (!f?.original) return
-      const c = f.condicion ??= { error: null, enviando: false }
-      if (c.enviando) return
+    // Devuelve true si quedó guardada. f: la ficha (por defecto la abierta;
+    // al salir, la que se deja: sus campos siguen en la página, escondidos).
+    async function guardarCondicionVenta(f = estado.ficha) {
+      if (!f?.original) return false
+      const c = f.condicion ??= { error: null, enviando: false, version: 0, guardadaVersion: 0, mensaje: null }
+      if (c.enviando) return false
       const pctA = leerCampoNumero(document.getElementById('ad-f-pct-a'))
       const comisiones = comisionesFicha(c.vendedores)
+      const version = c.version ?? 0
       c.error = validarCondicionVenta(pctA, comisiones)
-      if (c.error) { pintarCondicionVenta(); return }
+      if (c.error) { if (estado.ficha === f) pintarCondicionVenta(); return false }
       c.enviando = true
-      pintarCondicionVenta()
+      if (estado.ficha === f) pintarCondicionVenta()
       try {
         const { error } = await supabase.rpc('guardar_condicion_venta_cliente', { p_cliente_id: f.id, p_pct_a: pctA, p_comisiones: comisiones })
         if (error) throw error
-        if (estado.ficha !== f) return
+        c.guardadaVersion = Math.max(c.guardadaVersion ?? 0, version)
         f.original = { ...f.original, pct_parte_a: pctA }
         // Un propio que quedó vacío volvió a la configuración en la base.
         for (const v of c.vendedores ?? []) if (v.propio && numeroONulo(v.pct) === null) { v.propio = false; v.pct = v.defecto }
         // Las órdenes leen la condición de la lista de clientes: que la relea.
         estado.clientes = null
-        mostrarExito(pctA === null
-          ? 'Condición de venta guardada: sus órdenes van todas al punto de venta 1.'
-          : `Condición de venta guardada: punto 1 ${textoPct(pctA)} % · punto 2 ${textoPct(complementoPct(pctA))} %.`)
+        c.mensaje = textoCondicionGuardada(pctA)
+        mostrarExito(c.mensaje + '.')
+        return true
       } catch (err) {
         console.error('No se pudo guardar la condición de venta:', err)
         // Los mensajes de guardar_condicion_venta_cliente vienen escritos para una persona: tal cual.
         c.error = err?.message || 'No se pudo guardar la condición de venta. Probá de nuevo.'
+        return false
       } finally {
         c.enviando = false
         if (estado.ficha === f) { pintarCondicionVenta(); pintarVendedoresFicha() }
@@ -13796,6 +13970,7 @@
       facturar.addEventListener('input', (e) => {
         const t = e.target
         if (t.id === 'ad-fc-otro') escribirPctFacturar(leerCampoNumero(t))
+        else if (t.id === 'ad-fc-otro-b') escribirPctFacturar(leerCampoNumero(t), 'B')
         else if (t.dataset?.vendedorPct) cambiarVendedorFacturar(t.dataset.vendedorPct, leerCampoNumero(t))
         else if (t.id?.startsWith?.('ad-fc-numero-')) escribirNumeroFactura(t.id.slice('ad-fc-numero-'.length).toUpperCase())
       })
@@ -13803,6 +13978,7 @@
       facturar.addEventListener('change', (e) => {
         const t = e.target
         if (t.id?.startsWith?.('ad-fc-pdf-')) escribirNumeroFactura(t.id.slice('ad-fc-pdf-'.length).toUpperCase())
+        else if (t.id === 'ad-fc-guardar-cliente') marcarGuardarCliente(t.checked)
       })
       // El listado se relee solo (28/10/2026): al volver a la pestaña y cada
       // minuto mientras se ve.
@@ -13905,8 +14081,12 @@
       // La ficha
       document.getElementById('ad-ficha-volver').addEventListener('click', () => { if (estado.ficha) abrirCliente(estado.ficha.id) })
       document.getElementById('ad-ficha-guardar').addEventListener('click', () => guardarFicha())
-      document.getElementById('ad-f-pct-a').addEventListener('input', () => completarOtroPct('ad-f-pct-a', 'ad-f-pct-b'))
-      document.getElementById('ad-f-pct-b').addEventListener('input', () => completarOtroPct('ad-f-pct-b', 'ad-f-pct-a'))
+      document.getElementById('ad-f-pct-a').addEventListener('input', () => { completarOtroPct('ad-f-pct-a', 'ad-f-pct-b'); marcarCondicionTocada() })
+      document.getElementById('ad-f-pct-b').addEventListener('input', () => { completarOtroPct('ad-f-pct-b', 'ad-f-pct-a'); marcarCondicionTocada() })
+      // Cerrar o recargar la página con la condición sin guardar: el navegador pregunta.
+      window.addEventListener('beforeunload', (e) => {
+        if (estado.vista === 'ad-vista-ficha' && condicionSinGuardar(estado.ficha)) { e.preventDefault(); e.returnValue = '' }
+      })
       document.getElementById('ad-f-condicion-guardar').addEventListener('click', () => guardarCondicionVenta())
       document.getElementById('ad-f-vendedores').addEventListener('input', (e) => {
         const id = e.target.dataset?.vendedorPct

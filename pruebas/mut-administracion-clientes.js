@@ -73,7 +73,7 @@ correrMutaciones({
     { nombre: 'la ficha vuelve a mandar el proveedor (saltearía desvincular)', de: '      // dos cuentas con compensaciones. Mandarlo acá se saltearía las dos cosas.\n      return datos', a: "      if ((actual.proveedor_id ?? '') !== (original.proveedor_id ?? '')) datos.proveedor_id = actual.proveedor_id ?? ''\n      return datos" },
     { nombre: 'borrar un dato manda null', de: '        if (a !== valorComparable(tipo, original[clave])) datos[clave] = a', a: '        if (a !== valorComparable(tipo, original[clave])) datos[clave] = a || null' },
     { nombre: 'los espacios cuentan como cambio', de: '      return limpio(v)\n    }\n\n    // LO QUE SE MANDA', a: "      return String(v ?? '')\n    }\n\n    // LO QUE SE MANDA" },
-    { nombre: 'sin cambios se llama igual', de: "      if (!Object.keys(datos).length) { f.error = 'No cambiaste nada.'; pintarPieFicha(); return }\n", a: '' },
+    { nombre: 'sin cambios se llama igual', de: "      if (!Object.keys(datos).length) {\n        f.error = conCondicion ? null : 'No cambiaste nada.'\n        pintarPieFicha()\n        return\n      }\n", a: '' },
     { nombre: 'el nombre vacío se manda', de: "      if ('nombre' in datos && datos.nombre.length < 2) { f.error = 'El nombre no puede quedar vacío.'; pintarPieFicha(); return }\n", a: '' },
     { nombre: 'el error de la ficha se tapa', de: "        f.error = err?.message || 'No se pudo guardar la ficha. Probá de nuevo.'", a: "        f.error = 'No se pudo guardar la ficha. Probá de nuevo.'" },
     { nombre: 'se elige un proveedor que no está', de: "      if (!f || f.vinculo?.enviando || (id && !(estado.proveedores ?? []).some(p => p.id === id))) return", a: '      if (!f) return' },
