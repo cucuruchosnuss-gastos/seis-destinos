@@ -263,7 +263,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     S.cambiarPrecio('i1', 100)
     chk('con 80.000 + 17.000 ya no pasa: no avisa', S.avisoLimite(S.saldoProyectado(d), 100000, 'ARS') === null)
     let params = null
-    S.__setRpc(async (n, p) => { if (n === 'valorizar_orden_retiro') { params = p; return { data: { total: 17000, moneda: 'ARS', saldo_cliente: 97000, limite_credito: 100000, supera_limite: false }, error: null } } return { data: null, error: null } })
+    S.__setRpc(async (n, p) => { if (n === 'valorizar_con_condiciones') { params = p; return { data: { total: 17000, moneda: 'ARS', saldo_cliente: 97000, limite_credito: 100000, supera_limite: false }, error: null } } return { data: null, error: null } })
     return S.guardarValorizacion().then(() => {
       chk('valorizar manda la orden y el precio de CADA renglón (los de la lista y los corregidos)', params && params.p_orden_id === 'o1' && params.p_precios.i1 === 100 && params.p_precios.i2 === 4000)
       chk('y avisa el total', S.__llamadas.exitos.some(x => /N-0012 valorizada: \$ 17\.000,00/.test(x)))
@@ -287,11 +287,11 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     const d = S.estado.orden
     chk('sin lista, los precios vienen vacíos y se dice', d.valorizar.precios.i1 === null && /no tiene una lista de precios/.test(S.__els.get('ad-orden-cuerpo').innerHTML))
     await S.guardarValorizacion()
-    chk('faltando precios NO se llama a la base', !S.__llamadas.rpc.some(x => x[0] === 'valorizar_orden_retiro'))
+    chk('faltando precios NO se llama a la base', !S.__llamadas.rpc.some(x => x[0] === 'valorizar_con_condiciones'))
     chk('y dice cuántos faltan, pegado al botón', /Faltan precios en 2 renglones/.test(d.valorizar.errorGuardar))
     S.cambiarPrecio('i1', -5); S.cambiarPrecio('i2', 10)
     await S.guardarValorizacion()
-    chk('un precio negativo no se manda', !S.__llamadas.rpc.some(x => x[0] === 'valorizar_orden_retiro') && /negativo/.test(d.valorizar.errorGuardar))
+    chk('un precio negativo no se manda', !S.__llamadas.rpc.some(x => x[0] === 'valorizar_con_condiciones') && /negativo/.test(d.valorizar.errorGuardar))
     S.cambiarPrecio('i1', 10)
     S.__setRpc(async () => ({ data: null, error: { message: 'Faltan precios en 1 renglón(es): cargalos o asignale una lista con esos productos al cliente.' } }))
     await S.guardarValorizacion()
@@ -335,7 +335,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     chk('sin cono, solo la unidad', v.origen.i1.texto === 'lista Heladerías · $ 30,00 por unidad' && !v.origen.i1.grave)
     chk('los propuestos cuentan como de la lista', v.desdeLista.has('i1') && v.desdeLista.has('i2'))
     const pv = S.parametrosValorizar(d)
-    chk('se mandan TODOS los precios a valorizar_orden_retiro', pv.p_precios.i1 === 3000 && pv.p_precios.i2 === 4000 && pv.p_precios.i2b === 4000 && Object.keys(pv.p_precios).length === 3)
+    chk('se mandan TODOS los precios (de lista) a valorizar_con_condiciones', pv.p_precios.i1 === 3000 && pv.p_precios.i2 === 4000 && pv.p_precios.i2b === 4000 && Object.keys(pv.p_precios).length === 3)
   }))
 }
 {

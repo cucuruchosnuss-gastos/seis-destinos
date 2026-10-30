@@ -143,7 +143,7 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   preparar(S, { orden: { ...ORDEN, estado_valorizacion: 'pendiente', total: 0 }, items: [{ ...ITEMS[0], precio_caja: null, subtotal: null }] })
   S.__tablas.cliente_movimientos = [{ importe: 999999 }]
   S.__setRpc((n) => n === 'precio_venta' ? { data: [{ precio: 50000, origen: 'lista' }], error: null }
-    : n === 'valorizar_orden_retiro' ? { data: { total: 500000, moneda: 'ARS', saldo_cliente: 999999, limite_credito: 1000, supera_limite: true }, error: null }
+    : n === 'valorizar_con_condiciones' ? { data: { total: 500000, moneda: 'ARS', saldo_cliente: 999999, limite_credito: 1000, supera_limite: true }, error: null }
     : { data: null, error: null })
   esperas.push(S.abrirOrden('o1').then(async () => {
     chk('sin valorizar: se ofrece valorizar', el(S, 'ad-btn-valorizar').hidden === false)
@@ -155,8 +155,10 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
     chk('la valorización avisa de quién es la deuda', /Al valorizar, queda como deuda de Dolce Pasta con Cucuruchos Nuss \(Entre empresas\): no va a la cuenta corriente/.test(h), h.slice(0, 400))
     chk('sin el aviso del límite de crédito', !/pasa su límite/.test(h))
     await S.guardarValorizacion()
-    const llamada = S.__llamadas.rpc.find(r => r[0] === 'valorizar_orden_retiro')
-    chk('la RPC es la de siempre (la base decide adónde va la deuda)', !!llamada && llamada[1].p_orden_id === 'o1' && Object.keys(llamada[1]).sort().join() === 'p_orden_id,p_precios')
+    const llamada = S.__llamadas.rpc.find(r => r[0] === 'valorizar_con_condiciones')
+    // 30/10/2026: valorizar_con_condiciones (sin condiciones tildadas: []), que llama a valorizar_orden_retiro.
+    chk('la RPC es la de siempre (la base decide adónde va la deuda)', !!llamada && llamada[1].p_orden_id === 'o1' && Object.keys(llamada[1]).sort().join() === 'p_condiciones,p_orden_id,p_precios' &&
+      JSON.stringify(llamada[1].p_condiciones) === '[]')
     const exito = S.__llamadas.exitos.join(' | ')
     chk('el aviso de éxito dice de quién es la deuda', /Orden N-0042 valorizada: \$\s500\.000,00\. Queda como deuda de Dolce Pasta con Cucuruchos Nuss\./.test(exito), exito)
     chk('aunque la base diga supera_limite, no se avisa límite', !S.estado.orden?.aviso)
@@ -166,7 +168,7 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   // Un cliente común sigue avisando el límite.
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, cliente_id: 'c1', estado_valorizacion: 'pendiente' } })
-  S.__setRpc((n) => n === 'valorizar_orden_retiro' ? { data: { total: 500000, moneda: 'ARS', saldo_cliente: 200000, limite_credito: 100000, supera_limite: true }, error: null }
+  S.__setRpc((n) => n === 'valorizar_con_condiciones' ? { data: { total: 500000, moneda: 'ARS', saldo_cliente: 200000, limite_credito: 100000, supera_limite: true }, error: null }
     : n === 'precio_venta' ? { data: [{ precio: 50000, origen: 'lista' }], error: null } : { data: null, error: null })
   esperas.push(S.abrirOrden('o1').then(async () => {
     await S.abrirValorizar()
@@ -182,7 +184,7 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   // El error de la base, tal cual.
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, estado_valorizacion: 'pendiente' } })
-  S.__setRpc((n) => n === 'valorizar_orden_retiro' ? { data: null, error: { message: 'Faltan precios en 1 renglón(es): cargalos o asignale una lista con esos productos al cliente.' } }
+  S.__setRpc((n) => n === 'valorizar_con_condiciones' ? { data: null, error: { message: 'Faltan precios en 1 renglón(es): cargalos o asignale una lista con esos productos al cliente.' } }
     : n === 'precio_venta' ? { data: [{ precio: 50000, origen: 'lista' }], error: null } : { data: null, error: null })
   esperas.push(S.abrirOrden('o1').then(async () => {
     await S.abrirValorizar()

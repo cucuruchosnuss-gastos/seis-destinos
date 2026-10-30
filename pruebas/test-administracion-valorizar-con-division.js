@@ -468,7 +468,7 @@ async function abrir(S, opciones) {
   const PV = { pr1: 6500, pr2: 5819.44 }
   S.__setRpc(async (n, p) => {
     if (n === 'precio_venta') return { data: { precio_caja: PV[p.p_presentacion_id], producto_unitario: 1, conito_unitario: 0, lista: 'Lista 1', sin_precio: false }, error: null }
-    if (n === 'valorizar_orden_retiro') {
+    if (n === 'valorizar_con_condiciones') {
       for (const it of S.__tablas.orden_retiro_items) { it.precio_caja = p.p_precios[it.id]; it.subtotal = r2(it.cajas * it.precio_caja) }
       const o = S.__tablas.ordenes_retiro[0]
       o.estado_valorizacion = 'valorizada'
@@ -504,7 +504,7 @@ async function abrir(S, opciones) {
   const { rpc } = baseFalsa(S)
   S.__setRpc(async (n, p) => {
     if (n === 'precio_venta') return { data: { precio_caja: 100, producto_unitario: 1, conito_unitario: 0, lista: 'Interna', sin_precio: false }, error: null }
-    if (n === 'valorizar_orden_retiro') { S.__tablas.ordenes_retiro[0].estado_valorizacion = 'valorizada'; return { data: { total: 9600, moneda: 'ARS' }, error: null } }
+    if (n === 'valorizar_con_condiciones') { S.__tablas.ordenes_retiro[0].estado_valorizacion = 'valorizada'; return { data: { total: 9600, moneda: 'ARS' }, error: null } }
     return rpc(n, p)
   })
   esperas.push(S.abrirOrden('o36').then(() => S.abrirValorizar()).then(async () => {

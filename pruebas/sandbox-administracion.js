@@ -73,7 +73,7 @@ const FUNCIONES_BASE = [
   'clavePrecio', 'preciosInsumosDeLista', 'leerSaldoCliente', 'abrirValorizar',
   'precioFijoDeVersion', 'textoPrecioInsumoGrilla',
   // Valorizar con precio_venta() (30/09/2026)
-  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'textoDescuentoPrecio', 'htmlDescuentoGuardado', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
+  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'textoDescuentoGuardado', 'htmlDescuentoGuardado', 'leerCondicionesDeOrden', 'condicionDeRenglon', 'precioConDescuento', 'leerCondicionesValorizar', 'condicionesElegidas', 'precioEfectivoValorizar', 'htmlDescuentoValorizar', 'htmlCondicionesValorizar', 'elegirCondicionValorizar', 'leerCondicionesCorregir', 'precioListaCorregir', 'itemDeHojaPunto', 'htmlDescuentoHojaPunto', 'puedeEspeciales', 'cargarEspecialesFicha', 'textoFilaEspecial', 'htmlFilaEspecial', 'pintarEspecialesFicha', 'htmlFormEspecial', 'pintarPartesFormEspecial', 'conosParaBuscarEsp', 'abrirFormEspecial', 'cerrarFormEspecial', 'validarEspecial', 'parametrosEspecial', 'guardarFormEspecial', 'cambiarActivaEspecial', 'mandarEspecial', 'alTocarEspeciales', 'alEscribirEspeciales', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
   // La comisión de una orden (06/10/2026)
   'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
@@ -294,7 +294,7 @@ const CONSTANTES_BASE = [
   // Entre empresas (13/10/2026)
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
   // Dividir para facturar (21/10/2026) y los puntos N1 / N2 (28/10/2026)
-  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
+  'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'MIN_LETRAS_CONO_ESP', 'MAX_CONOS_ESP', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
   // Los remitos precargados de Rosario (27/10/2026)
   'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO',
   // Los acopios (27/10/2026)

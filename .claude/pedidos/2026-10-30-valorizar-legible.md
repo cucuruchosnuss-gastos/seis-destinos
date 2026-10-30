@@ -33,3 +33,35 @@ PRUEBAS: nombre con "× N u." y sin el "Sin cono" repetido; renglón con cono co
 campo de descuento en Conos, que guarda y se puede borrar; la caja de 23.990,80 se muestra 23.990,80. Ensayo y CI en
 verde. Integración de noche, con auditoría del .patch. Un resumen al final y, como último mensaje, solo: TERMINADO —
 mandar al chat
+
+## CAMBIO (30/10/2026, más tarde): el PUNTO 2 queda ANULADO y se reemplaza
+
+No hagas el campo de descuento en conos.html, guardar_descuento_marca ya no está habilitado, y precio_venta ya NO
+devuelve descuento_pct ni precio_caja_sin_descuento (devuelve el precio de lista). Los puntos 1 y 3 siguen igual.
+
+2) CONDICIONES ESPECIALES DEL CLIENTE (la base ya está lista)
+a) Ficha del cliente (modulos/administracion.html, Clientes), debajo de la condición de venta N1/N2: sección "Condiciones
+   especiales". Lista con condiciones_especiales_cliente(p_cliente_id, p_solo_activas => false). Cada una devuelve {id,
+   nombre, descuento_pct, activa, marcas[{id,nombre}], productos[{id,nombre}], alcance}. Cada fila muestra "Caserato ·
+   Verasens · Dipale  −5 %  · conos: CASERATO, DIPALE, VERASENS", un interruptor Activa y Editar. "Agregar condición"
+   abre un formulario con: Nombre (ej. "Venta a Ostera"); Descuento % (mayor que 0 y menor que 100); Conos: buscador con
+   varios elegidos; mismo criterio que en Remitos: nada listado hasta 2 letras, después los que empiezan así; Productos:
+   varios, de la fábrica del cliente; Ayuda: "Sin conos ni productos = se descuenta de toda la orden". Guarda con
+   guardar_condicion_especial(p_id (null = nueva), p_cliente_id, p_nombre, p_descuento_pct, p_marcas uuid[], p_productos
+   uuid[], p_activa). Solo con retiros:precios en la fábrica del cliente.
+b) Valorizar: debajo de los renglones, "Condiciones especiales de este cliente": un tilde por cada condición ACTIVA
+   ("Caserato · Verasens · Dipale (−5 %)" + su alcance en chico). Si la orden ya estaba valorizada, vienen tildadas las de
+   ordenes_retiro.condiciones_especiales. Al tildar, en vivo, los renglones que entran muestran el precio con descuento y,
+   en chico y color normal (no rojo), "(−5 % · antes $ 35.830,80)", con el total recalculado. Regla (la misma que la
+   base): entra si (la condición no tiene conos o el cono del renglón está) Y (no tiene productos o el producto del
+   renglón está). Si entra en varias, la de mayor %. Las reposiciones no. Los precios que se mandan siguen siendo los de
+   LISTA (no descuentes en el navegador lo que mandás): guardar llama a valorizar_con_condiciones(p_orden_id, p_precios,
+   p_condiciones uuid[]) en lugar de valorizar_orden_retiro. La base hace el descuento y lo guarda.
+c) Orden ya valorizada (detalle y hojas): orden_retiro_items trae precio_lista, descuento_pct y condicion_id. Si
+   descuento_pct no es null, al lado del precio por caja: "(−5 % · <nombre de la condición>)".
+d) Corregir orden: orden_para_corregir ahora trae en cada renglón precio_lista, descuento_pct y condicion_id. El "precio"
+   editable del renglón es el de LISTA (precio_lista); las condiciones de la orden se vuelven a aplicar solas al corregir.
+
+PRUEBAS: alta, edición y desactivar condición; valorizar con y sin tilde (solo los renglones con esos conos bajan 5 %);
+con condición "toda la orden" bajan todos menos las reposiciones; revalorizar trae los tildes. Ensayo y CI en verde.
+Mismo cierre: un resumen y, como último mensaje, solo: TERMINADO — mandar al chat

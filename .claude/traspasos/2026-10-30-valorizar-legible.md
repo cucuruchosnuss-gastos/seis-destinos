@@ -1,36 +1,40 @@
 # Traspaso 30/10/2026 — Valorizar más legible
 
-Pedido: `.claude/pedidos/2026-10-30-valorizar-legible.md`. Rama `ci-prueba/valorizar-legible`, salida de `origin/main` =
-e6e0c74, en un git worktree aparte. **Trae `ci-prueba/remitos-mas-simple` (302b351) con un merge** para reusar
-`textoUnidadesRemito` de `js/remitos-comun.js` (el pedido dice no duplicarla): se integra DESPUÉS de remitos-mas-simple.
-Toca solo `modulos/administracion.html` (más pruebas y docs). La base no se tocó.
+Pedido: `.claude/pedidos/2026-10-30-valorizar-legible.md` (con el CAMBIO del punto 2). Rama `ci-prueba/valorizar-legible`,
+salida de `origin/main` = e6e0c74, en un git worktree aparte. **Trae `ci-prueba/remitos-mas-simple` (302b351) y
+`ci-prueba/corregir-orden` (da0c835) con merges**: la primera por `textoUnidadesRemito` (no duplicarla), la segunda porque
+el punto d) cambia Corregir orden. **Se integra después de esas dos.** Toca solo `modulos/administracion.html` (más
+pruebas y docs). La base no se tocó.
 
 ## Qué cambió
-1. **El nombre del renglón** al valorizar, en el detalle de la orden y en las hojas N1/N2: "Barquillo 40 x4 · Caja con
-   cono **× 252 u.** · VENEZIA" y "Soft · Caja sin cono **× 224 u.**" (en negrita y sin partirse; sin el "· Sin cono"
-   final; nada con 1 ni si el nombre ya trae el número, como en Remitos Dolce).
-2. **El descuento**: la orden valorizada muestra "(−5 %)" al lado del precio por caja (`orden_retiro_items.descuento_pct`).
-   Al valorizar, si `precio_venta` trae `descuento_pct`, va "(−5 % CASERATO · antes $ 35.830,80)" chico y en el color normal.
-3. **La caja con cono en Listas** hace la misma cuenta que la base: sin redondear en el medio y con la aritmética de
-   numeric (la caja de 23.990,80 se ve 23.990,80; comprobado contra la base con 10 casos).
+1. **El nombre del renglón** al valorizar, en el detalle y en las hojas N1/N2: "Barquillo 40 x4 · Caja con cono **× 252
+   u.** · VENEZIA" y "Soft · Caja sin cono **× 224 u.**" (en negrita y sin partirse; sin el "· Sin cono" final).
+2. **Las condiciones especiales del cliente** (el punto 2 nuevo): sección en la ficha (lista, interruptor Activa, Editar,
+   "Agregar condición" con buscador de conos y productos); tildes al valorizar con el precio con descuento en vivo y el
+   total, guardando con `valorizar_con_condiciones` y los precios de LISTA; "(−5 % · nombre)" en la orden valorizada y en
+   las hojas N1/N2; Corregir orden con `precio_lista` y el total estimado con las condiciones. El descuento de
+   `precio_venta` y el campo de Conos se sacaron (anulados).
+3. **La caja con cono en Listas** hace la misma cuenta que la base (sin redondeo intermedio y con la aritmética de
+   numeric: la caja de 23.990,80 se ve 23.990,80; comprobado contra la base con 10 casos).
 
-## LO QUE NO SE HIZO, Y POR QUÉ (para el chat de la base)
-- **`precio_venta` NO devuelve `descuento_pct` ni `precio_caja_sin_descuento`** (leída con pg_get_functiondef el
-  30/10/2026). Su comentario de hoy dice: "el precio es el de la lista; los descuentos van por condición especial del
-  cliente (al valorizar)". El descuento lo pone `valorizar_orden_retiro` desde `ordenes_retiro.condiciones_especiales`
-  (`cliente_condiciones_especiales`, `valorizar_con_condiciones`, `guardar_condicion_especial`). La pantalla de valorizar
-  ya está lista para mostrarlo si `precio_venta` lo devuelve, pero hoy nunca aparece.
-- **El campo "Descuento en el precio de venta (%)" en Conos NO se hizo.** `guardar_descuento_marca` y
-  `marcas_personalizadas.descuento_pct` existen, pero ninguna función de precios lee ese descuento: el campo guardaría un
-  número que no cambia ningún precio. Si el chat de la base vuelve a usarlo, es una tarea corta (campo + sello "−5 %").
-- No hay pantalla para elegir las condiciones especiales de una orden (`valorizar_con_condiciones`): queda para otro pedido.
+## Decidido sin consultar
+- Al revalorizar se propone `precio_lista` (no `precio_caja`, que ya viene descontado: si no, la base descontaría dos veces).
+- Una condición tildada que después se desactivó no se manda al revalorizar (solo se ofrecen y mandan las activas).
+- Los nombres de las condiciones en el detalle se leen solo con retiros:precios (la función lo exige): sin eso, "(−5 %)".
+- La hoja de retiro impresa (js/retiros-comun.js, compartido) no muestra el descuento: el precio impreso ya es el
+  descontado. Si Facu lo quiere ahí, es un cambio en el js compartido.
 
 ## Pruebas
-- Nueva `test-/mut-administracion-valorizar-legible.js` (baseline f3d7152); `test-administracion-ordenes.js` y
-  `-link-remitos.js` ajustadas; seguras de XSS al día. `e2e/103-valorizar-legible.spec.js` (390 y 1280 px).
+- Nueva `test-/mut-administracion-valorizar-legible.js` (134; 81/81 + 2 equivalentes, baseline f3d7152): el nombre, la regla
+  de las condiciones, valorizar con y sin tildes ("toda la orden" sin la reposición), revalorizar con precio_lista y los
+  tildes, la ficha (alta, edición, activa/inactiva, validaciones, error de la base, escapes) y Corregir orden.
+- Ajustadas: las que simulaban `valorizar_orden_retiro` (devoluciones, lista-otra-empresa, orden-entre-empresas, ordenes,
+  valorizar-con-division y los e2e 57, 59, 62, 95), `test-administracion-ordenes.js`, `-link-remitos.js`, seguras de XSS
+  y las anclas de `mut-administracion-devoluciones/-ordenes/-lista-completa` y `mut-faltante-retiro`.
+- `e2e/103-valorizar-legible.spec.js` (390 y 1280 px): valorizar con el tilde, la orden valorizada y la ficha.
 
 ## Lo que no se pudo probar
-- El "antes $ …" con datos reales: la base todavía no lo manda (solo con la maqueta).
+- Con datos reales (no hay sesión en el contenedor): todo con la maqueta y respuestas simuladas.
 
 ## Qué automatizaría ahora
 - Comparar en la suite la cuenta de la pantalla contra la base con un SELECT guardado: hoy los 10 casos de

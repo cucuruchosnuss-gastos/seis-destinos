@@ -150,9 +150,11 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     const precio = cuerpo.locator('[data-precio]').first();
     await precio.fill('50000');
     await page.locator('#ad-valorizar-guardar').click();
-    await expect.poll(() => rpc.some(r => r.nombre === 'valorizar_orden_retiro')).toBe(true);
-    const v = rpc.find(r => r.nombre === 'valorizar_orden_retiro');
-    expect(Object.keys(v.params).sort()).toEqual(['p_orden_id', 'p_precios']);
+    await expect.poll(() => rpc.some(r => r.nombre === 'valorizar_con_condiciones')).toBe(true);
+    const v = rpc.find(r => r.nombre === 'valorizar_con_condiciones');
+    // 30/10/2026: valorizar_con_condiciones (sin condiciones tildadas: []).
+    expect(Object.keys(v.params).sort()).toEqual(['p_condiciones', 'p_orden_id', 'p_precios']);
+    expect(v.params.p_condiciones).toEqual([]);
     expect(v.params.p_orden_id).toBe('o43');
     expect(errores).toEqual([]);
   });
