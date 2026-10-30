@@ -23,20 +23,14 @@ correrMutaciones({
     { expr: 'esc(importeHoja(ch.importe))', motivo: 'la plata: importeHoja() devuelve "$ n,nn" o "—", sin nada que escapar' },
     { expr: 'esc(importeHoja(it?.importe))', motivo: 'la plata: importeHoja() devuelve "$ n,nn" o "—", sin nada que escapar' },
     { expr: "esc('Fecha ' + fechaNd(d?.fecha))", motivo: 'una fecha dd/mm/aaaa o "—": sin nada que escapar' },
-    { expr: 'esc(rotulo)', motivo: 'ORIGINAL o DUPLICADO: constante del código' },
     { expr: 'esc(importeHoja(d?.total))', motivo: 'la plata: importeHoja() devuelve "$ n,nn" o "—", sin nada que escapar' },
     { expr: "esc('Son ' + importeEnLetrasNd(d?.total))", motivo: 'letras mayúsculas armadas por el código: sin nada que escapar' },
-    { expr: 'esc(r.toLowerCase())', motivo: 'original o duplicado: constante del código' },
-    { expr: 'esc(r)', motivo: 'ORIGINAL o DUPLICADO: constante del código' },
   ],
   manuales: [
-    // ── Las dos copias ────────────────────────────────────────────────────
-    { nombre: 'una sola copia', de: "    const COPIAS_NOTA_DEBITO = ['ORIGINAL', 'DUPLICADO']", a: "    const COPIAS_NOTA_DEBITO = ['ORIGINAL']" },
-    { nombre: 'el duplicado primero', de: "    const COPIAS_NOTA_DEBITO = ['ORIGINAL', 'DUPLICADO']", a: "    const COPIAS_NOTA_DEBITO = ['DUPLICADO', 'ORIGINAL']" },
-    { nombre: 'las dos copias dicen ORIGINAL', de: '${copia(r)}</div>`).join(\'\')', a: '${copia(\'ORIGINAL\')}</div>`).join(\'\')' },
-    { nombre: 'la copia sin su rótulo', de: "        `<div class=\"ndh-cab__copia\">${esc(rotulo)}</div></div></div>` +", a: "        '</div></div>' +" },
-    { nombre: 'en la pantalla se ven las dos copias', de: '    #ad-nd-hoja .ndh-copia--duplicado { display: none; }\n', a: '' },
-    { nombre: 'al imprimir el duplicado no salta de hoja', de: '    .ndh--papel .ndh-copia--duplicado { break-before: page; page-break-before: always; }\n', a: '' },
+    // ── UNA sola hoja (30/10/2026: antes ORIGINAL y DUPLICADO) ────────────
+    { nombre: 'vuelven las dos copias', de: 'return `<div class="ndh-copia">${hoja}</div>`', a: 'return `<div class="ndh-copia">${hoja}</div><div class="ndh-copia">${hoja}</div>`' },
+    { nombre: 'vuelve el rótulo ORIGINAL', de: "${esc('Fecha ' + fechaNd(d?.fecha))}</div></div></div>` +", a: "${esc('Fecha ' + fechaNd(d?.fecha))}</div><div class=\"ndh-cab__copia\">ORIGINAL</div></div></div>` +" },
+    { nombre: 'vuelve el aviso de dos hojas', de: '      <div class="ndh-marco"><div class="ndh" id="ad-nd-hoja"></div></div>', a: '      <p class="ad-texto-suave" id="ad-nd-nota-copias">Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO.</p>\n      <div class="ndh-marco"><div class="ndh" id="ad-nd-hoja"></div></div>' },
     { nombre: 'imprimir sin A4 vertical', de: "'<style>@media print { @page { size: A4 portrait; margin: 8mm; } }</style>' +\n        `<div class=\"ndh ndh--papel\">", a: "`<div class=\"ndh ndh--papel\">" },
     { nombre: 'imprimir no llama a window.print', de: '        `<div class="ndh ndh--papel">${htmlNotaDebito(d)}</div>`\n      window.print()', a: '        `<div class="ndh ndh--papel">${htmlNotaDebito(d)}</div>`' },
     // ── Lo que lleva la hoja ──────────────────────────────────────────────

@@ -190,6 +190,9 @@ esperas.push((async () => {
       // 28/10/2026 (región Cheques): se fue el botón "Cargar el gasto del
       // banco"; el gasto lo crea acreditar_cheques al acreditar.
       ['data-gastos-banco', 'el botón "Cargar el gasto del banco" de la cartera (28/10/2026)'],
+      // 30/10/2026: la nota de débito sale en UNA sola hoja (sin ORIGINAL ni
+      // DUPLICADO): se fueron el aviso de las dos hojas y el rótulo de cada copia.
+      ['id="ad-nd-nota-copias"', 'la nota de débito en una sola hoja (30/10/2026)'], ['data-copia', 'la nota de débito en una sola hoja (30/10/2026)'],
     ])
     const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !RETIRADOS.has(m))
     chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
