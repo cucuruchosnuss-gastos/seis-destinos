@@ -14,7 +14,7 @@ correrMutacionesEnVarios([
   {
     suite: SUITE,
     original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/cuentas-corrientes.html'),
-    funciones: ['htmlFilaCartera', 'htmlListaCartera', 'pintarTotalCartera', 'htmlOrdenPago', 'htmlOrdenesPagoFicha'],
+    funciones: ['htmlFilaCartera', 'htmlListaCartera', 'pintarTotalCartera', 'htmlOrdenPago'],
     equivalentes: [
       { expr: 'esc(cobra)', motivo: 'texto armado con formatearFecha() de una fecha y palabras fijas: sin ningún carácter que escapar en los datos de prueba' },
       { expr: "esc(c.numero ?? '—')", motivo: 'lo cubre test-cuentas-corrientes-cheques-pago.js / -xss.js con marcas en el número; acá los números son letras y dígitos' },
@@ -143,13 +143,12 @@ correrMutacionesEnVarios([
       { nombre: 'letras: "un pesos"', de: "(pesos === 1 ? ' peso' : ' pesos')", a: "' pesos'" },
       { nombre: 'letras: sin los centavos', de: '      return `${textoPesos} con ${textoCent}`.toUpperCase()', a: '      return textoPesos.toUpperCase()' },
       { nombre: 'letras: centavos sin redondear', de: '      const c = Math.round(Math.abs(Number(importe)) * 100)', a: '      const c = Math.floor(Math.abs(Number(importe)) * 100)' },
-      // ── Las órdenes de la ficha ───────────────────────────────────────────
-      { nombre: 'ficha: no filtra por empresa', de: "      if (unidadId) q = q.eq('unidad_negocio_id', unidadId)\n", a: '' },
-      { nombre: 'ficha: la más vieja arriba', de: "        ({ data, error } = await q.order('creada_en', { ascending: false }))", a: "        ({ data, error } = await q.order('creada_en', { ascending: true }))" },
-      { nombre: 'ficha: no ordena al dibujar', de: ".sort((a, b) => String(b.creada_en ?? '').localeCompare(String(a.creada_en ?? '')))", a: '' },
+      // ── La orden de cada pago, en su renglón (30/10/2026) ────────────────────
       { nombre: 'ficha: el número sin el prefijo de la empresa', de: "      const prefijo = estado.maestros?.unidades?.find(u => u.id === unidadId)?.prefijo ?? ''", a: "      const prefijo = ''" },
-      { nombre: 'ficha: consulta sin permiso', de: "      if (!(tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'ver_todo'))) {\n        renderizarFichaOrdenesPago()", a: "      if (false) {\n        renderizarFichaOrdenesPago()" },
-      { nombre: 'ficha: un error no se dice', de: "        f.errorOrdenesPago = 'No se pudieron leer las órdenes de pago.'\n", a: '' },
+      { nombre: 'pagos: las órdenes se leen sin permiso', de: "      if (!(tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'ver_todo'))) return mapa", a: '      if (false) return mapa' },
+      { nombre: 'pagos: la orden con el prefijo de otra empresa', de: 'texto: numeroTextoOrden(o.unidad_negocio_id, o.numero)', a: "texto: numeroTextoOrden('u-n', o.numero)" },
+      { nombre: 'pagos: un gasto sin orden igual trae una', de: '          for (const g of data ?? []) if (g.orden_pago_id) gastoAOrden.set(g.id, g.orden_pago_id)', a: "          for (const g of data ?? []) gastoAOrden.set(g.id, g.orden_pago_id ?? 'op-1')" },
+      { nombre: 'pagos: se leen también las facturas', de: "      const ids = [...new Set((filas ?? []).filter(m => m.tipo === 'pago' && m.gasto_id).map(m => m.gasto_id))]\n      const gastoAOrden", a: "      const ids = [...new Set((filas ?? []).map(m => m.gasto_id ?? m.factura_pendiente_id))]\n      const gastoAOrden" },
       // ── Abrir el formulario y la cuenta ───────────────────────────────────
       { nombre: 'abrir: vuelve a pedir la sugerencia FIFO', de: "      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, montoDeCampo('campo-monto-pago'))", a: "      await supabase.rpc('sugerir_facturas_fifo', {})\n      if (estado.pagoFacturaElegida) facturasParaPago = elegirSoloFactura(facturasParaPago, estado.pagoFacturaElegida, montoDeCampo('campo-monto-pago'))" },
       { nombre: 'abrir: las facturas vienen tildadas', de: "        saldo: Number(x.saldo_pendiente) || 0,\n        checked: false,", a: "        saldo: Number(x.saldo_pendiente) || 0,\n        checked: true," },

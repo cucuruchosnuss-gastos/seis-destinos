@@ -128,7 +128,7 @@ const FUNCIONES = [
   'badgeEstadoFactura', 'tieneTarea', 'nombreUnidad', 'nombreProveedor', 'contarSinImporte', 'contarSinImporteVisible', 'htmlSinImporte',
   'esSinImporte', 'htmlFilaSinImporte', 'decimalesImporteSin', 'enlazarCampoImporteSin', 'cargarEstadosDeFacturas', 'cargarCantidadesSinImporte',
   'productoUnicoConCantidad', 'textoCantidadInsumo', 'totalImporteFormulario', 'resumenCantidades',
-  'saldosFichaVisibles', 'creditosFichaDeUnidad', 'renderizarFichaBanner', 'cargarFichaMovimientos', 'cargarNotasDebitoFicha', 'renderizarFichaMovimientos',
+  'saldosFichaVisibles', 'creditosFichaDeUnidad', 'renderizarFichaBanner', 'cargarFichaMovimientos', 'cargarNotasDebitoFicha', 'cargarOrdenesDePagos', 'numeroTextoOrden', 'renderizarFichaMovimientos',
   'cargarHistorial', 'armarHistorial', 'renderizarListaHistorial', 'exportarExcelHistorial', 'abrirModalDetallePago',
   'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   'filtrarPadron', 'renderizarPadron', 'inicialesEmpresa', 'colorAvatar', 'unidadesParaElegir', 'montoDeCampo', 'fechaISO',

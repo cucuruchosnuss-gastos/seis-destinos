@@ -5,9 +5,10 @@
 // es la misma impresión: "Imprimir / Guardar PDF" usa window.print()):
 //  1. Los cheques SIN la columna "Librador" (no se dice quién nos dio el
 //     cheque): quedan Banco, N°, Fecha de pago e Importe.
-//  2. DOS hojas iguales en la misma impresión: la primera dice "ORIGINAL" y
-//     la segunda "DUPLICADO", arriba a la derecha bajo el número. Las dos
-//     con las firmas.
+//  2. (23/10/2026: DOS hojas, ORIGINAL y DUPLICADO.) DESDE EL 30/10/2026
+//     (rama ci-prueba/cc-proveedor-una-lista, pedido de Facu: "sale UNA
+//     hoja, sin ORIGINAL/DUPLICADO; si hacen falta dos, se imprime dos
+//     veces"): UNA sola hoja, sin rótulo, con las firmas.
 //  3. Letra y tabla al ~80% (entran más comprobantes).
 //  4. Cuando se pagan facturas, "Se cancelan los siguientes comprobantes" las
 //     lista (no "Pago a cuenta") con número, fecha e importe aplicado.
@@ -21,7 +22,7 @@
 // por factura, de la más vieja a la más nueva) → la hoja (abrirOrdenPago).
 // Las dos funciones de la base se leyeron con pg_get_functiondef el
 // 23/10/2026; el modelo de acá las copia y está anotado línea por línea.
-// La impresión real (dos páginas, la letra) la mide e2e/88-orden-pago-copias.spec.js.
+// La impresión real (UNA página, la letra) la mide e2e/88-orden-pago-copias.spec.js.
 //
 //   node pruebas/test-cuentas-corrientes-orden-pago-copias.js
 'use strict'
@@ -30,6 +31,7 @@ const path = require('path')
 const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -67,9 +69,11 @@ const FUNCIONES = [
   'esc', 'formatearImporte', 'importeHtml', 'numeroParaMostrar', 'centavosDe',
   'aplicacionesPago', 'parametrosPagoMixto',
   'logoSeguroCC', 'cuitConGuiones', 'fechaOrden', 'letrasMenorDeMil', 'letrasMenorDeMillon', 'enteroEnLetras', 'importeEnLetras',
-  'htmlOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
+  'htmlOrdenPago', 'lineaSaldoOrdenPago', 'leerSaldoOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
 ]
-const CONSTANTES = ['NUMERO_SALDO_INICIAL', 'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'COPIAS_ORDEN_PAGO']
+const CONSTANTES = ['NUMERO_SALDO_INICIAL', 'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -80,13 +84,14 @@ function sandbox() {
 
 // ── Leer la hoja que devolvió el render (texto, no regex sobre el código) ──
 const sinEtiquetas = (h) => h.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-// Las copias, en el orden en que salen: [{ rotulo, html }].
+// Las hojas que salen (30/10/2026: UNA, la hoja entera, sin envoltorio de
+// copia): [{ rotulo, html }]. Si volviera un envoltorio .op-copia, salen
+// tantas como haya (y el chequeo de "una sola" da rojo).
 function copias(html) {
-  return html.split('<div class="op-copia ').slice(1).map(trozo => ({
-    rotulo: (trozo.match(/data-copia="([^"]*)"/) || [])[1] ?? null,
-    clase: trozo.slice(0, trozo.indexOf('"')),
-    html: trozo.slice(trozo.indexOf('>') + 1),
-  }))
+  if (!html.includes('class="op-cab"')) return []
+  const envueltas = html.split('<div class="op-copia ').slice(1)
+  if (envueltas.length) return envueltas.map(trozo => ({ rotulo: 'copia', html: trozo.slice(trozo.indexOf('>') + 1) }))
+  return [{ rotulo: 'la hoja', html }]
 }
 // Lo que hay entre el título de una sección y el de la siguiente.
 function seccion(html, titulo, siguiente) {
@@ -118,29 +123,25 @@ const ORDEN = {
 }
 
 async function main() {
-  // ══ 1. DOS COPIAS: ORIGINAL Y DUPLICADO ════════════════════════════════════
+  // ══ 1. UNA SOLA HOJA, SIN ORIGINAL / DUPLICADO (30/10/2026) ════════════════
   {
     const S = sandbox()
     const h = S.htmlOrdenPago(ORDEN)
     const cs = copias(h)
-    chk('salen DOS copias', cs.length === 2, String(cs.length))
-    chk('la primera es el ORIGINAL y la segunda el DUPLICADO', cs[0]?.rotulo === 'ORIGINAL' && cs[1]?.rotulo === 'DUPLICADO', JSON.stringify(cs.map(c => c.rotulo)))
-    chk('cada copia con su clase (la del duplicado es la que va en otra hoja)', cs[0]?.clase === 'op-copia--original' && cs[1]?.clase === 'op-copia--duplicado', JSON.stringify(cs.map(c => c.clase)))
+    chk('sale UNA sola hoja (sin envoltorio de copias)', cs.length === 1 && !h.includes('op-copia') && !h.includes('data-copia'), String(cs.length))
+    chk('no dice ORIGINAL ni DUPLICADO en ningún lado', !/ORIGINAL|DUPLICADO/.test(sinEtiquetas(h)))
+    chk('la cabecera aparece una sola vez', (h.match(/class="op-cab"/g) || []).length === 1)
     for (const c of cs) {
       const t = sinEtiquetas(c.html)
       // El rótulo, arriba a la derecha bajo el número y la fecha.
       const titulo = sinEtiquetas(seccion(c.html, '<div class="op-cab__titulo">', '<div class="op-seccion">') ?? '')
-      chk(`${c.rotulo}: arriba a la derecha dice "ORDEN DE PAGO", el número, la fecha y "${c.rotulo}", en ese orden`,
-        titulo === `ORDEN DE PAGO N-OP-00012 Fecha 23/10/2026 ${c.rotulo}`, titulo)
+      chk(`${c.rotulo}: arriba a la derecha dice "ORDEN DE PAGO", el número y la fecha, en ese orden (sin rótulo de copia)`,
+        titulo === 'ORDEN DE PAGO N-OP-00012 Fecha 23/10/2026', titulo)
       chk(`${c.rotulo}: con las dos firmas`, t.includes('Recibí conforme (proveedor) — firma y aclaración') && t.includes('Autorizó'))
       chk(`${c.rotulo}: el total en número y en letras`, t.includes('$ 650.000,50') && t.includes('Son SEISCIENTOS CINCUENTA MIL PESOS CON CINCUENTA CENTAVOS'))
       chk(`${c.rotulo}: el proveedor, las observaciones y quién la generó`, t.includes('ANATOLIA SRL') && t.includes('Entregado en mano') && t.includes('Generada por Facu'))
-      chk(`${c.rotulo}: dice un solo rótulo (no los dos)`, (t.match(/\bORIGINAL\b/g) || []).length + (t.match(/\bDUPLICADO\b/g) || []).length === 1, t)
     }
-    // Las dos copias son IGUALES salvo el rótulo y la clase.
-    const normal = (c) => c.html.replace(c.rotulo, 'X').replace(c.rotulo.toLowerCase(), 'x').replace(c.rotulo, 'X')
-    chk('las dos copias son iguales salvo el rótulo', cs.length === 2 && normal(cs[0]) === normal(cs[1]))
-    chk('vacía tampoco se rompe: dos copias', copias(S.htmlOrdenPago({})).length === 2 && /ORDEN DE PAGO/.test(S.htmlOrdenPago({})))
+    chk('vacía tampoco se rompe: una hoja', copias(S.htmlOrdenPago({})).length === 1 && /ORDEN DE PAGO/.test(S.htmlOrdenPago({})))
   }
 
   // ══ 2. LOS CHEQUES SIN LIBRADOR ════════════════════════════════════════════
@@ -229,7 +230,7 @@ async function main() {
     const hoja = S.__els.get('orden-pago-hoja').innerHTML
     chk('la orden se abre', S.__els.get('modal-orden-pago').hidden === false)
     // Sin esto, una hoja vacía pasaría el for de abajo sin afirmar nada.
-    chk('la hoja abierta tiene las dos copias', copias(hoja).length === 2, hoja.slice(0, 80))
+    chk('la hoja abierta es UNA sola', copias(hoja).length === 1, hoja.slice(0, 80))
     for (const c of copias(hoja)) {
       const trozo = seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados')
       chk(`${c.rotulo}: con facturas pagadas NO dice "Pago a cuenta"`, trozo !== null && !trozo.includes('Pago a cuenta'))
@@ -246,52 +247,51 @@ async function main() {
     chk('no queda saldo a favor (lo aplicado = lo pagado)', !hoja.includes('Saldo a favor'))
   })())
 
-  // Sin facturas sí es "Pago a cuenta", en las dos copias.
+  // Sin facturas sí es "Pago a cuenta".
   {
     const S = sandbox()
     const cs = copias(S.htmlOrdenPago({ ...ORDEN, facturas: [] }))
-    chk('sin facturas: "Pago a cuenta" en las dos copias, sin tabla de comprobantes',
-      cs.length === 2 && cs.every(c => { const s = seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'); return s.includes('Pago a cuenta') && !s.includes('<table') }))
+    chk('sin facturas: "Pago a cuenta", sin tabla de comprobantes',
+      cs.length === 1 && cs.every(c => { const s = seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'); return s.includes('Pago a cuenta') && !s.includes('<table') }))
     // El saldo inicial se nombra como en el resto del módulo.
     const si = copias(S.htmlOrdenPago({ ...ORDEN, facturas: [{ tipo: 'otro', numero: 'SALDO-INICIAL', fecha: '2026-10-10', importe: 9, aplicado: 9, saldo_actual: 0 }] }))
     chk('el saldo inicial dice "Saldo inicial" en el número', tabla(seccion(si[0].html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'))?.filas?.[0]?.[1] === 'Saldo inicial')
   }
 
-  // Muchas facturas: todas, en las dos copias (la hoja no corta ninguna).
+  // Muchas facturas: todas (la hoja no corta ninguna).
   {
     const S = sandbox()
     const muchas = Array.from({ length: 30 }, (_, i) => ({ tipo: 'Factura A', numero: `0003-${String(2000 + i).padStart(8, '0')}`, fecha: '2026-09-01', importe: 1000, aplicado: 1000, saldo_actual: 0 }))
     const cs = copias(S.htmlOrdenPago({ ...ORDEN, facturas: muchas }))
-    chk('30 facturas: las 30 en cada copia', cs.every(c => tabla(seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'))?.filas?.length === 30))
+    chk('30 facturas: las 30', cs.length === 1 && cs.every(c => tabla(seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'))?.filas?.length === 30))
   }
 
   // ══ 4. IMPRIMIR Y CERRAR ═══════════════════════════════════════════════════
   {
     const S = sandbox()
     S.imprimirOrdenPago()
-    chk('"Imprimir / Guardar PDF" marca el html (las dos hojas) e imprime una vez', S.__impresiones() === 1 && S.__doc.documentElement.classList.contains('op-imprimiendo'))
+    chk('"Imprimir / Guardar PDF" marca el html (la hoja) e imprime una vez', S.__impresiones() === 1 && S.__doc.documentElement.classList.contains('op-imprimiendo'))
     S.cerrarOrdenPago()
     chk('"Cerrar" saca la marca', !S.__doc.documentElement.classList.contains('op-imprimiendo'))
   }
 
   // ══ 5. LA HOJA DE IMPRESIÓN (el CSS que la arma) ═══════════════════════════
   // Lo que pasa de verdad al imprimir lo mide e2e/88-orden-pago-copias.spec.js
-  // (un PDF de Chromium de DOS páginas); acá, que las reglas estén.
+  // (un PDF de Chromium de UNA página); acá, que las reglas estén.
   {
-    const css = FUENTE.slice(FUENTE.indexOf('/* ── La orden de pago'), FUENTE.indexOf('/* Las órdenes de pago del proveedor, en la ficha. */'))
+    const css = FUENTE.slice(FUENTE.indexOf('/* ── La orden de pago'), FUENTE.indexOf('/* La orden de pago en el renglón del pago'))
     const regla = (sel) => { const i = css.indexOf(sel + ' {'); return i < 0 ? '' : css.slice(i, css.indexOf('}', i)) }
-    chk('en la pantalla el duplicado no se ve', /display: none/.test(regla('    .op-copia--duplicado')))
-    chk('al imprimir el duplicado se ve y empieza en otra hoja', /display: block/.test(regla('html.op-imprimiendo .op-copia--duplicado')) && /break-before: page/.test(regla('html.op-imprimiendo .op-copia--duplicado')))
-    chk('la nota "Se imprimen dos hojas" no se imprime', /display: none/.test(regla('html.op-imprimiendo .op-nota-copias')))
+    chk('se leyó el CSS de la orden de pago', css.length > 500 && css.includes('.op-hoja {'))
+    chk('ya no hay reglas de copias (ni el duplicado en otra hoja ni la nota)', !/op-copia|op-nota-copias|break-before: page/.test(css))
     const pt = (sel, prop) => Number((regla(sel).match(new RegExp(prop + ': ([0-9.]+)pt')) || [])[1])
     // Antes (20/10/2026): hoja 10.5pt, tabla 9.5pt, razón social 13pt.
     chk('la letra de la hoja al ~80% (10.5pt → 8.5pt)', pt('    .op-hoja', 'font-size') === 8.5)
     chk('la letra de la tabla al ~80% (9.5pt → 7.5pt)', pt('    .op-tabla', 'font-size') === 7.5)
-    chk('el rótulo ORIGINAL / DUPLICADO tiene su estilo', regla('    .op-cab__copia').includes('font-weight: 800'))
+    chk('ni el estilo del rótulo de copia', !css.includes('.op-cab__copia'))
   }
   {
-    // La nota en el modal, fuera de la hoja (no entra en las copias).
-    chk('el modal avisa que salen dos hojas', FUENTE.includes('<p class="op-nota-copias" id="nota-copias-orden">Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO, las dos con las firmas.</p>'))
+    // La nota "Se imprimen dos hojas iguales" del modal se fue.
+    chk('el modal ya no avisa que salen dos hojas', !FUENTE.includes('nota-copias-orden') && !FUENTE.includes('Se imprimen dos hojas iguales'))
   }
 
   fin()

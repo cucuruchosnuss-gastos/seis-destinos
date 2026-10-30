@@ -56,8 +56,9 @@ correrMutaciones({
       a: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${etiquetaUnidad(m.unidad_negocio_id)}` : ''}</div>\n            ${cantidadesHtml}" },
     { nombre: 'movimientos: la unidad en "todas" pierde el esc()',
       // 24/10/2026: debajo de la fecha va el error del PDF de la nota de débito.
-      de: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n              ${errorPdfNd}\n            </div>",
-      a: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${etiquetaUnidad(m.unidad_negocio_id)}` : ''}</div>\n              ${errorPdfNd}\n            </div>" },
+      // 30/10/2026: y debajo, "A cuenta $ X · Aplicar a facturas" de un pago.
+      de: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n              ${errorPdfNd}\n              ${esPago ? htmlACuentaEnFila(m) : ''}\n            </div>",
+      a: "${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${etiquetaUnidad(m.unidad_negocio_id)}` : ''}</div>\n              ${errorPdfNd}\n              ${esPago ? htmlACuentaEnFila(m) : ''}\n            </div>" },
     { nombre: 'historial: la referencia pierde el esc()',
       de: "${referencia ? ` — ${esc(referencia)}` : ''}", a: "${referencia ? ` — ${referencia}` : ''}" },
     { nombre: 'sugerencias: la fantasía pierde el esc()',

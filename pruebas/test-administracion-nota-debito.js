@@ -3,8 +3,8 @@
 //
 // Lo que se EJECUTA (sandbox-administracion.js, con un Supabase falso):
 //  - la hoja (htmlNotaDebito, de datos_nota_debito): A4 vertical en blanco y
-//    negro como la orden de pago, ORIGINAL y DUPLICADO (en la pantalla solo el
-//    original; al imprimir y en el PDF las dos, cada una en su hoja), el
+//    negro como la orden de pago, en UNA sola hoja sin ORIGINAL ni DUPLICADO
+//    (30/10/2026; antes salían dos copias), el
 //    encabezado de la empresa con su logo, "NOTA DE DÉBITO" y el código, los
 //    datos del cliente, la tabla de conceptos, el TOTAL en número y en letras,
 //    los datos del cheque si es por un rechazo y el sello ANULADA;
@@ -63,21 +63,17 @@ const DATOS = {
   cheque: { banco: 'BANCO MACRO S.A.', numero: '43300023', importe: 150000, fecha_pago: '2026-10-15', rechazo_fecha: '2026-10-20', rechazo_motivo: 'Sin fondos' },
   cargada_por: 'Yanina', cargada_en: '2026-10-20T15:00:00Z',
 }
-const copias = (html) => html.split('<div class="ndh-copia ').slice(1).map(t => ({
-  rotulo: (t.match(/data-copia="([^"]*)"/) || [])[1] ?? null, clase: t.slice(0, t.indexOf('"')), html: t,
-}))
+const copias = (html) => html.split('<div class="ndh-copia"').slice(1).map(t => ({ rotulo: 'la hoja', html: t }))
 
 // ── La hoja ───────────────────────────────────────────────────────────────
 {
   const S = nuevo()
   const h = S.htmlNotaDebito(DATOS)
   const cs = copias(h)
-  chk('hoja: dos copias, ORIGINAL y después DUPLICADO', cs.length === 2 && cs[0].rotulo === 'ORIGINAL' && cs[1].rotulo === 'DUPLICADO', cs.map(c => c.rotulo).join())
-  chk('hoja: cada copia con su clase (el duplicado salta de hoja al imprimir)', cs[0].clase === 'ndh-copia--original' && cs[1].clase === 'ndh-copia--duplicado')
+  chk('hoja: UNA sola, sin ORIGINAL ni DUPLICADO', cs.length === 1 && !/ORIGINAL|DUPLICADO|ndh-cab__copia|data-copia/.test(h), String(cs.length))
   for (const c of cs) {
     const t = texto(c.html)
     chk(`${c.rotulo}: "NOTA DE DÉBITO" y el código`, t.includes('NOTA DE DÉBITO N-ND-0001'), t.slice(0, 200))
-    chk(`${c.rotulo}: el rótulo de la copia en su recuadro`, new RegExp(`<div class="ndh-cab__copia">${c.rotulo}</div>`).test(c.html))
     chk(`${c.rotulo}: la fecha dd/mm/aaaa`, t.includes('Fecha 20/10/2026'))
     chk(`${c.rotulo}: la empresa (razón social, CUIT con guiones, domicilio y teléfono)`, t.includes('PAZ MIRTA') && t.includes('CUIT 20-92410679-5') && t.includes('Unión 843') && t.includes('Tel. 351 555'))
     chk(`${c.rotulo}: el logo de la empresa`, /<img class="ndh-cab__logo" src="\.\.\/logo-cucuruchos-nuss\.png" alt="">/.test(c.html))
@@ -95,8 +91,8 @@ const copias = (html) => html.split('<div class="ndh-copia ').slice(1).map(t => 
   chk('hoja: una nota suelta (sin cheque) no tiene la sección del cheque', !texto(sinCheque).includes('Cheque rechazado Banco'))
   const anulada = S.htmlNotaDebito({ ...DATOS, estado: 'anulada', anulada_motivo: 'Se cobró en efectivo' })
   const ca = copias(anulada)
-  chk('anulada: el sello ANULADA en las dos copias', ca.every(c => /<div class="ndh-sello" aria-hidden="true">ANULADA<\/div>/.test(c.html)))
-  chk('anulada: el motivo escrito en las dos copias', ca.every(c => texto(c.html).includes('ANULADA: Se cobró en efectivo')))
+  chk('anulada: el sello ANULADA en la hoja', ca.length === 1 && ca.every(c => /<div class="ndh-sello" aria-hidden="true">ANULADA<\/div>/.test(c.html)))
+  chk('anulada: el motivo escrito en la hoja', ca.length === 1 && ca.every(c => texto(c.html).includes('ANULADA: Se cobró en efectivo')))
   chk('hoja: un logo que no es un archivo de la raíz no se dibuja', !/<img/.test(S.htmlNotaDebito({ ...DATOS, empresa: { ...DATOS.empresa, logo_url: 'javascript:alert(1)' } })))
   const recibida = S.htmlNotaDebito({ ...DATOS, direccion: 'recibida', codigo: null, comprobante: '0001-4567', cliente: null, proveedor: { razon_social: 'ANATOLIA SRL', cuit: '30711111112', direccion: 'Ruta 19' } })
   chk('recibida: el número del comprobante y el proveedor', texto(recibida).includes('NOTA DE DÉBITO N° 0001-4567') && texto(recibida).includes('Proveedor (la recibimos) ANATOLIA SRL CUIT 30-71111111-2 Ruta 19'))
@@ -126,13 +122,12 @@ const copias = (html) => html.split('<div class="ndh-copia ').slice(1).map(t => 
 }
 
 // ── El CSS de la hoja ─────────────────────────────────────────────────────
-chk('css: en la pantalla se ve solo el ORIGINAL', /#ad-nd-hoja \.ndh-copia--duplicado \{ display: none; \}/.test(src))
-chk('css: al imprimir, el duplicado empieza en otra hoja', /\.ndh--papel \.ndh-copia--duplicado \{ break-before: page; page-break-before: always; \}/.test(src))
+chk('css: sin reglas de un duplicado ni del rótulo de la copia', !/ndh-copia--duplicado|ndh-cab__copia/.test(src))
 chk('css: blanco y negro (fondo blanco, letra casi negra)', /\.ndh \{[^}]*background: #fff; color: #111;/.test(src))
 chk('css: la ventana de la nota va por encima de la cartera (z 80)', /\.ad-nd \{ position: fixed; inset: 0; z-index: 90;/.test(src))
 chk('markup: la ventana es hija directa de <body> (fuera de .ad-contenedor) y con Imprimir y Compartir PDF',
   /<div class="ad-nd" id="ad-nd" hidden role="dialog"/.test(src) && !/class="ad-dv[ _]/.test(src.slice(src.indexOf('id="ad-nd"'), src.indexOf('id="ad-nd-hoja"'))) && /id="ad-nd-imprimir"[^>]*>Imprimir</.test(src) && /id="ad-nd-compartir"[^>]*>Compartir PDF</.test(src))
-chk('markup: avisa que salen dos hojas', /Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO\./.test(src))
+chk('markup: ya no avisa que salen dos hojas', !/Se imprimen dos hojas/.test(src) && !/ad-nd-nota-copias/.test(src))
 chk('markup: "+ Nota de débito" en la cuenta del cliente', /id="ad-btn-nota-debito" hidden>\+ Nota de débito</.test(src))
 
 // ── Abrir, imprimir, anular ───────────────────────────────────────────────
@@ -149,7 +144,7 @@ esperas.push((async () => {
   S.imprimirNotaDebito()
   const imp = S.__els.get('ad-impresion').innerHTML
   chk('imprimir: A4 vertical', /@page \{ size: A4 portrait; margin: 8mm; \}/.test(imp))
-  chk('imprimir: las dos copias en la hoja de papel', /<div class="ndh ndh--papel">/.test(imp) && copias(imp).length === 2)
+  chk('imprimir: UNA sola hoja de papel', /<div class="ndh ndh--papel">/.test(imp) && copias(imp).length === 1 && !/DUPLICADO/.test(imp))
   chk('imprimir: llama a window.print', S.__impresiones() === 1)
   // Anular: sin motivo no llama; con motivo, anular_nota_debito y se relee.
   S.pedirAnularNotaDebito()

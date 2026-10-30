@@ -596,7 +596,10 @@ chk('"Ampliar" copia también las observaciones y los cheques, y la grilla se ll
   if (antes) {
     const marcas = t => new Set([...t.matchAll(/\b(id="[a-z][\w-]*"|data-[a-z][\w-]*)/g)].map(m => m[1]))
     const ahora = marcas(FUENTE)
-    const faltan = [...marcas(antes)].filter(m => !ahora.has(m))
+    // Retirados a propósito por ci-prueba/cc-proveedor-una-lista (el recuadro
+    // "Órdenes de pago" de la ficha y las dos copias de la orden), al unirse.
+    const RETIRADOS = new Set(['id="ficha-ordenes-pago"', 'id="nota-copias-orden"', 'data-copia'])
+    const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !RETIRADOS.has(m))
     chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
     chk(`en ${BASE_COMMIT} el detalle no sacaba ni agregaba cheques (lo que este cambio agrega)`, !/sacar_cheque_de_pago|agregar_cheques_a_pago/.test(antes))
   }

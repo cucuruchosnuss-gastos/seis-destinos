@@ -18,7 +18,7 @@ const FUNCIONES_PAGO_APLICAR = [
   'abrirAplicarPago', 'cerrarAplicarPago', 'htmlFilasAplicarPago', 'renderizarAplicarPago', 'totalesAplicarPago', 'pintarPieAplicarPago',
   'validarAplicarPago', 'textoExitoAplicarPago', 'confirmarAplicarPago', 'tildarFacturaAplicar', 'alTocarListaAplicarPago',
   'alCambiarListaAplicarPago', 'proponerAplicarPagoViejas',
-  'anulacionDeOrdenes', 'leerAnulacionOrdenes', 'htmlOrdenPagoAnulada',
+  'anulacionDeOrdenes', 'leerAnulacionOrdenes', 'htmlOrdenAnulada', 'marcarHojaAnulada',
   // lo que usan del resto del módulo
   'centavosDe',
 ]

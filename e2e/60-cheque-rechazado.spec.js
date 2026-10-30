@@ -2,8 +2,8 @@
 // (Supabase falso, sin credenciales; datos `cheque-rechazado`), a 390, 360,
 // tablet (768 × 1024) y 1280 px:
 //  - la cartera con el filtro "Rechazados": el cheque en rojo, con la fecha,
-//    el motivo y el link a su nota de débito; el link abre la hoja (solo el
-//    ORIGINAL en la pantalla);
+//    el motivo y el link a su nota de débito; el link abre la hoja (UNA sola,
+//    sin ORIGINAL ni DUPLICADO);
 //  - "Cheque rechazado": se escribe el número, la lista se filtra (con
 //    espera), se elige el depositado, el motivo con su chip, un gasto, el
 //    resumen ("Se descuentan $ … de <cuenta>", el total de la nota) y UNA
@@ -11,7 +11,7 @@
 //    se abre la hoja de la nota;
 //  - el endosado a un proveedor sin cliente en la cobranza: el selector de
 //    cliente y la nota de débito del proveedor;
-//  - la hoja al imprimir: dos páginas A4 (ORIGINAL y DUPLICADO);
+//  - la hoja al imprimir: UNA página A4, sin ORIGINAL ni DUPLICADO;
 //  - "Compartir PDF" arma el PDF (sin compartir en Chromium: se descarga);
 //  - la cuenta del cliente: "Nota de débito N-ND-0001" abre la hoja, y
 //    "+ Nota de débito" suelta → registrar_nota_debito_cliente;
@@ -86,11 +86,12 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     const hoja = page.locator('#ad-nd');
     await expect(hoja).toBeVisible();
     expect(llamadas.some(l => l.nombre === 'datos_nota_debito' && l.params?.p_id === 'nd-1')).toBe(true);
-    await expect(page.locator('#ad-nd-hoja .ndh-copia--original')).toBeVisible();
-    await expect(page.locator('#ad-nd-hoja .ndh-copia--duplicado')).toBeHidden();
-    await expect(page.locator('#ad-nd-hoja .ndh-copia--original .ndh-cab__titulo')).toHaveText(/NOTA DE DÉBITO\s*N-ND-0001\s*Fecha 20\/10\/2026\s*ORIGINAL/);
-    await expect(page.locator('#ad-nd-hoja .ndh-copia--original')).toContainText('SON CIENTO CINCUENTA Y UN MIL QUINIENTOS PESOS CON CINCUENTA CENTAVOS'.replace(/^SON/, 'Son'));
-    await expect(page.locator('#ad-nd-hoja .ndh-copia--original')).toContainText('Cheque rechazado');
+    await expect(page.locator('#ad-nd-hoja .ndh-copia')).toHaveCount(1);
+    await expect(page.locator('#ad-nd-hoja .ndh-copia')).toBeVisible();
+    await expect(page.locator('#ad-nd-hoja .ndh-copia .ndh-cab__titulo')).toHaveText(/^\s*NOTA DE DÉBITO\s*N-ND-0001\s*Fecha 20\/10\/2026\s*$/);
+    await expect(page.locator('#ad-nd-hoja .ndh-copia')).toContainText('SON CIENTO CINCUENTA Y UN MIL QUINIENTOS PESOS CON CINCUENTA CENTAVOS'.replace(/^SON/, 'Son'));
+    await expect(page.locator('#ad-nd-hoja .ndh-copia')).toContainText('Cheque rechazado');
+    await expect(page.locator('#ad-nd')).not.toContainText('DUPLICADO');
     for (const b of ['#ad-nd-imprimir', '#ad-nd-compartir', '#ad-nd-anular', '#ad-nd-cerrar']) await aLaVista(page, b);
     expect(await sinCostado(page), 'la hoja sin scroll de costado de la página').toBe(true);
     await captura(page, `cheque-rechazado-hoja-${nombre}`, info);
@@ -177,23 +178,23 @@ for (const [nombre, ancho, alto] of TAMANOS) {
   });
 }
 
-test('la hoja al imprimir: dos páginas A4 (ORIGINAL y DUPLICADO)', async ({ page }, info) => {
+test('la hoja al imprimir: UNA página A4, sin ORIGINAL ni DUPLICADO', async ({ page }, info) => {
   const errores = vigilarErrores(page);
   await abrir(page, 1280, 900);
   await page.locator('[data-estado-cheque="rechazados"]').click();
   await page.locator('[data-cheque-fila="chq-rech"]:visible [data-ver-nota-debito="nd-1"]').first().click();
-  await expect(page.locator('#ad-nd-hoja .ndh-copia--original')).toBeVisible();
+  await expect(page.locator('#ad-nd-hoja .ndh-copia')).toBeVisible();
   await page.locator('#ad-nd-imprimir').click();
   expect(await page.evaluate(() => window.__impresiones)).toBe(1);
   await page.emulateMedia({ media: 'print' });
-  const original = page.locator('#ad-impresion .ndh-copia--original');
-  const duplicado = page.locator('#ad-impresion .ndh-copia--duplicado');
-  await expect(original).toBeVisible();
-  await expect(duplicado).toBeVisible();
+  const hoja = page.locator('#ad-impresion .ndh-copia');
+  await expect(hoja).toHaveCount(1);
+  await expect(hoja).toBeVisible();
   await expect(page.locator('#ad-nd')).toBeHidden();
-  await expect(duplicado.locator('.ndh-cab__titulo')).toHaveText(/NOTA DE DÉBITO\s*N-ND-0001\s*Fecha 20\/10\/2026\s*DUPLICADO/);
+  await expect(page.locator('#ad-impresion')).not.toContainText('ORIGINAL');
+  await expect(page.locator('#ad-impresion')).not.toContainText('DUPLICADO');
   const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString('latin1');
-  expect((pdf.match(/\/Type\s*\/Page(?![s\w])/g) || []).length, 'dos hojas').toBe(2);
+  expect((pdf.match(/\/Type\s*\/Page(?![s\w])/g) || []).length, 'una sola hoja').toBe(1);
   await page.setViewportSize({ width: 794, height: 1123 });
   await captura(page, 'cheque-rechazado-hoja-impresa', info);
   await page.emulateMedia({ media: 'screen' });

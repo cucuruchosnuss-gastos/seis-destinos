@@ -15,8 +15,9 @@
 //  3. Confirmar: UNA llamada a pagar_proveedor_mixto (la base reparte), con
 //     el error de la base tal cual y sin orden si falla.
 //  4. La ORDEN DE PAGO (datos_orden_pago), imprimible, sin la empresa del
-//     cheque ni la cuenta, con el total en letras con centavos; y las órdenes
-//     de la ficha para reimprimirlas.
+//     cheque ni la cuenta, con el total en letras con centavos; y (desde el
+//     30/10/2026) la orden de cada pago en su renglón de la cuenta, para
+//     reimprimirla (se fue el recuadro "Órdenes de pago (N)" de la ficha).
 // Se EJECUTAN las funciones reales del módulo con un document y una base
 // falsos; lo que viaja a la base se mira en los parámetros de cada RPC.
 //
@@ -127,13 +128,13 @@ const FUNCIONES = [
   'abrirModalPago', 'cerrarModalPago', 'actualizarSugerenciasPago', 'programarActualizarSugerenciasPago', 'renderizarFilasFifo',
   'elegirSoloFactura', 'textoExitoPago', 'recargarFichaDespuesDePago', 'confirmarPago',
   'logoSeguroCC', 'cuitConGuiones', 'fechaOrden', 'letrasMenorDeMil', 'letrasMenorDeMillon', 'enteroEnLetras', 'importeEnLetras',
-  'htmlOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
-  'numeroTextoOrden', 'cargarFichaOrdenesPago', 'htmlOrdenesPagoFicha', 'renderizarFichaOrdenesPago',
+  'htmlOrdenPago', 'lineaSaldoOrdenPago', 'leerSaldoOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
+  'numeroTextoOrden', 'cargarOrdenesDePagos',
   // aplicar un pago a facturas y anular un pago (30/10/2026)
   ...FUNCIONES_PAGO_APLICAR,
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL',
-  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'COPIAS_ORDEN_PAGO']
+  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'TANDA_GASTOS_PAGO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -609,40 +610,48 @@ async function main() {
     chk('la orden que no se pudo leer lo dice', /No se pudo leer la orden de pago: No tenés permiso para ver órdenes de pago\./.test(el(S, 'orden-pago-hoja').innerHTML))
   }
 
-  // ══ 13. LAS ÓRDENES DE PAGO EN LA FICHA ════════════════════════════════════
+  // ══ 13. LA ORDEN DE PAGO DE CADA PAGO (30/10/2026) ═════════════════════════
+  // Se fue el recuadro "Órdenes de pago (N)": cada pago de la cuenta trae la
+  // suya (gastos.orden_pago_id → ordenes_pago) para el renglón.
   {
     const S = sandbox()
-    S.__tablas.ordenes_pago = [
-      { id: 'op-1', proveedor_id: 'p1', unidad_negocio_id: 'u-n', numero: 1, fecha: '2026-10-14', total: 1000, creada_en: '2026-10-14T10:00:00Z' },
-      { id: 'op-2', proveedor_id: 'p1', unidad_negocio_id: 'u-n', numero: 2, fecha: '2026-10-15', total: 2000, creada_en: '2026-10-15T10:00:00Z' },
-      { id: 'op-x', proveedor_id: 'p1', unidad_negocio_id: 'u-d', numero: 1, fecha: '2026-10-15', total: 9, creada_en: '2026-10-16T10:00:00Z' },
-      { id: 'op-y', proveedor_id: 'otro', unidad_negocio_id: 'u-n', numero: 3, fecha: '2026-10-15', total: 9, creada_en: '2026-10-16T10:00:00Z' },
+    S.__tablas.gastos = [
+      { id: 'g-1', orden_pago_id: 'op-1' }, { id: 'g-2', orden_pago_id: 'op-2' }, { id: 'g-2b', orden_pago_id: 'op-2' },
+      { id: 'g-sin', orden_pago_id: null }, { id: 'g-dolce', orden_pago_id: 'op-x' },
     ]
-    await S.cargarFichaOrdenesPago()
-    const q = S.__consultas.find(c => c.t === 'ordenes_pago')
-    chk('se leen por proveedor y empresa, la más nueva arriba', q && JSON.stringify(q.eq) === '[["proveedor_id","p1"],["unidad_negocio_id","u-n"]]' && JSON.stringify(q.orden) === '["creada_en",{"ascending":false}]', JSON.stringify(q))
-    const h = el(S, 'ficha-ordenes-pago').innerHTML
-    const nums = [...h.matchAll(/orden-pago-cc__numero">([^·<]+)/g)].map(m => m[1].trim())
-    chk('la lista: "Órdenes de pago (2)", la más nueva arriba, con el número de la empresa', /Órdenes de pago \(2\)/.test(h) && JSON.stringify(nums) === '["N-OP-00002","N-OP-00001"]', JSON.stringify(nums))
-    chk('cada una con "Reimprimir"', (h.match(/data-reimprimir-orden="op-/g) || []).length === 2)
+    S.__tablas.ordenes_pago = [
+      { id: 'op-1', proveedor_id: 'p1', unidad_negocio_id: 'u-n', numero: 1 },
+      { id: 'op-2', proveedor_id: 'p1', unidad_negocio_id: 'u-n', numero: 2 },
+      { id: 'op-x', proveedor_id: 'p1', unidad_negocio_id: 'u-d', numero: 7 },
+    ]
+    const filas = [
+      { tipo: 'pago', gasto_id: 'g-1' }, { tipo: 'pago', gasto_id: 'g-2' }, { tipo: 'pago', gasto_id: 'g-2b' }, { tipo: 'pago', gasto_id: 'g-sin' },
+      { tipo: 'pago', gasto_id: 'g-dolce' }, { tipo: 'factura', gasto_id: null, factura_pendiente_id: 'f' }, { tipo: 'pago', gasto_id: 'g-1' },
+    ]
+    const m = await S.cargarOrdenesDePagos(filas)
+    chk('cada pago con su orden y el número de su empresa', m.get('g-1')?.id === 'op-1' && m.get('g-1')?.texto === 'N-OP-00001' && m.get('g-2')?.texto === 'N-OP-00002' && m.get('g-2b')?.texto === 'N-OP-00002' && m.get('g-dolce')?.texto === 'D-OP-00007', JSON.stringify([...m]))
+    chk('un pago sin orden no trae nada', !m.has('g-sin'))
+    // La segunda lectura de gastos es la de "¿se anuló algún pago de la
+    // orden?" (30/10/2026, por orden_pago_id, con el estado).
+    const qg = S.__consultas.filter(c => c.t === 'gastos' && !/estado/.test(c.sel))
+    chk('se leen los gastos de los pagos (orden_pago_id), una sola vez cada uno', qg.length === 1 && /orden_pago_id/.test(qg[0].sel), JSON.stringify(qg))
+    chk('y una vez los de las órdenes, para saber si alguna se anuló', S.__consultas.filter(c => c.t === 'gastos' && c.sel === 'id, orden_pago_id, estado').length === 1)
+    chk('el número de otra empresa lleva su prefijo', S.numeroTextoOrden('u-d', 7) === 'D-OP-00007' && S.numeroTextoOrden('u-sin', 7) === '-OP-00007')
     S.__responder('datos_orden_pago', { data: ORDEN, error: null })
     await S.abrirOrdenPago('op-1')
     chk('reimprimir: datos_orden_pago con esa orden', S.__rpc.at(-1).nombre === 'datos_orden_pago' && S.__rpc.at(-1).params.p_orden_id === 'op-1' && /N-OP-00009/.test(el(S, 'orden-pago-hoja').innerHTML))
-    chk('en "todas las unidades" se lee todo el proveedor y dice la empresa', /Dolce Pasta/.test(S.htmlOrdenesPagoFicha([S.__tablas.ordenes_pago[2]], { unidadId: null })))
-    chk('el número de otra empresa lleva su prefijo', S.numeroTextoOrden('u-d', 7) === 'D-OP-00007' && S.numeroTextoOrden('u-sin', 7) === '-OP-00007')
-    chk('sin órdenes, no se dibuja nada', S.htmlOrdenesPagoFicha([], {}) === '')
-    S.estado.maestros.unidades.push({ id: 'u-m', nombre: marca('uni'), prefijo: marca('pre') })
-    chequearMarcas(chk, 'las órdenes de la ficha', S.htmlOrdenesPagoFicha([{ id: marca('id'), unidad_negocio_id: 'u-m', numero: 1, fecha: '2026-10-01', total: 1, creada_en: 'x' }], { unidadId: null }), ['uni', 'pre', 'id'])
-    chequearMarcas(chk, 'el error de las órdenes de la ficha', S.htmlOrdenesPagoFicha([], { error: marca('err') }), ['err'])
     // Sin permiso no se consulta.
     const T = sandbox()
     T.estado.misTareas = new Set()
-    await T.cargarFichaOrdenesPago()
-    chk('sin registrar_pago ni ver_todo: no se consulta', !T.__consultas.some(c => c.t === 'ordenes_pago'))
+    const mt = await T.cargarOrdenesDePagos(filas)
+    chk('sin registrar_pago ni ver_todo: no se consulta y no trae nada', mt.size === 0 && !T.__consultas.some(c => c.t === 'ordenes_pago' || c.t === 'gastos'))
+    // Si falla la lectura, los pagos quedan como vienen.
     const U = sandbox()
+    U.__tablas.gastos = S.__tablas.gastos
     U.__fallaTabla.ordenes_pago = { message: 'x' }
-    await U.cargarFichaOrdenesPago()
-    chk('si falla la lectura, se dice', /No se pudieron leer las órdenes de pago\./.test(el(U, 'ficha-ordenes-pago').innerHTML))
+    chk('si falla la lectura, no se inventa ninguna orden', (await U.cargarOrdenesDePagos(filas)).size === 0)
+    const V = sandbox()
+    chk('sin pagos no consulta nada', (await V.cargarOrdenesDePagos([{ tipo: 'factura' }])).size === 0 && !V.__consultas.some(c => c.t === 'ordenes_pago'))
   }
 
   // ══ 14. ABRIR EL FORMULARIO ════════════════════════════════════════════════

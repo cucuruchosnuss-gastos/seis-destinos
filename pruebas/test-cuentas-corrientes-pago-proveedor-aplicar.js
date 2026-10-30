@@ -61,14 +61,15 @@ const PRELUDIO = `
     querySelector: () => null,
     documentElement: nuevoEl('html'),
   }
-  var window = { addEventListener() {}, removeEventListener() {}, print() {} }
+  var __impresiones = 0
+  var window = { addEventListener() {}, removeEventListener() {}, print() { __impresiones++ } }
 
   // ── La base falsa ─────────────────────────────────────────────────────
   // __db: las tablas (se leen filtradas por eq / in, como PostgREST). Las
   // aplicaciones llevan su factura embebida, armada al leer (así se ve el
   // estado de AHORA). Cada rpc se anota; las que cambian datos repiten la
   // lógica del SQL.
-  var __db = {}, __rpc = [], __consultas = [], __falla = {}, __rpcError = {}, __espera = null
+  var __db = {}, __rpc = [], __consultas = [], __falla = {}, __fallaSel = {}, __rpcError = {}, __espera = null
   var __yo = 'emp-yanina'
   function __embeber(t, r) {
     if (t !== 'aplicaciones_pago') return r
@@ -86,7 +87,7 @@ const PRELUDIO = `
         maybeSingle() { uno = true; return q },
         then(res, rej) {
           __consultas.push(reg)
-          if (__falla[t]) return Promise.resolve({ data: null, error: { message: 'sin permiso: ' + t } }).then(res, rej)
+          if (__falla[t] || (__fallaSel[t] && __fallaSel[t].test(reg.sel ?? ''))) return Promise.resolve({ data: null, error: { message: 'sin permiso: ' + t } }).then(res, rej)
           const filas = (__db[t] ?? []).filter(r => filtros.every(f => f(r))).map(r => JSON.parse(JSON.stringify(__embeber(t, r))))
           return Promise.resolve({ data: uno ? (filas[0] ?? null) : filas, error: null }).then(res, rej)
         },
@@ -175,7 +176,7 @@ const PRELUDIO = `
   }
 
   var turnoCartera = 0, bancosBcra = null, turnoFacturasPago = 0, errorFacturasPago = null
-  var accionesPago = null, turnoAccionesPago = 0, aplicarPago = null, turnoAplicarPago = 0
+  var accionesPago = null, turnoAccionesPago = 0, aplicarPago = null, turnoAplicarPago = 0, turnoOrdenPago = 0
   var __errores = [], __exitos = [], __recargas = [], __ordenesAbiertas = [], __detallesAbiertos = [], __detallesCerrados = 0, __unidadesFicha = []
   function mostrarError(m) { __errores.push(m) } function mostrarExito(m) { __exitos.push(m) }
   function formatearFecha(f) { if (!f) return '—'; const [a, m, d] = String(f).slice(0, 10).split('-'); return d + '/' + m + '/' + a }
@@ -215,17 +216,17 @@ const FUNCIONES = [
   'abrirModalPago', 'cerrarModalPago', 'actualizarSugerenciasPago', 'renderizarFilasFifo', 'elegirSoloFactura',
   'textoExitoPago', 'recargarFichaDespuesDePago', 'confirmarPago',
   // la cuenta del proveedor y las órdenes de pago
-  'cargarFichaCreditos', 'numeroTextoOrden', 'fechaOrden', 'cargarFichaOrdenesPago', 'htmlOrdenesPagoFicha', 'renderizarFichaOrdenesPago',
+  'cargarFichaCreditos', 'numeroTextoOrden', 'fechaOrden', 'cargarOrdenesDePagos', 'imprimirOrdenPago',
   ...FUNCIONES_PAGO_APLICAR,
 ]
-const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL', 'NOMBRE_MEDIO_ORDEN']
+const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL', 'NOMBRE_MEDIO_ORDEN', 'TANDA_GASTOS_PAGO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
     preludio: PRELUDIO, funciones: [...new Set(FUNCIONES)], constantes: CONSTANTES,
-    retorno: `estado, __els, __db, __rpc, __consultas, __falla, __rpcError, __errores, __exitos, __recargas, __montos, __focos,
+    retorno: `estado, __els, __db, __rpc, __consultas, __falla, __fallaSel, __rpcError, __errores, __exitos, __recargas, __montos, __focos,
       __ordenesAbiertas, __detallesAbiertos, __unidadesFicha,
-      __detallesCerrados(){ return __detallesCerrados },
+      __detallesCerrados(){ return __detallesCerrados }, __impresiones(){ return __impresiones },
       __setVar(k, v){ eval(k + ' = v') }, __getVar(k){ return eval(k) }, __esperar(p){ __espera = p }`,
   })
 }
@@ -605,9 +606,8 @@ async function main() {
     const f4 = S.__getVar('facturasParaPago').find(f => f.id === 'fp-4')
     chk('después: la factura 0004-00011115 vuelve a estar PENDIENTE por $ 3.360.000,01', !!f4 && f4.saldo === 3360000.01 && S.__db.facturas_pendientes.find(f => f.id === 'fp-4').estado === 'pendiente', JSON.stringify(f4))
     chk('después: el crédito a cuenta quedó anulado (la ficha ya no lo ofrece)', S.aCuentaPorPago(S.estado.fichaCreditos).get('g-badic') === undefined && S.__db.creditos_proveedor[0].estado === 'anulado')
-    chk('después: la orden de pago se ve tachada, con "ANULADA" y sin "Reimprimir"',
-      /<s>N-OP-00002 · \$ 4\.200\.000,00<\/s><span class="orden-pago-cc__anulada">ANULADA<\/span>/.test(el(S, 'ficha-ordenes-pago').innerHTML) &&
-      !/data-reimprimir-orden/.test(el(S, 'ficha-ordenes-pago').innerHTML) && /No se reimprime/.test(el(S, 'ficha-ordenes-pago').innerHTML), el(S, 'ficha-ordenes-pago').innerHTML)
+    chk('después: el detalle dice su orden de pago tachada con "ANULADA" (sin reimprimir)',
+      /<div class="detalle-pago-orden"><s>Orden de pago N-OP-00002<\/s> <span class="orden-pago-cc__anulada">ANULADA<\/span><\/div>/.test(h) && !/data-reimprimir-orden/.test(h), h)
     // "Hacer el pago de nuevo": el formulario de pago a ese proveedor, en esa empresa.
     S.estado.ficha.unidadId = null
     S.alTocarAccionesPago({ target: { closest: (s) => (s === '[data-pagar-de-nuevo]' ? {} : null) } })
@@ -694,32 +694,51 @@ async function main() {
       { orden_pago_id: 'o3', estado: 'registrado' }, { orden_pago_id: null, estado: 'anulado' },
     ])
     chk('orden: todos sus pagos anulados → anulada; algunos → en parte; ninguno → nada', m.get('o1') === 'anulada' && m.get('o2') === 'en_parte' && !m.has('o3') && m.size === 2)
-    const h = S.htmlOrdenesPagoFicha([
-      { id: 'o1', unidad_negocio_id: 'u-n', numero: 1, fecha: '2026-10-22', total: 10, creada_en: '1', anulacion: 'anulada' },
-      { id: 'o2', unidad_negocio_id: 'u-n', numero: 2, fecha: '2026-10-30', total: 20, creada_en: '2', anulacion: 'en_parte' },
-      { id: 'o3', unidad_negocio_id: 'u-n', numero: 3, fecha: '2026-10-30', total: 30, creada_en: '3', anulacion: null },
-    ], { unidadId: 'u-n' })
-    chk('orden anulada: tachada con "ANULADA" y sin reimprimir', /data-orden-anulada="o1"[\s\S]*?<s>N-OP-00001 · \$ 10,00<\/s><span class="orden-pago-cc__anulada">ANULADA<\/span>/.test(h) && !/data-reimprimir-orden="o1"/.test(h), h)
-    chk('orden anulada en parte: "ANULADA EN PARTE", sin reimprimir, y dice por qué', /<span class="orden-pago-cc__anulada">ANULADA EN PARTE<\/span>/.test(h) && !/data-reimprimir-orden="o2"/.test(h) && /Un pago de esta orden se anuló: no se reimprime/.test(h))
-    chk('orden sana: como siempre, con "Reimprimir"', /data-reimprimir-orden="o3">Reimprimir</.test(h) && !/data-orden-anulada="o3"/.test(h))
-    // Si el RLS de gastos no deja leerlos, no se afirma nada.
+    chk('orden anulada: tachada con "ANULADA"', S.htmlOrdenAnulada('N-OP-00001', 'anulada', 'fila-movimiento__orden') === '<div class="fila-movimiento__orden"><s>Orden de pago N-OP-00001</s> <span class="orden-pago-cc__anulada">ANULADA</span></div>')
+    chk('orden anulada en parte: "ANULADA EN PARTE"', /<span class="orden-pago-cc__anulada">ANULADA EN PARTE<\/span>/.test(S.htmlOrdenAnulada('N-OP-00002', 'en_parte', 'x')))
+    // En la lista única (cc-proveedor-una-lista): un pago mixto con su otro
+    // pago anulado dice su orden "ANULADA EN PARTE" (el anulado ya no está).
     const T = sandbox()
-    conDatos(T, badic({ conPagoHecho: true }))
-    T.__db.gastos[0].estado = 'anulado'
-    T.__falla.gastos = true
-    await T.cargarFichaOrdenesPago()
-    chk('sin poder leer los gastos: la orden queda como estaba (con "Reimprimir")', /data-reimprimir-orden="op-2"/.test(el(T, 'ficha-ordenes-pago').innerHTML) && !/ANULADA/.test(el(T, 'ficha-ordenes-pago').innerHTML))
-    delete T.__falla.gastos
-    await T.cargarFichaOrdenesPago()
-    chk('pudiendo leerlos: anulada', /ANULADA/.test(el(T, 'ficha-ordenes-pago').innerHTML))
-    chk('las órdenes leen los gastos por orden_pago_id (estado)', T.__consultas.some(q => q.t === 'gastos' && /orden_pago_id, estado/.test(q.sel) && q.in.some(([c]) => c === 'orden_pago_id')))
+    const dbT = badic({ conPagoHecho: true })
+    dbT.gastos.push({ ...dbT.gastos[0], id: 'g-resto', medio_pago: 'transferencia', importe: 100, estado: 'anulado' })
+    conDatos(T, dbT)
+    const filas = [{ tipo: 'pago', gasto_id: 'g-badic' }]
+    let mo = await T.cargarOrdenesDePagos(filas)
+    chk('renglón: la orden del pago sabe que se anuló en parte', mo.get('g-badic')?.texto === 'N-OP-00002' && mo.get('g-badic')?.anulacion === 'en_parte', JSON.stringify([...mo]))
+    chk('las órdenes leen los gastos por orden_pago_id (con el anulado, que no está en la lista)', T.__consultas.some(q => q.t === 'gastos' && q.sel === 'id, orden_pago_id, estado' && q.in.some(([c, v]) => c === 'orden_pago_id' && v.includes('op-2'))))
+    T.__db.gastos[1].estado = 'registrado'
+    mo = await T.cargarOrdenesDePagos(filas)
+    chk('renglón: una orden sana no lleva anulación', mo.get('g-badic')?.anulacion === null)
+    // Si el RLS de gastos no deja leer los de la orden, no se afirma nada.
+    T.__db.gastos[1].estado = 'anulado'
+    T.__fallaSel.gastos = /estado/
+    mo = await T.cargarOrdenesDePagos(filas)
+    chk('sin poder leer los gastos de la orden: queda como estaba (con su número, sin anular)', mo.get('g-badic')?.texto === 'N-OP-00002' && mo.get('g-badic')?.anulacion === null, JSON.stringify([...mo]))
+    delete T.__fallaSel.gastos
+    // La hoja: tachada, con el aviso y sin "Imprimir".
+    const hoja = el(T, 'orden-pago-hoja'), btnImp = el(T, 'btn-imprimir-orden')
+    hoja.innerHTML = '<div class="op-cab__titulo-texto">ORDEN DE PAGO</div>'
+    await T.marcarHojaAnulada('op-2', 0)
+    chk('hoja: el aviso arriba, la clase de anulada y sin "Imprimir"', /^<div class="op-anulada" role="alert">ANULADA EN PARTE: un pago de esta orden se anuló\. No se reimprime\.<\/div><div class="op-cab__titulo-texto">/.test(hoja.innerHTML) &&
+      hoja.classList.contains('op-hoja--anulada') && btnImp.hidden === true, hoja.innerHTML)
+    T.imprimirOrdenPago()
+    chk('hoja anulada: "Imprimir" no imprime aunque se llame', T.__impresiones() === 0)
+    T.__db.gastos[1].estado = 'registrado'
+    hoja.innerHTML = '<p>sana</p>'
+    await T.marcarHojaAnulada('op-2', 0)
+    chk('hoja sana: sin aviso, con "Imprimir"', hoja.innerHTML === '<p>sana</p>' && !hoja.classList.contains('op-hoja--anulada') && btnImp.hidden === false)
+    T.imprimirOrdenPago()
+    chk('hoja sana: imprime', T.__impresiones() === 1)
+    T.__db.gastos[1].estado = 'anulado'
+    hoja.innerHTML = '<p>otra</p>'
+    await T.marcarHojaAnulada('op-2', 5)
+    chk('hoja: si mientras tanto se abrió otra orden, no la marca', hoja.innerHTML === '<p>otra</p>')
   }
 
   // ══ 5. TODO TEXTO SE ESCAPA ══════════════════════════════════════════════
   {
     const S = sandbox()
     S.estado.maestros.unidades[0].prefijo = marca('prefijo')
-    S.estado.maestros.unidades[0].nombre = marca('nombreUnidad')
     const a = {
       gastoId: 'g', gasto: { id: marca('gasto'), estado: 'registrado', empleado_id: 'emp-yanina', medio_pago: 'cheque', moneda: 'ARS', unidad_negocio_id: 'u-n' },
       aCuenta: 5, creditoUsado: false,
@@ -734,7 +753,7 @@ async function main() {
     chequearMarcas(chk, 'pago anulado', anulado, ['motivoAnulado'])
     chequearMarcas(chk, 'a cuenta', S.htmlACuentaPago(marca('gastoBoton'), 5, 'ARS', true), ['gastoBoton'])
     chequearMarcas(chk, 'facturas de aplicar', S.htmlFilasAplicarPago([{ numero: marca('numeroFactura'), fecha: '2026-10-01', saldo: 1, checked: true, monto: 1 }]), ['numeroFactura'])
-    chequearMarcas(chk, 'orden anulada', S.htmlOrdenPagoAnulada({ id: marca('idOrden'), unidad_negocio_id: 'u-n', numero: 1, fecha: '2026-10-01', total: 1, anulacion: 'anulada' }, null), ['idOrden', 'prefijo', 'nombreUnidad'])
+    chequearMarcas(chk, 'orden anulada', S.htmlOrdenAnulada(marca('numeroOrden'), 'anulada', 'fila-movimiento__orden'), ['numeroOrden'])
   }
 
   // ══ 6. LO QUE SE MIRA EN EL TEXTO DEL MÓDULO ═════════════════════════════
@@ -744,7 +763,8 @@ async function main() {
   chk('los botones de la pregunta tienen su listener', /getElementById\('btn-si-a-cuenta-pago'\)\.addEventListener\('click', siDejarACuenta\)/.test(FUENTE) && /getElementById\('btn-elegir-factura-pago'\)\.addEventListener\('click', elegirFacturaEnVezDeACuenta\)/.test(FUENTE))
   chk('la casilla de una factura pasa por tildarFacturaPago', /tildarFacturaPago\(Number\(e\.target\.dataset\.index\), e\.target\.checked, e\.target\.closest\('\.fila-fifo'\)\)/.test(FUENTE))
   chk('el renglón de una factura tiene cursor de mano', /#lista-fifo \.fila-fifo, #aplicar-pago-lista \.fila-fifo \{ cursor: pointer; \}/.test(FUENTE))
-  chk('el renglón del pago lleva "A cuenta" junto al detalle', /\$\{htmlACuentaEnFila\(m\)\}\s*<button type="button" class="btn-icono-accion btn-detalle-pago"/.test(FUENTE))
+  chk('el renglón del pago lleva "A cuenta" a la izquierda, bajo la fecha (en el celular no aprieta el texto)', /<div class="fila-movimiento__fecha">[^\n]*\n\s*\$\{errorPdfNd\}\n\s*\$\{esPago \? htmlACuentaEnFila\(m\) : ''\}\n\s*<\/div>/.test(FUENTE) &&
+    (FUENTE.match(/\$\{[^}\n]*htmlACuentaEnFila\(m\)/g) || []).length === 1)
   chk('la ficha lee de qué pago salió cada crédito (origen_gasto_id)', /from\('creditos_proveedor'\)\s*\.select\('id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, estado, origen_gasto_id'\)/.test(FUENTE))
   chk('el renglón del pago abre "Aplicar a facturas" (delegado en la lista)', /getElementById\('lista-movimientos-ficha'\)\.addEventListener\('click', \(e\) => \{\s*const b = e\.target\.closest\?\.\('\[data-aplicar-pago\]'\)\s*if \(b\) abrirAplicarPago\(b\.dataset\.aplicarPago\)/.test(FUENTE))
   chk('abrir el detalle del pago carga sus acciones', /async function abrirModalDetallePago\(gastoId\) \{\s*cargarAccionesDetallePago\(gastoId\)/.test(FUENTE))
@@ -757,7 +777,10 @@ async function main() {
     /for \(const tipo of \['input', 'change'\]\) listaAplicarPago\.addEventListener\(tipo, alCambiarListaAplicarPago\)/.test(FUENTE))
   chk('cada monto de "Aplicar a facturas" se enlaza con su saldo como máximo', /enlazarCampoNumero\(inp, \{ decimales: 2, max: f\.saldo > 0 \? f\.saldo : undefined \}\)/.test(FUENTE))
   chk('aplicar_pago_a_facturas y anular_gasto: una llamada cada una en el módulo', (FUENTE.match(/supabase\.rpc\('aplicar_pago_a_facturas'/g) || []).length === 1 && (FUENTE.match(/supabase\.rpc\('anular_gasto'/g) || []).length === 1)
-  chk('la orden se guarda con si se anuló, leído de sus gastos', /const anulacion = await leerAnulacionOrdenes\(\(data \?\? \[\]\)\.map\(o => o\.id\)\)/.test(FUENTE) && /anulacion: anulacion\.get\(o\.id\) \?\? null/.test(FUENTE))
+  chk('la orden de cada pago sabe si se anuló, leído de TODOS sus gastos', /const anulacion = await leerAnulacionOrdenes\(opIds\)/.test(FUENTE) && /anulacion: anulacion\.get\(o\.id\) \?\? null \}\)/.test(FUENTE))
+  chk('el renglón: la orden anulada tachada y sin "Reimprimir"', /\$\{ordenPago && !ordenPago\.anulacion \? `<button type="button" class="btn-pago-ayuda" data-reimprimir-orden=/.test(FUENTE) &&
+    /ordenPago\.anulacion \? htmlOrdenAnulada\(ordenPago\.texto, ordenPago\.anulacion, 'fila-movimiento__orden'\)/.test(FUENTE))
+  chk('la hoja se marca anulada después de dibujarla', /hoja\.innerHTML = htmlOrdenPago\(res\.data, \{ saldo \}\)[\s\S]{0,200}marcarHojaAnulada\(ordenId, turno\)/.test(FUENTE))
   chk('no se inserta ni se borra nada a mano (todo por las funciones de la base)', !/from\('(aplicaciones_pago|creditos_proveedor|gastos|cobranza_cheques)'\)\s*\.(insert|update|delete|upsert)\(/.test(FUENTE))
   chk('nada de confirm() ni alert() nuevos para anular o aplicar', !/confirm\([^)]*(anul|aplic|cuenta)/i.test(FUENTE.slice(FUENTE.indexOf('APLICAR UN PAGO A FACTURAS Y ANULAR UN PAGO (30/10/2026) ═'))))
 
@@ -775,7 +798,10 @@ async function main() {
     if (antes) {
       const marcas = t => new Set([...t.matchAll(/\b(id="[a-z][\w-]*"|data-[a-z][\w-]*)/g)].map(m => m[1]))
       const ahora = marcas(FUENTE)
-      const faltan = [...marcas(antes)].filter(m => !ahora.has(m))
+      // Retirados a propósito por ci-prueba/cc-proveedor-una-lista (el recuadro
+      // "Órdenes de pago" y las dos copias de la orden), que esta rama trae unida.
+      const RETIRADOS = new Set(['id="ficha-ordenes-pago"', 'id="nota-copias-orden"', 'data-copia'])
+      const faltan = [...marcas(antes)].filter(m => !ahora.has(m) && !RETIRADOS.has(m))
       chk(`ningún id ni data-* de ${BASE_COMMIT} se perdió`, faltan.length === 0, faltan.join(', '))
       chk(`en ${BASE_COMMIT} el módulo no aplicaba un pago después ni anulaba pagos (lo que este cambio agrega)`, !/aplicar_pago_a_facturas|'anular_gasto'/.test(antes))
     }

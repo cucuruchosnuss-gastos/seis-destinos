@@ -88,7 +88,8 @@ correrMutaciones({
     { nombre: 'los movimientos de la ficha no filtran por su unidad',
       de: '      let filas = estado.ficha.movimientosRaw.filter(m => pasaFiltroUnidad(m.unidad_negocio_id, estado.ficha.unidadId))', a: '      let filas = estado.ficha.movimientosRaw' },
     { nombre: 'un movimiento sin unidad lleva saldo corrido',
-      de: '        const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)', a: '        const lineaSaldo = (!todas && saldoAcum !== 0)' },
+      // 30/10/2026: el saldo corrido va en cada renglón, también en cero.
+      de: '        const lineaSaldo = (!todas && m.unidad_negocio_id)', a: '        const lineaSaldo = (!todas)' },
     // (25/10/2026: el renglón de abajo pasó a ser el error del "Ver PDF" de la nota de débito.)
     { nombre: 'un movimiento sin unidad no lo dice en una unidad',
       de: "              <div class=\"fila-movimiento__fecha\">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>\n              ${errorPdfNd}",

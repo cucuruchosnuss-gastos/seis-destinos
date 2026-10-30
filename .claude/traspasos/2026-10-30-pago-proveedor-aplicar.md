@@ -2,9 +2,11 @@
 
 Prompt para el chat de arquitectura. Quien lo lee no vio el trabajo: todo lo necesario está acá.
 
+**Esta rama trae unidas `ci-prueba/detalle-pago-cheques` (`347e028`) y `ci-prueba/cc-proveedor-una-lista` (`5156852`)**, con `git merge --no-ff` en ese orden (el de integración), quedándose con lo de todos los lados. Al integrar alcanza con esta rama (o las tres en ese orden).
+
 ## Qué hay que tocar
 
-- **`docs/memoria/cuentas-corrientes.md`**: ya tiene la sección nueva, escrita en la rama, como sub-viñeta **"LA FACTURA ELEGIDA VIAJA, "APLICAR A FACTURAS" Y ANULAR UN PAGO (30/10/2026…)"**, después de "LA ORDEN DE PAGO: ORIGINAL Y DUPLICADO…" y antes de "La cuenta del proveedor nombra esos pagos". Revisala; no hay que escribirla de nuevo.
+- **`docs/memoria/cuentas-corrientes.md`**: ya tiene la sección nueva, escrita en la rama, como sub-viñeta **"LA FACTURA ELEGIDA VIAJA, "APLICAR A FACTURAS" Y ANULAR UN PAGO (30/10/2026…)"**, después de la de `ci-prueba/cc-proveedor-una-lista` ("LA CUENTA DEL PROVEEDOR EN UNA SOLA LISTA…") y antes de "La cuenta del proveedor nombra esos pagos". Revisala; no hay que escribirla de nuevo.
 - **`docs/memoria/aprendizajes.md`**: sumar el aprendizaje de abajo ("Una lista que se tilda tiene que tildar igual que la de al lado").
 - **CLAUDE.md**: nada (es un índice; la sección del módulo vive en `docs/memoria/cuentas-corrientes.md`).
 - **Permisos**: no hacen falta tareas nuevas ni cambios de catálogo (ver "Permisos").
@@ -15,7 +17,8 @@ Rama `ci-prueba/pago-proveedor-aplicar`, desde `origin/main` `e6e0c74`. Archivos
 - `modulos/cuentas-corrientes.html`
 - `pruebas/test-cuentas-corrientes-pago-proveedor-aplicar.js` y `pruebas/mut-cuentas-corrientes-pago-proveedor-aplicar.js` (nuevas), `pruebas/pago-aplicar-comun.js` (nueva: la lista de funciones para los sandbox)
 - `e2e/109-pago-proveedor-aplicar.spec.js` (nuevo; las ramas abiertas usan del 102 al 108)
-- Ajustadas: `test-cuentas-corrientes-numeros.js`, `-pago-mixto.js`, `-proveedores.js`, `-saldo-inicial.js` (suman la lista común), `-xss.js` (las justificaciones de las funciones nuevas), `mut-cuentas-corrientes-numeros.js` (un ancla movida a `tildarFacturaPago`), `e2e/74-cc-clientes-cheques.spec.js` (contesta la pregunta nueva).
+- Ajustadas: `test-cuentas-corrientes-numeros.js`, `-pago-mixto.js`, `-proveedores.js`, `-saldo-inicial.js`, `-orden-pago-copias.js`, `-proveedor-una-lista.js` (suman la lista común; `detalle-pago-comun.js` también la suma, porque `abrirModalDetallePago` carga las acciones), `-xss.js` (las justificaciones de las funciones nuevas), `mut-cuentas-corrientes-numeros.js` (un ancla movida a `tildarFacturaPago`), `e2e/74-cc-clientes-cheques.spec.js` (contesta la pregunta nueva).
+- **Al unir las otras dos ramas** (se resolvió quedándose con todo): en `abrirModalDetallePago`, la versión de detalle-pago-cheques más la línea `cargarAccionesDetallePago(gastoId)` (las acciones van aparte, en `#detalle-pago-acciones`, y conviven con "Sacar del pago" y "+ Agregar cheque"); el recuadro "Órdenes de pago (N)" se fue con una-lista, así que la orden anulada pasó al renglón del pago (`cargarOrdenesDePagos` suma la `anulacion`, "Reimprimir" no va si está anulada), al detalle del pago anulado y a la hoja (`marcarHojaAnulada`); "A cuenta $ X" pasó a la izquierda del renglón (a la derecha, a 390 px, apretaba el texto). Las suites de las otras dos ramas: `test-cuentas-corrientes-detalle-pago-cheques.js` y la mía aceptan como retirados a propósito `id="ficha-ordenes-pago"`, `id="nota-copias-orden"` y `data-copia` (los sacó una-lista, como su propia suite); `test-cuentas-corrientes-pago-mixto.js` cuenta aparte la lectura de gastos de la anulación; `mut-cuentas-corrientes-proveedor-una-lista.js` tiene dos anclas del renglón al día.
 
 ## 1. El error de BADIC: qué pasó (verificado con SELECT y el registro de la API, 30/10/2026)
 
@@ -33,7 +36,7 @@ Rama `ci-prueba/pago-proveedor-aplicar`, desde `origin/main` `e6e0c74`. Archivos
 2. **Sin ninguna factura elegida, se pregunta**: en `confirmarPago`, con facturas pendientes en la lista y ninguna en `p_aplicaciones`, no se llama a la base y aparece pegada al botón `#confirmar-a-cuenta-pago`: **"No elegiste ninguna factura: el pago va a quedar a cuenta. ¿Seguro?"**, con "Elegir una factura" y "Sí, dejarlo a cuenta" (`siDejarACuenta`). Cualquier cambio vuelve a preguntar. Sin facturas pendientes no se pregunta.
 3. **"A cuenta $ X · Aplicar a facturas"** en el renglón del pago de la cuenta del proveedor y en su detalle (lo que dejó ESE pago: `creditos_proveedor` disponibles con `origen_gasto_id`; `cargarFichaCreditos` lee ahora `origen_gasto_id`). Abre `#modal-aplicar-pago`: las facturas pendientes con saldo del proveedor en la empresa y la moneda del pago, propuestas de la más vieja a la más nueva, editables, y UNA llamada a **`aplicar_pago_a_facturas(p_gasto_id uuid, p_aplicaciones jsonb [{factura_pendiente_id, monto_aplicado}]) → jsonb {aplicado, queda_a_cuenta}`**. El error de la base tal cual. Con `cuentas_corrientes:registrar_pago`.
 4. **"Anular el pago"** en el detalle de cualquier pago (también con cheques), con motivo obligatorio y la vista previa ("Vuelven a la cartera: N° 62921151 ($ 2.000.000,00), N° 62294736 ($ 2.200.000,00)", "La factura 0004-00011115 vuelve a deber $ 3.360.000,01", lo que quedó a cuenta, la deuda con la otra empresa que se da vuelta, la plata que vuelve a la cuenta en efectivo o transferencia, la orden que queda anulada; avisos si el crédito ya se usó o si la orden tiene otro pago que no se anula) → **`anular_gasto(p_gasto_id uuid, p_motivo text) → void`**. Después: "Pago anulado · <motivo>" y **"Hacer el pago de nuevo"** (abre "Registrar pago" en la empresa del pago).
-5. **La orden de pago de un pago anulado**, en "Órdenes de pago" de la ficha: tachada con **"ANULADA"** (o "ANULADA EN PARTE" si la orden tiene dos pagos y se anuló uno) y sin "Reimprimir". `ordenes_pago` no tiene estado (columnas verificadas el 30/10/2026): se sabe por `gastos.orden_pago_id` + `gastos.estado = 'anulado'`.
+5. **La orden de pago de un pago anulado** (con la lista única de una-lista): el pago anulado sale de la lista; su detalle dice "<s>Orden de pago N-OP-…</s> ANULADA"; si la orden tenía otro pago que sigue (pago mixto), su renglón dice "<s>Orden de pago N-OP-…</s> ANULADA EN PARTE" sin "Reimprimir"; y la hoja de una orden anulada (si se llega a abrir) lleva arriba "ANULADA: el pago de esta orden se anuló. No se reimprime.", tachados el título y el total, y sin "Imprimir / Guardar PDF". `ordenes_pago` no tiene estado (columnas verificadas el 30/10/2026): se sabe por `gastos.orden_pago_id` + `gastos.estado = 'anulado'`.
 
 ## 3. Lo leído en la base (pg_get_functiondef / information_schema / pg_policies, 30/10/2026)
 
@@ -45,10 +48,10 @@ Rama `ci-prueba/pago-proveedor-aplicar`, desde `origin/main` `e6e0c74`. Archivos
 
 ## 4. Qué se verificó y contra qué
 
-- `test-cuentas-corrientes-pago-proveedor-aplicar.js`: 162/162, ejecutando las funciones reales con una base falsa que repite la lógica de `aplicar_pago_a_facturas` y `anular_gasto`: la factura elegida viaja con un cheque de otra empresa (por la casilla y por el renglón), la pregunta sin factura y "Sí, dejarlo a cuenta", aplicar después un pago a cuenta deja la factura pagada y baja el crédito (releído), anular un pago con cheques deja los cheques en cartera, la factura pendiente, el crédito anulado y la orden "ANULADA" sin reimprimir, el error de la base tal cual, doble toque, permisos, marcas de XSS y el baseline fijo `e6e0c74` (ningún id ni data-* perdido).
-- `mut-cuentas-corrientes-pago-proveedor-aplicar.js`: 92/92 detectadas (+1 equivalente: `esc(fechaOrden(o.fecha))`), de a una.
-- `e2e/109-pago-proveedor-aplicar.spec.js`: 8 pruebas a 390 y 1280 px, sin scroll horizontal ni errores de JS (las rpc que cambian datos se simulan con un getter en `__maqueta.rpc` que cambia `__maquetaTablas`). También pasan 49, 51, 64, 7, 74, 75, 76, 88 y 33 (los de la pantalla).
-- `npm run pruebas` y `node pruebas/check-scripts.js` en verde (números en el commit).
+- `test-cuentas-corrientes-pago-proveedor-aplicar.js`: 167/167, ejecutando las funciones reales con una base falsa que repite la lógica de `aplicar_pago_a_facturas` y `anular_gasto`: la factura elegida viaja con un cheque de otra empresa (por la casilla y por el renglón), la pregunta sin factura y "Sí, dejarlo a cuenta", aplicar después un pago a cuenta deja la factura pagada y baja el crédito (releído), anular un pago con cheques deja los cheques en cartera, la factura pendiente, el crédito anulado y la orden "ANULADA" (detalle, renglón y hoja) sin reimprimir, el error de la base tal cual, doble toque, permisos, marcas de XSS y el baseline fijo `e6e0c74` (ningún id ni data-* perdido).
+- `mut-cuentas-corrientes-pago-proveedor-aplicar.js`: 100/100 detectadas, de a una. Con las tres ramas unidas: `mut-cuentas-corrientes-detalle-pago-cheques.js` 78/78 (+8 equivalentes), `mut-cuentas-corrientes-proveedor-una-lista.js` 28/28, `mut-cuentas-corrientes-xss.js` 125/125 y `test-anclas-mutaciones.js` 248/248.
+- `e2e/109-pago-proveedor-aplicar.spec.js`: 10 pruebas a 390 y 1280 px (también la orden "ANULADA EN PARTE" en el renglón), sin scroll horizontal ni errores de JS (las rpc que cambian datos se simulan con un getter en `__maqueta.rpc` que cambia `__maquetaTablas`). Con las tres ramas unidas pasan 106, 107, 109, 74, 88 y 49 a 390 y 1280 (41 pruebas).
+- `npm run pruebas` **332/332 en verde** y `node pruebas/check-scripts.js` OK, con las tres ramas unidas.
 
 ## 5. Permisos
 
@@ -67,6 +70,8 @@ No hay tareas nuevas. Se usan las que ya existen: `cuentas_corrientes:registrar_
 ## Decidido sin consultar
 
 - "ANULADA EN PARTE" para la orden de un pago mixto con uno de sus dos pagos anulado, también sin reimprimir (la hoja impresa ya no diría la verdad).
+- La orden de un pago anulado, con la lista única, va en el renglón del otro pago de la orden (si lo hay), en el detalle del pago anulado y en la hoja; el pago anulado no vuelve a la lista.
+- "A cuenta $ X · Aplicar a facturas" va a la izquierda del renglón, bajo la fecha.
 - La vista previa va como lista (una línea por cosa) y no en un solo renglón con " · ", para que se lea en el celular.
 - "Aplicar a facturas" filtra por la moneda del pago aunque la base no lo controle.
 - El panel de acciones del detalle no aparece en la ventana "Ampliar" (es una vista; las acciones están en el modal).

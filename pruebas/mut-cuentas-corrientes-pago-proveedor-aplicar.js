@@ -14,9 +14,8 @@ correrMutacionesEnVarios([
   {
     suite: SUITE,
     original: process.env.ARCHIVO_BASE_MUT || path.join(RAIZ, 'modulos/cuentas-corrientes.html'),
-    funciones: ['htmlACuentaPago', 'htmlPanelAnularPago', 'htmlAccionesDetallePago', 'htmlFilasAplicarPago', 'htmlOrdenPagoAnulada'],
+    funciones: ['htmlACuentaPago', 'htmlPanelAnularPago', 'htmlAccionesDetallePago', 'htmlFilasAplicarPago', 'htmlOrdenAnulada'],
     equivalentes: [
-      { expr: 'esc(fechaOrden(o.fecha))', motivo: 'fechaOrden(): dígitos validados por regex o "—"' },
     ],
     manuales: [
       // ── 1. La factura elegida viaja ───────────────────────────────────────
@@ -47,7 +46,7 @@ correrMutacionesEnVarios([
       { nombre: 'a cuenta: el botón aunque no haya nada', de: "      if (!gastoId || !(centavosDe(aCuenta) > 0)) return ''", a: "      if (!gastoId) return ''" },
       { nombre: 'a cuenta: el botón sin permiso', de: '      return puede\n        ? `<button type="button" class="btn-a-cuenta-pago"', a: '      return true\n        ? `<button type="button" class="btn-a-cuenta-pago"' },
       { nombre: 'a cuenta: el renglón pide otra tarea', de: "m?.moneda, tieneTarea('cuentas_corrientes', 'registrar_pago'))", a: "m?.moneda, tieneTarea('cuentas_corrientes', 'aplicar_credito'))" },
-      { nombre: 'a cuenta: el renglón del pago no lo muestra', de: '            ${htmlACuentaEnFila(m)}\n', a: '' },
+      { nombre: 'a cuenta: el renglón del pago no lo muestra', de: "              ${esPago ? htmlACuentaEnFila(m) : ''}\n", a: '' },
       { nombre: 'la ficha no lee de qué pago salió cada crédito', de: 'monto_original, monto_disponible, estado, origen_gasto_id\')', a: 'monto_original, monto_disponible, estado\')' },
       { nombre: 'aplicar: abre sin permiso', de: "      if (!gastoId || !tieneTarea('cuentas_corrientes', 'registrar_pago')) return\n      const turno = ++turnoAplicarPago", a: '      if (!gastoId) return\n      const turno = ++turnoAplicarPago' },
       { nombre: 'aplicar: sin filtrar por moneda', de: "        .eq('moneda', gasto.moneda || 'ARS')\n", a: '' },
@@ -102,10 +101,20 @@ correrMutacionesEnVarios([
       // ── 5. La orden anulada ───────────────────────────────────────────────
       { nombre: 'orden: "en parte" se ve como anulada entera', de: "      for (const [id, x] of por) if (x.anulados) res.set(id, x.anulados === x.total ? 'anulada' : 'en_parte')", a: "      for (const [id, x] of por) if (x.anulados) res.set(id, 'anulada')" },
       { nombre: 'orden: sin anulados también se marca', de: '      for (const [id, x] of por) if (x.anulados) res.set(', a: '      for (const [id, x] of por) if (true) res.set(' },
-      { nombre: 'orden: la anulada se dibuja como siempre', de: '${filas.map(o => o.anulacion ? htmlOrdenPagoAnulada(o, unidadId) : `', a: '${filas.map(o => false ? htmlOrdenPagoAnulada(o, unidadId) : `' },
-      { nombre: 'orden: no se lee si se anuló', de: '        f.ordenesPago = (data ?? []).map(o => ({ ...o, anulacion: anulacion.get(o.id) ?? null }))', a: '        f.ordenesPago = data ?? []' },
-      { nombre: 'orden: no dice "ANULADA EN PARTE"', de: "${enParte ? 'ANULADA EN PARTE' : 'ANULADA'}", a: "ANULADA" },
-      { nombre: 'orden: sin tachar', de: '<s>${esc(numeroTextoOrden(o.unidad_negocio_id, o.numero))} · ${importeHtml(o.total)}</s>', a: '${esc(numeroTextoOrden(o.unidad_negocio_id, o.numero))} · ${importeHtml(o.total)}' },
+      { nombre: 'orden: el renglón no sabe si se anuló', de: 'texto: numeroTextoOrden(o.unidad_negocio_id, o.numero), anulacion: anulacion.get(o.id) ?? null })', a: 'texto: numeroTextoOrden(o.unidad_negocio_id, o.numero), anulacion: null })' },
+      { nombre: 'orden: la anulación se lee solo de los pagos de la lista (sin el anulado)', de: '        const anulacion = await leerAnulacionOrdenes(opIds)\n', a: '        const anulacion = new Map()\n' },
+      { nombre: 'orden: el renglón dibuja la anulada como siempre', de: "${ordenPago ? (ordenPago.anulacion ? htmlOrdenAnulada(", a: "${ordenPago ? (false ? htmlOrdenAnulada(" },
+      { nombre: 'orden: la anulada se puede reimprimir', de: "${ordenPago && !ordenPago.anulacion ? `<button", a: "${ordenPago ? `<button" },
+      { nombre: 'orden: no dice "ANULADA EN PARTE"', de: "${anulacion === 'en_parte' ? 'ANULADA EN PARTE' : 'ANULADA'}</span></div>`", a: "ANULADA</span></div>`" },
+      { nombre: 'orden: sin tachar', de: "<div class=\"${clase}\"><s>${esc('Orden de pago ' + texto)}</s> <span", a: "<div class=\"${clase}\">${esc('Orden de pago ' + texto)} <span" },
+      { nombre: 'detalle anulado: no dice su orden', de: "          (a.ordenTexto ? htmlOrdenAnulada(a.ordenTexto, (a.otrosOrden ?? []).length ? 'en_parte' : 'anulada', 'detalle-pago-orden') : '') +\n", a: '' },
+      { nombre: 'hoja: no se marca anulada', de: '      // Anulada (30/10/2026): tachada, con el aviso y sin "Imprimir".\n      marcarHojaAnulada(ordenId, turno)\n', a: '' },
+      { nombre: 'hoja anulada: sigue con "Imprimir"', de: "      hoja.classList?.add('op-hoja--anulada')\n", a: '' },
+      { nombre: 'hoja anulada: sin el aviso', de: "      hoja.innerHTML = `<div class=\"op-anulada\" role=\"alert\">", a: "      hoja.innerHTML = '' + `<div hidden class=\"op-anulada\" role=\"alert\">" },
+      { nombre: 'hoja anulada: el botón se ve', de: '      btn.hidden = true\n    }', a: '    }' },
+      { nombre: 'hoja: marca otra orden abierta después', de: "      if (turno !== turnoOrdenPago || !anulacion) return\n", a: '      if (!anulacion) return\n' },
+      { nombre: 'hoja sana: queda marcada de antes', de: "      hoja.classList?.remove('op-hoja--anulada')\n      btn.hidden = false\n", a: '' },
+      { nombre: 'imprimir: imprime una anulada', de: "      if (document.getElementById('orden-pago-hoja').classList?.contains('op-hoja--anulada')) return\n", a: '' },
     ],
   },
 ])

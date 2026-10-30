@@ -76,6 +76,16 @@ async function abrir(page, { extra = 'nada' } = {}) {
       tablas.ordenes_pago.push({ id: 'op-9', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 9, fecha: '2026-10-30', total: 500000, creada_en: '2026-10-30T15:00:00Z' });
       tablas.v_cuenta_corriente_movimientos.push(mov('g-2', 500000));
     }
+    if (extra === 'mixto-anulado') {
+      // La orden N-OP-00009 tiene dos pagos: los cheques (sigue) y la
+      // transferencia (anulada). El renglón de los cheques dice su orden
+      // "ANULADA EN PARTE" y no se reimprime.
+      tablas.gastos.push(pago('g-2', 500000, 'Pago con cheques de terceros (N° 62921151) — ANATOLIA SRL'))
+      tablas.gastos.push({ ...pago('g-3', 100000, 'Pago a cuenta corriente — ANATOLIA SRL'), medio_pago: 'transferencia', estado: 'anulado' })
+      tablas.ordenes_pago.push({ id: 'op-9', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 9, fecha: '2026-10-30', total: 600000, creada_en: '2026-10-30T15:00:00Z' })
+      tablas.creditos_proveedor.push({ id: 'cr-2', proveedor_id: 'pv1', unidad_negocio_id: 'u-n', moneda: 'ARS', origen_gasto_id: 'g-2', monto_original: 500000, monto_disponible: 500000, estado: 'disponible', aplicaciones_credito: [] })
+      tablas.v_cuenta_corriente_movimientos.push(mov('g-2', 500000))
+    }
     const rpc = { pagar_proveedor_mixto: { orden_pago_id: 'op-1', numero: 1, numero_texto: 'N-OP-00001', total: 1, aplicado: 0, a_favor: 0 }, datos_orden_pago: 'ERROR:sin orden en la maqueta' };
     sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas, rpc }));
     localStorage.setItem('barraUnidad.elegida', 'u-n');
@@ -213,13 +223,30 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844]]) {
     expect(errores, errores.join('\n')).toEqual([]);
   });
 
+  test(`${nombre}: la orden de un pago mixto con un pago anulado — "ANULADA EN PARTE" en el renglón, sin reimprimir`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize({ width: ancho, height: alto });
+    await abrir(page, { extra: 'mixto-anulado' });
+    const renglon = page.locator('#lista-movimientos-ficha .fila-movimiento', { has: page.locator('.btn-detalle-pago[data-gasto-id="g-2"]') });
+    await expect(renglon.locator('.fila-movimiento__orden s')).toHaveText('Orden de pago N-OP-00009');
+    await expect(renglon.locator('.orden-pago-cc__anulada')).toHaveText('ANULADA EN PARTE');
+    await expect(renglon.locator('[data-reimprimir-orden]')).toHaveCount(0);
+    await expect(renglon.locator('[data-aplicar-pago="g-2"]')).toHaveText('A cuenta $ 500.000,00 · Aplicar a facturas');
+    expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
+    await renglon.scrollIntoViewIfNeeded();
+    await captura(page, `orden-anulada-en-parte-${nombre}`, info);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+
   test(`${nombre}: anular un pago con cheques — vista previa, motivo, la orden ANULADA y los cheques en la cartera`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     const rpc = anotarRpc(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrir(page, { extra: 'anular' });
-    const ordenes = page.locator('#ficha-ordenes-pago');
-    await expect(ordenes.locator('[data-reimprimir-orden="op-9"]')).toBeVisible();
+    // La orden, en el renglón del pago (lista única), con "Reimprimir".
+    const renglon = page.locator('#lista-movimientos-ficha .fila-movimiento', { has: page.locator('.btn-detalle-pago[data-gasto-id="g-2"]') });
+    await expect(renglon.locator('.fila-movimiento__orden')).toHaveText('Orden de pago N-OP-00009');
+    await expect(renglon.locator('[data-reimprimir-orden="op-9"]')).toBeVisible();
     await expect(page.locator('#lista-movimientos-ficha [data-aplicar-pago="g-2"]')).toHaveText('A cuenta $ 250.000,00 · Aplicar a facturas');
     await page.locator('#lista-movimientos-ficha .btn-detalle-pago[data-gasto-id="g-2"]').click();
     const acciones = page.locator('#detalle-pago-acciones');
@@ -244,10 +271,10 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844]]) {
     expect(de(rpc, 'anular_gasto')[0].params).toEqual({ p_gasto_id: 'g-2', p_motivo: 'Faltó elegir la factura' });
     await expect(acciones).toContainText('Pago anulado · Faltó elegir la factura');
     await expect(acciones.locator('[data-anular-pago]')).toHaveCount(0);
-    // La orden de pago: tachada, ANULADA, sin reimprimir.
-    await expect(ordenes.locator('[data-orden-anulada="op-9"] s')).toHaveText(/N-OP-00009/);
-    await expect(ordenes.locator('.orden-pago-cc__anulada')).toHaveText('ANULADA');
-    await expect(ordenes.locator('[data-reimprimir-orden="op-9"]')).toHaveCount(0);
+    // La orden de pago, en el detalle: tachada, ANULADA, sin reimprimir.
+    await expect(acciones.locator('.detalle-pago-orden s')).toHaveText('Orden de pago N-OP-00009');
+    await expect(acciones.locator('.detalle-pago-orden .orden-pago-cc__anulada')).toHaveText('ANULADA');
+    await expect(page.locator('[data-reimprimir-orden="op-9"]')).toHaveCount(0);
     // El pago salió de la cuenta.
     await expect(page.locator('#lista-movimientos-ficha .btn-detalle-pago[data-gasto-id="g-2"]')).toHaveCount(0);
     // "Hacer el pago de nuevo": el formulario, con los cheques otra vez en la cartera y la factura pendiente.
