@@ -75,11 +75,13 @@ const r = correrMutaciones({
     { nombre: 'la lista vuelve a ordenar por numero', de: ".order('codigo', { ascending: false })", a: ".order('numero', { ascending: false })" },
     { nombre: 'el detalle de la cuenta no saca el código de una interna', de: '|[A-Z]+-(?:I-)?\\d+)/', a: '|[A-Z]+-\\d+)/' },
     { nombre: 'el sello vuelve a decir "Entre empresas"', de: '>Orden interna</span>`\n    }', a: '>Entre empresas</span>`\n    }' },
-    { nombre: 'la fila sin la orden', de: '${htmlOrdenEntre(f)}${valorHtmlEntre}', a: '${valorHtmlEntre}' },
+    // Ancla al día con Entre empresas v2 (30/10/2026: el link de cada fila sale de htmlLinkEntre).
+    { nombre: 'la fila sin la orden', de: '      if (f?.orden?.codigo || codigoOrdenEntre(f)) return htmlOrdenEntre(f)\n', a: '' },
     { nombre: 'el link sin permiso', de: "      return !!o?.id && !!o.unidad && puedeEn('retiros', 'ver', o.unidad) && empresasDeAdministracion().some(e => e.id === o.unidad)", a: '      return !!o?.id' },
-    { nombre: 'sin leer la tabla', de: "        const { data, error } = await supabase.from('movimientos_entre_unidades').select('id, orden_retiro_id').in('id', deudas.map(f => f.referencia_id))\n        if (error) throw error\n        for (const m of data ?? []) if (m?.id && m.orden_retiro_id) porMov.set(m.id, m.orden_retiro_id)", a: '' },
+    { nombre: 'sin leer la tabla', de: "          const { data, error } = await supabase.from('movimientos_entre_unidades').select('id, orden_retiro_id').in('id', deudas.map(f => f.referencia_id))\n          if (error) throw error\n          for (const m of data ?? []) if (m?.id && m.orden_retiro_id) porMov.set(m.id, m.orden_retiro_id)", a: '' },
     { nombre: 'sin buscar por el código', de: "      await Promise.all([leer('id', ids), leer('codigo', codigos)])", a: "      await Promise.all([leer('id', ids)])" },
-    { nombre: 'un error de la tabla traba', de: "        console.error('No se pudieron leer las órdenes de las deudas entre empresas:', err)\n      }\n      const ids", a: '        throw err\n      }\n      const ids' },
+    // Ancla al día con Entre empresas v2 (30/10/2026: la tabla se lee solo si hay deudas cargadas).
+    { nombre: 'un error de la tabla traba', de: "          console.error('No se pudieron leer las órdenes de las deudas entre empresas:', err)\n        }\n      }\n      const ids", a: '          throw err\n        }\n      }\n      const ids' },
     { nombre: 'sin el código cuando no se encuentra la orden', de: '        else if (codigo) f.orden = { id: null, codigo, unidad: null }\n', a: '' },
     { nombre: 'el link no cambia de empresa', de: '      if (f.orden.unidad !== estado.empresaId) ponerEmpresa(f.orden.unidad)\n', a: '' },
     { nombre: 'el link abre aunque no esté en la lista', de: '      if (!f || !puedeAbrirOrdenEntre(f.orden)) return\n      if (f.orden.unidad', a: '      if (f && !puedeAbrirOrdenEntre(f.orden)) return\n      if (f?.orden.unidad' },

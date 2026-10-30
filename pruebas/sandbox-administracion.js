@@ -33,6 +33,21 @@ const FUNCIONES_ACOPIOS = [
   'clientesParaAsentar', 'apodoMostrarRet', 'claveBusquedaCliente',
 ]
 
+// Entre empresas v2 (30/10/2026): el saldo neto por par, la mercadería sin
+// valorizar, los links, "Cargar ajuste o compensación" y las listas
+// internas. Una copia de antes no las tiene: van con un reemplazo que no
+// hace nada (ver OPCIONALES_FN, abajo).
+const FUNCIONES_ENTRE_V2 = [
+  'claveParEntre', 'nombreParEntre', 'textoLadosEntre', 'saldosEntre', 'desdeSaldosEntre', 'sinCortarPlataEntre', 'htmlSaldoEntre', 'htmlSaldosEntre',
+  'codigoMercaderiaEntre', 'productoMercaderiaEntre', 'sinValorizarEntre', 'htmlQuienEntre', 'htmlGrupoSinValorizarEntre', 'htmlSinValorizarEntre',
+  'htmlLinkEntre', 'paresConocidosEntre', 'elegirParEntre', 'cargarSaldosEntre',
+  'puedeAjustarEntre', 'ajusteVacioEntre', 'htmlAjusteEntre', 'pintarAjusteEntre', 'abrirAjusteEntre', 'cerrarAjusteEntre', 'leerAjusteEntre',
+  'validarAjusteEntre', 'parametrosAjusteEntre', 'guardarAjusteEntre',
+  'internasVacioEntre', 'puedeCambiarInternaEntre', 'numeroPctEntre', 'textoPctInternaEntre', 'campoPctEntre', 'htmlItemInternaEntre',
+  'htmlInternaEntre', 'htmlInternasEntre', 'pintarInternasEntre', 'cargarInternasEntre', 'leerPreciosInternaEntre', 'guardarInternaEntre',
+]
+const CONSTANTES_ENTRE_V2 = ['DIAS_SALDO_ENTRE', 'RE_ORDEN_MERCADERIA_ENTRE', 'ORIGEN_MERCADERIA_ENTRE', 'AYUDA_AJUSTE_ENTRE', 'AYUDA_INTERNAS_ENTRE']
+
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
   'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles', 'moduloVisible',
@@ -197,11 +212,12 @@ const FUNCIONES_BASE = [
   'htmlEditarPrestamo', 'validarEditarPrestamo', 'parametrosEditarPrestamo', 'pintarErrorEditar', 'guardarEditarPrestamo', 'pintarSumaEdicion',
   // Entre empresas (13/10/2026)
   'entreVacio', 'datosEntre', 'nombreTipoEntre', 'nombreEmpresaEntre', 'centavosEntre', 'plataEntre', 'cantidadEntre', 'primerTramoEntre',
-  'normalizarEntre', 'sinPruebaEntre', 'claveParFechaEntre', 'traspasosConPrecio', 'yaTienePrecio', 'necesitaValor', 'filtrarEntre',
-  'valorEntre', 'direccionVaciaEntre', 'resumenEntre', 'ordenMonedasEntre', 'textoDireccionEntre', 'textosNetoEntre', 'htmlParEntre',
-  'htmlFilaEntre', 'entregadorasEntre', 'puedeLeerListasEntre', 'puedeValorizarProductoEntre', 'textoEstadoValorEntre',
-  'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'leerListasEntre', 'valorizarEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
+  'normalizarEntre', 'sinPruebaEntre', 'yaTienePrecio', 'filtrarEntre',
+  'valorEntre', 'direccionVaciaEntre', 'resumenEntre', 'ordenMonedasEntre', 'textosNetoEntre',
+  'htmlFilaEntre', 'htmlOpcionesEntre', 'pintarFiltrosEntre',
   'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
+  // Entre empresas v2 (30/10/2026): el saldo por par, el ajuste y las listas internas
+  ...FUNCIONES_ENTRE_V2,
   // La condición de venta (21/10/2026) y las órdenes de pedido N1 / N2 (28/10/2026)
   'leerFacturasDeOrden', 'leerRecepcionDeOrden', 'cantidadRecepcion', 'textoRecepcionOrden', 'diferenciasRecepcion', 'htmlRecepcionOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'parametrosDivision',
   'codigoPunto', 'textoCondicion', 'facturasPorParte', 'puntosDePct', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura',
@@ -271,7 +287,9 @@ const CONSTANTES_BASE = [
   // Préstamos (13/10/2026)
   'MONEDAS_PRESTAMO_AD', 'NOMBRE_MONEDA_AD', 'NOMBRE_MEDIO_PRESTAMO', 'MAX_CUOTAS_PRESTAMO', 'LARGO_MINIMO_MOTIVO_PAGO',
   // Entre empresas (13/10/2026)
-  'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'CONCEPTO_TRASPASO_CON_PRECIO', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
+  'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
+  // Entre empresas v2 (30/10/2026)
+  ...CONSTANTES_ENTRE_V2,
   // Dividir para facturar (21/10/2026) y los puntos N1 / N2 (28/10/2026)
   'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
   // Los remitos precargados de Rosario (27/10/2026)
@@ -449,6 +467,14 @@ const REEMPLAZOS_ACOPIOS = {
 for (const n of FUNCIONES_ACOPIOS) {
   OPCIONALES_FN[n] = REEMPLAZOS_ACOPIOS[n] ?? (/^(html|texto|nombre|papeles)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
 }
+// Entre empresas v2 (30/10/2026): una copia de antes no tiene ninguna.
+for (const n of FUNCIONES_ENTRE_V2) {
+  OPCIONALES_FN[n] = /^(html|texto|nombre|producto)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`
+}
+Object.assign(OPCIONALES_CONST, {
+  DIAS_SALDO_ENTRE: 'var DIAS_SALDO_ENTRE = 800', RE_ORDEN_MERCADERIA_ENTRE: 'var RE_ORDEN_MERCADERIA_ENTRE = /$^/',
+  ORIGEN_MERCADERIA_ENTRE: 'var ORIGEN_MERCADERIA_ENTRE = {}', AYUDA_AJUSTE_ENTRE: "var AYUDA_AJUSTE_ENTRE = '(no existe)'", AYUDA_INTERNAS_ENTRE: "var AYUDA_INTERNAS_ENTRE = '(no existe)'",
+})
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
   const html = require('fs').readFileSync(ruta, 'utf8')

@@ -10,11 +10,11 @@
 //    ORIGEN.
 //  - EL RESUMEN por par de empresas, por tipo y por moneda (pesos y dólares
 //    nunca se suman), y el NETO en las dos direcciones, en centavos.
-//  - LA VALORIZACIÓN con una lista de la empresa que entrega: precio_venta()
-//    para el producto (presentación de origen, sin cono, fecha), y
-//    precios_insumos_lista() para los insumos; lo que no tiene precio se dice;
-//    sin el permiso de precios, se dice; nunca se cuenta dos veces un traspaso
-//    que ya tiene su deuda cargada.
+//  - LA MERCADERÍA CON PRECIO (con_precio de la base, 30/10/2026) nunca se
+//    cuenta dos veces: su importe llega aparte como 'otro'. (La cuenta "≈"
+//    con una lista de precios salió con la v2; lo nuevo de la v2 —el saldo
+//    por par, el ajuste y las listas internas— está en
+//    test-administracion-entre-empresas-v2.js.)
 //  - LOS PARÁMETROS de la RPC, el error de la base TAL CUAL con Reintentar, el
 //    período sin movimientos con palabras, la respuesta vieja que no pisa.
 //  - EL PERMISO (gastos:gastos_empresa), la fábrica de pruebas afuera y XSS.
@@ -60,12 +60,12 @@ const FILAS = [
   F({ tipo: 'pago', fecha: '2026-10-03', ...DE_N, ...A_D, detalle: 'Repuesto · pagado desde Caja USD', moneda: 'USD', importe: 200, referencia_tipo: 'gasto', referencia_id: 'g2' }),
   F({ tipo: 'traspaso_dinero', fecha: '2026-10-04', ...DE_D, ...A_N, detalle: 'Traspaso de Banco DP a Banco Nuss', moneda: 'ARS', importe: 5000.5, referencia_tipo: 'caja_movimiento', referencia_id: 'm1' }),
   // Producto terminado SIN precio: las dos mitades de la base.
-  F({ tipo: 'mercaderia', fecha: '2026-10-02', ...DE_N, detalle: 'Cucurucho grande · Caja x 100', unidad_medida: 'cajas', presentacion_id: 'pr-o', referencia_tipo: 'traspaso_terminado', referencia_id: 't1' }),
-  F({ tipo: 'mercaderia', fecha: '2026-10-02', ...A_D, detalle: 'Cucurucho grande · Caja x 100', cantidad: 10, unidad_medida: 'cajas', presentacion_id: 'pr-d', referencia_tipo: 'traspaso_terminado', referencia_id: 't1' }),
+  F({ tipo: 'mercaderia', fecha: '2026-10-02', ...DE_N, detalle: 'Cucurucho grande · Caja x 100', unidad_medida: 'cajas', presentacion_id: 'pr-o', referencia_tipo: 'traspaso_terminado', referencia_id: 't1', con_precio: false }),
+  F({ tipo: 'mercaderia', fecha: '2026-10-02', ...A_D, detalle: 'Cucurucho grande · Caja x 100', cantidad: 10, unidad_medida: 'cajas', presentacion_id: 'pr-d', referencia_tipo: 'traspaso_terminado', referencia_id: 't1', con_precio: false }),
   F({ tipo: 'insumos', fecha: '2026-10-01', ...DE_N, ...A_D, detalle: 'Azúcar Ledesma · lote L1', cantidad: 50, unidad_medida: 'kg', insumo_id: 'i1', referencia_tipo: 'transferencia_stock', referencia_id: 's1' }),
   // Producto terminado CON precio: la deuda ya está cargada como 'otro'.
-  F({ tipo: 'mercaderia', fecha: '2026-10-06', ...DE_D, detalle: 'Cono dulce · Caja x 50', unidad_medida: 'cajas', presentacion_id: 'pr-o2', referencia_tipo: 'traspaso_terminado', referencia_id: 't2' }),
-  F({ tipo: 'mercaderia', fecha: '2026-10-06', ...A_N, detalle: 'Cono dulce · Caja x 50', cantidad: 5, unidad_medida: 'cajas', presentacion_id: 'pr-d2', referencia_tipo: 'traspaso_terminado', referencia_id: 't2' }),
+  F({ tipo: 'mercaderia', fecha: '2026-10-06', ...DE_D, detalle: 'Cono dulce · Caja x 50', unidad_medida: 'cajas', presentacion_id: 'pr-o2', referencia_tipo: 'traspaso_terminado', referencia_id: 't2', con_precio: true }),
+  F({ tipo: 'mercaderia', fecha: '2026-10-06', ...A_N, detalle: 'Cono dulce · Caja x 50', cantidad: 5, unidad_medida: 'cajas', presentacion_id: 'pr-d2', referencia_tipo: 'traspaso_terminado', referencia_id: 't2', con_precio: true }),
   F({ tipo: 'otro', fecha: '2026-10-06', ...DE_D, ...A_N, detalle: 'Traspaso de producto terminado · semana', moneda: 'ARS', importe: 20000, referencia_tipo: 'movimiento_entre_unidades', referencia_id: 'mu1' }),
 ]
 
@@ -114,13 +114,10 @@ const FILAS = [
 {
   const S = nuevo()
   const filas = S.normalizarEntre(FILAS)
-  const con = S.traspasosConPrecio(filas)
-  chk('el traspaso con precio se reconoce por la deuda cargada', con.size === 1)
-  chk('su mercadería ya tiene precio (no se valoriza)', S.yaTienePrecio(filas.find(f => f.referencia_id === 't2'), con) && !S.necesitaValor(filas.find(f => f.referencia_id === 't2'), con))
-  chk('la otra mercadería sí necesita valor', S.necesitaValor(filas.find(f => f.referencia_id === 't1'), con))
-  chk('los insumos también', S.necesitaValor(filas.find(f => f.tipo === 'insumos'), con))
-  chk('un cheque no', !S.necesitaValor(filas.find(f => f.tipo === 'cheque'), con))
-  const r = S.resumenEntre(filas, new Map(), con)
+  chk('la mercadería con con_precio ya tiene su deuda (no se cuenta dos veces)', S.yaTienePrecio(filas.find(f => f.referencia_id === 't2')))
+  chk('la de con_precio false no', !S.yaTienePrecio(filas.find(f => f.referencia_id === 't1')))
+  chk('un cheque no es mercadería con precio', !S.yaTienePrecio(filas.find(f => f.tipo === 'cheque')))
+  const r = S.resumenEntre(filas)
   chk('un solo par: Dolce Pasta y Nuss', r.pares.length === 1 && r.pares[0].x === 'u-d' && r.pares[0].y === 'u-n', r.pares.map(p => p.x + '|' + p.y).join())
   const p = r.pares[0]
   chk('Dolce → Nuss: cheques', p.dirs.xy.tipos.get('cheque').get('ARS') === 10000000)
@@ -134,59 +131,44 @@ const FILAS = [
   const netos = S.textosNetoEntre(p)
   chk('Nuss le debe a Dolce Pasta en pesos', netos[0] === 'Nuss le debe a Dolce Pasta $ 95.000,50', netos[0])
   chk('Dolce Pasta le debe a Nuss en dólares (la otra dirección)', netos[1] === 'Dolce Pasta le debe a Nuss US$ 200,00', netos[1])
-  const t = S.textoDireccionEntre(p.dirs.xy)
-  chk('el texto de una dirección, por tipo', t.includes('$ 100.000,00 en cheques') && t.includes('$ 5.000,50 en traspasos de plata') && t.includes('$ 20.000,00 en deudas cargadas'), t)
-  chk('y dice lo que ya está en la deuda cargada', t.includes('1 traspaso de producto ya incluido en la deuda cargada'), t)
-  const t2 = S.textoDireccionEntre(p.dirs.yx)
-  chk('pesos y dólares en el mismo tipo: "y"', t2.includes('$ 30.000,00 y US$ 200,00 en pagos'), t2)
-  chk('lo sin valor se dice', t2.includes('2 movimientos sin valor'), t2)
   // En cero.
-  const cero = S.resumenEntre([F({ tipo: 'pago', ...DE_N, ...A_D, moneda: 'ARS', importe: 10, _id: 'a' }), F({ tipo: 'cobro', ...DE_D, ...A_N, moneda: 'ARS', importe: 10, _id: 'b' })], new Map(), new Set())
+  const cero = S.resumenEntre([F({ tipo: 'pago', ...DE_N, ...A_D, moneda: 'ARS', importe: 10, _id: 'a' }), F({ tipo: 'cobro', ...DE_D, ...A_N, moneda: 'ARS', importe: 10, _id: 'b' })])
   chk('las dos direcciones iguales: "Están en cero"', S.textosNetoEntre(cero.pares[0])[0] === 'Están en cero')
   // La dirección contraria sola.
-  const solo = S.resumenEntre([F({ tipo: 'pago', ...DE_N, ...A_D, moneda: 'ARS', importe: 10, _id: 'a' })], new Map(), new Set())
+  const solo = S.resumenEntre([F({ tipo: 'pago', ...DE_N, ...A_D, moneda: 'ARS', importe: 10, _id: 'a' })])
   chk('solo Nuss → Dolce: Dolce Pasta le debe a Nuss', S.textosNetoEntre(solo.pares[0])[0] === 'Dolce Pasta le debe a Nuss $ 10,00')
   // Una fila sin las dos empresas no entra al resumen.
-  const suelta = S.resumenEntre([F({ tipo: 'mercaderia', ...DE_N, _id: 'z' })], new Map(), new Set())
+  const suelta = S.resumenEntre([F({ tipo: 'mercaderia', ...DE_N, _id: 'z' })])
   chk('una fila sin las dos empresas va aparte', suelta.pares.length === 0 && suelta.sueltas.length === 1)
-  // El HTML del par.
-  const h = S.htmlParEntre(p)
-  chk('el par dice el neto', h.includes('Neto: Nuss le debe a Dolce Pasta $ 95.000,50'))
-  chk('el par dice las dos direcciones', h.includes('Dolce Pasta → Nuss:') && h.includes('Nuss → Dolce Pasta:'))
-  chk('el par avisa lo que falta valorizar', h.includes('Faltan valorizar 2 movimientos de mercadería o insumos: no entran en el neto.'))
-  chk('con la etiqueta de color de cada fábrica', (h.match(/ad-sello--empresa/g) || []).length === 2)
 }
 
 // ── Los filtros ────────────────────────────────────────────────────────────
 {
   const S = nuevo()
   const filas = S.normalizarEntre(FILAS)
-  chk('filtro origen', S.filtrarEntre(filas, { origen: 'u-n' }).every(f => f.de_unidad_id === 'u-n') && S.filtrarEntre(filas, { origen: 'u-n' }).length === 4)
-  chk('filtro destino', S.filtrarEntre(filas, { destino: 'u-n' }).length === 4)
+  const par = S.claveParEntre('u-n', 'u-d')
+  chk('filtro par (en cualquier dirección)', S.filtrarEntre(filas, { par }).length === filas.length)
+  chk('filtro par de otro par: nada', S.filtrarEntre(filas, { par: 'u-n|u-x' }).length === 0)
   chk('filtro tipo', S.filtrarEntre(filas, { tipo: 'pago' }).length === 2)
-  chk('los tres juntos', S.filtrarEntre(filas, { origen: 'u-n', destino: 'u-d', tipo: 'insumos' }).length === 1)
+  chk('par y tipo juntos', S.filtrarEntre(filas, { par, tipo: 'insumos' }).length === 1)
   chk('sin filtros, todas', S.filtrarEntre(filas, {}).length === filas.length)
 }
 
 // ── La pantalla: cargar, la RPC, el error, el vacío, el turno ─────────────
 {
   const S = nuevo()
-  S.__setRpc((n) => n === 'movimientos_entre_empresas' ? { data: FILAS, error: null } : (n === 'precio_venta' || n === 'precios_insumos_lista') ? { data: null, error: null } : { data: null, error: null })
-  S.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
+  S.__setRpc((n) => n === 'movimientos_entre_empresas' ? { data: FILAS, error: null } : { data: null, error: null })
   esperas.push(S.cargarEntre().then(() => {
     const llamada = S.__llamadas.rpc.find(x => x[0] === 'movimientos_entre_empresas')
     chk('la RPC con p_desde y p_hasta del período', JSON.stringify(llamada?.[1]) === JSON.stringify({ p_desde: '2026-10-01', p_hasta: '2026-10-13' }), JSON.stringify(llamada?.[1]))
     chk('la lista: una tarjeta por movimiento', (html(S, 'ad-entre-lista').match(/data-entre="/g) || []).length === 8)
     chk('la cuenta', S.__els.get('ad-entre-cuenta').textContent === '8 movimientos')
-    chk('el resumen arriba', html(S, 'ad-entre-resumen').includes('Neto: Nuss le debe a Dolce Pasta $ 95.000,50'))
     chk('la mercadería muestra las cajas', html(S, 'ad-entre-lista').includes('10 cajas'))
     chk('los insumos, los kilos', html(S, 'ad-entre-lista').includes('50 kg'))
-    chk('el tipo en palabras', html(S, 'ad-entre-lista').includes('Cheque en el banco de otra') && html(S, 'ad-entre-lista').includes('Producto terminado'))
-    chk('el traspaso con precio lo dice', html(S, 'ad-entre-lista').includes('Con precio: el importe está en la deuda cargada del mismo día.'))
-    chk('lo que falta valorizar dice "Sin valorizar"', html(S, 'ad-entre-lista').includes('Sin valorizar'))
-    const consulta = S.__llamadas.consultas.find(c => c[0] === 'listas_precios')
-    chk('se leen las listas de la empresa que ENTREGA (Nuss), activas', !!consulta && consulta[1].some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === 'u-n') && consulta[1].some(f => f[0] === 'eq' && f[1] === 'activa' && f[2] === true))
-    chk('no se leen las de Dolce (su producto ya tiene precio)', !S.__llamadas.consultas.some(c => c[0] === 'listas_precios' && c[1].some(f => f[0] === 'eq' && f[2] === 'u-d')))
+    chk('el tipo con su sello', html(S, 'ad-entre-lista').includes('>Cheque</span>') && html(S, 'ad-entre-lista').includes('>Mercadería</span>'))
+    chk('el traspaso con precio lo dice', html(S, 'ad-entre-lista').includes('Ya valorizada: su importe está en la deuda cargada'))
+    chk('lo que falta valorizar dice "Sin valorizar"', html(S, 'ad-entre-lista').includes('Sin valorizar: todavía no tiene precio'))
+    chk('ya no se leen listas de precios para valorizar', !S.__llamadas.consultas.some(c => c[0] === 'listas_precios'))
   }))
 }
 {
@@ -197,7 +179,6 @@ const FILAS = [
     const h = html(S, 'ad-entre-lista')
     chk('el error de la base tal cual', h.includes('No tenés permiso para ver los movimientos entre empresas.'))
     chk('con Reintentar', h.includes('data-entre-reintentar') && h.includes('Reintentar'))
-    chk('sin resumen con un error', html(S, 'ad-entre-resumen') === '')
   }))
   const S2 = nuevo()
   S2.__setRpc(() => ({ data: null, error: { message: 'El período no puede pasar de dos años.' } }))
@@ -209,7 +190,7 @@ const FILAS = [
   S.__setRpc(() => ({ data: [], error: null }))
   esperas.push(S.cargarEntre().then(() => {
     chk('período sin movimientos: con palabras', html(S, 'ad-entre-lista').includes('En este período ninguna empresa le pasó nada a otra.'))
-    chk('sin "$ 0" en un período vacío', !html(S, 'ad-entre-resumen').includes('$ 0'))
+    chk('sin "$ 0" en un período vacío', !html(S, 'ad-entre-lista').includes('$ 0'))
   }))
   // Sin fechas no se llama a la base.
   const S2 = nuevo()
@@ -237,116 +218,7 @@ const FILAS = [
   esperas.push(S.cargarEntre().then(() => {
     chk('un movimiento con la fábrica de pruebas no aparece', (html(S, 'ad-entre-lista').match(/data-entre="/g) || []).length === 1)
     S.pintarFiltrosEntre(S.estado.entre)
-    chk('los filtros de empresa no ofrecen la fábrica de pruebas', !html(S, 'ad-entre-origen').includes(PRUEBAS) && html(S, 'ad-entre-origen').includes('u-n'))
-  }))
-}
-
-// ── Valorizar ─────────────────────────────────────────────────────────────
-function rpcValorizar(llamadas, { precio = { precio_caja: 1500.25, sin_precio: false }, insumos = [{ insumo_id: 'i1', precio_unitario: 100.5, sin_costo: false }] } = {}) {
-  return (n, p) => {
-    llamadas.push([n, p])
-    if (n === 'movimientos_entre_empresas') return { data: FILAS, error: null }
-    if (n === 'precio_venta') return { data: precio, error: null }
-    if (n === 'precios_insumos_lista') return { data: insumos, error: null }
-    return { data: null, error: null }
-  }
-}
-{
-  const S = nuevo()
-  const ll = []
-  S.__setRpc(rpcValorizar(ll))
-  S.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
-  esperas.push(S.cargarEntre().then(() => S.leerListasEntre('u-n')).then(() => {
-    const v = html(S, 'ad-entre-valorizar')
-    chk('el selector de listas de la empresa que entrega', v.includes('data-entre-lista="u-n"') && v.includes('Distribuidores') && v.includes('Valorizar lo que entregó Nuss con la lista'))
-    chk('un solo selector (Dolce no tiene nada sin valor)', (v.match(/data-entre-lista=/g) || []).length === 1)
-    return S.valorizarEntre('u-n', 'l-n')
-  }).then(() => {
-    const pv = ll.find(x => x[0] === 'precio_venta')
-    chk('precio_venta con la lista, la presentación de ORIGEN, sin cono y la fecha', JSON.stringify(pv?.[1]) === JSON.stringify({ p_lista_id: 'l-n', p_presentacion_id: 'pr-o', p_marca_id: null, p_fecha: '2026-10-02' }), JSON.stringify(pv?.[1]))
-    chk('el producto con precio de Dolce no se pide (ya tiene su deuda)', !ll.some(x => x[0] === 'precio_venta' && x[1].p_presentacion_id === 'pr-o2'))
-    const pi = ll.find(x => x[0] === 'precios_insumos_lista')
-    chk('precios_insumos_lista con la lista y la fecha', JSON.stringify(pi?.[1]) === JSON.stringify({ p_lista_id: 'l-n', p_fecha: '2026-10-01' }))
-    const e = S.estado.entre
-    const t1 = e.filas.find(f => f.referencia_id === 't1'), ins = e.filas.find(f => f.tipo === 'insumos')
-    chk('el producto: precio de la caja × las cajas', e.valores.get(t1._id)?.cent === 1500250)
-    chk('los insumos: precio × kilos', e.valores.get(ins._id)?.cent === 502500)
-    const r = html(S, 'ad-entre-resumen')
-    chk('el neto suma lo valorizado', r.includes('Neto: Nuss le debe a Dolce Pasta $ 74.973,00'), r.match(/Neto:[^<]*/g)?.join(' | '))
-    chk('marcado como valorizado', r.includes('(valorizado)') && r.includes('≈ $ 15.002,50 en producto terminado (valorizado)'))
-    chk('ya no avisa que falta valorizar', !r.includes('Faltan valorizar'))
-    chk('la fila dice cuánto vale y con qué lista', html(S, 'ad-entre-lista').includes('≈ $ 15.002,50 con la lista Distribuidores'))
-    chk('todo valorizado se dice', html(S, 'ad-entre-valorizar').includes('Todo valorizado con la lista Distribuidores.'))
-    // Volver a "Sin valorizar" saca lo valorizado.
-    return S.valorizarEntre('u-n', '')
-  }).then(() => {
-    chk('"Sin valorizar" saca lo valorizado', S.estado.entre.valores.size === 0 && html(S, 'ad-entre-resumen').includes('Neto: Nuss le debe a Dolce Pasta $ 95.000,50'))
-  }))
-}
-{
-  // Sin precio: se dice, nunca se inventa.
-  const S = nuevo()
-  const ll = []
-  S.__setRpc(rpcValorizar(ll, { precio: { sin_precio: true, motivo: 'El producto no tiene precio en la lista base.' }, insumos: [{ insumo_id: 'i1', precio_unitario: null, sin_costo: true }] }))
-  S.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
-  esperas.push(S.cargarEntre().then(() => S.leerListasEntre('u-n')).then(() => S.valorizarEntre('u-n', 'l-n')).then(() => {
-    chk('"N renglones sin precio en la lista X"', html(S, 'ad-entre-valorizar').includes('2 renglones sin precio en la lista Distribuidores'), html(S, 'ad-entre-valorizar'))
-    chk('la fila dice el motivo de la base', html(S, 'ad-entre-lista').includes('Sin precio en la lista Distribuidores: El producto no tiene precio en la lista base.'))
-    chk('un insumo a costo sin costo lo dice', html(S, 'ad-entre-lista').includes('falta cargar el costo'))
-    chk('lo sin precio NO entra en el neto (nada inventado)', html(S, 'ad-entre-resumen').includes('Neto: Nuss le debe a Dolce Pasta $ 95.000,50'))
-    chk('y sigue avisando que falta', html(S, 'ad-entre-resumen').includes('Faltan valorizar 2'))
-  }))
-  const S2 = nuevo()
-  S2.__setRpc(rpcValorizar([], { insumos: [] }))
-  S2.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
-  esperas.push(S2.cargarEntre().then(() => S2.leerListasEntre('u-n')).then(() => S2.valorizarEntre('u-n', 'l-n')).then(() => {
-    chk('un insumo que no está en la lista: 1 renglón sin precio', html(S2, 'ad-entre-valorizar').includes('1 renglón sin precio en la lista Distribuidores'))
-    chk('y la fila dice que no está en la lista', html(S2, 'ad-entre-lista').includes('no está en la lista'))
-  }))
-  // Un insumo marcado sin costo no se valoriza aunque traiga un número.
-  const S3 = nuevo()
-  S3.__setRpc(rpcValorizar([], { insumos: [{ insumo_id: 'i1', precio_unitario: 5, sin_costo: true }] }))
-  S3.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
-  esperas.push(S3.cargarEntre().then(() => S3.leerListasEntre('u-n')).then(() => S3.valorizarEntre('u-n', 'l-n')).then(() => {
-    const ins = S3.estado.entre.filas.find(f => f.tipo === 'insumos')
-    chk('sin costo: no se valoriza aunque traiga un número', S3.estado.entre.valores.get(ins._id)?.cent === undefined && html(S3, 'ad-entre-lista').includes('falta cargar el costo'))
-  }))
-}
-{
-  // Sin retiros:precios: el producto no se valoriza y se dice (los insumos sí, con retiros:ver).
-  const S = nuevo({ tareas: [['gastos:gastos_empresa', null], ['retiros:ver', { unidades: ['u-n'] }]] })
-  const ll = []
-  S.__setRpc(rpcValorizar(ll))
-  S.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
-  esperas.push(S.cargarEntre().then(() => S.leerListasEntre('u-n')).then(() => S.valorizarEntre('u-n', 'l-n')).then(() => {
-    chk('sin retiros:precios no se llama a precio_venta', !ll.some(x => x[0] === 'precio_venta'))
-    chk('y lo dice, en vez de un cero', html(S, 'ad-entre-valorizar').includes('hace falta el permiso de precios de Órdenes de retiro en Nuss: 1 renglón queda sin valorizar.'), html(S, 'ad-entre-valorizar'))
-    chk('los insumos sí se valorizan (precios_insumos_lista acepta retiros:ver)', S.estado.entre.valores.get(S.estado.entre.filas.find(f => f.tipo === 'insumos')._id)?.cent === 502500)
-  }))
-  // Sin ningún permiso de retiros: no hay selector, se dice.
-  const S2 = nuevo({ tareas: [['gastos:gastos_empresa', null]] })
-  S2.__setRpc(rpcValorizar([]))
-  esperas.push(S2.cargarEntre().then(() => {
-    const v = html(S2, 'ad-entre-valorizar')
-    chk('sin permiso de retiros: lo dice', v.includes('Para valorizar lo que entregó Nuss hace falta el permiso de precios de Órdenes de retiro en esa empresa.'))
-    chk('y no hay selector', !v.includes('data-entre-lista'))
-    chk('y no lee las listas', !S2.__llamadas.consultas.some(c => c[0] === 'listas_precios'))
-  }))
-}
-{
-  // El error de una valorización, tal cual; y sin listas activas, se dice.
-  const S = nuevo()
-  S.__setRpc((n) => n === 'movimientos_entre_empresas' ? { data: FILAS, error: null } : { data: null, error: { message: 'No tenés permiso para ver precios.' } })
-  S.__tablas.listas_precios = [{ id: 'l-n', nombre: 'Distribuidores', moneda: 'ARS', activa: true }]
-  esperas.push(S.cargarEntre().then(() => S.leerListasEntre('u-n')).then(() => S.valorizarEntre('u-n', 'l-n')).then(() => {
-    chk('el error de la valorización, tal cual', html(S, 'ad-entre-valorizar').includes('No se pudo valorizar con la lista Distribuidores: No tenés permiso para ver precios.'))
-    chk('con error no queda nada valorizado', S.estado.entre.valores.size === 0)
-  }))
-  const S2 = nuevo()
-  S2.__setRpc(rpcValorizar([]))
-  S2.__tablas.listas_precios = []
-  esperas.push(S2.cargarEntre().then(() => S2.leerListasEntre('u-n')).then(() => {
-    chk('sin listas activas, se dice', html(S2, 'ad-entre-valorizar').includes('Nuss no tiene listas de precios activas'))
+    chk('el filtro de par no ofrece la fábrica de pruebas', !html(S, 'ad-entre-par').includes(PRUEBAS) && html(S, 'ad-entre-par').includes('u-n'))
   }))
 }
 
@@ -372,10 +244,11 @@ function rpcValorizar(llamadas, { precio = { precio_caja: 1500.25, sin_precio: f
   chk('la portada cargando', S.contenidoSeccionEntre({}).carga === true)
   chk('la portada con error', S.contenidoSeccionEntre({ errorEntre: 'No se pudo contar.' }).error === 'No se pudo contar.')
   const ll = []
-  S.__setRpc(rpcValorizar(ll))
+  S.__setRpc((n, p) => { ll.push([n, p]); return n === 'movimientos_entre_empresas' ? { data: FILAS, error: null } : { data: null, error: null } })
   esperas.push(S.contarEntrePortada().then(r => {
+    const mes = ll.filter(x => x[0] === 'movimientos_entre_empresas').pop()
     chk('la portada cuenta el mes, juntando las mitades', r.movimientos === 8 && r.pares === 1, JSON.stringify(r))
-    chk('la portada pide del 1º del mes a hoy', /^\d{4}-\d{2}-01$/.test(ll[0]?.[1]?.p_desde) && ll[0]?.[1]?.p_hasta === S.hoyArgentina())
+    chk('la portada pide del 1º del mes a hoy', /^\d{4}-\d{2}-01$/.test(mes?.[1]?.p_desde) && mes?.[1]?.p_hasta === S.hoyArgentina())
   }))
 }
 
@@ -383,26 +256,14 @@ function rpcValorizar(llamadas, { precio = { precio_caja: 1500.25, sin_precio: f
 {
   const S = nuevo()
   const f = F({ tipo: 'pago', de_unidad_id: 'u-z1', de_unidad: marca('de-unidad'), a_unidad_id: 'u-z2', a_unidad: marca('a-unidad'), detalle: marca('detalle'), moneda: 'ARS', importe: 5, _id: 'x1' })
-  chequearMarcas(chk, 'fila', S.htmlFilaEntre(f, { conPrecio: new Set(), valores: new Map() }), ['de-unidad', 'a-unidad', 'detalle'])
-  const tipoRaro = S.htmlFilaEntre(F({ tipo: marca('tipo'), _id: 'x2' }), {})
+  chequearMarcas(chk, 'fila', S.htmlFilaEntre(f), ['de-unidad', 'a-unidad', 'detalle'])
+  const tipoRaro = S.htmlFilaEntre(F({ tipo: marca('tipo'), _id: 'x2' }))
   chequearMarcas(chk, 'fila con un tipo desconocido', tipoRaro, ['tipo'])
-  const r = S.resumenEntre([f], new Map(), new Set())
-  chequearMarcas(chk, 'par', S.htmlParEntre(r.pares[0]), ['de-unidad', 'a-unidad'])
-  const merc = F({ tipo: 'mercaderia', ...DE_N, ...A_D, cantidad: 2, unidad_medida: 'cajas', _id: 'x3' })
-  const vals = new Map([['x3', { motivo: marca('motivo'), lista: marca('lista') }]])
-  chequearMarcas(chk, 'fila sin precio', S.htmlFilaEntre(merc, { conPrecio: new Set(), valores: vals }), ['motivo', 'lista'])
-  const e = S.entreVacio()
-  e.listas.set('u-n', { filas: [{ id: marca('id-lista'), nombre: marca('nombre-lista') }] })
-  e.valorizando.set('u-n', { error: marca('error-val'), lista: 'L' })
-  chequearMarcas(chk, 'selector de listas', S.htmlValorizarEntre(e, ['u-n']), ['id-lista', 'nombre-lista', 'error-val'])
-  const e2 = S.entreVacio()
-  e2.listas.set('u-n', { error: marca('error-listas'), filas: [] })
-  chequearMarcas(chk, 'error de las listas', S.htmlValorizarEntre(e2, ['u-n']), ['error-listas'])
   S.estado.entre = S.entreVacio()
   S.estado.entre.error = marca('error-base')
   S.pintarEntre()
   chequearMarcas(chk, 'error de la base', html(S, 'ad-entre-lista'), ['error-base'])
-  estaticoAcotado(chk, ARCHIVO, src, ['htmlParEntre', 'htmlFilaEntre', 'htmlValorizarUnidadEntre', 'htmlValorizarEntre', 'htmlOpcionesEntre', 'pintarEntre'],
+  estaticoAcotado(chk, ARCHIVO, src, ['htmlFilaEntre', 'htmlOpcionesEntre', 'pintarEntre'],
     { escape: 'esc', seguras: SEGURAS_ADMINISTRACION, segurasRegex: SEGURAS_REGEX_ADMINISTRACION })
 }
 
