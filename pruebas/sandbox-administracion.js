@@ -453,6 +453,14 @@ const OPCIONALES_CONST = {
   ESTADOS_ACOPIO: "var ESTADOS_ACOPIO = ['activo', 'terminado', 'anulado']", LARGO_NUMERO_ACOPIO: 'var LARGO_NUMERO_ACOPIO = 30',
   GRUPOS_REMITO: 'var GRUPOS_REMITO = []',
 }
+// Entre empresas v2 (30/10/2026): una copia de antes no tiene ninguna.
+for (const n of FUNCIONES_ENTRE_V2) {
+  OPCIONALES_FN[n] = /^(html|texto|nombre|producto)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`
+}
+Object.assign(OPCIONALES_CONST, {
+  DIAS_SALDO_ENTRE: 'var DIAS_SALDO_ENTRE = 800', RE_ORDEN_MERCADERIA_ENTRE: 'var RE_ORDEN_MERCADERIA_ENTRE = /$^/',
+  ORIGEN_MERCADERIA_ENTRE: 'var ORIGEN_MERCADERIA_ENTRE = {}', AYUDA_AJUSTE_ENTRE: "var AYUDA_AJUSTE_ENTRE = '(no existe)'", AYUDA_INTERNAS_ENTRE: "var AYUDA_INTERNAS_ENTRE = '(no existe)'",
+})
 // Los acopios (27/10/2026): una copia de antes no tiene ninguna de estas.
 // Las que llaman las funciones de siempre tienen su reemplazo que no hace
 // nada (sin acopios, sin cuenta en el grupo, la lista de la misma empresa);
@@ -467,14 +475,6 @@ const REEMPLAZOS_ACOPIOS = {
 for (const n of FUNCIONES_ACOPIOS) {
   OPCIONALES_FN[n] = REEMPLAZOS_ACOPIOS[n] ?? (/^(html|texto|nombre|papeles)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
 }
-// Entre empresas v2 (30/10/2026): una copia de antes no tiene ninguna.
-for (const n of FUNCIONES_ENTRE_V2) {
-  OPCIONALES_FN[n] = /^(html|texto|nombre|producto)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`
-}
-Object.assign(OPCIONALES_CONST, {
-  DIAS_SALDO_ENTRE: 'var DIAS_SALDO_ENTRE = 800', RE_ORDEN_MERCADERIA_ENTRE: 'var RE_ORDEN_MERCADERIA_ENTRE = /$^/',
-  ORIGEN_MERCADERIA_ENTRE: 'var ORIGEN_MERCADERIA_ENTRE = {}', AYUDA_AJUSTE_ENTRE: "var AYUDA_AJUSTE_ENTRE = '(no existe)'", AYUDA_INTERNAS_ENTRE: "var AYUDA_INTERNAS_ENTRE = '(no existe)'",
-})
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
   const html = require('fs').readFileSync(ruta, 'utf8')
