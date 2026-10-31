@@ -12,6 +12,21 @@ const { FUNCIONES_CU, CONSTANTES_CU } = require('./cuenta-unica-comun')
 const { FUNCIONES_FR, CONSTANTES_FR } = require('./faltante-comun')
 const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
+// Pendientes desde el corte, aplicar y el recibo (30/10/2026): la cuenta del
+// cliente las llama (htmlCuenta, pintarCliente y abrirCliente).
+const FUNCIONES_PENDIENTES_AD = [
+  'centavosAplAd', 'puedeLeerPendientesAd', 'puedeAplicarAd', 'pendientesActivosAd', 'cargarPendientesAd', 'reintentarPendientesAd',
+  'docsPendientesAd', 'creditosLibresAd', 'claveCreditoAd', 'claveDocAd', 'creditoAplicableAd', 'htmlPendientesAd', 'htmlDocPendienteAd',
+  'htmlCreditoPendienteAd', 'aplicacionVaciaAd', 'disponibleAd', 'hayMediosAd', 'montoElegidoAd', 'itemsNuevosAd', 'itemsPreviosAd',
+  'itemsParaEnviarAd', 'resumenAplicacionAd', 'abrirAplicarAd', 'cerrarAplicarAd', 'aplicarListoAd', 'sugerirTodoAd', 'sugerirMedioLocalAd',
+  'sugerirMedioAd', 'cambiarModoAd', 'actualizarMontoAd', 'htmlCifrasAd', 'htmlBotonesParteAd', 'htmlFilaAplicarAd', 'htmlAplicarAd',
+  'pintarCifrasAd', 'pintarAplicarAd', 'confirmarAplicarAd', 'releerPendientesYCuentaAd', 'alTocarPendientesAd', 'alEscribirPendientesAd',
+  'htmlReciboLineaAd', 'cuitReciboAd', 'fechaReciboAd', 'bancoCortoAd', 'etiquetaReciboAd', 'textoSaldoCuentaAd', 'filasReciboAd',
+  'claseHojaReciboAd', 'htmlReciboAd', 'nombreArchivoReciboAd', 'abrirReciboAd', 'pintarReciboAd', 'cerrarReciboAd', 'imprimirReciboAd',
+  'pdfReciboAd', 'enviarReciboAd', 'enlazarPendientesAd',
+]
+const CONSTANTES_PENDIENTES_AD = ['MEDIOS_APLICAR_AD', 'NOMBRE_MEDIO_APLICAR_AD', 'FILAS_RECIBO_COMPACTO_AD', 'TEXTO_HUECO_APLICAR_AD']
+
 // Los acopios, la cuenta en el grupo, "(también en Nuss)" y valorizar con la
 // lista de otra empresa (27/10/2026). Van todas a la base: las llaman la
 // portada, la cuenta del cliente y valorizar. (El saldo del acopio al revisar
@@ -250,6 +265,8 @@ const FUNCIONES_BASE = [
   // a Remitos Dolce): si la fábrica controla el stock, el link de Órdenes y
   // el "Remito N° X" de la ficha (js/remitos-comun.js).
   'sinControlStockEmpresa', 'leerSinControl', 'pintarLinkRemitos', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio',
+  // Pendientes desde el corte, aplicar y el recibo (30/10/2026)
+  ...FUNCIONES_PENDIENTES_AD,
   // Los acopios, la cuenta en el grupo y la lista de otra empresa (27/10/2026)
   ...FUNCIONES_ACOPIOS,
   // Corregir una orden (29/10/2026)
@@ -301,6 +318,8 @@ const CONSTANTES_BASE = [
   'MIN_LETRAS_CONO_ESP', 'MAX_CONOS_ESP',
   // Los acopios (27/10/2026)
   'ESTADOS_ACOPIO', 'LARGO_NUMERO_ACOPIO', 'GRUPOS_REMITO',
+  // Pendientes desde el corte, aplicar y el recibo (30/10/2026)
+  ...CONSTANTES_PENDIENTES_AD,
 ]
 
 const PRELUDIO = `
@@ -488,6 +507,16 @@ const REEMPLAZOS_CORREGIR = {
 for (const n of FUNCIONES_CORREGIR) {
   OPCIONALES_FN[n] = REEMPLAZOS_CORREGIR[n] ?? (/^(html|texto|nombre|descripcion)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
 }
+
+// Pendientes desde el corte (30/10/2026): una copia de antes no tiene
+// ninguna. El reemplazo no hace nada (un pedazo de HTML vacío o null).
+for (const n of FUNCIONES_PENDIENTES_AD) {
+  OPCIONALES_FN[n] = /^html/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`
+}
+Object.assign(OPCIONALES_CONST, {
+  MEDIOS_APLICAR_AD: "var MEDIOS_APLICAR_AD = ['cheque', 'transferencia', 'efectivo']", NOMBRE_MEDIO_APLICAR_AD: 'var NOMBRE_MEDIO_APLICAR_AD = {}',
+  FILAS_RECIBO_COMPACTO_AD: 'var FILAS_RECIBO_COMPACTO_AD = 14', TEXTO_HUECO_APLICAR_AD: "var TEXTO_HUECO_APLICAR_AD = '(no existe)'",
+})
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
   const html = require('fs').readFileSync(ruta, 'utf8')
