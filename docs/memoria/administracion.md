@@ -67,6 +67,20 @@
 
    - **LA VENTA POR UNIDAD (27/10/2026, rama `ci-prueba/venta-por-unidad`; ver `retiros.md`).** Las presentaciones de 1 por caja o con `sin_stock` (los "Conos de papel sueltos · Por cono") se dicen en unidades: el catálogo lee `sin_stock` y `partesRenglon` lo pasa (`sinStock`) a la hoja; la lista de órdenes lee también las `unidades` de cada renglón y dice "3 cajas + 720 un." (un renglón con cajas = unidades es por unidad); la ficha "720 conos · Conos de papel sueltos · …" y, al valorizar, **"Precio x cono"** (el precio es por cono, como cualquier presentación de 1 unidad: `precio_venta` de la Lista 1 propone $ 27 y el subtotal es precio × conos, sin cambios en la base).
 
+## La división: el 0 % y la factura que se carga después (30/10/2026, rama `ci-prueba/division-cero-y-factura`)
+- **El 0 % vale**: `pctInicialFacturar` = `numeroONulo(orden.division_pct_a) ?? numeroONulo(cliente.pct_parte_a) ?? 100`
+  (`numeroONulo` lee 0 y "0.00", que es como manda la base el numeric). 100 solo si los dos son null. Revisado en toda la
+  app el 30/10/2026: `pct_parte_a`, `division_pct_a`, `comision_parte_a_pct` y los % de comisión no se leen con `||`.
+  Con 0 el N1 no se muestra ni pide número (`puntosDePct`).
+- **La factura va después**: primero se divide (se guarda sola, "Guardado.") y recién después se factura en ARCA.
+  "Guardar la factura" está apagado mientras el número está vacío y no hay PDF (`actualizarFacturaPunto`; escribir o
+  elegir un PDF lo prende con `escribirNumeroFactura`, que también borra el error de antes); si igual se llama sin
+  número ni PDF, `guardarFacturaPunto` no llama a `guardar_factura_orden` ni muestra error. Con un PDF y sin número sí
+  pide el número (la base no guarda una factura sin número). Debajo del campo: "No hace falta para guardar la división:
+  se carga cuando ARCA dé el número." Cada punto tiene su botón: se puede volver a la orden y cargar solo el del N2.
+- Suites: `test-administracion-valorizar-con-division.js` (cliente SALVADOR LOFORTE con "0.00", la N-0033) y `mut-`
+  (12 mutaciones nuevas; baseline ac3cb25).
+
 ## Remitos precargados de Rosario (27/10/2026)
 
 > **28/10/2026: se MUDÓ a Remitos Dolce** (`modulos/remitos-dolce.html`, pestaña Revisar; ver `remitos-dolce.md`), con el saldo de acopio al revisar y las órdenes por N° de remito. En Órdenes de una fábrica sin control queda la lista de siempre y un link chico "Remitos Dolce →" (`pintarLinkRemitos`); la ficha y la hoja siguen con "Remito N° X". El catálogo de un renglón (Nuevo acopio) y `textoNumeroRemito` / `htmlSelloAcopio` vienen de `js/remitos-comun.js`. Lo de abajo describe el código como era.

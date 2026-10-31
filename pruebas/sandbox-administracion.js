@@ -229,7 +229,7 @@ const FUNCIONES_BASE = [
   'aplicarDatosFacturar', 'anotarDivisionGuardada', 'pintarFacturar', 'idFc', 'htmlPuntoFacturar', 'pintarVendedoresFacturar', 'facturarPendiente',
   'puntoListo', 'actualizarFacturar', 'actualizarFacturaPunto', 'elegirPctFacturar', 'escribirPctFacturar', 'cambiarVendedorFacturar',
   'programarGuardarFacturar', 'validarDivision', 'guardarFacturar', 'imprimirPunto', 'pdfPunto', 'compartirPunto', 'rutaPdfFactura',
-  'subirPdfFactura', 'guardarFacturaPunto', 'verPdfFactura', 'listaOrdenesALaVista', 'releerOrdenesEnSilencio',
+  'subirPdfFactura', 'escribirNumeroFactura', 'guardarFacturaPunto', 'verPdfFactura', 'listaOrdenesALaVista', 'releerOrdenesEnSilencio',
   'llenarCondicionVenta', 'completarOtroPct', 'pintarCondicionVenta', 'guardarCondicionVenta',
   // Los 3 vendedores y la configuración de comisiones (21/10/2026, tarde)
   'numeroONulo', 'leerVendedores', 'leerComisionesCliente', 'sumaPcts', 'parametrosComisiones', 'validarComisiones', 'htmlVendedoresPct',
