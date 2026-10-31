@@ -226,6 +226,7 @@ const entre = (h, a, b) => { const i = h.indexOf(a); const j = h.indexOf(b, i + 
 
 // ── La ficha: la condición de venta ─────────────────────────────────────────
 function prepararFicha(S, cliente = { id: 'c1', nombre: 'Anatolia', pct_parte_a: 30 }, propias = {}) {
+  S.estado.vista = 'ad-vista-ficha'
   S.estado.ficha = { id: cliente.id, original: cliente, condicion: { error: null, enviando: false, vendedores: S.filasVendedoresFicha(VENDEDORES, propias), errorVendedores: null } }
   S.llenarCondicionVenta(cliente)
 }
@@ -271,7 +272,9 @@ function prepararFicha(S, cliente = { id: 'c1', nombre: 'Anatolia', pct_parte_a:
     chk('guarda con guardar_condicion_venta_cliente: el propio con su %, los de la configuración en null',
       r.length === 1 && json(r[0][1]) === json({ p_cliente_id: 'c1', p_pct_a: 40, p_comisiones: [{ vendedor_id: 'v1', pct: 2.5 }, { vendedor_id: 'v2', pct: null }, { vendedor_id: 'v3', pct: null }] }), json(r))
     chk('no toca guardar_ficha_cliente', !rpcs(S, 'guardar_ficha_cliente').length)
-    chk('dice lo que guardó, con los puntos', S.__llamadas.exitos.some(m => /punto 1 40 % · punto 2 60 %/.test(m)), json(S.__llamadas.exitos))
+    // 30/10/2026: "Condición guardada: N1 X% / N2 Y%" (el texto de Facu), también pegado al botón.
+    chk('dice lo que guardó, con los puntos', S.__llamadas.exitos.some(m => m === 'Condición guardada: N1 40% / N2 60%.'), json(S.__llamadas.exitos))
+    chk('…y queda escrito en la ficha', el(S, 'ad-f-condicion-estado').textContent === 'Condición guardada: N1 40% / N2 60%' && el(S, 'ad-f-condicion-estado').hidden === false)
     chk('la lista de clientes se relee (la orden usa la condición)', S.estado.clientes === null)
   }))
   S.estado.clientes = CLIENTES
@@ -313,8 +316,9 @@ function prepararFicha(S, cliente = { id: 'c1', nombre: 'Anatolia', pct_parte_a:
   el(S, 'ad-f-pct-a').value = ''
   esperas.push(S.guardarCondicionVenta().then(() => {
     const r = rpcs(S, 'guardar_condicion_venta_cliente')
-    chk('el punto 1 vacío manda null (todo al punto 1)', r.length === 1 && r[0][1].p_pct_a === null)
-    chk('y lo dice', S.__llamadas.exitos.some(m => /van todas al punto de venta 1/.test(m)))
+    chk('el punto 1 vacío manda null (sin condición)', r.length === 1 && r[0][1].p_pct_a === null)
+    // 30/10/2026: sin condición ya no es "todo al punto 1": se pone el % en cada orden.
+    chk('y lo dice', S.__llamadas.exitos.some(m => /^Condición guardada: sin condición \(se pone el % en cada orden, al facturar\)\.$/.test(m)), json(S.__llamadas.exitos))
   }))
 }
 {
@@ -381,4 +385,105 @@ function prepararFicha(S, cliente = { id: 'c1', nombre: 'Anatolia', pct_parte_a:
     chequearMarcas(chk, 'el error de la base en la configuración', el(S, 'ad-comisiones-cuerpo').innerHTML, ['error-cv'])
   }))
 }
+// ── La ficha no pierde la condición en silencio (30/10/2026) ───────────────
+// Lo elegido: se guarda sola, sin preguntar, al tocar "Guardar la ficha" y al
+// salir de la ficha.
+const vaciar = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setImmediate(r)) }
+{
+  const S = nuevo()
+  prepararFicha(S)
+  chk('recién abierta: nada sin guardar', S.condicionSinGuardar(S.estado.ficha) === false)
+  el(S, 'ad-f-pct-a').value = '45'
+  S.completarOtroPct('ad-f-pct-a', 'ad-f-pct-b')
+  S.marcarCondicionTocada()
+  chk('cambiar un %: queda sin guardar', S.condicionSinGuardar(S.estado.ficha) === true)
+  S.estado.clientes = CLIENTES
+  S.mostrarVista('ad-vista-clientes')
+  esperas.push(vaciar().then(() => {
+    const r = rpcs(S, 'guardar_condicion_venta_cliente')
+    chk('al salir de la ficha se guarda sola', r.length === 1 && r[0][1].p_pct_a === 45 && r[0][1].p_cliente_id === 'c1', json(r))
+    chk('…lo dice: "Condición guardada: N1 45% / N2 55%"', S.__llamadas.exitos.includes('Condición guardada: N1 45% / N2 55%.'), json(S.__llamadas.exitos))
+    chk('…y ya no queda nada sin guardar', S.condicionSinGuardar(S.estado.ficha) === false)
+    S.mostrarVista('ad-vista-inicio')
+    return vaciar().then(() => chk('salir otra vez no la vuelve a mandar', rpcs(S, 'guardar_condicion_venta_cliente').length === 1))
+  }))
+}
+{
+  // Un vendedor cambiado y "Volver al de la configuración" también cuentan.
+  const S = nuevo()
+  prepararFicha(S, undefined, { v2: 5 })
+  S.volverVendedorAConfig('v2')
+  chk('volver al de la configuración: sin guardar', S.condicionSinGuardar(S.estado.ficha) === true)
+  const S2 = nuevo()
+  prepararFicha(S2)
+  S2.cambiarVendedorFicha('v1', 2.5)
+  chk('cambiar un vendedor: sin guardar', S2.condicionSinGuardar(S2.estado.ficha) === true)
+  S2.mostrarVista('ad-vista-inicio')
+  esperas.push(vaciar().then(() => {
+    const r = rpcs(S2, 'guardar_condicion_venta_cliente')
+    chk('al salir viaja el vendedor propio', r.length === 1 && json(r[0][1].p_comisiones) === json([{ vendedor_id: 'v1', pct: 2.5 }, { vendedor_id: 'v2', pct: null }, { vendedor_id: 'v3', pct: null }]), json(r))
+  }))
+}
+{
+  // Sin tocar la condición, salir no llama.
+  const S = nuevo()
+  prepararFicha(S)
+  S.mostrarVista('ad-vista-inicio')
+  esperas.push(vaciar().then(() => chk('sin cambios, salir no guarda nada', !rpcs(S, 'guardar_condicion_venta_cliente').length)))
+}
+{
+  // Al salir no se puede guardar: lo dice con el aviso (la ficha ya no se ve).
+  const S = nuevo()
+  prepararFicha(S)
+  S.__setRpc(async (n) => n === 'guardar_condicion_venta_cliente' ? { data: null, error: { message: 'No tenés permiso sobre este cliente.' } } : { data: null, error: null })
+  el(S, 'ad-f-pct-a').value = '20'
+  S.marcarCondicionTocada()
+  S.mostrarVista('ad-vista-inicio')
+  esperas.push(vaciar().then(() => {
+    chk('el aviso con el nombre y el texto de la base', S.__llamadas.errores.includes('No se guardó la condición de venta de Anatolia: No tenés permiso sobre este cliente.'), json(S.__llamadas.errores))
+    chk('…y sigue sin guardar (se puede reintentar)', S.condicionSinGuardar(S.estado.ficha) === true)
+  }))
+}
+{
+  // Un % que no sirve al salir: no llama y lo avisa.
+  const S = nuevo()
+  prepararFicha(S)
+  S.cambiarVendedorFicha('v2', 120)
+  S.mostrarVista('ad-vista-inicio')
+  esperas.push(vaciar().then(() => {
+    chk('un vendedor fuera de rango al salir: no llama', !rpcs(S, 'guardar_condicion_venta_cliente').length)
+    chk('…y lo avisa', S.__llamadas.errores.includes('No se guardó la condición de venta de Anatolia: Las comisiones van de 0 a 100.'), json(S.__llamadas.errores))
+  }))
+}
+{
+  // "Guardar la ficha" con la condición cambiada: la guarda también (antes que el resto).
+  const S = nuevo()
+  prepararFicha(S)
+  S.estado.ficha.error = null
+  S.llenarFicha(S.estado.ficha.original)
+  el(S, 'ad-f-pct-a').value = '35'
+  S.marcarCondicionTocada()
+  esperas.push(S.guardarFicha().then(() => {
+    const r = rpcs(S, 'guardar_condicion_venta_cliente')
+    chk('"Guardar la ficha" guarda también la condición', r.length === 1 && r[0][1].p_pct_a === 35, json(r))
+    chk('…sin el "No cambiaste nada" (cambió la condición)', !S.estado.ficha.error, S.estado.ficha.error)
+    chk('…y queda escrito "Condición guardada: N1 35% / N2 65%"', el(S, 'ad-f-condicion-estado').textContent === 'Condición guardada: N1 35% / N2 65%')
+  }))
+}
+{
+  // Si la condición no se puede guardar, "Guardar la ficha" no sigue (no se pierde).
+  const S = nuevo()
+  prepararFicha(S)
+  S.cambiarVendedorFicha('v2', 120)
+  esperas.push(S.guardarFicha().then(() => {
+    chk('condición inválida: "Guardar la ficha" frena y lo dice', !rpcs(S, 'guardar_condicion_venta_cliente').length && !rpcs(S, 'guardar_ficha_cliente').length &&
+      S.estado.ficha.error === 'No se guardó la condición de venta: Las comisiones van de 0 a 100.', S.estado.ficha.error)
+  }))
+}
+{
+  // Cerrar o recargar la página con la condición sin guardar: el navegador pregunta.
+  chk('beforeunload con la condición sin guardar', /addEventListener\('beforeunload', \(e\) => \{\n\s+if \(estado\.vista === 'ad-vista-ficha' && condicionSinGuardar\(estado\.ficha\)\) \{ e\.preventDefault\(\); e\.returnValue = '' \}/.test(src))
+  chk('el texto de "vacío" en la ficha ya no dice 100/0', /Vacío: sin condición \(se pone el % en cada orden, al facturar\)\./.test(src) && !/Vacío: todo al punto 1 \(100\/0\)/.test(src))
+}
+
 fin()

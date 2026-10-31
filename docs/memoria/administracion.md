@@ -69,7 +69,8 @@
 
 ## La división: el 0 % y la factura que se carga después (30/10/2026, rama `ci-prueba/division-cero-y-factura`)
 - **El 0 % vale**: `pctInicialFacturar` = `numeroONulo(orden.division_pct_a) ?? numeroONulo(cliente.pct_parte_a) ?? 100`
-  (`numeroONulo` lee 0 y "0.00", que es como manda la base el numeric). 100 solo si los dos son null. Revisado en toda la
+  (`numeroONulo` lee 0 y "0.00", que es como manda la base el numeric). Si los dos son null, desde la rama
+  `ci-prueba/condicion-venta-sin-defecto` ya no hay 100: ver la sección siguiente. Revisado en toda la
   app el 30/10/2026: `pct_parte_a`, `division_pct_a`, `comision_parte_a_pct` y los % de comisión no se leen con `||`.
   Con 0 el N1 no se muestra ni pide número (`puntosDePct`).
 - **La factura va después**: primero se divide (se guarda sola, "Guardado.") y recién después se factura en ARCA.
@@ -80,6 +81,33 @@
   se carga cuando ARCA dé el número." Cada punto tiene su botón: se puede volver a la orden y cargar solo el del N2.
 - Suites: `test-administracion-valorizar-con-division.js` (cliente SALVADOR LOFORTE con "0.00", la N-0033) y `mut-`
   (12 mutaciones nuevas; baseline ac3cb25).
+
+## Sin condición no se inventa el 100/0, y la ficha no la pierde (30/10/2026, rama `ci-prueba/condicion-venta-sin-defecto`)
+- **La pantalla de facturar** (`iniciarFacturar`): `pctInicialFacturar` = orden → cliente → **null** (antes caía en 100).
+  Con null: N1 y N2 vacíos, no se llama a `datos_division_orden` (la base lo rechaza sin %) ni se guarda nada; solo se
+  leen los vendedores (`comisionesSinDatos`). Para el cliente sin condición, el aviso en naranja (`.ad-aviso--naranja`,
+  `AVISO_SIN_CONDICION`, el texto de Facu tal cual) y el estado "Sin el % de N1 y N2 no se puede guardar la división ni
+  armar las órdenes de pedido."; los puntos N1/N2 escondidos (sin imprimir ni compartir). Vaciar el % de un cliente
+  que sí tiene condición no es error: muestra ese estado y no guarda (`programarGuardarFacturar` no arma el retardo).
+- Hay dos campos: "Otro % del N1-…" (`#ad-fc-otro`) y "% del N2-…" (`#ad-fc-otro-b`); escribir uno completa el otro
+  (`escribirPctFacturar(valor, 'A'|'B')`, `ponerPctsFacturar` no pisa el que se está escribiendo). Los rápidos completan los dos.
+- **El tilde "Guardar también como condición del cliente"** (`#ad-fc-guardar-cliente`, solo si el cliente no tenía
+  condición al abrir): con la división guardada va `guardar_condicion_venta_cliente(p_cliente_id, p_pct_a, p_comisiones null)`
+  con el % que devolvió `guardar_division_orden` (las comisiones del cliente no se tocan; verificada con pg_get_functiondef
+  el 30/10/2026); tildarlo con la división ya guardada va en el momento; nunca dos en camino; el error de la base tal
+  cual al lado; "Condición guardada: N1 30% / N2 70% (en el cliente)." La lista de clientes se actualiza (copia, sin
+  mutar), así la próxima orden abre con ese %.
+- **La ficha**: cada cambio en la condición (los % o un vendedor, "Volver al de la configuración") sube
+  `condicion.version`; `condicionSinGuardar` compara con `guardadaVersion`. **Lo elegido (lo más simple): se guarda sola,
+  sin preguntar**, al tocar "Guardar la ficha" (antes que el resto; si falla, no sigue y lo dice en el pie) y al salir de
+  la ficha por cualquier lado (`mostrarVista` → `guardarCondicionAlSalir`; también al abrir otra ficha). Si al salir
+  no se puede, `mostrarError` "No se guardó la condición de venta de <cliente>: <texto de la base>". Cerrar o recargar la
+  página con algo sin guardar: el navegador pregunta (`beforeunload`). Después de guardar: "Condición guardada: N1 X% /
+  N2 Y%" en el aviso y escrito al lado del botón (`#ad-f-condicion-estado`). Vacío = "sin condición (se pone el % en
+  cada orden, al facturar)".
+- Suites: `test-administracion-valorizar-con-division.js` (204) y `test-administracion-division-orden.js` (108) con los
+  casos nuevos; `mut-` de las dos y `mut-administracion-clientes.js` con anclas al día; `e2e/102-condicion-sin-defecto.spec.js`
+  (390 y 1280 px) y `e2e/53` ajustada al texto nuevo.
 
 ## Remitos precargados de Rosario (27/10/2026)
 

@@ -30,7 +30,9 @@ const VISTAS = {
     url: 'modulos/administracion.html?maqueta=celular-administracion',
     pasos: [async (p) => { await p.evaluate(() => localStorage.setItem('barraUnidad.elegida', 'u-n')); await p.reload() },
       '[data-pestana="ordenes"]', '#ad-ordenes-lista [data-orden="o12"]'],
-    ver: '#ad-fc-punto-b',
+    // El cliente de o12 no tiene condición de venta: desde el 30/10/2026 los
+    // puntos N1 / N2 esperan a que se ponga el % (se ve el segmento).
+    ver: '#ad-fc .ad-segmento',
   },
   salida: { url: 'modulos/administracion.html?maqueta=celular-administracion', pasos: ['[data-pestana="cheques"]', '[data-dar-salida]:visible'], ver: '#chq-salida-confirmar' },
   costo: { url: 'modulos/stock.html?vista=insumos&maqueta=stock-costos', pasos: ['.barra-unidad__chip[data-unidad="u-n"]', '#btn-ver-costos', '[data-costo="i-harina"]'], ver: '#modal-costo #costo-precio' },
