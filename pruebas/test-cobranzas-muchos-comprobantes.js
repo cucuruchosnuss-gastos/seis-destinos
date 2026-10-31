@@ -313,7 +313,9 @@ async function pruebas() {
     const it = ll[0]?.params.p_items?.[0]
     chk('p_items: [{clave (el id local), referencia, importe, sha256}]', it && it.clave === t.id && it.referencia === '274845028' && it.importe === 150000 &&
       it.sha256 === f.fotos[0].sha256 && Object.keys(it).sort().join(',') === 'clave,importe,referencia,sha256', JSON.stringify(it))
-    chk('p_cobranza_id: null en una cobranza nueva', ll[0]?.params.p_cobranza_id === null)
+    // Desde los arreglos del 31/10/2026 (punto 3): el id también en una nueva
+    // (un borrador que la base ya guardó no puede chocar consigo mismo).
+    chk('p_cobranza_id: el id del formulario también en una cobranza nueva', ll[0]?.params.p_cobranza_id === f.id)
     // Ya revisada una vez: un comprobante nuevo leído vuelve a preguntar, enseguida.
     S.__setInvoke(async () => leido([op('Brubank', 700, '70007000')]))
     await S.agregarFotos([archivo('otro.jpg')], 'transferencia')
