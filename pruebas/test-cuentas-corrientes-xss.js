@@ -667,6 +667,11 @@ const SEGURAS = {
   escribirNota: {
     'htmlResultadosInsumoNota(n, a, k)': 'htmlResultadosInsumoNota() escapa el id, el nombre y la marca de cada insumo',
   },
+  // 30/10/2026: la venta y sus N1 / N2 (lo ejecuta con marcas
+  // test-cuentas-corrientes-orden-n1-n2.js).
+  decorarVentasCC: {
+    'htmlDivisionVentaCC(fila, infoDivisionCC(id))': 'htmlDivisionVentaCC() escapa el código de la orden, los importes, el mensaje de la base y cada texto (ejecutada con marcas)',
+  },
   // 24/10/2026: la nota de débito de un proveedor (lo ejecuta con marcas
   // test-cuentas-corrientes-nota-debito.js).
   pintarRenglonesNd: {

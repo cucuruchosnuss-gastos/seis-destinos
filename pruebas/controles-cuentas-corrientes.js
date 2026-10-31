@@ -132,6 +132,8 @@ try {
   // Lo que escribe un archivo de js/ que la pantalla importa (06/10/2026).
   const EN_JS = {
     'data-clasificacion': ['js/cuenta-unica.js', /data-clasificacion="\$\{escCu\(clave\)\}"/, 'htmlClasificacion(): los botones Cliente / Proveedor / Cliente y proveedor'],
+    // 30/10/2026: la fila de una Venta despliega sus N1 / N2 (decorarVentasCC).
+    'data-orden-retiro': ['js/cuenta-unica.js', /data-orden-retiro="\$\{escCu\(f\.orden_retiro_id\)\}"/, 'htmlFilaCu(): cada renglón con su orden de retiro'],
   }
   for (const r of referenciasDelJs(A.referencias)) {
     if (EN_JS[r.valor]) {

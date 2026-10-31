@@ -1310,6 +1310,22 @@
     @media (max-width: 520px) {
       .tarjeta-lista__titulo, .tarjeta-lista__subtitulo { white-space: normal; overflow-wrap: anywhere; }
     }
+    /* La venta y sus puntos N1 / N2 (30/10/2026, decorarVentasCC): la fila
+       de una Venta de la cuenta de cliente y proveedor se toca y despliega
+       debajo cómo se parte. Las filas son de js/cuenta-unica.js (main.css);
+       esto es solo de este módulo. */
+    .cu-fila.cc-fila-venta { cursor: pointer; }
+    .cu-fila.cc-fila-venta:hover { background: var(--color-fila-hover); }
+    .cu-fila.cc-fila-venta:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 6px; }
+    .cc-n1n2 {
+      padding: 0.5rem 0.75rem 0.625rem; border-bottom: 1px solid var(--color-divisor);
+      background: var(--color-superficie); font-size: 0.875rem; color: var(--color-texto);
+      display: flex; flex-direction: column; gap: 0.25rem;
+    }
+    .cc-n1n2__linea { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .cc-n1n2__linea--total { padding-top: 0.25rem; border-top: 1px solid var(--color-divisor); }
+    .cc-n1n2__nota, .cc-n1n2__suave { color: var(--color-texto-2); }
+    .cc-n1n2__suave { margin: 0; font-size: 0.8125rem; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -5282,7 +5298,7 @@
       if (!el) return
       const f = estado.ficha
       const ctx = ctxCuentaUnicaCC()
-      if (ctx) { el.hidden = false; pintarCuentaUnica(ctx); return }
+      if (ctx) { el.hidden = false; pintarCuentaUnica(ctx); decorarVentasCC(); return }
       if (f && !f.unidadId && Array.isArray(f.vinculos) && f.vinculos.length) {
         el.hidden = false
         el.innerHTML = `<div class="cu-caja"><p class="cu-suave">${esc(textoDondeEsCliente(f.vinculos) + ' Elegí esa unidad para ver las dos cuentas juntas.')}</p></div>`
@@ -5304,6 +5320,199 @@
       await cargarCuentaUnica(supabase, cu)
       if (estado.ficha !== f || f.unica !== cu) return
       pintarCuentaUnicaFicha()
+    }
+
+    // ── LA VENTA Y SUS PUNTOS N1 / N2 (30/10/2026) ─────────────────────────
+    // cuenta_unificada() ya trae UNA fila "Venta" por orden, con te_debe = el
+    // retiro + la comisión de vendedores y el detalle "Orden N-0042 · incluye
+    // comisión de vendedores $ X"; una corrección posterior viene aparte como
+    // "Comisión" (con el MISMO orden_retiro_id). Acá no se agrupa nada: tocar
+    // la fila de una VENTA despliega debajo cómo se parte en los dos puntos de
+    // venta de ARCA:
+    //   N1-0042: $ … (incluye comisión de vendedores $ …)
+    //   N2-0042: $ …
+    //   Total: $ …
+    // con datos_division_orden(p_orden_id, null, null) → codigo, total_a (el
+    // subtotal A + las comisiones), comision_total, total_b y guardada
+    // (= la orden tiene division_pct_a). Verificada con pg_get_functiondef el
+    // 30/10/2026: SECURITY DEFINER, pide retiros:precios EN LA FÁBRICA DE LA
+    // ORDEN (tiene_tarea_alcance) y rechaza con raise exception.
+    //  - Se lee al tocar, UNA vez por orden (estado.divisionesOrdenCC).
+    //  - Sin retiros:precios no se llama: solo el total. Si la base lo
+    //    rechaza por permiso (el alcance es de otra fábrica), lo mismo, sin
+    //    error rojo.
+    //  - Sin división guardada (guardada = false, "Este cliente no tiene
+    //    condición de venta…" y los demás rechazos de la función): el total y
+    //    "Sin división N1/N2".
+    //  - Una parte en 0 (condición 100/0 o 0/100) no se muestra.
+    //  - Un corte de conexión no queda guardado: tocar de nuevo reintenta.
+    // Las filas las dibuja js/cuenta-unica.js (compartido con Administración,
+    // que no se toca): este módulo DECORA sus filas de Venta después de
+    // pintarlas (decorarVentasCC, también desde un MutationObserver, porque el
+    // filtro y Compensar repintan desde adentro de cuenta-unica.js).
+    const NUMERO_PUNTO_CC = { A: 1, B: 2 }
+    const TEXTO_SIN_DIVISION_CC = 'Sin división N1/N2'
+
+    // "N-0042" → "N1-0042" / "N2-0042"; "D-0045" → "D1-0045". Duplicada de
+    // codigoPunto() de administracion.html (cada módulo duplica sus helpers).
+    function codigoPuntoCC(codigo, parte) {
+      const c = String(codigo ?? '').trim()
+      const n = NUMERO_PUNTO_CC[parte]
+      if (!n) return c
+      if (/^[^-]+-/.test(c)) return c.replace(/^([^-]+)-/, (_, letra) => letra + n + '-')
+      return c ? c + '-' + n : 'Punto ' + n
+    }
+
+    function puedeVerDivisionCC() {
+      return tieneTarea('retiros', 'precios')
+    }
+
+    // La fila "Venta" de esa orden (una corrección "Comisión" de la misma
+    // orden NO despliega).
+    function filaVentaCC(cu, ordenId) {
+      if (!ordenId) return null
+      return (cu?.filas ?? []).find(f => f.etiqueta === 'Venta' && f.orden_retiro_id === ordenId) ?? null
+    }
+
+    function divisionesOrdenCC() {
+      if (!(estado.divisionesOrdenCC instanceof Map)) estado.divisionesOrdenCC = new Map()
+      return estado.divisionesOrdenCC
+    }
+
+    function centavosN1n2CC(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? Math.round(n * 100) : null
+    }
+
+    // Puro: qué se sabe de la división con lo que respondió la base.
+    function divisionDeRespuestaCC(data, error) {
+      if (error) {
+        const msg = String(error.message ?? '')
+        if (error.code === '42501' || /permiso|identificar tu usuario/i.test(msg)) return { tipo: 'sin_permiso' }
+        if (error.code === 'P0001' || /condición de venta|no se divide|valorizar|anulada|no existe/i.test(msg)) return { tipo: 'sin_division' }
+        return { tipo: 'error', mensaje: msg }
+      }
+      if (!data || typeof data !== 'object' || data.guardada !== true) return { tipo: 'sin_division' }
+      return { tipo: 'division', codigo: data.codigo ?? '', totalA: data.total_a, comision: data.comision_total, totalB: data.total_b }
+    }
+
+    // Lo que se sabe AHORA de esa orden (sin permiso no se pregunta).
+    function infoDivisionCC(ordenId) {
+      if (!puedeVerDivisionCC()) return { tipo: 'sin_permiso' }
+      return divisionesOrdenCC().get(ordenId) ?? { tipo: 'cargando' }
+    }
+
+    // El desplegable de una venta. Devuelve HTML: escapa por dentro.
+    function htmlDivisionVentaCC(fila, info) {
+      const moneda = fila?.moneda || 'ARS'
+      const linea = (rotulo, monto, nota = '', esTotal = false) =>
+        `<div class="cc-n1n2__linea${esTotal ? ' cc-n1n2__linea--total' : ''}"><span class="cc-n1n2__rotulo">${esc(rotulo)}:</span> <strong>${esc(formatearImporte(monto, moneda))}</strong>` +
+        (nota ? ` <span class="cc-n1n2__nota">${esc(nota)}</span>` : '') + '</div>'
+      const suave = (t) => `<p class="cc-n1n2__suave">${esc(t)}</p>`
+      const cuenta = centavosN1n2CC(fila?.te_debe)
+      if (info?.tipo === 'division') {
+        const cA = centavosN1n2CC(info.totalA) ?? 0
+        const cB = centavosN1n2CC(info.totalB) ?? 0
+        const cCom = centavosN1n2CC(info.comision) ?? 0
+        let html = ''
+        if (cA !== 0) html += linea(codigoPuntoCC(info.codigo, 'A'), cA / 100, cCom !== 0 ? `(incluye comisión de vendedores ${formatearImporte(cCom / 100, moneda)})` : '')
+        if (cB !== 0) html += linea(codigoPuntoCC(info.codigo, 'B'), cB / 100)
+        html += linea('Total', (cA + cB) / 100, '', true)
+        if (cuenta !== null && cuenta !== cA + cB) html += suave(`En esta línea de la cuenta figuran ${formatearImporte(cuenta / 100, moneda)}. Las correcciones posteriores van en su propia línea.`)
+        return html
+      }
+      const total = linea('Total', cuenta === null ? null : cuenta / 100, '', true)
+      if (info?.tipo === 'sin_division') return total + suave(TEXTO_SIN_DIVISION_CC)
+      if (info?.tipo === 'cargando') return total + suave('Leyendo N1 / N2…')
+      if (info?.tipo === 'error') return total + suave('No se pudo leer N1 / N2' + (info.mensaje ? ` (${info.mensaje})` : '') + '. Cerrá y volvé a tocar la fila para reintentar.')
+      return total
+    }
+
+    // Lee la división de esa orden UNA vez (la respuesta queda guardada; un
+    // corte de conexión no, así se reintenta). Nunca tira.
+    async function leerDivisionCC(ordenId) {
+      try {
+        const { data, error } = await supabase.rpc('datos_division_orden', { p_orden_id: ordenId, p_pct_a: null, p_comisiones: null })
+        return divisionDeRespuestaCC(data, error)
+      } catch (err) {
+        return { tipo: 'error', mensaje: err?.message || '' }
+      }
+    }
+
+    function cargarDivisionCC(ordenId) {
+      if (!puedeVerDivisionCC()) return Promise.resolve()
+      const cache = divisionesOrdenCC()
+      const ya = cache.get(ordenId)
+      if (ya?.tipo === 'cargando') return ya.promesa
+      if (ya && ya.tipo !== 'error') return Promise.resolve()
+      const entrada = { tipo: 'cargando', promesa: null }
+      cache.set(ordenId, entrada)
+      entrada.promesa = leerDivisionCC(ordenId).then(info => { if (cache.get(ordenId) === entrada) cache.set(ordenId, info) })
+      return entrada.promesa
+    }
+
+    // Decora las filas de Venta ya pintadas: se tocan (clase cc-fila-venta,
+    // role="button", Enter y espacio), dicen "Ver N1 / N2 ▾" y, abiertas,
+    // llevan su panel debajo (#cc-n1n2-<orden>, hermano de la fila), armados
+    // con createElement. Se puede llamar las veces que sea: no duplica.
+    function decorarVentasCC() {
+      const el = document.getElementById('ficha-cuenta-unica')
+      const f = estado.ficha
+      const cu = f?.unica
+      if (!el?.querySelectorAll || !cu?.filas) return
+      const abiertas = f.ventasAbiertasCC instanceof Set ? f.ventasAbiertasCC : (f.ventasAbiertasCC = new Set())
+      for (const row of el.querySelectorAll('.cu-fila[data-orden-retiro]')) {
+        const id = row.dataset.ordenRetiro
+        const fila = row.querySelector('.cu-chip--venta') ? filaVentaCC(cu, id) : null
+        if (!fila) continue
+        const abierta = abiertas.has(id)
+        const idPanel = 'cc-n1n2-' + id
+        if (!row.classList.contains('cc-fila-venta')) {
+          row.classList.add('cc-fila-venta')
+          row.setAttribute('role', 'button')
+          row.setAttribute('tabindex', '0')
+          row.setAttribute('aria-controls', idPanel)
+          const ver = document.createElement('span')
+          ver.className = 'cu-fila__ver cc-fila-venta__ver'
+          row.querySelector('.cu-fila__que')?.appendChild(ver)
+        }
+        row.setAttribute('aria-expanded', abierta ? 'true' : 'false')
+        const ver = row.querySelector('.cc-fila-venta__ver')
+        if (ver) ver.textContent = abierta ? 'Ocultar N1 / N2 ▴' : 'Ver N1 / N2 ▾'
+        const sig = row.nextElementSibling
+        let panel = sig?.classList?.contains('cc-n1n2') && sig.id === idPanel ? sig : null
+        if (!abierta) { panel?.remove(); continue }
+        if (!panel) {
+          panel = document.createElement('div')
+          panel.className = 'cc-n1n2'
+          panel.id = idPanel
+          panel.setAttribute('role', 'region')
+          panel.setAttribute('aria-label', 'N1 y N2 de la venta')
+          row.after(panel)
+        }
+        panel.innerHTML = htmlDivisionVentaCC(fila, infoDivisionCC(id))
+      }
+    }
+
+    async function alternarVentaCC(ordenId) {
+      const f = estado.ficha
+      if (!f?.unica || !filaVentaCC(f.unica, ordenId)) return
+      const abiertas = f.ventasAbiertasCC instanceof Set ? f.ventasAbiertasCC : (f.ventasAbiertasCC = new Set())
+      if (abiertas.has(ordenId)) { abiertas.delete(ordenId); decorarVentasCC(); return }
+      abiertas.add(ordenId)
+      decorarVentasCC()
+      await cargarDivisionCC(ordenId)
+      if (estado.ficha === f) decorarVentasCC()
+    }
+
+    // Un toque en la cuenta: si es una fila de Venta, la despliega (y no
+    // sigue a js/cuenta-unica.js). Devuelve si la atendió.
+    function alTocarVentaCC(ev) {
+      const row = ev?.target?.closest?.('.cu-fila.cc-fila-venta')
+      if (!row) return false
+      alternarVentaCC(row.dataset.ordenRetiro)
+      return true
     }
 
     // Trae TODAS las unidades del proveedor: la vista devuelve una fila por
@@ -7566,8 +7775,18 @@
     // Cliente y proveedor (06/10/2026): la clasificación y la cuenta juntas.
     document.getElementById('ficha-clasificacion').addEventListener('click', (ev) => alTocarClasificacionCC(ev))
     const unicaCC = document.getElementById('ficha-cuenta-unica')
-    unicaCC.addEventListener('click', (ev) => { const ctx = ctxCuentaUnicaCC(); if (ctx) alTocarCuentaUnica(ev, ctx) })
+    unicaCC.addEventListener('click', (ev) => { if (alTocarVentaCC(ev)) return; const ctx = ctxCuentaUnicaCC(); if (ctx) alTocarCuentaUnica(ev, ctx) })
     for (const tipo of ['input', 'change']) unicaCC.addEventListener(tipo, (ev) => { const ctx = ctxCuentaUnicaCC(); if (ctx) alCambiarCuentaUnica(ev, ctx) })
+    // La venta y sus N1 / N2 (30/10/2026): la fila de una Venta se abre
+    // también con Enter o espacio, y cuando js/cuenta-unica.js repinta (el
+    // filtro, Compensar) las filas se vuelven a decorar.
+    unicaCC.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return
+      if (!ev.target?.matches?.('.cu-fila.cc-fila-venta')) return
+      ev.preventDefault()
+      alternarVentaCC(ev.target.dataset.ordenRetiro)
+    })
+    if (typeof MutationObserver === 'function') new MutationObserver(() => decorarVentasCC()).observe(unicaCC, { childList: true })
 
     // ── Modal: Registrar pago ─────────────────────────────────────────────
     document.getElementById('campo-moneda-pago').addEventListener('change', () => {
