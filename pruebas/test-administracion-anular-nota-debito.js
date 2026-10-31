@@ -180,6 +180,10 @@ esperas.push((async () => {
     const ahora = marcas(src)
     // Lo que se fue A PROPÓSITO después del baseline, con su razón.
     const RETIRADOS = new Map([
+      // 30/10/2026 (Entre empresas v2): el filtro por par, el saldo de arriba
+      // y sin la cuenta "≈" con una lista.
+      ...['id="ad-entre-origen"', 'id="ad-entre-destino"', 'id="ad-entre-valorizar"', 'id="ad-entre-resumen"', 'data-entre-par', 'data-entre-lista']
+        .map(m => [m, 'Entre empresas v2 (30/10/2026)']),
       // 28/10/2026: "Dividir para facturar" ya no es una ventana; los puntos
       // N1 / N2 van en la misma pantalla de la orden (#ad-orden-facturar).
       ...['id="ad-btn-dividir"', 'id="ad-dv"', 'id="ad-dv-titulo"', 'id="ad-dv-cerrar"', 'id="ad-dv-pct-a"', 'id="ad-dv-pct-b"', 'id="ad-dv-vendedores"',

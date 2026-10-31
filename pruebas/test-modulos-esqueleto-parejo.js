@@ -323,6 +323,18 @@ const CAMBIADOS_A_PROPOSITO = {
     'control:button#btn-enviar-transferencia[type=button]': 'reemplazado por #btn-mandar-grupo',
   },
   'administracion.html': {
+    // Rama entre-empresas-v2 (30/10/2026): en Entre empresas, el filtro por par
+    // reemplaza "empresa que entrega / que recibe", el saldo de arriba
+    // reemplaza el resumen del período y se fue la cuenta "≈" con una lista
+    // (test-administracion-entre-empresas-v2.js mira lo nuevo).
+    'id:ad-entre-origen': 'Entre empresas v2: el filtro por par (#ad-entre-par)',
+    'control:select#ad-entre-origen': 'Entre empresas v2: el filtro por par (#ad-entre-par)',
+    'id:ad-entre-destino': 'Entre empresas v2: el filtro por par (#ad-entre-par)',
+    'control:select#ad-entre-destino': 'Entre empresas v2: el filtro por par (#ad-entre-par)',
+    'id:ad-entre-resumen': 'Entre empresas v2: el saldo por par (#ad-entre-saldos)',
+    'id:ad-entre-valorizar': 'Entre empresas v2: se fue la cuenta "≈" con una lista',
+    'id:ad-entre-lista-*': 'Entre empresas v2: se fue la cuenta "≈" con una lista',
+    'control:select#ad-entre-lista-*[data-entre-lista]': 'Entre empresas v2: se fue la cuenta "≈" con una lista',
     // Rama valorizar-con-division (28/10/2026): la comisión común salió del
     // flujo (las comisiones van por vendedor en el N1); lo mira
     // test-administracion-comisiones.js.
