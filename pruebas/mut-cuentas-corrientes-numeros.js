@@ -56,8 +56,9 @@ correrMutaciones({
     { nombre: 'la sugerencia FIFO se escribe como texto con punto decimal',
       de: '        ponerNumero(inp, facturasParaPago[i].monto || null)', a: "        inp.value = facturasParaPago[i].monto ? String(facturasParaPago[i].monto) : ''" },
     { nombre: 'tildar una factura escribe el saldo como texto',
-      de: '            ponerNumero(cont.querySelector(`.monto-fifo[data-index="${i}"]`), facturasParaPago[i].monto)',
-      a: '            cont.querySelector(`.monto-fifo[data-index="${i}"]`).value = String(facturasParaPago[i].monto)' },
+      // Desde el 30/10/2026 vive en tildarFacturaPago (la casilla y el renglón).
+      de: '        ponerNumero(cont.querySelector(`.monto-fifo[data-index="${i}"]`), f.monto)',
+      a: '        cont.querySelector(`.monto-fifo[data-index="${i}"]`).value = String(f.monto)' },
     { nombre: 'el prefill del crédito se escribe como texto',
       de: "      ponerNumero(document.getElementById('campo-monto-credito'), sugerido)", a: "      document.getElementById('campo-monto-credito').value = String(sugerido)" },
     { nombre: 'elegir el crédito no limpia el monto',

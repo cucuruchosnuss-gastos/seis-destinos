@@ -36,6 +36,7 @@ const { construirCon } = require('./sandbox')
 const { FUNCIONES_CP_CC, CONSTANTES_CP_CC } = require('./cuenta-unica-comun')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 const { FUNCIONES_DETALLE_PAGO, CONSTANTES_DETALLE_PAGO } = require('./detalle-pago-comun')
 
 const RAIZ = path.join(__dirname, '..')
@@ -135,6 +136,8 @@ const FUNCIONES = [
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial',
   'puedeCargarSaldoInicial', 'unidadesSaldoInicial', 'htmlUnidadesSaldoInicial', 'parametrosSaldoInicial', 'renderizarSaldoInicial',
   'abrirModalSaldoInicial', 'cerrarModalSaldoInicial', 'elegirUnidadSaldoInicial', 'confirmarSaldoInicial', 'refrescarTrasSaldoInicial',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
   // el detalle del pago en dos columnas, con sus cheques (30/10/2026)
   ...FUNCIONES_DETALLE_PAGO.filter(f => f !== 'abrirModalDetallePago'),
 ]

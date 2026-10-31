@@ -96,6 +96,10 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     const confirmar = page.locator('#btn-confirmar-pago');
     await expect(confirmar).toBeInViewport();
     await confirmar.click();
+    // Sin facturas elegidas, primero pregunta (30/10/2026, caso BADIC).
+    await expect(page.locator('#confirmar-a-cuenta-pago')).toBeVisible();
+    expect(rpc.some(r => r.nombre === 'pagar_proveedor_mixto'), 'sin factura no se manda sin preguntar').toBe(false);
+    await page.locator('#btn-si-a-cuenta-pago').click();
     await expect.poll(() => rpc.find(r => r.nombre === 'pagar_proveedor_mixto')).toBeTruthy();
     const pc = rpc.find(r => r.nombre === 'pagar_proveedor_mixto').params;
     expect(pc.p_cheque_ids.sort()).toEqual(['chq-1', 'chq-2']);

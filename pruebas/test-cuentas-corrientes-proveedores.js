@@ -26,6 +26,7 @@ const fs = require('fs')
 const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 const { FUNCIONES_DETALLE_PAGO, CONSTANTES_DETALLE_PAGO } = require('./detalle-pago-comun')
 
 const RAIZ = path.join(__dirname, '..')
@@ -105,6 +106,8 @@ const FUNCIONES = [
   'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   // el saldo inicial de un proveedor (30/09/2026)
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial', 'puedeCargarSaldoInicial',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
   // el detalle del pago en dos columnas, con sus cheques (30/10/2026)
   ...FUNCIONES_DETALLE_PAGO.filter(f => f !== 'abrirModalDetallePago'),
 ]

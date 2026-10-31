@@ -1271,6 +1271,45 @@
     /* La orden de pago en el renglón del pago (30/10/2026; antes, un
        recuadro aparte abajo de la ficha). */
     .fila-movimiento__orden { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    /* APLICAR UN PAGO A FACTURAS Y ANULAR UN PAGO (30/10/2026). La orden de
+       un pago anulado: tachada, con "ANULADA" y sin "Reimprimir" (en el
+       renglón del pago, en el detalle y en la hoja). */
+    .fila-movimiento__orden s, .detalle-pago-orden s { color: var(--color-texto-2); font-weight: 600; }
+    .detalle-pago-orden { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto-2); overflow-wrap: anywhere; }
+    .op-anulada { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border: 2px solid var(--bordo); border-radius: 8px; color: var(--bordo-oscuro); font-weight: 800; letter-spacing: 0.04em; text-align: center; }
+    .op-hoja--anulada .op-cab__titulo-texto, .op-hoja--anulada .op-total { text-decoration: line-through; }
+    .orden-pago-cc__anulada { display: inline-block; margin-left: 0.375rem; padding: 0.0625rem 0.5rem; border-radius: 999px; background: var(--bordo-suave); color: var(--bordo-oscuro); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: middle; }
+    /* El renglón entero de una factura la tilda (como los cheques). */
+    #lista-fifo .fila-fifo, #aplicar-pago-lista .fila-fifo { cursor: pointer; }
+    #aplicar-pago-lista .fila-fifo { flex-wrap: wrap; }
+    .pago-a-cuenta-pregunta { margin: 0.5rem 0 0; padding: 0.625rem 0.75rem; border-radius: 8px; background: var(--amarillo-suave); color: var(--amarillo-oscuro); font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+    .pago-a-cuenta-pregunta[hidden] { display: none; }
+    .pago-a-cuenta-pregunta p { margin: 0 0 0.5rem; }
+    .pago-a-cuenta-pregunta__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .pago-a-cuenta-pregunta__botones .btn { width: auto; flex: 1 1 10rem; }
+    .btn-a-cuenta-pago {
+      min-height: 36px; padding: 0.25rem 0.75rem; border-radius: 999px; border: 1.5px solid var(--color-acento);
+      background: var(--color-fondo); color: var(--color-acento-hover); font: inherit; font-size: 0.8125rem; font-weight: 700;
+      cursor: pointer; text-align: left; overflow-wrap: anywhere;
+    }
+    .a-cuenta-pago { font-size: 0.8125rem; font-weight: 700; color: var(--verde-oscuro); overflow-wrap: anywhere; }
+    /* En el renglón del pago va a la izquierda, bajo la fecha: a la derecha,
+       en el celular, se comía la columna del texto (visto a 390 px). */
+    .fila-movimiento .btn-a-cuenta-pago, .fila-movimiento .a-cuenta-pago { display: inline-block; margin-top: 0.375rem; max-width: 100%; }
+    .detalle-pago-acciones:empty { display: none; }
+    .detalle-pago-acciones { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--color-borde); display: flex; flex-direction: column; align-items: flex-start; gap: 0.625rem; }
+    .btn-anular-pago { min-height: 40px; padding: 0 0.875rem; border-radius: 10px; border: 1.5px solid var(--bordo); background: var(--color-fondo); color: var(--bordo); font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
+    .panel-anular-pago { align-self: stretch; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border-radius: 10px; background: var(--bordo-suave); color: var(--color-texto); font-size: 0.875rem; }
+    .panel-anular-pago__titulo { font-weight: 700; color: var(--bordo-oscuro); }
+    .panel-anular-pago__previa { margin: 0; padding-left: 1.1rem; overflow-wrap: anywhere; }
+    .panel-anular-pago__previa li + li { margin-top: 0.25rem; }
+    .panel-anular-pago__aviso { margin: 0; font-weight: 600; color: var(--bordo-oscuro); overflow-wrap: anywhere; }
+    .panel-anular-pago label { font-size: 0.8125rem; font-weight: 700; }
+    .panel-anular-pago textarea { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0.5rem 0.75rem; border: 1.5px solid var(--color-borde); border-radius: var(--radio-input); background: var(--color-fondo); font: inherit; font-size: 16px; color: var(--color-texto); resize: vertical; }
+    .panel-anular-pago .pago-error { margin: 0; }
+    .panel-anular-pago__botones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+    .panel-anular-pago__botones .btn { width: auto; flex: 1 1 9rem; }
+    .pago-anulado-cc { font-size: 0.875rem; color: var(--bordo-oscuro); overflow-wrap: anywhere; }
     .cartera-pago { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-borde); border-radius: 10px; }
     .cartera-pago:empty { display: none; }
     .cartera-pago__fila {
@@ -1729,6 +1768,15 @@
         <div class="resumen-aplicacion" id="resumen-aplicacion" aria-live="polite"></div>
         <p class="pago-aviso" id="aviso-diferencia-pago" hidden></p>
         <p class="pago-error" id="error-confirmar-pago" role="alert" hidden></p>
+        <!-- Sin ninguna factura elegida (30/10/2026): antes de dejar el pago
+             a cuenta, se pregunta (caso BADIC: la factura no se había tildado). -->
+        <div class="pago-a-cuenta-pregunta" id="confirmar-a-cuenta-pago" role="alert" hidden>
+          <p id="texto-confirmar-a-cuenta">No elegiste ninguna factura: el pago va a quedar a cuenta. ¿Seguro?</p>
+          <div class="pago-a-cuenta-pregunta__botones">
+            <button type="button" class="btn btn--secundario" id="btn-elegir-factura-pago">Elegir una factura</button>
+            <button type="button" class="btn btn-cc-accion" id="btn-si-a-cuenta-pago">Sí, dejarlo a cuenta</button>
+          </div>
+        </div>
         <div class="pago-pie__botones">
           <button type="button" class="btn btn--secundario" id="btn-cancelar-pago">Cancelar</button>
           <button type="button" class="btn btn-cc-accion" id="btn-confirmar-pago">Confirmar pago</button>
@@ -2173,8 +2221,39 @@
       </div>
       <h2>Detalle del pago</h2>
       <div id="detalle-pago-contenido"></div>
+      <!-- Lo que se puede hacer con el pago (30/10/2026): "A cuenta $ X ·
+           Aplicar a facturas" y "Anular el pago" con su vista previa. Va
+           aparte del contenido: lo dibuja cargarAccionesDetallePago(). -->
+      <div id="detalle-pago-acciones" class="detalle-pago-acciones" aria-live="polite"></div>
     </div>
   </div><!-- /modal-detalle-pago -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — APLICAR UN PAGO A FACTURAS (30/10/2026)
+       Lo que un pago dejó a cuenta se aplica a las facturas pendientes del
+       proveedor en esa empresa: aplicar_pago_a_facturas.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-aplicar-pago" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-aplicar-pago" title="Cerrar">✕</button>
+      <h2>Aplicar a facturas</h2>
+      <p class="etiqueta-opcional" id="aplicar-pago-resumen"></p>
+      <p class="etiqueta-opcional pago-bloque__ayuda">Se proponen de la más vieja a la más nueva. Tildá, destildá o cambiá cuánto se aplica a cada una.</p>
+      <div id="aplicar-pago-lista"></div>
+      <div class="pago-bloque__acciones">
+        <button type="button" class="btn-pago-ayuda" id="btn-aplicar-pago-viejas">Aplicar a las facturas más viejas</button>
+      </div>
+      <div class="pago-pie">
+        <div class="resumen-aplicacion" id="aplicar-pago-totales" aria-live="polite"></div>
+        <p class="pago-error" id="error-aplicar-pago" role="alert" hidden></p>
+        <div class="pago-pie__botones">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-aplicar-pago">Cancelar</button>
+          <button type="button" class="btn btn-cc-accion" id="btn-confirmar-aplicar-pago">Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /modal-aplicar-pago -->
 
 
   <script type="module">
@@ -3077,6 +3156,7 @@
     }
 
     async function abrirModalDetallePago(gastoId) {
+      cargarAccionesDetallePago(gastoId)   // "Aplicar a facturas" y "Anular el pago" (30/10/2026), aparte
       const cont = document.getElementById('detalle-pago-contenido')
       cont.innerHTML = '<p style="color:var(--color-texto-suave); font-size:0.875rem; padding:1rem 0;">Cargando…</p>'
       document.getElementById('modal-detalle-pago').removeAttribute('hidden')
@@ -6289,7 +6369,7 @@
             ${botonAnularNd}
           </div>` : esPago ? `
           <div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:0.375rem; align-items:center; margin-top:0.375rem;">
-            ${ordenPago ? `<button type="button" class="btn-pago-ayuda" data-reimprimir-orden="${esc(ordenPago.id)}">Reimprimir</button>` : ''}
+            ${ordenPago && !ordenPago.anulacion ? `<button type="button" class="btn-pago-ayuda" data-reimprimir-orden="${esc(ordenPago.id)}">Reimprimir</button>` : ''}
             <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${esc(m.gasto_id)}" title="Detalle del pago">📋</button>
           </div>` : ''
         // El saldo corrido NO se muestra con las unidades mezcladas.
@@ -6314,9 +6394,10 @@
             <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${esc(esNotaDebito ? 'Nota de débito' : etiquetaTipoMovimiento(m))}</div>
               <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
-              ${ordenPago ? `<div class="fila-movimiento__orden">${esc('Orden de pago ' + ordenPago.texto)}</div>` : ''}
+              ${ordenPago ? (ordenPago.anulacion ? htmlOrdenAnulada(ordenPago.texto, ordenPago.anulacion, 'fila-movimiento__orden') : `<div class="fila-movimiento__orden">${esc('Orden de pago ' + ordenPago.texto)}</div>`) : ''}
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
               ${errorPdfNd}
+              ${esPago ? htmlACuentaEnFila(m) : ''}
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
               <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>
@@ -6856,7 +6937,7 @@
     async function cargarFichaCreditos() {
       const ficha = estado.ficha
       const { data, error } = await supabase.from('creditos_proveedor')
-        .select('id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, estado')
+        .select('id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, estado, origen_gasto_id')
         .eq('proveedor_id', ficha.proveedorId)
         .eq('estado', 'disponible')
       if (estado.ficha !== ficha) return
@@ -7453,10 +7534,15 @@
       const err = document.getElementById('error-confirmar-pago')
       err.hidden = !estado.pagoError
       err.textContent = estado.pagoError ?? ''
+      // "No elegiste ninguna factura…" (30/10/2026), hasta que conteste.
+      document.getElementById('confirmar-a-cuenta-pago').hidden = !estado.pagoPreguntaACuenta
     }
-    // Cualquier cambio de la persona borra el error viejo.
+    // Cualquier cambio de la persona borra el error viejo (y la pregunta de
+    // "dejarlo a cuenta": con otra cosa elegida, se vuelve a preguntar).
     function refrescarPago() {
       estado.pagoError = null
+      estado.pagoPreguntaACuenta = false
+      estado.pagoACuentaConfirmado = false
       pintarPiePago()
     }
 
@@ -7627,16 +7713,11 @@
         </div>
       `).join('')
 
+      // La casilla y (desde el 30/10/2026) el renglón entero: los dos pasan
+      // por tildarFacturaPago (el renglón, con alTocarRenglonFactura).
       cont.querySelectorAll('.check-fifo').forEach(chk => {
         chk.addEventListener('change', (e) => {
-          const i = Number(e.target.dataset.index)
-          facturasParaPago[i].checked = e.target.checked
-          if (e.target.checked && !centavosDe(facturasParaPago[i].monto)) {
-            facturasParaPago[i].monto = facturasParaPago[i].saldo
-            ponerNumero(cont.querySelector(`.monto-fifo[data-index="${i}"]`), facturasParaPago[i].monto)
-          }
-          e.target.closest('.fila-fifo')?.classList.toggle('fila-fifo--tildada', e.target.checked)
-          refrescarPago()
+          tildarFacturaPago(Number(e.target.dataset.index), e.target.checked, e.target.closest('.fila-fifo'))
         })
       })
       // Cada monto se dibuja SIN value: se enlaza (nunca más que el saldo),
@@ -7695,6 +7776,15 @@
         pintarPiePago()
         return
       }
+      // CASO BADIC (30/10/2026): con facturas pendientes en la lista y
+      // NINGUNA elegida, no se manda sin preguntar "No elegiste ninguna
+      // factura: el pago va a quedar a cuenta. ¿Seguro?" (lo contesta
+      // "Sí, dejarlo a cuenta", que vuelve a llamar a confirmarPago).
+      if (!estado.pagoACuentaConfirmado && facturasParaPago.some(f => centavosDe(f.saldo) > 0) && !aplicacionesPago(facturasParaPago).length) {
+        estado.pagoPreguntaACuenta = true
+        pintarPiePago()
+        return
+      }
 
       const btn = document.getElementById('btn-confirmar-pago')
       estado.pagoEnviando = true
@@ -7747,6 +7837,589 @@
         btn.disabled = false
         if (!document.getElementById('modal-pago').hidden) pintarPiePago()
       }
+    }
+
+    // ═══ APLICAR UN PAGO A FACTURAS Y ANULAR UN PAGO (30/10/2026) ═════════
+    // Rama ci-prueba/pago-proveedor-aplicar. Tres cosas:
+    //  1) "Registrar pago" ya no deja un pago a cuenta SIN AVISAR: con
+    //     facturas pendientes en la lista y ninguna elegida, pregunta "No
+    //     elegiste ninguna factura: el pago va a quedar a cuenta. ¿Seguro?"
+    //     (en confirmarPago). Y el renglón entero de una factura la tilda,
+    //     como en la lista de cheques. CASO REAL: el pago a BADIC del
+    //     30/10/2026 ($ 4.200.000 en dos cheques, uno de Dolce Pasta) llegó a
+    //     pagar_proveedor_mixto con p_aplicaciones vacío: la factura nunca se
+    //     tildó. En la lista de cheques tocar el renglón tilda; en la de
+    //     facturas, justo arriba, solo tildaba el cuadradito de 18 px
+    //     (reproducido en la maqueta: tocando el renglón viaja []).
+    //  2) "A cuenta $ X · Aplicar a facturas": lo que un pago dejó a favor
+    //     (creditos_proveedor disponibles con origen_gasto_id = el pago) se
+    //     aplica después con aplicar_pago_a_facturas(p_gasto_id,
+    //     p_aplicaciones [{factura_pendiente_id, monto_aplicado}]) →
+    //     {aplicado, queda_a_cuenta}. Pide cuentas_corrientes:registrar_pago
+    //     (con bypass de super_admin); no mira la moneda de la factura, por
+    //     eso la lista se filtra por la moneda del pago. Verificada con
+    //     pg_get_functiondef el 30/10/2026.
+    //  3) "Anular el pago" en el detalle, con motivo obligatorio y la vista
+    //     previa de lo que vuelve atrás: anular_gasto(p_gasto_id, p_motivo)
+    //     → void (el pago propio, o cualquiera con gastos:editar_anular, con
+    //     bypass). Devuelve las facturas (o anula la que creó el mismo pago),
+    //     anula el crédito a cuenta, los cheques de terceros vuelven a la
+    //     cartera (pago_gasto_id o salida_gasto_id) y da vuelta la deuda entre
+    //     empresas; frena si el crédito ya se usó en otra factura. Verificada
+    //     con pg_get_functiondef el 30/10/2026. Después: "Hacer el pago de
+    //     nuevo". La orden de pago de un pago anulado se ve tachada, con
+    //     "ANULADA" y sin "Reimprimir" en el renglón del pago (lista única de
+    //     cc-proveedor-una-lista: el pago anulado sale de la lista, así que en
+    //     el renglón se ve la de un pago mixto "ANULADA EN PARTE"), en el
+    //     detalle del pago anulado y en la hoja (ordenes_pago no tiene estado:
+    //     se sabe por gastos.orden_pago_id + gastos.estado = 'anulado').
+
+    // Una lectura que nunca tira: el error viaja en { error }.
+    async function leerSeguroCC(consulta) {
+      try { return await consulta } catch (e) { return { data: null, error: e } }
+    }
+
+    // ── 1. "Registrar pago": el renglón entero tilda la factura ──────────
+    // Tildar o destildar una factura (la casilla o el renglón). Tildar pone
+    // su saldo si no tenía monto.
+    function tildarFacturaPago(i, si, fila) {
+      const f = facturasParaPago[i]
+      if (!f) return
+      f.checked = !!si
+      if (f.checked && !centavosDe(f.monto)) {
+        f.monto = f.saldo
+        const cont = document.getElementById('lista-fifo')
+        ponerNumero(cont.querySelector(`.monto-fifo[data-index="${i}"]`), f.monto)
+      }
+      fila?.classList?.toggle('fila-fifo--tildada', f.checked)
+      refrescarPago()
+    }
+    // Tocar el renglón (no la casilla ni el monto) da vuelta la casilla.
+    function alTocarRenglonFactura(e) {
+      const t = e?.target
+      if (!t?.closest || t.closest('input, button, a, select, textarea, label')) return
+      const fila = t.closest('.fila-fifo')
+      const chk = fila?.querySelector('.check-fifo')
+      if (!chk || chk.disabled) return
+      chk.checked = !chk.checked
+      tildarFacturaPago(Number(chk.dataset.index), chk.checked, fila)
+    }
+    // Las dos respuestas a "No elegiste ninguna factura…".
+    function siDejarACuenta() {
+      if (estado.pagoEnviando) return
+      estado.pagoACuentaConfirmado = true
+      estado.pagoPreguntaACuenta = false
+      return confirmarPago()
+    }
+    function elegirFacturaEnVezDeACuenta() {
+      estado.pagoPreguntaACuenta = false
+      pintarPiePago()
+      document.querySelector('#lista-fifo .check-fifo')?.focus?.()
+    }
+
+    // ── 2. Lo que un pago dejó a cuenta ─────────────────────────────────
+    // Puro: por pago, lo que tiene a cuenta (los créditos DISPONIBLES con
+    // origen_gasto_id = el pago), sumado en centavos.
+    function aCuentaPorPago(creditos) {
+      const cent = new Map()
+      for (const c of creditos ?? []) {
+        if (!c?.origen_gasto_id || c.estado !== 'disponible') continue
+        const x = centavosDe(c.monto_disponible)
+        if (x > 0) cent.set(c.origen_gasto_id, (cent.get(c.origen_gasto_id) ?? 0) + x)
+      }
+      return new Map([...cent].map(([k, v]) => [k, v / 100]))
+    }
+    // Puro: "A cuenta $ X · Aplicar a facturas" (el botón, con permiso; sin
+    // él, solo lo que hay a cuenta). Sin nada a cuenta, nada.
+    function htmlACuentaPago(gastoId, aCuenta, moneda, puede) {
+      if (!gastoId || !(centavosDe(aCuenta) > 0)) return ''
+      const texto = `A cuenta ${importeHtml(aCuenta, moneda)}`
+      return puede
+        ? `<button type="button" class="btn-a-cuenta-pago" data-aplicar-pago="${esc(gastoId)}">${texto} · Aplicar a facturas</button>`
+        : `<span class="a-cuenta-pago">${texto}</span>`
+    }
+    // En el renglón de un pago de la cuenta del proveedor.
+    function htmlACuentaEnFila(m) {
+      return htmlACuentaPago(m?.gasto_id, aCuentaPorPago(estado.fichaCreditos).get(m?.gasto_id), m?.moneda, tieneTarea('cuentas_corrientes', 'registrar_pago'))
+    }
+
+    // ── El panel de abajo del detalle del pago ──────────────────────────
+    // Se lee aparte del contenido del detalle (que dibuja
+    // abrirModalDetallePago): el pago, lo que dejó a cuenta, las facturas
+    // que paga, sus cheques (pago_gasto_id o salida_gasto_id, igual que
+    // anular_gasto) con su empresa, y los otros pagos de su orden de pago.
+    let accionesPago = null
+    let turnoAccionesPago = 0
+    // Nunca tira: abrirModalDetallePago la llama sin esperarla.
+    async function cargarAccionesDetallePago(gastoId) {
+      try {
+        await leerAccionesDetallePago(gastoId)
+      } catch (e) {
+        console.error('acciones del pago:', e)
+      }
+    }
+    async function leerAccionesDetallePago(gastoId) {
+      const turno = ++turnoAccionesPago
+      accionesPago = { gastoId, cargando: true }
+      pintarAccionesDetallePago()
+      const COLS_CHEQUE = 'id, cobranza_id, banco_codigo, numero, importe, estado'
+      const [g, cr, ap, chPago, chSalida] = await Promise.all([
+        leerSeguroCC(supabase.from('gastos').select('id, proveedor_id, unidad_negocio_id, moneda, importe, medio_pago, cuenta_id, estado, empleado_id, orden_pago_id, motivo_anulacion, descripcion').eq('id', gastoId).maybeSingle()),
+        leerSeguroCC(supabase.from('creditos_proveedor').select('id, monto_original, monto_disponible, estado').eq('origen_gasto_id', gastoId)),
+        leerSeguroCC(supabase.from('aplicaciones_pago').select('factura_pendiente_id, monto_aplicado, facturas_pendientes(numero_comprobante, origen_gasto_id)').eq('gasto_id', gastoId)),
+        leerSeguroCC(supabase.from('cobranza_cheques').select(COLS_CHEQUE).eq('pago_gasto_id', gastoId)),
+        leerSeguroCC(supabase.from('cobranza_cheques').select(COLS_CHEQUE).eq('salida_gasto_id', gastoId)),
+      ])
+      if (turno !== turnoAccionesPago) return
+      const gasto = g?.data
+      if (g?.error || !gasto) {
+        accionesPago = { gastoId, sinDatos: true }
+        pintarAccionesDetallePago()
+        return
+      }
+      const creditos = cr?.error ? [] : (cr?.data ?? [])
+      const vistos = new Set(), cheques = []
+      for (const c of [...(chPago?.data ?? []), ...(chSalida?.data ?? [])]) {
+        if (c?.id && !vistos.has(c.id)) { vistos.add(c.id); cheques.push(c) }
+      }
+      // En el orden en que los nombra el pago ("Pago con cheques de terceros
+      // (N° 62921151, N° 62294736) — …"); los que no nombra, al final.
+      const lugar = (c) => { const k = String(gasto.descripcion ?? '').indexOf(`N° ${c.numero}`); return k < 0 ? Infinity : k }
+      cheques.sort((a, b) => (lugar(a) - lugar(b)) || String(a.numero ?? '').localeCompare(String(b.numero ?? '')))
+      const idsCob = [...new Set(cheques.map(c => c.cobranza_id).filter(Boolean))]
+      const cobranzas = new Map()
+      let otrosOrden = [], ordenTexto = null
+      const [cob, og, op] = await Promise.all([
+        idsCob.length ? leerSeguroCC(supabase.from('v_cobranzas').select('id, unidad_negocio_id, unidad_negocio_nombre').in('id', idsCob)) : null,
+        gasto.orden_pago_id ? leerSeguroCC(supabase.from('gastos').select('id, medio_pago, importe, moneda, estado').eq('orden_pago_id', gasto.orden_pago_id)) : null,
+        gasto.orden_pago_id ? leerSeguroCC(supabase.from('ordenes_pago').select('id, unidad_negocio_id, numero').eq('id', gasto.orden_pago_id).maybeSingle()) : null,
+      ])
+      if (turno !== turnoAccionesPago) return
+      for (const c of cob?.data ?? []) cobranzas.set(c.id, c)
+      otrosOrden = (og?.data ?? []).filter(x => x.id !== gastoId && x.estado !== 'anulado')
+      if (op?.data) ordenTexto = numeroTextoOrden(op.data.unidad_negocio_id, op.data.numero)
+      const sinCheques = !!(chPago?.error && chSalida?.error)
+      accionesPago = {
+        gastoId, gasto,
+        aCuenta: creditos.filter(c => c.estado === 'disponible').reduce((s, c) => s + Math.max(centavosDe(c.monto_disponible), 0), 0) / 100,
+        // La misma condición con que frena anular_gasto.
+        creditoUsado: creditos.some(c => centavosDe(c.monto_disponible) < centavosDe(c.monto_original)),
+        aplicaciones: ap?.error ? null : (ap?.data ?? []).map(a => ({
+          numero: a.facturas_pendientes?.numero_comprobante ?? null,
+          monto: Number(a.monto_aplicado) || 0,
+          laCreoElPago: !!a.facturas_pendientes?.origen_gasto_id && a.facturas_pendientes.origen_gasto_id === gastoId,
+        })),
+        cheques: sinCheques ? null : cheques.map(c => {
+          const k = cobranzas.get(c.cobranza_id)
+          return { numero: c.numero, importe: Number(c.importe) || 0, unidadId: k?.unidad_negocio_id ?? null,
+            unidadNombre: k?.unidad_negocio_nombre ?? (k?.unidad_negocio_id ? nombreUnidad(k.unidad_negocio_id) : null) }
+        }),
+        otrosOrden, ordenTexto, anular: null,
+      }
+      pintarAccionesDetallePago()
+    }
+
+    // Puro: la vista previa de lo que vuelve atrás al anular (lo mismo que
+    // hace anular_gasto, con lo que se leyó para el detalle; la base no
+    // tiene una función para simular).
+    function lineasPreviaAnularPago(a) {
+      const g = a?.gasto ?? {}
+      const moneda = g.moneda || 'ARS'
+      const lineas = []
+      if (g.medio_pago === 'cheque') {
+        lineas.push(a.cheques?.length
+          ? `Vuelven a la cartera: ${a.cheques.map(c => `N° ${c.numero ?? '—'} (${formatearImporte(c.importe)})`).join(', ')}`
+          : 'Los cheques de este pago vuelven a la cartera (con tu usuario no se ve cuáles son)')
+      }
+      if (a?.aplicaciones === null) lineas.push('Las facturas que pagaba vuelven a deberse (con tu usuario no se ve cuáles son)')
+      for (const ap of a?.aplicaciones ?? []) {
+        const nombre = ap.numero === NUMERO_SALDO_INICIAL ? 'El saldo inicial' : `La factura ${ap.numero ?? '—'}`
+        lineas.push(ap.laCreoElPago ? `${nombre} se anula (la cargó este mismo pago)` : `${nombre} vuelve a deber ${formatearImporte(ap.monto, moneda)}`)
+      }
+      if (centavosDe(a?.aCuenta) > 0) lineas.push(`Se anula lo que quedó a cuenta: ${formatearImporte(a.aCuenta, moneda)}`)
+      // Los cheques de OTRA empresa: la deuda entre empresas se da vuelta.
+      const otras = new Map()
+      for (const c of a?.cheques ?? []) {
+        if (!c.unidadId || !g.unidad_negocio_id || c.unidadId === g.unidad_negocio_id) continue
+        const x = otras.get(c.unidadId) ?? { nombre: c.unidadNombre ?? '—', cent: 0 }
+        x.cent += centavosDe(c.importe)
+        otras.set(c.unidadId, x)
+      }
+      for (const x of otras.values()) lineas.push(`Se da vuelta la deuda con ${x.nombre} por ${formatearImporte(x.cent / 100)} (Entre empresas)`)
+      if (['efectivo', 'transferencia'].includes(g.medio_pago) && g.cuenta_id) lineas.push(`Vuelven ${formatearImporte(g.importe, moneda)} a la cuenta de la que salieron`)
+      if (a?.ordenTexto && !(a.otrosOrden ?? []).length) lineas.push(`La orden de pago ${a.ordenTexto} queda anulada (tachada y sin reimprimir)`)
+      return lineas
+    }
+    // Puro: lo que conviene saber antes (en bordó).
+    function avisosAnularPago(a) {
+      const avisos = []
+      if (a?.creditoUsado) avisos.push('Parte de lo que este pago dejó a cuenta ya se aplicó a otra factura: la base no deja anularlo solo.')
+      const nombre = { ...NOMBRE_MEDIO_ORDEN, cheque: 'Cheques' }
+      for (const o of a?.otrosOrden ?? []) {
+        avisos.push(`Este pago es parte de la orden de pago${a.ordenTexto ? ` ${a.ordenTexto}` : ''} junto con otro pago (${nombre[o.medio_pago] ?? o.medio_pago ?? '—'} ${formatearImporte(o.importe, o.moneda || 'ARS')}) que NO se anula: si corresponde, anulalo aparte desde su detalle.`)
+      }
+      return avisos
+    }
+    // Lo mismo que pide anular_gasto: el pago propio, o gastos:editar_anular.
+    function puedeAnularPago(g) {
+      return !!g && g.estado !== 'anulado' &&
+        (tieneTarea('gastos', 'editar_anular') || (!!estado.miEmpleadoId && g.empleado_id === estado.miEmpleadoId))
+    }
+
+    function htmlPanelAnularPago(a) {
+      const x = a.anular
+      const dis = x.enviando ? ' disabled' : ''
+      const lineas = lineasPreviaAnularPago(a)
+      return `<div class="panel-anular-pago">
+          <div class="panel-anular-pago__titulo">Anular el pago: esto vuelve atrás</div>
+          ${lineas.length ? `<ul class="panel-anular-pago__previa">${lineas.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+          ${avisosAnularPago(a).map(t => `<p class="panel-anular-pago__aviso">${esc(t)}</p>`).join('')}
+          <label for="motivo-anular-pago">Motivo (obligatorio)</label>
+          <textarea id="motivo-anular-pago" rows="2" maxlength="300" placeholder="Por qué se anula"${dis}>${esc(x.motivo ?? '')}</textarea>
+          <p class="pago-error" role="alert"${x.error ? '' : ' hidden'}>${esc(x.error ?? '')}</p>
+          <div class="panel-anular-pago__botones">
+            <button type="button" class="btn btn--secundario" data-cancelar-anular-pago${dis}>Cancelar</button>
+            <button type="button" class="btn btn--peligro" data-confirmar-anular-pago${dis}>${x.enviando ? 'Anulando…' : 'Anular el pago'}</button>
+          </div>
+        </div>`
+    }
+    function htmlAccionesDetallePago(a) {
+      const g = a.gasto
+      const puedePagar = tieneTarea('cuentas_corrientes', 'registrar_pago')
+      if (g.estado === 'anulado') {
+        return `<div class="pago-anulado-cc"><strong>Pago anulado</strong>${g.motivo_anulacion ? ` · ${esc(g.motivo_anulacion)}` : ''}</div>` +
+          (a.ordenTexto ? htmlOrdenAnulada(a.ordenTexto, (a.otrosOrden ?? []).length ? 'en_parte' : 'anulada', 'detalle-pago-orden') : '') +
+          (puedePagar ? '<button type="button" class="btn-pago-ayuda" data-pagar-de-nuevo>Hacer el pago de nuevo</button>' : '')
+      }
+      const partes = []
+      const aCuenta = htmlACuentaPago(g.id, a.aCuenta, g.moneda, puedePagar)
+      if (aCuenta) partes.push(aCuenta)
+      if (puedeAnularPago(g)) partes.push(a.anular ? htmlPanelAnularPago(a) : '<button type="button" class="btn-anular-pago" data-anular-pago>Anular el pago</button>')
+      return partes.join('')
+    }
+    function pintarAccionesDetallePago() {
+      const cont = document.getElementById('detalle-pago-acciones')
+      if (!cont) return
+      const a = accionesPago
+      cont.innerHTML = (!a || a.cargando || a.sinDatos || !a.gasto) ? '' : htmlAccionesDetallePago(a)
+    }
+
+    function alTocarAccionesPago(e) {
+      const t = e?.target
+      if (!t?.closest) return
+      const aplicar = t.closest('[data-aplicar-pago]')
+      if (aplicar) { abrirAplicarPago(aplicar.dataset.aplicarPago); return }
+      const a = accionesPago
+      if (!a?.gasto) return
+      if (t.closest('[data-anular-pago]')) {
+        a.anular = { motivo: '', error: null, enviando: false }
+        pintarAccionesDetallePago()
+        document.getElementById('motivo-anular-pago')?.focus?.()
+      } else if (t.closest('[data-cancelar-anular-pago]')) {
+        if (!a.anular?.enviando) { a.anular = null; pintarAccionesDetallePago() }
+      } else if (t.closest('[data-confirmar-anular-pago]')) {
+        confirmarAnularPago()
+      } else if (t.closest('[data-pagar-de-nuevo]')) {
+        hacerPagoDeNuevo()
+      }
+    }
+    function alEscribirAccionesPago(e) {
+      if (e?.target?.id !== 'motivo-anular-pago' || !accionesPago?.anular) return
+      accionesPago.anular.motivo = e.target.value
+      // Escribir borra el "Poné el motivo…" sin redibujar (no pierde el foco).
+      if (accionesPago.anular.error) {
+        accionesPago.anular.error = null
+        const p = document.querySelector('#detalle-pago-acciones .panel-anular-pago .pago-error')
+        if (p) p.hidden = true
+      }
+    }
+
+    async function confirmarAnularPago() {
+      const a = accionesPago
+      const x = a?.anular
+      if (!x || x.enviando) return
+      const motivo = String(x.motivo ?? '').trim()
+      if (!motivo) { x.error = 'Poné el motivo de la anulación.'; pintarAccionesDetallePago(); return }
+      x.enviando = true
+      x.error = null
+      pintarAccionesDetallePago()
+      let res
+      try {
+        res = await supabase.rpc('anular_gasto', { p_gasto_id: a.gastoId, p_motivo: motivo })
+      } catch (e) { res = { data: null, error: e } }
+      if (res?.error) {
+        x.enviando = false
+        // El error de la base, TAL CUAL.
+        x.error = res.error.message || String(res.error)
+        if (accionesPago === a) pintarAccionesDetallePago()
+        return
+      }
+      mostrarExito(a.gasto.medio_pago === 'cheque'
+        ? 'Pago anulado: los cheques volvieron a la cartera y las facturas vuelven a deberse.'
+        : 'Pago anulado: las facturas vuelven a deberse.')
+      if (estado.ficha) await recargarFichaDespuesDePago()
+      // El detalle se vuelve a leer: dice "Pago anulado" y ofrece pagar de nuevo.
+      if (accionesPago === a && !document.getElementById('modal-detalle-pago').hidden) await abrirModalDetallePago(a.gastoId)
+    }
+
+    // "Hacer el pago de nuevo": el formulario de pago a ese proveedor, en
+    // la empresa del pago anulado.
+    async function hacerPagoDeNuevo() {
+      const g = accionesPago?.gasto
+      if (!g || !tieneTarea('cuentas_corrientes', 'registrar_pago')) return
+      if (!estado.ficha || estado.ficha.proveedorId !== g.proveedor_id) {
+        mostrarError('Abrí la ficha de este proveedor para hacer el pago de nuevo.')
+        return
+      }
+      cerrarModalDetallePago()
+      if (g.unidad_negocio_id && estado.ficha.unidadId !== g.unidad_negocio_id) cambiarUnidadFicha(g.unidad_negocio_id)
+      await abrirModalPago()
+    }
+
+    // ── El modal "Aplicar a facturas" ───────────────────────────────────
+    let aplicarPago = null   // { gastoId, gasto, aCuenta, facturas, cargando, errorCarga, error, enviando }
+    let turnoAplicarPago = 0
+    async function abrirAplicarPago(gastoId) {
+      if (!gastoId || !tieneTarea('cuentas_corrientes', 'registrar_pago')) return
+      const turno = ++turnoAplicarPago
+      const ap = aplicarPago = { gastoId, gasto: null, aCuenta: 0, facturas: [], cargando: true, errorCarga: null, error: null, enviando: false }
+      document.getElementById('modal-aplicar-pago').hidden = false
+      renderizarAplicarPago()
+      const [g, cr] = await Promise.all([
+        leerSeguroCC(supabase.from('gastos').select('id, proveedor_id, unidad_negocio_id, moneda, importe, fecha_pago, estado').eq('id', gastoId).maybeSingle()),
+        leerSeguroCC(supabase.from('creditos_proveedor').select('id, monto_disponible, estado').eq('origen_gasto_id', gastoId).eq('estado', 'disponible')),
+      ])
+      if (turno !== turnoAplicarPago) return
+      const fin = (texto) => { ap.cargando = false; ap.errorCarga = texto; renderizarAplicarPago() }
+      if (g?.error || !g?.data || cr?.error) return fin('No se pudo leer el pago. Cerrá y probá de nuevo.')
+      if (g.data.estado === 'anulado') return fin('Ese pago está anulado.')
+      const cACuenta = (cr.data ?? []).reduce((s, c) => s + Math.max(centavosDe(c.monto_disponible), 0), 0)
+      if (!cACuenta) return fin('Este pago ya no tiene nada a cuenta.')
+      const gasto = g.data
+      const fr = await leerSeguroCC(supabase.from('facturas_pendientes')
+        .select('id, numero_comprobante, fecha_factura, saldo_pendiente')
+        .eq('proveedor_id', gasto.proveedor_id)
+        .eq('unidad_negocio_id', gasto.unidad_negocio_id)
+        .eq('moneda', gasto.moneda || 'ARS')
+        .in('estado', ['pendiente', 'parcial'])
+        .order('fecha_factura', { ascending: true }))
+      if (turno !== turnoAplicarPago) return
+      const facturas = (fr?.data ?? []).filter(x => centavosDe(x.saldo_pendiente) > 0).map(x => ({
+        id: x.id, numero: numeroParaMostrar(x.numero_comprobante), fecha: x.fecha_factura,
+        saldo: Number(x.saldo_pendiente) || 0, checked: false, monto: 0,
+      }))
+      ap.gasto = gasto
+      ap.aCuenta = cACuenta / 100
+      // Propuesta: de la más vieja a la más nueva, hasta lo que hay a cuenta.
+      ap.facturas = aplicarAFacturasViejas(facturas, cACuenta)
+      fin(fr?.error ? 'No se pudieron leer las facturas pendientes. Cerrá y probá de nuevo.'
+        : (facturas.length ? null : 'Este proveedor no tiene facturas pendientes en esa empresa: el pago sigue a cuenta.'))
+    }
+    function cerrarAplicarPago() {
+      turnoAplicarPago++
+      aplicarPago = null
+      document.getElementById('modal-aplicar-pago').hidden = true
+    }
+
+    // Puro: los renglones (sin value en el monto: se escribe al enlazarlo).
+    function htmlFilasAplicarPago(facturas, moneda = 'ARS') {
+      return (facturas ?? []).map((f, i) => `
+        <div class="fila-fifo${f.checked ? ' fila-fifo--tildada' : ''}" data-fila-aplicar="${i}">
+          <input type="checkbox" class="check-fifo" data-aplicar-check="${i}" aria-label="Aplicar a la factura ${esc(f.numero)}"${f.checked ? ' checked' : ''}>
+          <div class="fila-fifo__info">
+            <div class="fila-fifo__numero">${esc(f.numero)} · ${formatearFecha(f.fecha)}</div>
+            <div class="fila-fifo__meta">Saldo: ${importeHtml(f.saldo, moneda)}</div>
+          </div>
+          <input type="text" class="fila-fifo__monto" data-aplicar-monto="${i}" placeholder="0,00" inputmode="decimal" aria-label="Monto a aplicar a la factura ${esc(f.numero)}">
+        </div>`).join('')
+    }
+    function renderizarAplicarPago() {
+      const ap = aplicarPago
+      if (!ap) return
+      const moneda = ap.gasto?.moneda || 'ARS'
+      document.getElementById('aplicar-pago-resumen').textContent = ap.cargando ? 'Cargando el pago…'
+        : (ap.gasto ? `Pago del ${formatearFecha(ap.gasto.fecha_pago)} por ${formatearImporte(ap.gasto.importe, moneda)} · A cuenta ${formatearImporte(ap.aCuenta, moneda)}` : '')
+      const lista = document.getElementById('aplicar-pago-lista')
+      lista.innerHTML = ap.cargando ? '' : (ap.errorCarga ? `<p class="etiqueta-opcional">${esc(ap.errorCarga)}</p>` : '') + htmlFilasAplicarPago(ap.facturas, moneda)
+      lista.querySelectorAll('[data-aplicar-monto]').forEach(inp => {
+        const f = ap.facturas[Number(inp.dataset.aplicarMonto)]
+        if (!f) return
+        enlazarCampoNumero(inp, { decimales: 2, max: f.saldo > 0 ? f.saldo : undefined })
+        ponerNumero(inp, f.monto || null)
+      })
+      document.getElementById('btn-aplicar-pago-viejas').hidden = ap.cargando || !ap.facturas.length
+      pintarPieAplicarPago()
+    }
+
+    // Puro: lo que se aplica y lo que queda a cuenta, en centavos.
+    function totalesAplicarPago(facturas, aCuenta) {
+      const cAplica = (facturas ?? []).filter(f => f.checked).reduce((s, f) => s + Math.max(centavosDe(f.monto), 0), 0)
+      const cACuenta = Math.max(centavosDe(aCuenta), 0)
+      return { cAplica, cACuenta, cQueda: cACuenta - cAplica }
+    }
+    function pintarPieAplicarPago() {
+      const ap = aplicarPago
+      if (!ap) return
+      const moneda = ap.gasto?.moneda || 'ARS'
+      const t = totalesAplicarPago(ap.facturas, ap.aCuenta)
+      document.getElementById('aplicar-pago-totales').innerHTML = (ap.cargando || !ap.gasto) ? ''
+        : `A cuenta <strong>${importeHtml(t.cACuenta / 100, moneda)}</strong> · Aplicás <strong>${importeHtml(t.cAplica / 100, moneda)}</strong> · ` +
+          (t.cQueda < 0
+            ? `Te pasás por <strong class="resumen-aplicacion__dif--falta">${importeHtml(-t.cQueda / 100, moneda)}</strong>`
+            : `Queda a cuenta <strong>${importeHtml(t.cQueda / 100, moneda)}</strong>`)
+      const err = document.getElementById('error-aplicar-pago')
+      err.hidden = !ap.error
+      err.textContent = ap.error ?? ''
+      const btn = document.getElementById('btn-confirmar-aplicar-pago')
+      btn.disabled = !!(ap.cargando || ap.enviando || !ap.gasto || !ap.facturas.length)
+      btn.textContent = ap.enviando ? 'Aplicando…' : 'Aplicar'
+    }
+    // Puro: lo que frena antes de mandar (null = se puede).
+    function validarAplicarPago({ facturas, aCuenta, moneda = 'ARS' }) {
+      const tildadas = (facturas ?? []).filter(f => f.checked)
+      if (!tildadas.length) return 'Elegí al menos una factura.'
+      for (const f of tildadas) {
+        if (centavosDe(f.monto) <= 0) return `Poné cuánto se aplica a la factura ${f.numero ?? '—'} (o destildala).`
+        if (centavosDe(f.monto) > centavosDe(f.saldo)) return `Lo aplicado a la factura ${f.numero ?? '—'} supera su saldo pendiente.`
+      }
+      const t = totalesAplicarPago(facturas, aCuenta)
+      if (t.cQueda < 0) return `Este pago tiene ${formatearImporte(t.cACuenta / 100, moneda)} a cuenta y querés aplicar ${formatearImporte(t.cAplica / 100, moneda)}.`
+      return null
+    }
+    function textoExitoAplicarPago(r, moneda = 'ARS') {
+      const aplicado = Number(r?.aplicado) || 0
+      const queda = Number(r?.queda_a_cuenta) || 0
+      return `Aplicado ${formatearImporte(aplicado, moneda)} a facturas.` + (queda > 0 ? ` Queda a cuenta ${formatearImporte(queda, moneda)}.` : ' No queda nada a cuenta.')
+    }
+    async function confirmarAplicarPago() {
+      const ap = aplicarPago
+      if (!ap || ap.enviando || ap.cargando || !ap.gasto) return
+      const moneda = ap.gasto.moneda || 'ARS'
+      const falla = validarAplicarPago({ facturas: ap.facturas, aCuenta: ap.aCuenta, moneda })
+      if (falla) { ap.error = falla; pintarPieAplicarPago(); return }
+      ap.enviando = true
+      ap.error = null
+      pintarPieAplicarPago()
+      let res
+      try {
+        res = await supabase.rpc('aplicar_pago_a_facturas', { p_gasto_id: ap.gastoId, p_aplicaciones: aplicacionesPago(ap.facturas) })
+      } catch (e) { res = { data: null, error: e } }
+      ap.enviando = false
+      if (res?.error) {
+        // El error de la base, TAL CUAL, pegado al botón.
+        ap.error = res.error.message || String(res.error)
+        if (aplicarPago === ap) pintarPieAplicarPago()
+        return
+      }
+      mostrarExito(textoExitoAplicarPago(res.data, moneda))
+      if (aplicarPago === ap) cerrarAplicarPago()
+      if (estado.ficha) await recargarFichaDespuesDePago()
+      if (accionesPago?.gastoId === ap.gastoId && !document.getElementById('modal-detalle-pago').hidden) await abrirModalDetallePago(ap.gastoId)
+    }
+
+    // Tildar en el modal: tildar propone lo que falta, hasta su saldo.
+    function tildarFacturaAplicar(i, si, fila) {
+      const ap = aplicarPago
+      const f = ap?.facturas?.[i]
+      if (!f || ap.enviando) return
+      f.checked = !!si
+      if (f.checked && !centavosDe(f.monto)) {
+        const queda = totalesAplicarPago(ap.facturas, ap.aCuenta).cQueda
+        f.monto = (queda > 0 ? Math.min(centavosDe(f.saldo), queda) : centavosDe(f.saldo)) / 100
+        const inp = fila?.querySelector?.('[data-aplicar-monto]')
+        if (inp) ponerNumero(inp, f.monto)
+      }
+      fila?.classList?.toggle('fila-fifo--tildada', f.checked)
+      ap.error = null
+      pintarPieAplicarPago()
+    }
+    function alTocarListaAplicarPago(e) {
+      const t = e?.target
+      if (!t?.closest || t.closest('input, button, a, select, textarea, label')) return
+      const fila = t.closest('[data-fila-aplicar]')
+      const chk = fila?.querySelector('[data-aplicar-check]')
+      if (!chk || chk.disabled) return
+      chk.checked = !chk.checked
+      tildarFacturaAplicar(Number(chk.dataset.aplicarCheck), chk.checked, fila)
+    }
+    function alCambiarListaAplicarPago(e) {
+      const t = e?.target
+      const ap = aplicarPago
+      if (!t?.dataset || !ap) return
+      if (e.type === 'change' && t.dataset.aplicarCheck !== undefined) {
+        tildarFacturaAplicar(Number(t.dataset.aplicarCheck), t.checked, t.closest?.('[data-fila-aplicar]'))
+        return
+      }
+      if (e.type !== 'input' || t.dataset.aplicarMonto === undefined) return
+      const f = ap.facturas[Number(t.dataset.aplicarMonto)]
+      if (!f) return
+      f.monto = leerCampoNumero(t) || 0
+      // Escribir un monto tilda la factura.
+      if (centavosDe(f.monto) > 0 && !f.checked) {
+        f.checked = true
+        const fila = t.closest?.('[data-fila-aplicar]')
+        const chk = fila?.querySelector('[data-aplicar-check]')
+        if (chk) chk.checked = true
+        fila?.classList?.add('fila-fifo--tildada')
+      }
+      ap.error = null
+      pintarPieAplicarPago()
+    }
+    function proponerAplicarPagoViejas() {
+      const ap = aplicarPago
+      if (!ap || ap.enviando || ap.cargando) return
+      ap.facturas = aplicarAFacturasViejas(ap.facturas, centavosDe(ap.aCuenta))
+      ap.error = null
+      renderizarAplicarPago()
+    }
+
+    // ── 3. La orden de pago de un pago anulado ──────────────────────────
+    // Puro: por orden, 'anulada' (todos sus pagos anulados) o 'en_parte'
+    // (alguno: la orden impresa ya no dice la verdad). Sin anulados, nada.
+    function anulacionDeOrdenes(gastos) {
+      const por = new Map()
+      for (const g of gastos ?? []) {
+        if (!g?.orden_pago_id) continue
+        const x = por.get(g.orden_pago_id) ?? { total: 0, anulados: 0 }
+        x.total++
+        if (g.estado === 'anulado') x.anulados++
+        por.set(g.orden_pago_id, x)
+      }
+      const res = new Map()
+      for (const [id, x] of por) if (x.anulados) res.set(id, x.anulados === x.total ? 'anulada' : 'en_parte')
+      return res
+    }
+    // Los gastos de las órdenes (de a 200). Si el RLS de gastos no deja
+    // leerlos (sin gastos:ver_exportar se ven solo los propios), la orden
+    // queda como estaba: no se afirma lo que no se pudo leer.
+    async function leerAnulacionOrdenes(ids) {
+      const lista = [...new Set((ids ?? []).filter(Boolean))]
+      const gastos = []
+      for (let i = 0; i < lista.length; i += 200) {
+        const r = await leerSeguroCC(supabase.from('gastos').select('id, orden_pago_id, estado').in('orden_pago_id', lista.slice(i, i + 200)))
+        if (r?.error) { console.error('gastos de las órdenes de pago:', r.error); return new Map() }
+        gastos.push(...(r?.data ?? []))
+      }
+      return anulacionDeOrdenes(gastos)
+    }
+    // Puro: "Orden de pago N-OP-00002" tachado con "ANULADA" (o "ANULADA EN
+    // PARTE"), en el renglón del pago (lista única) o en su detalle.
+    function htmlOrdenAnulada(texto, anulacion, clase) {
+      return `<div class="${clase}"><s>${esc('Orden de pago ' + texto)}</s> <span class="orden-pago-cc__anulada">${anulacion === 'en_parte' ? 'ANULADA EN PARTE' : 'ANULADA'}</span></div>`
+    }
+    // La hoja de una orden anulada: el aviso arriba, tachada y sin
+    // "Imprimir" (no se reimprime). Lo lee aparte de datos_orden_pago, que
+    // no dice si la orden está anulada.
+    async function marcarHojaAnulada(ordenId, turno) {
+      const hoja = document.getElementById('orden-pago-hoja')
+      const btn = document.getElementById('btn-imprimir-orden')
+      hoja.classList?.remove('op-hoja--anulada')
+      btn.hidden = false
+      const anulacion = (await leerAnulacionOrdenes([ordenId])).get(ordenId) ?? null
+      if (turno !== turnoOrdenPago || !anulacion) return
+      hoja.classList?.add('op-hoja--anulada')
+      hoja.innerHTML = `<div class="op-anulada" role="alert">${anulacion === 'en_parte' ? 'ANULADA EN PARTE: un pago de esta orden se anuló. No se reimprime.' : 'ANULADA: el pago de esta orden se anuló. No se reimprime.'}</div>` + hoja.innerHTML
+      btn.hidden = true
     }
 
     // ═══ LA ORDEN DE PAGO (20/10/2026) ═══════════════════════════════════
@@ -7956,6 +8629,8 @@
       }
       hoja.innerHTML = htmlOrdenPago(res.data, { saldo })
       document.getElementById('btn-imprimir-orden').focus?.()
+      // Anulada (30/10/2026): tachada, con el aviso y sin "Imprimir".
+      marcarHojaAnulada(ordenId, turno)
     }
     function cerrarOrdenPago() {
       turnoOrdenPago++
@@ -7963,6 +8638,7 @@
       document.documentElement.classList.remove('op-imprimiendo')
     }
     function imprimirOrdenPago() {
+      if (document.getElementById('orden-pago-hoja').classList?.contains('op-hoja--anulada')) return
       const raiz = document.documentElement
       raiz.classList.add('op-imprimiendo')
       const quitar = () => { raiz.classList.remove('op-imprimiendo'); window.removeEventListener('afterprint', quitar) }
@@ -7998,6 +8674,9 @@
           for (const g of data ?? []) if (g.orden_pago_id) gastoAOrden.set(g.id, g.orden_pago_id)
         }
         const opIds = [...new Set(gastoAOrden.values())]
+        // Si algún pago de la orden se anuló (30/10/2026): por TODOS sus gastos
+        // (el anulado ya no está en la lista).
+        const anulacion = await leerAnulacionOrdenes(opIds)
         const ordenes = new Map()
         for (let i = 0; i < opIds.length; i += TANDA_GASTOS_PAGO) {
           const { data, error } = await supabase.from('ordenes_pago').select('id, numero, unidad_negocio_id').in('id', opIds.slice(i, i + TANDA_GASTOS_PAGO))
@@ -8006,7 +8685,7 @@
         }
         for (const [gastoId, opId] of gastoAOrden) {
           const o = ordenes.get(opId)
-          if (o) mapa.set(gastoId, { id: o.id, texto: numeroTextoOrden(o.unidad_negocio_id, o.numero) })
+          if (o) mapa.set(gastoId, { id: o.id, texto: numeroTextoOrden(o.unidad_negocio_id, o.numero), anulacion: anulacion.get(o.id) ?? null })
         }
       } catch (e) {
         console.error('No se pudieron leer las órdenes de pago de los pagos:', e)
@@ -8372,6 +9051,28 @@
     document.getElementById('btn-cerrar-orden').addEventListener('click', cerrarOrdenPago)
     document.querySelector('#modal-orden-pago .modal-cc__backdrop').addEventListener('click', cerrarOrdenPago)
     document.getElementById('modal-orden-pago').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); cerrarOrdenPago() } })
+    // ── Aplicar un pago a facturas y anular un pago (30/10/2026) ─────────
+    // El renglón entero de una factura del pago la tilda; "Sí, dejarlo a
+    // cuenta" / "Elegir una factura"; "A cuenta $ X · Aplicar a facturas" en
+    // el renglón del pago y en su detalle; anular en el detalle.
+    document.getElementById('lista-fifo').addEventListener('click', alTocarRenglonFactura)
+    document.getElementById('btn-si-a-cuenta-pago').addEventListener('click', siDejarACuenta)
+    document.getElementById('btn-elegir-factura-pago').addEventListener('click', elegirFacturaEnVezDeACuenta)
+    document.getElementById('lista-movimientos-ficha').addEventListener('click', (e) => {
+      const b = e.target.closest?.('[data-aplicar-pago]')
+      if (b) abrirAplicarPago(b.dataset.aplicarPago)
+    })
+    const accionesPagoCont = document.getElementById('detalle-pago-acciones')
+    accionesPagoCont.addEventListener('click', alTocarAccionesPago)
+    accionesPagoCont.addEventListener('input', alEscribirAccionesPago)
+    const listaAplicarPago = document.getElementById('aplicar-pago-lista')
+    listaAplicarPago.addEventListener('click', alTocarListaAplicarPago)
+    for (const tipo of ['input', 'change']) listaAplicarPago.addEventListener(tipo, alCambiarListaAplicarPago)
+    document.getElementById('btn-aplicar-pago-viejas').addEventListener('click', proponerAplicarPagoViejas)
+    document.getElementById('btn-confirmar-aplicar-pago').addEventListener('click', confirmarAplicarPago)
+    document.getElementById('btn-cancelar-aplicar-pago').addEventListener('click', cerrarAplicarPago)
+    document.getElementById('btn-cerrar-aplicar-pago').addEventListener('click', cerrarAplicarPago)
+    document.querySelector('#modal-aplicar-pago .modal-cc__backdrop').addEventListener('click', cerrarAplicarPago)
     document.getElementById('cc-primer').addEventListener('click', (e) => {
       const b = e.target.closest('[data-cc-seccion]')
       if (b) mostrarSeccionCC(b.dataset.ccSeccion)

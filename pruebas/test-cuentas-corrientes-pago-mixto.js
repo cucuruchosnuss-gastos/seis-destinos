@@ -28,6 +28,7 @@ const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -129,6 +130,8 @@ const FUNCIONES = [
   'logoSeguroCC', 'cuitConGuiones', 'fechaOrden', 'letrasMenorDeMil', 'letrasMenorDeMillon', 'enteroEnLetras', 'importeEnLetras',
   'htmlOrdenPago', 'lineaSaldoOrdenPago', 'leerSaldoOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
   'numeroTextoOrden', 'cargarOrdenesDePagos',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL',
   'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'TANDA_GASTOS_PAGO']
@@ -628,8 +631,11 @@ async function main() {
     const m = await S.cargarOrdenesDePagos(filas)
     chk('cada pago con su orden y el número de su empresa', m.get('g-1')?.id === 'op-1' && m.get('g-1')?.texto === 'N-OP-00001' && m.get('g-2')?.texto === 'N-OP-00002' && m.get('g-2b')?.texto === 'N-OP-00002' && m.get('g-dolce')?.texto === 'D-OP-00007', JSON.stringify([...m]))
     chk('un pago sin orden no trae nada', !m.has('g-sin'))
-    const qg = S.__consultas.filter(c => c.t === 'gastos')
+    // La segunda lectura de gastos es la de "¿se anuló algún pago de la
+    // orden?" (30/10/2026, por orden_pago_id, con el estado).
+    const qg = S.__consultas.filter(c => c.t === 'gastos' && !/estado/.test(c.sel))
     chk('se leen los gastos de los pagos (orden_pago_id), una sola vez cada uno', qg.length === 1 && /orden_pago_id/.test(qg[0].sel), JSON.stringify(qg))
+    chk('y una vez los de las órdenes, para saber si alguna se anuló', S.__consultas.filter(c => c.t === 'gastos' && c.sel === 'id, orden_pago_id, estado').length === 1)
     chk('el número de otra empresa lleva su prefijo', S.numeroTextoOrden('u-d', 7) === 'D-OP-00007' && S.numeroTextoOrden('u-sin', 7) === '-OP-00007')
     S.__responder('datos_orden_pago', { data: ORDEN, error: null })
     await S.abrirOrdenPago('op-1')

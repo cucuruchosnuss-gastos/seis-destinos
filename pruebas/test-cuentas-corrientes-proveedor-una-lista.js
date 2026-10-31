@@ -26,6 +26,7 @@ const path = require('path')
 const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -101,6 +102,8 @@ const FUNCIONES = [
   'htmlFilaComision', 'cargarCodigosComision', 'fechaISO', 'cargarNotasDebitoFicha', 'cargarOrdenesDePagos', 'numeroTextoOrden',
   'logoSeguroCC', 'cuitConGuiones', 'fechaOrden', 'letrasMenorDeMil', 'letrasMenorDeMillon', 'enteroEnLetras', 'importeEnLetras',
   'lineaSaldoOrdenPago', 'leerSaldoOrdenPago', 'htmlOrdenPago', 'abrirOrdenPago',
+  // aplicar un pago a facturas y anular un pago (30/10/2026)
+  ...FUNCIONES_PAGO_APLICAR,
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL',
   'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN']

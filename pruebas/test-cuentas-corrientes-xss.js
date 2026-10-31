@@ -602,6 +602,10 @@ const SEGURAS = {
     // firma (esc() del mensaje); los ejecuta con marcas
     // test-cuentas-corrientes-nota-debito-pdf.js.
     botonPdfNd: HTML_PROPIO, errorPdfNd: HTML_PROPIO,
+    // 30/10/2026: "A cuenta $ X · Aplicar a facturas" en el renglón del pago;
+    // lo ejecuta con marcas test-cuentas-corrientes-pago-proveedor-aplicar.js.
+    'htmlACuentaEnFila(m)': 'htmlACuentaPago() escapa el id del pago y pasa el importe por importeHtml() (ejecutada con marcas)',
+    "htmlOrdenAnulada(ordenPago.texto, ordenPago.anulacion, 'fila-movimiento__orden')": 'htmlOrdenAnulada() escapa el número de la orden (ejecutada con marcas)',
   },
   htmlSinImporte: { n: 'número: la función devuelve "" si n no es > 0; los call sites pasan contarSinImporte() (.length)' },
   // Las comisiones (06/10/2026): las ejecuta con marcas test-cuentas-corrientes-comisiones.js.
@@ -684,6 +688,26 @@ const SEGURAS = {
   // test-cuentas-corrientes-nota-debito.js).
   pintarRenglonesNd: {
     'htmlRenglonesNd(n.renglones)': 'htmlRenglonesNd() escapa la clave y el concepto de cada renglón',
+  },
+  // 30/10/2026: aplicar un pago a facturas y anular un pago (lo ejecuta con
+  // marcas test-cuentas-corrientes-pago-proveedor-aplicar.js).
+  htmlACuentaPago: { texto: '"A cuenta " + importeHtml(), armado en la misma función' },
+  htmlPanelAnularPago: { dis: "' disabled' o '': constante del código" },
+  htmlFilasAplicarPago: {
+    i: 'índice del map (un número)', 'formatearFecha(f.fecha)': fecha('facturas_pendientes.fecha_factura'), 'importeHtml(f.saldo, moneda)': IMPORTE,
+  },
+  pintarPieAplicarPago: {
+    'importeHtml(t.cACuenta / 100, moneda)': IMPORTE, 'importeHtml(t.cAplica / 100, moneda)': IMPORTE,
+    'importeHtml(-t.cQueda / 100, moneda)': IMPORTE, 'importeHtml(t.cQueda / 100, moneda)': IMPORTE,
+  },
+  // La orden de un pago anulado, en el renglón (lista única) y en la hoja.
+  htmlOrdenAnulada: { clase: "'fila-movimiento__orden' o 'detalle-pago-orden': constantes de los dos call sites" },
+  marcarHojaAnulada: { 'hoja.innerHTML': 'la hoja que ya dibujó htmlOrdenPago() (escapa cada dato, ejecutada con marcas); se le suma adelante un aviso constante' },
+  pintarAccionesDetallePago: {
+    'htmlAccionesDetallePago(a)': 'htmlAccionesDetallePago() escapa el motivo, la vista previa, los avisos y el id del pago (ejecutada con marcas)',
+  },
+  renderizarAplicarPago: {
+    'htmlFilasAplicarPago(ap.facturas, moneda)': 'htmlFilasAplicarPago() escapa el número de cada factura y su saldo (ejecutada con marcas)',
   },
 }
 const SEGURAS_REGEX = {}

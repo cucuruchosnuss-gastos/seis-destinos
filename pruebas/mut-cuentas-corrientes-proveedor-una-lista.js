@@ -30,11 +30,13 @@ correrMutaciones({
     { nombre: 'la orden no se lee con los movimientos',
       de: '        cargarOrdenesDePagos(data ?? []),\n', a: '        new Map(),\n' },
     { nombre: 'el renglón no dice la orden',
-      de: "              ${ordenPago ? `<div class=\"fila-movimiento__orden\">${esc('Orden de pago ' + ordenPago.texto)}</div>` : ''}\n", a: '' },
+      // (30/10/2026, al unir pago-proveedor-aplicar: la orden anulada va por
+      // htmlOrdenAnulada; la sana, como siempre.)
+      de: "              ${ordenPago ? (ordenPago.anulacion ? htmlOrdenAnulada(ordenPago.texto, ordenPago.anulacion, 'fila-movimiento__orden') : `<div class=\"fila-movimiento__orden\">${esc('Orden de pago ' + ordenPago.texto)}</div>`) : ''}\n", a: '' },
     { nombre: 'el número de la orden sin escapar',
       de: "${esc('Orden de pago ' + ordenPago.texto)}", a: "${'Orden de pago ' + ordenPago.texto}" },
     { nombre: 'sin "Reimprimir" en el renglón',
-      de: "            ${ordenPago ? `<button type=\"button\" class=\"btn-pago-ayuda\" data-reimprimir-orden=\"${esc(ordenPago.id)}\">Reimprimir</button>` : ''}\n", a: '' },
+      de: "            ${ordenPago && !ordenPago.anulacion ? `<button type=\"button\" class=\"btn-pago-ayuda\" data-reimprimir-orden=\"${esc(ordenPago.id)}\">Reimprimir</button>` : ''}\n", a: '' },
     { nombre: 'el id de la orden sin escapar',
       de: 'data-reimprimir-orden="${esc(ordenPago.id)}"', a: 'data-reimprimir-orden="${ordenPago.id}"' },
     { nombre: '"Reimprimir" no abre la orden',
