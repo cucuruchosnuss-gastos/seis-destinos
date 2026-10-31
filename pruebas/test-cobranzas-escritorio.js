@@ -461,7 +461,8 @@ async function pruebas() {
     // cob-formas-botones / cob-forma-btn / cob-forma-cabecera / cob-comprobante-pdf: "¿Cómo pagó?" (02/10/2026).
     // body.con-barra-lateral .cob-barra-fija: la barra de la pantalla va arriba de la barra de abajo de la app (10/10/2026, revisión en el celular).
     // cob-estado--vendido: un cheque vendido al banco (13/10/2026).
-    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^body\.con-barra-lateral \.cob-barra-fija\{|^\.cob-unidad-|^\.cob-resumen-formas|^\.cob-formas-linea|^\.cob-formas-tabla|^\.cob-cheque__tipo \.forma-pago|^\.cob-campo__rotulo|^\.cob-empresa|^\.cob-clientes|^\.cob-cliente-op|^\.cob-cliente-elegido|^\.cob-asentar-nota|^\.cob-formas-botones|^\.cob-forma-btn|^\.cob-forma-cabecera|^\.cob-comprobante-pdf|^\.cob-estado--vendido|^\.cob-estado--en_banco|^\.cab-modulo\{/
+    // cob-resumen-transf / cob-transferencia--repetida / cob-aviso--revisar / cob-transf-linea: varios comprobantes (30/10/2026).
+    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^body\.con-barra-lateral \.cob-barra-fija\{|^\.cob-unidad-|^\.cob-resumen-formas|^\.cob-formas-linea|^\.cob-formas-tabla|^\.cob-cheque__tipo \.forma-pago|^\.cob-campo__rotulo|^\.cob-empresa|^\.cob-clientes|^\.cob-cliente-op|^\.cob-cliente-elegido|^\.cob-asentar-nota|^\.cob-formas-botones|^\.cob-forma-btn|^\.cob-forma-cabecera|^\.cob-comprobante-pdf|^\.cob-estado--vendido|^\.cob-estado--en_banco|^\.cab-modulo\{|^\.cob-resumen-transf|^\.cob-transferencia--repetida\{|^\.cob-aviso--revisar\{|^\.cob-transf-linea\{/
     // (29/09/2026) El sistema visual nuevo cambió en TODA la app los tintes
     // azulados escritos a mano por los cálidos (rgba(26,42,82) → rgba(28,26,23),
     // #55617d → #6B645A): se comparan con esa traducción aplicada.

@@ -91,6 +91,16 @@ export const supabase = {
     console.log('[maqueta] rpc', nombreRpc, params)
     const vivo = globalThis.__maqueta?.rpc
     let r = vivo && Object.prototype.hasOwnProperty.call(vivo, nombreRpc) ? vivo[nombreRpc] : DATOS.rpc?.[nombreRpc]
+    // Una rpc EN VIVO puede ser una función (30/10/2026, comprobantes
+    // repetidos de Cobranzas): globalThis.__maqueta.rpc.<nombre> = (params) =>
+    // respuesta | Promise. La respuesta pasa por las mismas reglas de abajo.
+    if (typeof r === 'function') {
+      const fn = r
+      return Promise.resolve(fn(params)).then(x => {
+        if (typeof x === 'string' && x.startsWith('ERROR:')) return { data: null, error: { message: x.slice(6), code: 'P0001' } }
+        return { data: x ?? null, error: null }
+      })
+    }
     // Las preferencias de la cuenta (29/09/2026): sin datos, la cuenta no
     // guardó nada ({}), como una persona nueva; así ninguna pantalla dice
     // "no se pudo guardar en tu cuenta" por no tener el juego.

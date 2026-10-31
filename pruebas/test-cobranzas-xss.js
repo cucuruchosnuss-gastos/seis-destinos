@@ -630,7 +630,14 @@ if (SOLO !== 'estatico') {
     chk('3.4 css: el aviso grave es bordó', /--bordo-suave/.test(regla('.cob-aviso--grave')) && /--bordo\)/.test(regla('.cob-aviso--grave')) && /--bordo-oscuro/.test(regla('.cob-aviso--grave')))
     const iAv = css.indexOf('\n    .cob-aviso {')
     chk('3.4 css: la variante grave va DESPUÉS de su base', iAv !== -1 && css.indexOf('\n    .cob-aviso--grave {') > iAv)
-    chk('3.4 módulo: no queda ámbar (ni la variable ni la clase)', !/amarillo|cob-aviso--ambar|cob-aviso--naranja|cob-aviso--alerta/.test(FUENTE))
+    // ÚNICA excepción (30/10/2026, pedido de Facu): .cob-aviso--revisar, el
+    // amarillo de "mismo número de operación con otro importe: revisalo"
+    // (no bloquea). Fuera de esa regla del CSS, ningún amarillo.
+    const sinRevisar = FUENTE.replace(/\n    \.cob-aviso--revisar \{[^}]*\}/, '')
+    chk('3.4 módulo: no queda ámbar (ni la variable ni la clase), salvo el "revisalo" de los comprobantes',
+      !/amarillo|cob-aviso--ambar|cob-aviso--naranja|cob-aviso--alerta/.test(sinRevisar))
+    chk('3.4 css: el "revisalo" de los comprobantes existe una sola vez y usa los tokens amarillos de main.css',
+      (FUENTE.match(/\n    \.cob-aviso--revisar \{/g) || []).length === 1 && /--amarillo-suave\).*--amarillo\).*--amarillo-oscuro\)/.test(regla('.cob-aviso--revisar')))
     chk('3.4 css: Endosado es un estado gris, como Depositado',
       regla('.cob-estado--endosado').replace('.cob-estado--endosado', '') === regla('.cob-estado--depositado').replace('.cob-estado--depositado', ''))
     chk('3.4 css: el total de la barra de carga va en tinta neutra',
@@ -878,6 +885,14 @@ if (SOLO !== 'render') {
     ['htmlBotonComprobante(t.foto_id)', 'HTML armado por htmlBotonComprobante(): un <button> literal con escCob(fotoId)'],
     ['htmlComprobantes(f, tipo)', 'HTML armado por htmlComprobantes(), que escapa adentro (y htmlAvisoComprobante(), que escapa el texto)'],
     ['htmlBancosOrigen()', 'HTML armado por htmlBancosOrigen(): <option> con escCob() de cada banco de BANCOS_ORIGEN, una lista fija del código'],
+    // Varios comprobantes en una cobranza (30/10/2026). Las ejecuta con
+    // marcas test-cobranzas-muchos-comprobantes.js.
+    ['lineaAvance', 'HTML armado en htmlComprobantes(): un <div> literal con escCob(tipo) y escCob() del texto de textoAvanceLector()'],
+    ['htmlRepetido(rep, t)', 'HTML armado por htmlRepetido(): escCob() de cada texto (que trae datos de la base) y un <button> literal con escCob(t.id)'],
+    ["grupos.map(x => `${escCob(x.banco)} ${escCob(x.cantidad)} · <span class=\"cob-resumen-transf__importe\">${escCob(formatearImporte(x.total))}</span>`).join(' — ')", 'HTML armado en htmlResumenTransferencias(): escCob() del banco (lo escribe el lector o la persona), de la cantidad y del importe, más un <span> literal'],
+    ["fila('Transferencias', g.transferencias)", 'HTML armado por fila() de htmlResumenTransferencias(): escCob() del título y de cada grupo'],
+    ["fila('Depósitos en efectivo', g.depositos)", 'HTML armado por fila() de htmlResumenTransferencias(): escCob() del título y de cada grupo'],
+    ['html', 'HTML armado por htmlResumenTransferencias() en pintarResumenTransferencias(), que escapa adentro'],
   ])
   const malas = []
   for (const x of aRevisar) {

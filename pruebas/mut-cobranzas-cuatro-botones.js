@@ -15,6 +15,9 @@ correrMutaciones({
   escape: 'escCob',
   equivalentes: [
     { expr: 'escCob(n)', motivo: 'n es `Comprobante ${i + 1}`: un literal del código y un número, sin nada escapable' },
+    // El avance de varios comprobantes (30/10/2026; lo prueba test-cobranzas-muchos-comprobantes.js).
+    { expr: 'escCob(tipo)', motivo: "tipo es 'echeque' o 'transferencia' (TIPOS_COMPROBANTE, una lista fija del código)" },
+    { expr: 'escCob(avance)', motivo: 'textoAvanceLector() arma el texto con literales del código y números, sin ningún carácter escapable (el "…" no se escapa)' },
   ],
   manuales: [
     // La empresa
