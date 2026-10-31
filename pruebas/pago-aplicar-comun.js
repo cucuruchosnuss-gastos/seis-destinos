@@ -19,6 +19,9 @@ const FUNCIONES_PAGO_APLICAR = [
   'validarAplicarPago', 'textoExitoAplicarPago', 'confirmarAplicarPago', 'tildarFacturaAplicar', 'alTocarListaAplicarPago',
   'alCambiarListaAplicarPago', 'proponerAplicarPagoViejas',
   'anulacionDeOrdenes', 'leerAnulacionOrdenes', 'htmlOrdenAnulada', 'marcarHojaAnulada',
+  // Arreglos 30/10 (punto 4): los cheques de este pago como la base, el aviso
+  // de la RLS y releer las acciones después de sacar o agregar un cheque.
+  'chequesDeEstePagoCC', 'esPagoConChequesDeCarteraCC', 'noSeVenChequesDP', 'releerAccionesTrasCambioChequesDP',
   // lo que usan del resto del módulo
   'centavosDe',
 ]

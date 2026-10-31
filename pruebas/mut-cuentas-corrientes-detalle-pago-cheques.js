@@ -38,8 +38,10 @@ correrMutaciones({
       a: "        banco: ch.banco_codigo ? `Banco ${ch.banco_codigo}` : null,\n        importe: Number(ch.importe)," },
     { nombre: 'los cheques sin ordenar por número',
       de: "      })).sort((a, b) => String(a.numero ?? '').localeCompare(String(b.numero ?? '')))\n    }\n\n    // Puro: lo que va a pasar al sacar", a: "      }))\n    }\n\n    // Puro: lo que va a pasar al sacar" },
-    { nombre: 'sin poder leer los cheques no lo dice',
-      de: '      dp.chequesError = !!(chPago?.error || chSalida?.error)', a: '      dp.chequesError = false' },
+    // Arreglos 30/10 (punto 4c): "sin poder leer los cheques no lo dice"
+    // (dp.chequesError = false) pasó a mut-cuentas-corrientes-arreglos-detalle-pago.js:
+    // ahora un pago de la cartera con la lectura VACÍA también avisa, así que
+    // con estos datos (g-p5 dice "Pago con cheques de terceros") es equivalente.
     // Lo que se muestra
     { nombre: 'vuelve el texto corrido en vez de "Cheques de terceros (N)"',
       de: '        ? `Cheques de terceros (${dp.cheques.length})`', a: '        ? (etiquetaPagoDeGasto(g) || \'\')' },

@@ -282,7 +282,7 @@ esperas.push((async () => {
     publicar(S, datos())
     S.__fallar('cobranza_cheques')
     await S.abrirModalDetallePago('g-p5')
-    chk('sin poder leer los cheques: lo dice y queda la etiqueta de siempre', /Con tu usuario no se pueden ver los cheques de este pago/.test(html(S)) && /Cheques de la cartera N° 16603539/.test(html(S)))
+    chk('sin poder leer los cheques: lo dice y queda la etiqueta de siempre', /No se pueden ver los cheques de este pago con tu usuario/.test(html(S)) && /Cheques de la cartera N° 16603539/.test(html(S)))
     chk('… y el resto del detalle igual', /Facturas que paga/.test(html(S)) && /Sobrante: \$ 50\.000,00/.test(html(S)))
   }
   // Un pago en efectivo: sin cheques ni botones.
