@@ -3285,6 +3285,18 @@
     // edita no cuentan). Con TURNO: una respuesta vieja no pisa una nueva.
     // Se guarda también qué se preguntó por cada tarjeta: si después cambió
     // el número o el comprobante, esa respuesta ya no le corresponde.
+    //
+    // p_cobranza_id va SIEMPRE con el id del formulario, también en una
+    // cobranza nueva (arreglos del 31/10/2026, punto 3): el id lo genera el
+    // celular y es la clave del alta, así que un borrador que la base YA
+    // guardó (se cortó la señal antes de la respuesta) y se vuelve a abrir
+    // tiene el mismo id que su fila; con null, sus propias transferencias
+    // salían en rojo. Con un id que la base todavía no tiene, la función no
+    // excluye nada (`c.id <> p_cobranza_id`, verificado el 31/10/2026).
+    function idParaRevisarRepetidos(f) {
+      return f?.id || null
+    }
+
     async function revisarRepetidos() {
       const f = estado.form
       if (!f || !puedeProcesar()) return
@@ -3299,7 +3311,7 @@
       }
       let resp
       try {
-        resp = await supabase.rpc('comprobantes_ya_cargados', { p_items: items, p_cobranza_id: f.modo === 'edicion' ? f.id : null })
+        resp = await supabase.rpc('comprobantes_ya_cargados', { p_items: items, p_cobranza_id: idParaRevisarRepetidos(f) })
       } catch (err) {
         resp = { data: null, error: err }
       }
@@ -4089,8 +4101,18 @@
       return n !== null && n > 0 ? n : 0
     }
 
+    // Los medios con algo cobrado: los únicos que tienen bloque en "Por medio
+    // de pago" (arreglos del 31/10/2026, punto 5a). Lo escrito en un medio
+    // que después quedó sin cobro (se borró el efectivo, se sacó el cheque)
+    // no se ve, así que tampoco cuenta: ni traba Guardar ni se aplica. Se
+    // conserva en el borrador: si el medio vuelve, vuelve con lo escrito.
+    function mediosConCobro(f) {
+      const cobrado = cobradoPorMedio(f)
+      return MEDIOS_APLICAR.filter(m => centavosAplicar(cobrado[m]) > 0)
+    }
+
     // Los items para aplicar_credito_cliente. En "Aplicar todo" van sin medio
-    // (null); por medio, cada uno con el suyo.
+    // (null); por medio, cada uno con el suyo (solo los medios con cobro).
     function itemsDeAplicacion(f, datos) {
       const ap = f?.aplicacion
       if (!ap) return []
@@ -4098,7 +4120,7 @@
       const item = (d, monto, medio) => ({ doc_tipo: d.doc_tipo, doc_id: d.doc_id, parte: d.parte, monto: Math.round(monto * 100) / 100, medio })
       if (ap.modo === 'medio') {
         const r = []
-        for (const m of MEDIOS_APLICAR) for (const d of docs) {
+        for (const m of mediosConCobro(f)) for (const d of docs) {
           const monto = montoElegido(ap.medios?.[m]?.montos, claveDocAplicar(d))
           if (monto > 0) r.push(item(d, monto, m))
         }
@@ -4180,6 +4202,11 @@
       if (!aplicarActivo(f)) return
       const a = estado.aplicar
       const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
+      // En "Por medio de pago" no se sugiere el total: nada que llegue a
+      // llamarla en ese modo vuelve la pantalla a "Aplicar todo". (Una
+      // respuesta que ya estaba en camino la descarta el turno, que sube
+      // cancelarSugerenciaTodo al cambiar de modo.)
+      if (ap.modo !== 'todo') return
       const cobrado = resumenAplicacion(f, a.datos).cobrado
       const turno = (a.turnoSugerir ?? 0) + 1
       a.turnoSugerir = turno
@@ -4265,12 +4292,24 @@
       pintarTotalYGuardado()
     }
 
+    function cancelarSugerenciaTodo(a) {
+      if (!a) return
+      clearTimeout(a.temporizador)
+      a.temporizador = null
+      a.turnoSugerir = (a.turnoSugerir ?? 0) + 1
+    }
+
     function cambiarModoAplicar(modo) {
       const f = estado.form
       if (!aplicarActivo(f) || !['todo', 'medio'].includes(modo)) return
       const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
       if (ap.modo === modo) return
       ap.modo = modo
+      // Una sugerencia de "Aplicar todo" pendiente (el retardo de 400 ms o la
+      // respuesta de la base) ya no corresponde: se cancela y su respuesta se
+      // descarta por turno (arreglos del 31/10/2026). Sin esto, al llegar
+      // volvía a poner la pantalla en "Aplicar todo".
+      cancelarSugerenciaTodo(estado.aplicar)
       guardarBorrador()
       if (modo === 'todo' && !ap.tocado) { sugerirAplicarTodo(ap.parte); return }
       pintarAplicar()

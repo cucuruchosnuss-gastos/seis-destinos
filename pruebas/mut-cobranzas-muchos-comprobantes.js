@@ -81,8 +81,9 @@ correrMutaciones({
     { nombre: 'el retardo cambia', de: '    const MS_REVISAR_REPETIDOS = 400', a: '    const MS_REVISAR_REPETIDOS = 0' },
     { nombre: 'sin turno: una respuesta vieja pisa una nueva', de: '      if (turno !== estado.turnoRepetidos || estado.form !== f) return', a: '      if (estado.form !== f) return' },
     { nombre: 'la respuesta de otro formulario se aplica', de: '      if (turno !== estado.turnoRepetidos || estado.form !== f) return', a: '      if (turno !== estado.turnoRepetidos) return' },
-    { nombre: 'p_cobranza_id siempre null', de: "p_cobranza_id: f.modo === 'edicion' ? f.id : null", a: 'p_cobranza_id: null' },
-    { nombre: 'p_cobranza_id siempre el id', de: "p_cobranza_id: f.modo === 'edicion' ? f.id : null", a: 'p_cobranza_id: f.id' },
+    // Arreglos 30/10 (punto 3): p_cobranza_id va siempre con el id del formulario.
+    { nombre: 'p_cobranza_id siempre null', de: 'p_cobranza_id: idParaRevisarRepetidos(f) })', a: 'p_cobranza_id: null })' },
+    { nombre: 'p_cobranza_id solo en una edición (lo de antes)', de: '      return f?.id || null\n', a: "      return f?.modo === 'edicion' ? f.id : null\n" },
     { nombre: 'p_items sin la huella', de: '        sha256: huellaDeTransferencia(f, t),\n      })).filter', a: '      })).filter' },
     { nombre: 'p_items con la clave equivocada', de: '        clave: t.id,\n', a: '        clave: t.foto_id,\n' },
     { nombre: 'p_items manda números cortos', de: "        referencia: referenciaNormalizada(t.referencia) ? String(t.referencia).trim() : null,", a: "        referencia: String(t.referencia ?? '').trim() || null," },
