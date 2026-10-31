@@ -154,7 +154,9 @@ for (const t of [{ nombre: '1280', ancho: 1280, alto: 900 }, { nombre: '390', an
 
     // La pregunta a la base llevó la clave, el número, el importe y la huella.
     const pregunta = await page.evaluate(() => globalThis.__preguntas[globalThis.__preguntas.length - 1]);
-    expect(pregunta.p_cobranza_id).toBeNull();
+    // Desde el 31/10/2026 (arreglos de la auditoría, punto 3) va SIEMPRE el id
+    // del formulario, también en una cobranza nueva.
+    expect(pregunta.p_cobranza_id).toMatch(/^[0-9a-f-]{36}$/);
     expect(pregunta.p_items.every(x => typeof x.clave === 'string' && /^[0-9a-f]{64}$/.test(x.sha256))).toBe(true);
 
     // Guardar: la base lo rechaza y se muestra TAL CUAL; las fotos llevan su huella.
