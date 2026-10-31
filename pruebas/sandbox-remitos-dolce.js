@@ -30,7 +30,7 @@ const FUNCIONES_BASE = [
   'nombreConoRemito', 'nombreConoPorIdRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
   'unidadesPresentacionRemito', 'textoUnidadesRemito', 'presentacionConUnidadesRc',
   // de js/retiros-comun.js
-  'escHoja', 'enteroHoja', 'decimalesDeUnidad', 'unidadHoja',
+  'escHoja', 'enteroHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja',
   // SUBIR
   'fabricasRemitos', 'puedeSubirRemitos', 'datosRemitos', 'fabricaRemitos', 'elegirFabricaRemitos', 'abrirSubirRemitos',
   'rutaFotoRemito', 'medidasAchicadas', 'cargarImagenRemito', 'achicarFoto', 'urlLocalDeFoto',
@@ -44,7 +44,7 @@ const FUNCIONES_BASE = [
   'htmlSelloAcopio', 'numeroRemitoN', 'ordenarPorRemito', 'ordenesVisibles', 'htmlTalonariosOrdenes', 'elegirTalonarioOrdenes',
   'remitosPorRevisar', 'leerRemitosPrecarga', 'leerRemito', 'cargarRemitosPrecarga', 'amarillosDe', 'nombreClienteRemito',
   'htmlTarjetaRemito', 'htmlRemitosPrecarga', 'pintarRemitosPrecarga', 'quitarRemitoDeLaLista',
-  'cajasLoteRemito', 'normalizarLoteRemito', 'renglonDesdeItem', 'renglonRemitoNuevo', 'formDesdeRemito',
+  'cajasLoteRemito', 'normalizarLoteRemito', 'cantidadLoteInsumo', 'cantidadLoteRemito', 'cantidadRenglonRemito', 'rotuloCantidadLote', 'renglonDesdeItem', 'renglonRemitoNuevo', 'formDesdeRemito',
   'lotesRemitoParaBase', 'itemRemitoParaBase', 'parametrosActualizarRemito', 'asignacionRemito', 'htmlResumenLotesRemito', 'puedeAceptarSugerencia',
   'textoResumenRemito', 'htmlOpcionesRemito', 'htmlSelectorRemito', 'htmlMarcasRemito', 'htmlConoRemito', 'filasLotesRemito', 'htmlLotesRemito',
   'htmlRenglonRemito', 'htmlClientesRemito', 'htmlClienteRemito', 'htmlEncabezadoRemito', 'urlFotoSegura', 'htmlFotoRemito', 'htmlAccionesRemito',

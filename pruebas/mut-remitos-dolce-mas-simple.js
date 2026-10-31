@@ -81,8 +81,8 @@ correrMutacionesEnVarios([{
     { nombre: 'la verde sin color', de: '    .rt-remito--confirmada { border-color: var(--verde); background: var(--verde-suave); }\n', a: '' },
     { nombre: '"Leyendo…" en azul', de: '.rt-remito--leyendo .rt-remito__estado { color: var(--rt-texto-2); }', a: '.rt-remito--leyendo .rt-remito__estado { color: var(--rt-modulo); }' },
     { nombre: 'el sello vuelve a decir "Revisar"', de: "'<span class=\"ad-sello ad-sello--amarillo\">Controlar</span>'", a: "'<span class=\"ad-sello ad-sello--amarillo\">Revisar</span>'" },
-    { nombre: 'el pie vuelve a "faltan"', de: 'falta repartir ${esc(enteroHoja(a.falta))}', a: 'faltan ${esc(enteroHoja(a.falta))}' },
-    { nombre: '"1 cajas"', de: "${a.falta === 1 ? 'caja' : 'cajas'}</span>`", a: 'cajas</span>`' },
+    { nombre: 'el pie vuelve a "faltan"', de: 'falta repartir ${esc(cantidadRenglonRemito(r, a.falta))}', a: 'faltan ${esc(cantidadRenglonRemito(r, a.falta))}' },
+    { nombre: '"1 cajas"', de: "      if (!r?.insumoId) return `${enteroHoja(n)} ${n === 1 ? 'caja' : 'cajas'}`", a: "      if (!r?.insumoId) return `${enteroHoja(n)} cajas`" },
     // 2. Órdenes cargadas
     { nombre: 'la pestaña vuelve a decir "Revisar"', de: 'aria-pressed="false">Órdenes cargadas</button>', a: 'aria-pressed="false">Revisar</button>' },
     { nombre: 'el encabezado dice "Revisar"', de: "'rd-vista-revisar': 'Órdenes cargadas', 'ad-vista-remito': 'Cargar lotes'", a: "'rd-vista-revisar': 'Revisar', 'ad-vista-remito': 'Revisar'" },

@@ -56,12 +56,12 @@ correrMutaciones({
     { nombre: 'confirmada sin "en tránsito"', de: "(grupo ? `Va en tránsito hasta que ${grupo} la reciba. ` : '')", a: "''" },
     { nombre: 'confirmada a cualquiera dice "en tránsito"', de: "(grupo ? `Va en tránsito hasta que ${grupo} la reciba. ` : '')", a: '`Va en tránsito hasta que ${grupo} la reciba. `' },
     // Los lotes
-    { nombre: '"Asignado" en vez de "Lotes:"', de: '">Lotes: ${esc(enteroHoja(a.asignado))} de ${esc(enteroHoja(a.pedido))} cajas</span>', a: '">Asignado ${esc(enteroHoja(a.asignado))} de ${esc(enteroHoja(a.pedido))}</span>' },
+    { nombre: '"Asignado" en vez de "Lotes:"', de: '">Lotes: ${deCuanto}</span>', a: '">Asignado ${deCuanto}</span>' },
     { nombre: 'sin el amarillo cuando no suman', de: "${a.falta === 0 ? '' : ' ad-rm-lotes__asignado--falta'}", a: '' },
     { nombre: 'amarillo también cuando suman', de: "${a.falta === 0 ? '' : ' ad-rm-lotes__asignado--falta'}", a: ' ad-rm-lotes__asignado--falta' },
     { nombre: 'agregar lote no agrega', de: '      r.lotes = [...filasLotesRemito(r).map(l => ({ ...l })), { lote: \'\', cajas: null }]', a: '      r.lotes = filasLotesRemito(r).map(l => ({ ...l }))' },
     { nombre: 'quitar lote no quita', de: '      r.lotes = filasLotesRemito(r).filter((_, j) => j !== Number(k))', a: '      r.lotes = filasLotesRemito(r).map(l => ({ ...l }))' },
-    { nombre: 'lo leído sin precargar los lotes', de: "        lotes: pres ? (Array.isArray(it?.lotes) ? it.lotes : []).map(l => ({ lote: String(l?.lote ?? ''), cajas: cajasLoteRemito(l) || null })) : [],", a: '        lotes: [],' },
-    { nombre: 'el lote sin recortar', de: 'normalizarLoteRemito(l.lote).slice(0, LARGO_LOTE_REMITO)', a: 'normalizarLoteRemito(l.lote)' },
+    { nombre: 'lo leído sin precargar los lotes', de: "        lotes: pres ? (Array.isArray(it?.lotes) ? it.lotes : []).map(l => ({ lote: String(l?.lote ?? ''), cajas: cajasLoteRemito(l) || null }))\n", a: '        lotes: pres ? []\n' },
+    { nombre: 'el lote sin recortar', de: 'lote: normalizarLoteRemito(l.lote).slice(0, LARGO_LOTE_REMITO), cajas: cajasLoteRemito(l) }))', a: 'lote: normalizarLoteRemito(l.lote), cajas: cajasLoteRemito(l) }))' },
   ],
 })

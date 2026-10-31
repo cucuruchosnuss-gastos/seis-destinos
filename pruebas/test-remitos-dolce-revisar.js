@@ -251,7 +251,8 @@ esperas.push((async () => {
     chk('…los insumos, al buscar', !/data-rm-insumo/.test(r1) && /Escribí para buscar también los insumos/.test(r1))
     chk('el producto elegido con su cono (el leído, con la lista cerrada y "Cambiar")', /Cono dulce 48 · Caja x 48 con cono · LELONA/.test(r0) && /data-rm-cono-elegido="0"><span class="ad-rm-cono-elegido__nombre">LELONA<\/span><button type="button" class="ad-link" data-rm-cono-cambiar="0">Cambiar<\/button>/.test(r0) && !/data-rm-marca=/.test(r0))
     chk('el insumo con su unidad', /Cantidad \(kg\)/.test(r2) && /Harina 000 · Wali/.test(r2))
-    chk('los lotes, solo para producto', /data-rm-lote-agregar="0"/.test(r0) && !/data-rm-lote-agregar="2"/.test(r2))
+    // 29/10/2026: también el insumo lleva lotes (con su cantidad en kg, un…).
+    chk('los lotes, para producto y para insumo (con su unidad)', /data-rm-lote-agregar="0"/.test(r0) && /data-rm-lote-agregar="2"/.test(r2) && /<span>Cantidad \(kg\)<\/span><input type="text" class="ad-input" data-rm-lote-cajas="2"/.test(r2))
     chk('el resumen de renglones', /4 renglones · 3 en amarillo/.test(h))
     chk('el cliente leído como ayuda, con "Buscar así"', /Leído en la foto: «Almacen Rosar»/.test(h) && /data-rm-cliente-leido/.test(h))
     chk('el talonario Oficial elegido', /data-rm-talonario="oficial" aria-pressed="true"/.test(h))
@@ -367,7 +368,7 @@ esperas.push((async () => {
   S.quitarRenglonRemito(0)
   chk('"Quitar el renglón"', S.estado.remito.form.renglones.length === 0)
   chk('el renglón desde la base: lo inválido se descarta', JSON.stringify(S.renglonDesdeItem({ presentacion_id: '', insumo_id: 'ins-h', cantidad: -2, revisar: 'si', lotes: [{ lote: 'A', cajas: 2 }] })) ===
-    JSON.stringify({ texto_leido: '', nota: '', revisar: false, omitir: false, cantidad: null, presentacionId: null, marcaId: null, insumoId: 'ins-h', lotes: [], eligiendo: false, busqueda: '', marcaBusqueda: '', cambiandoCono: false }))
+    JSON.stringify({ texto_leido: '', nota: '', revisar: false, omitir: false, cantidad: null, presentacionId: null, marcaId: null, insumoId: 'ins-h', lotes: [{ lote: 'A', cajas: 2 }], eligiendo: false, busqueda: '', marcaBusqueda: '', cambiandoCono: false }))
   chk('un insumo nunca viaja con cono', S.itemRemitoParaBase({ insumoId: 'ins-h', marcaId: 'm-lel', cantidad: 3 }).marca_id === null &&
     S.itemRemitoParaBase({ presentacionId: 'pr-cono', marcaId: 'm-lel', cantidad: 3 }).marca_id === 'm-lel')
   chk('el talonario de la fila: solo "acopio" es acopio', S.talonarioDe({ talonario: 'acopio' }) === 'acopio' && S.talonarioDe({ talonario: null }) === 'oficial' && S.talonarioDe({ talonario: 'x' }) === 'oficial')

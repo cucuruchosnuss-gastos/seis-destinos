@@ -750,6 +750,37 @@
     .ad-ac-total { margin: 0 0 0.75rem; font-weight: 700; overflow-wrap: anywhere; }
     .ad-cuenta-grupo__empresas { margin: 0.25rem 0 0; display: flex; flex-wrap: wrap; gap: 0 0.5rem; align-items: center; overflow-wrap: anywhere; min-width: 0; }
     .ad-cuenta-grupo .ad-link { min-height: 44px; }
+    /* ── Corregir una orden (29/10/2026) ───────────────────────────────
+       El editor de renglones (producto, cajas o cantidad, lotes, precio),
+       el resumen antes de guardar y "Corregida N veces" en el detalle. */
+    .ad-co { min-width: 0; }
+    .ad-co-renglones { display: flex; flex-direction: column; gap: 0.75rem; margin: 0 0 0.75rem; min-width: 0; }
+    .ad-co-renglon { border: 1px solid var(--color-borde); border-radius: var(--radio-input); padding: 0.75rem; background: var(--color-fondo); min-width: 0; }
+    .ad-co-renglon--dev { background: var(--color-superficie); }
+    .ad-co-renglon__cabeza { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.5rem; min-width: 0; }
+    .ad-co-renglon__num { font-weight: 800; }
+    .ad-co-renglon__sacar { margin-left: auto; min-height: 44px; }
+    .ad-co-lotes { display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; min-width: 0; }
+    .ad-co-lote { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 7rem) auto; gap: 0.375rem; align-items: center; width: 100%; min-width: 0; }
+    .ad-co-lote__sacar { min-width: 44px; padding-left: 0.5rem; padding-right: 0.5rem; }
+    .ad-co-lotes__estado { margin: 0; font-size: 0.875rem; font-weight: 700; overflow-wrap: anywhere; }
+    .ad-co-lotes__estado--falta { background: var(--amarillo-suave); border-left: 3px solid var(--amarillo); color: var(--amarillo-oscuro); padding: 0.25rem 0.5rem; border-radius: 6px; }
+    .ad-co-lotes .ad-link, .ad-co .ad-rm-selector .ad-link { min-height: 44px; }
+    .ad-co-agregar { margin: 0 0 0.75rem; }
+    .ad-co-errores, .ad-co-resumen { margin: 0 0 0.75rem; padding-left: 1.25rem; overflow-wrap: anywhere; }
+    .ad-co-diferencia { font-weight: 700; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
+    .ad-co-faltantes__titulo { margin: 0 0 0.25rem; font-weight: 800; }
+    #ad-co-faltantes ul { margin: 0 0 0.25rem; padding-left: 1.25rem; }
+    #ad-co-faltantes p:last-child { margin: 0; }
+    .ad-correcciones { margin: 0 0 0.5rem; min-width: 0; }
+    .ad-correcciones > summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; gap: 0.375rem; list-style: none; }
+    .ad-correcciones > summary::-webkit-details-marker { display: none; }
+    .ad-correcciones > summary::before { content: '▸'; color: var(--ad-texto-secundario); }
+    .ad-correcciones[open] > summary::before { content: '▾'; }
+    .ad-correcciones__lista { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; overflow-wrap: anywhere; }
+    .ad-correcciones__lista li { display: flex; flex-direction: column; gap: 0.125rem; }
+    .ad-correcciones__cuando { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
+    .ad-correcciones__plata { font-variant-numeric: tabular-nums; font-weight: 700; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -854,6 +885,8 @@
       <div class="ad-barra-acciones" id="ad-orden-acciones">
         <button type="button" class="ad-btn" id="ad-btn-valorizar" hidden>Valorizar</button>
         <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-corregir-valor" hidden>Corregir valorización</button>
+        <!-- Corregir la orden (29/10/2026): renglones, lotes, precios, fecha. -->
+        <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-corregir-orden" hidden>Corregir orden</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-imprimir" hidden>Imprimir</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-enviar" hidden>Enviar</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-anular" hidden>Anular</button>
@@ -1517,7 +1550,7 @@
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
       nuevaImpresion, prepararHoja, imprimirHoja, olvidarHoja, esIos, mostrarListoParaImprimir,
       cantidadInsumoHoja, unidadHoja, cargarScript, LIBRERIAS_PDF,
-      ordenarRenglonesHoja, textoDestinoDevuelto,
+      ordenarRenglonesHoja, textoDestinoDevuelto, decimalesDeUnidad,
           esPorUnidadHoja, palabraUnidadesHoja, cantidadUnidadesHoja,
     } from '../js/retiros-comun.js'
     // Los insumos por bulto (23/10/2026): la cantidad y el precio de un
@@ -3271,7 +3304,8 @@
       const planillas = await leerPlanillasDeOrden(o, items)
       const facturas = await leerFacturasDeOrden(o)
       const recepcion = await leerRecepcionDeOrden(o)
-      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas, facturas, recepcion }
+      const correcciones = await leerCorreccionesDeOrden(o)
+      return { orden: o, items: items ?? [], lotes, lotesInsumos, planillas, facturas, recepcion, correcciones }
     }
 
     // ── MERCADERÍA EN TRÁNSITO ENTRE EMPRESAS (29/10/2026) ─────────────────
@@ -3522,7 +3556,9 @@
       }
       // El remito de papel (27/10/2026): "Remito N° X" grande y el sello "Acopio".
       const remito = textoNumeroRemito(o)
-      return `<div class="ad-tarjeta">${remito ? `<p class="ad-orden-remito" data-orden-remito>${esc(remito)}</p>` : ''}<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div><div class="ad-datos">${datos.join('')}</div>${recepcion}${anulada}</div>` +
+      // Corregir la orden (29/10/2026): lo que faltó en stock al corregirla
+      // (arriba) y "Corregida N veces" con su historial.
+      return `${htmlFaltantesCorreccion(d)}<div class="ad-tarjeta">${remito ? `<p class="ad-orden-remito" data-orden-remito>${esc(remito)}</p>` : ''}<div class="ad-fila__linea">${htmlSelloOrden(o)}${htmlSelloEntre(o)}${htmlSelloAcopio(o)}</div><div class="ad-datos">${datos.join('')}</div>${htmlCorreccionesOrden(d)}${recepcion}${anulada}</div>` +
         `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}${htmlFaltaLista(d)}</div>` +
         // Entre empresas no se divide para facturar (24/10/2026).
         (d.valorizar || entre || puedeFacturar(o) ? '' : htmlFacturasOrden(d))
@@ -3535,7 +3571,11 @@
       const cuerpo = document.getElementById('ad-orden-cuerpo')
       if (d.error) cuerpo.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(d.error)}</div>`
       else if (!d.orden) cuerpo.innerHTML = '<div class="ad-vacio">Cargando la orden…</div>'
-      else {
+      else if (d.corregir) {
+        // Corregir la orden (29/10/2026): el editor en lugar del detalle.
+        cuerpo.innerHTML = htmlCorregirOrden(d)
+        enlazarCorregir(cuerpo)
+      } else {
         cuerpo.innerHTML = htmlDetalleOrden(d, estado.catalogo)
         if (d.valorizar) {
           for (const input of cuerpo.querySelectorAll('[data-precio]')) {
@@ -3559,9 +3599,12 @@
       const u = o?.unidad_negocio_id
       const activa = !!o && o.estado !== 'anulada'
       const precios = activa && puedeEn('retiros', 'precios', u)
-      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar && !d.faltaLista)
-      document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar)
-      document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))
+      // Mientras se corrige la orden (29/10/2026) no se valoriza ni se anula.
+      const corrigiendo = !!d?.corregir
+      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar && !d.faltaLista && !corrigiendo)
+      document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar && !corrigiendo)
+      document.getElementById('ad-btn-corregir-orden').hidden = !(puedeCorregirOrden(o) && !d.valorizar && !d.anular && !corrigiendo)
+      document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u) && !corrigiendo)
       document.getElementById('ad-btn-imprimir').hidden = !o
       document.getElementById('ad-btn-enviar').hidden = !o
       document.getElementById('ad-btn-enviar').disabled = estado.trabajando
@@ -3595,7 +3638,7 @@
         observar: document.getElementById('ad-vista-orden'),
         corte: MQ_LISTA_DETALLE,
         disponible: () => estado.vista === 'ad-vista-orden' && !!estado.orden?.orden && !estado.orden.error &&
-          !estado.orden.valorizar && !estado.orden.anular && !!document.querySelector('#ad-orden-cuerpo .ad-tarjeta'),
+          !estado.orden.valorizar && !estado.orden.anular && !estado.orden.corregir && !!document.querySelector('#ad-orden-cuerpo .ad-tarjeta'),
         titulo: () => {
           const o = estado.orden?.orden
           const cli = o ? clienteDe(o.cliente_id) : null
@@ -3637,7 +3680,8 @@
     async function abrirOrden(id) {
       const turno = ++turnoOrden
       if (estado.facturar) cerrarFacturar()
-      estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, comision: null, anular: null, aviso: null, errorHoja: null }
+      estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, comision: null, anular: null, aviso: null, errorHoja: null,
+        corregir: null, faltantesCorreccion: null }
       mostrarVista('ad-vista-orden')
       pintarOrden()
       try {
@@ -3647,7 +3691,8 @@
         if (!r) estado.orden.error = 'No se encontró la orden: puede ser de una empresa que no ves.'
         else {
           Object.assign(estado.orden, r)
-          await asegurarNombres([r.orden.cargada_por])
+          // Quién corrigió (29/10/2026), con los de siempre.
+          await asegurarNombres([r.orden.cargada_por, ...(Array.isArray(r.correcciones) ? r.correcciones.map(k => k?.corregida_por) : [])])
         }
       } catch (err) {
         if (turno !== turnoOrden) return
@@ -3838,7 +3883,7 @@
     async function abrirValorizar() {
       const d = estado.orden
       const o = d?.orden
-      if (!o || o.estado === 'anulada' || !puedeEn('retiros', 'precios', o.unidad_negocio_id) || estado.trabajando) return
+      if (!o || o.estado === 'anulada' || !puedeEn('retiros', 'precios', o.unidad_negocio_id) || estado.trabajando || d.corregir) return
       const turno = ++turnoValorizar
       const cli = clienteDe(o.cliente_id)
       const listaId = cli?.lista_precio_id ?? null
@@ -4115,6 +4160,824 @@
         estado.trabajando = false
         pintarAccionesOrden()
       }
+    }
+
+    // ── CORREGIR UNA ORDEN (29/10/2026, rama ci-prueba/corregir-orden) ─────
+    // Pedido de Facu: "Corregir orden" en el detalle, al lado de Valorizar y
+    // Anular, también (sobre todo) en las valorizadas. La base, leída con
+    // pg_get_functiondef el 29/10/2026:
+    //  - orden_para_corregir(p_orden_id) pide retiros:precios con alcance y
+    //    devuelve la orden con no_se_puede (el texto de _orden_no_corregible:
+    //    anulada, ya recibida en la otra empresa, ya en su stock, con factura
+    //    emitida, comisión facturada; null = se puede), items
+    //    (_orden_items_editables: los lotes SIN 'SIN STOCK' / 'SIN LOTE') y
+    //    correcciones.
+    //  - corregir_orden_retiro(p_orden_id, p_items, p_motivo, p_fecha,
+    //    p_transporte, p_observaciones) pide retiros:precios Y retiros:cargar
+    //    en la fábrica de la orden; saca lo que movió y la rehace con
+    //    registrar_orden_retiro (p_items en SU formato, el de la Carga, sin
+    //    'precio' que lo saca antes). Si estaba valorizada (y no es de
+    //    talonario acopio) la revaloriza con el 'precio' de cada renglón; uno
+    //    sin precio toma el viejo del mismo producto o insumo (mismo tipo,
+    //    primero el mismo cono) y si no, el de la lista ("Faltan precios"
+    //    si no hay). Valorizada: la fecha no cambia. p_fecha, p_transporte y
+    //    p_observaciones null = no cambian ('' los borra). El código queda.
+    //  - El historial se lee de orden_correcciones (su policy pide retiros:ver
+    //    en la fábrica de la orden): lo ve todo el que ve la orden, tenga o no
+    //    precios.
+    // Sin retiros:cargar se puede abrir y mirar cómo quedaría, pero Guardar
+    // queda apagado con la explicación (la base lo frenaría igual).
+
+    let turnoCorregir = 0
+    let claveCorregir = 0
+
+    function puedeCorregirOrden(o) {
+      return !!o && o.estado !== 'anulada' && puedeEn('retiros', 'precios', o.unidad_negocio_id)
+    }
+
+    function puedeGuardarCorregir(c) {
+      return puedeEn('retiros', 'cargar', c?.datos?.unidad_negocio_id)
+    }
+
+    function textoSinCargarCorregir() {
+      return 'Para guardar una corrección también hace falta el permiso para cargar retiros en esta fábrica (se da en Accesos). Podés mirar cómo quedaría, pero no guardarla.'
+    }
+
+    function valorizadaCorregir(c) {
+      return c?.datos?.estado_valorizacion === 'valorizada'
+    }
+
+    // Con precio en cada renglón: valorizada y no de acopio (la base no
+    // revaloriza las de acopio).
+    function conPreciosCorregir(c) {
+      return valorizadaCorregir(c) && c?.datos?.talonario !== 'acopio'
+    }
+
+    // Cajas enteras; kilos y litros hasta 3 decimales.
+    function redondearCorregir(n) {
+      return Math.round(Number(n) * 1000) / 1000
+    }
+
+    function decimalesRenglonCorregir(r) {
+      return r?.insumoId ? decimalesDeUnidad(r.unidad) : 0
+    }
+
+    function claveLotesCorregir(lotes) {
+      return JSON.stringify((lotes ?? []).map(l => [limpio(l.lote).toUpperCase(), numeroONull(l.n)]))
+    }
+
+    // Cómo estaba un renglón al abrir: para el resumen de lo que cambia.
+    function fotoRenglonCorregir(r) {
+      return { presentacionId: r.presentacionId ?? null, marcaId: r.marcaId ?? null, insumoId: r.insumoId ?? null, cantidad: numeroONull(r.cantidad),
+        precio: numeroONull(r.precio), lotes: claveLotesCorregir(r.lotes), motivo: limpio(r.motivo), loteDevuelto: limpio(r.loteDevuelto).toUpperCase(),
+        destino: r.destino === 'stock' ? 'stock' : 'descarte' }
+    }
+
+    // Un renglón del editor desde _orden_items_editables. Lo que salió SIN
+    // STOCK o SIN LOTE no vuelve como lote: queda un lote sin nombre con lo
+    // que falta, así el renglón sigue sumando lo mismo.
+    function renglonCorregirDeItem(it) {
+      const insumo = !!it?.insumo_id
+      const tipo = tipoItem(it)
+      const cantidad = numeroONull(insumo ? it.cantidad : it.cajas)
+      let lotes = []
+      if (tipo !== 'devolucion' && Array.isArray(it?.lotes) && it.lotes.length) {
+        lotes = it.lotes.map(l => ({ clave: ++claveCorregir, lote: limpio(l?.lote), n: numeroONull(insumo ? l?.cantidad : l?.cajas) }))
+        const suma = redondearCorregir(lotes.reduce((s, l) => s + (Number(l.n) || 0), 0))
+        if (cantidad !== null && suma < cantidad) lotes.push({ clave: ++claveCorregir, lote: '', n: redondearCorregir(cantidad - suma) })
+      }
+      const r = {
+        clave: ++claveCorregir, original: it, tipo, insumoId: it?.insumo_id ?? null,
+        presentacionId: insumo ? null : (it?.presentacion_id ?? null), marcaId: insumo ? null : (it?.marca_id ?? null),
+        unidad: it?.unidad ?? null, cantidad, precio: numeroONull(it?.precio),
+        motivo: limpio(it?.motivo), loteDevuelto: limpio(it?.lote_devuelto), destino: it?.destino === 'stock' ? 'stock' : 'descarte',
+        lotes, eligiendo: false, busqueda: '', marcaBusqueda: '',
+      }
+      r.inicial = fotoRenglonCorregir(r)
+      return r
+    }
+
+    function renglonCorregirNuevo() {
+      return { clave: ++claveCorregir, original: null, tipo: 'retiro', insumoId: null, presentacionId: null, marcaId: null, unidad: null,
+        cantidad: null, precio: null, motivo: '', loteDevuelto: '', destino: 'descarte', lotes: [], eligiendo: true, busqueda: '', marcaBusqueda: '', inicial: null }
+    }
+
+    function renglonCorregir(c, clave) {
+      return (c?.renglones ?? []).find(r => String(r.clave) === String(clave)) ?? null
+    }
+
+    // El nombre: del catálogo si lo tiene; si no (un producto apagado), el
+    // que trajo la base.
+    function nombreItemCorregir(c, it) {
+      const enCat = it?.insumo_id ? insumoDe(c?.cat, it.insumo_id) : presentacionRemito(c?.cat, it?.presentacion_id)
+      const deBase = (it?.insumo_id ? [it.insumo] : [it?.producto, it?.presentacion, it?.cono]).map(limpio).filter(Boolean).join(' · ')
+      if (!enCat && deBase) return deBase
+      return nombreRenglonRemito(c?.cat, { presentacionId: it?.presentacion_id ?? null, marcaId: it?.marca_id ?? null, insumoId: it?.insumo_id ?? null })
+    }
+
+    function nombreRenglonCorregir(c, r) {
+      const o = r?.original
+      const mismo = !!o && (o.insumo_id ?? null) === (r.insumoId ?? null) && (o.insumo_id ? true : (o.presentacion_id ?? null) === (r.presentacionId ?? null) && (o.marca_id ?? null) === (r.marcaId ?? null))
+      return nombreItemCorregir(c, mismo ? o : { insumo_id: r?.insumoId ?? null, presentacion_id: r?.presentacionId ?? null, marca_id: r?.marcaId ?? null })
+    }
+
+    function cantidadTextoCorregir(r, n) {
+      return r?.insumoId ? cantidadInsumoHoja(n, r.unidad) : textoCajasFr(n)
+    }
+
+    function prefijoTipoCorregir(tipo) {
+      return tipo === 'devolucion' ? 'Devolución de ' : tipo === 'reposicion' ? 'Reposición de ' : ''
+    }
+
+    // "10 cajas · Cucurucho grande · Caja x 100" (o "Devolución de 2 cajas · …").
+    function descripcionItemCorregir(c, it) {
+      const n = it?.insumo_id ? cantidadInsumoHoja(it.cantidad, it.unidad) : textoCajasFr(it?.cajas)
+      return prefijoTipoCorregir(tipoItem(it)) + n + ' · ' + nombreItemCorregir(c, it)
+    }
+
+    function descripcionRenglonCorregir(c, r) {
+      return prefijoTipoCorregir(r.tipo) + cantidadTextoCorregir(r, r.cantidad) + ' · ' + (nombreRenglonCorregir(c, r) || 'producto sin elegir')
+    }
+
+    // Los lotes de un renglón contra sus cajas (o su cantidad). Sin lotes, la
+    // base elige (de los más viejos, o SIN LOTE en una fábrica sin control).
+    function estadoLotesCorregir(r) {
+      if (r?.tipo === 'devolucion' || !(r?.lotes ?? []).length) return { hay: false }
+      const suma = redondearCorregir(r.lotes.reduce((s, l) => s + (Number(l.n) || 0), 0))
+      const total = numeroONull(r.cantidad) ?? 0
+      const dif = redondearCorregir(total - suma)
+      return { hay: true, suma, total, falta: dif > 0 ? dif : 0, sobra: dif < 0 ? -dif : 0, vacios: r.lotes.some(l => !(Number(l.n) > 0)) }
+    }
+
+    function textoLotesCorregir(r) {
+      const e = estadoLotesCorregir(r)
+      if (!e.hay) return 'Sin lotes: los elige la base (de los más viejos; SIN LOTE en una fábrica sin control de stock).'
+      const suma = r.insumoId ? formatearNumeroAr(e.suma, { decimales: decimalesDeUnidad(r.unidad), minimos: 0 }) : enteroHoja(e.suma)
+      const de = `Lotes: ${suma} de ${cantidadTextoCorregir(r, e.total)}`
+      if (e.falta) return `${de} · faltan repartir ${cantidadTextoCorregir(r, e.falta)}`
+      if (e.sobra) return `${de} · sobran ${cantidadTextoCorregir(r, e.sobra)}`
+      return `${de} · ✓ repartido completo`
+    }
+
+    function quitadosCorregir(c) {
+      return (Array.isArray(c?.datos?.items) ? c.datos.items : []).filter(it => !(c.renglones ?? []).some(r => r.original === it))
+    }
+
+    // Lo que cambió en un renglón que ya estaba, en palabras.
+    function cambiosRenglonCorregir(c, r) {
+      const a = r.inicial
+      if (!a) return []
+      const b = fotoRenglonCorregir(r)
+      const nombre = nombreRenglonCorregir(c, r)
+      const moneda = c?.datos?.moneda || 'ARS'
+      const out = []
+      if (a.presentacionId !== b.presentacionId || a.marcaId !== b.marcaId || a.insumoId !== b.insumoId) out.push(`Cambia ${nombreItemCorregir(c, r.original)} por ${nombre}`)
+      if (a.cantidad !== b.cantidad) {
+        const viejo = r.original?.insumo_id ? cantidadInsumoHoja(a.cantidad, r.original.unidad) : textoCajasFr(a.cantidad)
+        out.push(`${nombre}: ${viejo} → ${cantidadTextoCorregir(r, b.cantidad)}`)
+      }
+      if (a.lotes !== b.lotes) {
+        out.push(`${nombre}: lotes ` + (r.lotes.length ? r.lotes.map(l => `${limpio(l.lote).toUpperCase() || 'sin lote'} (${cantidadTextoCorregir(r, l.n)})`).join(', ') : 'los elige la base'))
+      }
+      if (conPreciosCorregir(c) && r.tipo !== 'reposicion' && a.precio !== b.precio) {
+        out.push(`${nombre}: precio ${importeHoja(a.precio, moneda)} → ${b.precio === null ? 'el anterior o el de la lista' : importeHoja(b.precio, moneda)}`)
+      }
+      if (r.tipo !== 'retiro' && (a.motivo !== b.motivo || a.loteDevuelto !== b.loteDevuelto || a.destino !== b.destino)) {
+        out.push(`${nombre}: ${textoDevolucionItem({ tipo: r.tipo, motivo_devolucion: b.motivo, lote_devuelto: b.loteDevuelto, destino_devuelto: b.destino })}`)
+      }
+      return out
+    }
+
+    function cambiosDatosCorregir(c) {
+      const d = c?.datos ?? {}
+      const out = []
+      if (!valorizadaCorregir(c) && esFechaIso(c.fecha) && c.fecha !== d.fecha) out.push(`Fecha: ${fechaCorta(d.fecha)} → ${fechaCorta(c.fecha)}`)
+      if (limpio(c.transporte) !== limpio(d.transporte)) out.push(`Transporte: ${limpio(d.transporte) || '(sin transporte)'} → ${limpio(c.transporte) || '(sin transporte)'}`)
+      const obs = String(c.observaciones ?? '').trim()
+      if (obs !== String(d.observaciones ?? '').trim()) out.push(obs ? 'Observaciones: ' + obs : 'Se borran las observaciones')
+      return out
+    }
+
+    function hayCambiosCorregir(c) {
+      if (quitadosCorregir(c).length) return true
+      if ((c?.renglones ?? []).some(r => !r.original || JSON.stringify(r.inicial) !== JSON.stringify(fotoRenglonCorregir(r)))) return true
+      return cambiosDatosCorregir(c).length > 0
+    }
+
+    function lineasResumenCorregir(c) {
+      const lineas = quitadosCorregir(c).map(it => 'Se saca: ' + descripcionItemCorregir(c, it))
+      for (const r of c?.renglones ?? []) {
+        if (!r.original) lineas.push('Se agrega: ' + descripcionRenglonCorregir(c, r))
+        else lineas.push(...cambiosRenglonCorregir(c, r))
+      }
+      return lineas.concat(cambiosDatosCorregir(c))
+    }
+
+    function erroresCorregir(c) {
+      const errores = []
+      if (!(c?.renglones ?? []).length) errores.push('La orden tiene que tener al menos un renglón.')
+      ;(c?.renglones ?? []).forEach((r, i) => {
+        const n = `Renglón ${i + 1}: `
+        if (!r.insumoId && !r.presentacionId) { errores.push(n + 'elegí el producto.'); return }
+        const pr = r.insumoId ? null : presentacionRemito(c.cat, r.presentacionId)
+        if (pr?.con_cono && !r.marcaId) errores.push(n + 'elegí el cono.')
+        if (!(Number(r.cantidad) > 0)) errores.push(n + (r.insumoId ? 'poné la cantidad.' : 'poné las cajas.'))
+        const e = estadoLotesCorregir(r)
+        if (e.hay) {
+          if (e.vacios) errores.push(n + (r.insumoId ? 'cada lote necesita su cantidad (o sacalo).' : 'cada lote necesita sus cajas (o sacalo).'))
+          else if (e.falta) errores.push(n + 'faltan repartir ' + cantidadTextoCorregir(r, e.falta) + ' entre los lotes.')
+          else if (e.sobra) errores.push(n + 'los lotes suman ' + cantidadTextoCorregir(r, e.sobra) + ' de más.')
+        }
+        if (r.tipo !== 'retiro' && limpio(r.motivo).length < LARGO_MINIMO_MOTIVO) errores.push(n + (r.tipo === 'reposicion' ? 'poné el motivo de la reposición.' : 'poné el motivo de la devolución.'))
+        if (r.precio !== null && r.precio !== undefined && Number(r.precio) < 0) errores.push(n + 'el precio no puede ser negativo.')
+      })
+      if (!esFechaIso(c?.fecha)) errores.push('Poné la fecha de la orden.')
+      if (limpio(c?.motivo).length < LARGO_MINIMO_MOTIVO) errores.push('Poné el motivo de la corrección.')
+      if (!errores.length && !hayCambiosCorregir(c)) errores.push('No cambiaste nada de la orden.')
+      return errores
+    }
+
+    // El precio con el que va a quedar un renglón, como lo hace la base: el
+    // de la pantalla; si no, el que tenía el mismo producto o insumo (mismo
+    // tipo, primero el mismo cono). null = lo toma de la lista al guardar.
+    function precioEstimadoCorregir(c, r) {
+      if (r.tipo === 'reposicion') return 0
+      if (r.precio !== null && r.precio !== undefined) return Number(r.precio)
+      const viejos = (Array.isArray(c?.datos?.items) ? c.datos.items : []).filter(it => numeroONull(it?.precio) !== null && tipoItem(it) === r.tipo &&
+        (it.presentacion_id ?? null) === (r.presentacionId ?? null) && (it.insumo_id ?? null) === (r.insumoId ?? null))
+      const it = viejos.find(x => (x.marca_id ?? null) === (r.marcaId ?? null)) ?? viejos[0]
+      return it ? Number(it.precio) : null
+    }
+
+    // Una devolución resta (como en valorizar_orden_retiro).
+    function subtotalCorregir(c, r) {
+      const p = precioEstimadoCorregir(c, r)
+      const n = numeroONull(r.cantidad)
+      if (p === null || n === null) return null
+      return Math.round(p * (r.tipo === 'devolucion' ? -n : n) * 100) / 100
+    }
+
+    function totalesCorregir(c) {
+      const antes = numeroONull(c?.datos?.total)
+      const subs = (c?.renglones ?? []).map(r => subtotalCorregir(c, r))
+      const faltan = subs.filter(s => s === null).length
+      const despues = faltan ? null : Math.round(subs.reduce((s, x) => s + x, 0) * 100) / 100
+      return { antes, despues, faltan, diferencia: despues === null || antes === null ? null : Math.round((despues - antes) * 100) / 100 }
+    }
+
+    function textoTotalCorregir(c) {
+      const t = totalesCorregir(c)
+      const m = c?.datos?.moneda || 'ARS'
+      return `Total: ${importeHoja(t.antes, m)} → ${t.despues === null ? 'se completa con la lista al guardar' : importeHoja(t.despues, m) + textoAFavor(t.despues)}`
+    }
+
+    function textoSubtotalCorregir(c, r) {
+      if (r.tipo === 'reposicion') return ''
+      const m = c?.datos?.moneda || 'ARS'
+      if (r.precio === null || r.precio === undefined) {
+        const p = precioEstimadoCorregir(c, r)
+        return p === null ? 'Sin precio: lo toma de la lista al guardar.' : `Sin precio: toma el que tenía (${importeHoja(p, m)}).`
+      }
+      const sub = subtotalCorregir(c, r)
+      return 'Subtotal ' + importeHoja(sub, m) + textoAFavor(sub)
+    }
+
+    // A dónde va la diferencia: la cuenta corriente del cliente o, si el
+    // cliente es otra empresa del grupo, la deuda entre las dos.
+    function textoDiferenciaCorregir(c, t) {
+      const d = c?.datos ?? {}
+      const m = d.moneda || 'ARS'
+      if (t.diferencia === null) return `La diferencia se sabe al guardar: ${t.faltan} ${t.faltan === 1 ? 'renglón toma' : 'renglones toman'} el precio de la lista.`
+      if (t.diferencia === 0) return 'Sin diferencia de plata.'
+      const signo = (t.diferencia > 0 ? '+ ' : '− ') + importeHoja(Math.abs(t.diferencia), m)
+      if (d.entre_empresas) {
+        const recibe = nombreEmpresa(empresaGrupoDe(clienteDe(d.cliente_id))) || 'la otra empresa del grupo'
+        const entrega = nombreEmpresa(d.unidad_negocio_id) || 'esta empresa'
+        return `Diferencia ${signo}: va a la deuda entre empresas (de ${recibe} con ${entrega}), no a la cuenta corriente.`
+      }
+      return `Diferencia ${signo}: va a la cuenta corriente de ${limpio(d.cliente) || 'el cliente'}.`
+    }
+
+    // Un renglón para la base, en el formato de registrar_orden_retiro (el de
+    // la Carga: itemParaBase de modulos/retiros.html), más 'precio' si la
+    // orden se revaloriza. Los lotes SOLO si se repartió; uno sin nombre va
+    // '' (la base lo toma SIN STOCK, o SIN LOTE si no controla el stock).
+    function itemCorregirParaBase(c, r) {
+      const lotes = r.tipo !== 'devolucion' && r.lotes.length
+        ? r.lotes.map(l => r.insumoId ? { lote: limpio(l.lote).toUpperCase(), cantidad: Number(l.n) } : { lote: limpio(l.lote).toUpperCase(), cajas: Number(l.n) })
+        : null
+      let item
+      if (r.insumoId) item = { insumo_id: r.insumoId, cantidad: Number(r.cantidad) }
+      else {
+        const pr = presentacionRemito(c?.cat, r.presentacionId)
+        item = { presentacion_id: r.presentacionId, marca_id: pr && !pr.con_cono ? null : (r.marcaId ?? null), cajas: Number(r.cantidad) }
+      }
+      if (lotes) item.lotes = lotes
+      if (r.tipo !== 'retiro') {
+        item.tipo = r.tipo
+        item.motivo = limpio(r.motivo)
+        item.lote_devuelto = limpio(r.loteDevuelto).toUpperCase() || null
+        item.destino = r.destino === 'stock' ? 'stock' : 'descarte'
+      }
+      if (conPreciosCorregir(c) && r.tipo !== 'reposicion' && r.precio !== null && r.precio !== undefined) item.precio = Number(r.precio)
+      return item
+    }
+
+    function parametrosCorregir(c) {
+      const d = c.datos
+      const transporte = limpio(c.transporte)
+      const obs = String(c.observaciones ?? '').trim()
+      return {
+        p_orden_id: d.orden_id ?? estado.orden?.orden?.id,
+        p_items: c.renglones.map(r => itemCorregirParaBase(c, r)),
+        p_motivo: limpio(c.motivo),
+        p_fecha: valorizadaCorregir(c) || c.fecha === d.fecha ? null : c.fecha,
+        p_transporte: transporte === limpio(d.transporte) ? null : transporte,
+        p_observaciones: obs === String(d.observaciones ?? '').trim() ? null : obs,
+      }
+    }
+
+    // Las cajas de la fila del listado, como las cuenta leerOrdenes.
+    function conteosFilaOrden(items) {
+      let cajas = 0, sueltas = 0, insumos = 0, devueltas = 0, hayCajas = false
+      for (const it of Array.isArray(items) ? items : []) {
+        if (it.insumo_id) insumos++
+        else if (esPorUnidadHoja(it)) sueltas += cajasQueSalen(it)
+        else { cajas += cajasQueSalen(it); hayCajas = true }
+        if (esItemDev(it)) devueltas += Number(it.cajas) || 0
+      }
+      return { cajas: hayCajas ? cajas : (insumos || sueltas ? 0 : null), sueltas, insumos, devueltas }
+    }
+
+    async function abrirCorregir() {
+      const d = estado.orden
+      const o = d?.orden
+      if (!puedeCorregirOrden(o) || d.valorizar || d.anular || d.corregir || estado.trabajando) return
+      const turno = ++turnoCorregir
+      const c = { cargando: true, errorLeer: null, datos: null, noSePuede: null, cat: null, renglones: [], fecha: '', transporte: '', observaciones: '',
+        motivo: '', paso: 'editar', errores: [], errorGuardar: null, guardando: false }
+      d.corregir = c
+      d.faltantesCorreccion = null
+      pintarOrden()
+      try {
+        const { data, error } = await supabase.rpc('orden_para_corregir', { p_orden_id: o.id })
+        if (error) throw error
+        if (!data || typeof data !== 'object') throw new Error('La base no devolvió la orden.')
+        const cat = estado.catalogoEmpresa === o.unidad_negocio_id && estado.catalogo ? estado.catalogo : await leerCatalogo(o.unidad_negocio_id)
+        if (turno !== turnoCorregir || estado.orden !== d || d.corregir !== c) return
+        c.datos = data
+        c.cat = cat
+        c.noSePuede = limpio(data.no_se_puede) || null
+        c.renglones = (Array.isArray(data.items) ? data.items : []).map(renglonCorregirDeItem)
+        c.fecha = esFechaIso(data.fecha) ? data.fecha : (o.fecha ?? '')
+        c.transporte = data.transporte ?? ''
+        c.observaciones = data.observaciones ?? ''
+      } catch (err) {
+        if (turno !== turnoCorregir || estado.orden !== d || d.corregir !== c) return
+        console.error('No se pudo leer la orden para corregir:', err)
+        // Los mensajes de la base van tal cual ("No tenés permiso…").
+        c.errorLeer = err?.message || 'No se pudo leer la orden para corregirla. Probá de nuevo.'
+      }
+      c.cargando = false
+      pintarOrden()
+    }
+
+    function revisarCorregir() {
+      const c = estado.orden?.corregir
+      if (!c || c.cargando || c.noSePuede || c.errorLeer || c.paso !== 'editar') return
+      c.errores = erroresCorregir(c)
+      c.errorGuardar = null
+      if (!c.errores.length) c.paso = 'resumen'
+      pintarOrden()
+    }
+
+    function volverAEditarCorregir() {
+      const c = estado.orden?.corregir
+      if (!c || c.guardando) return
+      c.paso = 'editar'
+      c.errorGuardar = null
+      pintarOrden()
+    }
+
+    function cancelarCorregir() {
+      const d = estado.orden
+      if (!d?.corregir || d.corregir.guardando) return
+      turnoCorregir++
+      d.corregir = null
+      pintarOrden()
+    }
+
+    // UNA llamada (doble toque: estado.trabajando). Después relee la orden y
+    // pone la fila del listado al día.
+    async function guardarCorregir() {
+      const d = estado.orden
+      const c = d?.corregir
+      if (!c || c.paso !== 'resumen' || c.guardando || estado.trabajando || !puedeGuardarCorregir(c)) return
+      const errores = erroresCorregir(c)
+      if (errores.length) { c.errores = errores; c.paso = 'editar'; pintarOrden(); return }
+      const id = d.orden.id
+      const params = parametrosCorregir(c)
+      estado.trabajando = true
+      c.guardando = true
+      c.errorGuardar = null
+      pintarOrden()
+      try {
+        const { data, error } = await supabase.rpc('corregir_orden_retiro', params)
+        if (error) throw error
+        const moneda = c.datos.moneda || 'ARS'
+        const faltantes = Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : []
+        mostrarExito(`Orden ${data?.codigo || d.orden.codigo} corregida.` +
+          (data?.valorizada ? ` Total ${importeHoja(data.total_antes, moneda)} → ${importeHoja(data.total_despues, moneda)}.` : ''))
+        estado.trabajando = false
+        actualizarFilaOrden(id, { ...(data?.valorizada ? { total: data.total_despues ?? d.orden.total } : {}), ...(params.p_fecha ? { fecha: params.p_fecha } : {}) })
+        await abrirOrden(id)
+        if (estado.orden?.orden?.id === id) {
+          actualizarFilaOrden(id, { ...estado.orden.orden, ...conteosFilaOrden(estado.orden.items) })
+          if (faltantes.length) { estado.orden.faltantesCorreccion = faltantes; pintarOrden() }
+        }
+      } catch (err) {
+        console.error('No se pudo corregir la orden:', err)
+        // Los mensajes de corregir_orden_retiro ya vienen para una persona
+        // ("Faltan precios…", "Poné el motivo de la corrección."): tal cual.
+        c.errorGuardar = err?.message || 'No se pudo corregir la orden. Probá de nuevo.'
+        c.guardando = false
+        estado.trabajando = false
+        pintarOrden()
+      }
+    }
+
+    // Lo que no estaba en stock al rehacer la orden (stock_insuficiente),
+    // como en la Carga: "Producto · faltaban 2 cajas".
+    function textoFaltanteCorreccion(x) {
+      if (x?.insumo) return limpio(x.insumo) + ' · faltaban ' + cantidadInsumoHoja(x.faltaron, x.unidad)
+      return ([x?.producto, x?.presentacion].map(limpio).filter(Boolean).join(' · ') || 'Producto') + ' · faltaban ' + textoCajasFr(x?.faltaron)
+    }
+
+    function htmlFaltantesCorreccion(d) {
+      const l = Array.isArray(d?.faltantesCorreccion) ? d.faltantesCorreccion : []
+      if (!l.length) return ''
+      return '<div class="ad-aviso ad-aviso--grave" id="ad-co-faltantes" role="alert"><p class="ad-co-faltantes__titulo">Lo que no estaba en stock</p><ul>' +
+        l.map(x => '<li>' + esc(textoFaltanteCorreccion(x)) + '</li>').join('') +
+        '</ul><p>Queda para revisar en «Retiros por revisar».</p></div>'
+    }
+
+    // El historial (la más nueva primero). null = no se pudo leer: no se muestra.
+    async function leerCorreccionesDeOrden(o) {
+      try {
+        const { data, error } = await supabase.from('orden_correcciones')
+          .select('corregida_en, corregida_por, motivo, total_antes:antes->>total, total_despues:despues->>total')
+          .eq('orden_retiro_id', o.id).order('corregida_en', { ascending: false })
+        if (error) throw error
+        return Array.isArray(data) ? data : []
+      } catch (err) {
+        console.error('No se pudieron leer las correcciones de la orden:', err)
+        return null
+      }
+    }
+
+    function htmlCorreccionesOrden(d) {
+      const l = Array.isArray(d?.correcciones) ? d.correcciones : []
+      if (!l.length) return ''
+      const m = d.orden?.moneda || 'ARS'
+      const titulo = 'Corregida ' + l.length + (l.length === 1 ? ' vez' : ' veces')
+      return `<details class="ad-correcciones" id="ad-correcciones-orden"><summary>${esc(titulo)}</summary><ul class="ad-correcciones__lista">` +
+        l.map(k => {
+          const quien = estado.nombres.get(k?.corregida_por) ?? '—'
+          const antes = numeroONull(k?.total_antes)
+          const despues = numeroONull(k?.total_despues)
+          const plata = antes !== null || despues !== null ? `Total ${importeHoja(antes, m)} → ${importeHoja(despues, m)}` : ''
+          return `<li><span class="ad-correcciones__cuando">${esc(fechaHoraHoja(k?.corregida_en) + ' · ' + quien)}</span>` +
+            `<span class="ad-correcciones__motivo">${esc(limpio(k?.motivo) || '—')}</span>` +
+            (plata ? `<span class="ad-correcciones__plata">${esc(plata)}</span>` : '') + '</li>'
+        }).join('') + '</ul></details>'
+    }
+
+    // ── El editor ─────────────────────────────────────────────────────────
+
+    function htmlCorregirOrden(d) {
+      const c = d.corregir
+      const cab = '<h2 class="ad-subtitulo">Corregir la orden</h2>'
+      if (c.cargando) return `<div class="ad-panel ad-co" id="ad-co">${cab}<p class="ad-texto-suave">Leyendo la orden…</p></div>`
+      if (c.errorLeer || c.noSePuede) {
+        return `<div class="ad-panel ad-co" id="ad-co">${cab}<div class="ad-aviso ad-aviso--grave" id="ad-co-no-se-puede" role="alert">` +
+          `${esc(c.errorLeer || 'No se puede corregir: ' + c.noSePuede)}</div>` +
+          '<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" data-co-accion="cancelar">Cerrar</button></div></div>' +
+          htmlDetalleOrden(d, estado.catalogo)
+      }
+      if (c.paso === 'resumen') return htmlResumenCorregir(c)
+      const valorizada = valorizadaCorregir(c)
+      const conPrecios = conPreciosCorregir(c)
+      const avisos = []
+      if (!puedeGuardarCorregir(c)) avisos.push(`<div class="ad-aviso" id="ad-co-sin-cargar">${esc(textoSinCargarCorregir())}</div>`)
+      if (valorizada && !conPrecios) avisos.push('<div class="ad-aviso">Es una orden de acopio: al corregirla no se tocan los precios.</div>')
+      if (conPrecios) avisos.push('<p class="ad-texto-suave">Está valorizada: cada renglón tiene su precio. Un renglón sin precio toma el que tenía ese producto en la orden o, si no, el de la lista.</p>')
+      const renglones = c.renglones.map((r, i) => htmlRenglonCorregir(c, r, i)).join('')
+      const fecha = '<div class="ad-campo"><label for="ad-co-fecha">Fecha</label>' +
+        `<input type="date" class="ad-input" id="ad-co-fecha" data-co-campo="fecha" value="${esc(c.fecha)}" max="${esc(hoyArgentina())}"${valorizada ? ' disabled aria-describedby="ad-co-fecha-ayuda"' : ''}>` +
+        (valorizada ? '<span class="ad-campo__ayuda" id="ad-co-fecha-ayuda">La orden ya está valorizada: no se le puede cambiar la fecha.</span>' : '') + '</div>'
+      const campos = `<div class="ad-fila-campos">${fecha}` +
+        `<div class="ad-campo"><label for="ad-co-transporte">Transporte</label><input type="text" class="ad-input" id="ad-co-transporte" data-co-campo="transporte" value="${esc(c.transporte)}" maxlength="120" autocomplete="off"></div></div>` +
+        `<div class="ad-campo"><label for="ad-co-observaciones">Observaciones</label><textarea class="ad-textarea" id="ad-co-observaciones" data-co-campo="observaciones" maxlength="500">${esc(c.observaciones)}</textarea></div>` +
+        `<div class="ad-campo"><label for="ad-co-motivo">Motivo de la corrección (obligatorio)</label><textarea class="ad-textarea" id="ad-co-motivo" data-co-campo="motivo" maxlength="300">${esc(c.motivo)}</textarea></div>`
+      const total = conPrecios ? `<p class="ad-total" id="ad-co-total">${esc(textoTotalCorregir(c))}</p>` : ''
+      const errores = c.errores?.length ? `<ul class="ad-error-pegado ad-co-errores" id="ad-co-errores" role="alert">${c.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''
+      return `<div class="ad-panel ad-co" id="ad-co">${cab}${avisos.join('')}` +
+        `<div class="ad-co-renglones">${renglones || '<div class="ad-vacio">Sin renglones: agregá al menos uno.</div>'}</div>` +
+        '<button type="button" class="ad-btn ad-btn--suave ad-co-agregar" data-co-accion="agregar">+ Agregar renglón</button>' + total + campos + errores +
+        '<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-co-accion="revisar" id="ad-co-revisar">Revisar los cambios</button>' +
+        '<button type="button" class="ad-btn ad-btn--suave" data-co-accion="cancelar">Cancelar</button></div></div>'
+    }
+
+    function htmlRenglonCorregir(c, r, i) {
+      const k = esc(r.clave)
+      const dev = r.tipo !== 'retiro'
+      const sello = dev ? `<span class="ad-sello ad-sello--dev">${r.tipo === 'reposicion' ? 'Reposición' : 'Devolución'}</span>` : ''
+      const cab = `<div class="ad-co-renglon__cabeza"><span class="ad-co-renglon__num">${esc('Renglón ' + (i + 1))}</span>${sello}` +
+        `<button type="button" class="ad-link ad-co-renglon__sacar" data-co-quitar="${k}">Sacar</button></div>`
+      const rotulo = r.insumoId ? 'Cantidad' + (unidadHoja(r.unidad) ? ' (' + unidadHoja(r.unidad) + ')' : '') : r.tipo === 'devolucion' ? 'Cajas que trae' : 'Cajas'
+      const cant = `<div class="ad-campo"><label for="ad-co-cant-${k}">${esc(rotulo)}</label><input type="text" class="ad-input" id="ad-co-cant-${k}" data-co-cantidad="${k}" autocomplete="off"></div>`
+      let precio = ''
+      if (conPreciosCorregir(c)) {
+        precio = r.tipo === 'reposicion'
+          ? '<div class="ad-campo"><span class="ad-campo__rotulo">Precio</span><span class="ad-texto-suave">Se repone a $ 0</span></div>'
+          : `<div class="ad-campo"><label for="ad-co-precio-${k}">${esc('Precio x ' + (r.insumoId ? (unidadHoja(r.unidad) || 'unidad') : 'caja'))}</label>` +
+            `<input type="text" class="ad-input" id="ad-co-precio-${k}" data-co-precio="${k}" autocomplete="off" placeholder="el anterior o el de la lista">` +
+            `<span class="ad-campo__ayuda" id="ad-co-sub-${k}">${esc(textoSubtotalCorregir(c, r))}</span></div>`
+      }
+      return `<div class="ad-co-renglon${dev ? ' ad-co-renglon--dev' : ''}" data-co-renglon="${k}">${cab}${htmlProductoCorregir(c, r)}` +
+        `<div class="ad-fila-campos">${cant}${precio}</div>${dev ? htmlDevCorregir(r) : ''}${r.tipo === 'devolucion' ? '' : htmlLotesCorregir(r)}</div>`
+    }
+
+    // El MISMO catálogo de "Nuevo acopio" y de la Carga sin control
+    // (gruposRemito: SIN CONO, CON CONO y, al buscar, los insumos). Una
+    // devolución o reposición es solo de producto terminado.
+    function htmlOpcionesCorregir(c, r) {
+      if (!c.cat) return '<p class="ad-texto-suave">Cargando los productos…</p>'
+      const grupos = gruposRemito(c.cat, r.busqueda, CATEGORIAS_PRODUCTO).filter(g => g.tipo !== 'insumos' || r.tipo === 'retiro')
+      const q = limpio(r.busqueda)
+      if (!grupos.length) return `<p class="ad-texto-suave">${esc(q ? 'Nada coincide con «' + q + '».' : 'No hay productos activos en esta fábrica.')}</p>`
+      return (r.tipo === 'retiro' && !q ? '<p class="ad-texto-suave">Para un insumo, escribí su nombre.</p>' : '') +
+        grupos.map(g => `<div class="ad-rm-grupo"><p class="ad-rm-grupo__titulo">${esc(g.titulo)}</p>` +
+          g.lista.map(o => `<button type="button" class="ad-rm-opcion" data-co-elegir="${esc(r.clave)}" ${o.insumoId ? `data-ins="${esc(o.insumoId)}"` : `data-pres="${esc(o.presentacionId)}"`}>${esc(o.nombre)}` +
+            `${o.conCono ? '<span class="ad-rm-opcion__detalle">elegí el cono</span>' : ''}</button>`).join('') + '</div>').join('')
+    }
+
+    function htmlMarcasCorregir(c, r) {
+      const q = normalizar(r.marcaBusqueda)
+      const todas = (c.cat?.marcas ?? []).filter(m => !q || normalizar(m.nombre).includes(q))
+      const lista = [...todas.filter(m => m.id === r.marcaId), ...todas.filter(m => m.id !== r.marcaId)].slice(0, 12)
+      if (!lista.length) return q ? `<span class="ad-texto-suave">${esc('Ningún cono coincide con «' + limpio(r.marcaBusqueda) + '».')}</span>` : ''
+      return lista.map(m => `<button type="button" class="ad-rm-opcion ad-rm-opcion--cono" data-co-marca="${esc(r.clave)}" data-marca="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+    }
+
+    function htmlProductoCorregir(c, r) {
+      const k = esc(r.clave)
+      if (r.eligiendo || (!r.presentacionId && !r.insumoId)) {
+        return `<div class="ad-campo ad-rm-selector"><label class="ad-campo__rotulo" for="ad-co-buscar-${k}">${r.tipo === 'retiro' ? 'Producto o insumo' : 'Producto'}</label>` +
+          `<input type="search" class="ad-input" id="ad-co-buscar-${k}" data-co-buscar="${k}" value="${esc(r.busqueda)}" autocomplete="off" maxlength="60" placeholder="Buscar">` +
+          `<div class="ad-rm-opciones" role="group" aria-label="Producto" id="ad-co-opciones-${k}">${htmlOpcionesCorregir(c, r)}</div>` +
+          (r.presentacionId || r.insumoId ? `<button type="button" class="ad-link" data-co-no-cambiar="${k}">${esc('Dejar ' + nombreRenglonCorregir(c, r))}</button>` : '') + '</div>'
+      }
+      const pr = r.insumoId ? null : presentacionRemito(c.cat, r.presentacionId)
+      return `<div class="ad-campo"><span class="ad-campo__rotulo">${r.insumoId ? 'Insumo' : 'Producto'}</span>` +
+        `<div class="ad-rm-elegido"><span class="ad-rm-elegido__nombre">${esc(nombreRenglonCorregir(c, r))}</span>` +
+        `<button type="button" class="ad-link" data-co-cambiar="${k}">Cambiar</button></div></div>` +
+        (pr?.con_cono ? `<div class="ad-campo"><label for="ad-co-cono-${k}">Cono</label>` +
+          `<input type="search" class="ad-input" id="ad-co-cono-${k}" data-co-cono-buscar="${k}" value="${esc(r.marcaBusqueda)}" autocomplete="off" maxlength="60" placeholder="Buscar el cono…">` +
+          `<div class="ad-rm-opciones ad-rm-opciones--conos" id="ad-co-marcas-${k}">${htmlMarcasCorregir(c, r)}</div></div>` : '')
+    }
+
+    // Devolución o reposición: el motivo, el lote que trajo y qué se hace
+    // con las cajas (lo mismo que pide registrar_orden_retiro).
+    function htmlDevCorregir(r) {
+      const k = esc(r.clave)
+      return '<div class="ad-fila-campos">' +
+        `<div class="ad-campo"><label for="ad-co-motivo-dev-${k}">Motivo</label><input type="text" class="ad-input" id="ad-co-motivo-dev-${k}" data-co-motivo-dev="${k}" value="${esc(r.motivo)}" maxlength="200" autocomplete="off"></div>` +
+        `<div class="ad-campo"><label for="ad-co-lote-dev-${k}">Lote que trajo</label><input type="text" class="ad-input" id="ad-co-lote-dev-${k}" data-co-lote-dev="${k}" value="${esc(r.loteDevuelto)}" maxlength="40" autocomplete="off"></div>` +
+        `<div class="ad-campo"><label for="ad-co-destino-${k}">Las cajas que trae</label><select class="ad-select" id="ad-co-destino-${k}" data-co-destino="${k}">` +
+        `<option value="descarte"${r.destino !== 'stock' ? ' selected' : ''}>Se descartan</option><option value="stock"${r.destino === 'stock' ? ' selected' : ''}>Vuelven al stock</option></select></div></div>`
+    }
+
+    function htmlLotesCorregir(r) {
+      const k = esc(r.clave)
+      const e = estadoLotesCorregir(r)
+      const filas = r.lotes.map(l => '<div class="ad-co-lote">' +
+        `<input type="text" class="ad-input ad-co-lote__nombre" data-co-lote="${k}" data-k="${esc(l.clave)}" value="${esc(l.lote)}" maxlength="40" autocomplete="off" placeholder="Sin lote" aria-label="Lote">` +
+        `<input type="text" class="ad-input ad-co-lote__n" data-co-lote-n="${k}" data-k="${esc(l.clave)}" autocomplete="off" aria-label="${r.insumoId ? 'Cantidad del lote' : 'Cajas del lote'}">` +
+        `<button type="button" class="ad-btn ad-btn--suave ad-co-lote__sacar" data-co-lote-quitar="${k}" data-k="${esc(l.clave)}" aria-label="Sacar el lote">✕</button></div>`).join('')
+      const mal = e.hay && !!(e.falta || e.sobra || e.vacios)
+      return `<div class="ad-co-lotes">${filas}<p class="ad-co-lotes__estado${mal ? ' ad-co-lotes__estado--falta' : ''}" id="ad-co-lotes-${k}">${esc(textoLotesCorregir(r))}</p>` +
+        `<button type="button" class="ad-link" data-co-lote-agregar="${k}">+ Agregar lote</button></div>`
+    }
+
+    function htmlResumenCorregir(c) {
+      const t = conPreciosCorregir(c) ? totalesCorregir(c) : null
+      const m = c.datos?.moneda || 'ARS'
+      const plata = t
+        ? `<p class="ad-total" id="ad-co-resumen-total">${esc('Total ' + importeHoja(t.antes, m) + ' → ' + (t.despues === null ? 'se completa con la lista' : importeHoja(t.despues, m)) + ' (estimado con los precios de la pantalla)')}</p>` +
+          `<p class="ad-co-diferencia" id="ad-co-diferencia">${esc(textoDiferenciaCorregir(c, t))}</p>`
+        : ''
+      const puede = puedeGuardarCorregir(c)
+      return '<div class="ad-panel ad-co" id="ad-co"><h2 class="ad-subtitulo">Antes de guardar</h2>' +
+        `<ul class="ad-co-resumen" id="ad-co-resumen">${lineasResumenCorregir(c).map(l => `<li>${esc(l)}</li>`).join('')}</ul>${plata}` +
+        `<p class="ad-texto-suave">${esc('Motivo: ' + limpio(c.motivo))}</p>` +
+        (puede ? '' : `<div class="ad-aviso" id="ad-co-sin-cargar">${esc(textoSinCargarCorregir())}</div>`) +
+        (c.errorGuardar ? `<p class="ad-error-pegado" id="ad-co-error" role="alert">${esc(c.errorGuardar)}</p>` : '') +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-co-accion="guardar" id="ad-co-guardar"${c.guardando || !puede ? ' disabled' : ''}>${c.guardando ? 'Guardando…' : 'Guardar la corrección'}</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" data-co-accion="volver"${c.guardando ? ' disabled' : ''}>Volver a editar</button></div></div>`
+    }
+
+    // Los números se ponen DESPUÉS de dibujar (nunca en un value="…").
+    function enlazarCorregir(cuerpo) {
+      const c = estado.orden?.corregir
+      if (!c || !cuerpo) return
+      for (const input of cuerpo.querySelectorAll('[data-co-cantidad]')) {
+        const r = renglonCorregir(c, input.dataset.coCantidad)
+        if (!r) continue
+        enlazarCampoNumero(input, { decimales: decimalesRenglonCorregir(r) })
+        ponerNumero(input, r.cantidad)
+      }
+      for (const input of cuerpo.querySelectorAll('[data-co-precio]')) {
+        const r = renglonCorregir(c, input.dataset.coPrecio)
+        if (!r) continue
+        enlazarCampoNumero(input, { decimales: DECIMALES_PRECIO })
+        ponerNumero(input, r.precio)
+      }
+      for (const input of cuerpo.querySelectorAll('[data-co-lote-n]')) {
+        const r = renglonCorregir(c, input.dataset.coLoteN)
+        const l = r?.lotes.find(x => String(x.clave) === String(input.dataset.k))
+        if (!l) continue
+        enlazarCampoNumero(input, { decimales: decimalesRenglonCorregir(r) })
+        ponerNumero(input, l.n)
+      }
+    }
+
+    function enfocarCorregir(selector) {
+      const el = document.querySelector(selector)
+      if (el?.focus) el.focus()
+    }
+
+    function agregarRenglonCorregir() {
+      const c = estado.orden?.corregir
+      if (!c || c.paso !== 'editar' || c.cargando || c.noSePuede || c.errorLeer) return
+      const r = renglonCorregirNuevo()
+      c.renglones.push(r)
+      c.errores = []
+      pintarOrden()
+      enfocarCorregir(`#ad-co-buscar-${r.clave}`)
+    }
+
+    function quitarRenglonCorregir(clave) {
+      const c = estado.orden?.corregir
+      if (!c) return
+      c.renglones = c.renglones.filter(r => String(r.clave) !== String(clave))
+      c.errores = []
+      pintarOrden()
+    }
+
+    function cambiarProductoCorregir(clave, abrir) {
+      const r = renglonCorregir(estado.orden?.corregir, clave)
+      if (!r) return
+      r.eligiendo = !!abrir
+      r.busqueda = ''
+      pintarOrden()
+      if (abrir) enfocarCorregir(`#ad-co-buscar-${r.clave}`)
+    }
+
+    // Otro producto u otro insumo: los lotes eran del anterior y se sacan;
+    // de producto a insumo (o al revés) también la cantidad.
+    function elegirProductoCorregir(clave, { presentacionId = null, insumoId = null } = {}) {
+      const c = estado.orden?.corregir
+      const r = renglonCorregir(c, clave)
+      if (!r) return
+      if (insumoId) {
+        const ins = insumoDe(c.cat, insumoId)
+        if (!ins || r.tipo !== 'retiro') return
+        if (!r.insumoId || (ins.unidad_medida ?? null) !== (r.unidad ?? null)) r.cantidad = null
+        if (r.insumoId !== ins.id) r.lotes = []
+        r.insumoId = ins.id
+        r.presentacionId = null
+        r.marcaId = null
+        r.unidad = ins.unidad_medida ?? null
+      } else {
+        const pr = presentacionRemito(c.cat, presentacionId)
+        if (!pr) return
+        if (r.insumoId) r.cantidad = null
+        if (r.presentacionId !== pr.id) r.lotes = []
+        r.insumoId = null
+        r.unidad = null
+        r.presentacionId = pr.id
+        if (!pr.con_cono) r.marcaId = null
+      }
+      r.eligiendo = false
+      r.busqueda = ''
+      c.errores = []
+      pintarOrden()
+    }
+
+    function elegirMarcaCorregir(clave, marcaId) {
+      const c = estado.orden?.corregir
+      const r = renglonCorregir(c, clave)
+      if (!r || !(c.cat?.marcas ?? []).some(m => m.id === marcaId)) return
+      if (r.marcaId !== marcaId) r.lotes = []
+      r.marcaId = marcaId
+      r.marcaBusqueda = ''
+      pintarOrden()
+    }
+
+    // El primer lote se lleva todo el renglón; los siguientes, lo que falta.
+    function agregarLoteCorregir(clave) {
+      const r = renglonCorregir(estado.orden?.corregir, clave)
+      if (!r || r.tipo === 'devolucion') return
+      const e = estadoLotesCorregir(r)
+      const l = { clave: ++claveCorregir, lote: '', n: r.lotes.length ? (e.falta || null) : numeroONull(r.cantidad) }
+      r.lotes.push(l)
+      pintarOrden()
+      enfocarCorregir(`[data-co-lote="${r.clave}"][data-k="${l.clave}"]`)
+    }
+
+    function quitarLoteCorregir(clave, k) {
+      const r = renglonCorregir(estado.orden?.corregir, clave)
+      if (!r) return
+      r.lotes = r.lotes.filter(l => String(l.clave) !== String(k))
+      pintarOrden()
+    }
+
+    function accionCorregir(a) {
+      if (a === 'agregar') agregarRenglonCorregir()
+      else if (a === 'revisar') revisarCorregir()
+      else if (a === 'volver') volverAEditarCorregir()
+      else if (a === 'guardar') guardarCorregir()
+      else if (a === 'cancelar') cancelarCorregir()
+    }
+
+    // true si el toque era del editor.
+    function alTocarCorregir(e) {
+      const b = e?.target?.closest?.('button')
+      if (!b || b.disabled || !estado.orden?.corregir) return false
+      const ds = b.dataset
+      if (ds.coAccion !== undefined) accionCorregir(ds.coAccion)
+      else if (ds.coQuitar !== undefined) quitarRenglonCorregir(ds.coQuitar)
+      else if (ds.coCambiar !== undefined) cambiarProductoCorregir(ds.coCambiar, true)
+      else if (ds.coNoCambiar !== undefined) cambiarProductoCorregir(ds.coNoCambiar, false)
+      else if (ds.coElegir !== undefined) elegirProductoCorregir(ds.coElegir, { presentacionId: ds.pres ?? null, insumoId: ds.ins ?? null })
+      else if (ds.coMarca !== undefined) elegirMarcaCorregir(ds.coMarca, ds.marca)
+      else if (ds.coLoteAgregar !== undefined) agregarLoteCorregir(ds.coLoteAgregar)
+      else if (ds.coLoteQuitar !== undefined) quitarLoteCorregir(ds.coLoteQuitar, ds.k)
+      else return false
+      return true
+    }
+
+    // Lo que se escribe no redibuja (el foco no se pierde): solo los textos
+    // que dependen de eso (los lotes, el subtotal, el total, el buscador).
+    function repintarCuentasCorregir(c, r) {
+      const est = document.getElementById('ad-co-lotes-' + r.clave)
+      if (est) {
+        const e = estadoLotesCorregir(r)
+        est.textContent = textoLotesCorregir(r)
+        est.classList.toggle('ad-co-lotes__estado--falta', e.hay && !!(e.falta || e.sobra || e.vacios))
+      }
+      const sub = document.getElementById('ad-co-sub-' + r.clave)
+      if (sub) sub.textContent = textoSubtotalCorregir(c, r)
+      const tot = document.getElementById('ad-co-total')
+      if (tot) tot.textContent = textoTotalCorregir(c)
+    }
+
+    function alEscribirCorregir(e) {
+      const t = e?.target
+      const c = estado.orden?.corregir
+      if (!t?.dataset || !c || c.paso !== 'editar') return
+      const ds = t.dataset
+      if (ds.coCampo !== undefined) {
+        if (!['fecha', 'transporte', 'observaciones', 'motivo'].includes(ds.coCampo)) return
+        if (ds.coCampo === 'fecha' && valorizadaCorregir(c)) return
+        c[ds.coCampo] = String(t.value ?? '')
+        return
+      }
+      const r = renglonCorregir(c, ds.coBuscar ?? ds.coConoBuscar ?? ds.coCantidad ?? ds.coPrecio ?? ds.coLote ?? ds.coLoteN ?? ds.coMotivoDev ?? ds.coLoteDev ?? ds.coDestino)
+      if (!r) return
+      if (ds.coBuscar !== undefined) {
+        r.busqueda = String(t.value ?? '')
+        const el = document.getElementById('ad-co-opciones-' + r.clave)
+        if (el) el.innerHTML = htmlOpcionesCorregir(c, r)
+      } else if (ds.coConoBuscar !== undefined) {
+        r.marcaBusqueda = String(t.value ?? '')
+        const el = document.getElementById('ad-co-marcas-' + r.clave)
+        if (el) el.innerHTML = htmlMarcasCorregir(c, r)
+      } else if (ds.coCantidad !== undefined) {
+        r.cantidad = leerCampoNumero(t)
+        repintarCuentasCorregir(c, r)
+      } else if (ds.coPrecio !== undefined) {
+        r.precio = leerCampoNumero(t)
+        repintarCuentasCorregir(c, r)
+      } else if (ds.coLote !== undefined || ds.coLoteN !== undefined) {
+        const l = r.lotes.find(x => String(x.clave) === String(ds.k))
+        if (!l) return
+        if (ds.coLote !== undefined) l.lote = String(t.value ?? '')
+        else { l.n = leerCampoNumero(t); repintarCuentasCorregir(c, r) }
+      } else if (ds.coMotivoDev !== undefined) r.motivo = String(t.value ?? '')
+      else if (ds.coLoteDev !== undefined) r.loteDevuelto = String(t.value ?? '')
+      else if (ds.coDestino !== undefined) r.destino = t.value === 'stock' ? 'stock' : 'descarte'
     }
 
     // ── Imprimir y enviar, CON precios ─────────────────────────────────────
@@ -4513,8 +5376,10 @@
     // Lo que importa del listado de una orden abierta: así su fila queda al
     // día sin releer la lista (28/10/2026: después de valorizar decía
     // "sin valorizar" hasta recargar la página).
+    // Corregir la orden (29/10/2026) cambia también la fecha, el transporte y
+    // las cajas de la fila (conteosFilaOrden).
     const CAMPOS_FILA_ORDEN = ['estado', 'estado_valorizacion', 'total', 'moneda', 'cliente_id', 'valorizada_en', 'anulada_motivo', 'anulada_en',
-      'comision_modo', 'comision_importe', 'division_pct_a', 'numero_remito', 'talonario']
+      'comision_modo', 'comision_importe', 'division_pct_a', 'numero_remito', 'talonario', 'fecha', 'transporte', 'cajas', 'sueltas', 'insumos', 'devueltas']
 
     function actualizarFilaOrden(id, cambios) {
       if (!Array.isArray(estado.ordenes)) return
@@ -4544,7 +5409,8 @@
     function sincronizarFacturar() {
       const d = estado.orden
       const o = d?.orden
-      const va = !!o && !d.error && !d.valorizar && puedeFacturar(o)
+      // Mientras se corrige la orden (29/10/2026), tampoco: es otro formulario.
+      const va = !!o && !d.error && !d.valorizar && !d.corregir && puedeFacturar(o)
       const fc = estado.facturar
       if (!va) {
         if (fc && fc.ordenId !== o?.id) cerrarFacturar()
@@ -13757,6 +14623,7 @@
       document.getElementById('ad-acopio-cuerpo').addEventListener('input', (e) => alEscribirAcopio(e))
       document.getElementById('ad-btn-valorizar').addEventListener('click', () => abrirValorizar())
       document.getElementById('ad-btn-corregir-valor').addEventListener('click', () => abrirValorizar())
+      document.getElementById('ad-btn-corregir-orden').addEventListener('click', () => abrirCorregir())
       document.getElementById('ad-btn-imprimir').addEventListener('click', () => imprimirOrden())
       document.getElementById('ad-btn-enviar').addEventListener('click', () => enviarOrdenAd())
       document.getElementById('ad-btn-anular').addEventListener('click', () => pedirAnular())
@@ -13787,9 +14654,18 @@
       cuerpo.addEventListener('input', (e) => {
         const t = e.target
         if (t.dataset?.precio !== undefined) cambiarPrecio(t.dataset.precio, leerCampoNumero(t))
+        else if (estado.orden?.corregir) alEscribirCorregir(e)
+      })
+      // Corregir la orden (29/10/2026): la fecha y "Las cajas que trae". SOLO
+      // esos: el 'change' del buscador salta al tocar una opción y redibujar
+      // la lista ahí se comería el toque.
+      cuerpo.addEventListener('change', (e) => {
+        const ds = e.target?.dataset
+        if (estado.orden?.corregir && (ds?.coCampo !== undefined || ds?.coDestino !== undefined)) alEscribirCorregir(e)
       })
       cuerpo.addEventListener('click', (e) => {
         let b
+        if (estado.orden?.corregir && alTocarCorregir(e)) return
         if (e.target.closest('#ad-valorizar-guardar')) guardarValorizacion()
         else if (e.target.closest('#ad-valorizar-cancelar')) cancelarValorizar()
         else if (e.target.closest('#ad-falta-lista-cerrar')) cerrarFaltaLista()

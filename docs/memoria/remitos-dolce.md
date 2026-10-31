@@ -139,6 +139,24 @@ Pedido de Facu: "que Manuel suba la foto y cargue los lotes en el mismo lugar, s
 - Suites `test-/mut-remitos-dolce-mas-simple.js` (112; 77/77, baseline 2003aa3; también `test-remitos-dolce-subir` 156 / 125/125 y `-revisar` 188 / 98/98), `e2e/99-remitos-mas-simple.spec.js` (maqueta
   nueva `remitos-dolce-mas-simple`: el catálogo de Dolce de la base y 30 conos).
 
+## Lotes en los renglones de insumo (29/10/2026, rama `ci-prueba/corregir-orden`)
+- La base ya aceptaba lotes en un renglón de insumo (materia prima e insumos que van de Rosario a Córdoba): cada uno
+  `{lote, cantidad}` en la unidad del insumo, con decimales. Verificado con pg_get_functiondef el 29/10/2026:
+  `_remito_items_normalizar` los guarda así (acepta también `cajas`), `confirmar_remito_precarga` exige que sumen el
+  renglón ("los lotes suman X y el renglón dice Y") y `registrar_orden_retiro` sin lotes saca el insumo de los lotes más
+  viejos con stock (Dolce sí lleva el stock de insumos).
+- El editor ahora muestra "¿De qué lotes?" también en un renglón de insumo: lote + **"Cantidad (kg)"** (la unidad del
+  insumo, `rotuloCantidadLote`), con los decimales de su unidad (`decimalesDeUnidad`: un sin decimales) e
+  `inputmode="decimal"`. El pie: **"Lotes: 20,5 de 25 kg · falta repartir 4,5 kg"** (amarillo mientras no suman),
+  "0,5 kg de más", "✓ Asignado completo"; sin lotes: "Sin lotes escritos sale de los lotes más viejos con stock."
+  (`cantidadRenglonRemito` con `cantidadInsumoHoja` de js/retiros-comun.js).
+- En el formulario cada fila guarda su número en `cajas` (como las de producto; `cantidadLoteInsumo` lo lee con
+  milésimas, y también `cantidad` de lo que leyó la IA); a actualizar_remito_precarga va `{lote, cantidad}` en
+  mayúsculas y 40 letras. La suma se redondea a milésimas (10,1 + 10,2 = 20,3). Cambiar un insumo por un producto saca
+  sus lotes.
+- Suites `test-/mut-remitos-dolce-lotes-insumo.js` (24; 20/20, baseline 302b351) y `e2e/101-remitos-lotes-insumo.spec.js`
+  (390 y 1280 px); revisar e interna-lotes ajustadas (el insumo ya no queda sin lotes).
+
 ## Lo que quedó afuera
 - **La Carga** (retiros.html): un link chico **"Remitos Dolce →"** (`#rt-link-remitos`, a `?pestana=subir`), con la
   misma regla de antes (retiros:cargar en una fábrica sin control; `pintarEntradaRemitos`).

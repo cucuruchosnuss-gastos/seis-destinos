@@ -155,3 +155,39 @@ Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedi
   lo resolvería (pedido para el chat de la base).
 - Suites `test-/mut-administracion-orden-recepcion.js` (36; baseline 497c393), `test-administracion-orden-entre-empresas.js`
   ajustada, e2e 98.
+
+## Corregir una orden (29/10/2026, rama `ci-prueba/corregir-orden`)
+- Botón **"Corregir orden"** (`#ad-btn-corregir-orden`) en el detalle, al lado de Valorizar / Corregir valorización /
+  Anular: con `retiros:precios` en la fábrica de la orden y la orden no anulada (`puedeCorregirOrden`), también
+  valorizada. Mientras se corrige se esconden Valorizar, Corregir valorización, Anular y Ampliar; mientras se valoriza
+  o se anula no se ofrece.
+- La base (pg_get_functiondef el 29/10/2026): `orden_para_corregir(p_orden_id)` (retiros:precios) → la orden con
+  `no_se_puede` (texto de `_orden_no_corregible`), `items` (`_orden_items_editables`: sus lotes SIN 'SIN STOCK' /
+  'SIN LOTE') y `correcciones`; `corregir_orden_retiro(p_orden_id, p_items, p_motivo, p_fecha, p_transporte,
+  p_observaciones)` (retiros:precios **y** retiros:cargar) saca lo que movió la orden y la rehace con
+  `registrar_orden_retiro` (p_items en su formato, el de la Carga) y, si estaba valorizada y no es de acopio, la
+  revaloriza con el `precio` de cada renglón (sin precio: el viejo del mismo producto/insumo y tipo, primero el mismo
+  cono; si no, la lista; si no hay, "Faltan precios"). Valorizada: no cambia la fecha. null = no cambia; '' borra.
+- `abrirCorregir` → `d.corregir` y `pintarOrden` dibuja el editor en lugar del detalle (`htmlCorregirOrden`). Con
+  `no_se_puede` (o un error al leer) muestra el aviso tal cual, "Cerrar" y el detalle debajo: no deja editar.
+- Cada renglón (`renglonCorregirDeItem`): producto/cono/insumo con el catálogo de "Nuevo acopio" (`gruposRemito`,
+  `nombreRenglonRemito`; los insumos al buscar, nunca en una devolución), cajas o cantidad (decimales según la unidad,
+  `enlazarCampoNumero`/`ponerNumero`, nunca en value), precio si está valorizada (no en una reposición), devolución /
+  reposición con motivo, lote que trajo y destino, y **varios lotes** con "Lotes: X de Y cajas · faltan repartir N /
+  sobran N / ✓ repartido completo" (amarillo si no suma; no deja seguir). Lo que salió SIN STOCK / SIN LOTE vuelve como
+  un lote sin nombre con lo que falta (viaja `lote: ''`, la base lo pone SIN STOCK o SIN LOTE). Sin lotes, la base
+  elige. Cambiar el producto o el cono saca los lotes.
+- "Revisar los cambios" valida (`erroresCorregir`) y muestra el resumen (`lineasResumenCorregir`: se saca / se agrega /
+  cambia producto, cajas, lotes, precio, devolución; fecha, transporte, observaciones) y, valorizada, el total antes →
+  después estimado como lo hará la base (`precioEstimadoCorregir`) y la diferencia: a la cuenta corriente del cliente
+  o, si `entre_empresas`, a la deuda entre empresas. Sin cambios no deja guardar.
+- Guardar (`guardarCorregir`, doble toque = una llamada) → `corregir_orden_retiro`; errores tal cual; después relee la
+  orden, pone la fila del listado al día (`actualizarFilaOrden` + `conteosFilaOrden`; `CAMPOS_FILA_ORDEN` suma fecha,
+  transporte y las cajas) y, si `stock_insuficiente` trae algo, "Lo que no estaba en stock" arriba del detalle
+  (`htmlFaltantesCorreccion`, como en la Carga: queda en Retiros por revisar).
+- **Sin retiros:cargar** el editor se abre igual (para mirar), con la explicación, y Guardar queda apagado.
+- **"Corregida N veces"** en la tarjeta de datos (`<details>`, `htmlCorreccionesOrden`): se lee de `orden_correcciones`
+  (`leerCorreccionesDeOrden`, `select … total_antes:antes->>total, total_despues:despues->>total`; su policy pide
+  retiros:ver en la fábrica de la orden, así lo ve todo el que ve la orden). Fecha y hora de Argentina, quién
+  (`v_empleados_publico`), motivo y total antes → después.
+- Suites `test-/mut-administracion-corregir-orden.js` (baseline 2003aa3), e2e 100 (maqueta "administracion").

@@ -33,7 +33,8 @@ const PANTALLAS = [
     celdas: 1, acciones: 2, texto: 'Anatolia' },
   { nombre: 'Órdenes de retiro', url: ADM,
     pasos: ['[data-pestana="ordenes"]', '#ad-ordenes-lista [data-orden="o1"]'], boton: '#ad-orden-ampliar', panel: '#ad-vista-orden',
-    celdas: 2, acciones: 4, texto: 'Distribuidora Anatolia' },
+    // 5 acciones desde "Corregir orden" (29/10/2026): Valorizar, Corregir orden, Imprimir, Enviar, Anular.
+    celdas: 2, acciones: 5, texto: 'Distribuidora Anatolia' },
   { nombre: 'Cuentas corrientes', url: '/modulos/cuentas-corrientes.html?maqueta=ampliar-cc',
     pasos: ['#tab-proveedores .btn-ver-cuenta[data-proveedor="p1"][data-unidad="u-d"]', '.btn-detalle-pago[data-gasto-id="g-1"]'],
     boton: '#btn-ampliar-pago', panel: '#modal-detalle-pago .modal-cc__panel', celdas: 3, acciones: 0, texto: 'Sobrante' },
