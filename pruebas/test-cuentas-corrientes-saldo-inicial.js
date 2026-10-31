@@ -36,6 +36,7 @@ const { construirCon } = require('./sandbox')
 const { FUNCIONES_CP_CC, CONSTANTES_CP_CC } = require('./cuenta-unica-comun')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
+const { FUNCIONES_DETALLE_PAGO, CONSTANTES_DETALLE_PAGO } = require('./detalle-pago-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -134,9 +135,11 @@ const FUNCIONES = [
   'esSaldoInicial', 'nombreFactura', 'numeroParaMostrar', 'etiquetaTipoMovimiento', 'cargarObservacionesSaldoInicial',
   'puedeCargarSaldoInicial', 'unidadesSaldoInicial', 'htmlUnidadesSaldoInicial', 'parametrosSaldoInicial', 'renderizarSaldoInicial',
   'abrirModalSaldoInicial', 'cerrarModalSaldoInicial', 'elegirUnidadSaldoInicial', 'confirmarSaldoInicial', 'refrescarTrasSaldoInicial',
+  // el detalle del pago en dos columnas, con sus cheques (30/10/2026)
+  ...FUNCIONES_DETALLE_PAGO.filter(f => f !== 'abrirModalDetallePago'),
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'PALETA_AVATAR',
-  'NUMERO_SALDO_INICIAL', 'MONEDAS_SALDO_INICIAL']
+  'NUMERO_SALDO_INICIAL', 'MONEDAS_SALDO_INICIAL', ...CONSTANTES_DETALLE_PAGO]
 
 function sandbox() {
   return construirCon(ARCHIVO, {

@@ -24,7 +24,10 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-cuentas-corrientes-xss.js'),
   original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/cuentas-corrientes.html'),
   funciones: [
-    'renderizarListaSaldos', 'renderizarListaSinProveedor', 'renderizarSugerenciasAsignar', 'abrirModalDetallePago',
+    // El detalle del pago (30/10/2026): abrirModalDetallePago ya no arma HTML;
+    // lo hacen htmlDetallePago, htmlFacturasDP y htmlCreditosDP (los cheques,
+    // sacar y agregar: mut-cuentas-corrientes-detalle-pago-cheques.js).
+    'renderizarListaSaldos', 'renderizarListaSinProveedor', 'renderizarSugerenciasAsignar', 'htmlDetallePago', 'htmlFacturasDP', 'htmlCreditosDP',
     'cargarPendientesAceptacion', 'renderizarPadron', 'renderizarListaHistorial', 'htmlFichaUnidad', 'htmlDesgloseResumen',
     'renderizarFichaBanner', 'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar',
     'crearSelectorOrdenFicha', 'abrirModalAplicarCreditoDesdeFicha', 'actualizarSelectorCuentaPago',
@@ -40,7 +43,8 @@ correrMutaciones({
     { nombre: 'padrón: el sufijo de moneda pierde el esc()',
       de: "const sufijo = multiMoneda ? ` · ${esc(l.moneda)}` : ''", a: "const sufijo = multiMoneda ? ` · ${l.moneda}` : ''" },
     { nombre: 'detalle del pago: la categoría pierde el esc()',
-      de: '` · ${esc(fp.categorias.nombre)}`', a: '` · ${fp.categorias.nombre}`' },
+      de: '        return `\n          <div class="fila-pago-aplicacion">\n            <div class="fila-fifo__info">\n              <div class="fila-fifo__numero">${esc(nombreFactura(fp?.numero_comprobante))}</div>\n              <div class="fila-fifo__meta">${esc(meta)}</div>',
+      a: '        return `\n          <div class="fila-pago-aplicacion">\n            <div class="fila-fifo__info">\n              <div class="fila-fifo__numero">${esc(nombreFactura(fp?.numero_comprobante))}</div>\n              <div class="fila-fifo__meta">${meta}</div>' },
     { nombre: 'banner: "Saldo a favor · moneda" pierde el esc()',
       de: '`Saldo a favor · ${esc(s.moneda)}`', a: '`Saldo a favor · ${s.moneda}`' },
     { nombre: 'banner: "A pagar · moneda" pierde el esc()',

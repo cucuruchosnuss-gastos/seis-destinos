@@ -17,7 +17,7 @@ correrMutacionesEnVarios([
       // ── Permisos ──────────────────────────────────────────────────────────
       { nombre: 'leer clientes sin permiso', de: "      return tieneTarea('retiros', 'ver') || tieneTarea('retiros', 'cargar') || tieneTarea('pedidos', 'ver') || tieneTarea('pedidos', 'cargar')", a: '      return true' },
       { nombre: 'clasificar sin permiso', de: "      return tieneTarea('cuentas_corrientes', 'alta_proveedor') || tieneTarea('retiros', 'precios') || tieneTarea('pedidos', 'configurar')", a: '      return true' },
-      { nombre: 'compensar con UNA de las dos tareas', de: "      return tieneTarea('cuentas_corrientes', 'registrar_pago') && tieneTarea('cobranzas', 'procesar')", a: "      return tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cobranzas', 'procesar')" },
+      { nombre: 'compensar con UNA de las dos tareas', de: "    function puedeCompensarCC() {\n      return tieneTarea('cuentas_corrientes', 'registrar_pago') && tieneTarea('cobranzas', 'procesar')", a: "    function puedeCompensarCC() {\n      return tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cobranzas', 'procesar')" },
       { nombre: 'no se leen las tareas de pedidos', de: "'retiros', 'cobranzas', 'pedidos'])", a: "'retiros', 'cobranzas'])" },
       // ── El chip ──────────────────────────────────────────────────────────
       { nombre: 'chip: sin permiso igual consulta', de: "      estado.clientesProveedor = new Map()\n      if (!puedeLeerClientesCC()) return\n", a: '      estado.clientesProveedor = new Map()\n' },
