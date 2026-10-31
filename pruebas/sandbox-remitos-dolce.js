@@ -27,7 +27,8 @@ const FUNCIONES_BASE = [
   'sinAcceso', 'cargarPermisos', 'cargarFabricas',
   // de js/remitos-comun.js
   'limpioRc', 'normalizarRc', 'talonarioDe', 'textoNumeroRemito', 'presentacionRemito', 'productoDePresentacionRemito', 'insumoRemito',
-  'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
+  'nombreConoRemito', 'nombreConoPorIdRemito', 'nombreRenglonRemito', 'ordenCategoriaRemito', 'opcionesRemito', 'gruposRemito',
+  'unidadesPresentacionRemito', 'textoUnidadesRemito', 'presentacionConUnidadesRc',
   // de js/retiros-comun.js
   'escHoja', 'enteroHoja', 'decimalesDeUnidad', 'unidadHoja',
   // SUBIR
@@ -59,6 +60,11 @@ const FUNCIONES_BASE = [
   'frenarAutoguardadoRemito', 'seguirAutoguardadoRemito', 'puedeGuardarRemito', 'pendienteRemito',
   // El saldo del acopio al revisar uno de talonario Acopio
   'claveAcopio', 'cargarAcopiosRemito', 'saldoAcopioRemito', 'htmlSaldoAcopioRemito', 'pintarAcopiosRemito',
+  // Un solo recorrido (29/10/2026): la tarjeta naranja abre el remito desde
+  // Subir, "Órdenes cargadas" con buscador, el buscador de conos y "× N u.".
+  'clienteTarjetaSubida', 'detalleListoSubida', 'asegurarClientesSubida', 'marcarSubidoRemito', 'conResueltosSubida',
+  'digitosRemito', 'buscarOrdenRemito', 'conosParaBuscar', 'htmlNombreRenglonRemito', 'cambiarConoRemito',
+  'usarEmpresaRemito', 'salirDeRemito',
 ]
 
 const CONSTANTES_BASE = [
@@ -68,7 +74,7 @@ const CONSTANTES_BASE = [
   'LADO_MAXIMO_FOTO', 'CALIDAD_FOTO', 'DIAS_MIS_REMITOS', 'SONDEO_REMITOS_MS', 'LECTURAS_A_LA_VEZ', 'LECTURA_TRABADA_MS',
   'SEGUNDOS_MINIATURA', 'CLAVE_REMITOS_COLA', 'CLAVE_REMITOS_FABRICA', 'TEXTO_FOTO_PERDIDA', 'ICONO_REMITO',
   'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO', 'ZOOM_FOTO_REMITO', 'LARGO_LOTE_REMITO',
-  'LARGO_MINIMO_MOTIVO_REMITO', 'RE_YA_INGRESADO', 'RETARDO_AUTOGUARDADO_REMITO',
+  'LARGO_MINIMO_MOTIVO_REMITO', 'RE_YA_INGRESADO', 'RETARDO_AUTOGUARDADO_REMITO', 'MIN_LETRAS_CONO', 'MAX_CONOS_REMITO',
 ]
 
 const PRELUDIO = `

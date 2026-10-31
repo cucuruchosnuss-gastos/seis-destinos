@@ -162,7 +162,7 @@ for (const [ancho, alto] of TAMANOS) {
     await expect(saldo(1)).toHaveText('Acopio: quedan 20 cajas; después de este remito, 0.');
     await expect(page.locator('#ad-rm-cantidad-1')).toBeFocused();
     expect(rpc.some(r => r.nombre === 'acopios_lista' && r.params.p_cliente_id === 'c-d-ros')).toBe(true);
-    // Las cajas cambiadas se guardan solas (29/10/2026): "‹ Revisar" las manda
+    // Las cajas cambiadas se guardan solas (29/10/2026): "‹ Remitos" las manda
     // si todavía esperaban, y sale.
     await page.locator('#ad-remito-volver').click();
     await expect(page.locator('#rd-vista-revisar')).toBeVisible();

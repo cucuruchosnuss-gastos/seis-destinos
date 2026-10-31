@@ -17,6 +17,9 @@
 //    grupos (SIN CONO, CON CONO y, al buscar, los insumos), los productos todos
 //    y sin cuánto hay. `categorias` es el orden de las categorías de cada
 //    pantalla (su CATEGORIAS_PRODUCTO: [{ clave }]).
+//  - Las unidades de la caja (29/10/2026): unidadesPresentacionRemito(pr) y
+//    textoUnidadesRemito(pr) ("× 252 u."); nombreRenglonRemito y las opciones
+//    las suman, y el número también se busca ("180" → la Caja N°2).
 //
 // Puro: no toca el DOM ni la base. Las suites lo pegan detrás del script del
 // módulo con pruebas/fuente-cobranzas.js (fuenteConComun), sin los `export`.
@@ -66,7 +69,51 @@ function insumoRemito(cat, id) {
   return id ? (cat?.insumos ?? []).find(i => i.id === id) ?? null : null
 }
 
-// "Cucurucho grande · Caja x 100 · LOLO", o un insumo: "Harina 000 · Molino".
+// LAS UNIDADES DE LA CAJA (29/10/2026, pedido de Facu): en Dolce el Barquillo
+// 40 x4 viene en caja de 252 o en Caja N°2 de 180; el renglón lo dice:
+// "Caja con cono × 252 u.". Sale de producto_presentaciones.unidades_por_caja
+// (integer not null, information_schema el 29/10/2026). Con 1 ("Por cono")
+// no se agrega nada, y tampoco si el nombre ya trae ese número ("Caja x 48",
+// "Caja ×1800": no se repite). null si no va.
+export function unidadesPresentacionRemito(pr) {
+  const n = Number(pr?.unidades_por_caja)
+  if (!Number.isInteger(n) || n <= 1) return null
+  const enElNombre = String(pr?.nombre ?? '').match(/\d+/g) ?? []
+  return enElNombre.includes(String(n)) ? null : n
+}
+
+// "× 252 u." (con el punto de los miles: "× 1.600 u."); '' si no va.
+export function textoUnidadesRemito(pr) {
+  const n = unidadesPresentacionRemito(pr)
+  return n === null ? '' : `× ${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} u.`
+}
+
+// "Caja con cono × 252 u." (el nombre de la presentación con sus unidades).
+function presentacionConUnidadesRc(pr) {
+  return [limpioRc(pr?.nombre), textoUnidadesRemito(pr)].filter(Boolean).join(' ')
+}
+
+// EL CONO DE PAPEL ILUSTRACIÓN (30/10/2026, pedido de Facu): se cobra más
+// caro (precio_venta lo resuelve con papel_conito = 'ilustracion'), así que
+// donde se nombre el cono va "MARBET (ilustración)". Sale de
+// marcas_personalizadas.papel_ilustracion (boolean not null default false,
+// information_schema el 30/10/2026), que cada pantalla lee con su catálogo de
+// conos: nunca una lista copiada a mano.
+export function nombreConoRemito(m) {
+  const n = limpioRc(m?.nombre)
+  if (!n) return ''
+  return m?.papel_ilustracion === true ? n + ' (ilustración)' : n
+}
+
+// El cono de un renglón por su id (o '' si no hay).
+export function nombreConoPorIdRemito(cat, marcaId) {
+  if (!marcaId) return ''
+  const m = (cat?.marcas ?? []).find(x => x.id === marcaId)
+  return m ? nombreConoRemito(m) : 'Cono que no se pudo leer'
+}
+
+// "Barquillo 40 x4 · Caja con cono × 252 u. · GLACE", o un insumo: "Harina 000 · Molino".
+// Con un cono de ilustración: "… · MARBET (ilustración)".
 export function nombreRenglonRemito(cat, r) {
   if (r?.insumoId) {
     const ins = insumoRemito(cat, r.insumoId)
@@ -75,8 +122,8 @@ export function nombreRenglonRemito(cat, r) {
   const pr = presentacionRemito(cat, r?.presentacionId)
   if (!pr) return r?.presentacionId ? 'Producto (no se pudo leer)' : ''
   const prod = productoDePresentacionRemito(cat, pr)
-  const cono = pr.con_cono ? (r.marcaId ? ((cat?.marcas ?? []).find(m => m.id === r.marcaId)?.nombre ?? 'Cono que no se pudo leer') : 'falta el cono') : ''
-  return [prod?.nombre ?? 'Producto (no se pudo leer)', pr.nombre, cono].map(limpioRc).filter(Boolean).join(' · ')
+  const cono = pr.con_cono ? (r.marcaId ? nombreConoPorIdRemito(cat, r.marcaId) : 'falta el cono') : ''
+  return [prod?.nombre ?? 'Producto (no se pudo leer)', presentacionConUnidadesRc(pr), cono].map(limpioRc).filter(Boolean).join(' · ')
 }
 
 export function ordenCategoriaRemito(c, categorias = []) {
@@ -93,7 +140,9 @@ export function opcionesRemito(cat, categorias = []) {
     const prod = productos.get(pr.producto_id)
     if (!prod || pr.activa === false) continue
     const o = { presentacionId: pr.id, conCono: pr.con_cono === true, categoria: prod.categoria ?? null,
-      nombre: `${limpioRc(prod.nombre)} · ${limpioRc(pr.nombre)}`, textos: [prod.nombre, pr.nombre] }
+      nombre: `${limpioRc(prod.nombre)} · ${presentacionConUnidadesRc(pr)}`,
+      // El número también se busca: "180" encuentra la Caja N°2 de 180.
+      textos: [prod.nombre, pr.nombre, unidadesPresentacionRemito(pr) === null ? '' : String(unidadesPresentacionRemito(pr))] }
     if (o.conCono) con.push({ ...o, grupo: 'con_cono' })
     else sin.push({ ...o, grupo: 'sin_cono' })
   }
