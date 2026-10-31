@@ -65,6 +65,14 @@ const FUNCIONES_PENDIENTES_AD = [
 ]
 const CONSTANTES_PENDIENTES_AD = ['MEDIOS_APLICAR_AD', 'NOMBRE_MEDIO_APLICAR_AD', 'FILAS_RECIBO_COMPACTO_AD', 'TEXTO_HUECO_APLICAR_AD']
 
+// Arreglos 30/10 (punto 2): la venta y sus N1 / N2 en la cuenta de cliente y
+// proveedor (31/10/2026). pintarCuentaUnicaCliente llama a decorarVentasAd.
+const FUNCIONES_N1N2_AD = [
+  'puedeVerDivisionAd', 'filaVentaAd', 'divisionesOrdenAd', 'centavosN1n2Ad', 'divisionDeRespuestaAd', 'infoDivisionAd',
+  'htmlDivisionVentaAd', 'leerDivisionAd', 'cargarDivisionAd', 'decorarVentasAd', 'alternarVentaAd', 'alTocarVentaAd',
+]
+const CONSTANTES_N1N2_AD = ['TEXTO_SIN_DIVISION_AD']
+
 // Los acopios, la cuenta en el grupo, "(también en Nuss)" y valorizar con la
 // lista de otra empresa (27/10/2026). Van todas a la base: las llaman la
 // portada, la cuenta del cliente y valorizar. (El saldo del acopio al revisar
@@ -308,6 +316,8 @@ const FUNCIONES_BASE = [
   'sinControlStockEmpresa', 'leerSinControl', 'pintarLinkRemitos', 'talonarioDe', 'textoNumeroRemito', 'htmlSelloAcopio',
   // Pendientes desde el corte, aplicar y el recibo (30/10/2026)
   ...FUNCIONES_PENDIENTES_AD,
+  // Arreglos 30/10 (punto 2): N1 / N2 en la cuenta de cliente y proveedor
+  ...FUNCIONES_N1N2_AD,
   // Los acopios, la cuenta en el grupo y la lista de otra empresa (27/10/2026)
   ...FUNCIONES_ACOPIOS,
   // Corregir una orden (29/10/2026)
@@ -365,6 +375,8 @@ const CONSTANTES_BASE = [
   'ESTADOS_ACOPIO', 'LARGO_NUMERO_ACOPIO', 'GRUPOS_REMITO',
   // Pendientes desde el corte, aplicar y el recibo (30/10/2026)
   ...CONSTANTES_PENDIENTES_AD,
+  // Arreglos 30/10 (punto 2): N1 / N2 en la cuenta de cliente y proveedor
+  ...CONSTANTES_N1N2_AD,
 ]
 
 const PRELUDIO = `
@@ -575,6 +587,13 @@ Object.assign(OPCIONALES_CONST, {
   MEDIOS_APLICAR_AD: "var MEDIOS_APLICAR_AD = ['cheque', 'transferencia', 'efectivo']", NOMBRE_MEDIO_APLICAR_AD: 'var NOMBRE_MEDIO_APLICAR_AD = {}',
   FILAS_RECIBO_COMPACTO_AD: 'var FILAS_RECIBO_COMPACTO_AD = 14', TEXTO_HUECO_APLICAR_AD: "var TEXTO_HUECO_APLICAR_AD = '(no existe)'",
 })
+
+// Arreglos 30/10 (punto 2): una copia de antes no tiene N1 / N2 en la cuenta
+// de cliente y proveedor. El reemplazo no hace nada.
+for (const n of FUNCIONES_N1N2_AD) {
+  OPCIONALES_FN[n] = /^html/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`
+}
+OPCIONALES_CONST.TEXTO_SIN_DIVISION_AD = "var TEXTO_SIN_DIVISION_AD = '(no existe)'"
 
 function construirAdministracion(ruta, { funciones = [], constantes = [], preludioExtra = '', preludioEstado = '' } = {}) {
   const html = require('fs').readFileSync(ruta, 'utf8')
