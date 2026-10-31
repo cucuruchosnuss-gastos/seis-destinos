@@ -40,7 +40,7 @@ correrMutacionesEnVarios([{
   funciones: [],
   manuales: [
     { nombre: 'null cuenta como sin control', de: "estado.sinControl.set(unidadId, data?.controla_stock_terminado === false)", a: "estado.sinControl.set(unidadId, data?.controla_stock_terminado !== true)" },
-    { nombre: 'la orden se lee sin numero_remito', de: 'division_pct_a, numero_remito, talonario\')', a: 'division_pct_a\')' },
+    { nombre: 'la orden se lee sin numero_remito', de: 'division_pct_a, numero_remito, talonario, condiciones_especiales\')', a: 'division_pct_a, condiciones_especiales\')' },
     { nombre: 'la lista se lee sin numero_remito', de: 'comision_modo, comision_importe, numero_remito, numero_remito_n, talonario\')', a: 'comision_modo, comision_importe\')' },
     { nombre: 'Dolce sin el link', de: "      if (el) el.innerHTML = sinControlStockEmpresa() ? '<p class=\"ad-link-remitos\"><a href=\"remitos-dolce.html?pestana=revisar\">Remitos Dolce →</a></p>' : ''", a: "      if (el) el.innerHTML = ''" },
     { nombre: 'el link también en Nuss', de: "      if (el) el.innerHTML = sinControlStockEmpresa() ? '<p", a: "      if (el) el.innerHTML = true ? '<p" },

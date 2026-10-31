@@ -77,7 +77,7 @@ correrMutaciones({
     { nombre: 'con 100/0 salen los dos puntos', de: "      return PARTES_DIVISION.filter(p => p === 'A' ? n > 0 : n < 100)", a: '      return [...PARTES_DIVISION]' },
     { nombre: 'la condición del cliente no se precarga', de: '      return numeroONulo(o?.division_pct_a) ?? numeroONulo(cli?.pct_parte_a)\n    }', a: '      return numeroONulo(o?.division_pct_a)\n    }' },
     { nombre: 'la de la orden no manda sobre la del cliente', de: '      return numeroONulo(o?.division_pct_a) ?? numeroONulo(cli?.pct_parte_a)\n    }', a: '      return numeroONulo(cli?.pct_parte_a) ?? numeroONulo(o?.division_pct_a)\n    }' },
-    { nombre: 'la orden no lee la división', de: "comision_cargada_en, division_pct_a, numero_remito, talonario')", a: "comision_cargada_en, numero_remito, talonario')" },
+    { nombre: 'la orden no lee la división', de: "comision_cargada_en, division_pct_a, numero_remito, talonario, condiciones_especiales')", a: "comision_cargada_en, numero_remito, talonario, condiciones_especiales')" },
     { nombre: 'la orden no lee las facturas', de: '      const facturas = await leerFacturasDeOrden(o)', a: '      const facturas = []' },
     // El papel
     { nombre: 'un vendedor en $ 0 sale', de: '        .filter(c => Number(c?.monto) > 0)', a: '        .filter(c => !!c)' },
@@ -97,7 +97,7 @@ correrMutaciones({
     { nombre: 'la hoja con la factura de ARCA', de: '<p class="opv__codigo">${esc(codigoPunto(datos?.codigo, parte))}</p></header>', a: '<p class="opv__codigo">${esc(codigoPunto(datos?.codigo, parte))}</p>${esc(facturasPorParte(datos?.facturas)[parte]?.numero ? \'Factura \' + facturasPorParte(datos?.facturas)[parte].numero : \'\')}</header>' },
     { nombre: 'la tabla con las cantidades del otro punto', de: "      const k = parte === 'A' ? 'a' : 'b'", a: "      const k = parte === 'A' ? 'b' : 'a'" },
     { nombre: 'el PDF sin el cliente en el nombre', de: "      return `Orden de pedido ${codigoPunto(datos?.codigo, parte)}${cli ? ' - ' + cli : ''}.pdf`", a: "      return `Orden de pedido ${codigoPunto(datos?.codigo, parte)}.pdf`" },
-    { nombre: 'el nombre del PDF con letras prohibidas', de: ".replace(/[\\\\/:*?\"<>|]+/g, ' ')", a: '' },
+    { nombre: 'el nombre del PDF con letras prohibidas', de: "limpio(datos?.cliente).replace(/[\\\\/:*?\"<>|]+/g, ' ')", a: 'limpio(datos?.cliente)' },
     // Imprimir y compartir: uno por punto
     { nombre: 'imprimir saca los dos puntos', de: '`<div class="opv-papel">${htmlHojaPunto(fc.datos, parte, fc.moneda)}</div>`', a: "`<div class=\"opv-papel\">${htmlHojaPunto(fc.datos, 'A', fc.moneda)}${htmlHojaPunto(fc.datos, 'B', fc.moneda)}</div>`" },
     { nombre: 'imprimir sin A4 vertical', de: "      document.getElementById('ad-impresion').innerHTML = '<style>@media print { @page { size: A4 portrait; margin: 12mm; } }</style>' +\n        `<div class=\"opv-papel\">", a: "      document.getElementById('ad-impresion').innerHTML = '' +\n        `<div class=\"opv-papel\">" },
