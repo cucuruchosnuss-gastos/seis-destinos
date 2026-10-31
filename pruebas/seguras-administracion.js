@@ -128,7 +128,7 @@ const SEGURAS_ADMINISTRACION = [
   ['origen', 'HTML ya escapado: htmlVendedoresPct() arma los rótulos con esc() del id del vendedor y del % de la configuración, o vacío'],
   // La nota de débito (24/10/2026): la ejecuta con texto malicioso
   // test-administracion-nota-debito.js.
-  ['copia(r)', 'HTML armado por copia() adentro de htmlNotaDebito(): cada dato de la base con esc(), el logo por logoSeguro() + encodeURIComponent, y el rótulo con esc()'],
+  ['hoja', 'HTML armado adentro de htmlNotaDebito() (la nota de débito en UNA sola hoja): cada dato de la base con esc() y el logo por logoSeguro() + encodeURIComponent'],
   ['htmlNotaDebito(d)', 'HTML armado por htmlNotaDebito(), que escapa adentro (lo ejecuta con marcas test-administracion-nota-debito.js)'],
   // La orden a otra empresa del grupo (24/10/2026): las ejecuta con texto
   // malicioso test-administracion-orden-entre-empresas.js.

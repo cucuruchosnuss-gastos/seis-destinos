@@ -1225,17 +1225,16 @@
     .op-acciones h2 { margin: 0; }
     .op-acciones__botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .op-hoja-marco { overflow-x: auto; }
-    /* 23/10/2026: letra y tabla al ~80% (entran más comprobantes) y DOS
-       copias iguales, ORIGINAL y DUPLICADO, cada una en su hoja. En la
-       pantalla se ve solo el ORIGINAL; al imprimir (o guardar el PDF), las dos. */
+    /* 23/10/2026: letra y tabla al ~80% (entran más comprobantes).
+       30/10/2026: UNA sola hoja, sin ORIGINAL/DUPLICADO (si hacen falta dos,
+       se imprime dos veces), y abajo de todo UNA línea con el saldo de la
+       cuenta (.op-saldo-cuenta). */
     .op-hoja {
       box-sizing: border-box; width: 100%; max-width: 194mm; margin: 0 auto;
       padding: 5mm; background: #fff; color: #111;
       font-family: var(--fuente); font-size: 8.5pt; line-height: 1.25;
       border: 1px solid var(--color-borde);
     }
-    .op-nota-copias { margin: 0 0 0.5rem; font-size: 0.8125rem; color: var(--color-texto-suave); }
-    .op-copia--duplicado { display: none; }
     .op-cab { display: flex; justify-content: space-between; gap: 5mm; align-items: flex-start; border-bottom: 1.5px solid #111; padding-bottom: 2.4mm; }
     .op-cab__emisor { display: flex; gap: 3mm; align-items: flex-start; min-width: 0; }
     .op-cab__logo { max-height: 13mm; max-width: 24mm; object-fit: contain; }
@@ -1244,7 +1243,6 @@
     .op-cab__titulo { text-align: right; flex-shrink: 0; }
     .op-cab__titulo-texto { font-size: 12pt; font-weight: 800; letter-spacing: 0.02em; }
     .op-cab__numero { font-size: 10.5pt; font-weight: 700; }
-    .op-cab__copia { display: inline-block; margin-top: 1mm; padding: 0.3mm 2mm; border: 1px solid #111; font-size: 8pt; font-weight: 800; letter-spacing: 0.1em; }
     .op-seccion { margin-top: 3mm; }
     .op-seccion__titulo { font-size: 8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 1.2mm; }
     .op-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
@@ -1258,10 +1256,10 @@
     .op-firmas { display: flex; gap: 10mm; margin-top: 15mm; }
     .op-firma { flex: 1; border-top: 1px solid #111; padding-top: 1.2mm; font-size: 7.5pt; text-align: center; }
     .op-pie { margin-top: 3mm; font-size: 6.5pt; color: #555; }
+    .op-saldo-cuenta { margin-top: 4mm; padding-top: 1.6mm; border-top: 1px solid #111; font-weight: 700; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; }
+    .op-saldo-cuenta__numero { white-space: nowrap; font-variant-numeric: tabular-nums; }
     @media print {
       @page { size: A4 portrait; margin: 8mm; }
-      html.op-imprimiendo .op-copia--duplicado { display: block; break-before: page; page-break-before: always; }
-      html.op-imprimiendo .op-nota-copias { display: none !important; }
       html.op-imprimiendo body > *:not(#modal-orden-pago) { display: none !important; }
       html.op-imprimiendo, html.op-imprimiendo body { background: #fff !important; margin: 0 !important; }
       html.op-imprimiendo #modal-orden-pago { position: static; display: block; }
@@ -1270,12 +1268,9 @@
       html.op-imprimiendo #modal-orden-pago .modal-cc__panel { max-height: none; overflow: visible; padding: 0; box-shadow: none; border-radius: 0; max-width: none; }
       html.op-imprimiendo .op-hoja { border: 0; padding: 0; max-width: none; }
     }
-    /* Las órdenes de pago del proveedor, en la ficha. */
-    .ordenes-pago-cc { margin-top: 1.25rem; }
-    .orden-pago-cc { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid var(--color-divisor); }
-    .orden-pago-cc__info { min-width: 0; font-size: 0.875rem; overflow-wrap: anywhere; }
-    .orden-pago-cc__numero { font-weight: 700; }
-    .orden-pago-cc__meta { font-size: 0.75rem; color: var(--color-texto-2); }
+    /* La orden de pago en el renglón del pago (30/10/2026; antes, un
+       recuadro aparte abajo de la ficha). */
+    .fila-movimiento__orden { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-2); overflow-wrap: anywhere; }
     .cartera-pago { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-borde); border-radius: 10px; }
     .cartera-pago:empty { display: none; }
     .cartera-pago__fila {
@@ -1588,9 +1583,6 @@
            (remitos_sin_facturar). Informativo: NO suma al saldo. -->
       <div id="ficha-remitos-sin-facturar"></div>
 
-      <!-- Las órdenes de pago de este proveedor (20/10/2026), para
-           reimprimirlas. La más nueva arriba. -->
-      <div id="ficha-ordenes-pago"></div>
     </div>
   </div><!-- /vista-ficha -->
 
@@ -1760,7 +1752,6 @@
           <button type="button" class="btn btn--secundario" id="btn-cerrar-orden">Cerrar</button>
         </div>
       </div>
-      <p class="op-nota-copias" id="nota-copias-orden">Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO, las dos con las firmas.</p>
       <div class="op-hoja-marco"><div class="op-hoja" id="orden-pago-hoja"></div></div>
     </div>
   </div><!-- /modal-orden-pago -->
@@ -5260,6 +5251,9 @@
     // El tipo de un movimiento: la factura del saldo inicial es "Saldo inicial".
     function etiquetaTipoMovimiento(m) {
       if (m?.tipo === 'factura' && esSaldoInicial(m)) return 'Saldo inicial'
+      // Un saldo a favor del corte inicial (30/10/2026: la vista lo trae como
+      // credito_aplicado SIN factura, "Saldo a favor (corte inicial)").
+      if (m?.tipo === 'credito_aplicado' && m.credito_id && !m.factura_pendiente_id) return 'Saldo a favor'
       return TIPO_MOVIMIENTO_LABEL[m?.tipo] || m?.tipo || ''
     }
 
@@ -5320,6 +5314,7 @@
         return { comprobante: nombreFactura(m.referencia), detalle: '' }
       }
       if (m?.tipo === 'pago') return { comprobante: 'Pago', detalle: etiquetas?.get(m.gasto_id) || '' }
+      if (m?.tipo === 'credito_aplicado' && m.credito_id && !m.factura_pendiente_id) return { comprobante: 'Saldo a favor', detalle: m.referencia || '' }
       if (m?.tipo === 'credito_aplicado') return { comprobante: 'Crédito aplicado', detalle: 'A ' + numeroParaMostrar(m.referencia) }
       if (m?.tipo === 'interes') return { comprobante: 'Interés', detalle: 'Sobre ' + numeroParaMostrar(m.referencia) }
       return { comprobante: TIPO_MOVIMIENTO_LABEL[m?.tipo] || m?.tipo || '', detalle: m?.referencia || '' }
@@ -5459,7 +5454,7 @@
       estado.ficha.unidades = unidadesDeFicha(ids)
       renderizarFichaUnidad()
 
-      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos(), cargarVinculosFicha(), cargarFichaOrdenesPago()])
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos(), cargarVinculosFicha()])
       if (estado.ficha !== ficha) return
       renderizarFichaBanner()
       renderizarClasificacionProveedor()
@@ -5474,7 +5469,6 @@
       renderizarFichaBanner()
       renderizarFichaMovimientos()
       renderizarFichaRemitos()
-      renderizarFichaOrdenesPago()
       renderizarClasificacionProveedor()
       prepararCuentaUnicaFicha()
     }
@@ -5488,8 +5482,6 @@
       // El panel de vincular o separar era de la unidad de antes.
       if (!estado.ficha.panelVinculo?.enviando) estado.ficha.panelVinculo = null
       renderizarFicha()
-      // Las órdenes de pago se leen por empresa (20/10/2026).
-      cargarFichaOrdenesPago()
     }
 
     // REGLA f (28/09/2026): registrar un pago o aplicar un crédito necesitan
@@ -5572,7 +5564,6 @@
       document.getElementById(destino).removeAttribute('hidden')
       estado.ficha = null
       renderizarFichaUnidad()
-      renderizarFichaOrdenesPago()
       renderizarClasificacionProveedor()
       pintarCuentaUnicaFicha()
       history.replaceState(null, '', location.pathname)
@@ -6184,13 +6175,15 @@
       // Las cantidades del ingreso vinculado a cada descarga sin importe: es lo
       // único que hay para ponerle precio.
       const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
-      const [cantidades, etiquetasPago, obsSaldoInicial, codigosComision, notasDebito] = await Promise.all([
+      const [cantidades, etiquetasPago, obsSaldoInicial, codigosComision, notasDebito, ordenesDePago] = await Promise.all([
         idsSinImporte.length ? cargarCantidadesSinImporte(idsSinImporte) : new Map(),
         cargarEtiquetasDePagos(data ?? []),
         cargarObservacionesSaldoInicial(data ?? []),
         idsComision.length ? cargarCodigosComision(idsComision) : new Map(),
         // Las notas de débito recibidas (24/10/2026): "Anular" en su fila.
         cargarNotasDebitoFicha(infoFactura),
+        // La orden de pago de cada pago (30/10/2026): va en su renglón.
+        cargarOrdenesDePagos(data ?? []),
       ])
       if (estado.ficha !== ficha) return
 
@@ -6203,6 +6196,7 @@
       estado.ficha.infoFactura = infoFactura
       estado.ficha.codigosComision = codigosComision
       estado.ficha.notasDebito = notasDebito
+      estado.ficha.ordenesDePago = ordenesDePago
       estado.ficha.cantidadesSinImporte = cantidades
       renderizarFichaMovimientos()
     }
@@ -6264,6 +6258,8 @@
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
         const esPago = m.tipo === 'pago' && m.gasto_id
+        // La orden de pago de ese pago (30/10/2026): en su renglón.
+        const ordenPago = esPago ? estado.ficha.ordenesDePago?.get?.(m.gasto_id) ?? null : null
         // Una NOTA DE DÉBITO recibida (24/10/2026): no se elimina como una
         // factura, se ANULA con motivo (anular_nota_debito).
         const infoNd = esFactura ? estado.ficha.infoFactura?.[m.factura_pendiente_id] : null
@@ -6292,7 +6288,8 @@
             ${botonPdfNd}
             ${botonAnularNd}
           </div>` : esPago ? `
-          <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
+          <div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:0.375rem; align-items:center; margin-top:0.375rem;">
+            ${ordenPago ? `<button type="button" class="btn-pago-ayuda" data-reimprimir-orden="${esc(ordenPago.id)}">Reimprimir</button>` : ''}
             <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${esc(m.gasto_id)}" title="Detalle del pago">📋</button>
           </div>` : ''
         // El saldo corrido NO se muestra con las unidades mezcladas.
@@ -6303,8 +6300,9 @@
         const saldoAcum = Number(m.saldo_acumulado) || 0
         // Uno sin unidad tampoco: su corrido es el de "sin unidad", no el de
         // la unidad que se está mirando.
-        const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)
-          ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
+        // 30/10/2026: en cada renglón, también cuando el corrido da cero.
+        const lineaSaldo = (!todas && m.unidad_negocio_id)
+          ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : saldoAcum < 0 ? 'Saldo a favor' : 'Saldo'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
         const referencia = referenciaMovimiento(m, estado.ficha.etiquetasPago, estado.ficha.obsSaldoInicial) || '—'
         const badgeEstado = m.tipo === 'factura'
@@ -6316,6 +6314,7 @@
             <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${esc(esNotaDebito ? 'Nota de débito' : etiquetaTipoMovimiento(m))}</div>
               <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
+              ${ordenPago ? `<div class="fila-movimiento__orden">${esc('Orden de pago ' + ordenPago.texto)}</div>` : ''}
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
               ${errorPdfNd}
             </div>
@@ -6330,6 +6329,9 @@
 
       listaEl.querySelectorAll('.btn-detalle-pago').forEach(btn => {
         btn.addEventListener('click', () => abrirModalDetallePago(btn.dataset.gastoId))
+      })
+      listaEl.querySelectorAll('[data-reimprimir-orden]').forEach(btn => {
+        btn.addEventListener('click', () => abrirOrdenPago(btn.dataset.reimprimirOrden))
       })
       listaEl.querySelectorAll('[data-anular-nd]').forEach(btn => {
         btn.addEventListener('click', () => abrirAnularNd(btn.dataset.anularNd))
@@ -7670,7 +7672,7 @@
 
     async function recargarFichaDespuesDePago() {
       try {
-        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaOrdenesPago()])
+        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
         renderizarFichaBanner()
         cargarSaldos()
       } catch (e) { console.error(e) }
@@ -7823,13 +7825,45 @@
 
     const NOMBRE_MEDIO_ORDEN = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR' }
 
-    // Las dos copias que se imprimen (23/10/2026), en este orden.
-    const COPIAS_ORDEN_PAGO = ['ORIGINAL', 'DUPLICADO']
+    // EL SALDO DE LA CUENTA, abajo de todo (30/10/2026): UNA línea con el
+    // neto de v_saldo_proveedor en esa empresa y en pesos (deuda_pendiente −
+    // credito_disponible), sin "aplicado / no aplicado". Positivo: "Saldo de
+    // la cuenta con <PROVEEDOR> (a pagar) $ X"; negativo: "Saldo de la cuenta
+    // a favor de <EMPRESA> $ X". Es el saldo de HOY (al imprimir o
+    // reimprimir), no el del día de la orden. Puro: TEXTO PLANO.
+    function lineaSaldoOrdenPago(saldo, { proveedor, empresa } = {}) {
+      if (!saldo) return null
+      const c = Math.round((Number(saldo.deuda) || 0) * 100) - Math.round((Number(saldo.credito) || 0) * 100)
+      if (c < 0) return { texto: `Saldo de la cuenta a favor de ${empresa || 'la empresa'}`, importe: -c / 100 }
+      return { texto: `Saldo de la cuenta con ${proveedor || 'el proveedor'}${c > 0 ? ' (a pagar)' : ''}`, importe: c / 100 }
+    }
 
-    // Puro: la hoja entera, DOS copias iguales (ORIGINAL y DUPLICADO, cada
-    // una en su página al imprimir). Todo texto de la base pasa por esc().
-    // 23/10/2026: los cheques ya NO dicen el librador (quién nos lo dio).
-    function htmlOrdenPago(d) {
+    // El saldo de la cuenta del proveedor de esa orden, en su empresa y en
+    // pesos. Si no se puede leer, null (la línea no va: nunca un "$ 0,00"
+    // inventado).
+    async function leerSaldoOrdenPago(ordenId) {
+      try {
+        const { data: op, error } = await supabase.from('ordenes_pago').select('proveedor_id, unidad_negocio_id').eq('id', ordenId).maybeSingle()
+        if (error || !op?.proveedor_id) return null
+        const { data, error: e2 } = await supabase.from('v_saldo_proveedor')
+          .select('deuda_pendiente, credito_disponible, moneda')
+          .eq('proveedor_id', op.proveedor_id).eq('unidad_negocio_id', op.unidad_negocio_id).eq('moneda', 'ARS')
+        if (e2) return null
+        const filas = Array.isArray(data) ? data : []
+        return {
+          deuda: filas.reduce((s, f) => s + (Number(f.deuda_pendiente) || 0), 0),
+          credito: filas.reduce((s, f) => s + (Number(f.credito_disponible) || 0), 0),
+        }
+      } catch (e) {
+        console.error('No se pudo leer el saldo de la cuenta para la orden de pago:', e)
+        return null
+      }
+    }
+
+    // Puro: la hoja entera, UNA sola (30/10/2026: sin ORIGINAL/DUPLICADO; si
+    // hacen falta dos, se imprime dos veces). Todo texto de la base pasa por
+    // esc(). 23/10/2026: los cheques ya NO dicen el librador.
+    function htmlOrdenPago(d, { saldo = null } = {}) {
       const e = d?.emisor ?? {}
       const p = d?.proveedor ?? {}
       const facturas = Array.isArray(d?.facturas) ? d.facturas : []
@@ -7855,7 +7889,8 @@
           }</tbody></table>`
         : ''
 
-      const copia = (rotulo) => `
+      const lineaSaldo = lineaSaldoOrdenPago(saldo, { proveedor: p.razon_social, empresa: e.razon_social || e.empresa })
+      return `
         <div class="op-cab">
           <div class="op-cab__emisor">
             ${logo ? `<img class="op-cab__logo" src="../${encodeURIComponent(logo)}" alt="">` : ''}
@@ -7869,7 +7904,6 @@
             <div class="op-cab__titulo-texto">ORDEN DE PAGO</div>
             <div class="op-cab__numero">${esc(d?.numero_texto ?? '—')}</div>
             <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>
-            <div class="op-cab__copia">${rotulo}</div>
           </div>
         </div>
         <div class="op-seccion">
@@ -7897,9 +7931,8 @@
           <div class="op-firma">Recibí conforme (proveedor) — firma y aclaración</div>
           <div class="op-firma">Autorizó</div>
         </div>
+        ${lineaSaldo ? `<div class="op-saldo-cuenta"><span>${esc(lineaSaldo.texto)}</span><span class="op-saldo-cuenta__numero">${esc(formatearImporte(lineaSaldo.importe))}</span></div>` : ''}
         ${d?.creada_por ? `<div class="op-pie">Generada por ${esc(d.creada_por)}</div>` : ''}`
-
-      return COPIAS_ORDEN_PAGO.map(r => `<div class="op-copia op-copia--${r.toLowerCase()}" data-copia="${r}">${copia(r)}</div>`).join('')
     }
 
     let turnoOrdenPago = 0
@@ -7910,8 +7943,9 @@
       hoja.innerHTML = '<p>Cargando la orden de pago…</p>'
       modal.hidden = false
       let res
+      let saldo = null
       try {
-        res = await supabase.rpc('datos_orden_pago', { p_orden_id: ordenId })
+        [res, saldo] = await Promise.all([supabase.rpc('datos_orden_pago', { p_orden_id: ordenId }), leerSaldoOrdenPago(ordenId)])
       } catch (e) {
         res = { data: null, error: { message: e?.message ?? String(e) } }
       }
@@ -7920,7 +7954,7 @@
         hoja.innerHTML = `<p class="pago-error">No se pudo leer la orden de pago: ${esc(res?.error?.message ?? 'no vino nada')}. Reimprimila desde la ficha del proveedor.</p>`
         return
       }
-      hoja.innerHTML = htmlOrdenPago(res.data)
+      hoja.innerHTML = htmlOrdenPago(res.data, { saldo })
       document.getElementById('btn-imprimir-orden').focus?.()
     }
     function cerrarOrdenPago() {
@@ -7945,56 +7979,40 @@
       return `${prefijo}-OP-${String(numero ?? '').padStart(5, '0')}`
     }
 
-    async function cargarFichaOrdenesPago() {
-      const f = estado.ficha
-      if (!f) return
-      f.ordenesPago = null
-      f.errorOrdenesPago = null
-      if (!(tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'ver_todo'))) {
-        renderizarFichaOrdenesPago()
-        return
-      }
-      const unidadId = f.unidadId
-      let q = supabase.from('ordenes_pago').select('id, unidad_negocio_id, numero, fecha, total, creada_en')
-        .eq('proveedor_id', f.proveedorId)
-      if (unidadId) q = q.eq('unidad_negocio_id', unidadId)
-      let data = null, error = null
+    // LA ORDEN DE PAGO EN EL RENGLÓN DEL PAGO (30/10/2026): se fue el
+    // recuadro "Órdenes de pago (N)" de abajo de la ficha. Cada pago de la
+    // lista que tiene orden (gastos.orden_pago_id → ordenes_pago) dice
+    // "Orden de pago N-OP-00001" y lleva "Reimprimir". gasto_id → { id,
+    // texto }. Sin permiso (la policy de ordenes_pago pide registrar_pago o
+    // ver_todo) o si la lectura falla, el pago queda como viene: nada se
+    // inventa.
+    async function cargarOrdenesDePagos(filas) {
+      const mapa = new Map()
+      if (!(tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'ver_todo'))) return mapa
+      const ids = [...new Set((filas ?? []).filter(m => m.tipo === 'pago' && m.gasto_id).map(m => m.gasto_id))]
+      const gastoAOrden = new Map()
       try {
-        ({ data, error } = await q.order('creada_en', { ascending: false }))
-      } catch (e) { error = e }
-      if (estado.ficha !== f || f.unidadId !== unidadId) return
-      if (error) {
-        console.error('ordenes_pago:', error)
-        f.errorOrdenesPago = 'No se pudieron leer las órdenes de pago.'
-      } else {
-        f.ordenesPago = data ?? []
+        for (let i = 0; i < ids.length; i += TANDA_GASTOS_PAGO) {
+          const { data, error } = await supabase.from('gastos').select('id, orden_pago_id').in('id', ids.slice(i, i + TANDA_GASTOS_PAGO))
+          if (error) throw error
+          for (const g of data ?? []) if (g.orden_pago_id) gastoAOrden.set(g.id, g.orden_pago_id)
+        }
+        const opIds = [...new Set(gastoAOrden.values())]
+        const ordenes = new Map()
+        for (let i = 0; i < opIds.length; i += TANDA_GASTOS_PAGO) {
+          const { data, error } = await supabase.from('ordenes_pago').select('id, numero, unidad_negocio_id').in('id', opIds.slice(i, i + TANDA_GASTOS_PAGO))
+          if (error) throw error
+          for (const o of data ?? []) ordenes.set(o.id, o)
+        }
+        for (const [gastoId, opId] of gastoAOrden) {
+          const o = ordenes.get(opId)
+          if (o) mapa.set(gastoId, { id: o.id, texto: numeroTextoOrden(o.unidad_negocio_id, o.numero) })
+        }
+      } catch (e) {
+        console.error('No se pudieron leer las órdenes de pago de los pagos:', e)
+        return new Map()
       }
-      renderizarFichaOrdenesPago()
-    }
-
-    function htmlOrdenesPagoFicha(ordenes, { unidadId = null, error = null } = {}) {
-      if (error) return `<div class="ordenes-pago-cc"><h3 class="titulo-seccion-cc">Órdenes de pago</h3><div class="cargar-importe-cc__error">${esc(error)}</div></div>`
-      const filas = [...(ordenes ?? [])].sort((a, b) => String(b.creada_en ?? '').localeCompare(String(a.creada_en ?? '')))
-      if (!filas.length) return ''
-      return `
-        <div class="ordenes-pago-cc">
-          <h3 class="titulo-seccion-cc">Órdenes de pago (${filas.length})</h3>
-          ${filas.map(o => `
-            <div class="orden-pago-cc">
-              <div class="orden-pago-cc__info">
-                <div class="orden-pago-cc__numero">${esc(numeroTextoOrden(o.unidad_negocio_id, o.numero))} · ${importeHtml(o.total)}</div>
-                <div class="orden-pago-cc__meta">${esc(fechaOrden(o.fecha))}${unidadId ? '' : ` · ${esc(etiquetaUnidad(o.unidad_negocio_id))}`}</div>
-              </div>
-              <button type="button" class="btn-pago-ayuda" data-reimprimir-orden="${esc(o.id)}">Reimprimir</button>
-            </div>`).join('')}
-        </div>`
-    }
-
-    function renderizarFichaOrdenesPago() {
-      const cont = document.getElementById('ficha-ordenes-pago')
-      if (!cont) return
-      if (!estado.ficha) { cont.innerHTML = ''; return }
-      cont.innerHTML = htmlOrdenesPagoFicha(estado.ficha.ordenesPago, { unidadId: estado.ficha.unidadId, error: estado.ficha.errorOrdenesPago })
+      return mapa
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -8354,10 +8372,6 @@
     document.getElementById('btn-cerrar-orden').addEventListener('click', cerrarOrdenPago)
     document.querySelector('#modal-orden-pago .modal-cc__backdrop').addEventListener('click', cerrarOrdenPago)
     document.getElementById('modal-orden-pago').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); cerrarOrdenPago() } })
-    document.getElementById('ficha-ordenes-pago').addEventListener('click', (e) => {
-      const b = e.target.closest?.('[data-reimprimir-orden]')
-      if (b) abrirOrdenPago(b.dataset.reimprimirOrden)
-    })
     document.getElementById('cc-primer').addEventListener('click', (e) => {
       const b = e.target.closest('[data-cc-seccion]')
       if (b) mostrarSeccionCC(b.dataset.ccSeccion)

@@ -1,5 +1,7 @@
 // Mutaciones de test-cuentas-corrientes-orden-pago-copias.js (la orden de
-// pago con ORIGINAL y DUPLICADO, sin librador y más compacta, 23/10/2026).
+// pago sin librador y más compacta, 23/10/2026; desde el 30/10/2026 en UNA
+// sola hoja, sin ORIGINAL/DUPLICADO: las mutaciones de las copias son ahora
+// las que las vuelven a poner).
 // Ver mutar.js. Las de esc() de htmlOrdenPago las miden -pago-mixto y -xss
 // (con marcas en cada dato); acá van solo las de este pedido.
 //
@@ -20,15 +22,12 @@ correrMutacionesEnVarios([
       // ── El librador ───────────────────────────────────────────────────────
       { nombre: 'vuelve la columna "Librador" (cabecera)', de: '<th>Fecha de pago</th><th class="op-num">Importe</th>', a: '<th>Fecha de pago</th><th>Librador</th><th class="op-num">Importe</th>' },
       { nombre: 'vuelve el librador en la fila del cheque', de: "<td>${esc(fechaOrden(c.fecha_pago))}</td><td class=\"op-num\">${importeHtml(c.importe)}</td>", a: "<td>${esc(fechaOrden(c.fecha_pago))}</td><td>${esc((c.librador ?? []).map(l => l?.nombre).join('; '))}</td><td class=\"op-num\">${importeHtml(c.importe)}</td>" },
-      // ── Las dos copias ────────────────────────────────────────────────────
-      { nombre: 'una sola copia', de: "    const COPIAS_ORDEN_PAGO = ['ORIGINAL', 'DUPLICADO']", a: "    const COPIAS_ORDEN_PAGO = ['ORIGINAL']" },
-      { nombre: 'el duplicado primero', de: "    const COPIAS_ORDEN_PAGO = ['ORIGINAL', 'DUPLICADO']", a: "    const COPIAS_ORDEN_PAGO = ['DUPLICADO', 'ORIGINAL']" },
-      { nombre: 'las dos copias dicen ORIGINAL', de: '${copia(r)}</div>`).join(\'\')', a: '${copia(\'ORIGINAL\')}</div>`).join(\'\')' },
-      { nombre: 'la copia sin su rótulo', de: '            <div class="op-cab__copia">${rotulo}</div>\n', a: '' },
-      { nombre: 'el rótulo arriba del título, no bajo el número', de: '            <div class="op-cab__titulo-texto">ORDEN DE PAGO</div>', a: '            <div class="op-cab__copia">${rotulo}</div><div class="op-cab__titulo-texto">ORDEN DE PAGO</div>' },
-      { nombre: 'el duplicado con la clase del original (no saltaría de hoja)', de: '<div class="op-copia op-copia--${r.toLowerCase()}"', a: '<div class="op-copia op-copia--original"' },
-      { nombre: 'el duplicado sin la firma de quien autorizó', de: '          <div class="op-firma">Autorizó</div>', a: "          ${rotulo === 'ORIGINAL' ? '<div class=\"op-firma\">Autorizó</div>' : ''}" },
-      { nombre: 'el duplicado sin las firmas', de: '        <div class="op-firmas">', a: "        <div class=\"op-firmas\"${rotulo === 'DUPLICADO' ? ' hidden' : ''}>" },
+      // ── Una sola hoja (30/10/2026) ─────────────────────────────────────────
+      { nombre: 'vuelve el rótulo ORIGINAL bajo el número', de: '            <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>\n          </div>', a: '            <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>\n            <div class="op-cab__copia">ORIGINAL</div>\n          </div>' },
+      { nombre: 'vuelve el envoltorio de copias', de: '      return `\n        <div class="op-cab">', a: '      return `<div class="op-copia op-copia--original" data-copia="ORIGINAL"></div>\n        <div class="op-cab">' },
+      { nombre: 'la cabecera dos veces (dos hojas)', de: '      return `\n        <div class="op-cab">', a: '      return `\n        <div class="op-cab"></div><div class="op-cab">' },
+      { nombre: 'sin la firma de quien autorizó', de: '          <div class="op-firma">Autorizó</div>\n', a: '' },
+      { nombre: 'sin la firma del proveedor', de: '          <div class="op-firma">Recibí conforme (proveedor) — firma y aclaración</div>\n', a: '' },
       // ── Se cancelan los siguientes comprobantes ───────────────────────────
       { nombre: 'con facturas igual dice "Pago a cuenta"', de: '      const filasFacturas = facturas.length\n', a: '      const filasFacturas = false\n' },
       { nombre: 'el aplicado muestra el importe de la factura', de: '<td class="op-num">${importeHtml(f.aplicado)}</td>', a: '<td class="op-num">${importeHtml(f.importe)}</td>' },
@@ -36,16 +35,12 @@ correrMutacionesEnVarios([
       { nombre: 'la factura sin su fecha', de: '<td>${esc(fechaOrden(f.fecha))}</td>', a: '<td>—</td>' },
       { nombre: 'viajan también las facturas sin tildar', de: '        .filter(f => f.checked && centavosDe(f.monto) > 0)\n        .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: centavosDe(f.monto) / 100 }))', a: '        .filter(f => centavosDe(f.monto) > 0)\n        .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: centavosDe(f.monto) / 100 }))' },
       { nombre: 'viaja el saldo entero en vez de lo aplicado', de: '        .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: centavosDe(f.monto) / 100 }))', a: '        .map(f => ({ factura_pendiente_id: f.id, monto_aplicado: centavosDe(f.saldo) / 100 }))' },
-      { nombre: 'abrir la orden no la dibuja', de: '      hoja.innerHTML = htmlOrdenPago(res.data)\n', a: '' },
+      { nombre: 'abrir la orden no la dibuja', de: '      hoja.innerHTML = htmlOrdenPago(res.data, { saldo })\n', a: '' },
       // ── La hoja de impresión ──────────────────────────────────────────────
-      { nombre: 'en la pantalla se ven las dos copias', de: '    .op-copia--duplicado { display: none; }\n', a: '' },
-      { nombre: 'al imprimir el duplicado no sale', de: '      html.op-imprimiendo .op-copia--duplicado { display: block;', a: '      html.op-imprimiendo .op-copia--duplicado { display: none;' },
-      { nombre: 'el duplicado no empieza en otra hoja', de: ' break-before: page; page-break-before: always; }', a: ' }' },
-      { nombre: 'la nota de las dos hojas se imprime', de: '      html.op-imprimiendo .op-nota-copias { display: none !important; }\n', a: '' },
+      { nombre: 'vuelve la regla del duplicado en otra hoja', de: '    .op-saldo-cuenta {', a: '    html.op-imprimiendo .op-copia--duplicado { display: block; break-before: page; }\n    .op-saldo-cuenta {' },
       { nombre: 'la letra de la hoja vuelve a 10.5pt', de: 'font-size: 8.5pt; line-height: 1.25;', a: 'font-size: 10.5pt; line-height: 1.35;' },
       { nombre: 'la letra de la tabla vuelve a 9.5pt', de: '.op-tabla { width: 100%; border-collapse: collapse; font-size: 7.5pt; }', a: '.op-tabla { width: 100%; border-collapse: collapse; font-size: 9.5pt; }' },
-      { nombre: 'el rótulo sin su estilo', de: 'font-size: 8pt; font-weight: 800; letter-spacing: 0.1em; }', a: 'font-size: 8pt; }' },
-      { nombre: 'el modal no avisa que salen dos hojas', de: '>Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO, las dos con las firmas.</p>', a: '></p>' },
+      { nombre: 'vuelve el aviso de las dos hojas en el modal', de: '      <div class="op-hoja-marco"><div class="op-hoja" id="orden-pago-hoja"></div></div>', a: '      <p class="op-nota-copias" id="nota-copias-orden">Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO, las dos con las firmas.</p>\n      <div class="op-hoja-marco"><div class="op-hoja" id="orden-pago-hoja"></div></div>' },
       { nombre: 'imprimir no marca el html', de: "      raiz.classList.add('op-imprimiendo')\n", a: '' },
     ],
   },

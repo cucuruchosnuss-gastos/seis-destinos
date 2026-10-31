@@ -80,7 +80,7 @@ const RENDERS = [
   'crearSelectorOrdenFicha', 'abrirModalAplicarCreditoDesdeFicha', 'seleccionarCreditoParaAplicar',
   'actualizarSelectorCuentaPago', 'renderizarFilasFifo',
   // el pago en los dos sentidos y la orden de pago (20/10/2026)
-  'pintarPiePago', 'htmlOrdenPago', 'htmlOrdenesPagoFicha', 'renderizarFichaOrdenesPago',
+  'pintarPiePago', 'htmlOrdenPago', 'lineaSaldoOrdenPago',
   'renderizarPreviewImportacion', 'mostrarErroresImportacion',
   // La barra de unidad (28/09/2026): viene de js/barra-unidad.js por el import
   // del módulo (extraer.js la encuentra ahí), con su código real.
@@ -465,16 +465,18 @@ async function correrRenders(S) {
     cheques: [{ banco: marca('op_cbanco'), numero: marca('op_cnum'), fecha_pago: '2026-10-01', librador: [{ nombre: marca('op_clib'), cuit: marca('op_ccuit') }], es_echeq: true, importe: 5, de_empresa: marca('op_cemp'), otra_empresa: true }],
     otros_medios: [{ medio: marca('op_medio'), cuenta: marca('op_cuenta'), importe: 5 }],
     a_favor: 1,
-  })
+  }, { saldo: { deuda: 10, credito: 0 } })
   chequearMarcas(chk, 'la orden de pago', hojaOrden, ['op_num', 'op_obs', 'op_quien', 'op_razon', 'op_cuit', 'op_dom', 'op_prov', 'op_pcuit', 'op_pdir',
     'op_ftipo', 'op_fnum', 'op_cbanco', 'op_cnum', 'op_medio'])
   // 23/10/2026: el librador del cheque ya no se imprime.
   chk('la orden de pago: NO se imprime el librador', !hojaOrden.includes('op_clib') && !hojaOrden.includes('op_ccuit'))
   chk('la orden de pago: un logo con comillas no entra (ni crudo ni escapado)', !hojaOrden.includes('op_logo') && !/<img/.test(hojaOrden))
   chk('la orden de pago: NO se imprime la empresa del cheque ni la cuenta', !hojaOrden.includes('op_cemp') && !hojaOrden.includes('op_cuenta'))
-  const fichaOrdenes = S.htmlOrdenesPagoFicha([{ id: marca('ofp_id'), unidad_negocio_id: 'u-x', numero: 3, fecha: '2026-10-15', total: 5, creada_en: '2026-10-15' }], { unidadId: null })
-  chequearMarcas(chk, 'las órdenes de pago de la ficha', fichaOrdenes, ['ofp_id'])
-  chequearMarcas(chk, 'las órdenes de pago de la ficha (el error)', S.htmlOrdenesPagoFicha([], { error: marca('ofp_err') }), ['ofp_err'])
+  // 30/10/2026: la línea del saldo de la cuenta lleva el nombre del
+  // proveedor (a pagar) o de la empresa (a favor).
+  chk('la orden de pago: el saldo a pagar con el proveedor escapado', hojaOrden.includes('Saldo de la cuenta con &quot;&gt;&lt;b data-xss=&quot;op_prov&quot;&gt; (a pagar)'))
+  const hojaFavor = S.htmlOrdenPago({ emisor: { razon_social: marca('op_razon2') }, proveedor: {} }, { saldo: { deuda: 0, credito: 5 } })
+  chequearMarcas(chk, 'la orden de pago con saldo a favor de la empresa', hojaFavor, ['op_razon2'])
 
   // La moneda del pago (abrirModalPago está stubeada para que ningún render
   // lo abra): se afirman sus dos ramas sobre el cuerpo real.
@@ -648,18 +650,9 @@ const SEGURAS = {
     'importeHtml(f.importe)': IMPORTE, 'importeHtml(f.aplicado)': IMPORTE, 'importeHtml(f.saldo_actual)': IMPORTE,
     'importeHtml(c.importe)': IMPORTE, 'importeHtml(o.importe)': IMPORTE, 'importeHtml(d?.total)': IMPORTE, 'importeHtml(favor)': IMPORTE,
     filasFacturas: HTML_PROPIO, filasCheques: HTML_PROPIO, filasOtros: HTML_PROPIO,
-    // 23/10/2026: las dos copias. El rótulo sale de COPIAS_ORDEN_PAGO
-    // (ORIGINAL / DUPLICADO, del código) y copia() es la hoja ya escapada.
-    rotulo: 'ORIGINAL o DUPLICADO, de COPIAS_ORDEN_PAGO (del código)',
-    'r.toLowerCase()': 'ORIGINAL o DUPLICADO, de COPIAS_ORDEN_PAGO (del código), en minúscula',
-    r: 'ORIGINAL o DUPLICADO, de COPIAS_ORDEN_PAGO (del código)',
-    'copia(r)': 'la hoja de esta misma función: cada dato de la base ya pasó por esc() (ejecutada con marcas)',
   },
-  abrirOrdenPago: { 'htmlOrdenPago(res.data)': 'htmlOrdenPago() escapa cada dato de la base (ejecutada con marcas)' },
-  htmlOrdenesPagoFicha: { 'filas.length': 'un número (la cantidad de órdenes)', 'importeHtml(o.total)': IMPORTE },
-  renderizarFichaOrdenesPago: {
-    'htmlOrdenesPagoFicha(estado.ficha.ordenesPago, { unidadId: estado.ficha.unidadId, error: estado.ficha.errorOrdenesPago })': 'htmlOrdenesPagoFicha() escapa cada dato (ejecutada con marcas)',
-  },
+  // 30/10/2026: UNA hoja (sin copias) y la línea del saldo.
+  abrirOrdenPago: { 'htmlOrdenPago(res.data, { saldo })': 'htmlOrdenPago() escapa cada dato de la base (ejecutada con marcas)' },
   '(top-level)': {
     'importeHtml(total, moneda)': IMPORTE + ' — la línea de "Total a cargar" del listener de input de "Cargar importe"',
   },

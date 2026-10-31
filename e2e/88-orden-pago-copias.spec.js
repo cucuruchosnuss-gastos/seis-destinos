@@ -1,16 +1,15 @@
-// LA ORDEN DE PAGO: ORIGINAL Y DUPLICADO, SIN LIBRADOR Y MÁS COMPACTA
-// (23/10/2026, rama ci-prueba/orden-pago-duplicado).
+// LA ORDEN DE PAGO: SIN LIBRADOR Y MÁS COMPACTA (23/10/2026, rama
+// ci-prueba/orden-pago-duplicado) y, desde el 30/10/2026 (rama
+// ci-prueba/cc-proveedor-una-lista), en UNA SOLA HOJA, sin ORIGINAL ni
+// DUPLICADO (si hacen falta dos, se imprime dos veces), con la línea del
+// saldo de la cuenta abajo de todo.
 // En la maqueta (cc-cheques), sin credenciales, a 1280, 390, 360 y tablet
-// (768 × 1024): la orden se reimprime desde la ficha y
-//  - en la pantalla se ve UNA hoja (el ORIGINAL) y el aviso "Se imprimen dos
-//    hojas iguales…"; los cheques sin "Librador"; los comprobantes pagados
-//    listados con número, fecha y aplicado;
-//  - al imprimir se ven las DOS copias (ORIGINAL arriba, DUPLICADO después),
-//    sin el aviso, cada una con las firmas;
-//  - el PDF de Chromium (lo mismo que "Guardar PDF") tiene DOS páginas, aun
-//    con 25 comprobantes: cada copia entra en su hoja. Medido el 23/10/2026
-//    en la maqueta: una copia entra en una hoja A4 con ~30 comprobantes;
-//    antes del cambio, con ~15 (la fila bajó de 27 a 18 px).
+// (768 × 1024): la orden se reimprime desde el renglón de su pago y
+//  - en la pantalla y al imprimir se ve UNA hoja, sin rótulo de copia ni
+//    aviso de dos hojas; los cheques sin "Librador"; los comprobantes
+//    pagados listados con número, fecha y aplicado; las firmas;
+//  - el PDF de Chromium (lo mismo que "Guardar PDF") tiene UNA página, aun
+//    con 25 comprobantes (medido el 23/10/2026: una hoja A4 entra ~30).
 //  - Sin scroll horizontal y sin errores de JS.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
@@ -38,67 +37,70 @@ const ORDEN = {
 async function abrirOrden(page, orden = ORDEN) {
   await page.clock.setFixedTime(new Date('2026-10-15T10:30:00-03:00'));
   await page.goto(`${MAQUETA}/modulos/cuentas-corrientes.html?maqueta=cc-cheques`, { waitUntil: 'domcontentloaded' });
-  await page.evaluate(({ orden }) => {
+  await page.evaluate(async ({ orden }) => {
+    const datos = await fetch('/maqueta/datos/cc-cheques.json').then(r => r.json());
     const ordenes = [{ id: 'op-1', unidad_negocio_id: 'u-n', proveedor_id: 'pv1', numero: 1, fecha: '2026-10-15', total: orden.total, creada_en: '2026-10-15T12:00:00Z' }];
-    sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas: { ordenes_pago: ordenes }, rpc: { datos_orden_pago: orden } }));
+    // El pago de esa orden, en la cuenta (30/10/2026: la orden va en su renglón).
+    const gastos = [{ id: 'g-op-1', orden_pago_id: 'op-1', medio_pago: 'transferencia', descripcion: 'Pago a proveedor' }];
+    const movimientos = [...datos.tablas.v_cuenta_corriente_movimientos, { proveedor_id: 'pv1', unidad_negocio_id: 'u-n', moneda: 'ARS', fecha: '2026-10-15', tipo: 'pago', monto: -orden.total,
+      factura_pendiente_id: null, gasto_id: 'g-op-1', credito_id: null, referencia: 'Pago a proveedor', saldo_acumulado: 0, orden_desempate: 9 }];
+    sessionStorage.setItem('maqueta.cambios', JSON.stringify({ tablas: { ordenes_pago: ordenes, gastos, v_cuenta_corriente_movimientos: movimientos }, rpc: { datos_orden_pago: orden } }));
     localStorage.setItem('barraUnidad.elegida', 'u-n');
   }, { orden });
   await page.goto(`${MAQUETA}/modulos/cuentas-corrientes.html?proveedor=pv1&unidad=u-n`);
-  await page.locator('#ficha-ordenes-pago [data-reimprimir-orden="op-1"]').click();
+  await page.locator('#lista-movimientos-ficha [data-reimprimir-orden="op-1"]').click();
   await expect(page.locator('#modal-orden-pago')).toBeVisible();
-  await expect(page.locator('#orden-pago-hoja .op-copia')).toHaveCount(2);
+  await expect(page.locator('#orden-pago-hoja .op-cab')).toHaveCount(1);
 }
 
 for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['360', 360, 780], ['tablet', 768, 1024]]) {
-  test(`${nombre}: en la pantalla una hoja; al imprimir, ORIGINAL y DUPLICADO`, async ({ page }, info) => {
+  test(`${nombre}: una sola hoja, en la pantalla y al imprimir`, async ({ page }, info) => {
     const errores = vigilarErrores(page);
     await page.setViewportSize({ width: ancho, height: alto });
     await abrirOrden(page);
-    const original = page.locator('#orden-pago-hoja .op-copia--original');
-    const duplicado = page.locator('#orden-pago-hoja .op-copia--duplicado');
+    const hoja = page.locator('#orden-pago-hoja');
 
-    // La pantalla: solo el ORIGINAL, con el aviso de las dos hojas.
-    await expect(original).toBeVisible();
-    await expect(duplicado).toBeHidden();
-    await expect(page.locator('#nota-copias-orden')).toBeVisible();
-    await expect(page.locator('#nota-copias-orden')).toHaveText('Se imprimen dos hojas iguales: ORIGINAL y DUPLICADO, las dos con las firmas.');
-    await expect(original.locator('.op-cab__titulo')).toHaveText(/ORDEN DE PAGO\s*N-OP-00001\s*Fecha 15\/10\/2026\s*ORIGINAL/);
+    // Una sola hoja: sin rótulo de copia ni aviso de dos hojas.
+    await expect(hoja).toBeVisible();
+    await expect(hoja.locator('.op-copia')).toHaveCount(0);
+    await expect(page.locator('#nota-copias-orden')).toHaveCount(0);
+    await expect(hoja.locator('.op-cab__titulo')).toHaveText(/^\s*ORDEN DE PAGO\s*N-OP-00001\s*Fecha 15\/10\/2026\s*$/);
+    expect(await hoja.textContent(), 'sin ORIGINAL ni DUPLICADO').not.toMatch(/ORIGINAL|DUPLICADO/);
 
     // Los cheques sin librador.
-    const cheques = original.locator('.op-seccion', { hasText: 'Valores entregados' }).locator('table').first();
+    const cheques = hoja.locator('.op-seccion', { hasText: 'Valores entregados' }).locator('table').first();
     expect(await cheques.locator('th').allTextContents()).toEqual(['Banco', 'N°', 'Fecha de pago', 'Importe']);
     expect(await cheques.locator('tbody td').allTextContents()).toEqual(['BANCO MACRO eCheq', '55443322', '10/10/2026', '$ 120.000,00']);
-    const texto = await page.locator('#orden-pago-hoja').textContent();
+    const texto = await hoja.textContent();
     expect(texto, 'sin el librador').not.toContain('Heladería Sol');
     expect(texto, 'sin la palabra Librador').not.toContain('Librador');
 
     // Los comprobantes pagados, listados (no "Pago a cuenta").
-    const comprobantes = original.locator('.op-seccion', { hasText: 'Se cancelan los siguientes comprobantes' });
+    const comprobantes = hoja.locator('.op-seccion', { hasText: 'Se cancelan los siguientes comprobantes' });
     await expect(comprobantes).not.toContainText('Pago a cuenta');
     const filas = comprobantes.locator('tbody tr');
     await expect(filas).toHaveCount(2);
     expect(await filas.nth(0).locator('td').allTextContents()).toEqual(['Factura A', '0003-00001201', '20/08/2026', '$ 250.000,00', '$ 250.000,00', '$ 0,00']);
     expect(await filas.nth(1).locator('td').allTextContents()).toEqual(['Factura A', '0003-00001245', '05/09/2026', '$ 400.000,00', '$ 150.000,00', '$ 250.000,00']);
 
+    // Abajo de todo, UNA línea con el saldo de la cuenta (v_saldo_proveedor de
+    // la maqueta: ANATOLIA en Nuss debe $ 650.000).
+    await expect(hoja.locator('.op-saldo-cuenta')).toHaveCount(1);
+    await expect(hoja.locator('.op-saldo-cuenta')).toHaveText(/Saldo de la cuenta con ANATOLIA SRL \(a pagar\)\s*\$ 650\.000,00/);
+
     // Más compacta: la letra de la tabla, 7.5pt = 10px.
     expect(await comprobantes.locator('table').evaluate(t => getComputedStyle(t).fontSize)).toBe('10px');
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
-    await captura(page, `orden-pago-copias-pantalla-${nombre}`, info);
+    await captura(page, `orden-pago-hoja-pantalla-${nombre}`, info);
 
-    // Al imprimir: las dos, en orden, sin el aviso, las dos con las firmas.
+    // Al imprimir: la misma hoja, una sola, con las firmas.
     await page.evaluate(() => document.documentElement.classList.add('op-imprimiendo'));
     await page.emulateMedia({ media: 'print' });
-    await expect(original).toBeVisible();
-    await expect(duplicado).toBeVisible();
-    await expect(page.locator('#nota-copias-orden')).toBeHidden();
+    await expect(hoja).toBeVisible();
+    await expect(hoja.locator('.op-cab')).toHaveCount(1);
     await expect(page.locator('#btn-imprimir-orden')).toBeHidden();
-    await expect(duplicado.locator('.op-cab__titulo')).toHaveText(/ORDEN DE PAGO\s*N-OP-00001\s*Fecha 15\/10\/2026\s*DUPLICADO/);
-    const [yO, yD] = await Promise.all([original.boundingBox(), duplicado.boundingBox()]);
-    expect(yD.y, 'el DUPLICADO va después del ORIGINAL').toBeGreaterThan(yO.y + yO.height - 1);
-    for (const c of [original, duplicado]) {
-      await expect(c.locator('.op-firma')).toHaveText(['Recibí conforme (proveedor) — firma y aclaración', 'Autorizó']);
-      await expect(c.locator('.op-firma').first()).toBeVisible();
-    }
+    await expect(hoja.locator('.op-firma')).toHaveText(['Recibí conforme (proveedor) — firma y aclaración', 'Autorizó']);
+    await expect(hoja.locator('.op-firma').first()).toBeVisible();
     expect(await page.locator('#vista-ficha').isVisible(), 'la ficha no se imprime').toBe(false);
     await page.emulateMedia({ media: 'screen' });
     await page.evaluate(() => document.documentElement.classList.remove('op-imprimiendo'));
@@ -117,21 +119,21 @@ async function paginasDelPdf(page) {
   return (pdf.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
 }
 
-test('el PDF: dos páginas (ORIGINAL y DUPLICADO), también con 25 comprobantes', async ({ page }, info) => {
+test('el PDF: UNA página, también con 25 comprobantes', async ({ page }, info) => {
   const errores = vigilarErrores(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await abrirOrden(page);
-  expect(await paginasDelPdf(page), 'la orden de siempre: dos hojas').toBe(2);
+  expect(await paginasDelPdf(page), 'la orden de siempre: una hoja').toBe(1);
 
   const muchas = Array.from({ length: 25 }, (_, i) => factura(i, 10000));
   await abrirOrden(page, { ...ORDEN, facturas: muchas });
-  await expect(page.locator('#orden-pago-hoja .op-copia--original tbody tr')).toHaveCount(25 + 1 + 1);
-  expect(await paginasDelPdf(page), '25 comprobantes: cada copia entra en UNA hoja').toBe(2);
+  await expect(page.locator('#orden-pago-hoja tbody tr')).toHaveCount(25 + 1 + 1);
+  expect(await paginasDelPdf(page), '25 comprobantes: entran en UNA hoja').toBe(1);
   // La hoja impresa, para mirarla: lo que sale en papel, a lo alto.
   await page.evaluate(() => document.documentElement.classList.add('op-imprimiendo'));
   await page.emulateMedia({ media: 'print' });
   await page.setViewportSize({ width: 794, height: 1123 });
-  await captura(page, 'orden-pago-copias-impresa-25', info);
+  await captura(page, 'orden-pago-hoja-impresa-25', info);
   await page.emulateMedia({ media: 'screen' });
   expect(errores, errores.join('\n')).toEqual([]);
 });

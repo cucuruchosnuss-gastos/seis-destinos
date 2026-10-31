@@ -181,7 +181,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
       await page.locator('[data-cliente="c1"]').first().click();
       await page.locator('[data-cuenta-nota-debito="nd-1"]').click();
       await expect(page.locator('#ad-nd')).toBeVisible();
-      await expect(page.locator('#ad-nd-hoja .ndh-copia--original')).toContainText('N-ND-0001');
+      await expect(page.locator('#ad-nd-hoja .ndh-copia')).toContainText('N-ND-0001');
       await expect(page.locator('#ad-nd-imprimir')).toBeEnabled();
       if (seVe) {
         await expect(page.locator('#ad-nd-anular')).toBeVisible();
