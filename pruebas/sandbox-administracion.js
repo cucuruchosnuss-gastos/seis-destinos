@@ -27,6 +27,29 @@ const CONSTANTES_ENTRE_V2 = ['DIAS_SALDO_ENTRE', 'RE_ORDEN_MERCADERIA_ENTRE', 'O
 
 const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
+// Arreglos 30/10 (puntos 1 y 6, 31/10/2026): revalorizar sin leer las
+// condiciones no manda [], el bulto con precio_lista, la condición
+// desactivada que la orden tenía, "sin condición" leído de la base y no
+// salir de la ficha si no se pudo guardar. Una copia de antes no las
+// tiene: van con un reemplazo que no hace nada (ver OPCIONALES_FN, abajo).
+const FUNCIONES_ARREGLOS_VALORIZAR_CONDICION = [
+  'opcionesBultoGuardado', 'condicionesPreviasValorizar', 'bloqueoCondicionesValorizar', 'htmlBloqueoCondicionesValorizar',
+  'releerCondicionesValorizar', 'htmlDesactivadasValorizar',
+  'leerPctClienteFacturar', 'aplicarPctClienteFacturar', 'htmlClienteSinLeerFacturar',
+  'retenerEnFicha', 'esperarEnvioYSalir', 'avisarFinEnvioFicha', 'seguirSalidaFicha',
+]
+const CONSTANTES_ARREGLOS_VALORIZAR_CONDICION = ['AVISO_CONDICIONES_SIN_LEER']
+const REEMPLAZOS_ARREGLOS_VALORIZAR_CONDICION = {
+  opcionesBultoGuardado: 'function opcionesBultoGuardado(it) { return { decimalesBase: 2, subtotal: it.subtotal, cantidad: it.cantidad } }',
+  condicionesPreviasValorizar: 'function condicionesPreviasValorizar() { return [] }',
+  releerCondicionesValorizar: 'async function releerCondicionesValorizar() {}',
+  leerPctClienteFacturar: 'async function leerPctClienteFacturar() { return { pct: null, error: null } }',
+  aplicarPctClienteFacturar: 'function aplicarPctClienteFacturar() {}',
+  retenerEnFicha: 'function retenerEnFicha() { return false }',
+  esperarEnvioYSalir: 'async function esperarEnvioYSalir() {}',
+  seguirSalidaFicha: 'function seguirSalidaFicha() {}',
+}
+
 // Pendientes desde el corte, aplicar y el recibo (30/10/2026): la cuenta del
 // cliente las llama (htmlCuenta, pintarCliente y abrirCliente).
 const FUNCIONES_PENDIENTES_AD = [
@@ -262,6 +285,8 @@ const FUNCIONES_BASE = [
   'programarGuardarFacturar', 'validarDivision', 'guardarFacturar', 'imprimirPunto', 'pdfPunto', 'compartirPunto', 'rutaPdfFactura',
   'subirPdfFactura', 'escribirNumeroFactura', 'guardarFacturaPunto', 'verPdfFactura', 'listaOrdenesALaVista', 'releerOrdenesEnSilencio',
   'llenarCondicionVenta', 'completarOtroPct', 'marcarCondicionTocada', 'condicionSinGuardar', 'guardarCondicionAlSalir', 'pintarCondicionVenta', 'guardarCondicionVenta',
+  // Arreglos 30/10 (puntos 1 y 6): ver FUNCIONES_ARREGLOS_VALORIZAR_CONDICION, arriba.
+  ...FUNCIONES_ARREGLOS_VALORIZAR_CONDICION,
   // Los 3 vendedores y la configuración de comisiones (21/10/2026, tarde)
   'numeroONulo', 'leerVendedores', 'leerComisionesCliente', 'sumaPcts', 'parametrosComisiones', 'validarComisiones', 'htmlVendedoresPct',
   'llenarVendedoresPct', 'comisionesDeDatos', 'comisionesSinDatos',
@@ -301,6 +326,8 @@ const CONSTANTES_BASE = [
   'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'DIAS_ERRORES', 'GRAVEDAD_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ALTO_UTIL_A4_MM', 'ALTO_MEDIA_HOJA_MM', 'ANCHO_UTIL_A4_MM', 'FUENTE_HOJA', 'MM', 'ALTO_LOGO_HOJA_PX', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'ESTILOS_LISTO',
   'NOMBRE_BULTO_HOJA', 'POR_UNIDAD_HOJA', 'SIN_NOMBRE_DE_CONO',
+  // Arreglos 30/10 (punto 1a)
+  ...CONSTANTES_ARREGLOS_VALORIZAR_CONDICION,
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
   // Las notas de débito (24/10/2026)
@@ -518,6 +545,11 @@ const REEMPLAZOS_ACOPIOS = {
 for (const n of FUNCIONES_ACOPIOS) {
   OPCIONALES_FN[n] = REEMPLAZOS_ACOPIOS[n] ?? (/^(html|texto|nombre|papeles)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
 }
+// Arreglos 30/10 (puntos 1 y 6): una copia de antes no tiene ninguna.
+for (const n of FUNCIONES_ARREGLOS_VALORIZAR_CONDICION) {
+  OPCIONALES_FN[n] = REEMPLAZOS_ARREGLOS_VALORIZAR_CONDICION[n] ?? (/^html/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
+}
+OPCIONALES_CONST.AVISO_CONDICIONES_SIN_LEER = "var AVISO_CONDICIONES_SIN_LEER = '(no existe)'"
 // Corregir una orden (29/10/2026): una copia de antes no tiene ninguna. Sin
 // permiso para corregir, sin historial y sin errores ni cambios: así esa
 // copia corre y las suites dan ROJO por lo que afirman.

@@ -53,8 +53,9 @@ correrMutaciones({
     { nombre: 'la condición: las órdenes no se enteran', de: '        // Las órdenes leen la condición de la lista de clientes: que la relea.\n        estado.clientes = null\n', a: '' },
     { nombre: 'los renglones en 0 se imprimen', de: 'return Number.isFinite(n) && n !== 0 })', a: 'return Number.isFinite(n) })' },
     // La ficha no pierde la condición en silencio (30/10/2026, ci-prueba/condicion-venta-sin-defecto)
-    { nombre: 'salir de la ficha no la guarda', de: "      if (estado.vista === 'ad-vista-ficha' && id !== 'ad-vista-ficha' && estado.ficha) guardarCondicionAlSalir(estado.ficha)\n", a: '' },
-    { nombre: 'salir sin avisar si falla', de: '        if (!ok) mostrarError(', a: '        if (false) mostrarError(' },
+    // Arreglos 30/10 (punto 6): salir de la ficha pasa por retenerEnFicha.
+    { nombre: 'salir de la ficha no la guarda', de: "      if (estado.vista === 'ad-vista-ficha' && id !== 'ad-vista-ficha' && retenerEnFicha(() => mostrarVista(id))) return\n", a: '' },
+    { nombre: 'salir sin avisar si falla', de: "        mostrarError(`No se guardó la condición de venta de ${f.original", a: "        if (false) mostrarError(`No se guardó la condición de venta de ${f.original" },
     { nombre: 'cambiar un vendedor no cuenta', de: '      v.propio = true\n      marcarCondicionTocada()', a: '      v.propio = true' },
     { nombre: 'volver a la configuración no cuenta', de: '      v.pct = v.defecto\n      marcarCondicionTocada()\n', a: '      v.pct = v.defecto\n' },
     { nombre: 'guardada nunca se marca', de: '        c.guardadaVersion = Math.max(c.guardadaVersion ?? 0, version)\n', a: '' },

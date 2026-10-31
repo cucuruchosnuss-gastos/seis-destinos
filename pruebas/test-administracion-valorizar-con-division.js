@@ -157,6 +157,13 @@ function preparar(S, { orden = ORDEN, items = ITEMS, clientes = CLIENTES } = {})
   S.__tablas.vendedores_comision = VENDEDORES.map(v => ({ ...v }))
   S.__tablas.cliente_comisiones = []
   S.__tablas.orden_facturas = []
+  // Arreglos 30/10 (punto 6): la pantalla de facturar lee el cliente de la
+  // base (clientes.pct_parte_a en ese momento); acá la base = los clientes dados.
+  const base = clientes.map(c => ({ ...c }))
+  S.__tablas.clientes = (f) => {
+    const id = f.find(x => x[0] === 'eq' && x[1] === 'id')?.[2]
+    return { data: base.filter(c => id === undefined || c.id === id).map(c => ({ ...c })), error: null }
+  }
 }
 const el = (S, id) => S.__doc.getElementById(id)
 const txt = (S, id) => el(S, id).textContent

@@ -119,7 +119,10 @@ const cuerpo = (S) => S.__els.get('ad-orden-cuerpo').innerHTML
   // El mismo caso con un cliente común: todo lo de siempre sigue.
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, cliente_id: 'c1' } })
-  esperas.push(S.abrirOrden('o1').then(() => {
+  // Arreglos 30/10 (punto 6): "sin condición" sale del cliente leído de la base.
+  S.__tablas.clientes = [{ id: 'c1', pct_parte_a: null }]
+  const esperarBase = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)) }
+  esperas.push(S.abrirOrden('o1').then(esperarBase).then(() => {
     const h = cuerpo(S)
     chk('cliente común: sin sello ni deuda entre empresas', !/Orden interna/.test(h) && !/Entre empresas/.test(h) && !/data-entre-deuda/.test(h))
     chk('cliente común: el total, sin la comisión común (28/10/2026)', /Total \$/.test(h) && !/Comisión: sin cargar/.test(h) && !/ad-btn-comision/.test(h))

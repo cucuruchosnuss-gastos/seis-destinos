@@ -209,6 +209,48 @@ Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, p
   1280 px, con la ficha); `test-administracion-ordenes.js`, `-link-remitos.js` y las que simulaban `valorizar_orden_retiro`
   (ahora `valorizar_con_condiciones`) ajustadas; seguras de XSS al día.
 
+## Valorizar y la condición de venta, sin perder datos (31/10/2026, arreglos de la auditoría, puntos 1 y 6)
+Rama local `arreglos-30-10/p16` (desde `1c20f98`). Base leída con `pg_get_functiondef` el 31/10/2026:
+`valorizar_con_condiciones` guarda `ordenes_retiro.condiciones_especiales = nullif(p_condiciones, '{}')` (mandar `[]` o
+null BORRA las de la orden); `valorizar_orden_retiro` descuenta con las de la orden **sin mirar `activa`**;
+`condiciones_especiales_cliente(p_cliente_id, p_solo_activas)` con false trae también las inactivas; `precio_lista`
+es numeric(14,2), como `precio_caja`.
+- **1a. Revalorizar sin poder leer las condiciones** (falla `condiciones_especiales_cliente`, o una lectura de antes en
+  el mismo paso —el saldo, los precios de insumos— y no hay tildes que dibujar): `v.condicionesSinLeer`. Si la orden YA
+  tenía condiciones (`condicionesPreviasValorizar`: valorizada y con `condiciones_especiales`), `bloqueoCondicionesValorizar`
+  frena: en lugar de los tildes, el aviso **"No se pudieron leer las condiciones especiales; reintentá"**
+  (`AVISO_CONDICIONES_SIN_LEER`, `[data-condiciones-sin-leer]`), Guardar apagado y, si igual se llama, `guardarValorizacion`
+  no llama a la base y lo pone al lado del botón. **"Volver a leer las condiciones"** (`#ad-valorizar-releer-condiciones`
+  → `releerCondicionesValorizar`) lee solo las condiciones, sin perder los precios escritos. Sin condiciones previas, `[]`
+  es lo mismo que tenía: se guarda como siempre (con el aviso de siempre "se valoriza sin ellas").
+- **1b. El bulto con condición**: al revalorizar se propone `precio_lista` pero el `subtotal` guardado es el descontado;
+  `prepararPreciosPorBulto` lo usaba para elegir el bulto y ninguno cuadraba (la bolsa de 30 kg a $ 17.500 quedaba en
+  17.499,90). `opcionesBultoGuardado(it)`: con `precio_lista`, solo lo guardado con 2 decimales (sale 17.500); sin él, con
+  el subtotal, como antes. El detalle de la orden valorizada no cambió (ahí precio y subtotal son los dos descontados).
+- **1c. La condición desactivada que la orden tenía**: `leerCondicionesValorizar(cliente, previas)` con previas pide
+  `p_solo_activas: false` y se queda con las activas más las previas desactivadas (las otras inactivas no aparecen). Se
+  muestra tildada con **"(desactivada)"** y el aviso naranja `[data-condicion-desactivada]` "La orden tenía la condición
+  «X», que hoy está desactivada: sigue tildada y se descuenta. Destildala si ya no va." (`htmlDesactivadasValorizar`).
+  Tildada viaja (la base la descuenta igual); destildada sigue a la vista para volver a tildarla.
+- **6. "Cliente sin condición" sale de la base**: `iniciarFacturar` arranca con `clienteSinCondicion: null` y lee
+  `clientes.pct_parte_a` del cliente en ese momento (`leerPctClienteFacturar`, `select('id, pct_parte_a').eq('id')`); con
+  lo leído (`aplicarPctClienteFacturar`) decide el aviso naranja, el tilde "Guardar también como condición del cliente" y
+  el % con que abre (si la orden no tiene el suyo y nadie tocó nada mientras), y pone al día la lista de clientes (copia).
+  Si la lectura falla o no viene la fila: `clienteSinCondicion` queda null (ni aviso ni tilde; `marcarGuardarCliente` no
+  hace nada), el % cae en la lista como antes y se ve "No se pudo leer la condición de venta del cliente…"
+  (`[data-fc-cliente-sin-leer]`, `htmlClienteSinLeerFacturar`).
+- **6. La ficha no se cierra si no se guardó**: `mostrarVista` (al salir de la ficha) y `abrirFicha` (otra ficha) pasan por
+  `retenerEnFicha(salida)`: con la condición sin guardar no se van; se guarda (`guardarCondicionAlSalir`) y, bien
+  guardada, sigue a donde iba (`seguirSalidaFicha`; si cambió algo mientras viajaba, guarda otra vez). Si falla (o no
+  pasa la validación): se queda en la ficha, el error tal cual al lado de "Guardar la condición de venta" y el aviso de
+  arriba "No se guardó la condición de venta de <cliente>: <texto>". Con un guardado ya en camino (el botón) espera a que
+  vuelva (`esperarEnvioYSalir` / `avisarFinEnvioFicha`, sin relojes). El atrás del navegador ya movió la dirección: si
+  falla, la página queda en la ficha igual.
+- Suites `test-/mut-administracion-arreglos-valorizar-condicion.js` (baseline 1c20f98) y
+  `e2e/112-arreglos-valorizar-condicion.spec.js` (390 y 1280 px). Ajustadas: `test-administracion-valorizar-con-division.js`
+  y `-orden-entre-empresas.js` (la base de clientes en el doble), `-cuenta-a-orden.js` (el renglón nuevo al principio
+  de `mostrarVista`) y las anclas de `mut-administracion-division-orden.js`.
+
 ## Acopios (27/10/2026)
 
 Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedido `.claude/pedidos/2026-10-27-acopios.md`). Un acopio es mercadería que el cliente ya compró (y se le facturó) y retira de a poco con el talonario celeste de ACOPIO.

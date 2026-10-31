@@ -2070,6 +2070,9 @@
     }
 
     function mostrarVista(id) {
+      // Arreglos 30/10 (punto 6): con la condición de venta sin guardar, no se
+      // sale de la ficha hasta guardarla; si no se puede, se queda ahí.
+      if (estado.vista === 'ad-vista-ficha' && id !== 'ad-vista-ficha' && retenerEnFicha(() => mostrarVista(id))) return
       // Ir a cualquier otro lado que no sea la vista que abrió la pila (una
       // pestaña, "‹ Clientes", la portada) la vacía: la flecha ya no aplica.
       if (PILA_NAV.length && PILA_NAV[PILA_NAV.length - 1].destino !== id) PILA_NAV.length = 0
@@ -2077,8 +2080,6 @@
       if (id !== 'ad-sin-acceso') document.getElementById('ad-sin-acceso').hidden = true
       // Las órdenes de pedido N1 / N2 son de la orden abierta.
       if (id !== 'ad-vista-orden' && estado.facturar) cerrarFacturar()
-      // La condición de venta tocada en la ficha no se pierde al salir (30/10/2026).
-      if (estado.vista === 'ad-vista-ficha' && id !== 'ad-vista-ficha' && estado.ficha) guardarCondicionAlSalir(estado.ficha)
       estado.vista = id
       pintarEmpresas()
       pintarPestanas()
@@ -4194,7 +4195,7 @@
             vigentes = preciosInsumosDeLista(data)
           }
           const saldo = await leerSaldoCliente(o.cliente_id)
-          const condiciones = await leerCondicionesValorizar(o.cliente_id)
+          const condiciones = await leerCondicionesValorizar(o.cliente_id, [...v.elegidas])
           return { vigentes, saldo, condiciones }
         } catch (err) {
           console.error('No se pudieron traer los precios:', err)
@@ -4217,6 +4218,9 @@
           v.origen[it.id] = { texto: r?.error ?? r?.motivo ?? 'No se pudo leer el precio de la lista.', grave: true }
         }
       }
+      // Arreglos 30/10 (punto 1a): sin poder leer las condiciones no se sabe
+      // qué tildes dibujar (ver bloqueoCondicionesValorizar).
+      v.condicionesSinLeer = !!resto.error || !!resto.condiciones?.error
       if (resto.error) v.error = resto.error
       else {
         for (const it of d.items) {
@@ -4253,11 +4257,21 @@
         const base = v.precios[it.id]
         if (base === null || base === undefined) { v.escritos[it.id] = null; continue }
         const bulto = precioDesdeBase(base, modo, guardado(it)
-          ? { decimalesBase: 2, subtotal: it.subtotal, cantidad: it.cantidad }
+          ? opcionesBultoGuardado(it)
           : { decimalesBase: 4 })
         v.escritos[it.id] = bulto
         v.precios[it.id] = precioABase(bulto, modo)
       }
+    }
+
+    // Arreglos 30/10 (punto 1b): un renglón con precio_lista (entró en una
+    // condición especial) se propone a precio de LISTA, pero su subtotal
+    // guardado es el DESCONTADO: con ese subtotal ningún bulto cuadra y
+    // quedaba 17.499,90 en vez de 17.500. Ahí se busca el bulto solo con lo
+    // guardado (precio_lista tiene 2 decimales, como precio_caja).
+    function opcionesBultoGuardado(it) {
+      if (numeroONull(it?.precio_lista) !== null) return { decimalesBase: 2 }
+      return { decimalesBase: 2, subtotal: it.subtotal, cantidad: it.cantidad }
     }
 
     function subtotalValorizar(d, it) {
@@ -4265,12 +4279,16 @@
       return p === null || p === undefined ? null : Math.round(p * cantidadValorizable(it) * 100) / 100
     }
 
-    // Las condiciones activas del cliente para tildar (nunca tira).
-    async function leerCondicionesValorizar(clienteId) {
+    // Las condiciones activas del cliente para tildar (nunca tira). Arreglos
+    // 30/10 (punto 1c): con `previas` (las que ya tenía la orden) se leen
+    // también las inactivas y se quedan las previas desactivadas: se muestran
+    // tildadas con "(desactivada)", no se sacan en silencio.
+    async function leerCondicionesValorizar(clienteId, previas = []) {
       try {
-        const { data, error } = await supabase.rpc('condiciones_especiales_cliente', { p_cliente_id: clienteId, p_solo_activas: true })
+        const conPrevias = Array.isArray(previas) && previas.length > 0
+        const { data, error } = await supabase.rpc('condiciones_especiales_cliente', { p_cliente_id: clienteId, p_solo_activas: !conPrevias })
         if (error) throw error
-        return { lista: (Array.isArray(data) ? data : []).filter(k => k?.id && k.activa !== false), error: null }
+        return { lista: (Array.isArray(data) ? data : []).filter(k => k?.id && (k.activa !== false || (conPrevias && previas.includes(k.id)))), error: null }
       } catch (err) {
         console.error('No se pudieron leer las condiciones especiales:', err)
         return { lista: [], error: 'No se pudieron leer las condiciones especiales del cliente: se valoriza sin ellas.' }
@@ -4308,12 +4326,70 @@
     function htmlCondicionesValorizar(d) {
       const v = d?.valorizar
       if (!v || v.cargando) return ''
+      if (bloqueoCondicionesValorizar(d)) return htmlBloqueoCondicionesValorizar()
       const lista = v.condiciones ?? []
       if (!lista.length && !v.errorCondiciones) return ''
       const filas = lista.map(k => `<label class="ad-check"><input type="checkbox" data-condicion-valorizar="${esc(k.id)}"${v.elegidas?.has(k.id) ? ' checked' : ''}>` +
-        `<span>${esc(limpio(k.nombre) + ' (−' + textoPct(k.descuento_pct) + ' %)')}<span class="ad-esp__alcance">${esc(limpio(k.alcance) || 'toda la orden')}</span></span></label>`).join('')
+        `<span>${esc(limpio(k.nombre) + ' (−' + textoPct(k.descuento_pct) + ' %)' + (k.activa === false ? ' (desactivada)' : ''))}<span class="ad-esp__alcance">${esc(limpio(k.alcance) || 'toda la orden')}</span></span></label>`).join('')
       return `<div class="ad-esp-valorizar" id="ad-esp-valorizar"><h3 class="ad-subtitulo">Condiciones especiales de este cliente</h3>` +
-        (v.errorCondiciones ? `<div class="ad-aviso">${esc(v.errorCondiciones)}</div>` : '') + filas + '</div>'
+        (v.errorCondiciones ? `<div class="ad-aviso">${esc(v.errorCondiciones)}</div>` : '') + htmlDesactivadasValorizar(lista) + filas + '</div>'
+    }
+
+    // ── Arreglos 30/10 (puntos 1a y 1c) ──────────────────────────────────
+    // 1a: al revalorizar una orden que ya tenía condiciones, si no se
+    // pudieron leer (falló la lectura de las condiciones, o la de antes que
+    // impide dibujar los tildes) NO se manda p_condiciones vacío: la base
+    // le borraría las condiciones a la orden (valorizar_con_condiciones
+    // guarda nullif(p_condiciones, '{}'), leída el 31/10/2026). Se bloquea
+    // Guardar con el aviso y un botón para volver a leerlas. Una orden sin
+    // condiciones manda [] = sin cambios.
+    const AVISO_CONDICIONES_SIN_LEER = 'No se pudieron leer las condiciones especiales; reintentá'
+
+    // Las que ya tenía la orden (solo si ya estaba valorizada).
+    function condicionesPreviasValorizar(d) {
+      const o = d?.orden
+      return o?.estado_valorizacion === 'valorizada' && Array.isArray(o.condiciones_especiales) ? o.condiciones_especiales.filter(Boolean) : []
+    }
+
+    // El aviso que bloquea Guardar, o null.
+    function bloqueoCondicionesValorizar(d) {
+      const v = d?.valorizar
+      if (!v || v.cargando || !v.condicionesSinLeer) return null
+      return condicionesPreviasValorizar(d).length ? AVISO_CONDICIONES_SIN_LEER : null
+    }
+
+    function htmlBloqueoCondicionesValorizar() {
+      return '<div class="ad-esp-valorizar" id="ad-esp-valorizar"><h3 class="ad-subtitulo">Condiciones especiales de este cliente</h3>' +
+        `<div class="ad-aviso ad-aviso--grave" data-condiciones-sin-leer>${esc(AVISO_CONDICIONES_SIN_LEER)}</div>` +
+        '<button type="button" class="ad-btn ad-btn--secundario" id="ad-valorizar-releer-condiciones">Volver a leer las condiciones</button></div>'
+    }
+
+    // Volver a leer solo las condiciones (los precios escritos no se pierden).
+    async function releerCondicionesValorizar() {
+      const d = estado.orden
+      const v = d?.valorizar
+      if (!v || v.cargando || v.releyendoCondiciones) return
+      v.releyendoCondiciones = true
+      const boton = document.getElementById('ad-valorizar-releer-condiciones')
+      if (boton) { boton.disabled = true; boton.textContent = 'Leyendo…' }
+      const r = await leerCondicionesValorizar(d.orden.cliente_id, condicionesPreviasValorizar(d))
+      v.releyendoCondiciones = false
+      if (estado.orden !== d || d.valorizar !== v) return
+      if (!r.error) { v.condiciones = r.lista; v.errorCondiciones = null; v.condicionesSinLeer = false }
+      pintarOrden()
+    }
+
+    // 1c: una condición que la orden tenía y hoy está desactivada sigue
+    // tildada (la base la descuenta igual: valorizar_orden_retiro no mira
+    // `activa`), con "(desactivada)" y este aviso.
+    function htmlDesactivadasValorizar(lista) {
+      const desact = (lista ?? []).filter(k => k?.activa === false)
+      if (!desact.length) return ''
+      const nombres = desact.map(k => '«' + limpio(k.nombre) + '»').join(', ')
+      const texto = desact.length === 1
+        ? `La orden tenía la condición ${nombres}, que hoy está desactivada: sigue tildada y se descuenta. Destildala si ya no va.`
+        : `La orden tenía las condiciones ${nombres}, que hoy están desactivadas: siguen tildadas y se descuentan. Destildalas si ya no van.`
+      return `<div class="ad-aviso ad-aviso--naranja" data-condicion-desactivada>${esc(texto)}</div>`
     }
 
     // Tildar o destildar: los renglones que entran, su subtotal y el total, en vivo.
@@ -4377,7 +4453,7 @@
       const aviso = avisoLimite(saldoProyectado(d), v.limite, d.orden.moneda)
       partes.push(`<div id="ad-valorizar-limite">${aviso ? `<div class="ad-aviso ad-aviso--grave">${esc(aviso)}</div>` : ''}</div>`)
       partes.push(`<p class="ad-error-pegado" id="ad-valorizar-error"${v.errorGuardar ? '' : ' hidden'}>${esc(v.errorGuardar ?? '')}</p>`)
-      partes.push(`<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-valorizar-guardar">${d.orden.estado_valorizacion === 'valorizada' ? 'Guardar la corrección' : 'Valorizar'}</button>` +
+      partes.push(`<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-valorizar-guardar"${bloqueoCondicionesValorizar(d) ? ' disabled' : ''}>${d.orden.estado_valorizacion === 'valorizada' ? 'Guardar la corrección' : 'Valorizar'}</button>` +
         `<button type="button" class="ad-btn ad-btn--suave" id="ad-valorizar-cancelar">Cancelar</button></div>`)
       return partes.join('')
     }
@@ -4425,6 +4501,9 @@
       const n = faltanPrecios(d)
       if (n) { v.errorGuardar = `Faltan precios en ${n} ${n === 1 ? 'renglón' : 'renglones'}.`; pintarOrden(); return }
       if (Object.values(v.precios).some(p => Number(p) < 0)) { v.errorGuardar = 'Un precio no puede ser negativo.'; pintarOrden(); return }
+      // Arreglos 30/10 (punto 1a): sin las condiciones leídas no se manda [].
+      const bloqueo = bloqueoCondicionesValorizar(d)
+      if (bloqueo) { v.errorGuardar = bloqueo; pintarOrden(); return }
       estado.trabajando = true
       v.errorGuardar = null
       try {
@@ -5835,15 +5914,21 @@
       if (estado.facturar) cerrarFacturar()
       const fc = estado.facturar = {
         ordenId: o.id, codigo: o.codigo, unidad: o.unidad_negocio_id, fecha: o.fecha, moneda: o.moneda || 'ARS', clienteId: o.cliente_id,
-        datos: null, pctA: pctInicialFacturar(o, cli), comisiones: null, guardada: numeroONulo(o.division_pct_a) !== null,
+        datos: null, pctA: pctInicialFacturar(o, null), comisiones: null, guardada: numeroONulo(o.division_pct_a) !== null,
         cargando: true, aviso: null, reloj: null, guardando: false, enCamino: null, otraVez: false, turno: 0, errorGuardar: null,
         facturas: facturasPorParte(d.facturas), cargas: {}, puntos: {}, armado: false,
         // Sin condición en el cliente (30/10/2026): el tilde para guardarla también ahí.
-        clienteSinCondicion: numeroONulo(cli?.pct_parte_a) === null, cliente: nuevoClienteFacturar(),
+        // Arreglos 30/10 (punto 6): null hasta leer el cliente de la base.
+        clienteSinCondicion: null, cliente: nuevoClienteFacturar(), errorCondicionCliente: null,
       }
       const c = contenedorFacturar()
       if (c) c.hidden = false
       pintarFacturar()
+      // Arreglos 30/10 (punto 6): la condición del cliente, de la base.
+      const turnoCliente = fc.turno
+      const leido = await leerPctClienteFacturar(o.cliente_id)
+      if (estado.facturar !== fc) return
+      aplicarPctClienteFacturar(fc, o, cli, leido, turnoCliente)
       // Ni la orden ni el cliente tienen %: no hay nada que calcular ni guardar
       // (datos_division_orden lo rechazaría). Solo los vendedores, para cuando se ponga.
       if (fc.pctA === null) {
@@ -5899,6 +5984,40 @@
         if (fc.otraVez) { fc.otraVez = false; if (!fc.reloj) guardarFacturar(fc) }
       }
       if (estado.facturar === fc) actualizarFacturar()
+    }
+
+    // ── Arreglos 30/10 (punto 6): "cliente sin condición" sale de la base ──
+    // Se lee clientes.pct_parte_a del cliente EN ESE MOMENTO (la lista de
+    // clientes del celular puede estar vieja: otro la cambió, o se cargó
+    // antes). Devuelve { pct, error }; con error no se sabe si tiene
+    // condición: ni el aviso de "sin condición" ni el tilde de guardarla.
+    async function leerPctClienteFacturar(clienteId) {
+      try {
+        const { data, error } = await supabase.from('clientes').select('id, pct_parte_a').eq('id', clienteId).maybeSingle()
+        if (error) throw error
+        if (!data) throw new Error('No se encontró el cliente.')
+        return { pct: numeroONulo(data.pct_parte_a), error: null }
+      } catch (err) {
+        console.error('No se pudo leer la condición de venta del cliente:', err)
+        return { pct: null, error: 'No se pudo leer la condición de venta del cliente: no se sabe si tiene. Revisá la conexión y volvé a abrir la orden.' }
+      }
+    }
+
+    // Con lo leído: el % con que se abre (si la orden no tiene el suyo y no
+    // se tocó nada mientras tanto), si el cliente está sin condición y la
+    // lista de clientes al día (una copia, sin mutar).
+    function aplicarPctClienteFacturar(fc, o, cli, leido, turno) {
+      fc.errorCondicionCliente = leido.error
+      fc.clienteSinCondicion = leido.error ? null : leido.pct === null
+      if (fc.turno === turno && fc.pctA === null) fc.pctA = pctInicialFacturar(o, leido.error ? cli : { pct_parte_a: leido.pct })
+      if (!leido.error && Array.isArray(estado.clientes) && cli && numeroONulo(cli.pct_parte_a) !== leido.pct) {
+        estado.clientes = estado.clientes.map(c => c.id === fc.clienteId ? { ...c, pct_parte_a: leido.pct } : c)
+      }
+      if (estado.facturar === fc) { ponerPctsFacturar(fc); actualizarFacturar() }
+    }
+
+    function htmlClienteSinLeerFacturar(fc) {
+      return fc?.errorCondicionCliente ? `<div class="ad-aviso" data-fc-cliente-sin-leer>${esc(fc.errorCondicionCliente)}</div>` : ''
     }
 
     function aplicarDatosFacturar(fc, data) {
@@ -6021,7 +6140,7 @@
       const aviso = document.getElementById('ad-fc-aviso')
       if (aviso) aviso.innerHTML = fc.aviso ? `<div class="ad-aviso">${esc(fc.aviso)}</div>` : ''
       const sin = document.getElementById('ad-fc-sin-condicion')
-      if (sin) sin.innerHTML = fc.pctA === null && fc.clienteSinCondicion ? `<div class="ad-aviso ad-aviso--naranja" data-fc-sin-condicion>${esc(AVISO_SIN_CONDICION)}</div>` : ''
+      if (sin) sin.innerHTML = fc.pctA === null && fc.clienteSinCondicion ? `<div class="ad-aviso ad-aviso--naranja" data-fc-sin-condicion>${esc(AVISO_SIN_CONDICION)}</div>` : htmlClienteSinLeerFacturar(fc)
       actualizarClienteFacturar(fc)
       // Con lo que ya devolvió la base: los puntos que lleva y sus totales.
       // Sin % (y nada guardado) no hay N1 ni N2 que armar: se esconden.
@@ -10203,7 +10322,8 @@
       // proveedorActual: con quién está vinculado hoy; proveedorId: el que se
       // elige en el panel de vincular (null = que lo busque la base).
       // Otra ficha sobre esta: la condición que quedó sin guardar se guarda igual.
-      if (estado.ficha && estado.ficha.id !== clienteId) guardarCondicionAlSalir(estado.ficha)
+      // Arreglos 30/10 (punto 6): si no se puede guardar, no se abre la otra.
+      if (estado.ficha && estado.ficha.id !== clienteId && retenerEnFicha(() => abrirFicha(clienteId))) return
       estado.ficha = { id: clienteId, original: null, proveedorActual: null, proveedorId: null, busquedaProveedor: '', error: null,
         vinculo: { panel: null, error: null, enviando: false }, condicion: { error: null, enviando: false, vendedores: null, errorVendedores: null, version: 0, guardadaVersion: 0, mensaje: null } }
       mostrarVista('ad-vista-ficha')
@@ -10528,12 +10648,61 @@
     }
 
     // Al salir de la ficha (otra vista, otra ficha): se guarda sola. Si no se
-    // puede, lo dice con el aviso de arriba (la ficha ya no se ve).
+    // puede, lo dice con el aviso de arriba. Arreglos 30/10 (punto 6): y no
+    // se va: queda en la ficha con el error al lado del botón (ver
+    // retenerEnFicha); bien guardada, sigue a donde se iba (f.salida).
     function guardarCondicionAlSalir(f) {
-      if (!condicionSinGuardar(f) || f.condicion.enviando) return
+      if (f.condicion?.enviando) return
+      if (!condicionSinGuardar(f)) { seguirSalidaFicha(f); return }
       guardarCondicionVenta(f).then(ok => {
-        if (!ok) mostrarError(`No se guardó la condición de venta de ${f.original?.nombre ?? 'el cliente'}: ${f.condicion.error ?? 'probá de nuevo.'}`)
+        if (ok) { seguirSalidaFicha(f); return }
+        f.salida = null
+        mostrarError(`No se guardó la condición de venta de ${f.original?.nombre ?? 'el cliente'}: ${f.condicion.error ?? 'probá de nuevo.'}`)
+        if (estado.ficha === f) {
+          pintarCondicionVenta()
+          document.getElementById('ad-f-condicion-error')?.scrollIntoView?.({ block: 'center' })
+        }
       })
+    }
+
+    // ── Arreglos 30/10 (punto 6): no salir de la ficha sin guardar ────────
+    // Salir (otra vista u otra ficha) con la condición de venta sin guardar:
+    // primero se guarda y recién bien guardada se sigue (`salida`); si falla,
+    // la ficha queda abierta con el error. true = se retuvo.
+    function retenerEnFicha(salida) {
+      const f = estado.ficha
+      if (!f || !condicionSinGuardar(f)) return false
+      f.salida = salida
+      if (f.condicion.enviando) esperarEnvioYSalir(f)
+      else guardarCondicionAlSalir(f)
+      return true
+    }
+
+    // Ya había un guardado en camino ("Guardar la condición de venta"): al
+    // volver, se sigue (o se reintenta, y si falla se queda).
+    async function esperarEnvioYSalir(f) {
+      if (f.esperandoEnvio) return
+      f.esperandoEnvio = true
+      while (f.condicion?.enviando) await new Promise(r => (f.esperanEnvio ??= []).push(r))
+      f.esperandoEnvio = false
+      if (f.salida) guardarCondicionAlSalir(f)
+    }
+
+    // Lo llama guardarCondicionVenta al terminar un envío (bien o mal).
+    function avisarFinEnvioFicha(f) {
+      const esperan = f?.esperanEnvio ?? []
+      if (f) f.esperanEnvio = []
+      for (const r of esperan) r()
+    }
+
+    function seguirSalidaFicha(f) {
+      const salida = f?.salida
+      if (!salida) return
+      f.salida = null
+      if (estado.ficha !== f) return
+      // Cambió algo mientras viajaba: se guarda otra vez antes de salir.
+      if (condicionSinGuardar(f)) { f.salida = salida; guardarCondicionAlSalir(f); return }
+      salida()
     }
 
     function pintarCondicionVenta() {
@@ -10582,6 +10751,7 @@
       } finally {
         c.enviando = false
         if (estado.ficha === f) { pintarCondicionVenta(); pintarVendedoresFicha() }
+        avisarFinEnvioFicha(f)
       }
     }
 
@@ -16689,6 +16859,10 @@
       cuerpo.addEventListener('change', (e) => {
         const id = e.target?.dataset?.condicionValorizar
         if (id && estado.orden?.valorizar) elegirCondicionValorizar(id, !!e.target.checked)
+      })
+      // Arreglos 30/10 (punto 1a): volver a leer las condiciones que no se pudieron leer.
+      cuerpo.addEventListener('click', (e) => {
+        if (e.target.closest?.('#ad-valorizar-releer-condiciones')) releerCondicionesValorizar()
       })
       // Corregir la orden (29/10/2026): la fecha y "Las cajas que trae". SOLO
       // esos: el 'change' del buscador salta al tocar una opción y redibujar

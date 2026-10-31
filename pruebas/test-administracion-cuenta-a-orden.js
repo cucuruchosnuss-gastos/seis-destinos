@@ -539,7 +539,8 @@ esperas.push((async () => {
   chk('html: la lista de órdenes abre con abrirOrdenDesde', /const b = e\.target\.closest\('\[data-orden\]'\) if \(b\) abrirOrdenDesde\(b\.dataset\.orden\)/.test(F))
   chk('html: la cuenta de cliente abre la orden con abrirOrdenDesde', /closest\('\[data-orden-retiro\]'\) if \(r && puedeVerLaOrden\(\)\) abrirOrdenDesde\(r\.dataset\.ordenRetiro\)/.test(F))
   chk('html: la cobranza de la cuenta de cliente apila', /if \(b && estado\.cliente\) abrirCobranzaDesdeCuenta\(b\.dataset\.cuentaCobranza\)/.test(F))
-  chk('html: mostrarVista vacía la pila al ir a otra vista', /function mostrarVista\(id\) \{ (\/\/[^\n]*? )*if \(PILA_NAV\.length && PILA_NAV\[PILA_NAV\.length - 1\]\.destino !== id\) PILA_NAV\.length = 0/.test(sinEspacios(FUENTE.replace(/\/\/[^\n]*\n/g, ''))))
+  // Arreglos 30/10 (punto 6): antes, solo la retención en la ficha con la condición sin guardar.
+  chk('html: mostrarVista vacía la pila al ir a otra vista', /function mostrarVista\(id\) \{ (\/\/[^\n]*? )*(if \(estado\.vista === 'ad-vista-ficha' && id !== 'ad-vista-ficha' && retenerEnFicha\(\(\) => mostrarVista\(id\)\)\) return )?if \(PILA_NAV\.length && PILA_NAV\[PILA_NAV\.length - 1\]\.destino !== id\) PILA_NAV\.length = 0/.test(sinEspacios(FUENTE.replace(/\/\/[^\n]*\n/g, ''))))
   chk('css: con la pila, se esconde el "‹ Volver" al dashboard', /\.ad-app--pila \.ad-header__volver \{ display: none; \}/.test(F))
   chk('css: la flecha tiene 44 px de alto (dedo)', /\.ad-volver-pila \{[^}]*min-height: 44px/.test(F))
   const C = sinEspacios(CSS)
