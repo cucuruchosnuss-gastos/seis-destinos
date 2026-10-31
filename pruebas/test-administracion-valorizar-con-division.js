@@ -278,6 +278,24 @@ async function abrir(S, opciones) {
   }))
 }
 {
+  // Arreglos 30/10 (anclas): desde el punto 6 el % del cliente se lee de la
+  // base después de pintar. Mientras esa lectura no vuelve, el % que ya tiene
+  // la orden (50) tiene que verse en "Otro %" y en el del N2.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, division_pct_a: 50 } })
+  baseFalsa(S)
+  const leerCliente = S.__tablas.clientes
+  let soltarCliente = null
+  S.__tablas.clientes = (f) => new Promise(r => { soltarCliente = () => { const x = leerCliente(f); r({ ...x, data: x.data[0] ?? null }) } })
+  const abierta = S.abrirOrden('o36')
+  esperas.push(vaciar().then(async () => {
+    chk('mientras lee el cliente: "Otro %" ya con el 50 de la orden y el N2 con 50', typeof soltarCliente === 'function' && el(S, 'ad-fc-otro').value === '50' && el(S, 'ad-fc-otro-b').value === '50')
+    if (soltarCliente) soltarCliente()
+    await abierta
+    await vaciar()
+  }))
+}
+{
   // La condición guardada en la orden manda sobre la del cliente.
   const S = nuevo()
   preparar(S, { orden: { ...ORDEN, division_pct_a: 50 } })
