@@ -672,8 +672,9 @@ async function main() {
     // pago, el saldo inicial, sin poder ver los cheques ni las facturas.
     const S = sandbox()
     const base = { gasto: { id: 'g', medio_pago: 'efectivo', cuenta_id: 'cta', importe: 1500.5, moneda: 'ARS', unidad_negocio_id: 'u-n' }, cheques: [], aplicaciones: [], aCuenta: 0, otrosOrden: [], ordenTexto: null }
-    chk('efectivo con cuenta: la plata vuelve a la cuenta', S.lineasPreviaAnularPago(base).includes('Vuelven $ 1.500,50 a la cuenta de la que salieron'))
-    chk('efectivo sin cuenta: no promete nada', !S.lineasPreviaAnularPago({ ...base, gasto: { ...base.gasto, cuenta_id: null } }).some(l => /cuenta de la que/.test(l)))
+    chk('efectivo con cuenta: la plata vuelve a la cuenta', S.lineasPreviaAnularPago(base).includes('Vuelven $ 1.500,50 a la caja (a la cuenta de la que salieron)'))
+    // Arreglos 30/10 (punto 4d): anular_gasto ahora la devuelve también sin cuenta.
+    chk('efectivo sin cuenta: también vuelve a la caja', S.lineasPreviaAnularPago({ ...base, gasto: { ...base.gasto, cuenta_id: null } }).includes('Vuelven $ 1.500,50 a la caja (a la cuenta de la que salieron)'))
     chk('QR: no promete devolver plata (la base no mueve caja con QR)', !S.lineasPreviaAnularPago({ ...base, gasto: { ...base.gasto, medio_pago: 'qr' } }).some(l => /cuenta de la que/.test(l)))
     chk('la factura que cargó el mismo pago se anula', S.lineasPreviaAnularPago({ ...base, aplicaciones: [{ numero: 'A-1', monto: 10, laCreoElPago: true }] }).includes('La factura A-1 se anula (la cargó este mismo pago)'))
     chk('el saldo inicial se nombra así', S.lineasPreviaAnularPago({ ...base, aplicaciones: [{ numero: 'SALDO-INICIAL', monto: 10, laCreoElPago: false }] }).includes('El saldo inicial vuelve a deber $ 10,00'))

@@ -3144,7 +3144,7 @@
     // y previaAgregarChequesDP); lo que manda es la respuesta del RPC, que se
     // muestra al terminar. Después de cada cambio se relee el detalle y la
     // cuenta del proveedor.
-    const COLUMNAS_CHEQUE_DP = 'id, cobranza_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, titulares, estado'
+    const COLUMNAS_CHEQUE_DP = 'id, cobranza_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, titulares, estado, pago_gasto_id, salida_gasto_id'
 
     function puedeCambiarChequesPagoDP() {
       return tieneTarea('cuentas_corrientes', 'registrar_pago') && tieneTarea('cobranzas', 'procesar')
@@ -3196,7 +3196,7 @@
       // cobranzas:ver_todo) la lista no se inventa: se dice.
       dp.chequesError = !!(chPago?.error || chSalida?.error)
       const vistos = new Map()
-      for (const ch of [...(chPago?.data ?? []), ...(chSalida?.data ?? [])]) if (ch?.id && !vistos.has(ch.id)) vistos.set(ch.id, ch)
+      for (const ch of chequesDeEstePagoCC(chPago?.data, chSalida?.data, id)) if (ch?.id && !vistos.has(ch.id)) vistos.set(ch.id, ch)
       const crudos = [...vistos.values()]
       const cobranzas = new Map()
       const ids = [...new Set(crudos.map(c => c.cobranza_id).filter(Boolean))]
@@ -3473,8 +3473,8 @@
             <div>${esc(dp.aviso)}</div>
             ${dp.ofrecerReemplazo && cambia && g?.medio_pago === 'cheque' && !dp.agregar ? '<button type="button" class="btn-sacar-cheque" data-agregar-cheque>¿Lo reemplazás por otro de la cartera?</button>' : ''}
           </div>` : ''
-      const sinLeer = !conCheques && g?.medio_pago === 'cheque' && dp.chequesError
-        ? '<p class="detalle-pago-suave">Con tu usuario no se pueden ver los cheques de este pago (hace falta poder ver sus cobranzas).</p>'
+      const sinLeer = noSeVenChequesDP(dp)
+        ? '<p class="detalle-pago-suave">No se pueden ver los cheques de este pago con tu usuario.</p>'
         : ''
       const agregarBoton = cambia && g?.medio_pago === 'cheque' && !dp.agregar
         ? '<button type="button" class="btn-agregar-cheque" data-agregar-cheque>+ Agregar cheque</button>'
@@ -3586,6 +3586,7 @@
         if (estado.detallePago === dp) pintarDetallePago()
         return
       }
+      releerAccionesTrasCambioChequesDP(dp)
       await cargarDetallePago(dp)
       if (estado.detallePago === dp) pintarDetallePago()
       refrescarCuentaTrasCambioPago()
@@ -3615,9 +3616,48 @@
         if (estado.detallePago === dp) pintarDetallePago()
         return
       }
+      releerAccionesTrasCambioChequesDP(dp)
       await cargarDetallePago(dp)
       if (estado.detallePago === dp) pintarDetallePago()
       refrescarCuentaTrasCambioPago()
+    }
+
+    // ── Arreglos 30/10 (punto 4): el detalle del pago (31/10/2026) ───────
+    // 4b) Los cheques de ESTE pago, con el MISMO criterio que la base
+    // (sacar_cheque_de_pago y anular_gasto, leídas con pg_get_functiondef el
+    // 31/10/2026): coalesce(pago_gasto_id, salida_gasto_id) = el pago y
+    // estado = 'endosado'. PostgREST no filtra por un coalesce: se leen las
+    // dos columnas por separado y se filtra acá (por salida_gasto_id cuenta
+    // solo si pago_gasto_id es null). Los repetidos los saca quien llama.
+    function chequesDeEstePagoCC(porPago, porSalida, gastoId) {
+      return [...(porPago ?? []), ...(porSalida ?? [])]
+        .filter(c => !!c && c.estado === 'endosado' && (c.pago_gasto_id ?? c.salida_gasto_id) === gastoId)
+    }
+    // Un pago con cheques de la cartera: así escribe la descripción la base
+    // al pagar con la cartera, al sacar o agregar cheques y al endosar un
+    // cheque (pagar_proveedor_con_cheques_cartera, sacar_cheque_de_pago,
+    // agregar_cheques_a_pago, endosar_cheque_a_proveedor). Un pago "con
+    // cheque" viejo cargado a mano ("Pago a cuenta corriente — …") no tiene
+    // cheques de la cartera: que no se vean no es la RLS.
+    function esPagoConChequesDeCarteraCC(g) {
+      const d = String(g?.descripcion ?? '')
+      return d.startsWith('Pago con cheques de terceros') || d.startsWith('Cheque endosado')
+    }
+    // 4c) La RLS de cobranza_cheques filtra SIN dar error (se lee si se ve
+    // la cobranza): un pago con cheques de la cartera, sin anular, cuya
+    // lectura vuelve vacía, no se pudo ver con este usuario. Con error, lo
+    // mismo.
+    function noSeVenChequesDP(dp) {
+      const g = dp?.gasto
+      if (!g || g.medio_pago !== 'cheque' || (dp.cheques ?? []).length) return false
+      if (dp.chequesError) return true
+      return g.estado !== 'anulado' && esPagoConChequesDeCarteraCC(g)
+    }
+    // 4a) Después de "Sacar del pago" o "Agregar cheque", lo de abajo del
+    // detalle (lo que queda a cuenta y "Anular el pago") se vuelve a leer: si
+    // el pago quedó anulado, "Anular" se va (y dice "Pago anulado").
+    function releerAccionesTrasCambioChequesDP(dp) {
+      if (estado.detallePago === dp) cargarAccionesDetallePago(dp.gastoId)
     }
 
     // Después de sacar o agregar un cheque: los saldos y, si hay una ficha
@@ -7962,7 +8002,7 @@
       const turno = ++turnoAccionesPago
       accionesPago = { gastoId, cargando: true }
       pintarAccionesDetallePago()
-      const COLS_CHEQUE = 'id, cobranza_id, banco_codigo, numero, importe, estado'
+      const COLS_CHEQUE = 'id, cobranza_id, banco_codigo, numero, importe, estado, pago_gasto_id, salida_gasto_id'
       const [g, cr, ap, chPago, chSalida] = await Promise.all([
         leerSeguroCC(supabase.from('gastos').select('id, proveedor_id, unidad_negocio_id, moneda, importe, medio_pago, cuenta_id, estado, empleado_id, orden_pago_id, motivo_anulacion, descripcion').eq('id', gastoId).maybeSingle()),
         leerSeguroCC(supabase.from('creditos_proveedor').select('id, monto_original, monto_disponible, estado').eq('origen_gasto_id', gastoId)),
@@ -7979,7 +8019,7 @@
       }
       const creditos = cr?.error ? [] : (cr?.data ?? [])
       const vistos = new Set(), cheques = []
-      for (const c of [...(chPago?.data ?? []), ...(chSalida?.data ?? [])]) {
+      for (const c of chequesDeEstePagoCC(chPago?.data, chSalida?.data, gastoId)) {
         if (c?.id && !vistos.has(c.id)) { vistos.add(c.id); cheques.push(c) }
       }
       // En el orden en que los nombra el pago ("Pago con cheques de terceros
@@ -8026,7 +8066,7 @@
       const g = a?.gasto ?? {}
       const moneda = g.moneda || 'ARS'
       const lineas = []
-      if (g.medio_pago === 'cheque') {
+      if (g.medio_pago === 'cheque' && (a.cheques?.length || !Array.isArray(a.cheques) || esPagoConChequesDeCarteraCC(g))) {
         lineas.push(a.cheques?.length
           ? `Vuelven a la cartera: ${a.cheques.map(c => `N° ${c.numero ?? '—'} (${formatearImporte(c.importe)})`).join(', ')}`
           : 'Los cheques de este pago vuelven a la cartera (con tu usuario no se ve cuáles son)')
@@ -8046,7 +8086,11 @@
         otras.set(c.unidadId, x)
       }
       for (const x of otras.values()) lineas.push(`Se da vuelta la deuda con ${x.nombre} por ${formatearImporte(x.cent / 100)} (Entre empresas)`)
-      if (['efectivo', 'transferencia'].includes(g.medio_pago) && g.cuenta_id) lineas.push(`Vuelven ${formatearImporte(g.importe, moneda)} a la cuenta de la que salieron`)
+      // Arreglos 30/10 (punto 4d): con efectivo o transferencia la plata
+      // vuelve a la caja SIEMPRE: anular_gasto (leída el 31/10/2026) con
+      // cuenta_id la devuelve a esa cuenta, y sin ella da vuelta cada egreso
+      // de caja que generó el gasto (misma cuenta y mismo dueño).
+      if (['efectivo', 'transferencia'].includes(g.medio_pago)) lineas.push(`Vuelven ${formatearImporte(g.importe, moneda)} a la caja (a la cuenta de la que salieron)`)
       if (a?.ordenTexto && !(a.otrosOrden ?? []).length) lineas.push(`La orden de pago ${a.ordenTexto} queda anulada (tachada y sin reimprimir)`)
       return lineas
     }

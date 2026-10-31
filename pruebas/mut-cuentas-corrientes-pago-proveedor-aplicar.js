@@ -75,7 +75,9 @@ correrMutacionesEnVarios([
       { nombre: 'anular: la vista previa no dice lo que quedó a cuenta', de: "      if (centavosDe(a?.aCuenta) > 0) lineas.push(`Se anula lo que quedó a cuenta: ${formatearImporte(a.aCuenta, moneda)}`)\n", a: '' },
       { nombre: 'anular: la deuda entre empresas también con la empresa que paga', de: '        if (!c.unidadId || !g.unidad_negocio_id || c.unidadId === g.unidad_negocio_id) continue', a: '        if (!c.unidadId || !g.unidad_negocio_id) continue' },
       { nombre: 'anular: no dice la deuda entre empresas', de: '      for (const x of otras.values()) lineas.push(`Se da vuelta la deuda con ${x.nombre} por ${formatearImporte(x.cent / 100)} (Entre empresas)`)\n', a: '' },
-      { nombre: 'anular: promete devolver plata en un pago sin cuenta', de: "      if (['efectivo', 'transferencia'].includes(g.medio_pago) && g.cuenta_id) lineas.push(", a: "      if (['efectivo', 'transferencia', 'qr'].includes(g.medio_pago)) lineas.push(" },
+      // Arreglos 30/10 (punto 4d): sin cuenta también vuelve a la caja; lo
+      // de "sin cuenta no promete nada" pasó a mut-cuentas-corrientes-arreglos-detalle-pago.js.
+      { nombre: 'anular: promete devolver plata en un pago con QR', de: "      if (['efectivo', 'transferencia'].includes(g.medio_pago)) lineas.push(", a: "      if (['efectivo', 'transferencia', 'qr'].includes(g.medio_pago)) lineas.push(" },
       { nombre: 'anular: dice que la orden queda anulada aunque tenga otro pago', de: '      if (a?.ordenTexto && !(a.otrosOrden ?? []).length) lineas.push(', a: '      if (a?.ordenTexto) lineas.push(' },
       { nombre: 'anular: no avisa del otro pago de la orden', de: '      for (const o of a?.otrosOrden ?? []) {\n        avisos.push(', a: '      for (const o of []) {\n        avisos.push(' },
       { nombre: 'anular: no avisa que el crédito ya se usó', de: "      if (a?.creditoUsado) avisos.push(", a: '      if (false) avisos.push(' },
