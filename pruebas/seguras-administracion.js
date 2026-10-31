@@ -65,6 +65,13 @@ const SEGURAS_ADMINISTRACION = [
   ['htmlProyectoAsentar(a)', 'HTML armado por htmlProyectoAsentar(), que escapa id y nombre de cada proyecto'],
   ['fila', 'HTML ya escapado: htmlFilaCliente() arma el botón de la fila con esc() de cada dato'],
   ['htmlInterruptor(c)', 'HTML armado por htmlInterruptor(), que escapa el id y el nombre del cliente'],
+  // valorizar-legible (30/10/2026)
+  ['htmlDescuentoGuardado(it, d.condiciones)', 'HTML armado por htmlDescuentoGuardado(), con esc() del % y del nombre de la condición (o vacío)'],
+  ['htmlDescuentoValorizar(d, it)', 'HTML armado por htmlDescuentoValorizar(), con esc() del precio, el % y el precio de antes (o vacío)'],
+  ['htmlCondicionesValorizar(d)', 'HTML armado por htmlCondicionesValorizar(), que escapa el id, el nombre y el alcance de cada condición'],
+  ['htmlDescuentoHojaPunto(datos, r)', 'HTML armado por htmlDescuentoHojaPunto(), con esc() del texto del descuento (o vacío)'],
+  ['descHtml', 'HTML ya escapado: esc() de la cantidad más htmlNombreRenglon(), que escapa producto, presentación, unidades y cono (si no, esc(desc))'],
+  ['htmlNombreHojaPunto(datos, r)', 'HTML armado por htmlNombreHojaPunto(): esc() de la descripción de la base, o htmlNombreRenglon(), que escapa cada parte'],
   // El diseño "Administración" (29/09/2026): la portada y las pestañas
   ['tam', 'número del código: el tamaño del ícono que pasa quien llama a htmlTrazo() (18 o 15)'],
   ['d', 'constante del código: el trazo del ícono sale de TRAZO_ICONO, nunca de la base'],

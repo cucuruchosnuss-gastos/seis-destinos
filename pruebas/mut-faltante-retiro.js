@@ -111,7 +111,7 @@ correrMutacionesEnVarios([
       { nombre: 'Admin: los botones no hacen nada', de: "        else if ((b = e.target.closest('[data-revisar-produccion]'))) abrirFaltanteRevisar(b.dataset.revisarProduccion, 'produccion')\n", a: '' },
       { nombre: 'Admin orden: esperar sin la máquina', de: "        const p = (d.planillas ?? []).find(x => String(x.turno_id) === String(it.turno_produccion_id))", a: '        const p = null' },
       { nombre: 'Admin orden: el pendiente sin motivo', de: "        return `<div class=\"ad-error-pegado\">${esc('Faltaban ' + textoCajasFr(it.faltante) + ' en stock: por revisar' + (motivo ? ' · ' + motivo : ''))}</div>`", a: "        return `<div class=\"ad-error-pegado\">${esc('Faltaban ' + textoCajasFr(it.faltante) + ' en stock: por revisar')}</div>`" },
-      { nombre: 'Admin orden: no lee la revisión', de: 'subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo,', a: 'subtotal, lote, tipo,' },
+      { nombre: 'Admin orden: no lee la revisión', de: 'subtotal, precio_lista, descuento_pct, condicion_id, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo,', a: 'subtotal, precio_lista, descuento_pct, condicion_id, lote, tipo,' },
       { nombre: 'Admin orden: la anulada dice el faltante', de: "      if (it?.insumo_id || d?.orden?.estado === 'anulada') return ''", a: "      if (it?.insumo_id) return ''" },
     ],
   },

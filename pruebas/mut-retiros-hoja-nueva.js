@@ -92,7 +92,7 @@ correrMutacionesEnVarios([{
     { nombre: 'Administración no lee el nombre del bulto', de: "vista_preferida, contenido_bulto, nombre_bulto').order('categoria')", a: "vista_preferida, contenido_bulto').order('categoria')" },
     { nombre: 'el insumo sin el nombre del bulto', de: 'nombreBulto: ins?.nombre_bulto ?? null,', a: 'nombreBulto: null,' },
     { nombre: 'el producto sin las unidades por caja', de: 'conoNombre, porCaja: pr?.unidades_por_caja ?? null,', a: 'conoNombre, porCaja: null,' },
-    { nombre: 'el cono aunque la presentación no lleve', de: 'const conoNombre = pr?.con_cono && it.marca_id ?', a: 'const conoNombre = it.marca_id ?' },
+    { nombre: 'el cono aunque la presentación no lleve', de: 'const conoNombre = pr?.con_cono && it.marca_id && (cat?.marcas', a: 'const conoNombre = it.marca_id && (cat?.marcas' },
     { nombre: 'el producto sin el nombre del cono', de: 'return { producto: prod?.nombre ?? \'Producto (no se pudo leer)\', presentacion: pr?.nombre ?? \'—\', cono, conoNombre,', a: 'return { producto: prod?.nombre ?? \'Producto (no se pudo leer)\', presentacion: pr?.nombre ?? \'—\', cono, conoNombre: null,' },
   ],
 }])

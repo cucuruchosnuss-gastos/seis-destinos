@@ -133,7 +133,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, lotes = LOTES, precios = []
     S.cambiarPrecio('i2', 1000)
     chk('corregir el precio de la devolución recalcula (−2.000)', S.subtotalValorizar(d, ITEMS[1]) === -2000 && S.totalValorizar(d) === -500)
     let params = null
-    S.__setRpc(async (n, p) => { if (n === 'valorizar_orden_retiro') { params = p; return { data: { total: -500, moneda: 'ARS', saldo_cliente: -500, limite_credito: null, supera_limite: false }, error: null } } return { data: null, error: null } })
+    S.__setRpc(async (n, p) => { if (n === 'valorizar_con_condiciones') { params = p; return { data: { total: -500, moneda: 'ARS', saldo_cliente: -500, limite_credito: null, supera_limite: false }, error: null } } return { data: null, error: null } })
     await S.guardarValorizacion()
     chk('se mandan los precios POSITIVOS (la base resta la devolución) y la reposición en 0', params && params.p_precios.i1 === 1500 && params.p_precios.i2 === 1000 && params.p_precios.i3 === 0, JSON.stringify(params))
     chk('valorizar con total negativo no se frena en la pantalla', S.__llamadas.exitos.some(x => /N-0031 valorizada: \$\s-500,00/.test(x)))

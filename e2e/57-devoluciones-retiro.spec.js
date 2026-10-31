@@ -236,7 +236,7 @@ async function abrirAdministracion(page) {
           { unidad_negocio_id: 'u-n', presentacion_id: 'pr2', marca_id: null, lote: '7011-2', cajas: -1, tipo: 'despacho', orden_retiro_id: 'o40', orden_retiro_item_id: 'o40-3' }],
         orden_facturas: [], vendedores_comision: VENDEDORES, cliente_comisiones: [],
       },
-      rpc: { datos_division_orden: DIVISION, guardar_division_orden: { ...DIVISION, guardada: true }, valorizar_orden_retiro: { total: -3000, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
+      rpc: { datos_division_orden: DIVISION, guardar_division_orden: { ...DIVISION, guardada: true }, valorizar_con_condiciones: { total: -3000, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
     }));
   }, { o40: ORDEN('o40', 40, true), o41: ORDEN('o41', 41, false), i40: ITEMS('o40', true), i41: ITEMS('o41', false), DIVISION, VENDEDORES });
   await page.reload();
@@ -315,8 +315,8 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await entra(page, '#ad-orden-cuerpo', 'valorizar');
     await captura(page, `devolucion-admin-valorizar-${nombre}`, info);
     await page.locator('#ad-valorizar-guardar').click();
-    await expect.poll(() => rpc.filter(r => r.nombre === 'valorizar_orden_retiro').length).toBe(1);
-    expect(rpc.find(r => r.nombre === 'valorizar_orden_retiro').params).toEqual({ p_orden_id: 'o41', p_precios: { 'o41-1': 3000, 'o41-2': 2500, 'o41-3': 0 } });
+    await expect.poll(() => rpc.filter(r => r.nombre === 'valorizar_con_condiciones').length).toBe(1);
+    expect(rpc.find(r => r.nombre === 'valorizar_con_condiciones').params).toEqual({ p_orden_id: 'o41', p_precios: { 'o41-1': 3000, 'o41-2': 2500, 'o41-3': 0 }, p_condiciones: [] });
 
     await page.evaluate(() => sessionStorage.removeItem('maqueta.cambios'));
     expect(errores, errores.join('\n')).toEqual([]);

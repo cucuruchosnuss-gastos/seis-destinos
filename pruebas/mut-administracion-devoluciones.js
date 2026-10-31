@@ -41,7 +41,7 @@ correrMutaciones({
     { nombre: 'la reposición sin sus lotes', de: "detalle = textoDevolucionItem(it) + ' · sale de ' + textoLotesIt", a: 'detalle = textoDevolucionItem(it)' },
     { nombre: 'sin el sello del tipo', de: "      const sello = esItemDev(it) ?", a: '      const sello = false ?' },
     // Valorizar
-    { nombre: 'la reposición con el precio de la lista', de: "      for (const it of d.items) v.precios[it.id] = tipoItem(it) === 'reposicion' ? 0 : vigente(it) ? Number(it.precio_caja) : null", a: '      for (const it of d.items) v.precios[it.id] = vigente(it) ? Number(it.precio_caja) : null' },
+    { nombre: 'la reposición con el precio de la lista', de: "      for (const it of d.items) v.precios[it.id] = tipoItem(it) === 'reposicion' ? 0 : vigente(it) ? Number(it.precio_lista ?? it.precio_caja) : null", a: '      for (const it of d.items) v.precios[it.id] = vigente(it) ? Number(it.precio_lista ?? it.precio_caja) : null' },
     { nombre: 'la reposición le pide precio a la lista', de: " && !vigente(it) && tipoItem(it) !== 'reposicion') : []", a: ' && !vigente(it)) : []' },
     { nombre: 'la reposición con campo de precio', de: "      if (tipoItem(it) === 'reposicion' && (d.valorizar || d.orden.estado_valorizacion === 'valorizada')) {", a: '      if (false) {' },
     { nombre: 'la reposición dice "faltan en la lista"', de: " && tipoItem(it) !== 'reposicion') && d.orden.estado_valorizacion !== 'valorizada') partes.push(", a: ") && d.orden.estado_valorizacion !== 'valorizada') partes.push(" },

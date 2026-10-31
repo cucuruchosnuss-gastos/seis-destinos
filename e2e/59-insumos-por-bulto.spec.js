@@ -100,7 +100,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
           insumos: datos.tablas.insumos.map(i => ({ ...i, vista_preferida: i.id === 'ins-1' ? 'bulto' : 'base' })),
           v_stock_insumos: [{ unidad_negocio_id: 'u-n', insumo_id: 'ins-1', contenido_unico: 25 }],
         },
-        rpc: { valorizar_orden_retiro: { total: 652410, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
+        rpc: { valorizar_con_condiciones: { total: 652410, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
       }));
     });
     await page.reload();
@@ -127,8 +127,8 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await sinScroll(page, 'valorizar');
     await captura(page, `bulto-valorizar-${nombre}`, info);
     await page.locator('#ad-valorizar-guardar').click();
-    await expect.poll(() => rpc.find(r => r.nombre === 'valorizar_orden_retiro')).toBeTruthy();
-    const p = rpc.find(r => r.nombre === 'valorizar_orden_retiro').params.p_precios;
+    await expect.poll(() => rpc.find(r => r.nombre === 'valorizar_con_condiciones')).toBeTruthy();
+    const p = rpc.find(r => r.nombre === 'valorizar_con_condiciones').params.p_precios;
     expect(p.y0, JSON.stringify(p)).toBe(840);
     expect(p.y2, JSON.stringify(p)).toBe(820);
     expect(p.y1, JSON.stringify(p)).toBe(95);
@@ -188,7 +188,7 @@ for (const [nombre, ancho, alto] of TAMANOS) {
             { id: 'ins-col', nombre: 'Colorante', marca: 'Nico', unidad_medida: 'kg', categoria: 'Aditivos', activo: true, vista_preferida: 'bulto', contenido_bulto: 25 }],
           v_stock_insumos: [],
         },
-        rpc: { valorizar_orden_retiro: { total: 600000, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
+        rpc: { valorizar_con_condiciones: { total: 600000, moneda: 'ARS', saldo_cliente: 0, limite_credito: null, supera_limite: false } },
       }));
     });
     await page.reload();
@@ -205,8 +205,8 @@ for (const [nombre, ancho, alto] of TAMANOS) {
     await sinScroll(page, 'valorizar sin stock:ver');
     await captura(page, `bulto-catalogo-valorizar-${nombre}`, info);
     await page.locator('#ad-valorizar-guardar').click();
-    await expect.poll(() => rpc.find(r => r.nombre === 'valorizar_orden_retiro')).toBeTruthy();
-    const p = rpc.find(r => r.nombre === 'valorizar_orden_retiro').params.p_precios;
+    await expect.poll(() => rpc.find(r => r.nombre === 'valorizar_con_condiciones')).toBeTruthy();
+    const p = rpc.find(r => r.nombre === 'valorizar_con_condiciones').params.p_precios;
     expect(p.y0, JSON.stringify(p)).toBe(700);
     expect(p.y2, JSON.stringify(p)).toBe(820);
     expect(errores, errores.join('\n')).toEqual([]);

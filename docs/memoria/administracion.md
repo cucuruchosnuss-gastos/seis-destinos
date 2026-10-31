@@ -161,6 +161,53 @@ Rama `ci-prueba/remitos-rosario-revisar` (sale de `ci-prueba/remitos-rosario`, p
   - `e2e/71-revisar-remitos.spec.js` (8, a 390 y 1280).
   - `sandbox-administracion.js` suma las funciones de Órdenes, con reemplazos para copias viejas, y `textoRemitoHoja`, igual que `sandbox-retiros.js`. `seguras-administracion.js` justifica las interpolaciones nuevas.
 
+## Valorizar más legible (30/10/2026, rama `ci-prueba/valorizar-legible`)
+- **El nombre del renglón** (al valorizar, en el detalle de la orden y en las hojas N1/N2): `htmlNombreRenglon` →
+  "Barquillo 40 x4 · Caja con cono **× 252 u.** · VENEZIA" y "Soft · Caja sin cono **× 224 u.**". Las unidades con
+  `textoUnidadesRemito` de `js/remitos-comun.js` (la misma de Remitos Dolce, de la rama `ci-prueba/remitos-mas-simple`:
+  esta rama la trae con un merge, **se integra después de esa**); nada con 1 ni si el nombre ya trae el número ("Caja
+  x 100"). En negrita y sin partirse (`.ad-renglon__u`). El cono solo si la presentación es con cono: sin el "· Sin
+  cono" final. Las hojas N1/N2 (`htmlNombreHojaPunto`) buscan el renglón de la orden abierta por su número
+  (`datos.items[].orden`); un insumo o de otra orden, la descripción que manda `datos_division_orden`.
+  `partesRenglon` no cambió (la hoja de retiro sigue igual).
+- **Las condiciones especiales del cliente** (el punto 2, cambiado por Facu el 30/10/2026: el descuento por cono de
+  `precio_venta` y `guardar_descuento_marca` quedaron anulados). Verificado con pg_get_functiondef el 30/10/2026:
+  `condiciones_especiales_cliente(p_cliente_id, p_solo_activas)` → `[{id, nombre, descuento_pct, activa, marcas[{id,nombre}],
+  productos[{id,nombre}], alcance}]`; `guardar_condicion_especial(p_id null = nueva, p_cliente_id, p_nombre ≥ 2, p_descuento_pct
+  > 0 y < 100, p_marcas, p_productos, p_activa)`; `valorizar_con_condiciones(p_orden_id, p_precios, p_condiciones)` guarda
+  `ordenes_retiro.condiciones_especiales` y llama a `valorizar_orden_retiro`, que descuenta cada renglón (la mayor si entra
+  en varias; nunca una reposición) y guarda `precio_lista`, `descuento_pct` y `condicion_id`. Las tres con retiros:precios.
+  - **La ficha** (debajo de la condición de venta, `#ad-f-especiales`): lista (con las inactivas), cada fila "Nombre  −5 %  ·
+    alcance" con su interruptor Activa (`cambiarActivaEspecial`: la misma condición con `p_activa` al revés) y Editar;
+    "Agregar condición" abre el formulario (nombre, descuento, conos con buscador —`conosParaBuscarEsp`, el criterio de
+    Remitos: nada hasta 2 letras, primero los que empiezan así— y productos activos de la fábrica del cliente; "Sin conos
+    ni productos = se descuenta de toda la orden"). Errores de la base tal cual; sin retiros:precios en la fábrica del
+    cliente no se lee.
+  - **Valorizar**: debajo de los renglones "Condiciones especiales de este cliente", un tilde por cada ACTIVA
+    (`htmlCondicionesValorizar`); en una orden ya valorizada vienen tildadas las de `ordenes_retiro.condiciones_especiales`.
+    Al tildar, en vivo, los renglones que entran (`condicionDeRenglon`: la regla de la base) muestran "$ 34.039,26 (−5 % ·
+    antes $ 35.830,80)" y el subtotal y el total cambian (`precioEfectivoValorizar`, `precioConDescuento` con la
+    aritmética de numeric). **A la base van los precios de LISTA** con `valorizar_con_condiciones`. Al revalorizar se
+    propone `precio_lista` (si se propusiera `precio_caja`, ya descontado, la base descontaría dos veces).
+  - **La orden valorizada y las hojas N1/N2**: "(−5 % · nombre de la condición)" al lado del precio (`htmlDescuentoGuardado`,
+    `htmlDescuentoHojaPunto`); los nombres salen de `condiciones_especiales_cliente` (`leerCondicionesDeOrden`, solo si algún
+    renglón tiene condición y hay retiros:precios; si no, "(−5 %)"). La hoja de retiro (js/retiros-comun.js) no lo muestra.
+  - **Corregir orden** (esta rama trae `ci-prueba/corregir-orden`): el precio editable es `precio_lista` de
+    `orden_para_corregir`; el total estimado vuelve a aplicar las condiciones de la orden (`leerCondicionesCorregir`).
+- **El cono de papel ilustración** (30/10/2026, agregado al pedido): el catálogo lee `marcas_personalizadas.papel_ilustracion`
+  y `partesRenglon` nombra el cono con `nombreConoPorIdRemito` (js/remitos-comun.js, de `ci-prueba/remitos-mas-simple`):
+  "… · MARBET (ilustración)" al valorizar, en el detalle, en las hojas N1/N2 y en la hoja de la orden (`conoNombre`). Al
+  valorizar, debajo del origen del precio y en chico, "conito ilustración $ 47,00 por unidad" (`textoConitoIlustracion`, con
+  el `conito_unitario` cuando `precio_venta` devuelve `papel_conito = 'ilustracion'`). Ningún nombre de cono copiado a mano.
+- **La caja con cono en Listas** (`conConoConPrecioNuevo`): la misma cuenta que `precio_venta` sin redondear el precio
+  por unidad en el medio, y con la aritmética de numeric (`cuentaNumeric` con BigInt: `dividirNumeric` da los decimales
+  de Postgres —select_div_scale, al menos 16 cifras, en grupos de 4— y redondea la mitad para arriba; el final a 2).
+  Con los decimales de la compu, una caja "en la mitad justa" salía un centavo distinta (16.287,73 contra 16.287,72 de
+  la base). Comprobado contra la base el 30/10/2026 con 10 casos (en la suite). Es el único lugar que copia la cuenta.
+- Suites `test-/mut-administracion-valorizar-legible.js` (baseline f3d7152) y `e2e/103-valorizar-legible.spec.js` (390 y
+  1280 px, con la ficha); `test-administracion-ordenes.js`, `-link-remitos.js` y las que simulaban `valorizar_orden_retiro`
+  (ahora `valorizar_con_condiciones`) ajustadas; seguras de XSS al día.
+
 ## Acopios (27/10/2026)
 
 Rama `ci-prueba/acopios` (sale de `ci-prueba/remitos-rosario` en `5e6ca2b`; pedido `.claude/pedidos/2026-10-27-acopios.md`). Un acopio es mercadería que el cliente ya compró (y se le facturó) y retira de a poco con el talonario celeste de ACOPIO.

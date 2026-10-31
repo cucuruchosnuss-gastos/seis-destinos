@@ -62,7 +62,7 @@ const FUNCIONES_BASE = [
   // Lista | detalle en la compu (05/10/2026)
   'ladoALado', 'aplicarListaDetalle', 'marcarElegidosLista',
   'htmlLogo', 'empresaSegunBarra', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial', 'alCambiarLaBarra',
-  'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon',
+  'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon', 'htmlNombreRenglon',
   'contarSinValorizar', 'textoNumeroSeccion', 'htmlSeccion', 'htmlLink', 'pintarPortada', 'mostrarInicio', 'abrirSeccion',
   // El diseño "Administración" (29/09/2026): pestañas y tarjetas de la portada
   'colorDeModulo', 'htmlTrazo', 'coloresIcono', 'plataPortada', 'diasEntreIso', 'resumenCheques', 'htmlLineaSeccion', 'contenidoSeccion',
@@ -73,7 +73,7 @@ const FUNCIONES_BASE = [
   'clavePrecio', 'preciosInsumosDeLista', 'leerSaldoCliente', 'abrirValorizar',
   'precioFijoDeVersion', 'textoPrecioInsumoGrilla',
   // Valorizar con precio_venta() (30/09/2026)
-  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
+  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'textoConitoIlustracion', 'textoDescuentoGuardado', 'htmlDescuentoGuardado', 'leerCondicionesDeOrden', 'condicionDeRenglon', 'precioConDescuento', 'leerCondicionesValorizar', 'condicionesElegidas', 'precioEfectivoValorizar', 'htmlDescuentoValorizar', 'htmlCondicionesValorizar', 'elegirCondicionValorizar', 'leerCondicionesCorregir', 'precioListaCorregir', 'itemDeHojaPunto', 'htmlDescuentoHojaPunto', 'puedeEspeciales', 'cargarEspecialesFicha', 'textoFilaEspecial', 'htmlFilaEspecial', 'pintarEspecialesFicha', 'htmlFormEspecial', 'pintarPartesFormEspecial', 'conosParaBuscarEsp', 'abrirFormEspecial', 'cerrarFormEspecial', 'validarEspecial', 'parametrosEspecial', 'guardarFormEspecial', 'cambiarActivaEspecial', 'mandarEspecial', 'alTocarEspeciales', 'alEscribirEspeciales', 'leerPrecioVenta', 'precioPropioEnLista', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
   // La comisión de una orden (06/10/2026)
   'comisionHabitualDe', 'faltaComision', 'ordenesComisionSinCargar', 'importeComision', 'totalConComision', 'validarComision',
@@ -127,7 +127,7 @@ const FUNCIONES_BASE = [
   'textoListaInterna', 'pintarListaInterna',
   // La grilla completa: lista_completa (30/09/2026)
   'leerListaCompleta', 'leerListaCompletaSegura', 'completaDelProducto', 'listaDerivada', 'filaEditable', 'numeroONull',
-  'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'chocanMismaFecha', 'textoChoqueMismaFecha',
+  'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'decimalNumeric', 'pesoNumeric', 'dividirNumeric', 'sumarNumeric', 'multiplicarNumeric', 'plataNumeric', 'cuentaNumeric', 'chocanMismaFecha', 'textoChoqueMismaFecha',
   'htmlFilaProducto', 'htmlConito', 'plantillaConito', 'textoConConoNuevo', 'pintarConConoNuevo', 'recargoDeLista',
   // Los insumos de una lista a precio fijo o costo + % (09/10/2026)
   'plataInsumoLista', 'porUnidadInsumo', 'renglonesInsumosLista', 'precioConRecargo', 'textoRenglonInsumo', 'leerInsumosLista',
@@ -224,7 +224,7 @@ const FUNCIONES_BASE = [
   // La condición de venta (21/10/2026) y las órdenes de pedido N1 / N2 (28/10/2026)
   'leerFacturasDeOrden', 'leerRecepcionDeOrden', 'cantidadRecepcion', 'textoRecepcionOrden', 'diferenciasRecepcion', 'htmlRecepcionOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'parametrosDivision',
   'codigoPunto', 'textoCondicion', 'facturasPorParte', 'puntosDePct', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura',
-  'cantidadDivision', 'renglonesParte', 'htmlTotalesPunto', 'htmlHojaPunto', 'nombrePdfPunto', 'htmlFacturasOrden', 'puedeFacturar',
+  'cantidadDivision', 'renglonesParte', 'htmlNombreHojaPunto', 'htmlTotalesPunto', 'htmlHojaPunto', 'nombrePdfPunto', 'htmlFacturasOrden', 'puedeFacturar',
   'pctInicialFacturar', 'actualizarFilaOrden', 'contenedorFacturar', 'sincronizarFacturar', 'cerrarFacturar', 'iniciarFacturar',
   'aplicarDatosFacturar', 'anotarDivisionGuardada', 'pintarFacturar', 'idFc', 'htmlPuntoFacturar', 'pintarVendedoresFacturar', 'facturarPendiente',
   'puntoListo', 'actualizarFacturar', 'actualizarFacturaPunto', 'elegirPctFacturar', 'escribirPctFacturar', 'ponerPctsFacturar', 'marcarGuardarCliente', 'nuevoClienteFacturar', 'guardarCondicionDelCliente', 'actualizarClienteFacturar', 'textoCondicionGuardada', 'cambiarVendedorFacturar',
@@ -297,6 +297,8 @@ const CONSTANTES_BASE = [
   'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'AVISO_SIN_CONDICION', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
   // Los remitos precargados de Rosario (27/10/2026)
   'ESTADOS_REMITO_POR_REVISAR', 'ETIQUETA_ESTADO_REMITO', 'TALONARIOS', 'CAMPOS_REMITO',
+  // Las condiciones especiales del cliente (30/10/2026)
+  'MIN_LETRAS_CONO_ESP', 'MAX_CONOS_ESP',
   // Los acopios (27/10/2026)
   'ESTADOS_ACOPIO', 'LARGO_NUMERO_ACOPIO', 'GRUPOS_REMITO',
 ]

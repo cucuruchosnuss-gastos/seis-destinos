@@ -89,7 +89,7 @@ const rpcDe = (S, n) => S.__llamadas.rpc.filter(r => r[0] === n)
     // Lo que va a la base: el precio por renglón de la orden (su id).
     S.cambiarPrecio('i2', 500)
     let params = null
-    S.__setRpc(async (n, p) => { if (n === 'valorizar_orden_retiro') { params = p; return { data: { total: 98500, moneda: 'ARS' }, error: null } } return { data: null, error: null } })
+    S.__setRpc(async (n, p) => { if (n === 'valorizar_con_condiciones') { params = p; return { data: { total: 98500, moneda: 'ARS' }, error: null } } return { data: null, error: null } })
     await S.guardarValorizacion()
     chk('valorizar manda el precio de cada renglón de la orden', params && params.p_orden_id === 'od7' && params.p_precios.i1 === 9600 && params.p_precios.i2 === 500, JSON.stringify(params))
   }))

@@ -99,7 +99,7 @@ correrMutaciones({
     { nombre: 'un precio null se propone igual', de: "          if (r.precio !== null) { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }", a: "          { v.precios[it.id] = r.precio; v.desdeLista.add(it.id) }" },
     { nombre: 'el % de la lista no se nombra', de: ": { texto: pct === null ? 'Sobre el costo (lista)' :", a: ": { texto: true ? 'Sobre el costo (lista)' :" },
     { nombre: 'el insumo se valoriza por cajas', de: '      const n = it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)', a: '      const n = Number(it?.cajas)' },
-    { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')" },
+    { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, precio_lista, descuento_pct, condicion_id, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, precio_lista, descuento_pct, condicion_id, lote, faltante, revision, revision_motivo, turno_produccion_id, tipo, motivo_devolucion, lote_devuelto, destino_devuelto')" },
     { nombre: 'los lotes de los insumos sin stock:ver', de: "      if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {", a: "      if ((items ?? []).some(it => it.insumo_id)) {" },
     { nombre: 'el insumo se dibuja como producto', de: '      if (it.insumo_id) {\n        // Un INSUMO de reventa', a: '      if (false) {\n        // Un INSUMO de reventa' },
     { nombre: 'el precio del insumo se pide x caja', de: "        porQue = modo.porBulto ? modo.rotulo : (unidadHoja(pi.unidad) || 'unidad')", a: "        porQue = 'caja'" },
@@ -138,6 +138,6 @@ correrMutaciones({
     { nombre: 'sin valorizar la hoja inventa precios', de: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,", a: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: it.precio_caja ?? 0," },
     { nombre: 'la hoja sin quién cargó', de: "        cargadaPor: estado.nombres.get(o.cargada_por) ?? '',", a: "        cargadaPor: ''," },
     // Un solo "sin cono" (10/10/2026)
-    { nombre: 'con cono y sin marca vuelve a ser "Común"', de: "?.nombre ?? 'Cono que no se pudo leer') : 'Falta el cono')", a: "?.nombre ?? 'Cono que no se pudo leer') : 'Común')" },
+    { nombre: 'con cono y sin marca vuelve a ser "Común"', de: "(it.marca_id ? nombreConoPorIdRemito(cat, it.marca_id) : 'Falta el cono')", a: "(it.marca_id ? nombreConoPorIdRemito(cat, it.marca_id) : 'Común')" },
   ],
 })

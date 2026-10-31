@@ -106,7 +106,7 @@ for (const [nombre, ancho, alto] of [['390', 390, 844], ['1280', 1280, 900]]) {
     await expect(page.locator('#ad-orden-facturar')).toBeHidden();
     // La base valoriza: la orden queda valorizada (las tablas de la maqueta, en vivo).
     await page.evaluate(() => {
-      globalThis.__maqueta = { rpc: { get valorizar_orden_retiro() {
+      globalThis.__maqueta = { rpc: { get valorizar_con_condiciones() {
         const o = globalThis.__maquetaTablas.ordenes_retiro.find(x => x.id === 'o36');
         Object.assign(o, { estado_valorizacion: 'valorizada', total: 599499.84, valorizada_en: '2026-10-28T12:30:00Z' });
         for (const it of globalThis.__maquetaTablas.orden_retiro_items.filter(x => x.orden_id === 'o36')) {
