@@ -129,7 +129,7 @@ const FUNCIONES = [
   // Las dos funciones nuevas de estos arreglos solo se piden si están: así,
   // sobre el código de antes (el baseline de las mutaciones) la suite corre y
   // da rojo por lo que hace, no por no poder armar el sandbox.
-  ...FUNCIONES_ASENTAR.filter(n => !['idParaRevisarRepetidos', 'mediosConCobro'].includes(n) || FUENTE.includes(`function ${n}(`)),
+  ...FUNCIONES_ASENTAR.filter(n => !['idParaRevisarRepetidos', 'mediosConCobro', 'cancelarSugerenciaTodo'].includes(n) || FUENTE.includes(`function ${n}(`)),
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_COBRANZA', 'ETIQUETA_ESTADO_CHEQUE',
@@ -344,6 +344,83 @@ async function pruebas() {
     // En "Aplicar todo" no cambia nada.
     f.aplicacion.modo = 'todo'
     chk('en "Aplicar todo" los items siguen sin medio', S.itemsDeAplicacion(f, S.estado.aplicar.datos).every(x => x.medio === null))
+  }
+
+  // ══ 5b. "POR MEDIO DE PAGO" CON UNA SUGERENCIA DE "APLICAR TODO" PENDIENTE ═
+  // Se cambia lo cobrado (queda el retardo de 400 ms o la respuesta en camino)
+  // y se toca "Por medio de pago": la pantalla NO vuelve sola a "Aplicar todo".
+  {
+    // (a) El retardo de 400 ms todavía no venció.
+    const S = sandboxAplicar()
+    const f = S.estado.form
+    f.unidad_id = 'u-nuss'
+    f.efectivo = '20.000,00'
+    f.transferencias = [Object.assign(S.transferenciaVacia('2026-10-31'), { cuenta_id: 'cta-paz', importe: 100000, referencia: 'OP-0001' })]
+    S.estado.asentar = Object.assign(S.estadoAsentarVacio(), { clientes: [{ cliente_id: 'c-duo', nombre: 'DUOLATE', saldo: 0 }] })
+    S.elegirClienteAsentar('c-duo')
+    await esperar()
+    S.__correrTimers(); await esperar()
+    chk('(a) arranca en "Aplicar todo", ya sugerido', f.aplicacion?.modo === 'todo' && rpcs(S, 'sugerir_aplicacion').length >= 1)
+    f.efectivo = '40.000,00'
+    S.pintarTotalYGuardado()
+    chk('(a) cambió lo cobrado: queda el retardo de 400 ms', S.__timers().some(x => x.f && x.ms === 400))
+    const pedidas = rpcs(S, 'sugerir_aplicacion').length
+    S.alTocarEnAplicar({ target: { closest: () => ({ dataset: { aplicarModo: 'medio' } }) } })
+    chk('(a) al tocar "Por medio de pago" el retardo se cancela', !S.__timers().some(x => x.f && x.ms === 400), JSON.stringify(S.__timers().map(x => [!!x.f, x.ms])))
+    S.__correrTimers(); await esperar()
+    chk('(a) pasado el retardo, sigue en "Por medio de pago"', f.aplicacion.modo === 'medio')
+    chk('(a) …con los bloques por medio en pantalla', /data-aplicar-bloque="efectivo"/.test(el(S, 'cob-aplicar-cuerpo').innerHTML) && /aria-pressed="true" data-aplicar-modo="medio"/.test(el(S, 'cob-aplicar-cuerpo').innerHTML))
+    chk('(a) y no se pidió otra sugerencia del total', rpcs(S, 'sugerir_aplicacion').length === pedidas)
+    // En "Por medio de pago", nada que la llame cambia el modo.
+    await S.sugerirAplicarTodo(null)
+    chk('(a) sugerirAplicarTodo en "Por medio de pago": no pide nada ni cambia el modo', f.aplicacion.modo === 'medio' && rpcs(S, 'sugerir_aplicacion').length === pedidas)
+    // Volver a "Aplicar todo" sin haber tocado: sugiere con el total nuevo.
+    S.alTocarEnAplicar({ target: { closest: () => ({ dataset: { aplicarModo: 'todo' } }) } })
+    await esperar()
+    chk('(a) volver a "Aplicar todo" sin tocar: sugiere con el total nuevo', f.aplicacion.modo === 'todo' && rpcs(S, 'sugerir_aplicacion').at(-1)?.params.p_monto === 140000, JSON.stringify(rpcs(S, 'sugerir_aplicacion').at(-1)?.params))
+  }
+  {
+    // (b) La respuesta de la base está en camino.
+    const S = sandboxAplicar()
+    const f = S.estado.form
+    f.unidad_id = 'u-nuss'
+    f.efectivo = '20.000,00'
+    f.transferencias = [Object.assign(S.transferenciaVacia('2026-10-31'), { cuenta_id: 'cta-paz', importe: 100000, referencia: 'OP-0001' })]
+    S.estado.asentar = Object.assign(S.estadoAsentarVacio(), { clientes: [{ cliente_id: 'c-duo', nombre: 'DUOLATE', saldo: 0 }] })
+    S.elegirClienteAsentar('c-duo')
+    await esperar()
+    S.__correrTimers(); await esperar()
+    const enCamino = []
+    const respuesta = { items: [{ doc_tipo: 'corte', doc_id: 'c-1', parte: 'total', etiqueta: 'x', monto: 50000 }, { doc_tipo: 'orden', doc_id: 'o-42', parte: 'N1', etiqueta: 'y', monto: 90000 }], sobra: 0 }
+    S.__setRpc(async (n, p) => {
+      if (n === 'sugerir_aplicacion') return new Promise(r => enCamino.push(() => r({ data: respuesta, error: null })))
+      if (n === 'cliente_pendientes') return { data: PENDIENTES, error: null }
+      return { data: null, error: null }
+    })
+    f.efectivo = '40.000,00'
+    S.pintarTotalYGuardado()
+    S.__correrTimers(); await esperar()
+    chk('(b) la sugerencia del total quedó en camino', enCamino.length === 1)
+    S.alTocarEnAplicar({ target: { closest: () => ({ dataset: { aplicarModo: 'medio' } }) } })
+    enCamino[0]?.(); await esperar()
+    chk('(b) llega la respuesta vieja: sigue en "Por medio de pago"', f.aplicacion.modo === 'medio')
+    chk('(b) …y la pantalla muestra los bloques por medio', /data-aplicar-bloque=/.test(el(S, 'cob-aplicar-cuerpo').innerHTML))
+    // Tocó a mano en "Por medio de pago" y volvió a "Aplicar todo" (no se
+    // vuelve a sugerir porque tocó): una respuesta vieja no pisa nada.
+    S.__setRpc(async (n) => n === 'sugerir_aplicacion' ? new Promise(r => enCamino.push(() => r({ data: respuesta, error: null }))) : { data: PENDIENTES, error: null })
+    S.alTocarEnAplicar({ target: { closest: () => ({ dataset: { aplicarModo: 'todo' } }) } })
+    await esperar()
+    chk('(b) de vuelta en "Aplicar todo" sin tocar: se pide una sugerencia nueva', enCamino.length === 2)
+    S.alTocarEnAplicar({ target: { closest: () => ({ dataset: { aplicarModo: 'medio' } }) } })
+    S.actualizarMontoAplicar(claveDoc(DOCS[1]), 'transferencia', '100.000,00')
+    S.alTocarEnAplicar({ target: { closest: () => ({ dataset: { aplicarModo: 'todo' } }) } })
+    const antesMontos = JSON.stringify(f.aplicacion.montos)
+    // (Sobre el código de antes no hay segunda pedida: la respuesta vieja ya
+    // había devuelto la pantalla a "Aplicar todo".)
+    for (const soltar of enCamino.slice(1)) soltar()
+    await esperar()
+    chk('(b) la respuesta que estaba en camino no pisa lo elegido ni lo marca como no tocado',
+      f.aplicacion.modo === 'todo' && f.aplicacion.tocado === true && JSON.stringify(f.aplicacion.montos) === antesMontos, JSON.stringify(f.aplicacion))
   }
 
   // ══ FUENTE ════════════════════════════════════════════════════════════════

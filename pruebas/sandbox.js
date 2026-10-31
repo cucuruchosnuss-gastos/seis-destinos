@@ -48,6 +48,8 @@ const FUNCIONES_PAGO = [
   // Arreglos 30/10 (puntos 3 y 5a): el id que va a comprobantes_ya_cargados
   // y los medios con algo cobrado.
   'idParaRevisarRepetidos', 'mediosConCobro',
+  // …y la sugerencia de "Aplicar todo" que se cancela al cambiar de modo.
+  'cancelarSugerenciaTodo',
 ]
 const CONSTANTES_PAGO = [
   'FORMAS_PAGO', 'SECCION_FORMA', 'TEXTO_OTRO_COMPROBANTE', 'TEXTO_PRIMER_COMPROBANTE', 'TIPOS_COMPROBANTE', 'BANCOS_ORIGEN',

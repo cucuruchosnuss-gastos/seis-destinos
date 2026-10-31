@@ -53,5 +53,10 @@ correrMutaciones({
     { nombre: 'mediosConCobro mira el total y no el medio', de: '      return MEDIOS_APLICAR.filter(m => centavosAplicar(cobrado[m]) > 0)', a: '      return MEDIOS_APLICAR.filter(m => centavosAplicar(cobrado.cheque + cobrado.transferencia + cobrado.efectivo) > 0)' },
     { nombre: 'mediosConCobro saca los que SÍ se cobraron', de: '      return MEDIOS_APLICAR.filter(m => centavosAplicar(cobrado[m]) > 0)', a: '      return MEDIOS_APLICAR.filter(m => !(centavosAplicar(cobrado[m]) > 0))' },
     { nombre: 'mediosConCobro limpia lo escrito al ocultar (no se conserva)', de: '      const cobrado = cobradoPorMedio(f)\n      return MEDIOS_APLICAR', a: '      const cobrado = cobradoPorMedio(f)\n      for (const m of MEDIOS_APLICAR) if (!(centavosAplicar(cobrado[m]) > 0) && f?.aplicacion?.medios?.[m]) f.aplicacion.medios[m].montos = {}\n      return MEDIOS_APLICAR' },
+    // Hallazgo de tiempos: cambiar de modo con una sugerencia de "Aplicar todo" pendiente
+    { nombre: 'cambiar de modo no cancela la sugerencia pendiente', de: '      cancelarSugerenciaTodo(estado.aplicar)\n', a: '' },
+    { nombre: 'cancelar no corta el retardo', de: '      clearTimeout(a.temporizador)\n      a.temporizador = null\n', a: '' },
+    { nombre: 'cancelar no sube el turno', de: '      a.turnoSugerir = (a.turnoSugerir ?? 0) + 1\n    }\n\n    function cambiarModoAplicar', a: '    }\n\n    function cambiarModoAplicar' },
+    { nombre: 'sugerirAplicarTodo corre en "Por medio de pago"', de: "      if (ap.modo !== 'todo') return\n", a: '' },
   ],
 })

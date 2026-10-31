@@ -4202,6 +4202,11 @@
       if (!aplicarActivo(f)) return
       const a = estado.aplicar
       const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
+      // En "Por medio de pago" no se sugiere el total: nada que llegue a
+      // llamarla en ese modo vuelve la pantalla a "Aplicar todo". (Una
+      // respuesta que ya estaba en camino la descarta el turno, que sube
+      // cancelarSugerenciaTodo al cambiar de modo.)
+      if (ap.modo !== 'todo') return
       const cobrado = resumenAplicacion(f, a.datos).cobrado
       const turno = (a.turnoSugerir ?? 0) + 1
       a.turnoSugerir = turno
@@ -4287,12 +4292,24 @@
       pintarTotalYGuardado()
     }
 
+    function cancelarSugerenciaTodo(a) {
+      if (!a) return
+      clearTimeout(a.temporizador)
+      a.temporizador = null
+      a.turnoSugerir = (a.turnoSugerir ?? 0) + 1
+    }
+
     function cambiarModoAplicar(modo) {
       const f = estado.form
       if (!aplicarActivo(f) || !['todo', 'medio'].includes(modo)) return
       const ap = f.aplicacion ?? (f.aplicacion = aplicacionVacia())
       if (ap.modo === modo) return
       ap.modo = modo
+      // Una sugerencia de "Aplicar todo" pendiente (el retardo de 400 ms o la
+      // respuesta de la base) ya no corresponde: se cancela y su respuesta se
+      // descarta por turno (arreglos del 31/10/2026). Sin esto, al llegar
+      // volvía a poner la pantalla en "Aplicar todo".
+      cancelarSugerenciaTodo(estado.aplicar)
       guardarBorrador()
       if (modo === 'todo' && !ap.tocado) { sugerirAplicarTodo(ap.parte); return }
       pintarAplicar()

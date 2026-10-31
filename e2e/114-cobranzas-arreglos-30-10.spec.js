@@ -199,4 +199,30 @@ for (const t of [{ nombre: '390', ancho: 390, alto: 844 }, { nombre: '1280', anc
     expect(ap.p_items.map(x => `${x.parte}:${x.monto}:${x.medio}`)).toEqual(['N1:100000:transferencia']);
     expect(errores, errores.join('\n')).toEqual([]);
   });
+
+  test(`"Por medio de pago" enseguida de cambiar lo cobrado no vuelve solo a "Aplicar todo", a ${t.nombre}`, async ({ page }, info) => {
+    const errores = vigilarErrores(page);
+    await page.setViewportSize({ width: t.ancho, height: t.alto });
+    await nuevaDeJm(page, { corte: true });
+    await page.locator('[data-abrir-forma="efectivo"]').click();
+    await page.locator('#cob-efectivo').fill('20000');
+    await page.locator('#cob-efectivo').blur();
+    await agregarTransferencia(page, { importe: '100000' });
+    const sec = page.locator('#cob-aplicar');
+    const cifras = page.locator('#cob-aplicar-cifras');
+    await expect.poll(async () => sinNbsp(await cifras.innerText())).toMatch(/Aplicado\s*\$ 120\.000,00/);
+    // Cambia el efectivo y, sin esperar la sugerencia nueva, "Por medio de pago".
+    await page.locator('#cob-efectivo').fill('40000');
+    await page.locator('#cob-efectivo').blur();
+    await sec.locator('[data-aplicar-modo="medio"]').click();
+    // Pasa de largo el retardo de 400 ms: la pantalla sigue por medio.
+    await page.waitForTimeout(1000);
+    await expect(sec.locator('[data-aplicar-modo="medio"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(sec.locator('[data-aplicar-bloque]')).toHaveCount(2);
+    await expect.poll(async () => sinNbsp(await cifras.innerText())).toMatch(/Total cobrado\s*\$ 140\.000,00/);
+    await sec.scrollIntoViewIfNeeded();
+    await captura(page, `por-medio-enseguida-${t.nombre}`, info);
+    await sinScrollHorizontal(page);
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
 }
