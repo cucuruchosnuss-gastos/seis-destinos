@@ -809,6 +809,34 @@
     .ad-entre-interna__cabeza { display: none; }
     .ad-entre-interna__item--sin .ad-entre-interna__precio { white-space: normal; font-size: 0.8125rem; }
     .ad-entre-ajuste .ad-texto-suave { margin: 0 0 0.75rem; }
+    /* ── Arreglos 30/10 (punto 7): "Poner precio" a un movimiento entre empresas ── */
+    .ad-entre-sv__mas { font-size: 0.8125rem; color: var(--ad-texto-secundario); padding: 0.125rem 0; }
+    .ad-entre-sv__flecha { font-weight: 800; color: var(--ad-texto-secundario); }
+    .ad-entre-fila__valorizacion { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .ad-entre-vz { position: fixed; inset: 0; z-index: 90; background: rgba(12, 16, 28, 0.5); display: flex; align-items: flex-end; justify-content: center; padding: 0.5rem; min-width: 0; }
+    .ad-entre-vz[hidden] { display: none; }
+    .ad-entre-vz__caja { background: var(--color-fondo); border-radius: var(--radio-tarjeta); padding: 1rem; width: 100%; max-width: 720px; max-height: 94vh; overflow-y: auto; min-width: 0; }
+    .ad-entre-vz__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .ad-entre-vz__titulo { font-size: 1.125rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+    .ad-entre-vz__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--color-texto); }
+    .ad-entre-vz__dato { margin: 0.25rem 0; font-size: 0.875rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-entre-vz__valorizado { font-weight: 700; color: var(--color-texto); }
+    .ad-entre-vz__items { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+    .ad-entre-vz__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.75rem; align-items: center; padding: 0.625rem 0; border-top: 1px solid var(--color-borde); min-width: 0; }
+    .ad-entre-vz__item:first-child { border-top: none; }
+    .ad-entre-vz__detalle { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+    .ad-entre-vz__cantidad { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+    .ad-entre-vz__precio { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.125rem 0.75rem; align-items: center; min-width: 0; }
+    .ad-entre-vz__precio label { grid-column: 1 / -1; font-size: 0.8125rem; font-weight: 700; color: var(--ad-texto-secundario); }
+    .ad-entre-vz__precio .ad-input { min-width: 0; }
+    .ad-entre-vz__sub { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+    .ad-entre-vz__fuente { grid-column: 1 / -1; font-size: 0.75rem; color: var(--ad-texto-secundario); }
+    .ad-entre-vz__fuente--falta { color: var(--naranja-oscuro); font-weight: 700; }
+    .ad-entre-vz__precio--falta .ad-input { border-color: var(--naranja); }
+    .ad-entre-vz__total { font-size: 1.0625rem; font-weight: 800; margin: 0.75rem 0 0.5rem; overflow-wrap: anywhere; }
+    .ad-entre-vz__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    @media (min-width: 640px) { .ad-entre-vz { align-items: center; padding: 1rem; } }
+    @media (max-width: 1023.98px) { .ad-entre-vz .ad-input { font-size: 16px; } }
     @media (max-width: 599.98px) {
       .ad-entre-ajuste__le-debe { display: none; }
     }
@@ -1591,6 +1619,13 @@
       <p class="ad-cuenta" id="ad-entre-cuenta"></p>
       <div class="ad-lista" id="ad-entre-lista"></div>
       <div id="ad-entre-internas" class="ad-entre-internas"></div>
+      <!-- Arreglos 30/10 (punto 7): la ventana "Poner precio" de un traspaso,
+           un ingreso desde otra empresa o una transferencia de insumos
+           (movimiento_para_valorizar → valorizar_movimiento_entre_empresas).
+           La arma pintarValorizarEntre(). -->
+      <div class="ad-entre-vz" id="ad-entre-vz" hidden role="dialog" aria-modal="true" aria-labelledby="ad-entre-vz-titulo">
+        <div class="ad-entre-vz__caja" id="ad-entre-vz-caja"></div>
+      </div>
     </section>
 
     <!-- ══ CONFIGURACIÓN DE COMISIONES (21/10/2026, con retiros:precios) ═══
@@ -14651,9 +14686,15 @@
     // El código de la orden al final del detalle de su mercadería ("… · lote 12 · orden D-I-0002").
     const RE_ORDEN_MERCADERIA_ENTRE = /\s*· orden ([A-Z]{1,3}-(?:I-)?\d{3,})\s*$/
     // De dónde salió la mercadería sin valorizar que no es de una orden.
-    const ORIGEN_MERCADERIA_ENTRE = { traspaso_terminado: 'Traspaso de producto terminado', ingreso_externo: 'Ingreso de producto de otra empresa' }
+    const ORIGEN_MERCADERIA_ENTRE = { traspaso_terminado: 'Traspaso de producto terminado', ingreso_externo: 'Ingreso de producto de otra empresa', transferencia_stock: 'Transferencia de insumos' }
     const AYUDA_AJUSTE_ENTRE = 'La plata que se pasa de una empresa a otra se carga como traspaso entre cuentas en Caja; esto es para ajustes y compensaciones.'
     const AYUDA_INTERNAS_ENTRE = 'Si un producto tiene precio propio en la lista interna, manda ese; si no, el más barato de las listas de venta de esa empresa, con el %.'
+    // Arreglos 30/10 (punto 7): lo que va a "Mercadería sin valorizar" y lo
+    // que se valoriza acá (las órdenes, en la orden).
+    const TIPOS_SIN_VALORIZAR_ENTRE = ['mercaderia', 'insumos']
+    const TIPOS_VALORIZABLES_ENTRE = ['traspaso_terminado', 'ingreso_externo', 'transferencia_stock']
+    const FUENTE_PRECIO_ENTRE = { lista_interna: 'lista interna', costo: 'costo de compra' }
+    const MAX_RENGLONES_SV_ENTRE = 4
 
     function entreVacio() {
       return { filas: null, error: null, turno: 0, filtros: { par: '', tipo: '' },
@@ -14759,6 +14800,7 @@
     // La mercadería que ya dejó su deuda cargada (con_precio de la base): su
     // importe llega aparte, como 'otro'. Nunca se cuenta dos veces.
     function yaTienePrecio(f) {
+      if (f?.tipo === 'insumos') return f?.con_precio === true
       return f?.tipo === 'mercaderia' && f?.con_precio === true
     }
 
@@ -14921,13 +14963,13 @@
     function sinValorizarEntre(filas, par = '') {
       const grupos = new Map()
       for (const f of filas ?? []) {
-        if (f?.tipo !== 'mercaderia' || f?.con_precio !== false) continue
+        if (!TIPOS_SIN_VALORIZAR_ENTRE.includes(f?.tipo) || f?.con_precio !== false) continue
         const de = f.de_unidad_id, a = f.a_unidad_id
         if (!de || !a || de === a) continue
         if (par && claveParEntre(de, a) !== par) continue
         const k = String(f.referencia_tipo ?? '') + '|' + String(f.referencia_id ?? f._id ?? '')
         if (!grupos.has(k)) {
-          grupos.set(k, { clave: k, referencia_tipo: f.referencia_tipo ?? null, de, a, de_unidad: f.de_unidad, a_unidad: f.a_unidad,
+          grupos.set(k, { clave: k, referencia_tipo: f.referencia_tipo ?? null, referencia_id: f.referencia_id ?? null, de, a, de_unidad: f.de_unidad, a_unidad: f.a_unidad,
             fecha: f.fecha ?? null, orden: null, codigo: null, renglones: [], cajas: 0 })
         }
         const g = grupos.get(k)
@@ -14959,12 +15001,13 @@
       } else if (g.referencia_tipo === 'orden_retiro') {
         accion = `<p class="ad-texto-suave">${esc('La valoriza quien tiene el permiso de precios de Órdenes de retiro en ' + nombreEmpresaEntre(g.de, g.de_unidad) + '.')}</p>`
       }
-      const renglones = g.renglones.map(f => `<li class="ad-entre-sv__renglon"><span>${esc(productoMercaderiaEntre(f))}</span><span class="ad-fila__importe">${esc(cantidadEntre(f))}</span></li>`).join('')
+      if (!accion) accion = htmlAccionSvEntre(g)
+      const renglones = g.renglones.slice(0, MAX_RENGLONES_SV_ENTRE).map(f => `<li class="ad-entre-sv__renglon"><span>${esc(productoMercaderiaEntre(f))}</span><span class="ad-fila__importe">${esc(cantidadEntre(f))}</span></li>`).join('')
       return `<div class="ad-entre-sv__grupo" data-entre-sv="${esc(g.clave)}">` +
         `<div class="ad-fila__linea"><strong>${esc(titulo)}</strong><span class="ad-fila__meta">${esc(fechaCorta(g.fecha))}</span></div>` +
-        '<div class="ad-entre-fila__empresas">' + htmlQuienEntre({ de_unidad_id: g.de, de_unidad: g.de_unidad, a_unidad_id: g.a, a_unidad: g.a_unidad }) + '</div>' +
-        '<ul class="ad-entre-sv__renglones">' + renglones + '</ul>' +
-        `<p class="ad-entre-sv__total">${esc('Total: ' + cantidadEntre({ cantidad: g.cajas, unidad_medida: 'cajas' }) + ' sin precio')}</p>` + accion + '</div>'
+        '<div class="ad-entre-fila__empresas">' + htmlEntregaRecibeEntre(g) + '</div>' +
+        '<ul class="ad-entre-sv__renglones">' + renglones + htmlMasRenglonesSvEntre(g) + '</ul>' +
+        `<p class="ad-entre-sv__total">${esc(textoTotalSvEntre(g))}</p>` + accion + '</div>'
     }
 
     function htmlSinValorizarEntre(e) {
@@ -14972,7 +15015,7 @@
       const grupos = sinValorizarEntre(e.saldos.filas, e.filtros.par)
       if (!grupos.length) return ''
       return '<div class="ad-tarjeta ad-entre-sv"><p class="ad-subtitulo">Mercadería sin valorizar</p>' +
-        '<p class="ad-texto-suave">Es deuda que todavía no tiene precio: no está en el saldo de arriba hasta que se valorice la orden.</p>' +
+        '<p class="ad-texto-suave">Es deuda que todavía no tiene precio: no está en el saldo de arriba hasta que se le ponga precio (las órdenes, en la orden).</p>' +
         grupos.map(htmlGrupoSinValorizarEntre).join('') + '</div>'
     }
 
@@ -14984,6 +15027,7 @@
     // una transferencia de insumos no tienen cómo abrirse: quedan con su
     // detalle.
     function htmlLinkEntre(f) {
+      if (f?.referencia_tipo === 'traspaso_terminado_precio') return htmlLinkValorizacionEntre(f)
       if (f?.tipo === 'mercaderia' && f.referencia_tipo === 'orden_retiro') {
         return htmlOrdenEntre({ ...f, orden: f.orden ?? { id: null, codigo: codigoMercaderiaEntre(f), unidad: null } })
       }
@@ -15003,12 +15047,12 @@
       const derecha = centavosEntre(f?.importe) !== null ? plataEntre(f.importe, f.moneda)
         : SIN_IMPORTE_ENTRE.includes(f?.tipo) ? cantidadEntre(f) : '—'
       const nota = yaTienePrecio(f) ? 'Ya valorizada: su importe está en la deuda cargada ("Otro").'
-        : f?.tipo === 'mercaderia' && f?.con_precio === false ? 'Sin valorizar: todavía no tiene precio y no está en el saldo.'
+        : TIPOS_SIN_VALORIZAR_ENTRE.includes(f?.tipo) && f?.con_precio === false ? 'Sin valorizar: todavía no tiene precio y no está en el saldo.'
           : f?.tipo === 'insumos' ? 'Sin importe: los insumos transferidos no tienen precio.' : null
       const clase = ORDEN_TIPOS_ENTRE.includes(f?.tipo) ? f.tipo : 'otro'
       return `<div class="ad-tarjeta ad-entre-fila" data-entre="${esc(f?._id)}" data-entre-tipo="${esc(f?.tipo ?? '')}">` +
         '<div class="ad-fila__linea"><span class="ad-entre-fila__izq">' +
-        `<span class="ad-sello ad-entre-sello--${esc(clase)}" title="${esc(TIPOS_ENTRE[f?.tipo]?.explica ?? '')}">${esc(nombreTipoEntre(f?.tipo))}</span>` +
+        `<span class="ad-sello ad-entre-sello--${esc(clase)}" title="${esc(TIPOS_ENTRE[f?.tipo]?.explica ?? '')}">${esc(nombreSelloEntre(f))}</span>` +
         `<span class="ad-fila__meta">${esc(fechaCorta(f?.fecha))}</span></span><span class="ad-fila__importe">${esc(derecha)}</span></div>` +
         `<p class="ad-entre-fila__detalle">${esc(f?.detalle || '—')}</p>` +
         '<div class="ad-entre-fila__empresas">' + htmlQuienEntre(f) + '</div>' +
@@ -15288,6 +15332,7 @@
     // Lo mismo que valida la base, con sus palabras (antes de mandar).
     function validarAjusteEntre(a) {
       if (!a.deudora || !a.acreedora || a.deudora === a.acreedora) return 'Elegí las dos empresas (distintas).'
+      if (a.importe !== null && a.importe <= 0) return 'El importe tiene que ser mayor que cero.'
       if (a.importe === null || !(a.importe > 0)) return 'Poné el importe.'
       if (!esFechaIso(a.fecha)) return 'Poné la fecha.'
       if (a.concepto.length < 3) return 'Poné el concepto.'
@@ -15327,6 +15372,315 @@
       pintarAjusteEntre()
       cargarSaldosEntre()
       cargarEntre()
+    }
+
+    // ── PONER PRECIO A UN MOVIMIENTO ENTRE EMPRESAS (31/10/2026, arreglos de
+    // la auditoría, punto 7) ───────────────────────────────────────────────
+    // Verificado con pg_get_functiondef el 30/10/2026:
+    // movimiento_para_valorizar(p_referencia_tipo, p_referencia_id) →
+    // { referencia_tipo, referencia_id, fecha, acreedora_id, acreedora,
+    // deudora_id, deudora, lista_interna { id, nombre } | null, valorizado
+    // { id, importe, fecha } | null, items[{ clave, presentacion_id, marca_id,
+    // insumo_id, detalle, cantidad, unidad, precio_sugerido, fuente
+    // ('lista_interna' | 'costo' | null) }] } y
+    // valorizar_movimiento_entre_empresas(p_referencia_tipo, p_referencia_id,
+    // p_precios [{ clave, precio }], p_concepto) → { id, importe } ("Faltan
+    // precios: …" si falta alguno; si ya tenía precio, lo reemplaza). Las dos
+    // piden gastos:gastos_empresa y solo aceptan traspaso_terminado,
+    // ingreso_externo y transferencia_stock. La deuda queda en
+    // movimientos_entre_unidades con traspaso_id = el movimiento: en
+    // movimientos_entre_empresas vuelve como 'otro' con referencia_tipo
+    // 'traspaso_terminado_precio' y referencia_id = el movimiento (sin decir
+    // de qué tipo era: se toma de su mercadería o sus insumos, o se prueba).
+    function puedeValorizarEntre() {
+      return tieneTarea('gastos', 'gastos_empresa')
+    }
+
+    function valorizarVacioEntre() {
+      return { abierto: false, cargando: false, tipo: '', id: '', datos: null, error: null, guardando: false, turno: 0 }
+    }
+
+    function datosValorizarEntre() {
+      const e = datosEntre()
+      if (!e.vz) e.vz = valorizarVacioEntre()
+      return e.vz
+    }
+
+    // "Poner precio" / "Cambiar precio" (solo con gastos:gastos_empresa).
+    function htmlBotonValorizarEntre(tipo, id, cambiar) {
+      if (!puedeValorizarEntre() || !id) return ''
+      return `<button type="button" class="ad-btn ad-btn--suave" data-entre-valorizar="${esc(id)}" data-entre-valorizar-tipo="${esc(tipo ?? '')}">` +
+        (cambiar ? 'Cambiar precio' : 'Poner precio') + '</button>'
+    }
+
+    // La acción de un renglón del bloque que no es de una orden.
+    function htmlAccionSvEntre(g) {
+      if (!TIPOS_VALORIZABLES_ENTRE.includes(g?.referencia_tipo)) return ''
+      if (!puedeValorizarEntre()) return '<p class="ad-texto-suave">Le pone precio quien tiene el permiso de gastos de la empresa.</p>'
+      return htmlBotonValorizarEntre(g.referencia_tipo, g.referencia_id, false)
+    }
+
+    // Quién entrega → quién recibe.
+    function htmlEntregaRecibeEntre(g) {
+      return htmlSelloEmpresa(g?.de, g?.de_unidad) + '<span class="ad-entre-sv__flecha" title="le entregó a">→</span>' + htmlSelloEmpresa(g?.a, g?.a_unidad)
+    }
+
+    // El detalle resumido: los primeros renglones y "y N renglones más".
+    function htmlMasRenglonesSvEntre(g) {
+      const mas = (g?.renglones?.length ?? 0) - MAX_RENGLONES_SV_ENTRE
+      if (mas <= 0) return ''
+      return '<li class="ad-entre-sv__mas">' + (mas === 1 ? 'y 1 renglón más' : 'y ' + mas + ' renglones más') + '</li>'
+    }
+
+    // "Total: 14 cajas sin precio" / "3 insumos sin precio" (los insumos
+    // vienen en unidades distintas: se cuentan).
+    function textoTotalSvEntre(g) {
+      if (g?.referencia_tipo === 'transferencia_stock') {
+        const n = new Set((g.renglones ?? []).map(f => f?.insumo_id || f?.detalle)).size
+        return (n === 1 ? '1 insumo' : n + ' insumos') + ' sin precio'
+      }
+      return 'Total: ' + cantidadEntre({ cantidad: g?.cajas, unidad_medida: 'cajas' }) + ' sin precio'
+    }
+
+    // El sello de la fila: la deuda de una valorización hecha acá dice "Valorización".
+    function nombreSelloEntre(f) {
+      return f?.referencia_tipo === 'traspaso_terminado_precio' ? 'Valorización' : nombreTipoEntre(f?.tipo)
+    }
+
+    // El tipo del movimiento de una valorización: el de su mercadería o sus
+    // insumos (el mismo referencia_id) en el saldo o en la lista; si no, ''.
+    function tipoValorizacionEntre(id) {
+      if (!id) return ''
+      const e = datosEntre()
+      const f = [...(e.saldos?.filas ?? []), ...(e.filas ?? [])].find(x => x?.referencia_id === id && TIPOS_VALORIZABLES_ENTRE.includes(x?.referencia_tipo))
+      return f?.referencia_tipo ?? ''
+    }
+
+    function htmlLinkValorizacionEntre(f) {
+      return '<p class="ad-entre-fila__link ad-entre-fila__valorizacion"><span class="ad-fila__meta">Precio puesto a mercadería o insumos sin orden</span>' +
+        htmlBotonValorizarEntre(tipoValorizacionEntre(f?.referencia_id), f?.referencia_id, true) + '</p>'
+    }
+
+    function diaMesEntre(iso) {
+      if (!esFechaIso(iso)) return '—'
+      const [, m, d] = String(iso).split('-')
+      return d + '/' + m
+    }
+
+    // "Valorizado en $ 123.456,70 el 27/10".
+    function textoValorizadoEntre(v) {
+      return 'Valorizado en ' + plataEntre(v?.importe, 'ARS') + ' el ' + diaMesEntre(v?.fecha)
+    }
+
+    // El concepto que pone la base si queda vacío.
+    function conceptoBaseValorizarEntre(d) {
+      const t = { traspaso_terminado: 'Traspaso', ingreso_externo: 'Ingreso' }[d?.referencia_tipo] ?? 'Transferencia de insumos'
+      return 'Valorización ' + t + ' del ' + fechaCorta(d?.fecha)
+    }
+
+    // Producto: por caja. Insumo: por su unidad de medida.
+    function precioPorEntre(unidad) {
+      const u = String(unidad ?? '')
+      if (u === 'cajas') return 'Precio por caja'
+      if (u === 'un') return 'Precio por unidad'
+      return 'Precio por ' + (UNIDAD_ENTRE[u] ?? (u || 'unidad'))
+    }
+
+    function decimalesPrecioEntre(unidad) {
+      return unidad === 'cajas' ? 2 : 4
+    }
+
+    // El subtotal de cada renglón y el total, en centavos. Un precio vacío
+    // (o 0) no suma y cuenta como faltante.
+    function cuentaValorizarEntre(items, precios) {
+      const subs = (items ?? []).map((it, i) => {
+        const p = precios?.[i]
+        const c = Number(it?.cantidad)
+        if (p === null || p === undefined || !(p > 0) || it?.cantidad === null || it?.cantidad === undefined || !Number.isFinite(c)) return null
+        return centavosEntre(c * p)
+      })
+      return { subs, total: subs.reduce((s, x) => s + (x ?? 0), 0), faltan: subs.filter(x => x === null).length }
+    }
+
+    function textoTotalValorizarEntre(cuenta) {
+      const t = 'Total: ' + plataEntre(cuenta.total / 100, 'ARS')
+      if (!cuenta.faltan) return t
+      return t + (cuenta.faltan === 1 ? ' · falta 1 precio' : ' · faltan ' + cuenta.faltan + ' precios')
+    }
+
+    function htmlItemValorizarEntre(it, i) {
+      const sugerido = Number(it?.precio_sugerido) > 0
+      const fuente = sugerido ? (FUENTE_PRECIO_ENTRE[it?.fuente] ?? '') : 'sin precio sugerido: ponelo a mano'
+      return '<li class="ad-entre-vz__item" data-entre-vz-item="' + i + '">' +
+        `<span class="ad-entre-vz__detalle">${esc(it?.detalle || '—')}</span>` +
+        `<span class="ad-entre-vz__cantidad">${esc(cantidadEntre({ cantidad: it?.cantidad, unidad_medida: it?.unidad }))}</span>` +
+        '<div class="ad-entre-vz__precio' + (sugerido ? '' : ' ad-entre-vz__precio--falta') + '">' +
+        '<label for="ad-entre-vz-precio-' + i + `">${esc(precioPorEntre(it?.unidad) + ' ($)')}</label>` +
+        '<input class="ad-input" id="ad-entre-vz-precio-' + i + '" data-entre-vz-precio="' + i + '" inputmode="decimal" autocomplete="off">' +
+        '<span class="ad-entre-vz__sub" id="ad-entre-vz-sub-' + i + '">—</span>' +
+        '<span class="ad-entre-vz__fuente' + (sugerido ? '' : ' ad-entre-vz__fuente--falta') + '" data-entre-vz-fuente="' + i + `">${esc(fuente)}</span>` +
+        '</div></li>'
+    }
+
+    function htmlValorizarEntre(v) {
+      const d = v?.datos
+      const barra = '<div class="ad-entre-vz__barra"><h2 class="ad-entre-vz__titulo" id="ad-entre-vz-titulo">' + (d?.valorizado ? 'Cambiar precio' : 'Poner precio') + '</h2>' +
+        '<button type="button" class="ad-entre-vz__cerrar" data-entre-vz-cerrar aria-label="Cerrar">&times;</button></div>'
+      if (v?.cargando) return barra + '<div class="ad-vacio">Buscando el movimiento…</div>'
+      if (v?.error || !d) {
+        return barra + `<div class="ad-aviso ad-aviso--grave">${esc(v?.error || 'No se encontró el movimiento.')}</div>` +
+          '<div class="ad-entre-vz__acciones"><button type="button" class="ad-btn ad-btn--suave" data-entre-vz-reintentar>Reintentar</button>' +
+          '<button type="button" class="ad-btn ad-btn--suave" data-entre-vz-cerrar>Cerrar</button></div>'
+      }
+      const items = Array.isArray(d.items) ? d.items : []
+      const entrega = nombreEmpresaEntre(d.acreedora_id, d.acreedora), recibe = nombreEmpresaEntre(d.deudora_id, d.deudora)
+      const origen = (ORIGEN_MERCADERIA_ENTRE[d.referencia_tipo] ?? 'Movimiento') + ' del ' + fechaCorta(d.fecha)
+      const lista = d.lista_interna ? 'Precios sugeridos de la lista interna "' + (limpio(d.lista_interna.nombre) || 'sin nombre') + '".'
+        : d.referencia_tipo === 'transferencia_stock' ? entrega + ' no tiene lista interna: el sugerido sale del costo de compra.'
+          : entrega + ' no tiene lista interna: los productos no tienen precio sugerido.'
+      const valorizado = d.valorizado
+        ? `<p class="ad-aviso ad-entre-vz__valorizado" data-entre-vz-valorizado>${esc(textoValorizadoEntre(d.valorizado))}. Al guardar, el precio nuevo reemplaza al anterior.</p>` : ''
+      const sugeridos = items.map(it => Number(it?.precio_sugerido) > 0 ? Number(it.precio_sugerido) : null)
+      const cuerpo = items.length
+        ? '<ul class="ad-entre-vz__items">' + items.map(htmlItemValorizarEntre).join('') + '</ul>' +
+          `<p class="ad-entre-vz__total" id="ad-entre-vz-total" aria-live="polite">${esc(textoTotalValorizarEntre(cuentaValorizarEntre(items, sugeridos)))}</p>` +
+          '<div class="ad-campo"><label for="ad-entre-vz-concepto">Concepto (opcional)</label>' +
+          `<input class="ad-input" id="ad-entre-vz-concepto" maxlength="200" autocomplete="off" placeholder="${esc('Si queda vacío: ' + conceptoBaseValorizarEntre(d))}"></div>` +
+          '<p class="ad-error-pegado" id="ad-entre-vz-error" role="alert"></p>' +
+          '<div class="ad-entre-vz__acciones"><button type="button" class="ad-btn" id="ad-entre-vz-guardar" data-entre-vz-guardar>' + (d.valorizado ? 'Cambiar precio' : 'Guardar precio') + '</button>' +
+          '<button type="button" class="ad-btn ad-btn--suave" data-entre-vz-cerrar>Cancelar</button></div>'
+        : '<div class="ad-vacio">Este movimiento no tiene renglones para ponerles precio.</div>'
+      return barra +
+        `<p class="ad-entre-vz__dato">${esc(origen)}</p>` +
+        '<div class="ad-entre-fila__empresas">' + htmlEntregaRecibeEntre({ de: d.acreedora_id, de_unidad: d.acreedora, a: d.deudora_id, a_unidad: d.deudora }) + '</div>' +
+        `<p class="ad-entre-vz__dato">${esc(recibe + ' le va a deber a ' + entrega + ' lo que sume.')}</p>` +
+        `<p class="ad-entre-vz__dato">${esc(lista)}</p>` + valorizado + cuerpo
+    }
+
+    function leerPreciosValorizarEntre(items) {
+      return (items ?? []).map((_, i) => leerCampoNumero(document.getElementById('ad-entre-vz-precio-' + i)))
+    }
+
+    // El subtotal de cada renglón y el total, mientras se escribe.
+    function actualizarValorizarEntre() {
+      const v = datosValorizarEntre()
+      const items = v.datos?.items
+      if (!v.abierto || v.cargando || !Array.isArray(items) || !items.length) return
+      const cuenta = cuentaValorizarEntre(items, leerPreciosValorizarEntre(items))
+      cuenta.subs.forEach((c, i) => { document.getElementById('ad-entre-vz-sub-' + i).textContent = c === null ? '—' : plataEntre(c / 100, 'ARS') })
+      document.getElementById('ad-entre-vz-total').textContent = textoTotalValorizarEntre(cuenta)
+    }
+
+    function pintarValorizarEntre() {
+      const v = datosValorizarEntre()
+      const capa = document.getElementById('ad-entre-vz')
+      const caja = document.getElementById('ad-entre-vz-caja')
+      if (!v.abierto) { capa.hidden = true; caja.innerHTML = ''; return }
+      capa.hidden = false
+      caja.innerHTML = htmlValorizarEntre(v)
+      const items = v.datos?.items
+      if (v.cargando || v.error || !Array.isArray(items)) return
+      // El precio sugerido, precargado (con el formato argentino del campo).
+      items.forEach((it, i) => {
+        const input = document.getElementById('ad-entre-vz-precio-' + i)
+        enlazarCampoNumero(input, { decimales: decimalesPrecioEntre(it?.unidad) })
+        ponerNumero(input, Number(it?.precio_sugerido) > 0 ? Number(it.precio_sugerido) : null)
+        if (i === 0) input.focus?.()
+      })
+      actualizarValorizarEntre()
+    }
+
+    // Abre la ventana. Sin el tipo (la fila de una valorización), se toma de
+    // su mercadería o sus insumos; si no están, se prueban los tres tipos
+    // hasta que uno conteste.
+    async function abrirValorizarEntre(tipo, id) {
+      if (!puedeValorizarEntre() || !id) return
+      const e = datosEntre()
+      const turno = e.vzTurno = (e.vzTurno ?? 0) + 1
+      const conocido = TIPOS_VALORIZABLES_ENTRE.includes(tipo) ? tipo : tipoValorizacionEntre(id)
+      e.vz = { ...valorizarVacioEntre(), abierto: true, cargando: true, tipo: conocido, id, turno }
+      pintarValorizarEntre()
+      let datos = null, error = null
+      for (const t of conocido ? [conocido] : TIPOS_VALORIZABLES_ENTRE) {
+        try {
+          const { data, error: err } = await supabase.rpc('movimiento_para_valorizar', { p_referencia_tipo: t, p_referencia_id: id })
+          if (err) throw err
+          if (data) { datos = data; error = null; break }
+        } catch (err) {
+          console.error('No se pudo leer el movimiento para ponerle precio:', err)
+          error = err?.message || 'No se pudo leer el movimiento.'
+          // Otro tipo puede contestar; un error que no es "no lo encontré" (el permiso), no.
+          if (!/^No encontré/.test(error)) break
+        }
+      }
+      if (e.vz?.turno !== turno) return
+      e.vz = { ...e.vz, cargando: false, datos, error: datos ? null : (error || 'No se encontró el movimiento.'), tipo: datos?.referencia_tipo || e.vz.tipo }
+      pintarValorizarEntre()
+    }
+
+    function cerrarValorizarEntre() {
+      datosEntre().vz = valorizarVacioEntre()
+      pintarValorizarEntre()
+    }
+
+    // TODOS los renglones van, con su precio o null: si falta alguno, la base
+    // contesta "Faltan precios: …" y se muestra tal cual.
+    function parametrosValorizarEntre(v, precios, concepto) {
+      return { p_referencia_tipo: v?.datos?.referencia_tipo || v?.tipo, p_referencia_id: v?.datos?.referencia_id || v?.id,
+        p_precios: (v?.datos?.items ?? []).map((it, i) => ({ clave: it?.clave, precio: precios?.[i] ?? null })),
+        p_concepto: concepto || null }
+    }
+
+    async function guardarValorizarEntre() {
+      const v = datosValorizarEntre()
+      if (!v.abierto || v.cargando || v.guardando || !v.datos || !puedeValorizarEntre()) return
+      const d = v.datos
+      const errorEl = document.getElementById('ad-entre-vz-error')
+      const boton = document.getElementById('ad-entre-vz-guardar')
+      const params = parametrosValorizarEntre(v, leerPreciosValorizarEntre(d.items), limpio(document.getElementById('ad-entre-vz-concepto').value))
+      v.guardando = true
+      errorEl.textContent = ''
+      boton.disabled = true
+      boton.textContent = 'Guardando…'
+      let r = null
+      try {
+        const { data, error } = await supabase.rpc('valorizar_movimiento_entre_empresas', params)
+        if (error) throw error
+        r = data
+      } catch (err) {
+        console.error('No se pudo poner el precio al movimiento entre empresas:', err)
+        v.guardando = false
+        boton.disabled = false
+        boton.textContent = d.valorizado ? 'Cambiar precio' : 'Guardar precio'
+        errorEl.textContent = err?.message || 'No se pudo guardar el precio.'
+        return
+      }
+      cerrarValorizarEntre()
+      mostrarExito('Listo: ' + nombreEmpresaEntre(d.deudora_id, d.deudora) + ' le debe a ' + nombreEmpresaEntre(d.acreedora_id, d.acreedora) + ' ' +
+        plataEntre(r?.importe, 'ARS') + ' (' + conceptoBaseValorizarEntre(d) + ').')
+      // El movimiento sale del bloque y el saldo por par ya lo incluye.
+      cargarSaldosEntre()
+      cargarEntre()
+    }
+
+    function conectarValorizarEntre() {
+      for (const id of ['ad-entre-sin-valorizar', 'ad-entre-lista']) {
+        document.getElementById(id).addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-entre-valorizar]')
+          if (b) abrirValorizarEntre(b.dataset.entreValorizarTipo, b.dataset.entreValorizar)
+        })
+      }
+      const capa = document.getElementById('ad-entre-vz')
+      capa.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-entre-vz-cerrar]')) cerrarValorizarEntre()
+        else if (ev.target.closest('[data-entre-vz-guardar]')) guardarValorizarEntre()
+        else if (ev.target.closest('[data-entre-vz-reintentar]')) { const v = datosValorizarEntre(); abrirValorizarEntre(v.tipo, v.id) }
+      })
+      capa.addEventListener('input', (ev) => { if (ev.target.closest?.('[data-entre-vz-precio]')) actualizarValorizarEntre() })
+      capa.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') { ev.preventDefault(); cerrarValorizarEntre() }
+        else if (ev.key === 'Enter' && ev.target.closest?.('input')) { ev.preventDefault(); guardarValorizarEntre() }
+      })
     }
 
     // ── LAS LISTAS INTERNAS (30/10/2026) ───────────────────────────────────
@@ -15575,6 +15929,7 @@
         const t = ev.target.closest?.('input[data-entre-interna-pct]')
         if (t && ev.key === 'Enter') { ev.preventDefault(); guardarInternaEntre(t.dataset.entreInternaPct) }
       })
+      conectarValorizarEntre()
     }
 
     // ═══════════════════════════════════════════════════════════════════════

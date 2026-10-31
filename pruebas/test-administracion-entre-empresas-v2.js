@@ -215,7 +215,8 @@ const MERC = [
   chk('el título con la orden', h.includes('<strong>Orden D-I-0002</strong>'))
   chk('el producto y las cajas', h.includes('Barquillo 40 x4 · Caja sin cono · lote L7') && h.includes('10 cajas') && h.includes('4 cajas'))
   chk('el total sin precio', h.includes('Total: 14 cajas sin precio'))
-  chk('quién le debe a quién: Nuss le debe a Dolce', /data-sello-empresa="u-n".*le debe a.*data-sello-empresa="u-d"/.test(h))
+  // Arreglos 30/10 (punto 7): el bloque dice quién entrega → quién recibe.
+  chk('quién entrega → quién recibe: Dolce → Nuss', /data-sello-empresa="u-d".*→.*data-sello-empresa="u-n"/.test(h))
   chk('sin la orden leída, sin botón', !h.includes('data-entre-orden='))
   // Con la orden leída (su empresa) y retiros:precios ahí: "Valorizar la orden".
   o.orden = { id: 'o-d2', codigo: 'D-I-0002', unidad: 'u-d' }
@@ -325,7 +326,8 @@ function abrirAjuste(S) {
     v('ad-entre-ajuste-acreedora', 'u-d'); v('ad-entre-ajuste-importe', '0')
     return S.guardarAjusteEntre()
   }).then(() => {
-    chk('importe cero: "Poné el importe."', err() === 'Poné el importe.' && !llamo())
+    // Arreglos 30/10 (punto 7): el cero lo dice claro.
+    chk('importe cero: "El importe tiene que ser mayor que cero."', err() === 'El importe tiene que ser mayor que cero.' && !llamo())
     v('ad-entre-ajuste-importe', '1.500,50'); v('ad-entre-ajuste-concepto', ' ab ')
     return S.guardarAjusteEntre()
   }).then(() => {
