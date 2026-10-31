@@ -76,7 +76,8 @@ for (const [ancho, alto] of [[390, 844], [1280, 900]]) {
     expect(await hoja.textContent(), 'sin ORIGINAL ni DUPLICADO').not.toMatch(/ORIGINAL|DUPLICADO/);
     await expect(page.locator('#nota-copias-orden')).toHaveCount(0);
     await expect(hoja.locator('.op-saldo-cuenta')).toHaveCount(1);
-    await expect(hoja.locator('.op-saldo-cuenta')).toHaveText(/^\s*Saldo de la cuenta con ANATOLIA SRL \(a pagar\)\s*\$ 360\.000,00\s*$/);
+    // 31/10/2026 (rama ci-prueba/orden-pago-a4): "Saldo de la cuenta: $ X le debemos".
+    await expect(hoja.locator('.op-saldo-cuenta')).toHaveText(/^\s*Saldo de la cuenta:\s*\$ 360\.000,00\s*le debemos\s*$/);
     expect(await hoja.textContent(), 'nada de aplicado / no aplicado').not.toMatch(/no aplicado|Resumen de cuenta/i);
     await expect(hoja.locator('.op-saldo-cuenta')).toBeVisible();
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal con la orden').toBe(true);

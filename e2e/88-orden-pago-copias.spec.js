@@ -11,6 +11,9 @@
 //  - el PDF de Chromium (lo mismo que "Guardar PDF") tiene UNA página, aun
 //    con 25 comprobantes (medido el 23/10/2026: una hoja A4 entra ~30).
 //  - Sin scroll horizontal y sin errores de JS.
+// 31/10/2026 (rama ci-prueba/orden-pago-a4): la hoja A4 de dos columnas
+// ("Con qué se pagó" / "Facturas que cancela"); lo nuevo lo mide
+// e2e/117-orden-pago-a4.spec.js.
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
@@ -68,28 +71,29 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     expect(await hoja.textContent(), 'sin ORIGINAL ni DUPLICADO').not.toMatch(/ORIGINAL|DUPLICADO/);
 
     // Los cheques sin librador.
-    const cheques = hoja.locator('.op-seccion', { hasText: 'Valores entregados' }).locator('table').first();
-    expect(await cheques.locator('th').allTextContents()).toEqual(['Banco', 'N°', 'Fecha de pago', 'Importe']);
+    const cheques = hoja.locator('.op-bloque--cheques table');
+    expect(await cheques.locator('th').allTextContents()).toEqual(['Banco', 'Número', 'Fecha de pago', 'Importe']);
     expect(await cheques.locator('tbody td').allTextContents()).toEqual(['BANCO MACRO eCheq', '55443322', '10/10/2026', '$ 120.000,00']);
     const texto = await hoja.textContent();
     expect(texto, 'sin el librador').not.toContain('Heladería Sol');
     expect(texto, 'sin la palabra Librador').not.toContain('Librador');
 
     // Los comprobantes pagados, listados (no "Pago a cuenta").
-    const comprobantes = hoja.locator('.op-seccion', { hasText: 'Se cancelan los siguientes comprobantes' });
+    const comprobantes = hoja.locator('.op-columna--facturas');
     await expect(comprobantes).not.toContainText('Pago a cuenta');
     const filas = comprobantes.locator('tbody tr');
     await expect(filas).toHaveCount(2);
-    expect(await filas.nth(0).locator('td').allTextContents()).toEqual(['Factura A', '0003-00001201', '20/08/2026', '$ 250.000,00', '$ 250.000,00', '$ 0,00']);
-    expect(await filas.nth(1).locator('td').allTextContents()).toEqual(['Factura A', '0003-00001245', '05/09/2026', '$ 400.000,00', '$ 150.000,00', '$ 250.000,00']);
+    expect(await filas.nth(0).locator('td').allTextContents()).toEqual(['Factura A 0003-00001201', '20/08/2026', '$ 250.000,00', '$ 250.000,00', '$ 0,00']);
+    expect(await filas.nth(1).locator('td').allTextContents()).toEqual(['Factura A 0003-00001245', '05/09/2026', '$ 400.000,00', '$ 150.000,00', '$ 250.000,00']);
 
     // Abajo de todo, UNA línea con el saldo de la cuenta (v_saldo_proveedor de
     // la maqueta: ANATOLIA en Nuss debe $ 650.000).
     await expect(hoja.locator('.op-saldo-cuenta')).toHaveCount(1);
-    await expect(hoja.locator('.op-saldo-cuenta')).toHaveText(/Saldo de la cuenta con ANATOLIA SRL \(a pagar\)\s*\$ 650\.000,00/);
+    await expect(hoja.locator('.op-saldo-cuenta')).toHaveText(/Saldo de la cuenta:\s*\$ 650\.000,00\s*le debemos/);
 
-    // Más compacta: la letra de la tabla, 7.5pt = 10px.
-    expect(await comprobantes.locator('table').evaluate(t => getComputedStyle(t).fontSize)).toBe('10px');
+    // Más compacta: la letra de la tabla, 7.5pt = 10px (la de facturas, desde
+    // el 31/10/2026, un punto menos: lleva tres importes).
+    expect(await cheques.evaluate(t => getComputedStyle(t).fontSize)).toBe('10px');
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal').toBe(true);
     await captura(page, `orden-pago-hoja-pantalla-${nombre}`, info);
 

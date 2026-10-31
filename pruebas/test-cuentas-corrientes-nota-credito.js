@@ -170,7 +170,9 @@ async function main() {
   chk('el número es un IDENTIFICADOR: texto, sin formato de número', /<input type="text" id="campo-nota-numero"[^>]*inputmode="text">/.test(FUENTE))
   chk('el botón de confirmar NO nace deshabilitado', /<button type="button" class="btn btn-cc-accion" id="btn-confirmar-nota-credito">Cargar nota de crédito<\/button>/.test(FUENTE))
   chk('el gate es aplicar_credito', /function puedeCargarNotaCredito\(\) \{\s*return tieneTarea\('cuentas_corrientes', 'aplicar_credito'\)\s*\}/.test(FUENTE))
-  chk('NO se inserta nada a mano en creditos_proveedor', !/from\('creditos_proveedor'\)\.(insert|update|upsert)/.test(FUENTE) && !/from\('aplicaciones_credito'\)/.test(FUENTE))
+  // Arreglos 30/10 (la orden de pago A4, 31/10/2026): la orden LEE
+  // aplicaciones_credito (lo anterior de cada factura); escribir, nunca.
+  chk('NO se inserta nada a mano en creditos_proveedor', !/from\('creditos_proveedor'\)\.(insert|update|upsert)/.test(FUENTE) && !/from\('aplicaciones_credito'\)\s*\.(insert|update|upsert|delete)/.test(FUENTE))
   chk('una sola llamada: registrar_nota_credito_proveedor', (FUENTE.match(/rpc\('registrar_nota_credito_proveedor'/g) ?? []).length === 1)
   chk('confirmar está conectado', /getElementById\('btn-confirmar-nota-credito'\)\.addEventListener\('click', confirmarNotaCredito\)/.test(FUENTE))
 

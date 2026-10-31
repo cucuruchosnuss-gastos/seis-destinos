@@ -8,6 +8,17 @@
 const path = require('path')
 const { correrMutaciones } = require('./mutar')
 
+// La línea del saldo, las observaciones y las firmas de htmlOrdenPago (31/10/2026).
+const LINEA_SENTIDO = "${lineaSaldo.sentido ? ` <span class=\"op-saldo-cuenta__sentido\">${esc(lineaSaldo.sentido)}</span>` : ''}"
+const LINEA_SALDO = "        ${lineaSaldo ? `<div class=\"op-saldo-cuenta\"><span>Saldo de la cuenta:</span> <span class=\"op-saldo-cuenta__numero\">${importeHtml(lineaSaldo.importe)}</span>" + LINEA_SENTIDO + "</div>` : ''}"
+const OBS_Y_FIRMAS = [
+  "        ${obs ? `<div class=\"op-seccion op-observaciones\"><div class=\"op-seccion__titulo\">Observaciones</div><div>${esc(obs)}</div></div>` : ''}",
+  '        <div class="op-firmas">',
+  '          <div class="op-firma">Recibí conforme (proveedor) — firma y aclaración</div>',
+  '          <div class="op-firma">Autorizó</div>',
+  '        </div>',
+].join('\n')
+
 correrMutaciones({
   suite: path.join(__dirname, 'test-cuentas-corrientes-proveedor-una-lista.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/cuentas-corrientes.html'),
@@ -52,12 +63,14 @@ correrMutaciones({
       de: "        ${lineaSaldo ? `<div class=\"op-saldo-cuenta\">", a: "        ${false ? `<div class=\"op-saldo-cuenta\">" },
     { nombre: 'el saldo sin restar el crédito',
       de: "- Math.round((Number(saldo.credito) || 0) * 100)", a: '' },
-    { nombre: 'a favor dice "con el proveedor"',
-      de: "      if (c < 0) return { texto: `Saldo de la cuenta a favor de ${empresa || 'la empresa'}`, importe: -c / 100 }\n", a: '' },
+    // 31/10/2026 (rama ci-prueba/orden-pago-a4): "Saldo de la cuenta: $ X"
+    // con "le debemos" o "a nuestro favor", antes de las firmas.
+    { nombre: 'a favor dice "le debemos"',
+      de: "sentido: c > 0 ? 'le debemos' : c < 0 ? 'a nuestro favor' : ''", a: "sentido: c !== 0 ? 'le debemos' : ''" },
     { nombre: 'a favor con el importe en negativo',
-      de: "a favor de ${empresa || 'la empresa'}`, importe: -c / 100 }", a: "a favor de ${empresa || 'la empresa'}`, importe: c / 100 }" },
-    { nombre: 'en cero dice "(a pagar)"',
-      de: "${c > 0 ? ' (a pagar)' : ''}", a: "' (a pagar)'" },
+      de: 'return { importe: Math.abs(c) / 100,', a: 'return { importe: c / 100,' },
+    { nombre: 'en cero dice "a nuestro favor"',
+      de: "c < 0 ? 'a nuestro favor' : ''", a: "'a nuestro favor'" },
     { nombre: 'sin saldo leído inventa $ 0,00',
       de: '      if (!saldo) return null\n', a: '      if (!saldo) saldo = { deuda: 0, credito: 0 }\n' },
     { nombre: 'el saldo de todas las monedas',
@@ -67,11 +80,11 @@ correrMutaciones({
     { nombre: 'un error del saldo se toma como cero',
       de: '        if (e2) return null\n', a: '' },
     { nombre: 'abrir la orden no le pasa el saldo',
-      de: '      hoja.innerHTML = htmlOrdenPago(res.data, { saldo })', a: '      hoja.innerHTML = htmlOrdenPago(res.data)' },
-    { nombre: 'el proveedor de la línea sin escapar',
-      de: '<span>${esc(lineaSaldo.texto)}</span>', a: '<span>${lineaSaldo.texto}</span>' },
-    { nombre: 'la línea arriba de las firmas',
-      de: "        <div class=\"op-firmas\">\n          <div class=\"op-firma\">Recibí conforme", a: "        <div class=\"op-saldo-cuenta\"></div><div class=\"op-firmas\">\n          <div class=\"op-firma\">Recibí conforme" },
+      de: '      hoja.innerHTML = htmlOrdenPago(res.data, { saldo, anteriores })', a: '      hoja.innerHTML = htmlOrdenPago(res.data, { anteriores })' },
+    { nombre: 'la línea sin "le debemos" / "a nuestro favor"',
+      de: LINEA_SENTIDO, a: '' },
+    { nombre: 'la línea abajo de las firmas',
+      de: LINEA_SALDO + '\n' + OBS_Y_FIRMAS, a: OBS_Y_FIRMAS + '\n' + LINEA_SALDO },
     { nombre: 'vuelve el rótulo de copia',
       de: '            <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>\n          </div>', a: '            <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>\n            <div class="op-cab__copia">DUPLICADO</div>\n          </div>' },
   ],

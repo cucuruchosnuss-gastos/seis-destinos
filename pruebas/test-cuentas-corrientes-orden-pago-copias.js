@@ -23,6 +23,10 @@
 // Las dos funciones de la base se leyeron con pg_get_functiondef el
 // 23/10/2026; el modelo de acá las copia y está anotado línea por línea.
 // La impresión real (UNA página, la letra) la mide e2e/88-orden-pago-copias.spec.js.
+// DESDE EL 31/10/2026 (rama ci-prueba/orden-pago-a4) la hoja es la A4 de dos
+// columnas: "Con qué se pagó" (los cheques siguen SIN librador) y "Facturas
+// que cancela" (Comprobante / Fecha / Importe / Aplicado / Le queda). Lo
+// nuevo lo prueba test-cuentas-corrientes-orden-pago-a4.js.
 //
 //   node pruebas/test-cuentas-corrientes-orden-pago-copias.js
 'use strict'
@@ -32,6 +36,8 @@ const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
+// Arreglos 30/10 (la orden de pago A4, 31/10/2026)
+const { FUNCIONES_ORDEN_PAGO_A4, CONSTANTES_ORDEN_PAGO_A4 } = require('./orden-pago-a4-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -62,6 +68,7 @@ const PRELUDIO = `
     },
   }
   var turnoOrdenPago = 0
+  var ordenPagoActual = null
   function formatearFecha(f) { if (!f) return '—'; const [a, m, d] = String(f).split('-'); return d + '/' + m + '/' + a }
 `
 
@@ -72,8 +79,10 @@ const FUNCIONES = [
   'htmlOrdenPago', 'lineaSaldoOrdenPago', 'leerSaldoOrdenPago', 'abrirOrdenPago', 'cerrarOrdenPago', 'imprimirOrdenPago',
   // aplicar un pago a facturas y anular un pago (30/10/2026)
   ...FUNCIONES_PAGO_APLICAR,
+  // la orden de pago A4 (31/10/2026)
+  ...FUNCIONES_ORDEN_PAGO_A4,
 ]
-const CONSTANTES = ['NUMERO_SALDO_INICIAL', 'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN']
+const CONSTANTES = ['NUMERO_SALDO_INICIAL', 'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', ...CONSTANTES_ORDEN_PAGO_A4]
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -134,7 +143,7 @@ async function main() {
     for (const c of cs) {
       const t = sinEtiquetas(c.html)
       // El rótulo, arriba a la derecha bajo el número y la fecha.
-      const titulo = sinEtiquetas(seccion(c.html, '<div class="op-cab__titulo">', '<div class="op-seccion">') ?? '')
+      const titulo = sinEtiquetas(seccion(c.html, '<div class="op-cab__titulo">', '<div class="op-seccion ') ?? '')
       chk(`${c.rotulo}: arriba a la derecha dice "ORDEN DE PAGO", el número y la fecha, en ese orden (sin rótulo de copia)`,
         titulo === 'ORDEN DE PAGO N-OP-00012 Fecha 23/10/2026', titulo)
       chk(`${c.rotulo}: con las dos firmas`, t.includes('Recibí conforme (proveedor) — firma y aclaración') && t.includes('Autorizó'))
@@ -149,14 +158,16 @@ async function main() {
     const S = sandbox()
     const h = S.htmlOrdenPago(ORDEN)
     for (const c of copias(h)) {
-      const tv = tabla(seccion(c.html, 'Valores entregados', 'op-total'))
-      chk(`${c.rotulo}: los cheques con Banco, N°, Fecha de pago e Importe (sin Librador)`,
-        JSON.stringify(tv?.cabecera) === '["Banco","N°","Fecha de pago","Importe"]', JSON.stringify(tv?.cabecera))
+      const tv = tabla(seccion(c.html, 'Con qué se pagó', 'Facturas que cancela'))
+      chk(`${c.rotulo}: los cheques con Banco, Número, Fecha de pago e Importe (sin Librador)`,
+        JSON.stringify(tv?.cabecera) === '["Banco","Número","Fecha de pago","Importe"]', JSON.stringify(tv?.cabecera))
       chk(`${c.rotulo}: la fila del cheque`, JSON.stringify(tv?.filas) === '[["GALICIA eCheq","12345678","25/10/2026","$ 120.000,00"]]', JSON.stringify(tv?.filas))
     }
     const t = sinEtiquetas(h)
     chk('el librador no aparece en ningún lado (ni nombre ni CUIT)', !t.includes('PEREZ JUAN') && !t.includes('20-11111111-2') && !t.includes('Librador'))
-    chk('tampoco la empresa del cheque ni la cuenta', !t.includes('Dolce Pasta') && !t.includes('Macro · Nuss'))
+    // 31/10/2026: la cuenta de la transferencia SÍ va (pedido de Facu:
+    // "Transferencias (cuenta e importe)"); la empresa del cheque, no.
+    chk('tampoco la empresa del cheque (la cuenta de la transferencia sí, desde el 31/10/2026)', !t.includes('Dolce Pasta') && t.includes('Macro · Nuss'))
     const conMarcas = S.htmlOrdenPago({ ...ORDEN, cheques: [{ banco: marca('banco'), numero: marca('cnum'), fecha_pago: '2026-10-01', librador: [{ nombre: marca('lib'), cuit: marca('lcuit') }], importe: 5 }] })
     chequearMarcas(chk, 'los cheques de la orden', conMarcas, ['banco', 'cnum'])
     chk('un librador con marcas no entra ni escapado', !conMarcas.includes('data-xss=&quot;lib') && !conMarcas.includes('data-xss=&quot;lcuit'))
@@ -232,19 +243,19 @@ async function main() {
     // Sin esto, una hoja vacía pasaría el for de abajo sin afirmar nada.
     chk('la hoja abierta es UNA sola', copias(hoja).length === 1, hoja.slice(0, 80))
     for (const c of copias(hoja)) {
-      const trozo = seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados')
+      const trozo = seccion(c.html, 'Facturas que cancela', 'op-totales')
       chk(`${c.rotulo}: con facturas pagadas NO dice "Pago a cuenta"`, trozo !== null && !trozo.includes('Pago a cuenta'))
       const tf = tabla(trozo)
-      chk(`${c.rotulo}: la tabla de comprobantes (Tipo, Número, Fecha, Importe, Aplicado, Saldo que queda)`,
-        JSON.stringify(tf?.cabecera) === '["Tipo","Número","Fecha","Importe","Aplicado","Saldo que queda"]', JSON.stringify(tf?.cabecera))
+      chk(`${c.rotulo}: la tabla de comprobantes (Comprobante, Fecha, Importe, Aplicado, Le queda)`,
+        JSON.stringify(tf?.cabecera) === '["Comprobante","Fecha","Importe","Aplicado","Le queda"]', JSON.stringify(tf?.cabecera))
       chk(`${c.rotulo}: se listan las DOS pagadas, la más vieja arriba, con número, fecha e importe aplicado (la partida, sumada)`,
         JSON.stringify(tf?.filas) === JSON.stringify([
-          ['Factura A', '0003-00001201', '20/08/2026', '$ 250.000,00', '$ 250.000,00', '$ 0,00'],
-          ['Factura A', '0003-00001245', '05/09/2026', '$ 400.000,00', '$ 150.000,00', '$ 250.000,00'],
+          ['Factura A 0003-00001201', '20/08/2026', '$ 250.000,00', '$ 250.000,00', '$ 0,00'],
+          ['Factura A 0003-00001245', '05/09/2026', '$ 400.000,00', '$ 150.000,00', '$ 250.000,00'],
         ]), JSON.stringify(tf?.filas))
       chk(`${c.rotulo}: la que no se tildó no aparece`, !c.html.includes('0003-00001300'))
     }
-    chk('no queda saldo a favor (lo aplicado = lo pagado)', !hoja.includes('Saldo a favor'))
+    chk('no queda nada a favor (lo aplicado = lo pagado); sí lo pendiente de la parcial', !hoja.includes('Queda a favor') && sinEtiquetas(hoja).includes('Queda saldo pendiente $ 250.000,00'))
   })())
 
   // Sin facturas sí es "Pago a cuenta".
@@ -252,10 +263,10 @@ async function main() {
     const S = sandbox()
     const cs = copias(S.htmlOrdenPago({ ...ORDEN, facturas: [] }))
     chk('sin facturas: "Pago a cuenta", sin tabla de comprobantes',
-      cs.length === 1 && cs.every(c => { const s = seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'); return s.includes('Pago a cuenta') && !s.includes('<table') }))
+      cs.length === 1 && cs.every(c => { const s = seccion(c.html, 'Facturas que cancela', 'op-totales'); return s.includes('Pago a cuenta') && !s.includes('<table') }))
     // El saldo inicial se nombra como en el resto del módulo.
     const si = copias(S.htmlOrdenPago({ ...ORDEN, facturas: [{ tipo: 'otro', numero: 'SALDO-INICIAL', fecha: '2026-10-10', importe: 9, aplicado: 9, saldo_actual: 0 }] }))
-    chk('el saldo inicial dice "Saldo inicial" en el número', tabla(seccion(si[0].html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'))?.filas?.[0]?.[1] === 'Saldo inicial')
+    chk('el saldo inicial dice "Saldo inicial" en el comprobante', tabla(seccion(si[0].html, 'Facturas que cancela', 'op-totales'))?.filas?.[0]?.[0] === 'Saldo inicial')
   }
 
   // Muchas facturas: todas (la hoja no corta ninguna).
@@ -263,7 +274,7 @@ async function main() {
     const S = sandbox()
     const muchas = Array.from({ length: 30 }, (_, i) => ({ tipo: 'Factura A', numero: `0003-${String(2000 + i).padStart(8, '0')}`, fecha: '2026-09-01', importe: 1000, aplicado: 1000, saldo_actual: 0 }))
     const cs = copias(S.htmlOrdenPago({ ...ORDEN, facturas: muchas }))
-    chk('30 facturas: las 30', cs.length === 1 && cs.every(c => tabla(seccion(c.html, 'Se cancelan los siguientes comprobantes', 'Valores entregados'))?.filas?.length === 30))
+    chk('30 facturas: las 30', cs.length === 1 && cs.every(c => tabla(seccion(c.html, 'Facturas que cancela', 'op-totales'))?.filas?.length === 30))
   }
 
   // ══ 4. IMPRIMIR Y CERRAR ═══════════════════════════════════════════════════

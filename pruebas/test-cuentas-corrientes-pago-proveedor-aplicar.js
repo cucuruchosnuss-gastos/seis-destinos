@@ -218,6 +218,8 @@ const FUNCIONES = [
   // la cuenta del proveedor y las órdenes de pago
   'cargarFichaCreditos', 'numeroTextoOrden', 'fechaOrden', 'cargarOrdenesDePagos', 'imprimirOrdenPago',
   ...FUNCIONES_PAGO_APLICAR,
+  // Arreglos 30/10 (la orden de pago A4, 31/10/2026): los botones de la hoja
+  'botonesOrdenPago',
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL', 'NOMBRE_MEDIO_ORDEN', 'TANDA_GASTOS_PAGO']
 
@@ -780,7 +782,8 @@ async function main() {
   chk('la orden de cada pago sabe si se anuló, leído de TODOS sus gastos', /const anulacion = await leerAnulacionOrdenes\(opIds\)/.test(FUENTE) && /anulacion: anulacion\.get\(o\.id\) \?\? null \}\)/.test(FUENTE))
   chk('el renglón: la orden anulada tachada y sin "Reimprimir"', /\$\{ordenPago && !ordenPago\.anulacion \? `<button type="button" class="btn-pago-ayuda" data-reimprimir-orden=/.test(FUENTE) &&
     /ordenPago\.anulacion \? htmlOrdenAnulada\(ordenPago\.texto, ordenPago\.anulacion, 'fila-movimiento__orden'\)/.test(FUENTE))
-  chk('la hoja se marca anulada después de dibujarla', /hoja\.innerHTML = htmlOrdenPago\(res\.data, \{ saldo \}\)[\s\S]{0,200}marcarHojaAnulada\(ordenId, turno\)/.test(FUENTE))
+  // 31/10/2026: con lo anterior de las facturas y la marca "anulada" de la base.
+  chk('la hoja se marca anulada después de dibujarla', /hoja\.innerHTML = htmlOrdenPago\(res\.data, \{ saldo, anteriores \}\)[\s\S]{0,700}marcarHojaAnulada\(ordenId, turno, res\.data\.anulada\)/.test(FUENTE))
   chk('no se inserta ni se borra nada a mano (todo por las funciones de la base)', !/from\('(aplicaciones_pago|creditos_proveedor|gastos|cobranza_cheques)'\)\s*\.(insert|update|delete|upsert)\(/.test(FUENTE))
   chk('nada de confirm() ni alert() nuevos para anular o aplicar', !/confirm\([^)]*(anul|aplic|cuenta)/i.test(FUENTE.slice(FUENTE.indexOf('APLICAR UN PAGO A FACTURAS Y ANULAR UN PAGO (30/10/2026) ═'))))
 

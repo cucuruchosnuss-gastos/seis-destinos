@@ -1249,14 +1249,11 @@
     .op-tabla th, .op-tabla td { border: 1px solid #555; padding: 0.6mm 1.2mm; text-align: left; vertical-align: top; }
     .op-tabla th { background: #eee; font-weight: 700; }
     .op-tabla .op-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: #111; }
-    .op-total { margin-top: 3mm; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; border-top: 1.5px solid #111; padding-top: 1.6mm; }
-    .op-total__numero { font-size: 11pt; font-weight: 800; white-space: nowrap; }
-    .op-letras { font-size: 7.5pt; margin-top: 0.8mm; }
-    .op-favor { margin-top: 1.6mm; font-weight: 700; }
+    .op-letras { font-size: 7.5pt; margin-top: 1.2mm; }
     .op-firmas { display: flex; gap: 10mm; margin-top: 15mm; }
     .op-firma { flex: 1; border-top: 1px solid #111; padding-top: 1.2mm; font-size: 7.5pt; text-align: center; }
     .op-pie { margin-top: 3mm; font-size: 6.5pt; color: #555; }
-    .op-saldo-cuenta { margin-top: 4mm; padding-top: 1.6mm; border-top: 1px solid #111; font-weight: 700; display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; }
+    .op-saldo-cuenta { margin-top: 2mm; font-weight: 700; }
     .op-saldo-cuenta__numero { white-space: nowrap; font-variant-numeric: tabular-nums; }
     @media print {
       @page { size: A4 portrait; margin: 8mm; }
@@ -1277,7 +1274,68 @@
     .fila-movimiento__orden s, .detalle-pago-orden s { color: var(--color-texto-2); font-weight: 600; }
     .detalle-pago-orden { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto-2); overflow-wrap: anywhere; }
     .op-anulada { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border: 2px solid var(--bordo); border-radius: 8px; color: var(--bordo-oscuro); font-weight: 800; letter-spacing: 0.04em; text-align: center; }
-    .op-hoja--anulada .op-cab__titulo-texto, .op-hoja--anulada .op-total { text-decoration: line-through; }
+    .op-hoja--anulada .op-cab__titulo-texto, .op-hoja--anulada .op-caja__total { text-decoration: line-through; }
+    /* LA ORDEN DE PAGO A4 (31/10/2026, rama ci-prueba/orden-pago-a4): dos
+       columnas ("Con qué se pagó" | "Facturas que cancela"), los totales en
+       dos cajas a la misma altura, la franja con la diferencia y la línea
+       del saldo. Con la hoja angosta (el celular: menos de 150 mm) las
+       columnas van una abajo de la otra; impresa y en el PDF (194 mm),
+       lado a lado. */
+    .op-hoja { container-type: inline-size; }
+    .op-hoja--pdf { border: 0; padding: 0; max-width: none; }
+    .op-a4 { position: relative; }
+    .op-columnas { display: grid; grid-template-columns: 9fr 11fr; gap: 4mm; margin-top: 3mm; align-items: start; }
+    .op-columna { min-width: 0; }
+    .op-bloque + .op-bloque { margin-top: 2mm; }
+    .op-bloque__titulo { font-size: 7.5pt; font-weight: 700; margin: 0 0 0.6mm; }
+    /* Los números, la fecha y los importes no se cortan: el que se acomoda
+       en dos renglones es el banco, la cuenta o el comprobante. */
+    .op-columnas .op-tabla td:not(:first-child), .op-nowrap { white-space: nowrap; }
+    .op-tabla tfoot td { font-weight: 700; background: #f4f4f4; }
+    /* Las facturas llevan tres importes: un punto menos y menos relleno a
+       los lados (medido con importes de millones: no se pasa de la columna). */
+    .op-tabla--facturas { font-size: 7pt; }
+    .op-tabla--facturas th, .op-tabla--facturas td { padding-left: 0.8mm; padding-right: 0.8mm; }
+    .op-tabla tr.op-con-sub td { border-bottom: 0; }
+    .op-tabla tr.op-sub td { border-top: 0; padding-top: 0; font-size: 0.88em; font-style: italic; color: #444; }
+    .op-vacio { margin: 0; }
+    .op-totales { display: grid; grid-template-columns: 9fr 11fr; gap: 4mm; margin-top: 3mm; align-items: stretch; }
+    .op-caja { border: 1.5px solid #111; padding: 1.4mm 2mm; display: flex; flex-direction: column; gap: 0.5mm; min-width: 0; }
+    .op-caja__fila, .op-caja__total { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 3mm; }
+    .op-caja__total { margin-top: auto; padding-top: 0.8mm; border-top: 1px solid #111; font-size: 10pt; font-weight: 800; }
+    .op-caja__total:first-child { border-top: 0; padding-top: 0; }
+    .op-caja__fila > span:last-child, .op-caja__total > span:last-child { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .op-franja { margin-top: 2mm; padding: 1.2mm 2mm; background: #eee; border-left: 3px solid #111; font-weight: 800; }
+    .op-franja__linea { display: flex; justify-content: space-between; gap: 3mm; }
+    .op-franja__linea > span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .op-observaciones { margin-top: 2mm; }
+    .op-sello-anulada {
+      position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-24deg);
+      font-size: 48pt; font-weight: 900; letter-spacing: 0.12em; white-space: nowrap; pointer-events: none;
+      color: rgba(150, 20, 40, 0.3); border: 4px solid rgba(150, 20, 40, 0.3); padding: 1mm 8mm;
+    }
+    /* La versión compacta (desde 15 renglones en la columna más larga).
+       Medido en el PDF de Chromium (A4, márgenes de 8 mm): entran en UNA
+       hoja 50 cheques y 50 facturas a la vez, con los nombres de banco del
+       BCRA (30 a 40 letras) e importes de millones; 55 ya son dos hojas (el
+       PDF de "Enviar" se achica siempre a una). La normal, hasta 15
+       renglones, entra siempre (medida con los renglones en dos y tres líneas). */
+    .op-a4--compacta { font-size: 7.5pt; line-height: 1.15; }
+    .op-a4--compacta .op-tabla { font-size: 6pt; }
+    .op-a4--compacta .op-tabla th, .op-a4--compacta .op-tabla td { padding: 0 0.8mm; line-height: 1.1; }
+    .op-a4--compacta .op-seccion, .op-a4--compacta .op-columnas, .op-a4--compacta .op-totales { margin-top: 2mm; }
+    .op-a4--compacta .op-cab__logo { max-height: 9mm; }
+    /* El banco, en UN renglón (los del BCRA tienen 30 a 40 letras): se corta
+       con "…" y el eCheq queda a la vista. */
+    .op-a4--compacta .op-banco { display: inline-block; max-width: 28mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+    .op-a4--compacta .op-bloque--cheques td:first-child { white-space: nowrap; }
+    .op-a4--compacta .op-firmas { margin-top: 8mm; }
+    @container (max-width: 150mm) {
+      .op-columnas { grid-template-columns: 1fr; }
+      .op-tabla--facturas { font-size: 6.5pt; }
+      .op-tabla--facturas th, .op-tabla--facturas td { padding-left: 0.5mm; padding-right: 0.5mm; }
+      .op-caja__total { font-size: 8.5pt; }
+    }
     .orden-pago-cc__anulada { display: inline-block; margin-left: 0.375rem; padding: 0.0625rem 0.5rem; border-radius: 999px; background: var(--bordo-suave); color: var(--bordo-oscuro); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: middle; }
     /* El renglón entero de una factura la tilda (como los cheques). */
     #lista-fifo .fila-fifo, #aplicar-pago-lista .fila-fifo { cursor: pointer; }
@@ -1797,6 +1855,7 @@
         <h2 id="titulo-orden-pago">Orden de pago</h2>
         <div class="op-acciones__botones">
           <button type="button" class="btn btn-cc-accion" id="btn-imprimir-orden">Imprimir / Guardar PDF</button>
+          <button type="button" class="btn btn--secundario" id="btn-enviar-orden">Enviar</button>
           <button type="button" class="btn btn--secundario" id="btn-cerrar-orden">Cerrar</button>
         </div>
       </div>
@@ -8410,16 +8469,20 @@
     // La hoja de una orden anulada: el aviso arriba, tachada y sin
     // "Imprimir" (no se reimprime). Lo lee aparte de datos_orden_pago, que
     // no dice si la orden está anulada.
-    async function marcarHojaAnulada(ordenId, turno) {
+    // 31/10/2026: con "Enviar" también, y si la base dice que la orden NO
+    // está anulada (datos_orden_pago.anulada === false) pero los gastos que
+    // se pueden leer (el RLS deja ver solo los propios) están todos
+    // anulados, es "en parte": manda la base.
+    async function marcarHojaAnulada(ordenId, turno, anuladaBase) {
       const hoja = document.getElementById('orden-pago-hoja')
-      const btn = document.getElementById('btn-imprimir-orden')
       hoja.classList?.remove('op-hoja--anulada')
-      btn.hidden = false
-      const anulacion = (await leerAnulacionOrdenes([ordenId])).get(ordenId) ?? null
+      botonesOrdenPago(true)
+      let anulacion = (await leerAnulacionOrdenes([ordenId])).get(ordenId) ?? null
       if (turno !== turnoOrdenPago || !anulacion) return
+      if (anulacion === 'anulada' && anuladaBase === false) anulacion = 'en_parte'
       hoja.classList?.add('op-hoja--anulada')
       hoja.innerHTML = `<div class="op-anulada" role="alert">${anulacion === 'en_parte' ? 'ANULADA EN PARTE: un pago de esta orden se anuló. No se reimprime.' : 'ANULADA: el pago de esta orden se anuló. No se reimprime.'}</div>` + hoja.innerHTML
-      btn.hidden = true
+      botonesOrdenPago(false)
     }
 
     // ═══ LA ORDEN DE PAGO (20/10/2026) ═══════════════════════════════════
@@ -8498,17 +8561,84 @@
 
     const NOMBRE_MEDIO_ORDEN = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR' }
 
-    // EL SALDO DE LA CUENTA, abajo de todo (30/10/2026): UNA línea con el
-    // neto de v_saldo_proveedor en esa empresa y en pesos (deuda_pendiente −
-    // credito_disponible), sin "aplicado / no aplicado". Positivo: "Saldo de
-    // la cuenta con <PROVEEDOR> (a pagar) $ X"; negativo: "Saldo de la cuenta
-    // a favor de <EMPRESA> $ X". Es el saldo de HOY (al imprimir o
-    // reimprimir), no el del día de la orden. Puro: TEXTO PLANO.
-    function lineaSaldoOrdenPago(saldo, { proveedor, empresa } = {}) {
+    // ═══ LA ORDEN DE PAGO A4 (31/10/2026, rama ci-prueba/orden-pago-a4) ═══
+    // Pedido de Facu: UNA hoja A4 sin ORIGINAL/DUPLICADO; arriba la empresa
+    // y el proveedor; dos columnas, "Con qué se pagó" (cheques en tabla
+    // compacta SIN librador, SIN cliente y SIN "entregado por"; bloques
+    // "Transferencias" con la cuenta y "Efectivo", cada uno con su subtotal)
+    // y "Facturas que cancela" (comprobante, fecha, importe, lo aplicado en
+    // este pago y lo que le queda, con un subrenglón si ya tenía pagos o
+    // créditos anteriores); los totales en dos cajas a la misma altura; la
+    // franja con la diferencia; UNA línea "Saldo de la cuenta"; las firmas.
+    // datos_orden_pago (pg_get_functiondef, 31/10/2026): total = el VIVO
+    // (suma de los gastos no anulados de la orden), total_original y
+    // anulada (todos los gastos de la orden anulados). Las observaciones son
+    // las de la ORDEN (ordenes_pago.observaciones, el campo "Observaciones
+    // de la orden" del pago, que dice "Van impresas en la orden de pago"):
+    // las del gasto no vienen y no van.
+
+    // Además de los cheques, en este orden. QR, si aparece, va aparte (no
+    // es una transferencia). Un medio desconocido va al final con su nombre.
+    const BLOQUES_MEDIO_ORDEN = [
+      { medio: 'transferencia', titulo: 'Transferencias', subtotal: 'Subtotal transferencias', conCuenta: true },
+      { medio: 'qr', titulo: 'QR', subtotal: 'Subtotal QR', conCuenta: true },
+      { medio: 'efectivo', titulo: 'Efectivo', subtotal: 'Subtotal efectivo', conCuenta: false },
+    ]
+    // Con más renglones que esto en la columna más larga, la hoja va en la
+    // versión compacta (medido en e2e/117: así entra en UNA A4; la normal,
+    // con renglones de dos líneas, no pasa de ~20).
+    const RENGLONES_OP_COMPACTA = 15
+
+    // Puro: el tipo de comprobante como se lee ("factura" → "Factura").
+    // "otro" y sin tipo: solo el número.
+    function tipoComprobanteOrden(tipo) {
+      const t = String(tipo ?? '').trim()
+      if (!t || t === 'otro') return ''
+      return { factura: 'Factura', nota_debito: 'Nota de débito', nota_credito: 'Nota de crédito' }[t] ?? t
+    }
+
+    // Puro: las cuentas de la hoja, en centavos. Pagado = datos_orden_pago.total
+    // (el vivo). Facturas = lo que debían al pagarse (lo aplicado en este
+    // pago + lo que les queda). A favor = lo pagado que no se aplicó.
+    function cuentasOrdenPago(d) {
+      const c = (x) => Math.round((Number(x) || 0) * 100)
+      const facturas = Array.isArray(d?.facturas) ? d.facturas : []
+      const cheques = Array.isArray(d?.cheques) ? d.cheques : []
+      const otros = Array.isArray(d?.otros_medios) ? d.otros_medios : []
+      const porMedio = new Map()
+      for (const o of otros) porMedio.set(o?.medio ?? '', (porMedio.get(o?.medio ?? '') ?? 0) + c(o?.importe))
+      const cAplicado = facturas.reduce((s, f) => s + c(f?.aplicado), 0)
+      const cQueda = facturas.reduce((s, f) => s + Math.max(0, c(f?.saldo_actual)), 0)
+      const cPagado = c(d?.total)
+      return {
+        cCheques: cheques.reduce((s, q) => s + c(q?.importe), 0),
+        porMedio, cPagado, cAplicado, cQueda,
+        cFacturas: cAplicado + cQueda,
+        cFavor: Math.max(0, cPagado - cAplicado),
+      }
+    }
+
+    // Puro: la franja con la diferencia. TEXTO PLANO (se escapa al dibujar).
+    // Puede tener dos renglones (se pagó una parte de una factura y lo que
+    // sobró quedó a favor). Sin facturas y sin nada a favor, no va.
+    function franjaOrdenPago(t, { empresa, hayFacturas } = {}) {
+      const lineas = []
+      if (t.cQueda > 0) lineas.push({ clase: 'pendiente', texto: 'Queda saldo pendiente', importe: t.cQueda / 100 })
+      if (t.cFavor > 0) lineas.push({ clase: 'favor', texto: `Queda a favor de ${empresa || 'la empresa'}`, importe: t.cFavor / 100 })
+      if (!lineas.length && hayFacturas) lineas.push({ clase: 'cancelada', texto: 'Facturas canceladas', importe: null })
+      return lineas
+    }
+
+    // EL SALDO DE LA CUENTA (30/10/2026; 31/10/2026 con las palabras de
+    // Facu): UNA línea "Saldo de la cuenta: $ X" con el neto de
+    // v_saldo_proveedor en esa empresa y en pesos (deuda_pendiente −
+    // credito_disponible), "le debemos" si es deuda y "a nuestro favor" si
+    // es crédito; nada de "aplicado / no aplicado". Es el saldo de HOY (al
+    // imprimir o reimprimir), no el del día de la orden. Puro.
+    function lineaSaldoOrdenPago(saldo) {
       if (!saldo) return null
       const c = Math.round((Number(saldo.deuda) || 0) * 100) - Math.round((Number(saldo.credito) || 0) * 100)
-      if (c < 0) return { texto: `Saldo de la cuenta a favor de ${empresa || 'la empresa'}`, importe: -c / 100 }
-      return { texto: `Saldo de la cuenta con ${proveedor || 'el proveedor'}${c > 0 ? ' (a pagar)' : ''}`, importe: c / 100 }
+      return { importe: Math.abs(c) / 100, sentido: c > 0 ? 'le debemos' : c < 0 ? 'a nuestro favor' : '' }
     }
 
     // El saldo de la cuenta del proveedor de esa orden, en su empresa y en
@@ -8533,42 +8663,144 @@
       }
     }
 
-    // Puro: la hoja entera, UNA sola (30/10/2026: sin ORIGINAL/DUPLICADO; si
-    // hacen falta dos, se imprime dos veces). Todo texto de la base pasa por
-    // esc(). 23/10/2026: los cheques ya NO dicen el librador.
-    function htmlOrdenPago(d, { saldo = null } = {}) {
+    // La clave con la que datos_orden_pago nombra una factura (no manda su
+    // id): tipo, número y fecha, como los arma la función.
+    function claveFacturaOrden(tipo, numero, fecha) {
+      return `${tipo ?? ''}|${numero ?? ''}|${String(fecha ?? '').slice(0, 10)}`
+    }
+
+    // Puro: lo que cada factura de la orden ya tenía ANTES de la orden
+    // (aplicaciones de OTROS pagos y de créditos, con created_at anterior a
+    // ordenes_pago.creada_en; las de la misma orden llevan el mismo now()
+    // de su transacción). Map clave → { pagos, creditos } (en pesos).
+    function anterioresPorFactura({ creadaEn, gastoIds, pagos, creditos, facturas }) {
+      const corte = Date.parse(creadaEn)
+      if (!Number.isFinite(corte)) return new Map()
+      const antes = (f) => { const x = Date.parse(f); return Number.isFinite(x) && x < corte }
+      const propios = new Set(gastoIds ?? [])
+      const porId = new Map()
+      const sumar = (id, campo, monto) => {
+        const x = porId.get(id) ?? { pagos: 0, creditos: 0 }
+        x[campo] = (Math.round(x[campo] * 100) + Math.round((Number(monto) || 0) * 100)) / 100
+        porId.set(id, x)
+      }
+      for (const a of pagos ?? []) if (!propios.has(a.gasto_id) && antes(a.created_at)) sumar(a.factura_pendiente_id, 'pagos', a.monto_aplicado)
+      for (const a of creditos ?? []) if (antes(a.created_at)) sumar(a.factura_pendiente_id, 'creditos', a.monto_aplicado)
+      const res = new Map()
+      for (const f of facturas ?? []) {
+        const x = porId.get(f.id)
+        if (x && (x.pagos > 0 || x.creditos > 0)) res.set(claveFacturaOrden(f.tipo_documento, f.numero_comprobante, f.fecha_factura), x)
+      }
+      return res
+    }
+
+    // Lo anterior de cada factura de la orden. aplicaciones_pago y
+    // aplicaciones_credito piden cuentas_corrientes:ver_todo (RLS, verificado
+    // el 31/10/2026): sin eso vienen vacías y el subrenglón no va. Si algo
+    // falla, null: nunca se afirma lo que no se leyó.
+    async function leerAnterioresOrdenPago(ordenId) {
+      try {
+        const op = await supabase.from('ordenes_pago').select('creada_en').eq('id', ordenId).maybeSingle()
+        if (op?.error || !op?.data?.creada_en) return null
+        const g = await supabase.from('gastos').select('id').eq('orden_pago_id', ordenId)
+        if (g?.error) return null
+        const gastoIds = (g?.data ?? []).map(x => x.id).filter(Boolean)
+        if (!gastoIds.length) return null
+        const propias = await supabase.from('aplicaciones_pago').select('factura_pendiente_id').in('gasto_id', gastoIds)
+        if (propias?.error) return null
+        const facturaIds = [...new Set((propias?.data ?? []).map(a => a.factura_pendiente_id).filter(Boolean))]
+        if (!facturaIds.length) return new Map()
+        const [ap, ac, fp] = await Promise.all([
+          supabase.from('aplicaciones_pago').select('gasto_id, factura_pendiente_id, monto_aplicado, created_at').in('factura_pendiente_id', facturaIds),
+          supabase.from('aplicaciones_credito').select('factura_pendiente_id, monto_aplicado, created_at').in('factura_pendiente_id', facturaIds),
+          supabase.from('facturas_pendientes').select('id, tipo_documento, numero_comprobante, fecha_factura').in('id', facturaIds),
+        ])
+        if (ap?.error || ac?.error || fp?.error) return null
+        return anterioresPorFactura({ creadaEn: op.data.creada_en, gastoIds, pagos: ap.data, creditos: ac.data, facturas: fp.data })
+      } catch (e) {
+        console.error('No se pudo leer lo anterior de las facturas de la orden de pago:', e)
+        return null
+      }
+    }
+
+    // Puro: el subrenglón de una factura que ya tenía pagos o créditos. TEXTO PLANO.
+    function textoAnterioresFactura(a) {
+      const p = Math.round((Number(a?.pagos) || 0) * 100), cr = Math.round((Number(a?.creditos) || 0) * 100)
+      if (p > 0 && cr > 0) return `Ya tenía pagos anteriores por ${formatearImporte(p / 100)} y créditos por ${formatearImporte(cr / 100)}`
+      if (p > 0) return `Ya tenía pagos anteriores por ${formatearImporte(p / 100)}`
+      if (cr > 0) return `Ya tenía créditos por ${formatearImporte(cr / 100)}`
+      return ''
+    }
+
+    // Puro: la hoja entera, UNA sola. Todo texto de la base pasa por esc().
+    function htmlOrdenPago(d, { saldo = null, anteriores = null } = {}) {
       const e = d?.emisor ?? {}
       const p = d?.proveedor ?? {}
       const facturas = Array.isArray(d?.facturas) ? d.facturas : []
       const cheques = Array.isArray(d?.cheques) ? d.cheques : []
       const otros = Array.isArray(d?.otros_medios) ? d.otros_medios : []
       const logo = logoSeguroCC(e.logo_url)
-      const favor = Number(d?.a_favor)
+      const empresa = e.razon_social || e.empresa
+      const anulada = d?.anulada === true
+      const t = cuentasOrdenPago(d)
+      const pie = (n, texto, centavos) => `<tfoot><tr><td colspan="${n}">${texto}</td><td class="op-num">${importeHtml(centavos / 100)}</td></tr></tfoot>`
 
+      // ── Con qué se pagó ──
+      const bloques = []
+      let renglonesPago = 0
+      if (cheques.length) {
+        renglonesPago += cheques.length + 3
+        bloques.push(`<div class="op-bloque op-bloque--cheques"><div class="op-bloque__titulo">Cheques</div><table class="op-tabla"><thead><tr><th>Banco</th><th>Número</th><th>Fecha de pago</th><th class="op-num">Importe</th></tr></thead><tbody>${
+          cheques.map(c => `<tr><td><span class="op-banco">${esc(c?.banco ?? '—')}</span>${c?.es_echeq ? ' <strong>eCheq</strong>' : ''}</td><td>${esc(c?.numero ?? '—')}</td><td>${esc(fechaOrden(c?.fecha_pago))}</td><td class="op-num">${importeHtml(c?.importe)}</td></tr>`).join('')
+        }</tbody>${pie(3, 'Subtotal cheques', t.cCheques)}</table></div>`)
+      }
+      const conocidos = new Set(BLOQUES_MEDIO_ORDEN.map(b => b.medio))
+      const extra = [...new Set(otros.map(o => o?.medio ?? '').filter(m => !conocidos.has(m)))]
+        .map(m => { const titulo = NOMBRE_MEDIO_ORDEN[m] ?? (m || 'Otro medio'); return { medio: m, titulo, subtotal: 'Subtotal ' + titulo, conCuenta: false } })
+      for (const b of [...BLOQUES_MEDIO_ORDEN, ...extra]) {
+        const filas = otros.filter(o => (o?.medio ?? '') === b.medio)
+        if (!filas.length) continue
+        renglonesPago += filas.length + 3
+        const cls = `op-bloque op-bloque--${b.medio === 'transferencia' || b.medio === 'qr' || b.medio === 'efectivo' ? b.medio : 'otro'}`
+        bloques.push(`<div class="${cls}"><div class="op-bloque__titulo">${esc(b.titulo)}</div><table class="op-tabla"><thead><tr><th>${b.conCuenta ? 'Cuenta' : 'Medio'}</th><th class="op-num">Importe</th></tr></thead><tbody>${
+          filas.map(o => `<tr><td>${esc(b.conCuenta ? (o?.cuenta || '—') : b.titulo)}</td><td class="op-num">${importeHtml(o?.importe)}</td></tr>`).join('')
+        }</tbody>${pie(1, esc(b.subtotal), t.porMedio.get(b.medio) ?? 0)}</table></div>`)
+      }
+
+      // ── Facturas que cancela ──
+      let renglonesFacturas = facturas.length + 1
       const filasFacturas = facturas.length
-        ? `<table class="op-tabla"><thead><tr><th>Tipo</th><th>Número</th><th>Fecha</th><th class="op-num">Importe</th><th class="op-num">Aplicado</th><th class="op-num">Saldo que queda</th></tr></thead><tbody>${
-            facturas.map(f => `<tr><td>${esc(f.tipo ?? '—')}</td><td>${esc(numeroParaMostrar(f.numero) || '—')}</td><td>${esc(fechaOrden(f.fecha))}</td><td class="op-num">${importeHtml(f.importe)}</td><td class="op-num">${importeHtml(f.aplicado)}</td><td class="op-num">${importeHtml(f.saldo_actual)}</td></tr>`).join('')
+        ? `<table class="op-tabla op-tabla--facturas"><thead><tr><th>Comprobante</th><th>Fecha</th><th class="op-num">Importe</th><th class="op-num">Aplicado</th><th class="op-num">Le queda</th></tr></thead><tbody>${
+            facturas.map(f => {
+              const ant = anteriores?.get?.(claveFacturaOrden(f?.tipo, f?.numero, f?.fecha))
+              const sub = ant ? textoAnterioresFactura(ant) : ''
+              if (sub) renglonesFacturas++
+              // El número entero en un renglón (no se corta en el guion).
+              const tipo = tipoComprobanteOrden(f?.tipo)
+              return `<tr${sub ? ' class="op-con-sub"' : ''}><td>${tipo ? esc(tipo) + ' ' : ''}<span class="op-nowrap">${esc(numeroParaMostrar(f?.numero))}</span></td><td>${esc(fechaOrden(f?.fecha))}</td><td class="op-num">${importeHtml(f?.importe)}</td><td class="op-num">${importeHtml(f?.aplicado)}</td><td class="op-num">${importeHtml(f?.saldo_actual)}</td></tr>${
+                sub ? `<tr class="op-sub"><td colspan="5">${esc(sub)}</td></tr>` : ''}`
+            }).join('')
           }</tbody></table>`
-        : '<p>Pago a cuenta</p>'
+        : '<p class="op-vacio">Pago a cuenta: no cancela facturas.</p>'
 
-      const filasCheques = cheques.length
-        ? `<table class="op-tabla"><thead><tr><th>Banco</th><th>N°</th><th>Fecha de pago</th><th class="op-num">Importe</th></tr></thead><tbody>${
-            cheques.map(c => `<tr><td>${esc(c.banco ?? '—')}${c.es_echeq ? ' <strong>eCheq</strong>' : ''}</td><td>${esc(c.numero ?? '—')}</td><td>${esc(fechaOrden(c.fecha_pago))}</td><td class="op-num">${importeHtml(c.importe)}</td></tr>`).join('')
-          }</tbody></table>`
-        : ''
-      const filasOtros = otros.length
-        ? `<table class="op-tabla"${cheques.length ? ' style="margin-top:2mm"' : ''}><thead><tr><th>Medio</th><th class="op-num">Importe</th></tr></thead><tbody>${
-            otros.map(o => `<tr><td>${esc(NOMBRE_MEDIO_ORDEN[o.medio] ?? o.medio ?? '—')}</td><td class="op-num">${importeHtml(o.importe)}</td></tr>`).join('')
-          }</tbody></table>`
-        : ''
+      // ── Totales, franja y saldo ──
+      const filaCaja = (texto, centavos) => `<div class="op-caja__fila"><span>${texto}</span><span>${importeHtml(centavos / 100)}</span></div>`
+      const subtotalesPago = [
+        t.cCheques ? filaCaja('Cheques', t.cCheques) : '',
+        ...[...BLOQUES_MEDIO_ORDEN, ...extra].map(b => t.porMedio.get(b.medio) ? filaCaja(esc(b.titulo), t.porMedio.get(b.medio)) : ''),
+      ].join('')
+      const franja = franjaOrdenPago(t, { empresa, hayFacturas: facturas.length > 0 })
+      const lineaSaldo = lineaSaldoOrdenPago(saldo)
+      const obs = String(d?.observaciones ?? '').trim()
+      const compacta = Math.max(renglonesPago, renglonesFacturas) > RENGLONES_OP_COMPACTA
 
-      const lineaSaldo = lineaSaldoOrdenPago(saldo, { proveedor: p.razon_social, empresa: e.razon_social || e.empresa })
-      return `
+      return `<div class="op-a4${compacta ? ' op-a4--compacta' : ''}${anulada ? ' op-a4--anulada' : ''}">
+        ${anulada ? '<div class="op-anulada" role="alert">ANULADA: el pago de esta orden se anuló. No se reimprime.</div><div class="op-sello-anulada" aria-hidden="true">ANULADA</div>' : ''}
         <div class="op-cab">
           <div class="op-cab__emisor">
             ${logo ? `<img class="op-cab__logo" src="../${encodeURIComponent(logo)}" alt="">` : ''}
             <div>
-              <div class="op-cab__razon">${esc(e.razon_social || e.empresa || '—')}</div>
+              <div class="op-cab__razon">${esc(empresa || '—')}</div>
               ${e.cuit ? `<div class="op-cab__dato">CUIT ${esc(cuitConGuiones(e.cuit))}</div>` : ''}
               ${e.domicilio ? `<div class="op-cab__dato">${esc(e.domicilio)}</div>` : ''}
             </div>
@@ -8579,46 +8811,72 @@
             <div class="op-cab__dato">Fecha ${esc(fechaOrden(d?.fecha))}</div>
           </div>
         </div>
-        <div class="op-seccion">
+        <div class="op-seccion op-proveedor">
           <div class="op-seccion__titulo">Proveedor</div>
           <div><strong>${esc(p.razon_social ?? '—')}</strong></div>
           ${p.cuit ? `<div>CUIT ${esc(cuitConGuiones(p.cuit))}</div>` : ''}
           ${p.direccion ? `<div>${esc(p.direccion)}</div>` : ''}
         </div>
-        <div class="op-seccion">
-          <div class="op-seccion__titulo">Se cancelan los siguientes comprobantes</div>
-          ${filasFacturas}
+        <div class="op-columnas">
+          <div class="op-columna op-columna--pago">
+            <div class="op-seccion__titulo">Con qué se pagó</div>
+            ${bloques.join('') || '<p class="op-vacio">—</p>'}
+          </div>
+          <div class="op-columna op-columna--facturas">
+            <div class="op-seccion__titulo">Facturas que cancela</div>
+            ${filasFacturas}
+          </div>
         </div>
-        <div class="op-seccion">
-          <div class="op-seccion__titulo">Valores entregados</div>
-          ${filasCheques}${filasOtros}${!cheques.length && !otros.length ? '<p>—</p>' : ''}
-        </div>
-        <div class="op-total">
-          <div>Total</div>
-          <div class="op-total__numero">${importeHtml(d?.total)}</div>
+        <div class="op-totales">
+          <div class="op-caja op-caja--pagado">
+            ${subtotalesPago}
+            <div class="op-caja__total"><span>TOTAL PAGADO</span><span>${importeHtml(d?.total)}</span></div>
+          </div>
+          <div class="op-caja op-caja--facturas">
+            ${facturas.length ? filaCaja('Aplicado en este pago', t.cAplicado) + filaCaja('Les queda', t.cQueda) : ''}
+            <div class="op-caja__total"><span>TOTAL FACTURAS</span><span>${importeHtml(t.cFacturas / 100)}</span></div>
+          </div>
         </div>
         <div class="op-letras">Son ${esc(importeEnLetras(d?.total))}</div>
-        ${favor > 0 ? `<div class="op-favor">Saldo a favor del proveedor: ${importeHtml(favor)}</div>` : ''}
-        ${String(d?.observaciones ?? '').trim() ? `<div class="op-seccion"><div class="op-seccion__titulo">Observaciones</div><div>${esc(d.observaciones)}</div></div>` : ''}
+        ${franja.length ? `<div class="op-franja">${franja.map(l => `<div class="op-franja__linea op-franja__linea--${l.clase}"><span>${esc(l.texto)}</span>${l.importe != null ? `<span>${importeHtml(l.importe)}</span>` : ''}</div>`).join('')}</div>` : ''}
+        ${lineaSaldo ? `<div class="op-saldo-cuenta"><span>Saldo de la cuenta:</span> <span class="op-saldo-cuenta__numero">${importeHtml(lineaSaldo.importe)}</span>${lineaSaldo.sentido ? ` <span class="op-saldo-cuenta__sentido">${esc(lineaSaldo.sentido)}</span>` : ''}</div>` : ''}
+        ${obs ? `<div class="op-seccion op-observaciones"><div class="op-seccion__titulo">Observaciones</div><div>${esc(obs)}</div></div>` : ''}
         <div class="op-firmas">
           <div class="op-firma">Recibí conforme (proveedor) — firma y aclaración</div>
           <div class="op-firma">Autorizó</div>
         </div>
-        ${lineaSaldo ? `<div class="op-saldo-cuenta"><span>${esc(lineaSaldo.texto)}</span><span class="op-saldo-cuenta__numero">${esc(formatearImporte(lineaSaldo.importe))}</span></div>` : ''}
-        ${d?.creada_por ? `<div class="op-pie">Generada por ${esc(d.creada_por)}</div>` : ''}`
+        ${d?.creada_por ? `<div class="op-pie">Generada por ${esc(d.creada_por)}</div>` : ''}
+      </div>`
+    }
+
+    // "Imprimir" y "Enviar" se ofrecen solo con una hoja que se puede
+    // reimprimir (no con una anulada). Sin los botones (un document de
+    // prueba), no hace nada.
+    function botonesOrdenPago(visibles) {
+      for (const id of ['btn-imprimir-orden', 'btn-enviar-orden']) {
+        const b = document.getElementById(id)
+        if (b) b.hidden = !visibles
+      }
     }
 
     let turnoOrdenPago = 0
+    // La orden abierta (para "Enviar"): { id, datos }.
+    let ordenPagoActual = null
     async function abrirOrdenPago(ordenId) {
       const turno = ++turnoOrdenPago
       const modal = document.getElementById('modal-orden-pago')
       const hoja = document.getElementById('orden-pago-hoja')
+      ordenPagoActual = null
+      hoja.classList?.remove('op-hoja--anulada')
       hoja.innerHTML = '<p>Cargando la orden de pago…</p>'
       modal.hidden = false
       let res
       let saldo = null
+      let anteriores = null
       try {
-        [res, saldo] = await Promise.all([supabase.rpc('datos_orden_pago', { p_orden_id: ordenId }), leerSaldoOrdenPago(ordenId)])
+        [res, saldo, anteriores] = await Promise.all([
+          supabase.rpc('datos_orden_pago', { p_orden_id: ordenId }), leerSaldoOrdenPago(ordenId), leerAnterioresOrdenPago(ordenId),
+        ])
       } catch (e) {
         res = { data: null, error: { message: e?.message ?? String(e) } }
       }
@@ -8627,13 +8885,22 @@
         hoja.innerHTML = `<p class="pago-error">No se pudo leer la orden de pago: ${esc(res?.error?.message ?? 'no vino nada')}. Reimprimila desde la ficha del proveedor.</p>`
         return
       }
-      hoja.innerHTML = htmlOrdenPago(res.data, { saldo })
+      hoja.innerHTML = htmlOrdenPago(res.data, { saldo, anteriores })
+      ordenPagoActual = { id: ordenId, datos: res.data }
+      // Anulada según la base (31/10/2026): tachada y sin "Imprimir" ni "Enviar".
+      if (res.data.anulada === true) {
+        hoja.classList?.add('op-hoja--anulada')
+        botonesOrdenPago(false)
+        return
+      }
       document.getElementById('btn-imprimir-orden').focus?.()
-      // Anulada (30/10/2026): tachada, con el aviso y sin "Imprimir".
-      marcarHojaAnulada(ordenId, turno)
+      // "Imprimir" y "Enviar" los vuelve a mostrar marcarHojaAnulada de entrada.
+      // Anulada en parte (30/10/2026): se lee aparte, por sus gastos.
+      marcarHojaAnulada(ordenId, turno, res.data.anulada)
     }
     function cerrarOrdenPago() {
       turnoOrdenPago++
+      ordenPagoActual = null
       document.getElementById('modal-orden-pago').hidden = true
       document.documentElement.classList.remove('op-imprimiendo')
     }
@@ -8644,6 +8911,88 @@
       const quitar = () => { raiz.classList.remove('op-imprimiendo'); window.removeEventListener('afterprint', quitar) }
       window.addEventListener('afterprint', quitar)
       window.print()
+    }
+
+    // "ENVIAR" (31/10/2026): el PDF de la hoja (html2canvas + jsPDF de
+    // cdnjs, cargados al usarlos, como el recibo de Cobranzas) por
+    // navigator.share; sin share (o si no acepta archivos), se descarga.
+    const LIBRERIAS_PDF_OP = [
+      'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    ]
+    function cargarScriptOP(url) {
+      return new Promise((ok, mal) => {
+        if (document.querySelector(`script[src="${url}"]`)) return ok()
+        const s = document.createElement('script')
+        s.src = url; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + url))
+        document.head.appendChild(s)
+      })
+    }
+    // Puro: "Orden de pago N-OP-00005 ANATOLIA SRL.pdf", sin caracteres que
+    // un sistema de archivos no acepte.
+    function nombreArchivoOrdenPago(d) {
+      const limpio = (s) => String(s ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim()
+      const prov = limpio(d?.proveedor?.razon_social).slice(0, 60)
+      return `Orden de pago ${limpio(d?.numero_texto) || 'sin número'}${prov ? ' ' + prov : ''}.pdf`
+    }
+    // El PDF: una copia de la hoja que está a la vista (ya escapada), en un
+    // contenedor de 194 mm fuera de la pantalla (así sale con las dos
+    // columnas también desde el celular), en UNA hoja A4: si no entra, se achica.
+    async function generarPdfOrdenPago() {
+      if (!(typeof window.html2canvas === 'function' && window.jspdf?.jsPDF)) {
+        for (const url of LIBRERIAS_PDF_OP) await cargarScriptOP(url)
+      }
+      const cont = document.createElement('div')
+      cont.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff;width:194mm'
+      const hoja = document.createElement('div')
+      hoja.className = 'op-hoja op-hoja--pdf'
+      hoja.innerHTML = document.getElementById('orden-pago-hoja').innerHTML
+      cont.appendChild(hoja)
+      document.body.appendChild(cont)
+      try {
+        const imgs = [...hoja.querySelectorAll('img')]
+        await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r })))
+        const canvas = await window.html2canvas(hoja, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4' })
+        const escala = Math.min(190 / canvas.width, 277 / canvas.height)
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, canvas.width * escala, canvas.height * escala)
+        return pdf.output('blob')
+      } finally {
+        cont.remove()
+      }
+    }
+    function descargarOrdenPago(blob, nombre) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = nombre
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    }
+    async function enviarOrdenPago() {
+      const actual = ordenPagoActual
+      if (!actual || document.getElementById('orden-pago-hoja').classList?.contains('op-hoja--anulada')) return
+      const btn = document.getElementById('btn-enviar-orden')
+      if (btn?.disabled) return
+      if (btn) btn.disabled = true
+      try {
+        let blob
+        try { blob = await generarPdfOrdenPago() } catch (err) {
+          mostrarError('No se pudo armar el PDF de la orden de pago: ' + (err?.message ?? err))
+          return
+        }
+        const nombre = nombreArchivoOrdenPago(actual.datos)
+        const archivo = typeof File === 'function' ? new File([blob], nombre, { type: 'application/pdf' }) : null
+        if (archivo && typeof navigator.share === 'function' && navigator.canShare?.({ files: [archivo] })) {
+          try { await navigator.share({ files: [archivo], title: nombre.replace(/\.pdf$/, '') }); return } catch (err) {
+            if (err?.name === 'AbortError') return
+          }
+        }
+        descargarOrdenPago(blob, nombre)
+        mostrarExito('Se descargó la orden de pago: ' + nombre)
+      } finally {
+        if (btn) btn.disabled = false
+      }
     }
 
     // ── Las órdenes de pago en la ficha del proveedor ───────────────────
@@ -9048,6 +9397,7 @@
     document.getElementById('campo-fecha-pago-cc').addEventListener('change', refrescarPago)
     // La orden de pago.
     document.getElementById('btn-imprimir-orden').addEventListener('click', imprimirOrdenPago)
+    document.getElementById('btn-enviar-orden').addEventListener('click', enviarOrdenPago)
     document.getElementById('btn-cerrar-orden').addEventListener('click', cerrarOrdenPago)
     document.querySelector('#modal-orden-pago .modal-cc__backdrop').addEventListener('click', cerrarOrdenPago)
     document.getElementById('modal-orden-pago').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); cerrarOrdenPago() } })

@@ -29,6 +29,8 @@ const { construirCon, scriptModulo } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
+// Arreglos 30/10 (la orden de pago A4, 31/10/2026)
+const { FUNCIONES_ORDEN_PAGO_A4, CONSTANTES_ORDEN_PAGO_A4 } = require('./orden-pago-a4-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -91,6 +93,7 @@ const PRELUDIO = `
   }
   var __tablas = {}, __fallaTabla = {}
   var turnoCartera = 0, bancosBcra = null, turnoFacturasPago = 0, errorFacturasPago = null, turnoOrdenPago = 0
+  var ordenPagoActual = null
   var __errores = [], __exitos = [], __recargas = 0
   function mostrarError(m) { __errores.push(m) } function mostrarExito(m) { __exitos.push(m) }
   function formatearFecha(f) { if (!f) return '—'; const [a, m, d] = String(f).split('-'); return d + '/' + m + '/' + a }
@@ -132,9 +135,11 @@ const FUNCIONES = [
   'numeroTextoOrden', 'cargarOrdenesDePagos',
   // aplicar un pago a facturas y anular un pago (30/10/2026)
   ...FUNCIONES_PAGO_APLICAR,
+  // la orden de pago A4 (31/10/2026)
+  ...FUNCIONES_ORDEN_PAGO_A4,
 ]
 const CONSTANTES = ['MEDIOS_CHEQUE', 'NOMBRE_MEDIO', 'MEDIO_CUENTA_LABEL', 'MEDIO_PAGO_A_MEDIO_CUENTA', 'NUMERO_SALDO_INICIAL',
-  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'TANDA_GASTOS_PAGO']
+  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', 'TANDA_GASTOS_PAGO', ...CONSTANTES_ORDEN_PAGO_A4]
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -559,14 +564,15 @@ async function main() {
     chk('encabezado: logo, razón social, CUIT con guiones, domicilio, número y fecha', h.includes('src="../logo-cucuruchos-nuss.png"') && texto.includes('PAZ MIRTA') &&
       texto.includes('CUIT 20-92410679-5') && texto.includes('Unión 843') && texto.includes('ORDEN DE PAGO') && texto.includes('N-OP-00009') && texto.includes('Fecha 20/10/2026'))
     chk('el proveedor: razón social, CUIT y dirección', texto.includes('ANATOLIA SRL') && texto.includes('CUIT 30-71234567-8') && texto.includes('Ruta 9'))
-    chk('los comprobantes: tipo, número, fecha, importe, aplicado y saldo que queda', texto.includes('Se cancelan los siguientes comprobantes') &&
-      texto.includes('Saldo que queda') && texto.includes('Factura A 0003-00001201 20/08/2026 $ 250.000,00 $ 250.000,00 $ 0,00'), texto)
+    // 31/10/2026: la hoja A4 (test-cuentas-corrientes-orden-pago-a4.js).
+    chk('los comprobantes: tipo y número, fecha, importe, aplicado y lo que le queda', texto.includes('Facturas que cancela') &&
+      texto.includes('Le queda') && texto.includes('Factura A 0003-00001201 20/08/2026 $ 250.000,00 $ 250.000,00 $ 0,00'), texto)
     // 23/10/2026: sin el librador (test-cuentas-corrientes-orden-pago-copias.js).
     chk('los cheques: banco, N°, fecha de pago e importe, con "eCheq"', texto.includes('GALICIA eCheq 12345678 25/10/2026 $ 120.000,00') && !texto.includes('PEREZ JUAN'), texto)
     chk('NO dice de qué empresa venía el cheque', !texto.includes('Dolce Pasta'))
-    chk('otros medios sin la cuenta', texto.includes('Transferencia $ 530.000,50') && !texto.includes('Macro · Nuss'))
+    chk('la transferencia con su cuenta (31/10/2026: "Transferencias (cuenta e importe)")', texto.includes('Transferencias Cuenta Importe Macro · Nuss $ 530.000,50'), texto)
     chk('el total en número y en letras (con centavos)', texto.includes('$ 650.000,50') && texto.includes('Son SEISCIENTOS CINCUENTA MIL PESOS CON CINCUENTA CENTAVOS'))
-    chk('el saldo a favor (solo si hay)', texto.includes('Saldo a favor del proveedor: $ 0,50') && !S.htmlOrdenPago({ ...ORDEN, a_favor: 0 }).includes('Saldo a favor'))
+    chk('lo pagado que no se aplicó queda a favor de la empresa (solo si hay)', texto.includes('Queda a favor de PAZ MIRTA $ 400.000,50') && !S.htmlOrdenPago({ ...ORDEN, total: 250000 }).includes('Queda a favor'), texto)
     chk('observaciones, firmas y quién la generó', texto.includes('Entregado en mano') && texto.includes('Recibí conforme (proveedor) — firma y aclaración') && texto.includes('Autorizó') && texto.includes('Generada por Facu'))
     const aCuenta = S.htmlOrdenPago({ ...ORDEN, facturas: [], observaciones: null })
     chk('sin facturas: "Pago a cuenta"; sin observaciones, no hay sección', /Pago a cuenta/.test(aCuenta) && !/Observaciones/.test(aCuenta))

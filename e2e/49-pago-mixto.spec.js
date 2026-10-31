@@ -158,15 +158,17 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     await expect(hoja).toContainText('N-OP-00001');
     await expect(hoja).toContainText('PAZ MIRTA');
     await expect(hoja).toContainText('CUIT 20-92410679-5');
-    await expect(hoja).toContainText('Se cancelan los siguientes comprobantes');
+    // 31/10/2026: la hoja A4 (e2e/117-orden-pago-a4.spec.js).
+    await expect(hoja).toContainText('Facturas que cancela');
     await expect(hoja).toContainText('eCheq');
     await expect(hoja).toContainText('SEISCIENTOS CINCUENTA MIL PESOS CON CINCUENTA CENTAVOS');
-    await expect(hoja).toContainText('Saldo a favor del proveedor');
+    await expect(hoja.locator('.op-franja')).toHaveText(/Queda a favor de PAZ MIRTA\s*\$ 0,50/);
     await expect(hoja).toContainText('Recibí conforme (proveedor)');
     await expect(hoja).toContainText('Generada por Usuario Maqueta');
     const texto = await hoja.textContent();
     expect(texto, 'la orden NO dice de qué empresa venía el cheque').not.toContain('Dolce Pasta');
-    expect(texto, 'la orden NO imprime la cuenta').not.toContain('Banco Galicia · mía');
+    // 31/10/2026, pedido de Facu: "Transferencias (cuenta e importe)".
+    expect(texto, 'la transferencia con su cuenta').toContain('Banco Galicia · mía');
     expect(rpc.filter(r => r.nombre === 'datos_orden_pago').map(r => r.params)).toEqual([{ p_orden_id: 'op-1' }]);
     await expect(page.locator('#btn-imprimir-orden')).toBeVisible();
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal con la orden abierta').toBe(true);

@@ -81,6 +81,8 @@ const RENDERS = [
   'actualizarSelectorCuentaPago', 'renderizarFilasFifo',
   // el pago en los dos sentidos y la orden de pago (20/10/2026)
   'pintarPiePago', 'htmlOrdenPago', 'lineaSaldoOrdenPago',
+  // Arreglos 30/10 (la orden de pago A4, 31/10/2026)
+  'cuentasOrdenPago', 'franjaOrdenPago', 'claveFacturaOrden', 'textoAnterioresFactura', 'tipoComprobanteOrden',
   'renderizarPreviewImportacion', 'mostrarErroresImportacion',
   // La barra de unidad (28/09/2026): viene de js/barra-unidad.js por el import
   // del módulo (extraer.js la encuentra ahí), con su código real.
@@ -471,10 +473,18 @@ async function correrRenders(S) {
   // 23/10/2026: el librador del cheque ya no se imprime.
   chk('la orden de pago: NO se imprime el librador', !hojaOrden.includes('op_clib') && !hojaOrden.includes('op_ccuit'))
   chk('la orden de pago: un logo con comillas no entra (ni crudo ni escapado)', !hojaOrden.includes('op_logo') && !/<img/.test(hojaOrden))
-  chk('la orden de pago: NO se imprime la empresa del cheque ni la cuenta', !hojaOrden.includes('op_cemp') && !hojaOrden.includes('op_cuenta'))
-  // 30/10/2026: la línea del saldo de la cuenta lleva el nombre del
-  // proveedor (a pagar) o de la empresa (a favor).
-  chk('la orden de pago: el saldo a pagar con el proveedor escapado', hojaOrden.includes('Saldo de la cuenta con &quot;&gt;&lt;b data-xss=&quot;op_prov&quot;&gt; (a pagar)'))
+  chk('la orden de pago: NO se imprime la empresa del cheque (ni la cuenta de un medio que no es transferencia ni QR)', !hojaOrden.includes('op_cemp') && !hojaOrden.includes('op_cuenta'))
+  // Arreglos 30/10 (la orden de pago A4, 31/10/2026): la línea del saldo
+  // ya no lleva nombres ("Saldo de la cuenta: $ X le debemos"); la cuenta de
+  // la transferencia, la franja (con la empresa) y lo anterior de una factura sí.
+  chk('la orden de pago: la línea del saldo', /<div class="op-saldo-cuenta"><span>Saldo de la cuenta:<\/span> <span class="op-saldo-cuenta__numero">\$ 10,00<\/span> <span class="op-saldo-cuenta__sentido">le debemos<\/span><\/div>/.test(hojaOrden))
+  const hojaA4 = S.htmlOrdenPago({
+    total: 9, emisor: { razon_social: marca('op_franja') },
+    facturas: [{ tipo: 'factura', numero: marca('op_fnum2'), fecha: '2026-10-01', importe: 5, aplicado: 4, saldo_actual: 1 }],
+    otros_medios: [{ medio: 'transferencia', cuenta: marca('op_cta'), importe: 9 }, { medio: 'qr', cuenta: marca('op_qr'), importe: 0 }],
+  }, { anteriores: new Map([[S.claveFacturaOrden('factura', '"><b data-xss="op_fnum2">', '2026-10-01'), { pagos: 1, creditos: 0 }]]) })
+  chequearMarcas(chk, 'la orden de pago A4 (cuentas, franja y lo anterior)', hojaA4, ['op_franja', 'op_fnum2', 'op_cta', 'op_qr'])
+  chk('la orden de pago A4: el subrenglón de lo anterior', hojaA4.includes('<tr class="op-sub"><td colspan="5">Ya tenía pagos anteriores por $ 1,00</td></tr>'))
   const hojaFavor = S.htmlOrdenPago({ emisor: { razon_social: marca('op_razon2') }, proveedor: {} }, { saldo: { deuda: 0, credito: 5 } })
   chequearMarcas(chk, 'la orden de pago con saldo a favor de la empresa', hojaFavor, ['op_razon2'])
 
@@ -650,13 +660,26 @@ const SEGURAS = {
   },
   pintarPiePago: { 'htmlBarraPago(t, moneda)': 'htmlBarraPago(): importes por importeHtml() y una clase del código (ejecutada con la moneda marcada)' },
   // La orden de pago (20/10/2026).
+  // Arreglos 30/10 (la orden de pago A4, 31/10/2026): dos columnas, cajas,
+  // franja y la línea del saldo (lo ejecuta con marcas
+  // test-cuentas-corrientes-orden-pago-a4.js, y acá arriba).
   htmlOrdenPago: {
-    'importeHtml(f.importe)': IMPORTE, 'importeHtml(f.aplicado)': IMPORTE, 'importeHtml(f.saldo_actual)': IMPORTE,
-    'importeHtml(c.importe)': IMPORTE, 'importeHtml(o.importe)': IMPORTE, 'importeHtml(d?.total)': IMPORTE, 'importeHtml(favor)': IMPORTE,
-    filasFacturas: HTML_PROPIO, filasCheques: HTML_PROPIO, filasOtros: HTML_PROPIO,
+    'importeHtml(d?.total)': IMPORTE, filasFacturas: HTML_PROPIO,
+    n: 'cantidad de columnas del rótulo del subtotal: 3 o 1, constante del código',
+    texto: 'el rótulo del subtotal o de la fila de la caja: un literal del código o esc() del título del medio',
+    'importeHtml(centavos / 100)': IMPORTE, 'importeHtml(c?.importe)': IMPORTE, 'importeHtml(o?.importe)': IMPORTE,
+    'importeHtml(f?.importe)': IMPORTE, 'importeHtml(f?.aplicado)': IMPORTE, 'importeHtml(f?.saldo_actual)': IMPORTE,
+    'importeHtml(t.cFacturas / 100)': IMPORTE, 'importeHtml(l.importe)': IMPORTE, 'importeHtml(lineaSaldo.importe)': IMPORTE,
+    "pie(3, 'Subtotal cheques', t.cCheques)": 'pie(): un rótulo literal e importeHtml()',
+    'pie(1, esc(b.subtotal), t.porMedio.get(b.medio) ?? 0)': 'pie(): esc() del rótulo e importeHtml()',
+    "filaCaja('Aplicado en este pago', t.cAplicado)": 'filaCaja(): un rótulo literal e importeHtml()',
+    "filaCaja('Les queda', t.cQueda)": 'filaCaja(): un rótulo literal e importeHtml()',
+    cls: 'clase armada con constantes del código (el medio, solo si es uno de los tres conocidos)',
+    "bloques.join('')": HTML_PROPIO, subtotalesPago: HTML_PROPIO,
+    'l.clase': "'pendiente', 'favor' o 'cancelada': constantes de franjaOrdenPago()",
   },
-  // 30/10/2026: UNA hoja (sin copias) y la línea del saldo.
-  abrirOrdenPago: { 'htmlOrdenPago(res.data, { saldo })': 'htmlOrdenPago() escapa cada dato de la base (ejecutada con marcas)' },
+  abrirOrdenPago: { 'htmlOrdenPago(res.data, { saldo, anteriores })': 'htmlOrdenPago() escapa cada dato de la base (ejecutada con marcas)' },
+  generarPdfOrdenPago: { "document.getElementById('orden-pago-hoja').innerHTML": 'la hoja que ya dibujó htmlOrdenPago() (escapa cada dato, ejecutada con marcas), copiada tal cual para el PDF' },
   '(top-level)': {
     'importeHtml(total, moneda)': IMPORTE + ' — la línea de "Total a cargar" del listener de input de "Cargar importe"',
   },
@@ -958,9 +981,18 @@ if (SOLO !== 'render') {
     historia.includes("null, '', location.pathname + (s === 'clientes' ? '?pestana=clientes' : ''") &&
     cuerpoDe('sincronizarUrlFicha').includes('const qs = `?proveedor=${proveedorId}`'), historia.join(' | '))
   // Salvo el link firmado del PDF (24/10/2026), en la pestaña que abrió verPdfNd.
-  chk('estático: ningún .src ni .href se asigna en runtime (salvo el link firmado del PDF)',
-    !/\.(src|href)\s*=(?!=)/.test(script.replace('pestana.location.href = data.signedUrl', '')) &&
-    script.split('pestana.location.href = data.signedUrl').length === 2)
+  // Arreglos 30/10 (la orden de pago A4, 31/10/2026): "Enviar" carga
+  // html2canvas y jsPDF de cdnjs (s.src = una de las dos URLs literales de
+  // LIBRERIAS_PDF_OP) y descarga el PDF (a.href = URL.createObjectURL del blob).
+  const SRC_LIBRERIA_OP = 's.src = url; s.onload = ok', HREF_BLOB_OP = 'a.href = url; a.download = nombre'
+  chk('estático: ningún .src ni .href se asigna en runtime (salvo el link firmado del PDF y lo de "Enviar" la orden de pago)',
+    !/\.(src|href)\s*=(?!=)/.test(script.replace('pestana.location.href = data.signedUrl', '').replace(SRC_LIBRERIA_OP, '').replace(HREF_BLOB_OP, '')) &&
+    script.split('pestana.location.href = data.signedUrl').length === 2 && script.split(SRC_LIBRERIA_OP).length === 2 && script.split(HREF_BLOB_OP).length === 2)
+  chk('estático: el .src de "Enviar" es solo una librería de cdnjs y el .href, el blob del PDF',
+    cuerpoDe('cargarScriptOP').includes(SRC_LIBRERIA_OP) && (script.match(/cargarScriptOP\(/g) || []).length === 2 &&
+    script.includes('for (const url of LIBRERIAS_PDF_OP) await cargarScriptOP(url)') &&
+    /const LIBRERIAS_PDF_OP = \[\s*'https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/html2canvas\/1\.4\.1\/html2canvas\.min\.js',\s*'https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/jspdf\/2\.5\.1\/jspdf\.umd\.min\.js',\s*\]/.test(script) &&
+    cuerpoDe('descargarOrdenPago').includes('const url = URL.createObjectURL(blob)') && cuerpoDe('descargarOrdenPago').includes(HREF_BLOB_OP))
 
   const utils = require('fs').readFileSync(path.join(RAIZ, 'js/utils.js'), 'utf8')
   chk('control: los toasts de js/utils.js usan textContent y no innerHTML',

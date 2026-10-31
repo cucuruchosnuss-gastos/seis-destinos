@@ -27,6 +27,8 @@ const { construirCon } = require('./sandbox')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { fuenteNumeros } = require('./numeros-comun')
 const { FUNCIONES_PAGO_APLICAR } = require('./pago-aplicar-comun')
+// Arreglos 30/10 (la orden de pago A4, 31/10/2026)
+const { FUNCIONES_ORDEN_PAGO_A4, CONSTANTES_ORDEN_PAGO_A4 } = require('./orden-pago-a4-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -81,6 +83,7 @@ const PRELUDIO = `
   function abrirModalDetallePago() {} function abrirAnularNd() {} function verPdfNd() {}
   async function cargarFichaSaldos() {} async function cargarFichaCreditos() {} function cargarSaldos() {}
   var turnoOrdenPago = 0
+  var ordenPagoActual = null
   var estado = {
     sesion: { user: { id: 'uid-1' } },
     miRolApp: 'usuario', miEmpleadoId: 'yo',
@@ -104,9 +107,11 @@ const FUNCIONES = [
   'lineaSaldoOrdenPago', 'leerSaldoOrdenPago', 'htmlOrdenPago', 'abrirOrdenPago',
   // aplicar un pago a facturas y anular un pago (30/10/2026)
   ...FUNCIONES_PAGO_APLICAR,
+  // la orden de pago A4 (31/10/2026)
+  ...FUNCIONES_ORDEN_PAGO_A4,
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'MEDIOS_PAGO_LABEL', 'TANDA_GASTOS_PAGO', 'NUMERO_SALDO_INICIAL',
-  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN']
+  'LETRAS_UNIDAD', 'LETRAS_DECENA', 'LETRAS_CENTENA', 'NOMBRE_MEDIO_ORDEN', ...CONSTANTES_ORDEN_PAGO_A4]
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -240,21 +245,24 @@ esperas.push((async () => {
   }
 
   // ── La orden de pago: UNA hoja y la línea del saldo ───────────────────────
+  // 31/10/2026 (rama ci-prueba/orden-pago-a4, pedido de Facu): la línea dice
+  // "Saldo de la cuenta: $ X" con "le debemos" o "a nuestro favor", y va
+  // antes de las firmas (la hoja A4 la prueba test-...-orden-pago-a4.js).
   {
     const S = sandbox()
     const h = S.htmlOrdenPago(ORDEN, { saldo: { deuda: 40000, credito: 15000.5 } })
     chk('una sola hoja: una cabecera, sin ORIGINAL ni DUPLICADO', (h.match(/class="op-cab"/g) || []).length === 1 && !/ORIGINAL|DUPLICADO|op-copia|data-copia/.test(h))
-    chk('a pagar: "Saldo de la cuenta con DIMAFLO S.A. (a pagar) $ 24.999,50" (deuda − crédito)', /<div class="op-saldo-cuenta"><span>Saldo de la cuenta con DIMAFLO S\.A\. \(a pagar\)<\/span><span class="op-saldo-cuenta__numero">\$ 24\.999,50<\/span><\/div>/.test(h), texto(h).slice(-200))
-    chk('la línea del saldo va abajo de todo (después de las firmas, antes del pie)', h.indexOf('op-saldo-cuenta') > h.indexOf('op-firmas') && h.indexOf('op-saldo-cuenta') < h.indexOf('op-pie'))
+    chk('a pagar: "Saldo de la cuenta: $ 24.999,50 le debemos" (deuda − crédito)', /<div class="op-saldo-cuenta"><span>Saldo de la cuenta:<\/span> <span class="op-saldo-cuenta__numero">\$ 24\.999,50<\/span> <span class="op-saldo-cuenta__sentido">le debemos<\/span><\/div>/.test(h), texto(h).slice(-200))
+    chk('la línea del saldo va antes de las firmas (después de los totales)', h.indexOf('op-saldo-cuenta') < h.indexOf('op-firmas') && h.indexOf('op-saldo-cuenta') > h.indexOf('op-totales'))
     chk('UNA sola línea, sin "aplicado / no aplicado" ni "Resumen de cuenta"', (h.match(/op-saldo-cuenta"/g) || []).length === 1 && !/no aplicado|Resumen de cuenta/i.test(texto(h)))
     const f = S.htmlOrdenPago(ORDEN, { saldo: { deuda: 10000, credito: 35000 } })
-    chk('a favor: "Saldo de la cuenta a favor de PAZ MIRTA $ 25.000,00"', /<span>Saldo de la cuenta a favor de PAZ MIRTA<\/span><span class="op-saldo-cuenta__numero">\$ 25\.000,00<\/span>/.test(f), texto(f).slice(-120))
+    chk('a favor: "Saldo de la cuenta: $ 25.000,00 a nuestro favor"', /<span>Saldo de la cuenta:<\/span> <span class="op-saldo-cuenta__numero">\$ 25\.000,00<\/span> <span class="op-saldo-cuenta__sentido">a nuestro favor<\/span>/.test(f), texto(f).slice(-120))
     const c0 = S.htmlOrdenPago(ORDEN, { saldo: { deuda: 0.1, credito: 0.1 } })
-    chk('en cero: "Saldo de la cuenta con DIMAFLO S.A. $ 0,00" (sin "a pagar")', /<span>Saldo de la cuenta con DIMAFLO S\.A\.<\/span><span class="op-saldo-cuenta__numero">\$ 0,00<\/span>/.test(c0))
+    chk('en cero: "Saldo de la cuenta: $ 0,00" (sin "le debemos" ni "a nuestro favor")', /<span>Saldo de la cuenta:<\/span> <span class="op-saldo-cuenta__numero">\$ 0,00<\/span><\/div>/.test(c0))
     chk('sin saldo leído: la línea no va (nunca un $ 0,00 inventado)', !/op-saldo-cuenta/.test(S.htmlOrdenPago(ORDEN)))
-    chk('sin la razón social de la empresa, el nombre de la empresa', S.lineaSaldoOrdenPago({ deuda: 0, credito: 5 }, { proveedor: 'X', empresa: '' }).texto === 'Saldo de la cuenta a favor de la empresa' &&
-      /a favor de Cucuruchos Nuss/.test(S.htmlOrdenPago({ ...ORDEN, emisor: { empresa: 'Cucuruchos Nuss' } }, { saldo: { deuda: 0, credito: 5 } })))
-    chequearMarcas(chk, 'la línea del saldo', S.htmlOrdenPago({ ...ORDEN, proveedor: { razon_social: marca('prov') } }, { saldo: { deuda: 5, credito: 0 } }), ['prov'])
+    chk('la línea: el neto en valor absoluto y de qué lado', JSON.stringify(S.lineaSaldoOrdenPago({ deuda: 0, credito: 5 })) === '{"importe":5,"sentido":"a nuestro favor"}' &&
+      JSON.stringify(S.lineaSaldoOrdenPago({ deuda: 5, credito: 0 })) === '{"importe":5,"sentido":"le debemos"}')
+    chequearMarcas(chk, 'la hoja con la línea del saldo', S.htmlOrdenPago({ ...ORDEN, proveedor: { razon_social: marca('prov') } }, { saldo: { deuda: 5, credito: 0 } }), ['prov'])
   }
   // leerSaldoOrdenPago: el proveedor y la empresa de la orden, en pesos.
   {
@@ -278,7 +286,7 @@ esperas.push((async () => {
     S.__responder('datos_orden_pago', { data: ORDEN, error: null })
     await S.abrirOrdenPago('op-7')
     const hoja = S.__els.get('orden-pago-hoja').innerHTML
-    chk('al abrir (o reimprimir) la orden, la hoja trae la línea del saldo de hoy', /Saldo de la cuenta con DIMAFLO S\.A\. \(a pagar\)[\s\S]*\$ 24\.999,50/.test(hoja) && (hoja.match(/class="op-cab"/g) || []).length === 1)
+    chk('al abrir (o reimprimir) la orden, la hoja trae la línea del saldo de hoy', /Saldo de la cuenta:[\s\S]*\$ 24\.999,50[\s\S]*le debemos/.test(hoja) && (hoja.match(/class="op-cab"/g) || []).length === 1)
     T.__responder('datos_orden_pago', { data: ORDEN, error: null })
     await T.abrirOrdenPago('op-7')
     chk('sin saldo, la orden se abre igual, sin la línea', /ORDEN DE PAGO/.test(T.__els.get('orden-pago-hoja').innerHTML) && !/op-saldo-cuenta/.test(T.__els.get('orden-pago-hoja').innerHTML))
