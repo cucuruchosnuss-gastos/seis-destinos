@@ -24,6 +24,17 @@ const FUNCIONES_ENTRE_V2 = [
   'htmlInternaEntre', 'htmlInternasEntre', 'pintarInternasEntre', 'cargarInternasEntre', 'leerPreciosInternaEntre', 'guardarInternaEntre',
 ]
 const CONSTANTES_ENTRE_V2 = ['DIAS_SALDO_ENTRE', 'RE_ORDEN_MERCADERIA_ENTRE', 'ORIGEN_MERCADERIA_ENTRE', 'AYUDA_AJUSTE_ENTRE', 'AYUDA_INTERNAS_ENTRE']
+// Arreglos 30/10 (punto 7): "Poner precio" a un traspaso, un ingreso desde
+// otra empresa o una transferencia de insumos, y los insumos en "Mercadería
+// sin valorizar". Una copia de antes no las tiene (ver OPCIONALES_FN).
+const FUNCIONES_P7_ENTRE = [
+  'puedeValorizarEntre', 'valorizarVacioEntre', 'datosValorizarEntre', 'htmlBotonValorizarEntre', 'htmlAccionSvEntre', 'htmlEntregaRecibeEntre',
+  'htmlMasRenglonesSvEntre', 'textoTotalSvEntre', 'nombreSelloEntre', 'tipoValorizacionEntre', 'htmlLinkValorizacionEntre', 'diaMesEntre',
+  'textoValorizadoEntre', 'conceptoBaseValorizarEntre', 'precioPorEntre', 'decimalesPrecioEntre', 'cuentaValorizarEntre', 'textoTotalValorizarEntre',
+  'htmlItemValorizarEntre', 'htmlValorizarEntre', 'leerPreciosValorizarEntre', 'actualizarValorizarEntre', 'pintarValorizarEntre',
+  'abrirValorizarEntre', 'cerrarValorizarEntre', 'parametrosValorizarEntre', 'guardarValorizarEntre',
+]
+const CONSTANTES_P7_ENTRE = ['TIPOS_SIN_VALORIZAR_ENTRE', 'TIPOS_VALORIZABLES_ENTRE', 'FUENTE_PRECIO_ENTRE', 'MAX_RENGLONES_SV_ENTRE']
 
 const { FUNCIONES_CANTIDADES, CONSTANTES_CANTIDADES, FUNCIONES_PRECIO, CONSTANTES_PRECIO } = require('./cantidades-comun')
 
@@ -283,6 +294,8 @@ const FUNCIONES_BASE = [
   'pintarEntre', 'cargarEntre', 'mostrarEntre', 'contarEntrePortada', 'contenidoSeccionEntre',
   // Entre empresas v2 (30/10/2026): el saldo por par, el ajuste y las listas internas
   ...FUNCIONES_ENTRE_V2,
+  // Arreglos 30/10 (punto 7): poner precio a un movimiento entre empresas
+  ...FUNCIONES_P7_ENTRE,
   // La condición de venta (21/10/2026) y las órdenes de pedido N1 / N2 (28/10/2026)
   'leerFacturasDeOrden', 'leerRecepcionDeOrden', 'cantidadRecepcion', 'textoRecepcionOrden', 'diferenciasRecepcion', 'htmlRecepcionOrden', 'complementoPct', 'textoPct', 'validarCondicionVenta', 'parametrosDivision',
   'codigoPunto', 'textoCondicion', 'facturasPorParte', 'puntosDePct', 'partesFacturaOrden', 'validarNumeroFactura', 'validarPdfFactura',
@@ -365,6 +378,8 @@ const CONSTANTES_BASE = [
   'TIPOS_ENTRE', 'ORDEN_TIPOS_ENTRE', 'SIN_IMPORTE_ENTRE', 'MONEDAS_ORDEN_ENTRE', 'UNIDAD_ENTRE',
   // Entre empresas v2 (30/10/2026)
   ...CONSTANTES_ENTRE_V2,
+  // Arreglos 30/10 (punto 7)
+  ...CONSTANTES_P7_ENTRE,
   // Dividir para facturar (21/10/2026) y los puntos N1 / N2 (28/10/2026)
   'PARTES_DIVISION', 'PARTE_UNICA', 'ESPERA_GUARDAR_DIVISION', 'AVISO_SIN_CONDICION', 'NUMERO_PUNTO', 'CONDICIONES_RAPIDAS', 'CAMPOS_FILA_ORDEN', 'RELEER_ORDENES_CADA',
   // Los remitos precargados de Rosario (27/10/2026)
@@ -542,6 +557,24 @@ for (const n of FUNCIONES_ENTRE_V2) {
 Object.assign(OPCIONALES_CONST, {
   DIAS_SALDO_ENTRE: 'var DIAS_SALDO_ENTRE = 800', RE_ORDEN_MERCADERIA_ENTRE: 'var RE_ORDEN_MERCADERIA_ENTRE = /$^/',
   ORIGEN_MERCADERIA_ENTRE: 'var ORIGEN_MERCADERIA_ENTRE = {}', AYUDA_AJUSTE_ENTRE: "var AYUDA_AJUSTE_ENTRE = '(no existe)'", AYUDA_INTERNAS_ENTRE: "var AYUDA_INTERNAS_ENTRE = '(no existe)'",
+})
+// Arreglos 30/10 (punto 7): una copia de antes no tiene ninguna. Sin permiso
+// para poner precio y sin ventana: así esa copia corre y la suite da ROJO
+// por lo que afirma.
+const REEMPLAZOS_P7_ENTRE = {
+  puedeValorizarEntre: 'function puedeValorizarEntre() { return false }',
+  nombreSelloEntre: 'function nombreSelloEntre(f) { return nombreTipoEntre(f?.tipo) }',
+  abrirValorizarEntre: 'async function abrirValorizarEntre() {}',
+  guardarValorizarEntre: 'async function guardarValorizarEntre() {}',
+  cuentaValorizarEntre: 'function cuentaValorizarEntre() { return { subs: [], total: 0, faltan: 0 } }',
+  parametrosValorizarEntre: 'function parametrosValorizarEntre() { return {} }',
+}
+for (const n of FUNCIONES_P7_ENTRE) {
+  OPCIONALES_FN[n] = REEMPLAZOS_P7_ENTRE[n] ?? (/^(html|texto|nombre|precio|concepto|dia)/.test(n) ? `function ${n}() { return '' }` : `function ${n}() { return null }`)
+}
+Object.assign(OPCIONALES_CONST, {
+  TIPOS_SIN_VALORIZAR_ENTRE: "var TIPOS_SIN_VALORIZAR_ENTRE = ['mercaderia']", TIPOS_VALORIZABLES_ENTRE: 'var TIPOS_VALORIZABLES_ENTRE = []',
+  FUENTE_PRECIO_ENTRE: 'var FUENTE_PRECIO_ENTRE = {}', MAX_RENGLONES_SV_ENTRE: 'var MAX_RENGLONES_SV_ENTRE = 99',
 })
 // Los acopios (27/10/2026): una copia de antes no tiene ninguna de estas.
 // Las que llaman las funciones de siempre tienen su reemplazo que no hace

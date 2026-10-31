@@ -60,7 +60,7 @@ correrMutaciones({
     { nombre: 'la tarjeta no filtra', de: "      e.filtros.par = e.filtros.par === clave ? '' : String(clave ?? '')", a: "      e.filtros.par = ''" },
     { nombre: 'tocarla de nuevo no limpia', de: "      e.filtros.par = e.filtros.par === clave ? '' : String(clave ?? '')", a: "      e.filtros.par = String(clave ?? '')" },
     // La mercadería sin valorizar
-    { nombre: 'la valorizada aparece sin valorizar', de: "        if (f?.tipo !== 'mercaderia' || f?.con_precio !== false) continue", a: "        if (f?.tipo !== 'mercaderia') continue" },
+    { nombre: 'la valorizada aparece sin valorizar', de: "        if (!TIPOS_SIN_VALORIZAR_ENTRE.includes(f?.tipo) || f?.con_precio !== false) continue", a: "        if (!TIPOS_SIN_VALORIZAR_ENTRE.includes(f?.tipo)) continue" },
     { nombre: 'sin valorizar no mira el par', de: '        if (par && claveParEntre(de, a) !== par) continue\n', a: '' },
     { nombre: 'la misma empresa de los dos lados aparece', de: '        if (!de || !a || de === a) continue\n        if (par', a: '        if (!de || !a) continue\n        if (par' },
     { nombre: '"Valorizar la orden" sin el permiso de precios', de: "puedeEn('retiros', 'precios', o.unidad) ? 'Valorizar la orden' : 'Ver la orden'", a: "'Valorizar la orden'" },
@@ -76,7 +76,7 @@ correrMutaciones({
     { nombre: 'acreedora y deudora al revés', de: '      return { p_acreedora: a.acreedora, p_deudora: a.deudora, p_importe: a.importe, p_fecha: a.fecha, p_concepto: a.concepto }', a: '      return { p_acreedora: a.deudora, p_deudora: a.acreedora, p_importe: a.importe, p_fecha: a.fecha, p_concepto: a.concepto }' },
     { nombre: 'el ajuste sin la fecha', de: '      return { p_acreedora: a.acreedora, p_deudora: a.deudora, p_importe: a.importe, p_fecha: a.fecha, p_concepto: a.concepto }', a: '      return { p_acreedora: a.acreedora, p_deudora: a.deudora, p_importe: a.importe, p_concepto: a.concepto }' },
     { nombre: 'la misma empresa pasa', de: '      if (!a.deudora || !a.acreedora || a.deudora === a.acreedora)', a: '      if (!a.deudora || !a.acreedora)' },
-    { nombre: 'importe cero pasa', de: "      if (a.importe === null || !(a.importe > 0)) return 'Poné el importe.'", a: "      if (a.importe === null) return 'Poné el importe.'" },
+    { nombre: 'importe cero pasa', de: "      if (a.importe !== null && a.importe <= 0) return 'El importe tiene que ser mayor que cero.'\n      if (a.importe === null || !(a.importe > 0)) return 'Poné el importe.'", a: "      if (a.importe === null) return 'Poné el importe.'" },
     { nombre: 'concepto corto pasa', de: "      if (a.concepto.length < 3) return 'Poné el concepto.'", a: "      if (!a.concepto.length) return 'Poné el concepto.'" },
     { nombre: 'el concepto sin limpiar', de: "        concepto: limpio(v('ad-entre-ajuste-concepto').value),", a: "        concepto: String(v('ad-entre-ajuste-concepto').value),"  },
     { nombre: 'el error del ajuste se tapa', de: "        errorEl.textContent = err?.message || 'No se pudo cargar el ajuste.'", a: "        errorEl.textContent = 'No se pudo cargar el ajuste.'" },
