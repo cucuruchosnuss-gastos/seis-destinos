@@ -2,8 +2,8 @@
 // (30/10/2026, rama ci-prueba/aplicar-cobranzas, parte B), en la maqueta
 // (administracion), sin credenciales, a 390 y 1280 px:
 //  - Administración → Clientes → Distribuidora Anatolia CON corte: la sección
-//    "Pendientes desde el corte" con lo que debe y lo que tiene a favor; el
-//    hueco de la base dicho en el crédito que no se puede seguir aplicando;
+//    "Pendientes desde el corte" con lo que debe y lo que tiene a favor
+//    ("Aplicar" en los tres créditos: desde el 31/10/2026 no hay hueco);
 //  - "Aplicar" en la cobranza que cargó el cobrador: sugiere, aplica
 //    (aplicar_credito_cliente) y vuelve a leer; después el saldo a favor del
 //    corte;
@@ -98,8 +98,10 @@ for (const t of [{ nombre: '390', ancho: 390, alto: 844 }, { nombre: '1280', anc
     await expect(sec).toContainText('Pendientes desde el corte');
     await expect(sec.locator('[data-ad-pend-doc]')).toHaveCount(3);
     await expect(sec.locator('[data-ad-pend-credito]')).toHaveCount(3);
-    await expect(sec).toContainText('Este crédito ya tiene una parte aplicada: para seguir aplicando falta una función de la base');
-    await expect(sec.locator('[data-ad-aplicar]')).toHaveCount(2);
+    // Desde el 31/10/2026 (arreglos de la auditoría, punto 5b) no hay hueco:
+    // el ajuste que ya tiene algo aplicado también ofrece "Aplicar" (e2e 113).
+    await expect(sec).not.toContainText('falta una función de la base');
+    await expect(sec.locator('[data-ad-aplicar]')).toHaveCount(3);
     await sinScrollHorizontal(page);
     await sec.scrollIntoViewIfNeeded();
     await captura(page, `pendientes-${t.nombre}`, info);

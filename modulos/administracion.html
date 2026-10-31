@@ -674,6 +674,24 @@
     .ad-visor__lienzo { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
     .ad-visor__img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
+    /* ── La venta y sus puntos N1 / N2 (31/10/2026, arreglos de la auditoría,
+       punto 2; decorarVentasAd). La fila "Venta" de la cuenta de cliente y
+       proveedor (js/cuenta-unica.js, main.css) se toca y despliega debajo
+       cómo se parte. Copia de la de Cuentas corrientes (.cc-n1n2 → .ad-n1n2). */
+    .cu-fila.ad-fila-venta { cursor: pointer; }
+    .cu-fila.ad-fila-venta:hover { background: var(--color-fila-hover); }
+    .cu-fila.ad-fila-venta:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 6px; }
+    .ad-n1n2 {
+      padding: 0.5rem 0.75rem 0.625rem; border-bottom: 1px solid var(--color-divisor);
+      background: var(--color-superficie); font-size: 0.875rem; color: var(--color-texto);
+      display: flex; flex-direction: column; gap: 0.25rem; min-width: 0;
+    }
+    .ad-n1n2__linea { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .ad-n1n2__linea--total { padding-top: 0.25rem; border-top: 1px solid var(--color-divisor); }
+    .ad-n1n2__nota, .ad-n1n2__suave { color: var(--color-texto-2); }
+    .ad-n1n2__suave { margin: 0; font-size: 0.8125rem; }
+    .ad-n1n2__orden { align-self: flex-start; min-height: 44px; padding-left: 0; font-weight: 700; color: var(--naranja-oscuro); }
+
     /* ── Pendientes desde el corte, aplicar y el recibo (30/10/2026) ──────
        En la cuenta del cliente, solo si tiene corte. El selector es copia
        del de Cobranzas (.cob-aplicar-* → .ad-apl*) y el recibo, de su hoja
@@ -8468,6 +8486,200 @@
       if (!ctx) { el.innerHTML = ''; el.hidden = true; return }
       el.hidden = false
       pintarCuentaUnica(ctx)
+      decorarVentasAd()
+    }
+
+    // ── LA VENTA Y SUS PUNTOS N1 / N2 (31/10/2026, arreglos de la auditoría,
+    // punto 2) ─────────────────────────────────────────────────────────────
+    // La misma que Cuentas corrientes (decorarVentasCC, rama cc-orden-n1-n2),
+    // DUPLICADA con nombres …Ad (cada módulo duplica sus helpers). Llega
+    // también a Cuentas corrientes → Clientes, que es esta pantalla embebida.
+    // cuenta_unificada() trae UNA fila "Venta" por orden (te_debe = retiro +
+    // comisión de vendedores; una corrección posterior viene aparte como
+    // "Comisión", con el MISMO orden_retiro_id). Tocar la fila de una VENTA
+    // despliega debajo:
+    //   N1-0042: $ … (incluye comisión de vendedores $ …)
+    //   N2-0042: $ …
+    //   Total: $ …
+    // con datos_division_orden(p_orden_id, null, null) → codigo, total_a (el
+    // subtotal A + las comisiones), comision_total, total_b y guardada (= la
+    // orden tiene division_pct_a). Leída con pg_get_functiondef el 31/10/2026:
+    // SECURITY DEFINER, pide retiros:precios EN LA FÁBRICA DE LA ORDEN
+    // (tiene_tarea_alcance) y rechaza con raise exception.
+    //  - Se lee al tocar, UNA vez por orden (estado.divisionesOrdenAd).
+    //  - Sin retiros:precios no se llama: solo el total. Si la base lo
+    //    rechaza por permiso, lo mismo, sin error rojo.
+    //  - Sin división guardada: el total y "Sin división N1/N2".
+    //  - Una parte en 0 (100/0 o 0/100) no se muestra.
+    //  - Un corte de conexión no queda guardado: tocar de nuevo reintenta.
+    // Acá la fila de una orden ya era un link ("Ver la orden ›", que abre la
+    // orden): ahora tocarla despliega N1 / N2 y "Ver la orden ›" va adentro
+    // del desplegable (solo con permiso para ver la orden, como antes).
+    // Las filas las dibuja js/cuenta-unica.js (compartido, no se toca): se
+    // DECORAN después de pintarlas (también desde un MutationObserver, porque
+    // el filtro "Ver" y Compensar repintan desde adentro de cuenta-unica.js).
+    const TEXTO_SIN_DIVISION_AD = 'Sin división N1/N2'
+
+    function puedeVerDivisionAd() {
+      return tieneTarea('retiros', 'precios')
+    }
+
+    // La fila "Venta" de esa orden (una corrección "Comisión" de la misma
+    // orden NO despliega).
+    function filaVentaAd(cu, ordenId) {
+      if (!ordenId) return null
+      return (cu?.filas ?? []).find(f => f.etiqueta === 'Venta' && f.orden_retiro_id === ordenId) ?? null
+    }
+
+    function divisionesOrdenAd() {
+      if (!(estado.divisionesOrdenAd instanceof Map)) estado.divisionesOrdenAd = new Map()
+      return estado.divisionesOrdenAd
+    }
+
+    function centavosN1n2Ad(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? Math.round(n * 100) : null
+    }
+
+    // Puro: qué se sabe de la división con lo que respondió la base.
+    function divisionDeRespuestaAd(data, error) {
+      if (error) {
+        const msg = String(error.message ?? '')
+        if (error.code === '42501' || /permiso|identificar tu usuario/i.test(msg)) return { tipo: 'sin_permiso' }
+        if (error.code === 'P0001' || /condición de venta|no se divide|valorizar|anulada|no existe/i.test(msg)) return { tipo: 'sin_division' }
+        return { tipo: 'error', mensaje: msg }
+      }
+      if (!data || typeof data !== 'object' || data.guardada !== true) return { tipo: 'sin_division' }
+      return { tipo: 'division', codigo: data.codigo ?? '', totalA: data.total_a, comision: data.comision_total, totalB: data.total_b }
+    }
+
+    // Lo que se sabe AHORA de esa orden (sin permiso no se pregunta).
+    function infoDivisionAd(ordenId) {
+      if (!puedeVerDivisionAd()) return { tipo: 'sin_permiso' }
+      return divisionesOrdenAd().get(ordenId) ?? { tipo: 'cargando' }
+    }
+
+    // El desplegable de una venta. Devuelve HTML: escapa por dentro.
+    function htmlDivisionVentaAd(fila, info) {
+      const moneda = fila?.moneda || 'ARS'
+      const linea = (rotulo, monto, nota = '', esTotal = false) =>
+        `<div class="ad-n1n2__linea${esTotal ? ' ad-n1n2__linea--total' : ''}"><span class="ad-n1n2__rotulo">${esc(rotulo)}:</span> <strong>${esc(importeHoja(monto, moneda))}</strong>` +
+        (nota ? ` <span class="ad-n1n2__nota">${esc(nota)}</span>` : '') + '</div>'
+      const suave = (t) => `<p class="ad-n1n2__suave">${esc(t)}</p>`
+      const cuenta = centavosN1n2Ad(fila?.te_debe)
+      if (info?.tipo === 'division') {
+        const cA = centavosN1n2Ad(info.totalA) ?? 0
+        const cB = centavosN1n2Ad(info.totalB) ?? 0
+        const cCom = centavosN1n2Ad(info.comision) ?? 0
+        let html = ''
+        if (cA !== 0) html += linea(codigoPunto(info.codigo, 'A'), cA / 100, cCom !== 0 ? `(incluye comisión de vendedores ${importeHoja(cCom / 100, moneda)})` : '')
+        if (cB !== 0) html += linea(codigoPunto(info.codigo, 'B'), cB / 100)
+        html += linea('Total', (cA + cB) / 100, '', true)
+        if (cuenta !== null && cuenta !== cA + cB) html += suave(`En esta línea de la cuenta figuran ${importeHoja(cuenta / 100, moneda)}. Las correcciones posteriores van en su propia línea.`)
+        return html
+      }
+      const total = linea('Total', cuenta === null ? null : cuenta / 100, '', true)
+      if (info?.tipo === 'sin_division') return total + suave(TEXTO_SIN_DIVISION_AD)
+      if (info?.tipo === 'cargando') return total + suave('Leyendo N1 / N2…')
+      if (info?.tipo === 'error') return total + suave('No se pudo leer N1 / N2' + (info.mensaje ? ` (${info.mensaje})` : '') + '. Cerrá y volvé a tocar la fila para reintentar.')
+      return total
+    }
+
+    // Lee la división de esa orden UNA vez (la respuesta queda guardada; un
+    // corte de conexión no, así se reintenta). Nunca tira.
+    async function leerDivisionAd(ordenId) {
+      try {
+        const { data, error } = await supabase.rpc('datos_division_orden', { p_orden_id: ordenId, p_pct_a: null, p_comisiones: null })
+        return divisionDeRespuestaAd(data, error)
+      } catch (err) {
+        return { tipo: 'error', mensaje: err?.message || '' }
+      }
+    }
+
+    function cargarDivisionAd(ordenId) {
+      if (!puedeVerDivisionAd()) return Promise.resolve()
+      const cache = divisionesOrdenAd()
+      const ya = cache.get(ordenId)
+      if (ya?.tipo === 'cargando') return ya.promesa
+      if (ya && ya.tipo !== 'error') return Promise.resolve()
+      const entrada = { tipo: 'cargando', promesa: null }
+      cache.set(ordenId, entrada)
+      entrada.promesa = leerDivisionAd(ordenId).then(info => { if (cache.get(ordenId) === entrada) cache.set(ordenId, info) })
+      return entrada.promesa
+    }
+
+    // Decora las filas de Venta ya pintadas: se tocan (clase ad-fila-venta;
+    // si la fila no es un botón, role="button", Enter y espacio), dicen
+    // "Ver N1 / N2 ▾" en vez de "Ver la orden ›" y, abiertas, llevan su panel
+    // debajo (#ad-n1n2-<orden>, hermano de la fila). Se puede llamar las
+    // veces que sea: no duplica.
+    function decorarVentasAd() {
+      const el = document.getElementById('ad-cuenta-unica')
+      const c = estado.cliente
+      const cu = c?.unica
+      if (!el?.querySelectorAll || !cu?.filas) return
+      const abiertas = c.ventasAbiertasAd instanceof Set ? c.ventasAbiertasAd : (c.ventasAbiertasAd = new Set())
+      for (const row of el.querySelectorAll('.cu-fila[data-orden-retiro]')) {
+        const id = row.dataset.ordenRetiro
+        const fila = row.querySelector('.cu-chip--venta') ? filaVentaAd(cu, id) : null
+        if (!fila) continue
+        const abierta = abiertas.has(id)
+        const idPanel = 'ad-n1n2-' + id
+        if (!row.classList.contains('ad-fila-venta')) {
+          row.classList.add('ad-fila-venta')
+          if (row.tagName !== 'BUTTON') {
+            row.setAttribute('role', 'button')
+            row.setAttribute('tabindex', '0')
+          }
+          row.setAttribute('aria-controls', idPanel)
+          // El "Ver la orden ›" de la fila pasa adentro del desplegable.
+          for (const v of row.querySelectorAll('.cu-fila__ver')) v.hidden = true
+          const ver = document.createElement('span')
+          ver.className = 'cu-fila__ver ad-fila-venta__ver'
+          row.querySelector('.cu-fila__que')?.appendChild(ver)
+        }
+        row.setAttribute('aria-expanded', abierta ? 'true' : 'false')
+        const ver = row.querySelector('.ad-fila-venta__ver')
+        if (ver) ver.textContent = abierta ? 'Ocultar N1 / N2 ▴' : 'Ver N1 / N2 ▾'
+        const sig = row.nextElementSibling
+        let panel = sig?.classList?.contains('ad-n1n2') && sig.id === idPanel ? sig : null
+        if (!abierta) { panel?.remove(); continue }
+        if (!panel) {
+          panel = document.createElement('div')
+          panel.className = 'ad-n1n2'
+          panel.id = idPanel
+          panel.setAttribute('role', 'region')
+          panel.setAttribute('aria-label', 'N1 y N2 de la venta')
+          row.after(panel)
+        }
+        panel.innerHTML = htmlDivisionVentaAd(fila, infoDivisionAd(id)) +
+          (puedeVerLaOrden() ? `<button type="button" class="ad-link ad-n1n2__orden" data-ad-n1n2-orden="${esc(id)}">Ver la orden ›</button>` : '')
+      }
+    }
+
+    async function alternarVentaAd(ordenId) {
+      const c = estado.cliente
+      if (!c?.unica || !filaVentaAd(c.unica, ordenId)) return
+      const abiertas = c.ventasAbiertasAd instanceof Set ? c.ventasAbiertasAd : (c.ventasAbiertasAd = new Set())
+      if (abiertas.has(ordenId)) { abiertas.delete(ordenId); decorarVentasAd(); return }
+      abiertas.add(ordenId)
+      decorarVentasAd()
+      await cargarDivisionAd(ordenId)
+      if (estado.cliente === c) decorarVentasAd()
+    }
+
+    // Un toque en la cuenta: la fila de una Venta la despliega y "Ver la
+    // orden ›" del desplegable abre la orden (no siguen a js/cuenta-unica.js).
+    // Devuelve si lo atendió.
+    function alTocarVentaAd(ev) {
+      const t = ev?.target
+      const orden = t?.closest?.('[data-ad-n1n2-orden]')
+      if (orden) { if (puedeVerLaOrden()) abrirOrdenDesde(orden.dataset.adN1n2Orden); return true }
+      const row = t?.closest?.('.cu-fila.ad-fila-venta')
+      if (!row) return false
+      alternarVentaAd(row.dataset.ordenRetiro)
+      return true
     }
 
     let turnoCliente = 0
@@ -8530,10 +8742,11 @@
     //  - aplicar_credito_cliente(p_cliente_id, p_credito_tipo, p_credito_id,
     //    p_items) → {aplicado, a_cuenta}: pide cobranzas:procesar y BORRA lo
     //    que ese crédito tenía aplicado antes de escribir: se manda lo que ya
-    //    tenía MÁS lo nuevo. Lo que ya tenía una cobranza sale de
-    //    recibo_cobranza(id).aplicaciones; para los demás créditos ninguna
-    //    función lo devuelve (hueco de la base): "Aplicar" solo si no tienen
-    //    nada aplicado.
+    //    tenía MÁS lo nuevo. Lo que ya tenía CUALQUIER crédito (cobranza,
+    //    corte, movimiento, orden o nota a favor) sale de
+    //    aplicaciones_credito_cliente (31/10/2026, arreglos de la auditoría,
+    //    punto 5b; antes, la cobranza lo leía de recibo_cobranza y los demás
+    //    no se podían seguir aplicando).
     //  - recibo_cobranza(p_cobranza_id) → los datos de la hoja del recibo.
     // cuenta_cliente() NO trae el id de la cobranza: la línea lo tiene por
     // aparearCobranzas (cliente_movimientos), que si no cierra no pone ninguno.
@@ -8544,7 +8757,6 @@
     const MEDIOS_APLICAR_AD = ['cheque', 'transferencia', 'efectivo']
     const NOMBRE_MEDIO_APLICAR_AD = { cheque: 'Cheques', transferencia: 'Transferencias', efectivo: 'Efectivo' }
     const FILAS_RECIBO_COMPACTO_AD = 14
-    const TEXTO_HUECO_APLICAR_AD = 'Este crédito ya tiene una parte aplicada: para seguir aplicando falta una función de la base'
 
     function centavosAplAd(n) {
       const x = Number(n)
@@ -8612,11 +8824,10 @@
       return `${d?.doc_tipo}|${d?.doc_id}|${d?.parte}`
     }
 
-    // ¿Se puede aplicar? Una cobranza siempre (lo que ya tenía sale de su
-    // recibo); los demás créditos, solo sin nada aplicado (hueco de la base).
+    // ¿Se puede aplicar? Cualquier crédito con algo libre: lo que ya tenía
+    // sale de aplicaciones_credito_cliente (31/10/2026, punto 5b).
     function creditoAplicableAd(k) {
-      if (!k?.credito_id || centavosAplAd(k.libre) <= 0) return false
-      return k.credito_tipo === 'cobranza' || centavosAplAd(k.aplicado) === 0
+      return !!k?.credito_id && centavosAplAd(k.libre) > 0
     }
 
     // La sección, entre la cabecera de la cuenta y sus movimientos. Sin
@@ -8648,11 +8859,9 @@
       const clave = claveCreditoAd(k)
       const abierto = c?.aplicar?.clave === clave
       const botones = []
-      if (puedeAplicarAd() && !abierto) {
-        botones.push(creditoAplicableAd(k)
-          ? `<button type="button" class="ad-btn" data-ad-aplicar="${esc(clave)}">Aplicar</button>`
-          : `<p class="ad-texto-suave ad-pend__hueco">${esc(TEXTO_HUECO_APLICAR_AD)}</p>`)
-      }
+      // Desde el 31/10/2026 (punto 5b) ya no hay "hueco": un crédito con
+      // algo aplicado también se aplica (lo previo se lee al abrir).
+      if (puedeAplicarAd() && !abierto && creditoAplicableAd(k)) botones.push(`<button type="button" class="ad-btn" data-ad-aplicar="${esc(clave)}">Aplicar</button>`)
       if (k?.credito_tipo === 'cobranza' && k.credito_id) botones.push(`<button type="button" class="ad-btn ad-btn--suave" data-ad-recibo="${esc(k.credito_id)}">Recibo</button>`)
       const datosCredito = [esFechaIso(k?.fecha) ? fechaCorta(k.fecha) : '', 'Monto ' + importeHoja(k?.monto)]
       if (centavosAplAd(k?.aplicado) > 0) datosCredito.push('Aplicado ' + importeHoja(k.aplicado))
@@ -8673,8 +8882,8 @@
       for (const m of MEDIOS_APLICAR_AD) medios[m] = { parte: null, montos: {} }
       return {
         clave: claveCreditoAd(k), credito: k, modo: 'todo', parte: null, montos: {}, medios,
-        // null = hay que leerlas (una cobranza con algo aplicado).
-        previas: k?.credito_tipo === 'cobranza' && centavosAplAd(k.aplicado) > 0 ? null : [],
+        // null = hay que leerlas (un crédito con algo aplicado).
+        previas: centavosAplAd(k?.aplicado) > 0 ? null : [],
         errorPrevias: '', errorSugerir: '', error: '', enviando: false, turno: 0, foco: null,
       }
     }
@@ -8714,17 +8923,21 @@
       return docs.map(d => [d, montoElegidoAd(ap.montos, claveDocAd(d))]).filter(([, n]) => n > 0).map(([d, n]) => item(d, n, null))
     }
 
-    // Lo que la cobranza ya tenía aplicado, como renglones para la base:
-    // recibo_cobranza().aplicaciones[{doc_tipo, doc_id, parte, aplicado,
-    // medios{cheque|transferencia|efectivo|sin_medio: n}}].
+    // Lo que el crédito ya tenía aplicado, como renglones para la base (31/10/2026,
+    // punto 5b): aplicaciones_credito_cliente() → [{doc_tipo, doc_id, parte,
+    // medio, monto, efectivo}], una por imputación guardada (leída con
+    // pg_get_functiondef el 31/10/2026). "monto" es lo que se guardó;
+    // "efectivo" es lo que de verdad cuenta hoy (si el documento bajó —una
+    // orden corregida—, lo que se pasa de su monto queda en 0, por orden de
+    // carga). Va "efectivo": es lo que la cuenta da como aplicado
+    // (cliente_pendientes suma efectivo) y lo que aplicar_credito_cliente
+    // acepta de vuelta sin pasarse del pendiente. Se juntan por renglón y
+    // medio en itemsParaEnviarAd.
     function itemsPreviosAd(aplicaciones) {
       const r = []
       for (const a of Array.isArray(aplicaciones) ? aplicaciones : []) {
-        const medios = a?.medios && typeof a.medios === 'object' ? a.medios : { sin_medio: a?.aplicado }
-        for (const [m, v] of Object.entries(medios)) {
-          const cent = centavosAplAd(v)
-          if (cent > 0) r.push({ doc_tipo: a.doc_tipo, doc_id: a.doc_id, parte: a.parte, monto: cent / 100, medio: MEDIOS_APLICAR_AD.includes(m) ? m : null })
-        }
+        const cent = centavosAplAd(a?.efectivo ?? a?.monto)
+        if (cent > 0) r.push({ doc_tipo: a.doc_tipo, doc_id: a.doc_id, parte: a.parte, monto: cent / 100, medio: MEDIOS_APLICAR_AD.includes(a.medio) ? a.medio : null })
       }
       return r
     }
@@ -8780,9 +8993,9 @@
       }
     }
 
-    // "Aplicar" en un crédito: abre el selector debajo; en una cobranza con
-    // algo aplicado, primero lee lo que ya tenía (sin eso no se aplica: la
-    // base lo borraría). Después sugiere "Aplicar todo".
+    // "Aplicar" en un crédito: abre el selector debajo; en un crédito con
+    // algo aplicado, primero lee lo que ya tenía (aplicaciones_credito_cliente;
+    // sin eso no se aplica: la base lo borraría). Después sugiere "Aplicar todo".
     async function abrirAplicarAd(clave) {
       const c = estado.cliente
       if (!c || !puedeAplicarAd() || !pendientesActivosAd(c)) return
@@ -8794,20 +9007,20 @@
       if (ap.previas === null) {
         let res
         try {
-          res = await supabase.rpc('recibo_cobranza', { p_cobranza_id: k.credito_id })
+          res = await supabase.rpc('aplicaciones_credito_cliente', { p_cliente_id: c.id, p_credito_tipo: k.credito_tipo, p_credito_id: k.credito_id })
         } catch (err) {
           res = { data: null, error: err }
         }
         if (estado.cliente !== c || c.aplicar !== ap) return
-        if (res?.error || !res?.data) {
-          ap.errorPrevias = 'No se pudo leer lo que esta cobranza ya tenía aplicado (' + (res?.error?.message || 'no vino nada') + '). Sin eso no se puede aplicar: se borraría.'
+        if (res?.error || !Array.isArray(res?.data)) {
+          ap.errorPrevias = 'No se pudo leer lo que este crédito ya tenía aplicado (' + (res?.error?.message || 'no vino nada') + '). Sin eso no se puede aplicar: se borraría.'
           pintarCliente()
           return
         }
-        const previas = itemsPreviosAd(res.data.aplicaciones)
+        const previas = itemsPreviosAd(res.data)
         const suma = previas.reduce((s, x) => s + centavosAplAd(x.monto), 0)
         if (suma !== centavosAplAd(k.aplicado)) {
-          ap.errorPrevias = `Lo que esta cobranza ya tenía aplicado (${importeHoja(suma / 100)}) no coincide con la cuenta (${importeHoja(k.aplicado)}). Volvé a abrir la cuenta del cliente.`
+          ap.errorPrevias = `Lo que este crédito ya tenía aplicado (${importeHoja(suma / 100)}) no coincide con la cuenta (${importeHoja(k.aplicado)}). Volvé a abrir la cuenta del cliente.`
           pintarCliente()
           return
         }
@@ -16755,8 +16968,19 @@
       // La cuenta de cliente y proveedor (js/cuenta-unica.js): Compensar, el
       // filtro y los campos del panel.
       const unica = document.getElementById('ad-cuenta-unica')
-      unica.addEventListener('click', (e) => { const ctx = ctxCuentaUnica(); if (ctx) alTocarCuentaUnica(e, ctx) })
+      unica.addEventListener('click', (e) => { if (alTocarVentaAd(e)) return; const ctx = ctxCuentaUnica(); if (ctx) alTocarCuentaUnica(e, ctx) })
       for (const tipo of ['input', 'change']) unica.addEventListener(tipo, (e) => { const ctx = ctxCuentaUnica(); if (ctx) alCambiarCuentaUnica(e, ctx) })
+      // La venta y sus N1 / N2 (31/10/2026, punto 2): una fila que no es
+      // botón se abre también con Enter o espacio (un botón ya lo hace solo),
+      // y cuando js/cuenta-unica.js repinta (el filtro, Compensar) las filas
+      // se vuelven a decorar.
+      unica.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return
+        if (!e.target?.matches?.('.cu-fila.ad-fila-venta') || e.target.tagName === 'BUTTON') return
+        e.preventDefault()
+        alternarVentaAd(e.target.dataset.ordenRetiro)
+      })
+      if (typeof MutationObserver === 'function') new MutationObserver(() => decorarVentasAd()).observe(unica, { childList: true })
       document.getElementById('ad-btn-ficha').addEventListener('click', () => { if (estado.cliente) abrirFicha(estado.cliente.id) })
       document.getElementById('ad-btn-saldo-inicial').addEventListener('click', () => abrirPanelCliente('saldo'))
       document.getElementById('ad-btn-ajuste').addEventListener('click', () => abrirPanelCliente('ajuste'))

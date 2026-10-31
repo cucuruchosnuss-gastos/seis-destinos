@@ -47,7 +47,8 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     // Los renglones con orden se ven como link.
     const venta = unica.locator('.cu-fila--link[data-orden-retiro="o1"]');
     await expect(venta).toHaveCount(1);
-    await expect(venta).toContainText('Ver la orden');
+    // Una Venta: desde el 31/10/2026 la fila despliega N1 / N2 (punto 2).
+    await expect(venta.locator('.ad-fila-venta__ver')).toHaveText('Ver N1 / N2 ▾');
     expect(await venta.evaluate(b => getComputedStyle(b).cursor)).toBe('pointer');
     await expect(unica.locator('.cu-fila--link[data-cobranza-id]')).toContainText('Ver la cobranza');
     await expect(unica.locator('.cu-fila:not(.cu-fila--link)').first()).toBeVisible(); // las compras, no
@@ -96,10 +97,17 @@ for (const [nombre, ancho, alto] of [['1280', 1280, 900], ['390', 390, 844], ['3
     expect(await sinScrollHorizontal(page), 'sin scroll horizontal al volver').toBe(true);
     await captura(page, `cuenta-a-orden-volvio-${nombre}`, info);
 
-    // El atrás del navegador hace lo mismo (ahora desde la cuenta de cliente y proveedor).
+    // El atrás del navegador hace lo mismo (ahora desde la cuenta de cliente y
+    // proveedor). Desde el 31/10/2026 (arreglos de la auditoría, punto 2)
+    // tocar una Venta despliega N1 / N2 y "Ver la orden ›" va adentro (e2e 113).
     await venta.scrollIntoViewIfNeeded();
-    const y2 = await scrollY(page);
     await venta.click();
+    const verOrden = page.locator('#ad-n1n2-o1 [data-ad-n1n2-orden="o1"]');
+    await expect(verOrden).toHaveText('Ver la orden ›');
+    await expect(page.locator('#ad-vista-orden')).toBeHidden();
+    await verOrden.scrollIntoViewIfNeeded();
+    const y2 = await scrollY(page);
+    await verOrden.click();
     await expect(page.locator('#ad-vista-orden')).toBeVisible();
     await expect(page.locator('#ad-orden-titulo')).toHaveText('Orden N-0012');
     await page.goBack();

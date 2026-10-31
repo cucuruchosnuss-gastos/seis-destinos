@@ -8,9 +8,11 @@
 //  - "Pendientes desde el corte" solo si cliente_pendientes().activo; sin
 //    corte, nada nuevo.
 //  - Los docs con pendiente y los créditos con libre; "Aplicar" solo con
-//    cobranzas:procesar; en los que no son cobranza, solo sin nada aplicado
-//    (hueco de la base).
+//    cobranzas:procesar (desde el 31/10/2026, punto 5b de los arreglos de la
+//    auditoría, también en los que no son cobranza y ya tienen algo
+//    aplicado: se terminó el "hueco de la base").
 //  - aplicar_credito_cliente REEMPLAZA: se manda lo que ya tenía (de
+//    aplicaciones_credito_cliente, desde el 31/10/2026; antes
 //    recibo_cobranza().aplicaciones) MÁS lo nuevo. El error de la base, tal
 //    cual; después se vuelven a leer cliente_pendientes y la cuenta.
 //  - "Recibo" en la línea de la cobranza y en Pendientes: UNA hoja A4.
@@ -71,6 +73,12 @@ const RECIBO_CB2 = {
   a_cuenta: 20000, saldo_cuenta: 40000,
 }
 
+// Lo que ya tenía cada crédito (aplicaciones_credito_cliente, 31/10/2026).
+const APLICACIONES = {
+  'cobranza|cb-2': [{ doc_tipo: 'orden', doc_id: 'o-42', parte: 'N1', medio: 'cheque', monto: 30000, efectivo: 30000 }],
+  'movimiento|mv-9': [{ doc_tipo: 'nota_debito', doc_id: 'nd-1', parte: 'total', medio: null, monto: 1000, efectivo: 1000 }],
+}
+
 function sugerir(docs, p) {
   let resta = Math.round(p.p_monto * 100)
   const items = []
@@ -104,6 +112,7 @@ function nuevo({ tareas = TODAS, corte = true, docs = DOCS, creditos = CREDITOS,
       return { data: { aplicado, a_cuenta: (k?.monto ?? 0) - aplicado }, error: null }
     }
     if (n === 'recibo_cobranza') return { data: copia({ ...RECIBO_CB2, _id: p.p_cobranza_id }), error: null }
+    if (n === 'aplicaciones_credito_cliente') return { data: copia(APLICACIONES[p.p_credito_tipo + '|' + p.p_credito_id] ?? []), error: null }
     if (n === 'cuenta_cliente_consolidada') return { data: [], error: null }
     return { data: null, error: null }
   })
@@ -158,10 +167,8 @@ esperas.push((async () => {
     chk('los créditos con libre > 0 (el ya aplicado entero no)', credEn.join() === 'corte|cli-1,cobranza|cb-1,cobranza|cb-2,movimiento|mv-9', credEn.join())
     chk('cada crédito: etiqueta, fecha, monto, aplicado y libre', t.includes('Cobranza del 06/11/2026 06/11/2026 · Monto $ 50.000,00 · Aplicado $ 30.000,00 Libre $ 20.000,00'), t)
     const aplicar = [...h.matchAll(/data-ad-aplicar="([^"]*)"/g)].map(m => m[1])
-    chk('"Aplicar" en el corte y en las cobranzas (aunque una tenga algo aplicado)', aplicar.join() === 'corte|cli-1,cobranza|cb-1,cobranza|cb-2', aplicar.join())
-    chk('el hueco de la base: un crédito que no es cobranza con algo aplicado dice el texto y no ofrece "Aplicar"',
-      t.includes('Ajuste a favor') && h.includes('Este crédito ya tiene una parte aplicada: para seguir aplicando falta una función de la base') && !aplicar.includes('movimiento|mv-9'))
-    chk('el texto del hueco aparece UNA vez (solo en ese crédito)', h.split('falta una función de la base').length - 1 === 1)
+    chk('"Aplicar" en todos los créditos con algo libre (aunque tengan algo aplicado, 31/10/2026)', aplicar.join() === 'corte|cli-1,cobranza|cb-1,cobranza|cb-2,movimiento|mv-9', aplicar.join())
+    chk('ya no está el texto del hueco de la base', t.includes('Ajuste a favor') && !h.includes('falta una función de la base'))
     const recibos = [...h.matchAll(/data-ad-recibo="([^"]*)"/g)].map(m => m[1])
     chk('"Recibo" en las cobranzas de Pendientes y en la línea de la cobranza de la cuenta', recibos.join() === 'cb-1,cb-2,cb-1', recibos.join())
     chk('la línea de la cobranza (la que tiene cobranza_id) lleva su "Recibo" justo después', /data-cuenta-cobranza="cb-1"[\s\S]*?<\/button><div class="ad-rc-linea"><button type="button" class="ad-btn ad-btn--suave" data-ad-recibo="cb-1">Recibo<\/button><\/div>/.test(h))
@@ -205,7 +212,7 @@ esperas.push((async () => {
     await esperar()
     const c = S.estado.cliente
     chk('cobrador: se abre el selector debajo de su crédito', c.aplicar?.clave === 'cobranza|cb-1' && /data-ad-pend-credito="cobranza\|cb-1"[\s\S]*id="ad-apl"/.test(cuerpo(S)))
-    chk('cobrador: sin nada aplicado no hace falta leer el recibo', !rpcs(S, 'recibo_cobranza').length)
+    chk('cobrador: sin nada aplicado no hace falta leer lo que ya tenía', !rpcs(S, 'recibo_cobranza').length && !rpcs(S, 'aplicaciones_credito_cliente').length)
     const sug = rpcs(S, 'sugerir_aplicacion')
     chk('cobrador: "Aplicar todo" sugiere con lo libre (sugerir_aplicacion)', sug.length === 1 && JSON.stringify(sug[0][1]) === JSON.stringify({ p_cliente_id: 'cli-1', p_monto: 120000, p_parte: null }), JSON.stringify(sug[0]?.[1]))
     chk('cobrador: lo sugerido queda elegido (del más viejo al más nuevo, el último parcial)', JSON.stringify(c.aplicar.montos) === JSON.stringify({ 'orden|o-42|N1': 70000, 'orden|o-42|N2': 50000 }), JSON.stringify(c.aplicar.montos))
@@ -284,7 +291,7 @@ esperas.push((async () => {
     await esperar()
     S.alTocarPendientesAd(toque({ adAplicar: 'corte|cli-1' }))
     await esperar()
-    chk('corte: no se lee ningún recibo', !rpcs(S, 'recibo_cobranza').length)
+    chk('corte: sin nada aplicado no se lee lo que ya tenía', !rpcs(S, 'recibo_cobranza').length && !rpcs(S, 'aplicaciones_credito_cliente').length)
     chk('corte: se sugiere con lo libre del corte', rpcs(S, 'sugerir_aplicacion')[0]?.[1].p_monto === 20000)
     chk('corte: las cifras', texto(S.__els.get('ad-apl-cifras').innerHTML) === 'Libre para aplicar $ 20.000,00 Aplicado ahora $ 20.000,00 Queda a cuenta $ 0,00')
     await S.confirmarAplicarAd()
@@ -292,7 +299,7 @@ esperas.push((async () => {
     chk('corte: aplicar_credito_cliente con el crédito "corte" y el id del cliente', ap.length === 1 && JSON.stringify(ap[0][1]) === JSON.stringify({
       p_cliente_id: 'cli-1', p_credito_tipo: 'corte', p_credito_id: 'cli-1', p_items: [{ doc_tipo: 'orden', doc_id: 'o-42', parte: 'N1', monto: 20000, medio: null }] }), JSON.stringify(ap[0]?.[1]))
     chk('corte: el aviso', N(S.__llamadas.exitos.pop()) === 'Aplicado $ 20.000,00 · Queda a cuenta $ 0,00')
-    // Un ajuste a favor sin nada aplicado sí se ofrece; con algo aplicado, no se abre.
+    // Un ajuste a favor sin nada aplicado se ofrece; con algo aplicado, también (31/10/2026).
     const S2 = nuevo({ creditos: [K('movimiento', 'mv-9', 'Ajuste a favor', '2026-11-07', 5000, 0)] })
     await S2.abrirCliente('cli-1')
     await esperar()
@@ -301,11 +308,13 @@ esperas.push((async () => {
     await S3.abrirCliente('cli-1')
     await esperar()
     await S3.abrirAplicarAd('movimiento|mv-9')
-    chk('el hueco: un crédito que no es cobranza con algo aplicado no abre el selector', !S3.estado.cliente.aplicar && !rpcs(S3, 'sugerir_aplicacion').length)
+    chk('sin hueco: un crédito que no es cobranza con algo aplicado abre el selector y lee lo que ya tenía',
+      S3.estado.cliente.aplicar?.clave === 'movimiento|mv-9' && rpcs(S3, 'aplicaciones_credito_cliente').length === 1 && rpcs(S3, 'sugerir_aplicacion').length === 1)
+    S3.cerrarAplicarAd()
     await S3.abrirAplicarAd('cobranza|cb-0')
     chk('un crédito sin nada libre no abre el selector', !S3.estado.cliente.aplicar)
-    chk('creditoAplicableAd: sin libre, no; cobranza con algo aplicado, sí; otro con algo aplicado, no',
-      S3.creditoAplicableAd(CREDITOS[4]) === false && S3.creditoAplicableAd(CREDITOS[2]) === true && S3.creditoAplicableAd(CREDITOS[3]) === false && S3.creditoAplicableAd(CREDITOS[0]) === true)
+    chk('creditoAplicableAd: sin libre, no; cobranza con algo aplicado, sí; otro con algo aplicado, también',
+      S3.creditoAplicableAd(CREDITOS[4]) === false && S3.creditoAplicableAd(CREDITOS[2]) === true && S3.creditoAplicableAd(CREDITOS[3]) === true && S3.creditoAplicableAd(CREDITOS[0]) === true)
     // Dos lecturas superpuestas: la vieja (que llega después) no pisa a la nueva.
     let soltar
     let n = 0
@@ -326,8 +335,9 @@ esperas.push((async () => {
     S.alTocarPendientesAd(toque({ adAplicar: 'cobranza|cb-2' }))
     await esperar()
     const c = S.estado.cliente
-    const rec = rpcs(S, 'recibo_cobranza')
-    chk('con algo aplicado: se lee lo que ya tenía (recibo_cobranza)', rec.length === 1 && rec[0][1].p_cobranza_id === 'cb-2')
+    const rec = rpcs(S, 'aplicaciones_credito_cliente')
+    chk('con algo aplicado: se lee lo que ya tenía (aplicaciones_credito_cliente, ya no recibo_cobranza)',
+      rec.length === 1 && JSON.stringify(rec[0][1]) === JSON.stringify({ p_cliente_id: 'cli-1', p_credito_tipo: 'cobranza', p_credito_id: 'cb-2' }) && !rpcs(S, 'recibo_cobranza').length)
     chk('lo que ya tenía, como renglones con su medio', JSON.stringify(c.aplicar.previas) === JSON.stringify([{ doc_tipo: 'orden', doc_id: 'o-42', parte: 'N1', monto: 30000, medio: 'cheque' }]), JSON.stringify(c.aplicar.previas))
     chk('lo dice: "Ya tenía aplicado"', texto(cuerpo(S)).includes('Ya tenía aplicado $ 30.000,00: se mantiene y se le suma lo de abajo.'))
     chk('se sugiere solo con lo libre', rpcs(S, 'sugerir_aplicacion')[0]?.[1].p_monto === 20000)
@@ -348,12 +358,12 @@ esperas.push((async () => {
     chk('por medio: mismo renglón y mismo medio van sumados', JSON.stringify(rpcs(S2, 'aplicar_credito_cliente')[0]?.[1].p_items) === JSON.stringify([
       { doc_tipo: 'orden', doc_id: 'o-42', parte: 'N1', monto: 50000, medio: 'cheque' }]), JSON.stringify(rpcs(S2, 'aplicar_credito_cliente')[0]?.[1].p_items))
     // Si no se puede leer lo que ya tenía, no se aplica (se borraría).
-    const S3 = nuevo({ rpc: { recibo_cobranza: { data: null, error: { message: 'sin red' } } } })
+    const S3 = nuevo({ rpc: { aplicaciones_credito_cliente: { data: null, error: { message: 'sin red' } } } })
     await S3.abrirCliente('cli-1')
     await esperar()
     await S3.abrirAplicarAd('cobranza|cb-2')
     const h3 = cuerpo(S3)
-    chk('sin lo que ya tenía: lo dice', texto(h3).includes('No se pudo leer lo que esta cobranza ya tenía aplicado (sin red). Sin eso no se puede aplicar: se borraría.'))
+    chk('sin lo que ya tenía: lo dice', texto(h3).includes('No se pudo leer lo que este crédito ya tenía aplicado (sin red). Sin eso no se puede aplicar: se borraría.'))
     chk('sin lo que ya tenía: no hay botón Aplicar ni se sugiere', !/data-ad-apl-confirmar/.test(h3) && !rpcs(S3, 'sugerir_aplicacion').length)
     await S3.confirmarAplicarAd()
     chk('sin lo que ya tenía: no se llama a aplicar', !rpcs(S3, 'aplicar_credito_cliente').length)
@@ -364,11 +374,11 @@ esperas.push((async () => {
     await S3.confirmarAplicarAd()
     chk('sin lo que ya tenía: ni escribir, ni sugerir, ni aplicar', !rpcs(S3, 'aplicar_credito_cliente').length && !rpcs(S3, 'sugerir_aplicacion').length && JSON.stringify(S3.estado.cliente.aplicar.montos) === '{}')
     // Si lo que ya tenía no coincide con la cuenta, tampoco.
-    const S4 = nuevo({ rpc: { recibo_cobranza: { data: { ...copia(RECIBO_CB2), aplicaciones: [{ ...RECIBO_CB2.aplicaciones[0], aplicado: 25000, medios: { cheque: 25000 } }] }, error: null } } })
+    const S4 = nuevo({ rpc: { aplicaciones_credito_cliente: { data: [{ ...APLICACIONES['cobranza|cb-2'][0], monto: 25000, efectivo: 25000 }], error: null } } })
     await S4.abrirCliente('cli-1')
     await esperar()
     await S4.abrirAplicarAd('cobranza|cb-2')
-    chk('lo que ya tenía no coincide: lo dice y no deja aplicar', texto(cuerpo(S4)).includes('Lo que esta cobranza ya tenía aplicado ($ 25.000,00) no coincide con la cuenta ($ 30.000,00).') && !/data-ad-apl-confirmar/.test(cuerpo(S4)))
+    chk('lo que ya tenía no coincide: lo dice y no deja aplicar', texto(cuerpo(S4)).includes('Lo que este crédito ya tenía aplicado ($ 25.000,00) no coincide con la cuenta ($ 30.000,00).') && !/data-ad-apl-confirmar/.test(cuerpo(S4)))
     S4.cerrarAplicarAd()
     chk('Cancelar cierra el selector', !S4.estado.cliente.aplicar && !/id="ad-apl"/.test(cuerpo(S4)))
   }
